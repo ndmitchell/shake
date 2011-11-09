@@ -9,8 +9,12 @@
 
 \include{paper}
 %include paper.fmt
+%format (List (a) (b)) = "[" b "]_{" a "}"
+%format Result_alpha = "\Varid{Result_\alpha}"
+%format *> = "\mathbin{*\!\!\!>}"
+%format `replaceExtension` = "\backtick{replaceExtension}"
 
-
+\newcommand{\make}{\texttt{make}}
 
 \begin{document}
 \conferenceinfo{ICFP'12,} {September 27--29, 2010, Baltimore, Maryland, USA.}
@@ -30,8 +34,15 @@
 
 \maketitle
 
+\begin{comment}
+1. State the problem
+2. Say why it’s an interesting problem
+3. Say what your solution achieves
+4. Say what follows from your solution
+\end{comment}
+
 \begin{abstract}
-Build systems are completely necessary, but universally loathed. While most languages have a nice story for building simple things (cabal install, ghc --make), there is not a good contender for general purpose make system (SCons, make, CMake). We present Shake, a theoretically sound approach which is currently used to compile millions of lines a day in many languages. The fundamental problem it solves is that of proper dependency tracking of generated files.
+Build systems, such as \make{}, are typically used for compiling source code into executables. However, most build systems fail to properly deal with generated source files, especially when the dependencies of the generated files can only be determined after the file has been generated. In many large software systems generated files are common, resulting in awkward hacks to paper over build system inadequacies. We describe how to generalise build systems to deal properly with generated files. We have implemented our ideas as the Haskell library Shake. Shake has been used by Standard Chartered for the last three years as the basis for a complex build system involving millions of lines of code in many languages.
 \end{abstract}
 
 \category{D.3}{Software}{Programming Languages}
@@ -40,70 +51,98 @@ Build systems are completely necessary, but universally loathed. While most lang
 Languages
 
 \keywords
-Haskell, compilation, build-system
+build-system, compilation, Haskell
 
 \section{Introduction}
 \label{sec:introduction}
 
-Consider a build system which tracks which dependencies.
+Need a good motivating example, which MUST rely on generated files... Could use Haskell... but much better to use C.
 
+compile c files, they rely on header files
+
+yacc generates c files...
+
+
+checksum a list of files? create a tarball?
+
+
+
+\begin{figure}
 \begin{code}
 import Development.Shake
-main = shake $ do
-    want ["Main.exe"]
+import System.FilePath
 
-    "Main.exe" *> \x -> do
+main = shake def $ do
+-- we want to produce the executable Main
+    want ["Main"]
+
+-- to produce Main.exe we list all the \texttt{*.c} files
+-- change their extensions to \texttt{*.o}, ensure they are built
+-- with |need|, then call \texttt{gcc} to link them.
+    "Main" *> \x -> do
         cs <- ls "*.c"
-        let os = map (`replaceExtension` "obj") cs
+        let os = map (`replaceExtension` "o") cs
         need os
         system $ ["gcc","-o",x] ++ os
 
-    "*.obj" *> \x -> do
+-- to produce an object file, we get the \texttt{.c} file it came from,
+-- ensure it is created, get the files it includes and create them,
+-- then compile the file with \texttt{gcc}.
+    "*.o" *> \x -> do
         let c = replaceExtension x "c"
         need [c]
         need =<< cIncludes c
         system ["gcc","-c",c,"-o",x]
+
+    -- but be careful that you are generating grammar.c, but can't do that if you ls it too
+    "grammar.c" *> \x -> do
+        
+
 \end{code}
+\caption{Demo build system}
+\label{fig:demo}
+\end{figure}
 
-\subsection{It's Haskell}
+A build system takes a set of input files, plus some rules, and produces some output files. The classic build system is \make{}.
 
-Can use modules/functions for abstraction/separation
+Build systems are an essential part of any large software project, yet often prove surprisingly tricky to get right. While most languages have a nice tool for building single language projects (ocamlbuild, ghc --make, Visual Studio projects), when building more complex multi-language projects, most people turn to \make{}. While there are many \make{} competitors (Scons, CMake, Ant), none have gained universal acceptance. We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
 
-Can use Haskell libraries (i.e. filepath)
+A standard build system generates a dependency graph for all files, and processes them to meet the dependency constraints.
 
-\subsection{It's a Make competitor}
+Let us consider the problem of defining a build system that takes all the \texttt{*.c} files in a directory, compiles them all, and links them to create an executable. We have defined a new build system, Shake, in Haskell which is much better. We can implement this program in Shake, see Figure \ref{fig:demo}.
 
-Automatic parallelism
+\begin{description}
+\item[It's Haskell] Can use modules/functions for abstraction/separation. Can use Haskell libraries (i.e. filepath). We can use rich command line parsers.
+\item[It's a Make competitor] Automatic parallelism, Minimal rebuilds.
+\item[It's better than make] More accurate dependencies (i.e. the results of ls are tracked). Can produce profiling reports (what took most time to build). Can deal with generated files properly. Properly cross-platform
+\end{description}
 
+\subsection{Contributions}
 
-Minimal rebuilds
-
-\subsection{It's better than make}
-
-More accurate dependencies (i.e. the results of ls are tracked)
-
-Can produce profiling reports (what took most time to build)
-
-Can deal with generated files properly
-
-Properly cross-platform
+\begin{itemize}
+\item We describe the underlying theory we believe all Make files should be based on. In particular it allows for two inovations - generated files and also files.
+\item We describe an efficient and practical implementation of our build system.
+\item Our build system is practical -- it builds millions of lines an hour.
+\end{itemize}
 
 \section{Theory}
 
-In this section we first recap roughly how Make works, then show how Shake works.
+In this section we first recap roughly how Make works, then show how Shake works. We show that Make has some theoretical limitations, which we resolve. In section ? we show how we can implement these ideas in a library.
 
 \subsection{Theory of Make}
 
 \begin{code}
 data Rule =
-    {depends :: [Key]
+    {depends :: List alpha Key
     ,creates :: Key
-    ,rule :: [Value] -> Value
+    ,rule :: List alpha Value -> Value
     }
 
-make :: RuleSet -> [Key] -> [Value]
+make :: Rules -> List alpha Key -> List alpha Value
 make rules xs = ...
 \end{code}
+
+We have an infinite set of Rules, a list of what we need to build.
 
 Note that each rule statically knows what files it requires before it starts. You can implement it by effectively sorting the generated rules into a graph and evaluating that graph - however, in our implementation we leave the graph implicit.
 
@@ -115,14 +154,14 @@ We use Key/Value pairs, but in Make these are mainly restricted to keys being fi
 
 \begin{code}
 data Rule =
-    {creates :: [Key]
-    ,rule :: Result
+    {creates :: List alpha Key
+    ,rule :: Result_alpha
     }
 
-data Result = Defer [Key] ([Value] -> Result)
-            | Result [Value]
+data Result_alpha  =  Defer (List beta Key) (List beta Value -> Result_alpha)
+                   |  Result (List alpha Value)
 
-shake :: RuleSet -> [Key] -> [Value]
+shake :: RuleSet -> List alpha Key -> List alpha Value
 shake rules xs = ...
 \end{code}
 
@@ -140,14 +179,51 @@ In most cases you can fake the dependency - i.e. say that Foo.o depends on both 
 
 \subsubsection{Correctness}
 
-A system is correct if everything falls out.
+A system is correct if everything falls out. There must be a partial ordering on the |Key|'s, such that everything gets built in the right order. This property cannot be checked statically, since dependencies can be arbitrarily generated at runtime.
+
+Can be accurately run with:
+
+\begin{code}
+data State = Map Key Val
+
+data Val
+    = Done Value
+    | Doing
+\end{code}
+
+If the key is in State then just use the existing Value, otherwise calculate it and put it in the list. Also keep a list of what you are currently doing, and if you hit it again you violate the ordering constraint.
 
 \subsection{Cached Shake}
 
-The standard behaviour for Shake is then to add a cache to get minimal rebuilding. Given a set of:
+The standard behaviour for Shake is then to add a cache to get minimal rebuilding. Given a set of Key/Value pairs from last time, and a history trace:
 
-For some rules we introduce a fake continually changing value. For things like:
+\begin{code}
+data Val
+    = Doing
+    | Done Value [[Key]] Status
 
+data Status
+    = Unchecked -- loaded from the cache without checking, should be checked before using
+    | Equal -- loaded from the cache, checked, and computed equal
+    | Different -- either was not cached, or different from the cache
+\end{code}
+
+For each Key/Value pair we also store the Key/Value list that was accessed during that run. We can do this quite effectively:
+
+\begin{code}
+-- Make sure key is in the cache, and has either has Equal or Different state.
+ensure key =
+    if Doing then error "has a loop"
+    if Equal || Different then done
+    if Unchecked then
+        for each key
+            ensures x
+            if any are not equal then bail to Missing
+    if Missing then
+        run rule
+\end{code}
+
+rule = if has a value in the history, then need all the keys from last time. If they are all currently equal to their historic values then move from history to current. Work by maintaining two dictionaries 
 
 \section{User View}
 
@@ -156,11 +232,14 @@ We can implement this as the following library...
 We have a set of rules:
 
 \begin{code}
-ruleAlways :: Make a -> Rule ()
-rule :: (from -> Maybe ([from], Make [to])) -> Rule ()
-rule1 :: (from -> Maybe (Make to)) -> Rule ()
+data Rules a = ...
+    deriving (Monad, Monoid)
 
-run :: [from] -> Make [to]
+ruleAlways :: Make a -> Rules ()
+rule :: (from -> Maybe (List alpha from, Make (List alpha to))) -> Rules ()
+rule1 :: (from -> Maybe (Make to)) -> Rules ()
+
+run :: List alpha from -> Make (List alpha to)
 run1 :: from -> Make to
 
 need :: [FilePath] -> Make ()
@@ -178,7 +257,7 @@ uncached = need1 Uncached
 
 rule1 $ \Uncached -> Just $ return now
 
-shake :: [Rule] -> [Make ()] -> Make ()
+shake :: ShakeOptions -> Rules () -> IO ()
 \end{code}
 
 \begin{code}
@@ -201,7 +280,7 @@ data Ls = Ls FilePath
 rule :: (Eq from, Typeable from, Typeable to) => (from -> Maybe ([from], Act [to])) -> Rule
 
 rule1 :: (Eq from, Typeable from, Typeable to) => (from -> Maybe (Act to)) -> Rule
-rule1 f = rule 
+rule1 f = rule
 
 
 rule1 $ \(Ls x) -> Just $ do
@@ -211,7 +290,7 @@ rule1 $ \(Ls x) -> Just $ do
 data File = File FilePath
 
 
-(*>) :: String -> FilePath -> 
+(*>) :: String -> FilePath ->
 
 
 want :: Make () -> Rule ()
@@ -238,6 +317,8 @@ ls = need1 . Ls x
 
 In theory uncached just depends on the entire world - things like the current time, and things like the SHA1 of the entire system.
 
+\subsection{Syntactic Sugar}
+
 \subsection{Transitive Dependencies}
 
 \subsection{Rules to Follow}
@@ -245,6 +326,10 @@ In theory uncached just depends on the entire world - things like the current ti
 \subsection{Lots of things generate .o files}
 
 Then change them to have an extra extension, such as .hs.o.
+
+\subsection{Command Line}
+
+Just use actionAllow to filter which things they are allowed to need. You should be very careful not to miss out on things that they actually use, as you'll like get an error.
 
 \section{Developer View}
 
@@ -271,7 +356,8 @@ Shake is awesome.
 
 \subsection*{Acknowledgements}
 
-Thanks to Standard Chartered, where the software was developed.
+Thanks to Standard Chartered, where the software was developed. Thanks to Raphael Montelatici for the name Shake.
+
 
 \bibliographystyle{plainnat}
 \balance
