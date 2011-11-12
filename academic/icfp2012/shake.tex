@@ -1,5 +1,7 @@
 \documentclass{sigplanconf}
 
+% Email drafts to: M. George Hansen, Evan Laforge
+
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{natbib}
@@ -12,8 +14,11 @@
 %format (List (a) (b)) = "[" b "]_{" a "}"
 %format Result_alpha = "\Varid{Result_\alpha}"
 %format *> = "\mathbin{*\!\!\!>}"
+%format ?> = "\mathbin{?\!\!\!>}"
+%format ?= = "\mathbin{?\!\!\!=}"
 %format `replaceExtension` = "\backtick{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
+%format context = "\Keyword{context}"
 
 
 \newcommand{\file}{\textsf}
@@ -83,12 +88,14 @@ This rule describes how to build \file{result.tar}. We depend on (|need|) the fi
 
 The key difference from \make{} (and nearly all other build tools) is that rather than specifying the dependencies of a file \textit{in advance}, we allow further dependencies to be specified \textit{after} using previous dependencies. This difference is crucial to properly handle generated files.
 
-We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake supports all the features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow build system authors the full power of abstraction, using Haskell features such as modules/functions.
+In addition, we also deal with multiple things, way more than just files. Even though we now deal with more than files, this helps with rules that depend on static configuration (\S?), directory contents (\S?), rules that generate multiple results (\S?) and other things. The power of multiple types really keeps the core simple.
+
+We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake properly handles generated files, as well as the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow build system authors the full power of abstraction, using Haskell features such as modules/functions.
 
 \subsection{Contributions}
 
 \begin{itemize}
-\item We describe the theory underlying \make{} (\S\ref{sec:theory_make}), and how to revise this theory to properly handle both generated files and rules that generate multiple outputs (\S\ref{sec:theory_shake}).
+\item We describe the theory underlying \make{} (\S\ref{sec:theory_make}), and how to revise this theory to properly handle generated files (\S\ref{sec:theory_shake}).
 \item We describe how to extend our theory with a cache, to enable minimal rebuilds (\S\ref{sec:theory_shake_cache}).
 \item We describe how to implement our build tool in Haskell, including how to present the underlying theory in a way that is practically usable (\S\ref{sec:user_view}), and how to implement it efficiently (\S\ref{sec:developer_view}). While Haskell is not essential to implement our build tool, it offers a number of advantages -- primarily making IO effects explicit and providing nice syntactic sugar.
 \item We describe how additional features can be added to our build tool, taking inspiration from from compilers. We describe how to implement a Lint tool (checking all dependencies are present and the system will perform the same in parallel as in serial), a profiling tool (which rules take most time) and an analysis tool (which input file caused a rule to fire). Many of these features are directly driven by the theory.
@@ -99,10 +106,12 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 \section{Theory}
 \label{sec:theory}
 
-In this section we first recap roughly how \make{} works, then show how Shake works. We show that Make has some theoretical limitations, which we resolve. In \S\ref{sec:user_view} we show how we can implement these ideas in a library.
+In this section we first recap roughly how \make{} works, then show how Shake works. We show that \make{} has some theoretical limitations, which we resolve. In \S\ref{sec:user_view} we show how we can implement these ideas in a library.
 
 \subsection{Theory of Make}
 \label{sec:theory_make}
+
+We deliberately abstract away the entire idea of files. While \make{} is heavily file based, that is not an intrinsic property of the theory behind \make{}. We use |Key| for things that can be inputs or output (think file names) and |Value| for the value associated with the |Key| (think file contents).
 
 We can model \make{} as:
 
@@ -113,15 +122,13 @@ data Rule =
     ,rule :: List alpha Value -> Value
     }
 
-make :: Rules -> List alpha Key -> List alpha Value
-make rules xs = ...
+make :: Set Rule -> List alpha Key -> List alpha Value
+make rules xs = ellipses
 \end{code}
-
-We deliberately abstract away the entire idea of files. While Make is heavily file based, that is not an intrinsic property of Make. We use |Key| for things that can be inputs or output (think file names) and |Val| for the value associated with the |Key| (think file contents).
 
 We can model \make{} as a function that takes a (possibly infinite) set of rules, a list of what we need to build, and builds it. We use |List alpha bullet| to denote a list which must have length |alpha|. In |make|, the number of values generated must correspond to the number of keys passed in (and in fact, each rule must be the result). A rule can be modelled as the things it depends on, the thing it creates, and the rule that takes the depended keys and produces the result keys.
 
-The correctness condition for a set of rules is as follows. Infinite set, but their creates fields must not overlap. Must be able to sort topologically. Once you have a partial sorting you can generate a graph, and implement it by traversing the graph (the technique that \make{} adopts).
+The correctness condition for a set of rules is as follows. Infinite set, but their creates fields must not overlap. A rule is \textit{necessary} iff it is either mentioned by the input list, or is a dependency of a rule that satisfies the output list. The \textit{necessary} rules must be finite, and you can topologically sort their |creates|.
 
 \subsection{Theory of Shake}
 \label{sec:theory_shake}
@@ -130,24 +137,18 @@ Using the same terminology from the previous section, we can model our build too
 
 \begin{code}
 data Rule =
-    {creates :: List alpha Key
-    ,rule :: Result_alpha
+    {creates :: Key
+    ,rule :: Result
     }
 
-data Result_alpha  =  Defer (List beta Key) (List beta Value -> Result_alpha)
-                   |  Result (List alpha Value)
+data Result  =  Defer (List alpha Key) (List alpha Value -> Result)
+             |  Result Value
 
 shake :: RuleSet -> List alpha Key -> List alpha Value
-shake rules xs = ...
+shake rules xs = ellipses
 \end{code}
 
-We have made two enhancements:
-
-\paragraph{Dynamic Dependencies} a rule can dynamically, based on the values of dependencies, add additional dependencies. We model dynamic dependencies with the |Result_alpha| type. You can think of this type as when run returns either a list of dependencies, and blocks until those dependencies are satisfied, or returns the resulting values.
-
-\paragraph{Multiple Results} a rule can create multiple values. Particularly running one command may result in two outputs being produced. This is usually a matter of efficiency.
-
-The first of these is essential - it's amazing that \make{} manages to avoid it. The second is useful in some situations, but can mostly be avoided (see \S?).
+The big enhancement is the introduction of dynamic dependencies. A rule can dynamically, based on the values of dependencies, add additional dependencies. We model dynamic dependencies with the |Result_alpha| type. You can think of this type as when run returns either a list of dependencies, and blocks until those dependencies are satisfied, or returns the resulting values.
 
 \subsubsection{Correctness}
 
@@ -156,42 +157,292 @@ A system is correct if everything falls out. There must be a partial ordering on
 Given a set of rules, and a set of keys, we define a number of terms:
 
 \begin{itemize}
-\item[interesting rules] are those which create something in the set of output keys, or who create something that an interesting rule has in it's Defer list.
-\item[reduced rules] are those whose |rule| is in the |Result| state.
-\item[reducible rules] are those which are in the |Defer| state, but whose immediate dependencies are all in the \textit{reduced} state.
+\item \textit{Interesting} rules are those which create something in the set of output keys, or who create something that an interesting rule has in it's Defer list.
+\item \textit{Reduced} rules are those whose |rule| is in the |Result| state.
+\item \textit{Reducible} rules are those which are in the |Defer| state, but whose immediate dependencies are all in the \textit{reduced} state.
 \end{itemize}
+
+Like in \make{}, the rules |creates| must all be distinct.
 
 Given a set of rules, we are finished when all the \textit{interesting} rules are \textit{reduced}. We can proceed one step by taking a rule that is both \textit{interesting} and \textit{reducible} and running the deferred function on it. If there are no rules that are both \textit{interesting} and \textit{reducible} then we are stuck, and the build system has a logical inconsistency, either because there is no rule to build something, or the build rules form a cycle.
 
 Note that we cannot know if the build system is consistent until it has completed. In particular, there are two ways for a build system to loop. Most obviously, an \textit{interesting} and \textit{reducible} rule could have a deferred action that never terminates. Alternatively, such a rule could immediately produce the same dependencies as previously, without making progress. We assume that each rule is structured in a way that there are a finite number of steps, and each step takes a finite amount of time (in practice, it is hard to write a rule that does not obey this property).
 
-\subsection{Cached Shake}
+\section{Shake in Haskell}
+\label{sec:user_view}
+
+While our theory talks about |Key| and |Value|, our library is much more practically constrained. We have to add types on, model the relationship with types. We first present the interface to Shake, and the functions available. We do this by giving an example of code in Shake. After having defined what the concepts do, in the next section we explain how to implement these concepts.
+
+\begin{figure}
+\begin{code}
+import Development.Shake
+import System.FilePath
+
+main = shake def $ do
+    want ["Main"]
+
+    "Main" *> exe -> do
+        cs <- ls "*.c"
+        let os = map (`replaceExtension` "o") cs
+        need os
+        system $ ["gcc","-o",exe] ++ os
+
+    "*.o" *> \o -> do
+        let c = replaceExtension o "c"
+        need [c]
+        headers <- cIncludes c
+        need headers
+        system ["gcc","-o",o,"-c",c]
+\end{code}
+\caption{Demo build system in Shake.}
+\label{fig:demo}
+\end{figure}
+
+We give an example of a demo in Figure \ref{fig:demo}. Running this program will build |Main| from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be recompiled.
+
+The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we take the directory listing of all \file{*.c} files (like the \prog{ls} command), change their extensions to \file{*.o}, require those files to be built (|need| them), then call \prog{gcc} to link them. To build any \file{*.o} file we take the associated \file{*.c}, make sure it's been built, then call the function |cIncludes| to get all headers transitively included. We require those headers, then we call \prog{gcc} to do the compilation.
+
+This script demonstrates a number of features of Shake based build systems:
+
+\begin{itemize}
+\item It's a full Haskell library using main, while |main| can call |shake|, it can also do anything it likes, such as command line processing (see \S?).
+\item The |ls| is tracked (see \S?), if the results of |ls| change, it will rebuild.
+\item We run arbitrary system commands in the internals.
+\item We fully track the dynamic dependencies with header files. The function |cIncludes| given a header file gets all the transitive @#include@ directives. (There is a better way of specifying the transitive closure, see \S?).
+\end{itemize}
+
+\subsection{Core Shake}
+
+\begin{figure}
+\begin{code}
+data ShakeOptions = ShakeOptions
+    {shakeDatabase :: FilePath
+    ,shakeParallelism :: Int
+    ,ellipses
+    }
+    deriving (Default)
+
+data Rules a = Ellipses
+    deriving (Monad, Monoid)
+
+data Make a = Ellipses
+    deriving (Monad, LiftIO)
+
+runRules :: ShakeOptions -> Rules () -> IO ()
+
+class (
+    Show key, Typeable key, Eq key, Ord key, Hashable key, Binary key,
+    Show value, Typeable value, Eq value, Ord value, Hashable value, Binary value
+    ) => Rule key value where
+    externalValue :: key -> IO (Maybe value)
+    externalValue x = return Nothing
+
+action :: Make a -> Rules ()
+
+-- accumulate the Rule instances from defaultRule and rule, and put them in]
+-- if no rules to build something then it's cache instance is dodgy anyway
+defaultRule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
+
+rule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
+
+run :: Rule key value => List alpha key -> Make (List alpha value)
+run1 :: Rule key value => key -> Make value
+
+uncached :: Make ()
+\end{code}
+\caption{Primitive operations in Shake}
+\label{fig:shake_core}
+\end{figure}
+
+The primitive interface to Shake is given in Figure \ref{fig:shake_core} -- everything else presented is defined in terms of these primitive interfaces.
+
+A Shake build system is basically a set of rules. These rules are either rules exactly like the |Rule| type in \S\ref{sec:theory_shake} created with |rule|, or are instead simply |action| values. These are translated as adding an input value (uniquely created), along with a rule that generates it, which produces a |()| value. These rules are also matched specially so they cannot be cached.
+
+We have used context synonyms to indicate that every |Key| or |Value| type must be in several type classes. We require:
+
+\begin{description}
+\item [Show] We require |Show| for debugging messages and logging.
+\item [Typeable] We allow multiple rule/run types in one build system, to distinguish them we require a |Typeable| constraint.
+\item [Eq] We require equality to match the values.
+\item [Ord] We require ordering so that given a set of values we can pick a minimum, useful when we produce multiple files.
+\item [Hashable] We require |Hashable| to accelerate searching.
+\item [Binary] We require |Binary| so we can cache the values between runs, to achieve minimal rebuilds.
+\end{description}
+
+The |rule| declares a rule. Given a single |key| value, the rule returns |Nothing| to indicate that it cannot be called, or |Just| with the steps necessary to build the associated |value|. The function is used to encode infinite rules, as a rule could match potentially infinite numbers of |key|'s, but returns concrete rules in response to each one.
+
+The |run| action looks for a matching |rule| with the same type. Since this involves runtime type matching, usually these rules are sugared up in type constrained versions. We take a list which allows parallelism, although you can imagine it just does a |mapM run1|.
+
+We drive the code with the |shake| function, which takes an initial parameter of the options to control Shake. Typical options include which file to store the cached versions in (|shakeDatabase|), and the number of processors to use (|shakeParallelism|). These options are also used to select which mode to run Shake in, as described in \S\ref{sec:tools}.
+
+Some functions should never be cached. As an example, functions that read from the file system in an untracked way -- such as getting the directory listing. Just because a previous run of the system detected that the directory contents was one way, we should recheck. The |uncached| function models this (the |uncached| function can be implemented in terms of |rule| and |run| by faking an incorrect instance definition, but by moving it into the core we get can optimise it to not store the cache, rather than simply storing and invaliding the cache).
+
+The |Rule| class has two methods. One let's us associate a default rule. If no other rule matches we use this one. This allows us to use |newtype|'s to insert rules into the system.
+
+We would like to move |defaultRule| into the type class |Rule|, but alas that breaks because of serialisation of existentials. See \S? for full details.
+
+By keeping the core of Shake small, and defining lots of things on top, we keep it simple.
+
+\subsubsection{Directory Listing}
+
+\begin{code}
+data Ls = Ls FilePath
+instance Rule Ls [FilePath]
+
+lsRule :: Rules ()
+lsRule = defaultRule $ \(Ls x) ->
+    uncached
+    getDirectoryContents x
+
+ls :: FilePath -> Make [FilePath]
+ls = run1 . Ls
+\end{code}
+
+We make the function as |uncached|, because even if we have run |ls| the previous time, it may have changed. Another way of implementing this would be to take the SHA1 of the entire file system, and say it depends on that -- but that isn't practical. We rely on explicit type signatures to ensure that |Ls| is always used with the correct type.
+
+\subsubsection{File Operations}
+
+\begin{code}
+newtype File = File FilePath
+newtype Timestamp = Timestamp Int
+
+instance Rule File TimeStamp where
+    externalValue (File x) = do
+        b <- doesFileExist x
+        -- we always return |Just|, which is important
+        if b then fmap Just getModificationTime else Just (-1)
+
+fileRule :: Rules ()
+fileRule = defaultRule \(File x) -> do
+    b <- io $ doesFileExist x
+    if b then io $ fmap TimeStamp getModificationTime else error "could not find file"
+
+
+need :: [FilePath] -> Make ()
+need xs = void (run $ map File xs :: Make [Timestamp])
+
+want :: [FilePath] -> Rule ()
+want xs = action $ need xs
+
+(?>) :: (FilePath -> Bool) -> (FilePath -> Make ()) -> Rules ()
+(?>) test act = rule $ \x -> if test x then Just act else Nothing
+
+(*>) :: WildFilePath -> (FilePath -> Make ()) -> Rule ()
+(*>) test act = (?= test) ?> act
+\end{code}
+
+We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or SHA1 in the value instead. We found in practice that Timestamp is faster (noticably so for large files) and it's actually quite nice to do a \prog{touch} to cause something to be rebuilt!
+
+We define |create| which is capable of describing all types of file related rule. It automatically gets the modification times from the resulting files. Next down the level of power is |(?>)|, which tests if a file matches a function and is suitable for any rules that create a single function. Finally, we have |(*>)| which just allows wildcards, and is much like the rule in \make{}. In practice, we have found that |create| is exceptionally rare, while |(?>)| is used about 25\% of the time, while |(*>)| is by far the most common. In simpler build systems we suspect |(*>)| would probably be all that is required.
+
+\subsubsection{Operations}
+
+We can layer on sugar like |readFileLines| quite easily. And also |readFile|, |system|, |mkdir|. In all cases, we try and emulate the \make{} behaviour of being more relaxed.
+
+\begin{code}
+readFile :: FilePath -> Make String
+readFile x = do
+    need x
+    io $ Prelude.readFile x
+
+system :: [String] -> Make ()
+system xs = do
+    x <- System.system $ unwords xs
+    unless (x == ExitSuccess) $ error "Failed when running command"
+
+mkdir :: FilePath -> Make ()
+mkdir x = io $ createDirectoryRecursive True x
+\end{code}
+
+\subsubsection{Wrapping}
+
+We can then defined:
+
+\begin{code}
+shake opts rules = runRules opts $ do
+    fileRule
+    lsRule
+    rules
+\end{code}
+
+Note that if we had |defaultRule| in the type class, we could avoid having the |shake| wrapper.
+
+\section{Implementing Shake}
+\label{sec:developer_view}
+
+We can implement Shake relatively easy. We don't give the entire implementation (for that, download the package from Hackage), but sketch some of the central ideas. When implementing Shake there are several goals:
+
+\begin{description}
+\item[Correctness] -- always rebuild enough, but we never rebuild something that could be reused.
+\item[Efficiency] -- we try and make the implementation efficient.
+\item[Parallelism] -- we try and do as much in parallel as possible.
+\item[Error feedback] -- if the build system fails for some reason, such as the rules being incorrect as per \S\ref{sec:theory_shake}, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it makes the system practical.
+\end{description}
+
+We first describe an implementation that is capable of building simple rules without parallelism of caching. We then add caching, and finally add parallelism.
+
+Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build.
+
+\subsection{Dynamically Typed Values}
+\label{sec:dynamically_typed}
+
+Shake can work with multiple types of value in the rules. Storing heterogenous values in Haskell is problematic, so we define:
+
+\begin{code}
+data Any = Any (forall a . C a => a)
+    deriving (Eq, Ord, Hashable, Binary)
+
+type Key = Any
+type Value = Any
+\end{code}
+
+This is a way of abstracting the |Key| and |Value| to store anything. For |Eq| and |Ord| and |Hashable| we just use the |TypeRep| and value as a pair, and apply the methods as that would be appropriate.
+
+Defining the Binary instance is far harder. Serialising a value is easy, but deserialising a value is a nightmare -- we need to figure out the type of the value so we can find it's |Binary| instance. We solve this problem by building a table of all instances we know about which are referred to by |rule|. If there are no rules to build something it isn't useful, so we use that table to index in. Since storing the full type would require storing lots of types, we instead index them into a table and have a lookup table by index. While these concerns are fiddly and low-level, they can largely be ignored and we can assume all |Any| values have a good |Binary| instance. When deserialising, if we encounter a binary instance that we don't have a copy of, we just ignore the entire cache. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_makefile}).
+
+\subsection{Basic Implementation}
+
+Note that \make{} builds a graph, we can't do that. However, given the nature of the problem, we highly doubt that implementing \make{} by building a graph is the right approach! If we ignore parallelism and caching, we can build using a variable of the following type:
+
+\begin{code}
+type State = Map Key Result
+
+data Result  =  Doing
+             |  Done Value
+             |  Also Key
+\end{code}
+
+At every point we have a global |State| value, initially starting with an empty |Map|. When we try and build an action we add it to the |State| as |Doing|. When we have built all it's dependencies, and run it, we add it to the |State| as |Done|. If while running the build system we encounter a |Doing|, then we have a cycle where a |Key| depends on itself.
+
+When building a rule that has multiple outputs we always store it by the minimum |Key| value, which makes it consistent. Anything else that is done is put on the map with an |Also| pointing at the original key.
+
+\subsection{Adding a Cache}
 \label{sec:theory_shake_cache}
 
 The standard behaviour for Shake is then to add a cache to get minimal rebuilding. Given a set of Key/Value pairs from last time, and a history trace.
 
-You add a set of:
+We add code to save |Key|/|Value|, which is a pain with the existential, but possible.
+
+Before running a rule, if we have something with an equal key
 
 \begin{code}
-data Cache =
-    {created :: [Key]
-    ,required :: [[(Key, Value)]]
-    ,result :: [Value]
-    }
-\end{code}
+data Val = Doing
+    | Done Value [[Key]] Version Bool
 
-Before running a rule, if we have something with an equal key 
-
-\begin{code}
-data Val
-    = Doing
-    | Done Value [[Key]] Status
 
 data Status
-    = Unchecked -- loaded from the cache without checking, should be checked before using
-    | Equal -- loaded from the cache, checked, and computed equal
-    | Different -- either was not cached, or different from the cache
+    = Unchecked -- loaded from the cache without checking, should be checked before using (old version number)
+    | Equal -- loaded from the cache, checked, and computed equal (keeps same version number)
+    | Different -- either was not cached, or different from the cache (different version numbers)
 \end{code}
+
+When you compute something, if it existed and had the same version, and is identical, keep the same number. You are dirty if the version numbers of your keys do not match your version number. This allows multiple rebuilds to work properly. Also have a cache which means you and all your children have up to date versions. Do not save that boolean.
+
+Version numbers let you load all the cache, validate and potentially rebuild some portion of the known universe, then save the cache back. As a result, some parts of the cache may have a much higher version than others, but you don't need to kill the rest until it gets broken. In any one run, a version number may only increase once at the same time as it gets its cached bit set to True.
+
+Important point: if you run something, and it's dependencies are dirty, but it gave the same answer, you can still use that in the cache.
+
+
 
 The reason for |[[Key]]| instead of just |[Key]| is so we figure out what can be checked in parallel.
 
@@ -199,7 +450,10 @@ For each Key/Value pair we also store the Key/Value list that was accessed durin
 
 \begin{code}
 -- Make sure key is in the cache, and has either has Equal or Different state.
-ensure key =
+
+ask :: Value ->
+
+ask key =
     if Doing then error "has a loop"
     if Equal || Different then done
     if Unchecked then
@@ -208,155 +462,13 @@ ensure key =
             if any are not equal then bail to Missing
     if Missing then
         run rule
+
+ensures
 \end{code}
 
 rule = if has a value in the history, then need all the keys from last time. If they are all currently equal to their historic values then move from history to current. Work by maintaining two dictionaries
 
-\section{User View}
-\label{sec:user_view}
-
-We can implement this as the following library...
-
-\subsection{Larger Example}
-
-\begin{code}
-    "Main.exe" *> \x -> do
-        cs <- ls "*.c"
-        let os = map (`replaceExtension` "obj") cs
-        need os
-        system $ ["gcc","-o",x] ++ os
-
-    "*.obj" *> \x -> do
-        let c = replaceExtension x "c"
-        need [c]
-        need =<< cIncludes c
-        system ["gcc","-c",c,"-o",x]
-\end{code}
-
-\subsection{The Interface}
-
-We have a set of rules:
-
-\begin{code}
-data Rules a = ...
-    deriving (Monad, Monoid)
-
-ruleAlways :: Make a -> Rules ()
-rule :: (from -> Maybe (List alpha from, Make (List alpha to))) -> Rules ()
-rule1 :: (from -> Maybe (Make to)) -> Rules ()
-
-run :: List alpha from -> Make (List alpha to)
-run1 :: from -> Make to
-
-need :: [FilePath] -> Make ()
-need xs = void $ run $ map File xs
-
-want :: [FilePath] -> Rule ()
-want xs = ruleAlways $ need xs
-
-(*>) :: WildFilePath -> (FilePath -> Make ()) -> Rule ()
-(*>) x f = rule1 $ \(File s) ->
-    if s ?= x then Just $ do f s; Stamp $ getModification s else Nothing
-
-uncached :: Make ()
-uncached = need1 Uncached
-
-rule1 $ \Uncached -> Just $ return now
-
-shake :: ShakeOptions -> Rules () -> IO ()
-\end{code}
-
-\begin{code}
-
-hasFlag :: String -> Bool
-
-dotNet = do
-    ruleAlways $ do
-        res <- run1 $ Flag "DOTNETGEN"
-        when res $
-            addins <- run1 Addins
-            need [dist $ x <.> "dll" | x <- addins]
-\end{code}
-
-|ruleAlways| is roughly equivalent to create a new value, add it to the todo set, and add a rule for it with the given contents.
-
-\begin{code}
-data Ls = Ls FilePath
-
-rule :: (Eq from, Typeable from, Typeable to) => (from -> Maybe ([from], Act [to])) -> Rule
-
-rule1 :: (Eq from, Typeable from, Typeable to) => (from -> Maybe (Act to)) -> Rule
-rule1 f = rule
-
-
-rule1 $ \(Ls x) -> Just $ do
-    uncached
-    getDirectoryContents x
-
-data File = File FilePath
-
-
-(*>) :: String -> FilePath ->
-
-
-want :: Make () -> Rule ()
-
-ruleAlways $ need [xs]
-
-
-ls :: FilePath -> Make [FilePath]
-ls = need1 . Ls x
-\end{code}
-
-In theory uncached just depends on the entire world - things like the current time, and things like the SHA1 of the entire system.
-
-We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or SHA1 in the value instead.
-
-\begin{code}
-import Development.Shake
-import System.FilePath
-
-main = shake def $ do
-    want ["Main"]
-
-    "Main" *> \_ -> do
-        need ["Main.tab.o"]
-        system ["gcc","-o","Main","Main.tab.o"]
-
-    "*.o" *> \x -> do
-        let c = replaceExtension x "c"
-        need [c]
-        headers <- cIncludes c
-        need headers
-        system ["gcc","-c",c,"-o",x]
-
-    "*.tab.c" *> \x -> do
-        let y = replaceExtension (dropExtension x) "y"
-        need y
-        system ["yacc","-o",x,y]
-\end{code}
-
-
-\subsection{Syntactic Sugar}
-
-We can layer on sugar like |readFileLines| quite easily.
-
-
-\section{Developer View}
-\label{sec:developer_view}
-
-\subsection{Implementation}
-
-Easy.
-
-\begin{code}
-data State = Map Key Val
-
-data Val
-    = Done Value
-    | Doing
-\end{code}
-
+We also practically use a journal, so that hitting Ctrl+C doesn't break it. Do we need to remember if things are different/same when storing the cache?
 
 \subsection{Parallelism}
 
@@ -371,10 +483,40 @@ Just add a lock in the Doing, use a thread pool and you are done. We always fork
 
 \subsection{Lint checking}
 
+\subsection{Multiple Outputs}
+
+Sometimes running one command will produce two outputs. As an example, running \prog{ghc} on \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. Some things (things importing \file{Foo.hs}) require \file{Foo.hi}. Some things, say linking, require \file{Foo.o}. We can fake this because we know that a change in the \file{*.o} timestamp changes the \file{*.hi} timestamp, so we can write:
+
+\begin{code}
+"*.hi" *> \hi ->
+    need [replaceExtension hi "o"]
+
+"*.o" *> \o ->
+    let hs = replaceExtension x "hs"
+    need [hs] -- and it's dependencies, but let's ignore that for now
+    system ["ghc","-c",hs]
+\end{code}
+
+Note that if we wrote it the other way, with the \file{*.o} depending on the \file{*.hi} then if the \file{*.hi} stayed the same we could end up screwed. We'd have written that neither file had changed, but both would have. Ouch. Also if we use SHA1 it's now not correct.
+
+We can work around the problem by introducing a new type, |File2| which stores two files. We can then ask for both files at once, which computes them and stores both timestamps. Now to compute either we depend on the Both rule, and since that always changes when either does, we're safe.
+
 \section{Evaluation}
 \label{sec:evaluation}
 
 We have used the resulting system extensively. It replaced a huge and error prone build system. Cite the 15\% study, and say we do very little.
+
+\begin{code}
+
+hasFlag :: String -> Bool
+
+dotNet = do
+    ruleAlways $ do
+        res <- run1 $ Flag "DOTNETGEN"
+        when res $
+            addins <- run1 Addins
+            need [dist $ x <.> "dll" | x <- addins]
+\end{code}
 
 \subsection{Multiple Results}
 
@@ -391,6 +533,8 @@ If you have a transitive dependency you can avoid it quite easily. Consider the 
 Do not use ls over a universe you are changing. If you ls, it should be in the source directory, not one you create - otherwise your build system as a result of generating a file could be unsatable. Ls should return the same at the start and end of the compilation.
 
 Put all generated files somewhere entirely separate, such as dist or |_make|. Do not comingle them.
+
+Make sure you normalise all filepaths, we recommend making them all relative to the root, never use combinations of @.@ and @/@ or @\\@.
 
 \subsection{Lots of things generate .o files}
 
@@ -416,7 +560,7 @@ Shake is awesome. Any future work goes here.
 
 \subsection*{Acknowledgements}
 
-Thanks to Standard Chartered, where the software was developed. Thanks to Raphael Montelatici for the name Shake.
+Thanks to Standard Chartered, where the software was developed. Thanks to Raphael Montelatici for the name Shake. Thanks to Evan Laforge for discussions, particularly about multiple files.
 
 
 \bibliographystyle{plainnat}
