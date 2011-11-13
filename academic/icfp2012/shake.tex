@@ -154,19 +154,33 @@ The big enhancement is the introduction of dynamic dependencies. A rule can dyna
 
 A system is correct if everything falls out. There must be a partial ordering on the |Key|'s, such that everything gets built in the right order. This property cannot be checked statically, since dependencies can be arbitrarily generated at runtime. A system is valid if it can be run to produce the outputs. If there is an ordering, the following algorithm will succeed.
 
-Given a set of rules, and a set of keys, we define a number of terms:
-
 \begin{itemize}
-\item \textit{Interesting} rules are those which create something in the set of output keys, or who create something that an interesting rule has in it's Defer list.
-\item \textit{Reduced} rules are those whose |rule| is in the |Result| state.
-\item \textit{Reducible} rules are those which are in the |Defer| state, but whose immediate dependencies are all in the \textit{reduced} state.
+\item \textit{Result} rules are those whose |rule| is in the |Result| state.
+\item \textit{Reducible} rules are those which are not \textit{results}, but whose immediate dependencies are all \textit{results}.
+\item \textit{Required} rules are those which are not \textit{results}, but which create something in the set of output keys, or who create something that a \textit{required} rule has in it's |Defer| list. We can guarantee that all \textit{required} rules must be evaluated for the build system to finish.
 \end{itemize}
 
 Like in \make{}, the rules |creates| must all be distinct.
 
-Given a set of rules, we are finished when all the \textit{interesting} rules are \textit{reduced}. We can proceed one step by taking a rule that is both \textit{interesting} and \textit{reducible} and running the deferred function on it. If there are no rules that are both \textit{interesting} and \textit{reducible} then we are stuck, and the build system has a logical inconsistency, either because there is no rule to build something, or the build rules form a cycle.
+Given a set of rules, we are finished when all the \textit{required} rules are \textit{results}. We can proceed one step by taking a rule that is both \textit{required} and \textit{reducible} and running the deferred function on it (\textit{reducing} it). If there are no rules that are both \textit{required} and \textit{reducible} then we are stuck, and the build system has a logical inconsistency, either because there is no rule to build something, or the build rules form a cycle.
 
-Note that we cannot know if the build system is consistent until it has completed. In particular, there are two ways for a build system to loop. Most obviously, an \textit{interesting} and \textit{reducible} rule could have a deferred action that never terminates. Alternatively, such a rule could immediately produce the same dependencies as previously, without making progress. We assume that each rule is structured in a way that there are a finite number of steps, and each step takes a finite amount of time (in practice, it is hard to write a rule that does not obey this property).
+Note that we cannot know if the build system is consistent until it has completed. In particular, there are two ways for a build system to loop. Most obviously, an \textit{required} and \textit{reducible} rule could have a deferred action that never terminates. Alternatively, such a rule could immediately produce the same dependencies as previously, without making progress. We assume that each rule is structured in a way that there are a finite number of steps, and each step takes a finite amount of time (in practice, it is hard to write a rule that does not obey this property).
+
+\subsection{Cached Shake}
+\label{sec:theory_cached}
+
+\make{} does something really easy - it just looks at the rules and uses an ordering on the values. We don't want to do an ordering on the value (just because you modify a dependent file, doesn't mean it doesn't need rebuilding). We therefore imagine we have run a Shake execution, and recorded everything that happened. In particular, we have:
+
+\begin{code}
+type History = Map Key ([(Key, Value)], Value)
+\end{code}
+
+This says that last time round |Key| depended on the values |[(Key, Value)]| -- so what it depended on and what those things were equal to, and produced the second component |Value|.
+
+We can use this cache to optimise. If a rule has never been \textit{reduced}, and all it's previous dependents are \textit{results}, and they all the the identical values to last time, we can skip running the rule and immediately reduce it to it's previous value. In order to get minimal rebuilding we would have to prefer reducing with the cache in all circumstances.
+
+The key thing is that things in our cache are duplicated in the environment. For example, if we are recording time stamps of files, then the real file may now have a different timestamp. Therefore, we also must check that the value of the thing on disk is consistent. When reading the timestamp of an on-disk file, there three state -- it has a value, which can be determined, it lacks a value because it does not exist or is missing (the thing should be rebuild), it never exists and thus lacks a value and is unapplicable (the thing should never be rebuilt). If the value has changed, or is missing, then we don't use the cache, but rerun the rule.
+
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -228,7 +242,7 @@ data Rules a = Ellipses
 data Make a = Ellipses
     deriving (Monad, LiftIO)
 
-runRules :: ShakeOptions -> Rules () -> IO ()
+run :: ShakeOptions -> Rules () -> IO ()
 
 class (
     Show key, Typeable key, Eq key, Ord key, Hashable key, Binary key,
@@ -245,10 +259,8 @@ defaultRule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
 
 rule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
 
-run :: Rule key value => List alpha key -> Make (List alpha value)
-run1 :: Rule key value => key -> Make value
-
-uncached :: Make ()
+apply :: Rule key value => List alpha key -> Make (List alpha value)
+apply1 :: Rule key value => key -> Make value
 \end{code}
 \caption{Primitive operations in Shake}
 \label{fig:shake_core}
@@ -275,8 +287,6 @@ The |run| action looks for a matching |rule| with the same type. Since this invo
 
 We drive the code with the |shake| function, which takes an initial parameter of the options to control Shake. Typical options include which file to store the cached versions in (|shakeDatabase|), and the number of processors to use (|shakeParallelism|). These options are also used to select which mode to run Shake in, as described in \S\ref{sec:tools}.
 
-Some functions should never be cached. As an example, functions that read from the file system in an untracked way -- such as getting the directory listing. Just because a previous run of the system detected that the directory contents was one way, we should recheck. The |uncached| function models this (the |uncached| function can be implemented in terms of |rule| and |run| by faking an incorrect instance definition, but by moving it into the core we get can optimise it to not store the cache, rather than simply storing and invaliding the cache).
-
 The |Rule| class has two methods. One let's us associate a default rule. If no other rule matches we use this one. This allows us to use |newtype|'s to insert rules into the system.
 
 We would like to move |defaultRule| into the type class |Rule|, but alas that breaks because of serialisation of existentials. See \S? for full details.
@@ -287,12 +297,11 @@ By keeping the core of Shake small, and defining lots of things on top, we keep 
 
 \begin{code}
 data Ls = Ls FilePath
-instance Rule Ls [FilePath]
+instance Rule Ls [FilePath] where
+    externalValue (Ls x) = fmap Just $ getDirectoryContents x
 
 lsRule :: Rules ()
-lsRule = defaultRule $ \(Ls x) ->
-    uncached
-    getDirectoryContents x
+lsRule = rule $ \(Ls x) -> liftIO $ getDirectoryContents x
 
 ls :: FilePath -> Make [FilePath]
 ls = run1 . Ls
