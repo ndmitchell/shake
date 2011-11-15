@@ -51,7 +51,7 @@
 \end{comment}
 
 \begin{abstract}
-Build tools, such as \make{}, are typically used for compiling source code into executables. However, most build tools fail to properly deal with generated source files, especially when the dependencies of the generated files can only be determined after the file has been generated. In many large software systems generated files are common, resulting in awkward hacks to paper over build tool inadequacies. We describe how to generalise build tools to deal properly with generated files. We have implemented our ideas as the Haskell library Shake. Shake has been used by Standard Chartered for the last three years as the basis for a complex build system involving millions of lines of code in many languages.
+Build tools, such as \make{}, are typically used for compiling source code into executables. Unfortunately, most build tools fail to properly deal with generated source files, especially when the dependencies of those generated files can only be determined after the files have been generated. In many large software systems generated files are common, resulting in awkward hacks to paper over build tool inadequacies. We describe how to generalise build tools to deal properly with generated files. We have implemented our ideas as the Haskell library Shake, which has been used by Standard Chartered for the last three years as the basis for a complex build system involving millions of lines of code in many languages.
 \end{abstract}
 
 \category{D.3}{Software}{Programming Languages}
@@ -72,25 +72,23 @@ A build tool, such as \make{}, takes a set of input files, plus some rules, and 
     {-"\textsf{tar -cf result.tar a.txt b.txt}"-}
 \end{code}
 
-\noindent This rule builds the tar archive file \file{result.tar} from the inputs \file{a.txt} and \file{b.txt}. Whenever \file{a.txt} or \file{b.txt} changes \file{result.tar} will be regenerated.
+\noindent This rule builds the tar archive \file{result.tar} from the inputs \file{a.txt} and \file{b.txt}. Whenever \file{a.txt} or \file{b.txt} changes \file{result.tar} will be regenerated.
 
-What if we want to build the file \file{result.tar} from the list of files in \file{result.files}? \make{} offers no easy way to express this pattern (there are workarounds, discussed in \S\ref{sec:make_hacks}, but none are pleasant or effective). However, using the build tool we develop in this paper, we can write:
+What if we want to build \file{result.tar} from the list of files in \file{list.txt}? \make{} offers no easy way to express this pattern (there are workarounds, discussed in \S\ref{sec:make_hacks}, but none are pleasant or effective). However, using the build tool we develop in this paper, we can write:
 
 \begin{code}
 "result.tar" *> \_ -> do
-    need ["result.files"]
-    contents <- readFileLines "result.files"
+    need ["list.txt"]
+    contents <- liftM lines $ readFile "list.txt"
     need contents
     system $ ["tar","-cf","result.tar"] ++ contents
 \end{code}
 
-This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{result.files}. We read \file{result.files}, and store each line in |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If the file \file{results.files} changes, or any of the files listed by \file{results.files} change, then \file{result.tar} will be rebuilt.
+This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read \file{list.txt}, and store each line in |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
 
-The key difference from \make{} (and nearly all other build tools) is that rather than specifying the dependencies of a file \textit{in advance}, we allow further dependencies to be specified \textit{after} using previous dependencies. This difference is crucial to properly handle generated files.
+The key difference from \make{} (and nearly all other build tools) is that rather than specifying the dependencies of a rule \textit{in advance}, we allow further dependencies to be specified \textit{after} using previous dependencies. This difference is crucial to properly handle generated files.
 
-In addition, we also deal with multiple things, way more than just files. Even though we now deal with more than files, this helps with rules that depend on static configuration (\S?), directory contents (\S?), rules that generate multiple results (\S?) and other things. The power of multiple types really keeps the core simple.
-
-We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake properly handles generated files, as well as the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow build system authors the full power of abstraction, using Haskell features such as modules/functions.
+We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake properly handles generated files and includes the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow rules to be written using the full power of Haskell, including the use of modules and functions to properly structure large systems.
 
 \subsection{Contributions}
 
@@ -98,37 +96,48 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 \item We describe the theory underlying \make{} (\S\ref{sec:theory_make}), and how to revise this theory to properly handle generated files (\S\ref{sec:theory_shake}).
 \item We describe how to extend our theory with a cache, to enable minimal rebuilds (\S\ref{sec:theory_shake_cache}).
 \item We describe how to implement our build tool in Haskell, including how to present the underlying theory in a way that is practically usable (\S\ref{sec:user_view}), and how to implement it efficiently (\S\ref{sec:developer_view}). While Haskell is not essential to implement our build tool, it offers a number of advantages -- primarily making IO effects explicit and providing nice syntactic sugar.
-\item We describe how additional features can be added to our build tool, taking inspiration from from compilers. We describe how to implement a Lint tool (checking all dependencies are present and the system will perform the same in parallel as in serial), a profiling tool (which rules take most time) and an analysis tool (which input file caused a rule to fire). Many of these features are directly driven by the theory.
-\item We have implemented a large build system, building more than a million lines of code, producing lots of objects, multiple languages and thousands of lines of build code. We originally implemented this system in \make{}, but failed, so switched. We compare our build systems, and also give a number of guidelines to follow when using Shake.
+\item We describe how additional features can be added to our build tool, including a Lint tool (\S?), a profiling tool (\S?) and a dependency analysis tool (\S?).
+\item We allow rule dependencies and targets to be arbitrary values. While we can represent files (\S?), we are also able to represent static configuration information (\S?), the list of files in a directory (\S?) and commands that produce multiple results (\S?).
+\item We have implemented a large build system using Shake (\S?). The build system is 9000 of lines of Haskell, building over a million lines of source code and over a million lines of generated code, written in many programming languages. We originally implemented this build system using \make{}, but the result was slow to run, hard to maintain, and frequently caused spurious compile failures. Since using Shake, our build system has ceased to be a problem.
+\item We give a number of guidelines to follow when using Shake, based on our experiences (\S?).
 \end{itemize}
 
 
 \section{Theory}
 \label{sec:theory}
 
-In this section we first recap roughly how \make{} works, then show how Shake works. We show that \make{} has some theoretical limitations, which we resolve. In \S\ref{sec:user_view} we show how we can implement these ideas in a library.
+In this section we first describe the underlying basis of \make{}, then the underlying basis of our build system. Finally, we describe how to support minimal rebuilds in Shake. In \S\ref{sec:user_view} we show how we can implement these ideas in a library.
 
 \subsection{Theory of Make}
 \label{sec:theory_make}
 
-We deliberately abstract away the entire idea of files. While \make{} is heavily file based, that is not an intrinsic property of the theory behind \make{}. We use |Key| for things that can be inputs or output (think file names) and |Value| for the value associated with the |Key| (think file contents).
-
-We can model \make{} as:
+While the \make{} tool is heavily file based, this is not an essential property of the ideas behind \make{}. We use the type |Key| for things that can be results or dependencies (i.e. file names) and the type |Value| for the value associated with a |Key| (i.e.  file contents). Using this abstraction, we can model \make{} as:
 
 \begin{code}
 data Rule =
     {depends :: List alpha Key
     ,creates :: Key
-    ,rule :: List alpha Value -> Value
+    ,action :: List alpha Value -> Value
     }
 
-make :: Set Rule -> List alpha Key -> List alpha Value
-make rules xs = ellipses
+make :: Set Rule -> Key -> Value
 \end{code}
 
-We can model \make{} as a function that takes a (possibly infinite) set of rules, a list of what we need to build, and builds it. We use |List alpha bullet| to denote a list which must have length |alpha|. In |make|, the number of values generated must correspond to the number of keys passed in (and in fact, each rule must be the result). A rule can be modelled as the things it depends on, the thing it creates, and the rule that takes the depended keys and produces the result keys.
+The |make| function takes a (possibly infinite) set of rules, the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key|s it |depends| on, the |Key| it |creates|, and the |action| that takes the depended upon |Value|s and produces the result |Value|. We use |List alpha bullet| to denote a list which must have length |alpha|, requiring that the |depends| list and the list passed to |action| are equal in length. We say a |Rule| is associated with a |Key| if it has that |Key| as its |creates| field.
 
-The correctness condition for a set of rules is as follows. Infinite set, but their creates fields must not overlap. A rule is \textit{necessary} iff it is either mentioned by the input list, or is a dependency of a rule that satisfies the output list. The \textit{necessary} rules must be finite, and you can topologically sort their |creates|.
+While \make{} allows specifying multiple targets (i.e. a list of |Key|s to build), we can encode multiple targets by creating a distinguished rule that depends on all the targets and whose action returns all their values, and then require building just that rule.
+
+For a call to |make| to be valid, given a set of rules named |rs| and a |Key| named |target|, we require:
+
+\begin{description}
+\item [No duplicate rules] No |Key| may have two associated rules.
+\item [No missing rules] Every item in a |depends| must have an associated rule.
+\item [Root rule] There must be a rule associated with the target.
+\item [Finite] There must be a finite number of rules reachable from the target following the |depends| field to the associated rules.
+\item [Acyclic] No key may be created by a rule, and also in either it's dependencies, or it's childrens dependencies etc.
+\end{description}
+
+Such a list can be easily computed. There are many such lists, and in fact the minimum structure is a graph, which is how \make{} actually works. The graph allows for more parallelism.
 
 \subsection{Theory of Shake}
 \label{sec:theory_shake}
@@ -141,10 +150,10 @@ data Rule =
     ,rule :: Result
     }
 
-data Result  =  Defer (List alpha Key) (List alpha Value -> Result)
+data Result  =  Defer Key (Value -> Result)
              |  Result Value
 
-shake :: RuleSet -> List alpha Key -> List alpha Value
+shake :: RuleSet -> Key -> Value
 shake rules xs = ellipses
 \end{code}
 
