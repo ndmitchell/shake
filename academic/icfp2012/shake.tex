@@ -19,6 +19,7 @@
 %format `replaceExtension` = "\backtick{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
 %format context = "\Keyword{context}"
+%format dependsS = "\Varid{depends^{*}}"
 
 
 \newcommand{\file}{\textsf}
@@ -106,38 +107,42 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 \section{Theory}
 \label{sec:theory}
 
-In this section we first describe the underlying basis of \make{}, then the underlying basis of our build system. Finally, we describe how to support minimal rebuilds in Shake. In \S\ref{sec:user_view} we show how we can implement these ideas in a library.
+In this section we describe the underlying basis of \make{}, then the underlying basis of our build system, named Shake. Finally, we describe how to support minimal rebuilds in Shake. In \S\ref{sec:user_view} we show how to implement these ideas in a usable tool.
 
 \subsection{Theory of Make}
 \label{sec:theory_make}
 
-While the \make{} tool is heavily file based, this is not an essential property of the ideas behind \make{}. We use the type |Key| for things that can be results or dependencies (i.e. file names) and the type |Value| for the value associated with a |Key| (i.e.  file contents). Using this abstraction, we can model \make{} as:
+While the \make{} tool is heavily file based, that is not an essential property of the ideas behind \make{}. We use the type |Key| for things that can be created or are dependencies (i.e. file names) and the type |Value| for the values associated with a |Key| (i.e.  file contents). Using this abstraction, we can model \make{} as:
 
 \begin{code}
 data Rule =
-    {depends :: List alpha Key
-    ,creates :: Key
+    {creates :: Key
+    ,depends :: List alpha Key
     ,action :: List alpha Value -> Value
     }
 
 make :: Set Rule -> Key -> Value
 \end{code}
 
-The |make| function takes a (possibly infinite) set of rules, the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key|s it |depends| on, the |Key| it |creates|, and the |action| that takes the depended upon |Value|s and produces the result |Value|. We use |List alpha bullet| to denote a list which must have length |alpha|, requiring that the |depends| list and the list passed to |action| are equal in length. We say a |Rule| is associated with a |Key| if it has that |Key| as its |creates| field.
+The |make| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key| it |creates|, the |Key|s it |depends| on, and the |action| that takes the depended upon |Value|s and produces the result |Value|. We use |List alpha bullet| to denote a list which must have length |alpha|, requiring that the |depends| list and the list passed to |action| are equal in length.
 
-While \make{} allows specifying multiple targets (i.e. a list of |Key|s to build), we can encode multiple targets by creating a distinguished rule that depends on all the targets and whose action returns all their values, and then require building just that rule.
+We restrict our model to only building one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that rule the target.
 
-For a call to |make| to be valid, given a set of rules named |rs| and a |Key| named |target|, we require:
+\subsubsection{Correctness}
 
-\begin{description}
-\item [No duplicate rules] No |Key| may have two associated rules.
-\item [No missing rules] Every item in a |depends| must have an associated rule.
-\item [Root rule] There must be a rule associated with the target.
-\item [Finite] There must be a finite number of rules reachable from the target following the |depends| field to the associated rules.
-\item [Acyclic] No key may be created by a rule, and also in either it's dependencies, or it's childrens dependencies etc.
-\end{description}
+We say a |Rule| is associated with a |Key| if it has that |Key| as its |creates| field. Given a |Rule| |r| we can define |dependsS r|, the complete set of |Key|s this rule requires to run, including those rules required by rules it requires. We can compute |dependsS r| as the set that is the union of |depends r| and |dependsS| on all the rules associated to the keys.
 
-Such a list can be easily computed. There are many such lists, and in fact the minimum structure is a graph, which is how \make{} actually works. The graph allows for more parallelism.
+For a call to |make| to be valid, given a set of rules and a target, we require:
+
+\begin{enumerate}
+\item \textit{No duplicate rules} - no |Key| may have two associated rules.
+\item \textit{No missing rules} - every item in a |depends| list must have an associated rule.
+\item \textit{Target rule} - there must be a rule associated with the target.
+\item \textit{Finite} - for all rules, |dependsS r| must be finite.
+\item \textit{Acyclic} - for all rules, |dependsS r| must not contain |creates r|.
+\end{enumerate}
+
+\noindent Given these conditions, there exists a finite list of |action|s that when run in order produces the result.
 
 \subsection{Theory of Shake}
 \label{sec:theory_shake}
@@ -147,25 +152,29 @@ Using the same terminology from the previous section, we can model our build too
 \begin{code}
 data Rule =
     {creates :: Key
-    ,rule :: Result
+    ,action :: Action
     }
 
-data Result  =  Defer Key (Value -> Result)
+data Action  =  Depends Key (Value -> Action)
              |  Result Value
 
-shake :: RuleSet -> Key -> Value
+shake :: Set Rule -> Key -> Value
 shake rules xs = ellipses
 \end{code}
 
-The big enhancement is the introduction of dynamic dependencies. A rule can dynamically, based on the values of dependencies, add additional dependencies. We model dynamic dependencies with the |Result_alpha| type. You can think of this type as when run returns either a list of dependencies, and blocks until those dependencies are satisfied, or returns the resulting values.
+The |shake| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Result| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and provides a new |Action|.
+
+The big difference from |make| is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, add additional dependencies.
 
 \subsubsection{Correctness}
 
-A system is correct if everything falls out. There must be a partial ordering on the |Key|'s, such that everything gets built in the right order. This property cannot be checked statically, since dependencies can be arbitrarily generated at runtime. A system is valid if it can be run to produce the outputs. If there is an ordering, the following algorithm will succeed.
+A call to |shake| is correct if the |Value| can be built from the target |Key|. Unlike |make|, we cannot check this property before running any |action|s, since new dependencies can be added by running an |action|. Like |make|, we require that each |Key| is associated with exactly one |Rule|, we also classify rules:
+
+At any point there is exactly one rule that can be reduced and must be!
 
 \begin{itemize}
-\item \textit{Result} rules are those whose |rule| is in the |Result| state.
-\item \textit{Reducible} rules are those which are not \textit{results}, but whose immediate dependencies are all \textit{results}.
+\item \textit{Result} rules are those whose |action| is a |Result|.
+\item \textit{Reducible} rules are those which are not \textit{results}, but where the immediate dependencies are all \textit{results}.
 \item \textit{Required} rules are those which are not \textit{results}, but which create something in the set of output keys, or who create something that a \textit{required} rule has in it's |Defer| list. We can guarantee that all \textit{required} rules must be evaluated for the build system to finish.
 \end{itemize}
 
