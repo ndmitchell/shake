@@ -19,7 +19,7 @@
 %format `replaceExtension` = "\backtick{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
 %format context = "\Keyword{context}"
-%format dependsS = "\Varid{depends^{*}}"
+%format dependsS = "\Varid{depends\!^{*}}"
 
 
 \newcommand{\file}{\textsf}
@@ -107,7 +107,7 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 \section{Theory}
 \label{sec:theory}
 
-In this section we describe the underlying basis of \make{}, then the underlying basis of our build system, named Shake. Finally, we describe how to support minimal rebuilds in Shake. In \S\ref{sec:user_view} we show how to implement these ideas in a usable tool.
+In this section we describe the theory that underpins of \make{}, then the underlying theory of our build system, named Shake. We then describe how to support minimal rebuilds in both theories. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to implement these ideas in a usable tool.
 
 \subsection{Theory of Make}
 \label{sec:theory_make}
@@ -116,9 +116,9 @@ While the \make{} tool is heavily file based, that is not an essential property 
 
 \begin{code}
 data Rule =
-    {creates :: Key
-    ,depends :: List alpha Key
-    ,action :: List alpha Value -> Value
+    {creates  :: Key
+    ,depends  :: List alpha Key
+    ,action   :: List alpha Value -> Value
     }
 
 make :: Set Rule -> Key -> Value
@@ -126,11 +126,11 @@ make :: Set Rule -> Key -> Value
 
 The |make| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key| it |creates|, the |Key|s it |depends| on, and the |action| that takes the depended upon |Value|s and produces the result |Value|. We use |List alpha bullet| to denote a list which must have length |alpha|, requiring that the |depends| list and the list passed to |action| are equal in length.
 
-We restrict our model to only building one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that rule the target.
+We restrict our model to only building one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that rule the single target.
 
 \subsubsection{Correctness}
 
-We say a |Rule| is associated with a |Key| if it has that |Key| as its |creates| field. Given a |Rule| |r| we can define |dependsS r|, the complete set of |Key|s this rule requires to run, including those rules required by rules it requires. We can compute |dependsS r| as the set that is the union of |depends r| and |dependsS| on all the rules associated to the keys.
+We say a |Rule| is associated with a |Key| if it has that |Key| as its |creates| field. Given a |Rule| |r| we can define |dependsS r| as all the |Key|s this rule requires to run, including the dependencies of its dependencies. We can compute |dependsS r| as the union of |depends r| and |dependsS| on all the rules associated to |depends r|.
 
 For a call to |make| to be valid, given a set of rules and a target, we require:
 
@@ -142,7 +142,7 @@ For a call to |make| to be valid, given a set of rules and a target, we require:
 \item \textit{Acyclic} - for all rules, |dependsS r| must not contain |creates r|.
 \end{enumerate}
 
-\noindent Given these conditions, there exists a finite list of |action|s that when run in order produces the result.
+\noindent Given a valid call to |make|, there exists a finite list of |action|s that when run in order produces the result. Provided each |action| terminates, the result can be obtained.
 
 \subsection{Theory of Shake}
 \label{sec:theory_shake}
@@ -151,54 +151,132 @@ Using the same terminology from the previous section, we can model our build too
 
 \begin{code}
 data Rule =
-    {creates :: Key
-    ,action :: Action
+    {creates  :: Key
+    ,action   :: Action
     }
 
 data Action  =  Depends Key (Value -> Action)
              |  Result Value
 
 shake :: Set Rule -> Key -> Value
-shake rules xs = ellipses
 \end{code}
 
 The |shake| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Result| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and provides a new |Action|.
 
-The big difference from |make| is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, add additional dependencies.
+The big difference from |make| is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, require additional dependencies. We can easily translate a |make| |Rule| to a |shake| |Rule|, but the reverse is not true -- |shake| is strictly more powerful than |make|.
 
 \subsubsection{Correctness}
 
-A call to |shake| is correct if the |Value| can be built from the target |Key|. Unlike |make|, we cannot check this property before running any |action|s, since new dependencies can be added by running an |action|. Like |make|, we require that each |Key| is associated with exactly one |Rule|, we also classify rules:
-
-At any point there is exactly one rule that can be reduced and must be!
-
-\begin{itemize}
-\item \textit{Result} rules are those whose |action| is a |Result|.
-\item \textit{Reducible} rules are those which are not \textit{results}, but where the immediate dependencies are all \textit{results}.
-\item \textit{Required} rules are those which are not \textit{results}, but which create something in the set of output keys, or who create something that a \textit{required} rule has in it's |Defer| list. We can guarantee that all \textit{required} rules must be evaluated for the build system to finish.
-\end{itemize}
-
-Like in \make{}, the rules |creates| must all be distinct.
-
-Given a set of rules, we are finished when all the \textit{required} rules are \textit{results}. We can proceed one step by taking a rule that is both \textit{required} and \textit{reducible} and running the deferred function on it (\textit{reducing} it). If there are no rules that are both \textit{required} and \textit{reducible} then we are stuck, and the build system has a logical inconsistency, either because there is no rule to build something, or the build rules form a cycle.
-
-Note that we cannot know if the build system is consistent until it has completed. In particular, there are two ways for a build system to loop. Most obviously, an \textit{required} and \textit{reducible} rule could have a deferred action that never terminates. Alternatively, such a rule could immediately produce the same dependencies as previously, without making progress. We assume that each rule is structured in a way that there are a finite number of steps, and each step takes a finite amount of time (in practice, it is hard to write a rule that does not obey this property).
-
-\subsection{Cached Shake}
-\label{sec:theory_cached}
-
-\make{} does something really easy - it just looks at the rules and uses an ordering on the values. We don't want to do an ordering on the value (just because you modify a dependent file, doesn't mean it doesn't need rebuilding). We therefore imagine we have run a Shake execution, and recorded everything that happened. In particular, we have:
+A call to |shake| is correct if the |Value| associated with the target |Key| can be built. Unlike |make|, we cannot check this property before running any |action|s, since new dependencies can be added by running an |action|. Like |make|, we require that each |Key| is associated with exactly one |Rule|. Given a function which finds the rule associated with a key (|find|), we can run a build system as:
 
 \begin{code}
-type History = Map Key ([(Key, Value)], Value)
+shake rules target = fromKey target
+    where
+        fromKey k = fromAction (action (find rules k))
+
+        fromAction (Result val) = val
+        fromAction (Depends dep act) =
+            fromAction (act (fromKey dep))
 \end{code}
 
-This says that last time round |Key| depended on the values |[(Key, Value)]| -- so what it depended on and what those things were equal to, and produced the second component |Value|.
+To reduce a |Key|, we find its |Rule| and reduce its |Action|. To reduce an |Action|, if it is a |Result| we return the value, if it is a |Depends| we reduce the dependency then reduce the result of the action. Note that in this simple implementation every time a |Key| is required we compute its |Value| from scratch -- an action may be run many times.
 
-We can use this cache to optimise. If a rule has never been \textit{reduced}, and all it's previous dependents are \textit{results}, and they all the the identical values to last time, we can skip running the rule and immediately reduce it to it's previous value. In order to get minimal rebuilding we would have to prefer reducing with the cache in all circumstances.
+A call to |shake| is correct if it terminates. We can guarantee termination if:
 
-The key thing is that things in our cache are duplicated in the environment. For example, if we are recording time stamps of files, then the real file may now have a different timestamp. Therefore, we also must check that the value of the thing on disk is consistent. When reading the timestamp of an on-disk file, there three state -- it has a value, which can be determined, it lacks a value because it does not exist or is missing (the thing should be rebuild), it never exists and thus lacks a value and is unapplicable (the thing should never be rebuilt). If the value has changed, or is missing, then we don't use the cache, but rerun the rule.
+\begin{enumerate}
+\item We require that every |action| function terminates.
+\item To ensure that the recursion in |fromAction| terminates, we require that |Rule| produces a finite number of |Depends| constructors before producing a |Result|.
+\item To ensure that the recursion in |fromKey| terminates, we require that no |Rule| depends on its |create| value, either directly or through a sequence of other rules.
+\item To ensure that the mutual recursion between |fromKey| and |fromAction| terminates, we require that there are a finite number of |Key| values required to build the |target|.
+\end{enumerate}
 
+%
+% \begin{itemize}
+% \item \textit{Result} rules are those whose |action| is a |Result|.
+% \item \textit{Reducible} rules are those which are not \textit{results}, but where the immediate dependencies are all \textit{results}.
+% \item \textit{Required} rules are those which are not \textit{results}, but which create something in the set of output keys, or who create something that a \textit{required} rule has in it's |Defer| list. We can guarantee that all \textit{required} rules must be evaluated for the build system to finish.
+% \end{itemize}
+%
+% Like in \make{}, the rules |creates| must all be distinct.
+%
+% Given a set of rules, we are finished when all the \textit{required} rules are \textit{results}. We can proceed one step by taking a rule that is both \textit{required} and \textit{reducible} and running the deferred function on it (\textit{reducing} it). If there are no rules that are both \textit{required} and \textit{reducible} then we are stuck, and the build system has a logical inconsistency, either because there is no rule to build something, or the build rules form a cycle.
+%
+% Note that we cannot know if the build system is consistent until it has completed. In particular, there are two ways for a build system to loop. Most obviously, an \textit{required} and \textit{reducible} rule could have a deferred action that never terminates. Alternatively, such a rule could immediately produce the same dependencies as previously, without making progress. We assume that each rule is structured in a way that there are a finite number of steps, and each step takes a finite amount of time (in practice, it is hard to write a rule that does not obey this property).
+%
+
+\subsection{Minimal Rebuilds in Make}
+\label{sec:cached_make}
+
+One of the important properties of \make{} is minimal rebuilds. In any execution of |make|, each |action| will be run at most once. If the last time the action was run it had the same inputs, the action will not be repeated. The \make{} tool uses file modification times, and assumes a target is valid if all its dependencies have older modification times. We can model this behaviour with a function that looks up the modification times:
+
+\begin{code}
+history :: Key -> Maybe Value
+\end{code}
+
+If we restrict ourselves to |Key|s which are files, and |Value|s which are modification times (as \make{} does), then we can write a function |history| which returns |Just| the modification time, or |Nothing| to indicate the file does not exist (and thus has never been built). An |Rule|s |action| can be skipped if the |creates| file exists, and all the |depends| times are older. Before running a rules action, all its dependencies must already have been created, and thus history must always return |Just|. We can check if a Rule is valid with respect to the history with:
+
+\begin{code}
+validHistory :: Rule -> Bool
+validHistory r = case history (creates r) of
+    Nothing -> False
+    Just t -> all ((< t) . fromJust . history) (depends r)
+\end{code}
+
+This scheme is limited to files, for two reasons:
+
+\begin{enumerate}
+\item Our |history| function relies on being able to access the history for a previous run which is stored on disk. We can eliminate this problem by storing the information in a database as we are executing, and then reloading it from disk on each execution.
+\item Our |validHistory| function relies on a |Value| which is monotonically increasing (e.g. time). We can eliminate this problem if whenever we complete an action we give it a real timestamp.
+\end{enumerate}
+
+We can make these changes to produce:
+
+\begin{code}
+history :: Key -> Maybe (Time, Value)
+
+validHistory r = case history (creates r) of
+    Nothing -> False
+    Just (t, v) -> all ((< t) . fst . fromJust . history) (depends r)
+\end{code}
+
+However, this scheme is incorrect for |Value|s that are stored by both the file system \textit{and} in our database. Consider a file, which has a file system modification time, and also has a |Value| in our database. If the file is edited externally, then the |Value| in our database will be incorrect. We can solve this problem by also checking that, where the |Value| is stored externally, it is still consistent:
+
+\begin{code}
+data Stored = NeverStored | NotStored | Stored Value
+
+stored :: Key -> Stored
+
+validStored :: Rule -> Bool
+validStored r = case stored (creates r) of
+    NeverStored -> True
+    NotStored -> False
+    Stored value -> history (creates r) == Just value
+\end{code}
+
+When attempting to read a value stored externally there are three possible states. Either the value is never stored, in which case it exists only in our database, and is always consistent. Or the value is sometimes stored, but not currently available externally -- such as a file that does not exist on disk, in which case the action must be rerun. Or the value is stored, and has an external value -- in which case the value is valid if it matches what we have stored. We can avoid running the action associated with a rule if it is valid with respect to the stored values, and with respect to the history.
+
+In order to remain consistent throughout the execution, we require that all |stored| values do \textit{not} change during the execution, other than as a result of running an |action| which |creates| it. The \make{} tool requires a similar property or it becomes inconsistent.
+
+While the timestamp approach works reasonably for \make{}, it can fail the system clock changes, or if a file is modified but has its value set to an older timestamp -- such as when extracting a backup which resets the timestamp. Instead of relying on the system time, we can instead store a counter in our database, and increment it every time we require a time value, thus guaranteeing that our time is correctly ordered.
+
+After running an action, we typically store a new time in the |history|. However, if the result of the |action| has not changed we \textit{do not} update the time. This allows any files that depend on this file to avoid recalculation, which can significantly reduce the number of actions that need to be run.
+
+\subsection{Minimal Rebuilds in Shake}
+\label{sec:cached_shake}
+
+Our original algorithm calculated every file repeatedly. We can easily add a cache mapping |Key| to |Value| and avoid reducing a rule that has already been reduced in this execution.
+
+To obtain minimal rebuilds across executions we can use the same approach as described in the previous section. However, we cannot determine whether a |history| is valid based on the rule, as we do not have the |depends| available, and do not want to rerun the |action| just to get the dependencies. Therefore, we just store the dependencies alongside.
+
+\begin{code}
+history :: Key -> Maybe (Time, Value, [Key])
+validHistory r = case history (creates r) of
+    Nothing -> False
+    Just (t, v, deps) -> all ((< t) . fst3 . fromJust . history) deps
+        where fst3 (x,_,_) = x
+\end{code}
+
+We can reuse the |validStored| unmodified.
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -262,18 +340,26 @@ data Make a = Ellipses
 
 run :: ShakeOptions -> Rules () -> IO ()
 
+data Stored alpha
+    = NeverStored
+    | NotStored
+    | Stored alpha
+
 class (
-    Show key, Typeable key, Eq key, Ord key, Hashable key, Binary key,
-    Show value, Typeable value, Eq value, Ord value, Hashable value, Binary value
+    Show key, Show value,
+    Typeable key, Typeable value,
+    Hashable key, Hashable value,
+    Eq key, Eq value,
+    Binary key, Binary value
     ) => Rule key value where
-    externalValue :: key -> IO (Maybe value)
-    externalValue x = return Nothing
+    externalValue :: key -> IO (Stored value)
+    externalValue x = return NeverStored
 
 action :: Make a -> Rules ()
 
 -- accumulate the Rule instances from defaultRule and rule, and put them in]
 -- if no rules to build something then it's cache instance is dodgy anyway
-defaultRule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
+defaultRule :: Rule key value => (key -> Make value) -> Rules ()
 
 rule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
 
@@ -294,7 +380,6 @@ We have used context synonyms to indicate that every |Key| or |Value| type must 
 \item [Show] We require |Show| for debugging messages and logging.
 \item [Typeable] We allow multiple rule/run types in one build system, to distinguish them we require a |Typeable| constraint.
 \item [Eq] We require equality to match the values.
-\item [Ord] We require ordering so that given a set of values we can pick a minimum, useful when we produce multiple files.
 \item [Hashable] We require |Hashable| to accelerate searching.
 \item [Binary] We require |Binary| so we can cache the values between runs, to achieve minimal rebuilds.
 \end{description}
@@ -311,7 +396,7 @@ We would like to move |defaultRule| into the type class |Rule|, but alas that br
 
 By keeping the core of Shake small, and defining lots of things on top, we keep it simple.
 
-\subsubsection{Directory Listing}
+\subsection{Directory Listing}
 
 \begin{code}
 data Ls = Ls FilePath
@@ -319,15 +404,16 @@ instance Rule Ls [FilePath] where
     externalValue (Ls x) = fmap Just $ getDirectoryContents x
 
 lsRule :: Rules ()
-lsRule = rule $ \(Ls x) -> liftIO $ getDirectoryContents x
+lsRule = rule $ \(Ls x) -> do
+    liftIO $ getDirectoryContents x
 
 ls :: FilePath -> Make [FilePath]
 ls = run1 . Ls
 \end{code}
 
-We make the function as |uncached|, because even if we have run |ls| the previous time, it may have changed. Another way of implementing this would be to take the SHA1 of the entire file system, and say it depends on that -- but that isn't practical. We rely on explicit type signatures to ensure that |Ls| is always used with the correct type.
+We rely on explicit type signatures to ensure that |Ls| is always used with the correct type. Note that if a value changes we are likely to call |getDirectoryContents| twice in a row, once to invalidate the old value, and once to compute the new value. We can aleviate this problem with a single element cache (although in practice we find it not to be a problem, since the OS typically caches all the files anyway).
 
-\subsubsection{File Operations}
+\subsection{File Operations}
 
 \begin{code}
 newtype File = File FilePath
@@ -354,15 +440,19 @@ want xs = action $ need xs
 (?>) :: (FilePath -> Bool) -> (FilePath -> Make ()) -> Rules ()
 (?>) test act = rule $ \x -> if test x then Just act else Nothing
 
+(**>) :: [WildFilePath] -> (FilePath -> Make ()) -> Rule ()
+(**>) test act = (\x -> any (x ?=) test) ?> act
+
 (*>) :: WildFilePath -> (FilePath -> Make ()) -> Rule ()
 (*>) test act = (?= test) ?> act
 \end{code}
 
-We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or SHA1 in the value instead. We found in practice that Timestamp is faster (noticably so for large files) and it's actually quite nice to do a \prog{touch} to cause something to be rebuilt!
+We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or hash (e.g. SHA1) in the value instead. We found in practice that Timestamp is faster (noticably so for large files) and it's actually quite nice to do a \prog{touch} to cause something to be rebuilt!
 
-We define |create| which is capable of describing all types of file related rule. It automatically gets the modification times from the resulting files. Next down the level of power is |(?>)|, which tests if a file matches a function and is suitable for any rules that create a single function. Finally, we have |(*>)| which just allows wildcards, and is much like the rule in \make{}. In practice, we have found that |create| is exceptionally rare, while |(?>)| is used about 25\% of the time, while |(*>)| is by far the most common. In simpler build systems we suspect |(*>)| would probably be all that is required.
+We define |(?>)| which tests if a file matches a function and can describe all types of file related rule. It automatically gets the modification times from the resulting files and handles all the details. We also have |(*>)| which just allows wildcards, and is much like the rule in \make{}. We also have |(**>)| which takes a set of wildcards.
+In practice, we have found that |(?>)| is used about 5\% of the time, |(**>)| is used about 10\% and |(*>)| is used about 85\% of the time. In our experience, using |(?>)| is a sign that the build system is poorly designed (due to reverse compatibility constraints in our system), and should be rethought.
 
-\subsubsection{Operations}
+\subsection{Operations}
 
 We can layer on sugar like |readFileLines| quite easily. And also |readFile|, |system|, |mkdir|. In all cases, we try and emulate the \make{} behaviour of being more relaxed.
 
@@ -381,7 +471,7 @@ mkdir :: FilePath -> Make ()
 mkdir x = io $ createDirectoryRecursive True x
 \end{code}
 
-\subsubsection{Wrapping}
+\subsection{Wrapping}
 
 We can then defined:
 
@@ -434,14 +524,20 @@ Note that \make{} builds a graph, we can't do that. However, given the nature of
 \begin{code}
 type State = Map Key Result
 
-data Result  =  Doing
-             |  Done Value
-             |  Also Key
+data Result
+    = Building
+    | Built  Time Value
 \end{code}
 
-At every point we have a global |State| value, initially starting with an empty |Map|. When we try and build an action we add it to the |State| as |Doing|. When we have built all it's dependencies, and run it, we add it to the |State| as |Done|. If while running the build system we encounter a |Doing|, then we have a cycle where a |Key| depends on itself.
+At every point we have a global |State| value, initially starting with an empty |Map|. When we try and build an action we add it to the |State| as |Building|. When we have built all it's dependencies, and run it, we add it to the |State| as |Built|. If while running the build system we encounter a |Building|, then we have a cycle where a |Key| depends on itself.
 
 When building a rule that has multiple outputs we always store it by the minimum |Key| value, which makes it consistent. Anything else that is done is put on the map with an |Also| pointing at the original key.
+
+Our TimeStamp can just be the number of runs, which means we can use a 32bit Int with no practical chance of overflowing. If values are equal then that is still safe.
+
+\subsection{Error Messages}
+
+We track the stack, so on errors when can show it nicely. We also have a @--verbose@ option to show all system commands called. These are seriously helpful for debugging. Also, all calls to |system| are wrapped and throw an error including their command line.
 
 \subsection{Adding a Cache}
 \label{sec:theory_shake_cache}
@@ -453,14 +549,10 @@ We add code to save |Key|/|Value|, which is a pain with the existential, but pos
 Before running a rule, if we have something with an equal key
 
 \begin{code}
-data Val = Doing
-    | Done Value [[Key]] Version Bool
-
-
-data Status
-    = Unchecked -- loaded from the cache without checking, should be checked before using (old version number)
-    | Equal -- loaded from the cache, checked, and computed equal (keeps same version number)
-    | Different -- either was not cached, or different from the cache (different version numbers)
+data Result
+    = Building
+    | Built   Time Value [Key]
+    | Loaded  Time Value [Key]
 \end{code}
 
 When you compute something, if it existed and had the same version, and is identical, keep the same number. You are dirty if the version numbers of your keys do not match your version number. This allows multiple rebuilds to work properly. Also have a cache which means you and all your children have up to date versions. Do not save that boolean.
@@ -500,6 +592,19 @@ We also practically use a journal, so that hitting Ctrl+C doesn't break it. Do w
 \subsection{Parallelism}
 
 Just add a lock in the Doing, use a thread pool and you are done. We always fork off all the rules in parallel, and modify the table atomically, but when checking equality we only fork threads if there is something to do (otherwise you end up with a lot of very small actions - since most just compare equalities).
+
+\begin{code}
+data Result
+    = Building Lock
+    | Built   Time Value [[Key]]
+    | Loaded  Time Value [[Key]]
+\end{code}
+
+We can optimise by running the check in parallel, and we also need to put a global lock around the map. We need to store the keys as a list so that when we have to rebuild N keys that have changed we can ensure they are done in parallel too.
+
+\subsection{Cleaning}
+
+A standard feature of build systems is cleaning operations. We can rebuild everything by just deleting the cache. Also note that the cache may have garbage in -- things which are old, stale, and not useful. However, we don't make any attempt to delete them -- in practice wiping a rebuilding is sufficiently common. However, we could say that anything which has not been used gets cleared.
 
 \section{User Tools}
 \label{sec:tools}
@@ -562,6 +667,17 @@ Do not use ls over a universe you are changing. If you ls, it should be in the s
 Put all generated files somewhere entirely separate, such as dist or |_make|. Do not comingle them.
 
 Make sure you normalise all filepaths, we recommend making them all relative to the root, never use combinations of @.@ and @/@ or @\\@.
+
+We also have found that when you use |(?>)| you are probably going too complicated. As an example:
+
+\begin{code}
+(\x ->  obj "/Root/*/*.hs" ?== x &&
+        not ("Generated" `isInfixOf` x) &&
+        not ("Hs" `isPrefixOf` takeFileName x))
+    ?> ellipses
+\end{code}
+
+This rule seems like a complete hack to me -- these special cases are likely added based on corners that should have been removed.
 
 \subsection{Lots of things generate .o files}
 
