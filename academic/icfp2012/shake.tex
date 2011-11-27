@@ -340,10 +340,7 @@ data Make a = Ellipses
 
 run :: ShakeOptions -> Rules () -> IO ()
 
-data Stored alpha
-    = NeverStored
-    | NotStored
-    | Stored alpha
+data Stored alpha  =  NeverStored | NotStored | Stored alpha
 
 class (
     Show key, Show value,
@@ -524,9 +521,8 @@ Note that \make{} builds a graph, we can't do that. However, given the nature of
 \begin{code}
 type State = Map Key Result
 
-data Result
-    = Building
-    | Built  Time Value
+data Result  =  Building
+             |  Built Value
 \end{code}
 
 At every point we have a global |State| value, initially starting with an empty |Map|. When we try and build an action we add it to the |State| as |Building|. When we have built all it's dependencies, and run it, we add it to the |State| as |Built|. If while running the build system we encounter a |Building|, then we have a cycle where a |Key| depends on itself.
@@ -535,11 +531,7 @@ When building a rule that has multiple outputs we always store it by the minimum
 
 Our TimeStamp can just be the number of runs, which means we can use a 32bit Int with no practical chance of overflowing. If values are equal then that is still safe.
 
-\subsection{Error Messages}
-
-We track the stack, so on errors when can show it nicely. We also have a @--verbose@ option to show all system commands called. These are seriously helpful for debugging. Also, all calls to |system| are wrapped and throw an error including their command line.
-
-\subsection{Adding a Cache}
+\subsubsection{Adding a Cache}
 \label{sec:theory_shake_cache}
 
 The standard behaviour for Shake is then to add a cache to get minimal rebuilding. Given a set of Key/Value pairs from last time, and a history trace.
@@ -549,10 +541,9 @@ We add code to save |Key|/|Value|, which is a pain with the existential, but pos
 Before running a rule, if we have something with an equal key
 
 \begin{code}
-data Result
-    = Building
-    | Built   Time Value [Key]
-    | Loaded  Time Value [Key]
+data Result  =  Building
+             |  Built   Time Value [Key]
+             |  Loaded  Time Value [Key]
 \end{code}
 
 When you compute something, if it existed and had the same version, and is identical, keep the same number. You are dirty if the version numbers of your keys do not match your version number. This allows multiple rebuilds to work properly. Also have a cache which means you and all your children have up to date versions. Do not save that boolean.
@@ -589,7 +580,7 @@ rule = if has a value in the history, then need all the keys from last time. If 
 
 We also practically use a journal, so that hitting Ctrl+C doesn't break it. Do we need to remember if things are different/same when storing the cache?
 
-\subsection{Parallelism}
+\subsubsection{Parallelism}
 
 Just add a lock in the Doing, use a thread pool and you are done. We always fork off all the rules in parallel, and modify the table atomically, but when checking equality we only fork threads if there is something to do (otherwise you end up with a lot of very small actions - since most just compare equalities).
 
@@ -601,6 +592,10 @@ data Result
 \end{code}
 
 We can optimise by running the check in parallel, and we also need to put a global lock around the map. We need to store the keys as a list so that when we have to rebuild N keys that have changed we can ensure they are done in parallel too.
+
+\subsection{Error Messages}
+
+We track the stack, so on errors when can show it nicely. We also have a @--verbose@ option to show all system commands called. These are seriously helpful for debugging. Also, all calls to |system| are wrapped and throw an error including their command line.
 
 \subsection{Cleaning}
 
