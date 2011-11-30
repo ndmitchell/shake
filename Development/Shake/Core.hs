@@ -55,7 +55,7 @@ instance Monad Rules where
         where Rules v2 y1 y2 y3 = f v1
 
 
--- accumulate the Rule instances from defaultRule and rule, and put them in]
+-- accumulate the Rule instances from defaultRule and rule, and put them in
 -- if no rules to build something then it's cache instance is dodgy anyway
 defaultRule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
 defaultRule r = mempty{defaultRules=[ARule r]}
