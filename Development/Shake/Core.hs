@@ -74,10 +74,6 @@ action a = mempty{actions=[void a]}
 
 data Database = Database
 
-type Key = ()
-type Value = ()
-
-
 loadDatabase :: ShakeOptions -> Rules () -> IO State
 loadDatabase = error "load state"
 
