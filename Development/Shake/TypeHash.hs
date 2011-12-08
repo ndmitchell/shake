@@ -1,12 +1,12 @@
 {-# LANGUAGE CPP #-}
 
 {- |
-This module just contains the hash function on TypeRep. Ideally would be moved
-into Data.Hashable.
+This module just contains the hash function on TypeRep. In future versions
+of the hashable package it is available in Data.Hashable.
 -}
-module Development.Shake.TypeHash(
-    typeHash
-    ) where
+module Development.Shake.TypeHash() where
+
+import Data.Hashable
 
 #if __GLASGOW_HASKELL__ < 702
 
@@ -25,3 +25,6 @@ typeHash (TypeRep (Fingerprint x _) _ _) = fromIntegral x
 #endif
 
 typeHash :: TypeRep -> Int
+
+instance Hashable TypeRep where
+    hash = typeHash

@@ -4,7 +4,9 @@
 This module implements the Key/Value types, to abstract over hetrogenous data types.
 -}
 module Development.Shake.Value(
-    Key, Value, newKey, newValue, registerWitness
+    Value, newValue, fromValue, typeValue,
+    Key, newKey, fromKey, typeKey,
+    registerWitness
     ) where
 
 import Data.Binary
@@ -15,7 +17,7 @@ import Data.Bits
 import Data.IORef
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
-import Development.Shake.TypeHash
+import Development.Shake.TypeHash()
 import System.IO.Unsafe
 
 
@@ -24,21 +26,34 @@ import System.IO.Unsafe
 newtype Key = Key Value
     deriving (Eq,Show,Hashable,Binary)
 
-data Value = forall a . (Eq a, Ord a, Show a, Typeable a, Hashable a, Binary a) => Value a
+data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a) => Value a
 
 
-newKey :: (Eq a, Ord a, Show a, Typeable a, Hashable a, Binary a) => a -> Key
+newKey :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> Key
 newKey = Key . newValue
 
-newValue :: (Eq a, Ord a, Show a, Typeable a, Hashable a, Binary a) => a -> Value
+newValue :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> Value
 newValue = Value
+
+typeKey :: Key -> TypeRep
+typeKey (Key v) = typeValue v
+
+typeValue :: Value -> TypeRep
+typeValue (Value x) = typeOf x
+
+fromKey :: Typeable a => Key -> a
+fromKey (Key v) = fromValue v
+
+fromValue :: Typeable a => Value -> a
+fromValue (Value x) = fromMaybe (error msg) $ cast x
+    where msg = "Internal error in Shake.fromValue, bad cast"
 
 
 instance Show Value where
     show (Value a) = show a
 
 instance Hashable Value where
-    hash (Value a) = typeHash (typeOf a) `xor` hash a
+    hash (Value a) = hash (typeOf a) `xor` hash a
 
 instance Eq Value where
     Value a == Value b = case cast b of
@@ -47,7 +62,7 @@ instance Eq Value where
 
 instance Binary Value where
     put (Value x) = do
-        put (typeHash $ typeOf x)
+        put (hash $ typeOf x)
         put x
 
     get = do
@@ -61,8 +76,8 @@ instance Binary Value where
 witnesses :: IORef (Map.HashMap Int Value)
 witnesses = unsafePerformIO $ newIORef Map.empty
 
-registerWitness :: (Eq a, Ord a, Show a, Typeable a, Hashable a, Binary a) => a -> IO ()
-registerWitness x = modifyIORef witnesses $ Map.insert (typeHash $ typeOf x) (Value x)
+registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> IO ()
+registerWitness x = modifyIORef witnesses $ Map.insert (hash $ typeOf x) (Value x)
 
 findWitness :: Int -> IO Value
 findWitness i = do
