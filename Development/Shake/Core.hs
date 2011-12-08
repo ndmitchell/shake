@@ -63,8 +63,7 @@ ruleStored _ k v = unsafePerformIO $ validStored k v -- safe because of the inva
 data Rules a = Rules
     {value :: a -- not really used, other than for the Monad instance
     ,actions :: [Action ()]
-    ,rules :: [ARule]
-    ,defaultRules :: [ARule]
+    ,rules :: [(Int,ARule)] -- higher fst is higher priority
     }
 
 instance Monoid a => Monoid (Rules a) where
@@ -72,19 +71,19 @@ instance Monoid a => Monoid (Rules a) where
     mappend a b = (a >> b){value = value a `mappend` value b}
 
 instance Monad Rules where
-    return x = Rules x [] [] []
-    Rules v1 x1 x2 x3 >>= f = Rules v2 (x1++y1) (x2++y2) (x3++y3)
-        where Rules v2 y1 y2 y3 = f v1
+    return x = Rules x [] []
+    Rules v1 x1 x2 >>= f = Rules v2 (x1++y1) (x2++y2)
+        where Rules v2 y1 y2 = f v1
 
 
 -- accumulate the Rule instances from defaultRule and rule, and put them in
 -- if no rules to build something then it's cache instance is dodgy anyway
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-defaultRule r = mempty{defaultRules=[ARule r]}
+defaultRule r = mempty{rules=[(0,ARule r)]}
 
 
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-rule r = mempty{rules=[ARule r]}
+rule r = mempty{rules=[(1,ARule r)]}
 
 
 action :: Action a -> Rules ()
@@ -128,7 +127,7 @@ runShake ShakeOptions{..} rules = do
 
 registerWitnesses :: Rules () -> IO ()
 registerWitnesses Rules{..} =
-    forM_ (defaultRules ++ rules) $ \(ARule r) -> do
+    forM_ rules $ \(_, ARule r) -> do
         registerWitness $ ruleKey r
         registerWitness $ ruleValue r
 
@@ -141,7 +140,7 @@ createStored Rules{..} = \k v ->
     in (fromMaybe (error msg) $ Map.lookup (tk,tv) mp) k v
     where mp = Map.fromList
                    [ ((typeOf $ ruleKey r, typeOf $ ruleValue r), stored)
-                   | ARule r <- defaultRules ++ rules
+                   | (_,ARule r) <- rules
                    , let stored k v = ruleStored r (fromKey k) (fromValue v)]
 
 
