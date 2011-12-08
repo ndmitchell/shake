@@ -340,8 +340,6 @@ data Make a = Ellipses
 
 run :: ShakeOptions -> Rules () -> IO ()
 
-data Stored alpha  =  NeverStored | NotStored | Stored alpha
-
 class (
     Show key, Show value,
     Typeable key, Typeable value,
@@ -349,8 +347,8 @@ class (
     Eq key, Eq value,
     Binary key, Binary value
     ) => Rule key value where
-    externalValue :: key -> IO (Stored value)
-    externalValue x = return NeverStored
+    validStored :: key -> value -> IO Bool
+    validStored k v = return True
 
 action :: Make a -> Rules ()
 
@@ -519,9 +517,9 @@ Defining the Binary instance is far harder. Serialising a value is easy, but des
 Note that \make{} builds a graph, we can't do that. However, given the nature of the problem, we highly doubt that implementing \make{} by building a graph is the right approach! If we ignore parallelism and caching, we can build using a variable of the following type:
 
 \begin{code}
-type State = Map Key Result
+type State = Map Key Status
 
-data Result  =  Building
+data Status  =  Building
              |  Built Value
 \end{code}
 
@@ -541,7 +539,7 @@ We add code to save |Key|/|Value|, which is a pain with the existential, but pos
 Before running a rule, if we have something with an equal key
 
 \begin{code}
-data Result  =  Building
+data Status  =  Building
              |  Built   Time Value [Key]
              |  Loaded  Time Value [Key]
 \end{code}
@@ -585,7 +583,7 @@ We also practically use a journal, so that hitting Ctrl+C doesn't break it. Do w
 Just add a lock in the Doing, use a thread pool and you are done. We always fork off all the rules in parallel, and modify the table atomically, but when checking equality we only fork threads if there is something to do (otherwise you end up with a lot of very small actions - since most just compare equalities).
 
 \begin{code}
-data Result
+data Status
     = Building Lock
     | Built   Time Value [[Key]]
     | Loaded  Time Value [[Key]]
@@ -644,6 +642,12 @@ dotNet = do
             addins <- run1 Addins
             need [dist $ x <.> "dll" | x <- addins]
 \end{code}
+
+Typically a system checks 360,000 files in a run.
+
+Depths of files are:
+
+[(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
 
 \subsection{Multiple Results}
 
