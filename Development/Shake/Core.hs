@@ -3,15 +3,16 @@
 module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, runShake,
     Rule(..), Rules, defaultRule, rule, action,
-    Action, apply, apply1, traced, currentRule
+    Action, apply, apply1, traced, currentRule,
+    putLoud, putNormal, putQuiet
     ) where
 
 import Control.Concurrent.ParallelIO.Local
 import Control.Monad
-import Control.Monad.IO.Class
 import Control.Monad.State
 import Data.Binary(Binary)
 import Data.Hashable
+import Data.Function
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -21,6 +22,7 @@ import Data.Typeable
 import System.IO.Unsafe
 
 import Development.Shake.Database
+import Development.Shake.Locks
 import Development.Shake.Value
 
 
@@ -31,10 +33,11 @@ data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.@)
     ,shakeParallelism :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@)
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force everyone to rebuild
+    ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud
     }
 
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions "." 1 1
+shakeOptions = ShakeOptions "." 1 1 1
 
 
 ---------------------------------------------------------------------
@@ -63,6 +66,7 @@ ruleStored _ k v = unsafePerformIO $ validStored k v -- safe because of the inva
 data Rules a = Rules
     {value :: a -- not really used, other than for the Monad instance
     ,actions :: [Action ()]
+    -- FIXME: Should be Map TypeRep{k} (TypeRep{v}, [(Int,ARule)])
     ,rules :: [(Int,ARule)] -- higher fst is higher priority
     }
 
@@ -87,7 +91,7 @@ rule r = mempty{rules=[(1,ARule r)]}
 
 
 action :: Action a -> Rules ()
-action a = mempty{actions=[void a]}
+action a = mempty{actions=[a >> return ()]}
 
 
 ---------------------------------------------------------------------
@@ -100,6 +104,8 @@ data S = S
     ,started :: UTCTime
     ,stored :: Key -> Value -> Bool
     ,execute :: Key -> Action Value
+    ,outputLock :: Var ()
+    ,verbosity :: Int
     -- stack variables
     ,stack :: [Key] -- in reverse
     -- local variables
@@ -108,7 +114,7 @@ data S = S
     ,traces :: [(String, Double, Double)] -- in reverse
     }
 
-newtype Action a = Action {fromAction :: StateT S IO a}
+newtype Action a = Action (StateT S IO a)
     deriving (Functor, Monad, MonadIO)
 
 
@@ -117,8 +123,9 @@ runShake ShakeOptions{..} rules = do
     start <- getCurrentTime
     registerWitnesses rules
     database <- openDatabase shakeFiles shakeVersion
+    outputLock <- newVar ()
     withPool shakeParallelism $ \pool -> do
-        let state = S database pool start (createStored rules) (createExecute rules) [] [] 0 []
+        let state = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
         parallel_ pool $ map (runAction state) (actions rules)
     closeDatabase database
     end <- getCurrentTime
@@ -135,17 +142,30 @@ registerWitnesses Rules{..} =
 createStored :: Rules () -> (Key -> Value -> Bool)
 createStored Rules{..} = \k v ->
     let (tk,tv) = (typeKey k, typeValue v)
-        msg = "Couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
+        msg = "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
               ", perhaps you are missing a call to defaultRule/rule?"
-    in (fromMaybe (error msg) $ Map.lookup (tk,tv) mp) k v
+    in (fromMaybe (error msg) $ Map.lookup tk mp) k v
     where mp = Map.fromList
-                   [ ((typeOf $ ruleKey r, typeOf $ ruleValue r), stored)
+                   [ (typeOf $ ruleKey r, stored)
                    | (_,ARule r) <- rules
                    , let stored k v = ruleStored r (fromKey k) (fromValue v)]
 
 
 createExecute :: Rules () -> (Key -> Action Value)
-createExecute Rules{..} = undefined
+createExecute Rules{..} = \k ->
+    let tk = typeKey k
+        rs = fromMaybe [] $ Map.lookup tk mp
+    in case filter (not . null) $ map (mapMaybe ($ k)) rs of
+           [r]:_ -> r
+           rs ->
+              let s = if null rs then "no" else show (length $ head rs)
+              in error $ "Error: " ++ s ++ " rules match for Rule " ++ show tk ++
+                         ", with key " ++ show k
+    where
+        mp = Map.map (map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)) $ Map.fromListWith (++)
+                 [ (typeOf $ ruleKey r, [(i,exec)])
+                 | (i,ARule r) <- rules
+                 , let exec k = fmap (fmap newValue) $ r (fromKey k)]
 
 
 runAction :: S -> Action a -> IO (a, S)
@@ -176,7 +196,9 @@ apply ks = Action $ do
                         discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t -> do
                             start <- getCurrentTime
                             let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
-                            (res,s2) <- runAction s2 $ execute s t
+                            (res,s2) <- runAction s2 $ do
+                                putNormal $ "# " ++ show t
+                                execute s t
                             end <- getCurrentTime
                             let x = duration start end - discount s2
                             finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)
@@ -206,3 +228,17 @@ currentRule :: Action (Maybe Key)
 currentRule = Action $ do
     s <- get
     return $ listToMaybe $ stack s
+
+
+putWhen :: (Int -> Bool) -> String -> Action ()
+putWhen f msg = Action $ do
+    s <- get
+    when (f $ verbosity s) $
+        liftIO $ modifyVar_ (outputLock s) $ const $
+            putStrLn msg
+
+
+putLoud, putNormal, putQuiet :: String -> Action ()
+putLoud = putWhen (>= 2)
+putNormal = putWhen (>= 1)
+putQuiet = putWhen (>= 0)

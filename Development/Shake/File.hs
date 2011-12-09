@@ -1,13 +1,12 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Development.Shake.File(
-    File, FilePattern, FileTime, need, want,
+    FilePattern, need, want,
     defaultRuleFile,
     (=*=), (?>), (**>), (*>)
     ) where
 
-import Control.Monad
-import Control.Monad.IO.Class
+import Control.Monad.Trans
 import Data.Binary
 import Data.Hashable
 import Data.List
@@ -50,7 +49,7 @@ defaultRuleFile = defaultRule $ \(File x) -> Just $ do
 
 
 need :: [FilePath] -> Action ()
-need xs = void (apply $ map File xs :: Action [FileTime])
+need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
 
 want :: [FilePath] -> Rules ()
 want xs = action $ need xs

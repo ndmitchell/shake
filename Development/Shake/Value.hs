@@ -24,7 +24,7 @@ import System.IO.Unsafe
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
-    deriving (Eq,Show,Hashable,Binary)
+    deriving (Eq,Hashable,Binary)
 
 data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a) => Value a
 
@@ -48,6 +48,8 @@ fromValue :: Typeable a => Value -> a
 fromValue (Value x) = fromMaybe (error msg) $ cast x
     where msg = "Internal error in Shake.fromValue, bad cast"
 
+instance Show Key where
+    show (Key a) = show a
 
 instance Show Value where
     show (Value a) = show a

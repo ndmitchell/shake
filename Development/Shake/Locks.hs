@@ -1,6 +1,6 @@
 
 module Development.Shake.Locks(
-    Var, newVar, modifyVar, modifyVar_,
+    Var, newVar, readVar, modifyVar, modifyVar_,
     Barrier, newBarrier, releaseBarrier, waitBarrier, waitAnyBarrier
     ) where
 
@@ -17,6 +17,9 @@ newtype Var a = Var (MVar a)
 
 newVar :: a -> IO (Var a)
 newVar = fmap Var . newMVar
+
+readVar :: Var a -> IO a
+readVar (Var x) = readMVar x
 
 modifyVar :: Var a -> (a -> IO (a, b)) -> IO b
 modifyVar (Var x) f = modifyMVar x f

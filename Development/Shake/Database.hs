@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# OPTIONS -fno-warn-unused-binds #-} -- for fields used just for docs
 {-
 Files stores the meta-data so its very important its always accurate
 We can't rely on getting a Ctrl+C at the end, so we'd better write out a journal
@@ -22,7 +23,6 @@ import qualified Control.Monad.State as S
 import Data.Binary
 import Data.Char
 import qualified Data.HashMap.Strict as Map
-import Data.IORef
 import Data.Maybe
 import Data.List
 import System.Directory
@@ -43,7 +43,7 @@ removeFile_ x = catch (removeFile x) (\(e :: SomeException) -> return ())
 type Map = Map.HashMap
 
 newtype Time = Time Int
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Show)
 
 incTime (Time i) = Time $ i + 1
 
@@ -51,7 +51,7 @@ incTime (Time i) = Time $ i + 1
 
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
-    {status :: IORef (Map Key Status)
+    {status :: Var (Map Key Status)
     ,timestamp :: Time
     ,journal :: Journal
     ,filename :: FilePath
@@ -66,6 +66,7 @@ data Info = Info
     ,execution :: Double -- how long it took when it was last run (seconds)
     ,traces :: [(String, Double, Double)] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     }
+    deriving Show
 
 
 data Status
@@ -104,37 +105,45 @@ toResponse Response_{..}
 -- complexity it could be avoided.
 request :: Database -> (Key -> Value -> Bool) -> [Key] -> IO Response
 request Database{..} validStored ks =
-    atomicModifyIORef status $ \v ->
-        let (res, mp) = S.runState (fmap concatResponse $ mapM f ks) v
-        in (mp, toResponse res)
+     modifyVar status $ \v -> do
+        (res, mp) <- S.runStateT (fmap concatResponse $ mapM f ks) v
+        return (mp, toResponse res)
     where
-        f :: Key -> S.State (Map Key Status) Response_
+        f :: Key -> S.StateT (Map Key Status) IO Response_
         f k = do
             s <- S.get
             case Map.lookup k s of
-                Nothing -> return $ Response_ [k] [] []
+                Nothing -> build k
                 Just (Building bar _) -> return $ Response_ [] [bar] []
                 Just (Built i) -> return $ Response_ [] [] [(time i, value i)]
                 Just (Loaded i) ->
                     if not $ validStored k (value i)
-                    then return $ Response_ [k] [] []
+                    then build k
                     else validHistory k i (depends i)
 
-        validHistory :: Key -> Info -> [[Key]] -> S.State (Map Key Status) Response_
+        validHistory :: Key -> Info -> [[Key]] -> S.StateT (Map Key Status) IO Response_
         validHistory k i [] = do
             S.modify $ Map.insert k $ Built i
             return $ Response_ [] [] [(time i, value i)]
         validHistory k i (x:xs) = do
             r@Response_{..} <- fmap concatResponse $ mapM f x
             if not $ null execute && null barriers then return r
-             else if all ((<= time i) . fst) values then return $ Response_ [k] [] []
-             else validHistory k i xs
+             else if all ((<= time i) . fst) values then validHistory k i xs
+             else build k
+
+        build :: Key -> S.StateT (Map Key Status) IO Response_
+        build k = do
+            bar <- S.liftIO newBarrier
+            S.modify $ \mp ->
+                let info = case Map.lookup k mp of Nothing -> Nothing; Just (Loaded i) -> Just i
+                in Map.insert k (Building bar info) mp
+            return $ Response_ [k] [] []
 
 
 finished :: Database -> Key -> Value -> [[Key]] -> Double -> [(String,Double,Double)] -> IO ()
 finished Database{..} k v depends duration traces = do
     let info = Info v timestamp depends timestamp duration traces
-    (info2, barrier) <- atomicModifyIORef status $ \mp ->
+    (info2, barrier) <- modifyVar status $ \mp -> return $
         let Just (Building bar old) = Map.lookup k mp
             info2 = if isJust old && value (fromJust old) == value info then info{time=time $ fromJust old} else info
         in (Map.insert k (Built info2) mp, (info2, bar))
@@ -163,14 +172,14 @@ openDatabase filename version = do
         writeDatabase dbfile version timestamp status
         return (status, incTime timestamp)
 
-    status <- newIORef status
+    status <- newVar status
     journal <- openJournal jfile version
     return Database{..}
 
 
 closeDatabase :: Database -> IO ()
 closeDatabase Database{..} = do
-    status <- readIORef status
+    status <- readVar status
     writeDatabase (filename ++ ".database") version timestamp status
     closeJournal journal
 
@@ -187,7 +196,12 @@ readDatabase file version = do
     b <- doesFileExist file
     if not b
         then return zero
-        else catch (fmap (second fromStatuses . decode) $ readFileVer file $ databaseVersion version) $
+        else catch (do
+            src <- readFileVer file $ databaseVersion version
+            let (a,b) = decode src
+                c = fromStatuses b
+            -- FIXME: The LBS.length shouldn't be necessary, but it is
+            a `seq` c `seq` LBS.length src `seq` return (a,c)) $
             \(err :: SomeException) -> do
                 putStrLn $ unlines $
                     ("Error when reading Shake database " ++ file) :
@@ -292,8 +306,7 @@ readFileVer file ver = do
     src <- LBS.readFile file
     unless (ver2 `LBS.isPrefixOf` src) $ do
         let bad = LBS.takeWhile (\x -> isAlphaNum x || x `elem` "-_ ") $ LBS.take 50 src
-        error $
-            "Invalid version stamp when reading " ++ file ++
-            "\n  Expected: " ++ ver ++
-            "\n  Got     : " ++ LBS.unpack bad
+        error $ "Invalid version stamp\n" ++
+                "Expected: " ++ ver ++ "\n" ++
+                "Got     : " ++ LBS.unpack bad
     return $ LBS.drop (fromIntegral $ length ver) src

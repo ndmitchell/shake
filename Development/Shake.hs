@@ -1,25 +1,25 @@
 
 module Development.Shake(
+    shake,
     module Development.Shake.Core,
-    module Development.Shake.Derived
+    module Development.Shake.Derived,
+    module Development.Shake.File,
+    module Development.Shake.Directory
     ) where
 
-import Development.Shake.Core
+import Development.Shake.Core hiding (runShake)
 import Development.Shake.Derived
-import Development.Shake.Ls
+import Development.Shake.File hiding (defaultRuleFile)
+import Development.Shake.Directory hiding (defaultRuleDirectory)
 
+import qualified Development.Shake.Core as X
+import qualified Development.Shake.File as X
+import qualified Development.Shake.Directory as X
 
 shake :: ShakeOptions -> Rules () -> IO ()
-shake opts r = undefined $ r >> lsRules
-
-
-
-need :: [FilePath] -> Make ()
-need xs = void $ run $ map File xs
-
-want :: [FilePath] -> Rule ()
-want xs = ruleAlways $ need xs
-
-(*>) :: WildFilePath -> (FilePath -> Make ()) -> Rule ()
-(*>) x f = rule1 $ \(File s) ->
-    if s ?= x then Just $ do f s; Stamp $ getModification s else Nothing
+shake opts r = do
+    X.runShake opts $ do
+        r
+        X.defaultRuleFile
+        X.defaultRuleDirectory
+    return ()
