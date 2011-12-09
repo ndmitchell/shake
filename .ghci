@@ -1,0 +1,3 @@
+:set -package transformers
+:set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
+:load Main
