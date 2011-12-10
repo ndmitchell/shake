@@ -224,6 +224,7 @@ openJournal journalFile ver = do
     h <- openFile journalFile WriteMode
     hSetFileSize h 0
     LBS.hPut h $ LBS.pack $ journalVersion ver
+    hFlush h
     handle <- newVar $ Just h
     return Journal{..}
 
