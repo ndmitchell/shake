@@ -1,0 +1,55 @@
+cabal-version:      >= 1.6
+build-type:         Simple
+name:               cmdargs
+version:            0.0
+license:            BSD3
+license-file:       LICENSE
+category:           Development
+author:             Neil Mitchell <ndmitchell@gmail.com>
+maintainer:         Neil Mitchell <ndmitchell@gmail.com>
+copyright:          Neil Mitchell 2011
+synopsis:           Build system creator
+description:
+    Write build systems
+homepage:           http://community.haskell.org/~ndm/shake/
+stability:          Beta
+
+source-repository head
+    type:     darcs
+    location: http://community.haskell.org/~ndm/darcs/shake/
+
+flag testprog
+    default: True
+    description: Build the test program
+
+library
+    build-depends:
+        base == 4.*,
+        old-time,
+        directory,
+        hashable,
+        binary,
+        filepath,
+        process,
+        unordered-containers,
+        bytestring,
+        time,
+        parallel-io,
+        transformers == 0.2.*
+
+    exposed-modules:
+        Development.Shake
+        Development.Shake.FilePath
+
+    other-modules:
+        Development.Shake.Core
+
+executable shake
+    main-is: Main.hs
+    if flag(testprog)
+        buildable: True
+    else
+        buildable: False
+
+    other-modules:
+        Examples.Tar.Main
