@@ -7,7 +7,7 @@ module Development.Shake.Directory(
     ) where
 
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
 import Data.List

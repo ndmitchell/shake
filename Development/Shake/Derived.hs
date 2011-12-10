@@ -2,7 +2,7 @@
 module Development.Shake.Derived where
 
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.IO.Class
 import System.Cmd
 import System.Exit
 

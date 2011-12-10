@@ -6,7 +6,7 @@ module Development.Shake.File(
     (=*=), (?>), (**>), (*>)
     ) where
 
-import Control.Monad.Trans
+import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
 import Data.List

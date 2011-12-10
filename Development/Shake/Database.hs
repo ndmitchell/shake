@@ -19,7 +19,8 @@ import Prelude hiding (catch)
 import Control.Arrow
 import Control.Exception
 import Control.Monad
-import qualified Control.Monad.State as S
+import Control.Monad.IO.Class
+import qualified Control.Monad.Trans.State as S
 import Data.Binary
 import Data.Char
 import qualified Data.HashMap.Strict as Map
@@ -133,7 +134,7 @@ request Database{..} validStored ks =
 
         build :: Key -> S.StateT (Map Key Status) IO Response_
         build k = do
-            bar <- S.liftIO newBarrier
+            bar <- liftIO newBarrier
             S.modify $ \mp ->
                 let info = case Map.lookup k mp of Nothing -> Nothing; Just (Loaded i) -> Just i
                 in Map.insert k (Building bar info) mp

@@ -9,7 +9,8 @@ module Development.Shake.Core(
 
 import Control.Concurrent.ParallelIO.Local
 import Control.Monad
-import Control.Monad.State
+import Control.Monad.IO.Class
+import Control.Monad.Trans.State
 import Data.Binary(Binary)
 import Data.Hashable
 import Data.Function
