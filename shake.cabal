@@ -1,6 +1,6 @@
 cabal-version:      >= 1.6
 build-type:         Simple
-name:               cmdargs
+name:               shake
 version:            0.0
 license:            BSD3
 license-file:       LICENSE
@@ -43,6 +43,13 @@ library
 
     other-modules:
         Development.Shake.Core
+        Development.Shake.Database
+        Development.Shake.Derived
+        Development.Shake.Directory
+        Development.Shake.File
+        Development.Shake.Locks
+        Development.Shake.TypeHash
+        Development.Shake.Value
 
 executable shake
     main-is: Main.hs
