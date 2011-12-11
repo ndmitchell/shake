@@ -6,7 +6,7 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
-    registerWitness
+    Witness, BinaryWitness(..), currentWitness, registerWitness
     ) where
 
 import Data.Binary
@@ -24,7 +24,7 @@ import System.IO.Unsafe
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
-    deriving (Eq,Hashable,Binary)
+    deriving (Eq,Hashable,BinaryWitness)
 
 data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a) => Value a
 
@@ -62,28 +62,57 @@ instance Eq Value where
         Just bb -> a == bb
         Nothing -> False
 
-instance Binary Value where
-    put (Value x) = do
-        put (hash $ typeOf x)
-        put x
 
-    get = do
-        h <- get
-        Value t <- return $ unsafePerformIO $ findWitness h
-        x <- get
-        return $ Value $ x `asTypeOf` t
+---------------------------------------------------------------------
+-- BINARY INSTANCES
 
-
-{-# NOINLINE witnesses #-}
-witnesses :: IORef (Map.HashMap Int Value)
-witnesses = unsafePerformIO $ newIORef Map.empty
+{-# NOINLINE witness #-}
+witness :: IORef (Map.HashMap TypeRep Value)
+witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> IO ()
-registerWitness x = modifyIORef witnesses $ Map.insert (hash $ typeOf x) (Value x)
+registerWitness x = modifyIORef witness $ Map.insert (typeOf x) (Value $ undefined `asTypeOf` x)
 
-findWitness :: Int -> IO Value
-findWitness i = do
-    ws <- readIORef witnesses
-    let err = "Failed to find witness for a type with hash " ++ show i ++ ". The most likely cause " ++
-              "is that your build tool has changed significantly. A wipe/clean should fix the problem."
-    return $ fromMaybe (error err) $ Map.lookup i ws
+
+data Witness = Witness
+    {typeNames :: [String] -- the canonical data, the names of the types
+    ,witnessIn :: Map.HashMap Int Value -- for reading in, the find the values (some may be missing)
+    ,witnessOut :: Map.HashMap TypeRep Int -- for writing out, find the value
+    }
+
+
+currentWitness :: IO Witness
+currentWitness = do
+    ws <- readIORef witness
+    let (ks,vs) = unzip $ Map.toList ws
+    return $ Witness (map show ks) (Map.fromList $ zip [0..] vs) (Map.fromList $ zip ks [0..])
+
+
+instance Binary Witness where
+    put (Witness ts _ _) = put ts
+    get = do
+        ts <- get
+        let ws = Map.toList $ unsafePerformIO $ readIORef witness
+        let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
+        return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
+
+
+class BinaryWitness a where
+    putWitness :: Witness -> a -> Put
+    getWitness :: Witness -> Get a
+
+instance BinaryWitness Value where
+    putWitness ws (Value x) = do
+        let msg = "Internal error, could not find witness type for " ++ show (typeOf x)
+        put $ fromMaybe (error msg) $ Map.lookup (typeOf x) (witnessOut ws)
+        put x
+
+    getWitness ws = do
+        h <- get
+        case Map.lookup h $ witnessIn ws of
+            Nothing -> error $
+                "Failed to find a type " ++ (typeNames ws !! fromIntegral h) ++ " which is stored in the database.\n" ++
+                "The most likely cause is that your build tool has changed significantly."
+            Just (Value t) -> do
+                x <- get
+                return $ Value $ x `asTypeOf` t

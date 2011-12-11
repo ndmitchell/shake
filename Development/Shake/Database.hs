@@ -22,6 +22,8 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Control.Monad.Trans.State as S
 import Data.Binary
+import Data.Binary.Get
+import Data.Binary.Put
 import Data.Char
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -186,9 +188,11 @@ closeDatabase Database{..} = do
 
 
 writeDatabase :: FilePath -> Int -> Time -> Map Key Status -> IO ()
-writeDatabase file version timestamp status = LBS.writeFile file $
-    (LBS.pack $ databaseVersion version) `LBS.append`
-    encode (timestamp, Statuses status)
+writeDatabase file version timestamp status = do
+    ws <- currentWitness
+    LBS.writeFile file $
+        (LBS.pack $ databaseVersion version) `LBS.append`
+        encode (timestamp, Witnessed ws $ Statuses status)
 
 
 readDatabase :: FilePath -> Int -> IO (Time, Map Key Status)
@@ -200,7 +204,7 @@ readDatabase file version = do
         else catch (do
             src <- readFileVer file $ databaseVersion version
             let (a,b) = decode src
-                c = fromStatuses b
+                c = fromStatuses $ fromWitnessed b
             -- FIXME: The LBS.length shouldn't be necessary, but it is
             a `seq` c `seq` LBS.length src `seq` return (a,c)) $
             \(err :: SomeException) -> do
@@ -218,6 +222,7 @@ readDatabase file version = do
 data Journal = Journal
     {handle :: Var (Maybe Handle)
     ,journalFile :: FilePath
+    ,witness :: Witness
     }
 
 openJournal :: FilePath -> Int -> IO Journal
@@ -225,6 +230,8 @@ openJournal journalFile ver = do
     h <- openFile journalFile WriteMode
     hSetFileSize h 0
     LBS.hPut h $ LBS.pack $ journalVersion ver
+    witness <- currentWitness
+    writeChunk h $ encode witness
     hFlush h
     handle <- newVar $ Just h
     return Journal{..}
@@ -233,7 +240,10 @@ openJournal journalFile ver = do
 replayJournal :: FilePath -> Int -> Map Key Status -> IO (Map Key Status)
 replayJournal file ver mp = catch (do
     src <- readFileVer file $ journalVersion ver
-    return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) mp (readJournal src))
+    let ws:rest = readChunks src
+    ws <- return $ decode ws
+    rest <- return $ map (runGet (getWitness ws)) rest
+    return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) mp rest)
     $ \(err :: SomeException) -> do
         putStrLn $ unlines $
             ("Error when reading Shake journal " ++ file) :
@@ -242,27 +252,11 @@ replayJournal file ver mp = catch (do
         return mp
 
 
-readJournal :: LBS.ByteString -> [(Key, Info)]
-readJournal x
-    | Just (n :: Word32, x) <- grab 4 x
-    , Just (ki, x) <- grab (fromIntegral n) x
-    = ki : readJournal x
-    | otherwise = []
-    where
-        grab i x | LBS.length a == i = Just (decode a, b)
-                 | otherwise = Nothing
-            where (a,b) = LBS.splitAt i x
-
-
 appendJournal :: Journal -> Key -> Info -> IO ()
 appendJournal Journal{..} k i = modifyVar_ handle $ \v -> case v of
     Nothing -> return Nothing
     Just h -> do
-        let x = encode (k,i)
-            n = encode (fromIntegral $ LBS.length x :: Word32)
-        LBS.hPut h n
-        LBS.hPut h x
-        hFlush h
+        writeChunk h $ runPut $ putWitness witness (k,i)
         return $ Just h
 
 
@@ -284,22 +278,37 @@ instance Binary Time where
     get = fmap Time get
 
 
+data Witnessed a = Witnessed Witness a
+fromWitnessed (Witnessed _ x) = x
+
+instance BinaryWitness a => Binary (Witnessed a) where
+    put (Witnessed ws x) = put ws >> putWitness ws x
+    get = do ws <- get; x <- getWitness ws; return $ Witnessed ws x
+
 -- Only for serialisation
 newtype Statuses = Statuses {fromStatuses :: Map Key Status}
 
-instance Binary Statuses where
-    put (Statuses x) = put [(k,i) | (k,v) <- Map.toList x, Just i <- [f v]]
+instance BinaryWitness Statuses where
+    putWitness ws (Statuses x) = putWitness ws [(k,i) | (k,v) <- Map.toList x, Just i <- [f v]]
         where
             f (Building _ i) = i
             f (Built i) = Just i
             f (Loaded i) = Just i
-    get = do
-        x <- get
+    getWitness ws = do
+        x <- getWitness ws
         return $ Statuses $ Map.fromList $ map (second Loaded) x
 
-instance Binary Info where
-    put (Info x1 x2 x3 x4 x5 x6) = put x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put x6
-    get = do x1 <- get; x2 <- get; x3 <- get; x4 <- get; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
+instance BinaryWitness Info where
+    putWitness ws (Info x1 x2 x3 x4 x5 x6) = putWitness ws x1 >> put x2 >> putWitness ws x3 >> put x4 >> put x5 >> put x6
+    getWitness ws = do x1 <- getWitness ws; x2 <- get; x3 <- getWitness ws; x4 <- get; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
+
+instance (BinaryWitness a, BinaryWitness b) => BinaryWitness (a,b) where
+    putWitness ws (a,b) = putWitness ws a >> putWitness ws b
+    getWitness ws = do a <- getWitness ws; b <- getWitness ws; return (a,b)
+
+instance BinaryWitness a => BinaryWitness [a] where
+    putWitness ws xs = put (length xs) >> mapM_ (putWitness ws) xs
+    getWitness ws = do n <- get; replicateM n $ getWitness ws
 
 
 readFileVer :: FilePath -> String -> IO LBS.ByteString
@@ -312,3 +321,22 @@ readFileVer file ver = do
                 "Expected: " ++ ver ++ "\n" ++
                 "Got     : " ++ LBS.unpack bad
     return $ LBS.drop (fromIntegral $ length ver) src
+
+
+readChunks :: LBS.ByteString -> [LBS.ByteString]
+readChunks x
+    | Just (n, x) <- grab 4 x
+    , Just (y, x) <- grab (fromIntegral (decode n :: Word32)) x
+    = y : readChunks x
+    | otherwise = []
+    where
+        grab i x | LBS.length a == i = Just (a, b)
+                 | otherwise = Nothing
+            where (a,b) = LBS.splitAt i x
+
+
+writeChunk :: Handle -> LBS.ByteString -> IO ()
+writeChunk h x = do
+    let n = encode (fromIntegral $ LBS.length x :: Word32)
+    LBS.hPut h $ n `LBS.append` x
+    hFlush h
