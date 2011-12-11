@@ -10,7 +10,7 @@ maintainer:         Neil Mitchell <ndmitchell@gmail.com>
 copyright:          Neil Mitchell 2011
 synopsis:           Build system creator
 description:
-    Write build systems
+    Write build systems. NOT READY FOR USE YET. DO NOT USE THIS PACKAGE.
 homepage:           http://community.haskell.org/~ndm/shake/
 stability:          Beta
 
