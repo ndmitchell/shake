@@ -1,0 +1,4 @@
+Changelog for Shake
+
+0.0
+    Initial version, not ready for public use
