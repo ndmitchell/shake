@@ -29,3 +29,7 @@ readFile_ x = do
 
 readFileLines :: FilePath -> Action [String]
 readFileLines = fmap lines . readFile_
+
+
+writeFileLines :: FilePath -> [String] -> Action ()
+writeFileLines name x = liftIO $ writeFile name $ unlines x
