@@ -21,9 +21,12 @@ import Development.Shake.File
 
 
 newtype Exist = Exist FilePath
-    deriving (Typeable,Show,Eq,Hashable,Binary)
+    deriving (Typeable,Eq,Hashable,Binary)
 newtype Exist_ = Exist_ Bool
     deriving (Typeable,Show,Eq,Hashable,Binary)
+
+instance Show Exist where
+    show (Exist a) = "Exists? " ++ a
 
 
 data GetDir
