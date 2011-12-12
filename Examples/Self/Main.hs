@@ -10,7 +10,7 @@ import Data.List
 
 
 main :: IO ()
-main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2} $ do
+main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParallelism=2} $ do
     let pkgs = "transformers binary unordered-containers parallel-io"
         flags = map ("-package=" ++) $ words pkgs
 
