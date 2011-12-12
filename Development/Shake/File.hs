@@ -15,6 +15,7 @@ import System.Directory
 import System.Time
 
 import Development.Shake.Core
+import System.FilePath(takeDirectory)
 
 
 type FilePattern = String
@@ -58,6 +59,7 @@ want xs = action $ need xs
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 (?>) test act = rule $ \(File x) ->
     if not $ test x then Nothing else Just $ do
+        liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
         res <- liftIO $ getFileTime x
         case res of
