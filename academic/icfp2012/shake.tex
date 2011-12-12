@@ -257,7 +257,7 @@ When attempting to read a value stored externally there are three possible state
 
 In order to remain consistent throughout the execution, we require that all |stored| values do \textit{not} change during the execution, other than as a result of running an |action| which |creates| it. The \make{} tool requires a similar property or it becomes inconsistent.
 
-While the timestamp approach works reasonably for \make{}, it can fail the system clock changes, or if a file is modified but has its value set to an older timestamp -- such as when extracting a backup which resets the timestamp. Instead of relying on the system time, we can instead store a counter in our database, and increment it every time we require a time value, thus guaranteeing that our time is correctly ordered.
+While the timestamp approach works reasonably for \make{}, it can fail if the system clock changes, or if a file is modified but has its value set to an older timestamp -- such as when extracting a backup which resets the timestamp. Instead of relying on the system time, we can instead store a counter in our database, and increment it every time we require a time value, thus guaranteeing that our time is correctly ordered.
 
 After running an action, we typically store a new time in the |history|. However, if the result of the |action| has not changed we \textit{do not} update the time. This allows any files that depend on this file to avoid recalculation, which can significantly reduce the number of actions that need to be run.
 
@@ -270,6 +270,7 @@ To obtain minimal rebuilds across executions we can use the same approach as des
 
 \begin{code}
 history :: Key -> Maybe (Time, Value, [Key])
+
 validHistory r = case history (creates r) of
     Nothing -> False
     Just (t, v, deps) -> all ((< t) . fst3 . fromJust . history) deps
@@ -281,7 +282,9 @@ We can reuse the |validStored| unmodified.
 \section{Shake in Haskell}
 \label{sec:user_view}
 
-While our theory talks about |Key| and |Value|, our library is much more practically constrained. We have to add types on, model the relationship with types. We first present the interface to Shake, and the functions available. We do this by giving an example of code in Shake. After having defined what the concepts do, in the next section we explain how to implement these concepts.
+In order to make the theory from \S\ref{sec:theory} practically usable as a Haskell library, we need to make a number of design decisions. In particular, we describe how to replace |Key| and |Value| with standard polymorphic values, how to integrate IO into the |action| function and how to define an infinite set of rules. We first present the interface to Shake, then in \S\ref{sec:developer_view} we describe how to implement the library.
+
+\subsection{A Shake Example}
 
 \begin{figure}
 \begin{code}
@@ -292,33 +295,33 @@ main = shake def $ do
     want ["Main"]
 
     "Main" *> exe -> do
-        cs <- ls "*.c"
+        cs <- getDirectoryFiles "." "*.c"
         let os = map (`replaceExtension` "o") cs
         need os
-        system $ ["gcc","-o",exe] ++ os
+        system_ $ ["gcc","-o",exe] ++ os
 
     "*.o" *> \o -> do
         let c = replaceExtension o "c"
         need [c]
-        headers <- cIncludes c
+        headers <- liftIO (cIncludes c)
         need headers
-        system ["gcc","-o",o,"-c",c]
+        system_ ["gcc","-o",o,"-c",c]
 \end{code}
 \caption{Demo build system in Shake.}
 \label{fig:demo}
 \end{figure}
 
-We give an example of a demo in Figure \ref{fig:demo}. Running this program will build |Main| from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be recompiled.
+We give an example Shake program in Figure \ref{fig:demo}. Running this program will build \file{Main} from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be recompiled.
 
-The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we take the directory listing of all \file{*.c} files (like the \prog{ls} command), change their extensions to \file{*.o}, require those files to be built (|need| them), then call \prog{gcc} to link them. To build any \file{*.o} file we take the associated \file{*.c}, make sure it's been built, then call the function |cIncludes| to get all headers transitively included. We require those headers, then we call \prog{gcc} to do the compilation.
+The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we list all the \file{*.c} files in the current directory, change their extensions to \file{*.o}, require those files to be built (|need| them), then call \prog{gcc} to link them. To build any \file{*.o} file we take the associated \file{*.c}, make sure it's been built, then call the function |cIncludes| to get all headers it includes. We require those headers, then we call \prog{gcc} to do the compilation.
 
 This script demonstrates a number of features of Shake based build systems:
 
 \begin{itemize}
-\item It's a full Haskell library using main, while |main| can call |shake|, it can also do anything it likes, such as command line processing (see \S?).
-\item The |ls| is tracked (see \S?), if the results of |ls| change, it will rebuild.
+\item It's a full Haskell program with a |main| entry point. While |main| can simply call |shake|, it can also do anything it likes, such as command line processing (see \S?).
+\item The call to |getDirectoryFiles| is tracked (see \S?), if the results change, it will trigger a rebuild.
 \item We run arbitrary system commands in the internals.
-\item We fully track the dynamic dependencies with header files. The function |cIncludes| given a header file gets all the transitive @#include@ directives. (There is a better way of specifying the transitive closure, see \S?).
+\item We fully track the dynamic dependencies introduced by header files. The function |cIncludes| given a source file returns all the files required by transitive @#include@ directives. (In \S? we show a better way to define transitive dependencies.)
 \end{itemize}
 
 \subsection{Core Shake}
@@ -326,19 +329,17 @@ This script demonstrates a number of features of Shake based build systems:
 \begin{figure}
 \begin{code}
 data ShakeOptions = ShakeOptions
-    {shakeDatabase :: FilePath
+    {shakeFiles :: FilePath
     ,shakeParallelism :: Int
     ,ellipses
     }
     deriving (Default)
 
-data Rules a = Ellipses
+data Rules a
     deriving (Monad, Monoid)
 
-data Make a = Ellipses
+data Action a
     deriving (Monad, LiftIO)
-
-run :: ShakeOptions -> Rules () -> IO ()
 
 class (
     Show key, Show value,
@@ -346,17 +347,16 @@ class (
     Hashable key, Hashable value,
     Eq key, Eq value,
     Binary key, Binary value
-    ) => Rule key value where
+    ) => Rule key value | key -> value where
     validStored :: key -> value -> IO Bool
     validStored k v = return True
 
+run :: ShakeOptions -> Rules () -> IO ()
+
 action :: Make a -> Rules ()
 
--- accumulate the Rule instances from defaultRule and rule, and put them in]
--- if no rules to build something then it's cache instance is dodgy anyway
-defaultRule :: Rule key value => (key -> Make value) -> Rules ()
-
-rule :: Rule key value => (key -> Maybe (Make value)) -> Rules ()
+rule, defaultRule :: Rule key value =>
+    (key -> Maybe (Make value)) -> Rules ()
 
 apply :: Rule key value => List alpha key -> Make (List alpha value)
 apply1 :: Rule key value => key -> Make value
@@ -365,50 +365,69 @@ apply1 :: Rule key value => key -> Make value
 \label{fig:shake_core}
 \end{figure}
 
-The primitive interface to Shake is given in Figure \ref{fig:shake_core} -- everything else presented is defined in terms of these primitive interfaces.
+The primitive interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|/|action|, and when defining a rule we can express a dependency with |apply|/|apply1|.
 
-A Shake build system is basically a set of rules. These rules are either rules exactly like the |Rule| type in \S\ref{sec:theory_shake} created with |rule|, or are instead simply |action| values. These are translated as adding an input value (uniquely created), along with a rule that generates it, which produces a |()| value. These rules are also matched specially so they cannot be cached.
+We execute a set of rules with the |run| function, which takes an initial parameter of the options to control Shake. Typical options include which file to store the cached versions in (|shakeFiles|), and the number of processors to use (|shakeParallelism|). These options are also used to select which mode to run Shake in, as described in \S\ref{sec:tools}.
 
-We have used context synonyms to indicate that every |Key| or |Value| type must be in several type classes. We require:
+Every rule that is defined or run in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a stored value is correct. Each |key|/|value| type must also be in several type classes:
 
 \begin{description}
-\item [Show] We require |Show| for debugging messages and logging.
-\item [Typeable] We allow multiple rule/run types in one build system, to distinguish them we require a |Typeable| constraint.
+\item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, and to match on only one type at a time, we require a |Typeable| constraint.
 \item [Eq] We require equality to match the values.
-\item [Hashable] We require |Hashable| to accelerate searching.
-\item [Binary] We require |Binary| so we can cache the values between runs, to achieve minimal rebuilds.
+\item [Binary] We require |Binary| so we can store the values in a database, to achieve minimal rebuilds.
+\item [Hashable] We require |Hashable| to perform fast searching.
+\item [Show] We require |Show| for debugging messages and logging.
 \end{description}
 
-The |rule| declares a rule. Given a single |key| value, the rule returns |Nothing| to indicate that it cannot be called, or |Just| with the steps necessary to build the associated |value|. The function is used to encode infinite rules, as a rule could match potentially infinite numbers of |key|'s, but returns concrete rules in response to each one.
+Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining a target to build, we instead allow rules with no target to be specified, using |action|. These rules are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|.
 
-The |run| action looks for a matching |rule| with the same type. Since this involves runtime type matching, usually these rules are sugared up in type constrained versions. We take a list which allows parallelism, although you can imagine it just does a |mapM run1|.
+The |apply1| function take a |key|, builds it, and returns the associated |value|. The |apply1| function finds a rule of the appropriate type whose application returns |Just|, then runs the action. To work correctly, the |apply1| and |rule| functions must match with suitable types -- usually sugared versions with type constraints are used (see \S\ref{sec:user_view_file}, \S\ref{sec:user_view_dir}). The |apply| function can be thought of as |mapM apply1|, but is defined to build all necessary dependencies in parallel (see \S\ref{sec:parallelism}).
 
-We drive the code with the |shake| function, which takes an initial parameter of the options to control Shake. Typical options include which file to store the cached versions in (|shakeDatabase|), and the number of processors to use (|shakeParallelism|). These options are also used to select which mode to run Shake in, as described in \S\ref{sec:tools}.
+We have deliberately kept the core of Shake small and extensible, supporting all instantiations of |Key|/|Value| outside, thus focusing purely on the building side.
 
-The |Rule| class has two methods. One let's us associate a default rule. If no other rule matches we use this one. This allows us to use |newtype|'s to insert rules into the system.
+\subsection{Defining Rule Types}
 
-We would like to move |defaultRule| into the type class |Rule|, but alas that breaks because of serialisation of existentials. See \S? for full details.
-
-By keeping the core of Shake small, and defining lots of things on top, we keep it simple.
-
-\subsection{Directory Listing}
+The simplest rule available, consider the rule that determines if a file exists, which we call |doesFileExist|, equivalent to the standard |System.Directory.doesFileExist|, but tracked as a dependency. When writing an |Action| we may wish to call |doesFileExist|, as an example:
 
 \begin{code}
-data Ls = Ls FilePath
-instance Rule Ls [FilePath] where
-    externalValue (Ls x) = fmap Just $ getDirectoryContents x
+".config" *> \dest -> do
+    b <- doesFileExist ".config.user"
+    let src = if b then ".config.user" else ".config.default"
+    copyFile src dest
+\end{code}
 
-lsRule :: Rules ()
-lsRule = rule $ \(Ls x) -> do
-    liftIO $ getDirectoryContents x
+This rule creates \file{.config} by copying either \file{.config.user} if it exists, or otherwise copying \file{.config.default}. You can imagine it being used for producing a config, allowing the user to override it as necessary. Since the |doesFileExist| is fully tracked, if the user removes their user config, or adds one, it will rerun the rule. Note the use of dynamic dependencies, if the user has a \file{.config.user}, and the \file{.config.default} changes then the rule will not be run, however if the file didn't exist it would be.
 
-ls :: FilePath -> Make [FilePath]
-ls = run1 . Ls
+Note that because of the restriction that a value remains stable, we should not use this rule to decide if something needs to be built or not.
+
+And we can define it as:
+
+\begin{code}
+module DoesFileExist(doesFileExist, defaultRuleDoesFileExist) where
+
+newtype Exist = Exist FilePath
+    deriving (Typeable,Show,Eq,Hashable,Binary)
+
+instance Rule Exist Bool where
+    validStored (Exist x) b = liftM (== b) $ IO.doesFileExist x
+
+doesFileExist :: FilePath -> Action Bool
+doesFileExist = apply1 . Exist
+
+defaultRuleDoesFileExist :: Rules ()
+defaultRuleDoesFileExist =
+    defaultRule $ \(Exist x) -> Just $
+        liftIO $ IO.doesFileExist x
 \end{code}
 
 We rely on explicit type signatures to ensure that |Ls| is always used with the correct type. Note that if a value changes we are likely to call |getDirectoryContents| twice in a row, once to invalidate the old value, and once to compute the new value. We can aleviate this problem with a single element cache (although in practice we find it not to be a problem, since the OS typically caches all the files anyway).
 
-\subsection{File Operations}
+Note that while |rule|/|apply1| require care about types, we have now abstracted that away. Anyone using this rule still needs to call |defaultRuleDoesFileExist| first.
+
+Do not use ls over a universe you are changing. If you ls, it should be in the source directory, not one you create - otherwise your build system as a result of generating a file could be unsatable. Ls should return the same at the start and end of the compilation.
+
+
+\subsection{File Based Rules}
 
 \begin{code}
 newtype File = File FilePath
@@ -452,10 +471,10 @@ In practice, we have found that |(?>)| is used about 5\% of the time, |(**>)| is
 We can layer on sugar like |readFileLines| quite easily. And also |readFile|, |system|, |mkdir|. In all cases, we try and emulate the \make{} behaviour of being more relaxed.
 
 \begin{code}
-readFile :: FilePath -> Make String
-readFile x = do
+readFile_ :: FilePath -> Make String
+readFile_ x = do
     need x
-    io $ Prelude.readFile x
+    liftIO $ Prelude.readFile x
 
 system :: [String] -> Make ()
 system xs = do
@@ -463,7 +482,12 @@ system xs = do
     unless (x == ExitSuccess) $ error "Failed when running command"
 
 mkdir :: FilePath -> Make ()
-mkdir x = io $ createDirectoryRecursive True x
+mkdir x = liftIO $ createDirectoryRecursive True x
+
+cp :: FilePath -> FilePath -> Make ()
+cp src dest = do
+    need [src]
+    liftIO $ copyFile src dest
 \end{code}
 
 \subsection{Wrapping}
@@ -471,7 +495,7 @@ mkdir x = io $ createDirectoryRecursive True x
 We can then defined:
 
 \begin{code}
-shake opts rules = runRules opts $ do
+shake opts rules = run opts $ do
     fileRule
     lsRule
     rules
@@ -591,6 +615,8 @@ data Status
 
 We can optimise by running the check in parallel, and we also need to put a global lock around the map. We need to store the keys as a list so that when we have to rebuild N keys that have changed we can ensure they are done in parallel too.
 
+We also need to implement a journal, important for killed builds. The journal is idempotent.
+
 \subsection{Error Messages}
 
 We track the stack, so on errors when can show it nicely. We also have a @--verbose@ option to show all system commands called. These are seriously helpful for debugging. Also, all calls to |system| are wrapped and throw an error including their command line.
@@ -604,27 +630,13 @@ A standard feature of build systems is cleaning operations. We can rebuild every
 
 \subsection{Profiling}
 
+We record trace information and build duration. We can then create a rich analysis toolbox.
+
 \subsection{Analysis}
 
+We have dependency information.
+
 \subsection{Lint checking}
-
-\subsection{Multiple Outputs}
-
-Sometimes running one command will produce two outputs. As an example, running \prog{ghc} on \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. Some things (things importing \file{Foo.hs}) require \file{Foo.hi}. Some things, say linking, require \file{Foo.o}. We can fake this because we know that a change in the \file{*.o} timestamp changes the \file{*.hi} timestamp, so we can write:
-
-\begin{code}
-"*.hi" *> \hi ->
-    need [replaceExtension hi "o"]
-
-"*.o" *> \o ->
-    let hs = replaceExtension x "hs"
-    need [hs] -- and it's dependencies, but let's ignore that for now
-    system ["ghc","-c",hs]
-\end{code}
-
-Note that if we wrote it the other way, with the \file{*.o} depending on the \file{*.hi} then if the \file{*.hi} stayed the same we could end up screwed. We'd have written that neither file had changed, but both would have. Ouch. Also if we use SHA1 it's now not correct.
-
-We can work around the problem by introducing a new type, |File2| which stores two files. We can then ask for both files at once, which computes them and stores both timestamps. Now to compute either we depend on the Both rule, and since that always changes when either does, we're safe.
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -649,19 +661,38 @@ Depths of files are:
 
 [(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
 
-\subsection{Multiple Results}
+\subsection{Multiple Outputs}
 
 GHC produces a .hi and a .o file. You can think of the .o file as depending on the entire contents of the file, and the .hi depending on only the type signatures. A single GHC invocation needs to do all the work to do both, but often it won't change the .hi file if it doesn't need to. The multiple results captures this perfectly.
 
 In most cases you can fake the dependency - i.e. say that Foo.o depends on both Foo.hs and Foo.hi - which may work, as whenever one gets built the other will be. However, consider a process that reads a file and splits it into the even numbers and the odd numbers, avoiding writing the file back if nothing has changed.
 
+Sometimes running one command will produce two outputs. As an example, running \prog{ghc} on \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. Some things (things importing \file{Foo.hs}) require \file{Foo.hi}. Some things, say linking, require \file{Foo.o}. We can fake this because we know that a change in the \file{*.o} timestamp changes the \file{*.hi} timestamp, so we can write:
+
+\begin{code}
+"*.hi" *> \hi ->
+    need [replaceExtension hi "o"]
+
+"*.o" *> \o ->
+    let hs = replaceExtension x "hs"
+    need [hs] -- and it's dependencies, but let's ignore that for now
+    system ["ghc","-c",hs]
+\end{code}
+
+Note that if we wrote it the other way, with the \file{*.o} depending on the \file{*.hi} then if the \file{*.hi} stayed the same we could end up screwed. We'd have written that neither file had changed, but both would have. Ouch. Also if we use SHA1 it's now not correct.
+
+We can work around the problem by introducing a new type, |File2| which stores two files. We can then ask for both files at once, which computes them and stores both timestamps. Now to compute either we depend on the Both rule, and since that always changes when either does, we're safe.
+
 \subsection{Transitive Dependencies}
 
-If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c files
+We can define the implementation as... this only does one layer.
+
+We can also define a more specific one, based on the assumption that #ifdef statements do not change the include files (a reasonable assumption in many cases).
+
+If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
+
 
 \subsection{Rules to Follow}
-
-Do not use ls over a universe you are changing. If you ls, it should be in the source directory, not one you create - otherwise your build system as a result of generating a file could be unsatable. Ls should return the same at the start and end of the compilation.
 
 Put all generated files somewhere entirely separate, such as dist or |_make|. Do not comingle them.
 
@@ -686,6 +717,10 @@ Then change them to have an extra extension, such as .hs.o.
 
 Just use actionAllow to filter which things they are allowed to need. You should be very careful not to miss out on things that they actually use, as you'll like get an error.
 
+\subsection{Type Safety}
+
+The |rule|/|apply| functions are checked at runtime. However, since everyone uses sugared versions, that isn't an issue. It should be relatively easy to define a statically typed rule that accumulates its types used, but it's more complex.
+
 
 \section{Related Work}
 \label{sec:related_work}
@@ -693,6 +728,8 @@ Just use actionAllow to filter which things they are allowed to need. You should
 Build systems are an essential part of any large software project, yet often prove surprisingly tricky to get right. While most languages have a nice tool for building single language projects (ocamlbuild, ghc --make, Visual Studio projects), when building more complex multi-language projects, most people turn to \make{}. While there are many \make{} competitors (Scons, CMake, Ant), none have gained universal acceptance. We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
 
 A standard build system generates a dependency graph for all files, and processes them to meet the dependency constraints.
+
+Ninja the Chromium build system has dynamic dependencies (you can specify a rule that contains dependencies), multiple outputs. It focus on only running command lines, and is a bit more limited, but still encompasses many of the same ideas.
 
 
 \section{Conclusions}
