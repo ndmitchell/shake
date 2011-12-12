@@ -186,7 +186,7 @@ apply ks = Action $ do
             s <- get
             res <- liftIO $ request (database s) (stored s) $ map newKey ks
             case res of
-                Block act -> discounted (liftIO act) >> loop
+                Block act -> discounted (liftIO $ extraWorkerWhileBlocked (pool s) act) >> loop
                 Response vs -> return $ map fromValue vs
                 Execute todo -> do
                     let bad = intersect (stack s) todo
