@@ -14,8 +14,9 @@
 %format (List (a) (b)) = "[" b "]_{" a "}"
 %format Result_alpha = "\Varid{Result_\alpha}"
 %format *> = "\mathbin{*\!\!\!>}"
+%format **> = "\mathbin{*\!*\!\!\!>}"
 %format ?> = "\mathbin{?\!\!\!>}"
-%format ?= = "\mathbin{?\!\!\!=}"
+%format =*= = "\mathbin{=\!\!^*}"
 %format `replaceExtension` = "\backtick{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
 %format context = "\Keyword{context}"
@@ -80,7 +81,7 @@ What if we want to build \file{result.tar} from the list of files in \file{list.
 \begin{code}
 "result.tar" *> \_ -> do
     need ["list.txt"]
-    contents <- liftM lines $ readFile "list.txt"
+    contents <- readFileLines "list.txt"
     need contents
     system $ ["tar","-cf","result.tar"] ++ contents
 \end{code}
@@ -282,7 +283,7 @@ We can reuse the |validStored| unmodified.
 \section{Shake in Haskell}
 \label{sec:user_view}
 
-In order to make the theory from \S\ref{sec:theory} practically usable as a Haskell library, we need to make a number of design decisions. In particular, we describe how to replace |Key| and |Value| with standard polymorphic values, how to integrate IO into the |action| function and how to define an infinite set of rules. We first present the interface to Shake, then in \S\ref{sec:developer_view} we describe how to implement the library.
+In order to make the theory from \S\ref{sec:theory} practically usable as a Haskell library, we need to make a number of design decisions. In particular, we describe how to replace |Key| and |Value| with standard polymorphic values, how to integrate IO into the |action| function and how to define an infinite set of rules. We first present the interface to Shake, then in \S\ref{sec:developer_view} we describe how to implement the internals of the library.
 
 \subsection{A Shake Example}
 
@@ -313,7 +314,7 @@ main = shake def $ do
 
 We give an example Shake program in Figure \ref{fig:demo}. Running this program will build \file{Main} from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be recompiled.
 
-The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we list all the \file{*.c} files in the current directory, change their extensions to \file{*.o}, require those files to be built (|need| them), then call \prog{gcc} to link them. To build any \file{*.o} file we take the associated \file{*.c}, make sure it's been built, then call the function |cIncludes| to get all headers it includes. We require those headers, then we call \prog{gcc} to do the compilation.
+The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we list all the \file{*.c} files in the current directory, change their extensions to \file{*.o}, require those files to be built (|need| them), then call \prog{gcc} to link them. To build any \file{*.o} file we take the associated \file{*.c}, make sure it's been built, then call the function |cIncludes| to get all headers it includes (|cIncludes| can be defined in terms of \prog{gcc -M}). We require those headers, then we call \prog{gcc} to do the compilation.
 
 This script demonstrates a number of features of Shake based build systems:
 
@@ -330,7 +331,7 @@ This script demonstrates a number of features of Shake based build systems:
 \begin{code}
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
-    ,shakeParallelism :: Int
+    ,shakeParallel :: Int
     ,ellipses
     }
     deriving (Default)
@@ -367,9 +368,9 @@ apply1 :: Rule key value => key -> Make value
 
 The primitive interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|/|action|, and when defining a rule we can express a dependency with |apply|/|apply1|.
 
-We execute a set of rules with the |run| function, which takes an initial parameter of the options to control Shake. Typical options include which file to store the cached versions in (|shakeFiles|), and the number of processors to use (|shakeParallelism|). These options are also used to select which mode to run Shake in, as described in \S\ref{sec:tools}.
+We execute a set of rules with the |run| function, which also takes an options record. Typical options include which file to store the cached versions in (|shakeFiles|), and the number of processors to use (|shakeParallel|). These options are also used to select which mode to run Shake in, as described in \S\ref{sec:tools}.
 
-Every rule that is defined or run in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a stored value is correct. Each |key|/|value| type must also be in several type classes:
+Every rule that is defined or applied in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with the value stored externally. We require that each rule |key| has only one type of |value|, this restriction is not technically required, but forces users to keep their rules simple. Each |key|/|value| type must also be in several type classes:
 
 \begin{description}
 \item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, and to match on only one type at a time, we require a |Typeable| constraint.
@@ -379,15 +380,15 @@ Every rule that is defined or run in Shake must be a member of the |Rule| class.
 \item [Show] We require |Show| for debugging messages and logging.
 \end{description}
 
-Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining a target to build, we instead allow rules with no target to be specified, using |action|. These rules are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|.
+Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining targets to build, we allow rules with no target, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|.
 
-The |apply1| function take a |key|, builds it, and returns the associated |value|. The |apply1| function finds a rule of the appropriate type whose application returns |Just|, then runs the action. To work correctly, the |apply1| and |rule| functions must match with suitable types -- usually sugared versions with type constraints are used (see \S\ref{sec:user_view_file}, \S\ref{sec:user_view_dir}). The |apply| function can be thought of as |mapM apply1|, but is defined to build all necessary dependencies in parallel (see \S\ref{sec:parallelism}).
+The |apply1| function takes a |key|, builds it, and returns the associated |value|. The |apply1| function finds a rule of the appropriate type whose application returns |Just|, then runs the action. The |apply| function can be thought of as |mapM apply1|, but is defined to build all necessary dependencies in parallel (see \S\ref{sec:parallelism}).
 
-We have deliberately kept the core of Shake small and extensible, supporting all instantiations of |Key|/|Value| outside, thus focusing purely on the building side.
+We have deliberately kept the core of Shake small and extensible, supporting all instantiations of |Key|/|Value| outside, thus focusing purely on the building side. We describe how to implement this core in \S\ref{sec:developer_view}.
 
 \subsection{Defining Rule Types}
 
-The simplest rule available, consider the rule that determines if a file exists, which we call |doesFileExist|, equivalent to the standard |System.Directory.doesFileExist|, but tracked as a dependency. When writing an |Action| we may wish to call |doesFileExist|, as an example:
+To work correctly, the |key|/|value| types of |apply1| and |rule| must match each other. To aid end users, we suggest that most rule authors define sugar functions, as we have done for the rule types included with Shake. The simplest rule available is one that determines if a file exists, similar to the standard function |System.Directory.doesFileExist|, but where the dependency is tracked. As an example, consider the following rule:
 
 \begin{code}
 ".config" *> \dest -> do
@@ -396,17 +397,14 @@ The simplest rule available, consider the rule that determines if a file exists,
     copyFile src dest
 \end{code}
 
-This rule creates \file{.config} by copying either \file{.config.user} if it exists, or otherwise copying \file{.config.default}. You can imagine it being used for producing a config, allowing the user to override it as necessary. Since the |doesFileExist| is fully tracked, if the user removes their user config, or adds one, it will rerun the rule. Note the use of dynamic dependencies, if the user has a \file{.config.user}, and the \file{.config.default} changes then the rule will not be run, however if the file didn't exist it would be.
+This rule creates \file{.config} by copying either \file{.config.user} if it exists, or otherwise copying \file{.config.default}. The intention is that there is a default configuration, but it can be overridden by then user. Note the use of dynamic dependencies -- if the user has a \file{.config.user}, and the \file{.config.default} changes then the rule will not be run, however if the file didn't exist it would be.
 
-Note that because of the restriction that a value remains stable, we should not use this rule to decide if something needs to be built or not.
-
-And we can define it as:
-
+\begin{figure}
 \begin{code}
-module DoesFileExist(doesFileExist, defaultRuleDoesFileExist) where
+import System.Directory as IO
 
 newtype Exist = Exist FilePath
-    deriving (Typeable,Show,Eq,Hashable,Binary)
+-- plus instances for |Typeable|, |Show|, |Eq|, |Hashable| and |Binary|
 
 instance Rule Exist Bool where
     validStored (Exist x) b = liftM (== b) $ IO.doesFileExist x
@@ -414,57 +412,79 @@ instance Rule Exist Bool where
 doesFileExist :: FilePath -> Action Bool
 doesFileExist = apply1 . Exist
 
-defaultRuleDoesFileExist :: Rules ()
-defaultRuleDoesFileExist =
+default_ :: Rules ()
+default_ =
     defaultRule $ \(Exist x) -> Just $
         liftIO $ IO.doesFileExist x
 \end{code}
+\caption{Implementation of |doesFileExist|.}
+\label{fig:doesfileexist}
+\end{figure}
 
-We rely on explicit type signatures to ensure that |Ls| is always used with the correct type. Note that if a value changes we are likely to call |getDirectoryContents| twice in a row, once to invalidate the old value, and once to compute the new value. We can aleviate this problem with a single element cache (although in practice we find it not to be a problem, since the OS typically caches all the files anyway).
+We define |doesFileExist| in Figure \ref{fig:doesfileexist}. We first define a |newtype| wrapper to represent the |key| type, deriving all the necessary classes. We define an instance for |Rule Exist Bool|, where |validStored| simply checks that the existence of the file matches. We define |doesFileExist| as very gentle sugar around |apply1|, the primary purpose is to tie down the types, so users cannot make mistakes. Finally we define a |defaultRule| which runs the action. Anyone wishing to use |doesFileExist| should include |default_| in their rule set.
 
-Note that while |rule|/|apply1| require care about types, we have now abstracted that away. Anyone using this rule still needs to call |defaultRuleDoesFileExist| first.
+We use module export to only export |doesFileExist| and |default_|, and thus we are guaranteed that the types match. Note that if a value changes we are likely to call |IO.doesFileExist| twice in a row, once to invalidate the old value in |validStored|, and once to compute the new value in |default_|. We can alleviate this problem with a single element cache -- although in practice we find it not to be a problem, since the operating system typically caches all file queries.
 
-Do not use ls over a universe you are changing. If you ls, it should be in the source directory, not one you create - otherwise your build system as a result of generating a file could be unsatable. Ls should return the same at the start and end of the compilation.
-
+We end with a note of caution. We require that any stored value remains consistent other than when a rule actively changes in. Since this rule does not force the existence of a file, it should not be used on any files that may be generated by the build system -- |doesFileExist| should return the same at the start and end of the compilation.
 
 \subsection{File Based Rules}
 
+\begin{figure}
 \begin{code}
+import System.Directory as IO
+
 newtype File = File FilePath
-newtype Timestamp = Timestamp Int
+newtype FileTime = FileTime Int
+-- plus all necessary instances
 
-instance Rule File TimeStamp where
-    externalValue (File x) = do
-        b <- doesFileExist x
-        -- we always return |Just|, which is important
-        if b then fmap Just getModificationTime else Just (-1)
+getFileTime :: FilePath -> IO (Maybe FileTime)
+getFileTime x = do
+    b <- IO.doesFileExist x
+    if not b then return Nothing else do
+        TOD t _ <- IO.getModificationTime x
+        return $ Just $ FileTime $ fromIntegral t
 
-fileRule :: Rules ()
-fileRule = defaultRule \(File x) -> do
-    b <- io $ doesFileExist x
-    if b then io $ fmap TimeStamp getModificationTime else error "could not find file"
+instance Rule File FileTime where
+    validStored (File x) t = fmap (== Just t) $ getFileTime x
 
+defaultRuleFile :: Rules ()
+defaultRuleFile = defaultRule $ \(File x) -> Just $ do
+    res <- liftIO $ getFileTime x
+    let msg = "Error, file does not exist and no available rule: " ++ x
+    return $ fromMaybe (error msg) res
 
-need :: [FilePath] -> Make ()
-need xs = void (run $ map File xs :: Make [Timestamp])
+need :: [FilePath] -> Action ()
+need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
 
-want :: [FilePath] -> Rule ()
+want :: [FilePath] -> Rules ()
 want xs = action $ need xs
 
-(?>) :: (FilePath -> Bool) -> (FilePath -> Make ()) -> Rules ()
-(?>) test act = rule $ \x -> if test x then Just act else Nothing
+(?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
+(?>) test act = rule $ \(File x) ->
+    if not $ test x then Nothing else Just $ do
+        liftIO $ createDirectoryIfMissing True $ takeDirectory x
+        act x
+        res <- liftIO $ getFileTime x
+        let msg = "Error, rule failed to build the file: " ++ x
+        return $ fromMaybe (error msg)
 
-(**>) :: [WildFilePath] -> (FilePath -> Make ()) -> Rule ()
-(**>) test act = (\x -> any (x ?=) test) ?> act
+(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(**>) test act = (\x -> any (x =*=) test) ?> act
 
-(*>) :: WildFilePath -> (FilePath -> Make ()) -> Rule ()
-(*>) test act = (?= test) ?> act
+(*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
+(*>) test act = (test =*=) ?> act
 \end{code}
+\caption{Implement of file rules.}
+\label{fig:file_rules}
+\end{figure}
 
-We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or hash (e.g. SHA1) in the value instead. We found in practice that Timestamp is faster (noticably so for large files) and it's actually quite nice to do a \prog{touch} to cause something to be rebuilt!
+We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or hash (e.g. SHA1) in the value instead. We found in practice that Timestamp is faster (noticably so for large files) and it's actually quite nice to do a \prog{touch} to cause something to be rebuilt! We define everything in Figure \ref{fig:file_rules}.
 
 We define |(?>)| which tests if a file matches a function and can describe all types of file related rule. It automatically gets the modification times from the resulting files and handles all the details. We also have |(*>)| which just allows wildcards, and is much like the rule in \make{}. We also have |(**>)| which takes a set of wildcards.
+
 In practice, we have found that |(?>)| is used about 5\% of the time, |(**>)| is used about 10\% and |(*>)| is used about 85\% of the time. In our experience, using |(?>)| is a sign that the build system is poorly designed (due to reverse compatibility constraints in our system), and should be rethought.
+
+We steal the idea of creating the rule if it is missing from the Ninja build system. We consider this critical functionality, primarily because many files are like to create a file. If these rules are randomly reordered, then occasionally we will get failures. Always creating it gives extra safety.
 
 \subsection{Operations}
 
@@ -687,7 +707,7 @@ We can work around the problem by introducing a new type, |File2| which stores t
 
 We can define the implementation as... this only does one layer.
 
-We can also define a more specific one, based on the assumption that #ifdef statements do not change the include files (a reasonable assumption in many cases).
+We can also define a more specific one, based on the assumption that @#ifdef@ statements do not change the include files (a reasonable assumption in many cases).
 
 If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
 
@@ -721,6 +741,11 @@ Just use actionAllow to filter which things they are allowed to need. You should
 
 The |rule|/|apply| functions are checked at runtime. However, since everyone uses sugared versions, that isn't an issue. It should be relatively easy to define a statically typed rule that accumulates its types used, but it's more complex.
 
+\subsection{Comparison to @ghc --make@}
+
+Compared to GHC --make, building the Shake project takes 9 seconds to compile, while GHC --make takes 6 seconds. The reason for the difference is that GHC has to analyse dependencies once, and can keep .hi information in memory. However, Shake can fight back with some parallelism - in the Shake demo, if we scale each compilation to 5seconds, then GHC would take at least 70 seconds, while Shake can gain with parallelism to take 45 seconds. Compared to something like gcc, which is always invoked in single mode, we do better.
+
+However, we do far better for a null rebuild. We have essentially reduced it to a question of which files already exist, and which timestamps do a set of files -- to rebuild GHC must ask at least these questions, and in practice will look at the insides of each file. As a result, we can do a minimal rebuild in 0.03 seconds, while GHC takes 0.6 seconds. Our only unnecesary overhead is reading in the database.
 
 \section{Related Work}
 \label{sec:related_work}
@@ -731,6 +756,9 @@ A standard build system generates a dependency graph for all files, and processe
 
 Ninja the Chromium build system has dynamic dependencies (you can specify a rule that contains dependencies), multiple outputs. It focus on only running command lines, and is a bit more limited, but still encompasses many of the same ideas.
 
+gittup.org/tup
+
+"redo"
 
 \section{Conclusions}
 \label{sec:conclusions}
