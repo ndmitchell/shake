@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, ExistentialQuantification, FunctionalDependencies, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Core(
-    ShakeOptions(..), shakeOptions, runShake,
+    ShakeOptions(..), shakeOptions, run,
     Rule(..), Rules, defaultRule, rule, action,
     Action, apply, apply1, traced, currentRule,
     putLoud, putNormal, putQuiet
@@ -32,7 +32,7 @@ import Development.Shake.Value
 
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.@)
-    ,shakeParallelism :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@)
+    ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@)
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force everyone to rebuild
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud
     }
@@ -119,13 +119,13 @@ newtype Action a = Action (StateT S IO a)
     deriving (Functor, Monad, MonadIO)
 
 
-runShake :: ShakeOptions -> Rules () -> IO Double
-runShake ShakeOptions{..} rules = do
+run :: ShakeOptions -> Rules () -> IO Double
+run ShakeOptions{..} rules = do
     start <- getCurrentTime
     registerWitnesses rules
     database <- openDatabase shakeFiles shakeVersion
     outputLock <- newVar ()
-    withPool shakeParallelism $ \pool -> do
+    withPool shakeParallel $ \pool -> do
         let state = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
         parallel_ pool $ map (runAction state) (actions rules)
     closeDatabase database

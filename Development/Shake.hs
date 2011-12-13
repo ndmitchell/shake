@@ -7,7 +7,7 @@ module Development.Shake(
     module Development.Shake.Directory
     ) where
 
-import Development.Shake.Core hiding (runShake)
+import Development.Shake.Core hiding (run)
 import Development.Shake.Derived
 import Development.Shake.File hiding (defaultRuleFile)
 import Development.Shake.Directory hiding (defaultRuleDirectory)
@@ -18,7 +18,7 @@ import qualified Development.Shake.Directory as X
 
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts r = do
-    X.runShake opts $ do
+    X.run opts $ do
         r
         X.defaultRuleFile
         X.defaultRuleDirectory

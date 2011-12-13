@@ -131,7 +131,7 @@ request Database{..} validStored ks =
         validHistory k i (x:xs) = do
             r@Response_{..} <- fmap concatResponse $ mapM f x
             if not $ null execute && null barriers then return r
-             else if all ((<= time i) . fst) values then validHistory k i xs
+             else if all ((<= realTime i) . fst) values then validHistory k i xs
              else build k
 
         build :: Key -> S.StateT (Map Key Status) IO Response_

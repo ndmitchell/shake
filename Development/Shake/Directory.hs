@@ -22,8 +22,6 @@ import Development.Shake.File
 
 newtype Exist = Exist FilePath
     deriving (Typeable,Eq,Hashable,Binary)
-newtype Exist_ = Exist_ Bool
-    deriving (Typeable,Show,Eq,Hashable,Binary)
 
 instance Show Exist where
     show (Exist a) = "Exists? " ++ a
@@ -56,8 +54,8 @@ instance Binary GetDir where
     put (GetDirDirs x) = putWord8 2 >> put x
 
 
-instance Rule Exist Exist_ where
-    validStored (Exist x) (Exist_ b) = fmap (== b) $ IO.doesFileExist x
+instance Rule Exist Bool where
+    validStored (Exist x) b = fmap (== b) $ IO.doesFileExist x
 
 instance Rule GetDir GetDir_ where
     validStored x y = fmap (== y) $ getDir x
@@ -66,15 +64,13 @@ instance Rule GetDir GetDir_ where
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     defaultRule $ \(Exist x) -> Just $
-        liftIO $ fmap Exist_ $ IO.doesFileExist x
+        liftIO $ IO.doesFileExist x
     defaultRule $ \x@GetDir{} -> Just $
         liftIO $ getDir x
 
 
 doesFileExist :: FilePath -> Action Bool
-doesFileExist x = do
-    Exist_ y <- apply1 $ Exist x
-    return y
+doesFileExist = apply1 . Exist
 
 getDirectoryContents :: FilePath -> Action [FilePath]
 getDirectoryContents x = getDirAction $ GetDir x

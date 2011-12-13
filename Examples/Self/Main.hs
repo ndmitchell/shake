@@ -10,7 +10,7 @@ import Data.List
 
 
 main :: IO ()
-main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParallelism=2} $ do
+main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParallel=1} $ do
     let pkgs = "transformers binary unordered-containers parallel-io"
         flags = map ("-package=" ++) $ words pkgs
 
@@ -38,10 +38,10 @@ main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParal
         xs <- filterM (doesFileExist . moduleToFile "hs") xs
         writeFileLines res xs
 
-    out "/*.o" *> \res -> do
-        need [replaceExtension res "hi"]
-
     out "/*.hi" *> \res -> do
+        need [replaceExtension res "o"]
+
+    out "/*.o" *> \res -> do
         dep <- readFileLines $ replaceExtension res "dep"
         let hs = unout $ replaceExtension res "hs"
         need $ hs : map (out . moduleToFile "hi") dep

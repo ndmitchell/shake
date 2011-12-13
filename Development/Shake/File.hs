@@ -10,6 +10,7 @@ import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
 import Data.List
+import Data.Maybe
 import Data.Typeable
 import System.Directory
 import System.Time
@@ -44,9 +45,8 @@ instance Rule File FileTime where
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(File x) -> Just $ do
     res <- liftIO $ getFileTime x
-    case res of
-        Nothing -> error $ "Error, file does not exist and no available rule: " ++ x
-        Just t -> return t
+    let msg = "Error, file does not exist and no available rule: " ++ x
+    return $ fromMaybe (error msg) res
 
 
 need :: [FilePath] -> Action ()
@@ -62,9 +62,8 @@ want xs = action $ need xs
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
         res <- liftIO $ getFileTime x
-        case res of
-            Nothing -> error $ "Error, rule failed to build the file: " ++ x
-            Just t -> return t
+        let msg = "Error, rule failed to build the file: " ++ x
+        return $ fromMaybe (error msg) res
 
 
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
