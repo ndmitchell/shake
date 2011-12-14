@@ -63,9 +63,9 @@ data Database = Database
 
 data Info = Info
     {value :: Value -- the value associated with the Key
-    ,time :: Time -- the timestamp for deciding if it's valid
+    ,built :: Time -- the timestamp for deciding if it's valid
+    ,changed :: Time -- when it was actually run
     ,depends :: [[Key]] -- dependencies
-    ,realTime :: Time -- when it was actually run
     ,execution :: Double -- how long it took when it was last run (seconds)
     ,traces :: [(String, Double, Double)] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     }
@@ -118,7 +118,7 @@ request Database{..} validStored ks =
             case Map.lookup k s of
                 Nothing -> build k
                 Just (Building bar _) -> return $ Response_ [] [bar] []
-                Just (Built i) -> return $ Response_ [] [] [(time i, value i)]
+                Just (Built i) -> return $ Response_ [] [] [(changed i, value i)]
                 Just (Loaded i) ->
                     if not $ validStored k (value i)
                     then build k
@@ -127,11 +127,11 @@ request Database{..} validStored ks =
         validHistory :: Key -> Info -> [[Key]] -> S.StateT (Map Key Status) IO Response_
         validHistory k i [] = do
             S.modify $ Map.insert k $ Built i
-            return $ Response_ [] [] [(time i, value i)]
+            return $ Response_ [] [] [(changed i, value i)]
         validHistory k i (x:xs) = do
             r@Response_{..} <- fmap concatResponse $ mapM f x
             if not $ null execute && null barriers then return r
-             else if all ((<= realTime i) . fst) values then validHistory k i xs
+             else if all ((<= built i) . fst) values then validHistory k i xs
              else build k
 
         build :: Key -> S.StateT (Map Key Status) IO Response_
@@ -145,10 +145,10 @@ request Database{..} validStored ks =
 
 finished :: Database -> Key -> Value -> [[Key]] -> Double -> [(String,Double,Double)] -> IO ()
 finished Database{..} k v depends duration traces = do
-    let info = Info v timestamp depends timestamp duration traces
+    let info = Info v timestamp timestamp depends duration traces
     (info2, barrier) <- modifyVar status $ \mp -> return $
         let Just (Building bar old) = Map.lookup k mp
-            info2 = if isJust old && value (fromJust old) == value info then info{time=time $ fromJust old} else info
+            info2 = if isJust old && value (fromJust old) == value info then info{changed=changed $ fromJust old} else info
         in (Map.insert k (Built info2) mp, (info2, bar))
     appendJournal journal k info2
     releaseBarrier barrier
@@ -299,8 +299,8 @@ instance BinaryWitness Statuses where
         return $ Statuses $ Map.fromList $ map (second Loaded) x
 
 instance BinaryWitness Info where
-    putWitness ws (Info x1 x2 x3 x4 x5 x6) = putWitness ws x1 >> put x2 >> putWitness ws x3 >> put x4 >> put x5 >> put x6
-    getWitness ws = do x1 <- getWitness ws; x2 <- get; x3 <- getWitness ws; x4 <- get; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
+    putWitness ws (Info x1 x2 x3 x4 x5 x6) = putWitness ws x1 >> put x2 >> put x3 >> putWitness ws x4 >> put x5 >> put x6
+    getWitness ws = do x1 <- getWitness ws; x2 <- get; x3 <- get; x4 <- getWitness ws; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
 
 instance (BinaryWitness a, BinaryWitness b) => BinaryWitness (a,b) where
     putWitness ws (a,b) = putWitness ws a >> putWitness ws b
