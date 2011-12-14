@@ -22,14 +22,14 @@ system_ (x:xs) = do
 
 
 readFile_ :: FilePath -> Action String
-readFile_ x = do
-    need [x]
-    liftIO $ readFile x
+readFile_ x = need [x] >> liftIO (readFile x)
+
+writeFile_ :: FilePath -> String -> Action ()
+writeFile_ name x = liftIO $ writeFile name x
 
 
 readFileLines :: FilePath -> Action [String]
 readFileLines = fmap lines . readFile_
 
-
 writeFileLines :: FilePath -> [String] -> Action ()
-writeFileLines name x = liftIO $ writeFile name $ unlines x
+writeFileLines name = writeFile_ name . unlines
