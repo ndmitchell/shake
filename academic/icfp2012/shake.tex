@@ -16,7 +16,7 @@
 %format *> = "\mathbin{*\!\!\!>}"
 %format **> = "\mathbin{*\!*\!\!\!>}"
 %format ?> = "\mathbin{?\!\!\!>}"
-%format =*= = "\mathbin{=\!\!^*}"
+%format =*= = "\mathbin{=\!\!*\!\!=}"
 %format `replaceExtension` = "\backtick{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
 %format context = "\Keyword{context}"
@@ -233,11 +233,16 @@ This scheme is limited to files, for two reasons:
 We can make these changes to produce:
 
 \begin{code}
-history :: Key -> Maybe (Time, Value)
+data Info =
+    {value :: Value
+    ,built :: Time
+    }
+
+history :: Key -> Maybe Info
 
 validHistory r = case history (creates r) of
     Nothing -> False
-    Just (t, v) -> all ((< t) . fst . fromJust . history) (depends r)
+    Just i -> all ((< built i) . built . fromJust . history) (depends r)
 \end{code}
 
 However, this scheme is incorrect for |Value|s that are stored by both the file system \textit{and} in our database. Consider a file, which has a file system modification time, and also has a |Value| in our database. If the file is edited externally, then the |Value| in our database will be incorrect. We can solve this problem by also checking that, where the |Value| is stored externally, it is still consistent:
@@ -247,11 +252,11 @@ data Stored = NeverStored | NotStored | Stored Value
 
 stored :: Key -> Stored
 
-validStored :: Rule -> Bool
-validStored r = case stored (creates r) of
+validStored :: Key -> Value -> Bool
+validStored k v = case stored k of
     NeverStored -> True
     NotStored -> False
-    Stored value -> history (creates r) == Just value
+    Stored value -> v == value
 \end{code}
 
 When attempting to read a value stored externally there are three possible states. Either the value is never stored, in which case it exists only in our database, and is always consistent. Or the value is sometimes stored, but not currently available externally -- such as a file that does not exist on disk, in which case the action must be rerun. Or the value is stored, and has an external value -- in which case the value is valid if it matches what we have stored. We can avoid running the action associated with a rule if it is valid with respect to the stored values, and with respect to the history.
@@ -270,15 +275,32 @@ Our original algorithm calculated every file repeatedly. We can easily add a cac
 To obtain minimal rebuilds across executions we can use the same approach as described in the previous section. However, we cannot determine whether a |history| is valid based on the rule, as we do not have the |depends| available, and do not want to rerun the |action| just to get the dependencies. Therefore, we just store the dependencies alongside.
 
 \begin{code}
-history :: Key -> Maybe (Time, Value, [Key])
+data Info =
+    {value :: Value
+    ,built :: Time
+    ,depends :: [Key]
+    }
+
+history :: Key -> Maybe Info
 
 validHistory r = case history (creates r) of
     Nothing -> False
-    Just (t, v, deps) -> all ((< t) . fst3 . fromJust . history) deps
-        where fst3 (x,_,_) = x
+    Just i -> all ((< built i) . built . fromJust . history) (depends i)
 \end{code}
 
 We can reuse the |validStored| unmodified.
+
+\subsubsection{Unchanging Files}
+
+Now let us consider the case where a rule runs, but the result is the same as last time. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. In \make{}, the solution is to disallow such changes, and always \prog{touch} the result after a rule completes. However, we can do better, avoiding unnecessary computation.
+
+Instead of storing just the built time, we can also store the |changed| time. Whenever we build a file we update its |built| time, but if the value is the same as last time, we leave its |changed| time the same. When checking |validHistory| we can replace the condition as:
+
+\begin{code}
+all ((< built i) . changed . fromJust . history) (dependedUpon i)
+\end{code}
+
+By introducing two timestamps for a single |Key|, we can reduce the number of builds required. For certain practical examples, this improvement can reduce rebuild times after a change from many minutes to seconds.
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -380,7 +402,7 @@ Every rule that is defined or applied in Shake must be a member of the |Rule| cl
 \item [Show] We require |Show| for debugging messages and logging.
 \end{description}
 
-Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining targets to build, we allow rules with no target, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|.
+Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining targets to build, we allow rules with no target, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate |IO alpha| to |Action alpha|.
 
 The |apply1| function takes a |key|, builds it, and returns the associated |value|. The |apply1| function finds a rule of the appropriate type whose application returns |Just|, then runs the action. The |apply| function can be thought of as |mapM apply1|, but is defined to build all necessary dependencies in parallel (see \S\ref{sec:parallelism}).
 
@@ -412,8 +434,8 @@ instance Rule Exist Bool where
 doesFileExist :: FilePath -> Action Bool
 doesFileExist = apply1 . Exist
 
-default_ :: Rules ()
-default_ =
+defaultRuleDoesFileExist :: Rules ()
+defaultRuleDoesFileExist =
     defaultRule $ \(Exist x) -> Just $
         liftIO $ IO.doesFileExist x
 \end{code}
@@ -421,9 +443,9 @@ default_ =
 \label{fig:doesfileexist}
 \end{figure}
 
-We define |doesFileExist| in Figure \ref{fig:doesfileexist}. We first define a |newtype| wrapper to represent the |key| type, deriving all the necessary classes. We define an instance for |Rule Exist Bool|, where |validStored| simply checks that the existence of the file matches. We define |doesFileExist| as very gentle sugar around |apply1|, the primary purpose is to tie down the types, so users cannot make mistakes. Finally we define a |defaultRule| which runs the action. Anyone wishing to use |doesFileExist| should include |default_| in their rule set.
+We define |doesFileExist| in Figure \ref{fig:doesfileexist}. We first define a |newtype| wrapper to represent the |key| type, deriving all the necessary classes. We define an instance for |Rule Exist Bool|, where |validStored| simply checks that the existence of the file matches. We define |doesFileExist| as very gentle sugar around |apply1|, the primary purpose is to tie down the types, so users cannot make mistakes. Finally we define a |defaultRule| which runs the action. Anyone wishing to use |doesFileExist| should include |defaultRuleDoesFileExist| in their rule set.
 
-We use module export to only export |doesFileExist| and |default_|, and thus we are guaranteed that the types match. Note that if a value changes we are likely to call |IO.doesFileExist| twice in a row, once to invalidate the old value in |validStored|, and once to compute the new value in |default_|. We can alleviate this problem with a single element cache -- although in practice we find it not to be a problem, since the operating system typically caches all file queries.
+We use a restricted module export list to export only |doesFileExist| and |defaultRuleDoesFileExist|, and thus we are guaranteed that the types match. Note that if a value changes we are likely to call |IO.doesFileExist| twice in a row, once to invalidate the old value in |validStored|, and once to compute the new value in |default_|. We can alleviate this problem with a single element cache -- although in practice we find it not to be a problem, since the operating system typically caches all file queries.
 
 We end with a note of caution. We require that any stored value remains consistent other than when a rule actively changes in. Since this rule does not force the existence of a file, it should not be used on any files that may be generated by the build system -- |doesFileExist| should return the same at the start and end of the compilation.
 
@@ -447,14 +469,14 @@ getFileTime x = do
 instance Rule File FileTime where
     validStored (File x) t = fmap (== Just t) $ getFileTime x
 
+need :: [FilePath] -> Action ()
+need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
+
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(File x) -> Just $ do
     res <- liftIO $ getFileTime x
     let msg = "Error, file does not exist and no available rule: " ++ x
     return $ fromMaybe (error msg) res
-
-need :: [FilePath] -> Action ()
-need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
 
 want :: [FilePath] -> Rules ()
 want xs = action $ need xs
@@ -466,7 +488,7 @@ want xs = action $ need xs
         act x
         res <- liftIO $ getFileTime x
         let msg = "Error, rule failed to build the file: " ++ x
-        return $ fromMaybe (error msg)
+        return $ fromMaybe (error msg) res
 
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (**>) test act = (\x -> any (x =*=) test) ?> act
@@ -478,15 +500,35 @@ want xs = action $ need xs
 \label{fig:file_rules}
 \end{figure}
 
-We use Key/Value pairs, but in Make these are mainly restricted to keys being filenames, and Value's being their contents, which are left on disk. You could imagine storing a timestamp or hash (e.g. SHA1) in the value instead. We found in practice that Timestamp is faster (noticably so for large files) and it's actually quite nice to do a \prog{touch} to cause something to be rebuilt! We define everything in Figure \ref{fig:file_rules}.
+While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. For files, the filename is a sensible |Key|, but |Value| could be either the on-disk modification time or a hash of the file contents (e.g. SHA1). We found in that modification time is faster (significantly faster for large files) and being able to rebuild something with \prog{touch} is highly convenient! Of course, our design allows anyone to define a new file type, based on file hashes. Using modification time for values, we define the functions for working with files in Figure \ref{fig:file_rules}.
 
-We define |(?>)| which tests if a file matches a function and can describe all types of file related rule. It automatically gets the modification times from the resulting files and handles all the details. We also have |(*>)| which just allows wildcards, and is much like the rule in \make{}. We also have |(**>)| which takes a set of wildcards.
+To force files to be built, we define |need| and |want|. The |need| action demands all the modification times associated with the filenames, then throws away the result -- a computation depends on the time a file was built, but rarely uses the modification time in its computation. We define |want| as simply a |need| run as an action.
 
-In practice, we have found that |(?>)| is used about 5\% of the time, |(**>)| is used about 10\% and |(*>)| is used about 85\% of the time. In our experience, using |(?>)| is a sign that the build system is poorly designed (due to reverse compatibility constraints in our system), and should be rethought.
+We define |defaultRuleFile| as a rule that simply checks if the file is already present, and if so uses it. Source files will have no associated rules, so this rule just records their modification time. If a file has no rules (since any rules would be run in preference to the default rule), and does not exist, then we give an error to the user. As with |defaultRuleDoesFileExist|, anyone using |want|/|need| should include |defaultRuleFile| in their rule set.
 
-We steal the idea of creating the rule if it is missing from the Ninja build system. We consider this critical functionality, primarily because many files are like to create a file. If these rules are randomly reordered, then occasionally we will get failures. Always creating it gives extra safety.
+We define new file rules with |(?>)|, which takes a predicate to match against the file name and an action to run. This function forces the correct types, and obtains the modification time afterwards. Before running the action we create the directory containing the output file, an idea taken from the Ninja build system \cite{ninja}. We found that when running a large set of newly written rules, often one rule would create the output directory while another did not -- meaning some rule orderings worked while others failed. Automatically creating the output directory removes this source of failure.
 
-\subsection{Operations}
+While |(?>)| is the ultimate file creation rule, we define two additional operators, in terms of a wildcard match operator |(=*=)|. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation, we found that |(?>)| was used about 5\% of the time, |(**>)| was used about 10\% and |(*>)| was used about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is poorly designed and should be rethought (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
+
+\subsection{Derived Operations}
+
+Using the file rules from the previous section, we can define new versions of operations such as |readFile|, which automatically call |need|:
+
+\begin{code}
+readFile :: FilePath -> Action String
+readFile x = need [x] >> liftIO (IO.readFile x)
+\end{code}
+
+We also define a number of helpful utilities:
+
+\begin{itemize}
+\item |readFileLines| reads a file and splits the result into lines.
+\item |writeFile|/|writeFileLines| just use |liftIO| to lift the |writeFile| call into the |Action| monad.
+\item |system| takes a list of command line arguments and escapes them as necessary. It's also useful for profiling (see \S\ref{sec:profiling}. Note that |system| does not automatically know, so must be used carefully.
+\end{itemize}
+
+We can also hoist |need| calls.
+
 
 We can layer on sugar like |readFileLines| quite easily. And also |readFile|, |system|, |mkdir|. In all cases, we try and emulate the \make{} behaviour of being more relaxed.
 
