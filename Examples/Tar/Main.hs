@@ -10,4 +10,4 @@ main = shake shakeOptions{shakeFiles="output/tar", shakeVerbosity=2} $ do
     "output/tar/result.tar" *> \out -> do
         contents <- readFileLines "Examples/Tar/list.txt"
         need contents
-        system_ $ ["tar","-cf",out] ++ contents
+        system' $ ["tar","-cf",out] ++ contents

@@ -4,6 +4,7 @@ module Development.Shake.Derived where
 import Control.Monad
 import Control.Monad.IO.Class
 import System.Cmd
+import System.Directory
 import System.Exit
 
 import Development.Shake.Core
@@ -11,8 +12,8 @@ import Development.Shake.File
 import Development.Shake.FilePath
 
 
-system_ :: [String] -> Action ()
-system_ (x:xs) = do
+system' :: [String] -> Action ()
+system' (x:xs) = do
     let cmd = unwords $ toNative x : xs
     putLoud cmd
     res <- liftIO $ system cmd
@@ -21,15 +22,19 @@ system_ (x:xs) = do
         error $ "System command failed while building " ++ show k ++ ", " ++ cmd
 
 
-readFile_ :: FilePath -> Action String
-readFile_ x = need [x] >> liftIO (readFile x)
+copyFile' :: FilePath -> FilePath -> Action ()
+copyFile' old new = need [old] >> liftIO (copyFile old new)
 
-writeFile_ :: FilePath -> String -> Action ()
-writeFile_ name x = liftIO $ writeFile name x
+
+readFile' :: FilePath -> Action String
+readFile' x = need [x] >> liftIO (readFile x)
+
+writeFile' :: FilePath -> String -> Action ()
+writeFile' name x = liftIO $ writeFile name x
 
 
 readFileLines :: FilePath -> Action [String]
-readFileLines = fmap lines . readFile_
+readFileLines = fmap lines . readFile'
 
 writeFileLines :: FilePath -> [String] -> Action ()
-writeFileLines name = writeFile_ name . unlines
+writeFileLines name = writeFile' name . unlines

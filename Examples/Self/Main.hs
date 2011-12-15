@@ -23,7 +23,7 @@ main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParal
         src <- readFileLines $ replaceExtension res "deps"
         let os = map (out . moduleToFile "o") $ "Main":src
         need os
-        system_ $ ["ghc","-o",res] ++ os ++ flags
+        system' $ ["ghc","-o",res] ++ os ++ flags
 
     out "/*.deps" *> \res -> do
         dep <- readFileLines $ replaceExtension res "dep"
@@ -33,7 +33,7 @@ main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParal
         writeFileLines res ds
 
     out "/*.dep" *> \res -> do
-        src <- readFile_ $ unout $ replaceExtension res "hs"
+        src <- readFile' $ unout $ replaceExtension res "hs"
         let xs = hsImports src
         xs <- filterM (doesFileExist . moduleToFile "hs") xs
         writeFileLines res xs
@@ -45,7 +45,7 @@ main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParal
         dep <- readFileLines $ replaceExtension res "dep"
         let hs = unout $ replaceExtension res "hs"
         need $ hs : map (out . moduleToFile "hi") dep
-        system_ $ ["ghc","-c",hs,"-odir=output/self","-hidir=output/self","-i=output/self"] ++ flags
+        system' $ ["ghc","-c",hs,"-odir=output/self","-hidir=output/self","-i=output/self"] ++ flags
 
 
 hsImports :: String -> [String]
