@@ -123,12 +123,11 @@ run :: ShakeOptions -> Rules () -> IO Double
 run ShakeOptions{..} rules = do
     start <- getCurrentTime
     registerWitnesses rules
-    database <- openDatabase shakeFiles shakeVersion
     outputLock <- newVar ()
-    withPool shakeParallel $ \pool -> do
-        let state = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
-        parallel_ pool $ map (runAction state) (actions rules)
-    closeDatabase database
+    withDatabase shakeFiles shakeVersion $ \database -> do
+        withPool shakeParallel $ \pool -> do
+            let s0 = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
+            parallel_ pool $ map (runAction s0) (actions rules)
     end <- getCurrentTime
     return $ duration start end
 

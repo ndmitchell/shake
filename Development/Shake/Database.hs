@@ -8,7 +8,7 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 -}
 
 module Development.Shake.Database(
-    Database, openDatabase, closeDatabase,
+    Database, withDatabase,
     request, Response(..), finished
     ) where
 
@@ -156,6 +156,11 @@ finished Database{..} k v depends duration traces = do
 
 ---------------------------------------------------------------------
 -- DATABASE
+
+
+withDatabase :: FilePath -> Int -> (Database -> IO a) -> IO a
+withDatabase filename version = bracket (openDatabase filename version) closeDatabase
+
 
 -- Files are named based on the FilePath, but with different extensions,
 -- such as .database, .journal, .trace
