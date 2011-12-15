@@ -83,7 +83,7 @@ What if we want to build \file{result.tar} from the list of files in \file{list.
     need ["list.txt"]
     contents <- readFileLines "list.txt"
     need contents
-    system $ ["tar","-cf","result.tar"] ++ contents
+    system' $ ["tar","-cf","result.tar"] ++ contents
 \end{code}
 
 This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read \file{list.txt}, and store each line in |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
@@ -291,6 +291,7 @@ validHistory r = case history (creates r) of
 We can reuse the |validStored| unmodified.
 
 \subsubsection{Unchanging Files}
+\label{sec:unchanging_files}
 
 Now let us consider the case where a rule runs, but the result is the same as last time. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. In \make{}, the solution is to disallow such changes, and always \prog{touch} the result after a rule completes. However, we can do better, avoiding unnecessary computation.
 
@@ -321,14 +322,14 @@ main = shake def $ do
         cs <- getDirectoryFiles "." "*.c"
         let os = map (`replaceExtension` "o") cs
         need os
-        system_ $ ["gcc","-o",exe] ++ os
+        system' $ ["gcc","-o",exe] ++ os
 
     "*.o" *> \o -> do
         let c = replaceExtension o "c"
         need [c]
         headers <- liftIO (cIncludes c)
         need headers
-        system_ ["gcc","-o",o,"-c",c]
+        system' ["gcc","-o",o,"-c",c]
 \end{code}
 \caption{Demo build system in Shake.}
 \label{fig:demo}
@@ -510,60 +511,48 @@ We define new file rules with |(?>)|, which takes a predicate to match against t
 
 While |(?>)| is the ultimate file creation rule, we define two additional operators, in terms of a wildcard match operator |(=*=)|. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation, we found that |(?>)| was used about 5\% of the time, |(**>)| was used about 10\% and |(*>)| was used about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is poorly designed and should be rethought (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
 
-\subsection{Derived Operations}
+\subsection{Automatically Include Default Rules}
 
-Using the file rules from the previous section, we can define new versions of operations such as |readFile|, which automatically call |need|:
-
-\begin{code}
-readFile :: FilePath -> Action String
-readFile x = need [x] >> liftIO (IO.readFile x)
-\end{code}
-
-We also define a number of helpful utilities:
-
-\begin{itemize}
-\item |readFileLines| reads a file and splits the result into lines.
-\item |writeFile|/|writeFileLines| just use |liftIO| to lift the |writeFile| call into the |Action| monad.
-\item |system| takes a list of command line arguments and escapes them as necessary. It's also useful for profiling (see \S\ref{sec:profiling}. Note that |system| does not automatically know, so must be used carefully.
-\end{itemize}
-
-We can also hoist |need| calls.
-
-
-We can layer on sugar like |readFileLines| quite easily. And also |readFile|, |system|, |mkdir|. In all cases, we try and emulate the \make{} behaviour of being more relaxed.
-
-\begin{code}
-readFile_ :: FilePath -> Make String
-readFile_ x = do
-    need x
-    liftIO $ Prelude.readFile x
-
-system :: [String] -> Make ()
-system xs = do
-    x <- System.system $ unwords xs
-    unless (x == ExitSuccess) $ error "Failed when running command"
-
-mkdir :: FilePath -> Make ()
-mkdir x = liftIO $ createDirectoryRecursive True x
-
-cp :: FilePath -> FilePath -> Make ()
-cp src dest = do
-    need [src]
-    liftIO $ copyFile src dest
-\end{code}
-
-\subsection{Wrapping}
-
-We can then defined:
+With the rule types already defined, users can write a build system using Shake. Unfortunately, if the user forgets to include the rule |defaultRuleFile|, there is likely to be a runtime error. Instead of requiring the user to remember to include the default rules, we instead define a wrapper function |shake| which includes all default rules available:
 
 \begin{code}
 shake opts rules = run opts $ do
-    fileRule
-    lsRule
+    defaultRuleDoesFileExist
+    defaultRuleFile
+    ellipses
     rules
 \end{code}
 
-Note that if we had |defaultRule| in the type class, we could avoid having the |shake| wrapper.
+The astute reader may be wondering why we can't move |defaultRule| into the |Rule| type class, and avoid requiring such a wrapper. Alas, that solution doesn't work for reasons described in \S\ref{sec:dynamically_typed}, because we always need to have an explicit rules of each type to deserialise dynamically typed values.
+
+\subsection{Additional Functions}
+
+Using the file rules from the previous section, we can define new versions of operations such as |readFile|/|copyFile|, which automatically call |need|:
+
+\begin{code}
+readFile' :: FilePath -> Action String
+readFile' x = need [x] >> liftIO (readFile x)
+
+copyFile' :: FilePath -> FilePath -> Action ()
+copyFile' old new = need [old] >> liftIO (copyFile old new)
+\end{code}
+
+These operations mirror their standard counterparts, but automatically include a |need| call. It is never harmful to include an additional call to |need|, in fact, sometimes it is beneficial! Consider the following example:
+
+\begin{code}
+"file.txt" *> \out ->
+    need [out ++ ".part1", out ++ ".part2"]
+    part1 <- readFile' (out ++ ".part1")
+    part2 <- readFile' (out ++ ".part2")
+    writeFile' out (part1++part2)
+\end{code}
+
+Here we use the additional function |writeFile'|, simply |writeFile| lifted to the |Action| monad. This rule would work correctly without the |need| call on the second line, as both |readFile'| calls include |need| within them. However, when running the build system in parallel, the additional |need| allows both dependencies to be computed at the same time, while the |need| calls inside |readFile'| serialise building of the dependencies.
+
+We define a number of additional functions for working with files. The functions |readFileLines|/|writeFileLines| deal with files which should be treated as a list of lines. The function |writeFileEq| writes a file, but only if the contents have changed, and is useful for avoiding redundant computation due to unchanging files (see \S\ref{sec:unchanging_files}).
+
+We define the |system'| function which take a list of command line arguments, and escapes them as necessary, before calling the underlying |system| command. This function also contributes generates profiling information (see \S\ref{sec:profiling}). The |system'| function should be used carefully, as it cannot tell which files the system command may depend on, so explicit |need| commands must be used (see \S\ref{sec:lint} for ways to detect such a problem). We recommend writing wrappers around system commands which insert the appropriate |need| calls.
+
 
 \section{Implementing Shake}
 \label{sec:developer_view}
@@ -738,7 +727,7 @@ Sometimes running one command will produce two outputs. As an example, running \
 "*.o" *> \o ->
     let hs = replaceExtension x "hs"
     need [hs] -- and it's dependencies, but let's ignore that for now
-    system ["ghc","-c",hs]
+    system' ["ghc","-c",hs]
 \end{code}
 
 Note that if we wrote it the other way, with the \file{*.o} depending on the \file{*.hi} then if the \file{*.hi} stayed the same we could end up screwed. We'd have written that neither file had changed, but both would have. Ouch. Also if we use SHA1 it's now not correct.
