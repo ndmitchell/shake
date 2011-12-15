@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, UndecidableInstances #-}
 {-# OPTIONS -fno-warn-unused-binds #-} -- for fields used just for docs
 {-
 Files stores the meta-data so its very important its always accurate
@@ -12,6 +13,7 @@ module Development.Shake.Database(
     request, Response(..), finished
     ) where
 
+import Development.Shake.Binary
 import Development.Shake.Locks
 import Development.Shake.Value
 
@@ -21,7 +23,6 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Control.Monad.Trans.State as S
-import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.Char
@@ -246,8 +247,8 @@ replayJournal :: FilePath -> Int -> Map Key Status -> IO (Map Key Status)
 replayJournal file ver mp = catch (do
     src <- readFileVer file $ journalVersion ver
     let ws:rest = readChunks src
-    ws <- return $ decode ws
-    rest <- return $ map (runGet (getWitness ws)) rest
+    ws :: Witness <- return $ decode ws
+    rest <- return $ map (runGet (getWith ws)) rest
     return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) mp rest)
     $ \(err :: SomeException) -> do
         putStrLn $ unlines $
@@ -261,7 +262,7 @@ appendJournal :: Journal -> Key -> Info -> IO ()
 appendJournal Journal{..} k i = modifyVar_ handle $ \v -> case v of
     Nothing -> return Nothing
     Just h -> do
-        writeChunk h $ runPut $ putWitness witness (k,i)
+        writeChunk h $ runPut $ putWith witness (k,i)
         return $ Just h
 
 
@@ -286,34 +287,26 @@ instance Binary Time where
 data Witnessed a = Witnessed Witness a
 fromWitnessed (Witnessed _ x) = x
 
-instance BinaryWitness a => Binary (Witnessed a) where
-    put (Witnessed ws x) = put ws >> putWitness ws x
-    get = do ws <- get; x <- getWitness ws; return $ Witnessed ws x
+instance BinaryWith Witness a => Binary (Witnessed a) where
+    put (Witnessed ws x) = put ws >> putWith ws x
+    get = do ws <- get; x <- getWith ws; return $ Witnessed ws x
 
 -- Only for serialisation
 newtype Statuses = Statuses {fromStatuses :: Map Key Status}
 
-instance BinaryWitness Statuses where
-    putWitness ws (Statuses x) = putWitness ws [(k,i) | (k,v) <- Map.toList x, Just i <- [f v]]
+instance BinaryWith Witness Statuses where
+    putWith ws (Statuses x) = putWith ws [(k,i) | (k,v) <- Map.toList x, Just i <- [f v]]
         where
             f (Building _ i) = i
             f (Built i) = Just i
             f (Loaded i) = Just i
-    getWitness ws = do
-        x <- getWitness ws
+    getWith ws = do
+        x <- getWith ws
         return $ Statuses $ Map.fromList $ map (second Loaded) x
 
-instance BinaryWitness Info where
-    putWitness ws (Info x1 x2 x3 x4 x5 x6) = putWitness ws x1 >> put x2 >> put x3 >> putWitness ws x4 >> put x5 >> put x6
-    getWitness ws = do x1 <- getWitness ws; x2 <- get; x3 <- get; x4 <- getWitness ws; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
-
-instance (BinaryWitness a, BinaryWitness b) => BinaryWitness (a,b) where
-    putWitness ws (a,b) = putWitness ws a >> putWitness ws b
-    getWitness ws = do a <- getWitness ws; b <- getWitness ws; return (a,b)
-
-instance BinaryWitness a => BinaryWitness [a] where
-    putWitness ws xs = put (length xs) >> mapM_ (putWitness ws) xs
-    getWitness ws = do n <- get; replicateM n $ getWitness ws
+instance BinaryWith Witness Info where
+    putWith ws (Info x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> putWith ws x4 >> put x5 >> put x6
+    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- getWith ws; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
 
 
 readFileVer :: FilePath -> String -> IO LBS.ByteString

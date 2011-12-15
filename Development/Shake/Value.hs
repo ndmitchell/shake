@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ExistentialQuantification, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
 
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.
@@ -6,10 +6,10 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
-    Witness, BinaryWitness(..), currentWitness, registerWitness
+    Witness, currentWitness, registerWitness
     ) where
 
-import Data.Binary
+import Development.Shake.Binary
 import Data.Hashable
 import Data.Typeable
 
@@ -24,7 +24,7 @@ import System.IO.Unsafe
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
-    deriving (Eq,Hashable,BinaryWitness)
+    deriving (Eq,Hashable,BinaryWith Witness)
 
 data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a) => Value a
 
@@ -97,17 +97,13 @@ instance Binary Witness where
         return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
 
 
-class BinaryWitness a where
-    putWitness :: Witness -> a -> Put
-    getWitness :: Witness -> Get a
-
-instance BinaryWitness Value where
-    putWitness ws (Value x) = do
+instance BinaryWith Witness Value where
+    putWith ws (Value x) = do
         let msg = "Internal error, could not find witness type for " ++ show (typeOf x)
         put $ fromMaybe (error msg) $ Map.lookup (typeOf x) (witnessOut ws)
         put x
 
-    getWitness ws = do
+    getWith ws = do
         h <- get
         case Map.lookup h $ witnessIn ws of
             Nothing -> error $
