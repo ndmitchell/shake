@@ -8,6 +8,7 @@
 \usepackage{multirow}
 \usepackage{setspace}
 \usepackage{balance}
+\usepackage[all]{xy}
 
 \include{paper}
 %include paper.fmt
@@ -233,7 +234,7 @@ This scheme is limited to files, for two reasons:
 We can make these changes to produce:
 
 \begin{code}
-data Info =
+data Info = Info
     {value :: Value
     ,built :: Time
     }
@@ -275,7 +276,7 @@ Our original algorithm calculated every file repeatedly. We can easily add a cac
 To obtain minimal rebuilds across executions we can use the same approach as described in the previous section. However, we cannot determine whether a |history| is valid based on the rule, as we do not have the |depends| available, and do not want to rerun the |action| just to get the dependencies. Therefore, we just store the dependencies alongside.
 
 \begin{code}
-data Info =
+data Info = Info
     {value :: Value
     ,built :: Time
     ,depends :: [Key]
@@ -396,7 +397,7 @@ We execute a set of rules with the |run| function, which also takes an options r
 Every rule that is defined or applied in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with the value stored externally. We require that each rule |key| has only one type of |value|, this restriction is not technically required, but forces users to keep their rules simple. Each |key|/|value| type must also be in several type classes:
 
 \begin{description}
-\item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, and to match on only one type at a time, we require a |Typeable| constraint.
+\item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, and to match on only one type at a time, we require a |Typeable| constraint, allowing us to obtain an explicit |TypeRep| \cite{typeable}.
 \item [Eq] We require equality to match the values.
 \item [Binary] We require |Binary| so we can store the values in a database, to achieve minimal rebuilds.
 \item [Hashable] We require |Hashable| to perform fast searching.
@@ -512,6 +513,7 @@ We define new file rules with |(?>)|, which takes a predicate to match against t
 While |(?>)| is the ultimate file creation rule, we define two additional operators, in terms of a wildcard match operator |(=*=)|. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation, we found that |(?>)| was used about 5\% of the time, |(**>)| was used about 10\% and |(*>)| was used about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is poorly designed and should be rethought (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
 
 \subsection{Automatically Include Default Rules}
+\label{sec:include_default_rules}
 
 With the rule types already defined, users can write a build system using Shake. Unfortunately, if the user forgets to include the rule |defaultRuleFile|, there is likely to be a runtime error. Instead of requiring the user to remember to include the default rules, we instead define a wrapper function |shake| which includes all default rules available:
 
@@ -557,37 +559,66 @@ We define the |system'| function which take a list of command line arguments, an
 \section{Implementing Shake}
 \label{sec:developer_view}
 
-We can implement Shake relatively easy. We don't give the entire implementation (for that, download the package from Hackage), but sketch some of the central ideas. When implementing Shake there are several goals:
+We have implemented Shake, and used it extensively. In this section we sketch some of the central implementation challenges, and how they can be overcome. Readers interested in the full implementation are welcome to download the associated package (see \S\ref{sec:introduction} for a link). In the implementation of Shake there are several goals:
 
 \begin{description}
-\item[Correctness] -- always rebuild enough, but we never rebuild something that could be reused.
-\item[Efficiency] -- we try and make the implementation efficient.
-\item[Parallelism] -- we try and do as much in parallel as possible.
-\item[Error feedback] -- if the build system fails for some reason, such as the rules being incorrect as per \S\ref{sec:theory_shake}, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it makes the system practical.
+\item[Correctness] -- we always execute enough rules to obtain correctness, but we never rebuild something that could be reused.
+\item[Efficiency] -- we aim to make the implementation efficient, while remembering that often executing a rule is expensive.
+\item[Parallelism] -- we try and do lots of work in parallel where possible.
+\item[Error feedback] -- if the build system fails for some reason, such as the rules being incorrect as per \S\ref{sec:theory_shake}, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it is required to make Shake usable.
 \end{description}
-
-We first describe an implementation that is capable of building simple rules without parallelism of caching. We then add caching, and finally add parallelism.
-
-Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build.
 
 \subsection{Dynamically Typed Values}
 \label{sec:dynamically_typed}
 
-Shake can work with multiple types of value in the rules. Storing heterogenous values in Haskell is problematic, so we define:
+A single Shake program can use multiple types of keys and values. To work with heterogenous values in Haskell we define:
 
 \begin{code}
-data Any = Any (forall a . C a => a)
-    deriving (Eq, Ord, Hashable, Binary)
-
-type Key = Any
-type Value = Any
+data Any = Any (forall alpha bullet
+    (Typeable alpha, Eq alpha, Binary alpha, Hashable alpha, Show alpha) => alpha)
 \end{code}
 
-This is a way of abstracting the |Key| and |Value| to store anything. For |Eq| and |Ord| and |Hashable| we just use the |TypeRep| and value as a pair, and apply the methods as that would be appropriate.
+This definition, using existentials \cite{existentials}, allows anything supporting all the type classes required to be stored with type |Any|. We can define |Key| and |Value| types in terms of |Any|. We can implement |Eq|, |Show| and |Hashable| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
 
-Defining the Binary instance is far harder. Serialising a value is easy, but deserialising a value is a nightmare -- we need to figure out the type of the value so we can find it's |Binary| instance. We solve this problem by building a table of all instances we know about which are referred to by |rule|. If there are no rules to build something it isn't useful, so we use that table to index in. Since storing the full type would require storing lots of types, we instead index them into a table and have a lookup table by index. While these concerns are fiddly and low-level, they can largely be ignored and we can assume all |Any| values have a good |Binary| instance. When deserialising, if we encounter a binary instance that we don't have a copy of, we just ignore the entire cache. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_makefile}).
+Implementing a |Binary| instance for |Any| is harder. Serialising a value is easy, but deserialising a value is problematic -- we can deserialise a |TypeRep|, but then we need to obtain the |get| method from the |Binary| instance associated with that type. The solution is to keep a table mapping |TypeRep|s to |Any| values containing the appropriate |Binary| instance. This table must include every type stored in the file we are reading, or it cannot be deserialised. We populate the table using all rules defined by |rule| and |defaultRule| in |Rules| -- which means we cannot move |defaultRule| into the |Rule| type class, as then a type could be usefully used without appearing in |Rules|, and would not be missing from the table.
+
+When deserialising, if we encounter a type not present in the table, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_makefile}).
 
 \subsection{Basic Implementation}
+
+\begin{code}
+type Database = Map Key Status
+
+data Status  =  Loaded Info
+             |  Building (MVar ()) (Maybe Info)
+             |  Built Info
+
+data Info = Info
+    {value :: Value
+    ,built :: Time
+    ,changed :: Value
+    ,depends :: [[Key]]
+    }
+\end{code}
+
+The |Database| maps each |Key| to its |Status|. Draw a movement diagram.
+
+\xymatrix{
+ & \mathsf{Loaded}\ar@@/_1pc/[dr]^{Invalid}\ar@@/^1pc/[rr]^{Valid} & & \mathsf{Built} \\
+\mathit{From disk}\ar@@{-->}[ur] & & \mathsf{Building}\ar@@/_1pc/[ur]^{Finished} \\
+& Via \mathsf{need}\ar@@{-->}[ur]
+}
+
+none -> Loaded, loaded from disk
+none -> Building, file that was needed (Info is set to none)
+Loaded -> Building, was checked, found to be incorrect (Info is Just)
+Loaded -> Built, was checked, found to be correct
+Building -> Built, once it finishes
+
+
+We enrich the |depends| field to be a list of keys. Things loaded from disk get |Loaded|, things which are built or have their loaded state validated are put into |Built| and things which are being built are in |Building|. 
+
+
 
 Note that \make{} builds a graph, we can't do that. However, given the nature of the problem, we highly doubt that implementing \make{} by building a graph is the right approach! If we ignore parallelism and caching, we can build using a variable of the following type:
 
@@ -672,9 +703,10 @@ We also need to implement a journal, important for killed builds. The journal is
 
 We track the stack, so on errors when can show it nicely. We also have a @--verbose@ option to show all system commands called. These are seriously helpful for debugging. Also, all calls to |system| are wrapped and throw an error including their command line.
 
-\subsection{Cleaning}
+\subsection{Journaling}
 
-A standard feature of build systems is cleaning operations. We can rebuild everything by just deleting the cache. Also note that the cache may have garbage in -- things which are old, stale, and not useful. However, we don't make any attempt to delete them -- in practice wiping a rebuilding is sufficiently common. However, we could say that anything which has not been used gets cleared.
+We journal step which moves something to Built as a result of changing it. That way 
+
 
 \section{User Tools}
 \label{sec:tools}
@@ -743,6 +775,13 @@ We can also define a more specific one, based on the assumption that @#ifdef@ st
 If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
 
 
+\subsection{Build rules that change}
+
+Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build.
+
+
+
+
 \subsection{Rules to Follow}
 
 Put all generated files somewhere entirely separate, such as dist or |_make|. Do not comingle them.
@@ -759,6 +798,10 @@ We also have found that when you use |(?>)| you are probably going too complicat
 \end{code}
 
 This rule seems like a complete hack to me -- these special cases are likely added based on corners that should have been removed.
+
+\subsection{Cleaning}
+
+A standard feature of build systems is cleaning operations. We can rebuild everything by just deleting the cache. Also note that the cache may have garbage in -- things which are old, stale, and not useful. However, we don't make any attempt to delete them -- in practice wiping a rebuilding is sufficiently common. However, we could say that anything which has not been used gets cleared.
 
 \subsection{Lots of things generate .o files}
 
