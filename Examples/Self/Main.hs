@@ -11,7 +11,7 @@ import Data.List
 
 main :: IO ()
 main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParallel=1} $ do
-    let pkgs = "transformers binary unordered-containers parallel-io"
+    let pkgs = "transformers binary unordered-containers parallel-io filepath directory process"
         flags = map ("-package=" ++) $ words pkgs
 
     let out x = "output/self/" ++ x
