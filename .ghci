@@ -1,3 +1,15 @@
 :set -package transformers
 :set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
 :load Main
+
+:{
+:def docs const $ return $ unlines
+        [":docs_"
+        ,":!start dist\\doc\\html\\shake\\Development-Shake.html"]
+:}
+
+:{
+:def docs_ const $ return $ unlines
+        [":!cabal configure"
+        ,":!cabal haddock"]
+:}
