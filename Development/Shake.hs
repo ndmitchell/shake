@@ -1,6 +1,22 @@
 
 -- | Main module for defining Shake build systems. You may also want to include
---   "Development.Shake.FilePath".
+--   "Development.Shake.FilePath", for manipulating file paths. As a simple example,
+--   let us build a @result.tar@ file from the contents of @result.txt@:
+--
+-- @
+--import "Development.Shake"
+--import "Development.Shake.FilePath"
+--
+--main = 'shake' 'shakeOptions' $ do
+--    'want' [\"result.tar\"]
+--    \"*.tar\" *> \out -> do
+--        contents <- 'readFileLines' $ replaceExtension out \"txt\"
+--        'need' contents
+--        'system'' \"tar\" $ [\"-cf\",out] ++ contents
+-- @
+--
+--   For the background theory behind a previous version of Shake the online video:
+--   <http://vimeo.com/15465133>.
 module Development.Shake(
     shake,
     -- * Core of Shake
