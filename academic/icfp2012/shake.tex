@@ -84,7 +84,7 @@ What if we want to build \file{result.tar} from the list of files in \file{list.
     need ["list.txt"]
     contents <- readFileLines "list.txt"
     need contents
-    system' $ ["tar","-cf","result.tar"] ++ contents
+    system' "tar" $ ["-cf","result.tar"] ++ contents
 \end{code}
 
 This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read \file{list.txt}, and store each line in |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
@@ -323,14 +323,14 @@ main = shake def $ do
         cs <- getDirectoryFiles "." "*.c"
         let os = map (`replaceExtension` "o") cs
         need os
-        system' $ ["gcc","-o",exe] ++ os
+        system' "gcc" $ ["-o",exe] ++ os
 
     "*.o" *> \o -> do
         let c = replaceExtension o "c"
         need [c]
         headers <- liftIO (cIncludes c)
         need headers
-        system' ["gcc","-o",o,"-c",c]
+        system' "gcc" ["-o",o,"-c",c]
 \end{code}
 \caption{Demo build system in Shake.}
 \label{fig:demo}
@@ -759,7 +759,7 @@ Sometimes running one command will produce two outputs. As an example, running \
 "*.o" *> \o ->
     let hs = replaceExtension x "hs"
     need [hs] -- and it's dependencies, but let's ignore that for now
-    system' ["ghc","-c",hs]
+    system' "ghc" ["-c",hs]
 \end{code}
 
 Note that if we wrote it the other way, with the \file{*.o} depending on the \file{*.hi} then if the \file{*.hi} stayed the same we could end up screwed. We'd have written that neither file had changed, but both would have. Ouch. Also if we use SHA1 it's now not correct.

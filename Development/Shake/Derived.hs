@@ -12,11 +12,13 @@ import Development.Shake.File
 import Development.Shake.FilePath
 
 
-system' :: [String] -> Action ()
-system' (x:xs) = do
-    let cmd = unwords $ toNative x : xs
+-- | Execute a system command. This function does not do any escaping of 
+system' :: FilePath -> [String] -> Action ()
+system' path args = do
+    let path2 = toNative path
+    let cmd = unwords $ path2 : args
     putLoud cmd
-    res <- liftIO $ system cmd
+    res <- liftIO $ rawSystem path2 args
     when (res /= ExitSuccess) $ do
         k <- currentRule
         error $ "System command failed while building " ++ show k ++ ", " ++ cmd
