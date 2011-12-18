@@ -1,5 +1,8 @@
 Changelog for Shake
 
+0.1.1
+    Significantly improved documentation
+    system' now takes an initial argument for the program
 0.1
     Many changes to signatures, some basic documentation
     Additional demo, to build shake itself
