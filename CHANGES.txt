@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a warning in the description
 0.1.1
     Significantly improved documentation
     system' now takes an initial argument for the program

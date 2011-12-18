@@ -8,8 +8,12 @@ category:           Development
 author:             Neil Mitchell <ndmitchell@gmail.com>
 maintainer:         Neil Mitchell <ndmitchell@gmail.com>
 copyright:          Neil Mitchell 2011
-synopsis:           Build system creator
+synopsis:           Build system library, like Make, but properly supports generated files.
 description:
+    /WARNING/: Shake has only been lightly tested, and there will be bugs (please report them).
+    The interface is likely to change, although hopefully not significantly. It would be unwise
+    to build a critical production system on top of the current version of Shake.
+    .
     Shake is a Haskell library for writing build systems - designed as a
     replacement for make. To use Shake the user writes a Haskell program
     that imports the Shake library, defines some build rules, and calls
@@ -33,6 +37,9 @@ description:
     under the @Examples@ directory.
 homepage:           http://community.haskell.org/~ndm/shake/
 stability:          Beta
+extra-source-files:
+    Examples/Tar/list.txt
+
 
 source-repository head
     type:     darcs
@@ -82,6 +89,3 @@ executable shake
     other-modules:
         Examples.Tar.Main
         Examples.Self.Main
-
-    extra-source-files:
-        Examples/Tar/list.txt
