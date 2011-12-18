@@ -22,7 +22,7 @@ import qualified Development.Shake.Core as X
 import qualified Development.Shake.File as X
 import qualified Development.Shake.Directory as X
 
--- | Main entry point for running Shake build systems.
+-- | Main entry point for running Shake build systems. For an example see "Development.Shake".
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts r = do
     X.run opts $ do

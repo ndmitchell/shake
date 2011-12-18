@@ -70,15 +70,23 @@ defaultRuleDirectory = do
         liftIO $ getDir x
 
 
+-- | Returns 'True' if the file exists.
 doesFileExist :: FilePath -> Action Bool
 doesFileExist = apply1 . Exist
 
+-- | Get the contents of a directory. The result will be sorted, and will not contain
+--   the files @.@ or @..@ (unlike the standard Haskell version). It is usually better to
+--   call either 'getDirectoryFiles' or 'getDirectoryDirs'. The resulting paths will be relative
+--   to the first argument.
 getDirectoryContents :: FilePath -> Action [FilePath]
 getDirectoryContents x = getDirAction $ GetDir x
 
+-- | Get the files in a directory that match a particular pattern.
+--   For the interpretation of the pattern see '?=='.
 getDirectoryFiles :: FilePath -> FilePattern -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
+-- | Get the directories contained by a directory, does not include @.@ or @..@.
 getDirectoryDirs :: FilePath -> Action [FilePath]
 getDirectoryDirs x = getDirAction $ GetDirDirs x
 

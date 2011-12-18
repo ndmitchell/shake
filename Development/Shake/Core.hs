@@ -30,15 +30,15 @@ import Development.Shake.Value
 ---------------------------------------------------------------------
 -- OPTIONS
 
--- | Options to specify how to control 'shake'.
+-- | Options to control 'shake'.
 data ShakeOptions = ShakeOptions
-    {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.@)
-    ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@)
-    ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force everyone to rebuild
-    ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud
+    {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.@).
+    ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
+    ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
+    ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud.
     }
 
--- | A default set of 'ShakeOptions'.
+-- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions "." 1 1 1
 
@@ -46,13 +46,16 @@ shakeOptions = ShakeOptions "." 1 1 1
 ---------------------------------------------------------------------
 -- RULES
 
--- | Define a pair of types that can be used as a Shake rule.
+-- | Define a pair of types that can be used by Shake rules.
 class (
     Show key, Typeable key, Eq key, Hashable key, Binary key,
     Show value, Typeable value, Eq value, Hashable value, Binary value
     ) => Rule key value | key -> value where
     -- | Given that the database contains @key@/@value@, does that still match the on-disk contents?
-    --   Return 'True' if no work needs to be done.
+    --
+    --   As an example for filenames/timestamps, if the file exists and had the same timestamp, you
+    --   would return 'True', but otherwise return 'False'. For rule values which are not also stored
+    --   on disk, 'validStored' should always return 'True'.
     validStored :: key -> value -> IO Bool
     validStored _ _ = return True
 
@@ -69,7 +72,7 @@ ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -
 ruleStored _ k v = unsafePerformIO $ validStored k v -- safe because of the invariants on validStored
 
 
--- | Define a set of rules. Rules can be created with calls to 'rule'/'action'. Rules are combined
+-- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or more commonly using the 'Monad' instance and @do@ notation.
 data Rules a = Rules
     {value :: a -- not really used, other than for the Monad instance
@@ -92,6 +95,7 @@ instance Functor Rules where
 
 
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
+--   All default rules must be disjoint.
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 defaultRule r = mempty{rules=[(0,ARule r)]}
 
@@ -190,7 +194,7 @@ duration start end = fromRational $ toRational $ end `diffUTCTime` start
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
---   This function requires that appropriate rules have been added with 'rule'/'defaultRule'.
+--   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
 apply :: Rule key value => [key] -> Action [value]
 apply ks = Action $ do
     modify $ \s -> s{depends=map newKey ks:depends s}
