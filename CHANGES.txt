@@ -1,4 +1,7 @@
 Changelog for Shake
 
+0.1
+    Many changes to signatures, some basic documentation
+    Additional demo, to build shake itself
 0.0
     Initial version, not ready for public use
