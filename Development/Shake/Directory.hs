@@ -61,6 +61,7 @@ instance Rule GetDir GetDir_ where
     validStored x y = fmap (== y) $ getDir x
 
 
+-- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     defaultRule $ \(Exist x) -> Just $

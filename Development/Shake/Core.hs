@@ -30,6 +30,7 @@ import Development.Shake.Value
 ---------------------------------------------------------------------
 -- OPTIONS
 
+-- | Options to specify how to control 'shake'.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.@)
     ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@)
@@ -37,6 +38,7 @@ data ShakeOptions = ShakeOptions
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud
     }
 
+-- | A default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions "." 1 1 1
 
@@ -44,10 +46,13 @@ shakeOptions = ShakeOptions "." 1 1 1
 ---------------------------------------------------------------------
 -- RULES
 
+-- | Define a pair of types that can be used as a Shake rule.
 class (
     Show key, Typeable key, Eq key, Hashable key, Binary key,
     Show value, Typeable value, Eq value, Hashable value, Binary value
     ) => Rule key value | key -> value where
+    -- | Given that the database contains @key@/@value@, does that still match the on-disk contents?
+    --   Return 'True' if no work needs to be done.
     validStored :: key -> value -> IO Bool
     validStored _ _ = return True
 
@@ -64,6 +69,8 @@ ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -
 ruleStored _ k v = unsafePerformIO $ validStored k v -- safe because of the invariants on validStored
 
 
+-- | Define a set of rules. Rules can be created with calls to 'rule'/'action'. Rules are combined
+--   with either the 'Monoid' instance, or more commonly using the 'Monad' instance and @do@ notation.
 data Rules a = Rules
     {value :: a -- not really used, other than for the Monad instance
     ,actions :: [Action ()]
@@ -80,17 +87,22 @@ instance Monad Rules where
     Rules v1 x1 x2 >>= f = Rules v2 (x1++y1) (x2++y2)
         where Rules v2 y1 y2 = f v1
 
+instance Functor Rules where
+    fmap f x = return . f =<< x
 
--- accumulate the Rule instances from defaultRule and rule, and put them in
--- if no rules to build something then it's cache instance is dodgy anyway
+
+-- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 defaultRule r = mempty{rules=[(0,ARule r)]}
 
 
+-- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.
+--   To define lower priority rules use 'defaultRule'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 rule r = mempty{rules=[(1,ARule r)]}
 
 
+-- | Run an action, usually used for specifying top-level requirements.
 action :: Action a -> Rules ()
 action a = mempty{actions=[a >> return ()]}
 
@@ -115,11 +127,14 @@ data S = S
     ,traces :: [(String, Double, Double)] -- in reverse
     }
 
+-- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'need' to execute files.
+--   Action values are used by 'rule' and 'action'.
 newtype Action a = Action (StateT S IO a)
     deriving (Functor, Monad, MonadIO)
 
 
-run :: ShakeOptions -> Rules () -> IO Double
+-- | This function is not actually exported, but Haddock is buggy. Please ignore.
+run :: ShakeOptions -> Rules () -> IO ()
 run ShakeOptions{..} rules = do
     start <- getCurrentTime
     registerWitnesses rules
@@ -128,8 +143,6 @@ run ShakeOptions{..} rules = do
         withPool shakeParallel $ \pool -> do
             let s0 = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
             parallel_ pool $ map (runAction s0) (actions rules)
-    end <- getCurrentTime
-    return $ duration start end
 
 
 registerWitnesses :: Rules () -> IO ()
@@ -176,6 +189,8 @@ duration :: UTCTime -> UTCTime -> Double
 duration start end = fromRational $ toRational $ end `diffUTCTime` start
 
 
+-- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
+--   This function requires that appropriate rules have been added with 'rule'/'defaultRule'.
 apply :: Rule key value => [key] -> Action [value]
 apply ks = Action $ do
     modify $ \s -> s{depends=map newKey ks:depends s}
@@ -211,10 +226,14 @@ apply ks = Action $ do
             modify $ \s -> s{discount=discount s + duration start end}
 
 
+-- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
+--   use 'apply' to allow the potential for parallelism.
 apply1 :: Rule key value => key -> Action value
 apply1 = fmap head . apply . return
 
 
+-- | Write an action to the trace list, along with the start/end time of running the IO action.
+--   The 'system'' command automatically calls 'traced'.
 traced :: String -> IO a -> Action a
 traced msg act = Action $ do
     start <- liftIO getCurrentTime
@@ -224,6 +243,8 @@ traced msg act = Action $ do
     return res
 
 
+-- | Get the 'Key' for the currently executing rule - usally used to improve error messages.
+--   Returns 'Nothing' if being run by 'action'.
 currentRule :: Action (Maybe Key)
 currentRule = Action $ do
     s <- get
@@ -238,6 +259,9 @@ putWhen f msg = Action $ do
             putStrLn msg
 
 
+-- | Write a message to the output when the verbosity is appropriate.
+--   The output will not be interleaved with any other Shake messages
+--   (other than those generated by system commands).
 putLoud, putNormal, putQuiet :: String -> Action ()
 putLoud = putWhen (>= 2)
 putNormal = putWhen (>= 1)

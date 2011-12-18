@@ -42,6 +42,7 @@ instance Rule File FileTime where
     validStored (File x) t = fmap (== Just t) $ getFileTime x
 
 
+-- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(File x) -> Just $ do
     res <- liftIO $ getFileTime x
