@@ -14,10 +14,10 @@
 %include paper.fmt
 %format (List (a) (b)) = "[" b "]_{" a "}"
 %format Result_alpha = "\Varid{Result_\alpha}"
-%format *> = "\mathbin{*\!\!\!>}"
-%format **> = "\mathbin{*\!*\!\!\!>}"
-%format ?> = "\mathbin{?\!\!\!>}"
-%format =*= = "\mathbin{=\!\!*\!\!=}"
+%format *> = "\mathbin{*\hspace{-5.8px}>}"
+%format **> = "\mathbin{*\!*\hspace{-5.8px}>}"
+%format ?> = "\mathbin{\raisebox{-.7px}{?}\hspace{-4px}>}"
+%format ?== = "\mathbin{\raisebox{-.7px}{?}\hspace{-4px}\equiv}"
 %format `replaceExtension` = "\backtick{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
 %format context = "\Keyword{context}"
@@ -493,10 +493,10 @@ want xs = action $ need xs
         return $ fromMaybe (error msg) res
 
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) test act = (\x -> any (x =*=) test) ?> act
+(**>) test act = (\x -> any (x ?==) test) ?> act
 
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) test act = (test =*=) ?> act
+(*>) test act = (test ?==) ?> act
 \end{code}
 \caption{Implement of file rules.}
 \label{fig:file_rules}
@@ -510,7 +510,7 @@ We define |defaultRuleFile| as a rule that simply checks if the file is already 
 
 We define new file rules with |(?>)|, which takes a predicate to match against the file name and an action to run. This function forces the correct types, and obtains the modification time afterwards. Before running the action we create the directory containing the output file, an idea taken from the Ninja build system \cite{ninja}. We found that when running a large set of newly written rules, often one rule would create the output directory while another did not -- meaning some rule orderings worked while others failed. Automatically creating the output directory removes this source of failure.
 
-While |(?>)| is the ultimate file creation rule, we define two additional operators, in terms of a wildcard match operator |(=*=)|. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation, we found that |(?>)| was used about 5\% of the time, |(**>)| was used about 10\% and |(*>)| was used about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is poorly designed and should be rethought (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
+While |(?>)| is the ultimate file creation rule, we define two additional operators, in terms of a wildcard match operator |(?==)|. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation, we found that |(?>)| was used about 5\% of the time, |(**>)| was used about 10\% and |(*>)| was used about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is poorly designed and should be rethought (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
 
 \subsection{Automatically Include Default Rules}
 \label{sec:include_default_rules}
@@ -584,7 +584,7 @@ Implementing a |Binary| instance for |Any| is harder. Serialising a value is eas
 
 When deserialising, if we encounter a type not present in the table, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_makefile}).
 
-\subsection{Basic Implementation}
+\subsection{Stored Data}
 
 \begin{code}
 type Database = Map Key Status
@@ -594,10 +594,10 @@ data Status  =  Loaded Info
              |  Built Info
 
 data Info = Info
-    {value :: Value
-    ,built :: Time
-    ,changed :: Value
-    ,depends :: [[Key]]
+    {  value :: Value
+    ,  built :: Time
+    ,  changed :: Value
+    ,  depends :: [[Key]]
     }
 \end{code}
 
@@ -616,7 +616,7 @@ Loaded -> Built, was checked, found to be correct
 Building -> Built, once it finishes
 
 
-We enrich the |depends| field to be a list of keys. Things loaded from disk get |Loaded|, things which are built or have their loaded state validated are put into |Built| and things which are being built are in |Building|. 
+We enrich the |depends| field to be a list of keys. Things loaded from disk get |Loaded|, things which are built or have their loaded state validated are put into |Built| and things which are being built are in |Building|.
 
 
 
@@ -705,7 +705,7 @@ We track the stack, so on errors when can show it nicely. We also have a @--verb
 
 \subsection{Journaling}
 
-We journal step which moves something to Built as a result of changing it. That way 
+We journal step which moves something to Built as a result of changing it. That way
 
 
 \section{User Tools}
