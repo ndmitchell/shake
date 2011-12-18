@@ -3,7 +3,7 @@
 module Development.Shake.File(
     FilePattern, need, want,
     defaultRuleFile,
-    (=*=), (?>), (**>), (*>)
+    (?==), (?>), (**>), (*>)
     ) where
 
 import Control.Monad.IO.Class
@@ -67,16 +67,16 @@ want xs = action $ need xs
 
 
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) test act = (\x -> any (x =*=) test) ?> act
+(**>) test act = (\x -> any (x ?==) test) ?> act
 
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) test act = (test =*=) ?> act
+(*>) test act = (test ?==) ?> act
 
 
-(=*=) :: FilePattern -> FilePath -> Bool
-(=*=) ('/':'/':x) y = any (x =*=) $ y : [i | '/':i <- tails y]
-(=*=) ('*':x) y = any (x =*=) $ a ++ take 1 b
+(?==) :: FilePattern -> FilePath -> Bool
+(?==) ('/':'/':x) y = any (x ?==) $ y : [i | '/':i <- tails y]
+(?==) ('*':x) y = any (x ?==) $ a ++ take 1 b
     where (a,b) = break ("/" `isPrefixOf`) $ tails y
-(=*=) (x:xs) (y:ys) | x == y = xs =*= ys
-(=*=) [] [] = True
-(=*=) _ _ = False
+(?==) (x:xs) (y:ys) | x == y = xs ?== ys
+(?==) [] [] = True
+(?==) _ _ = False
