@@ -10,7 +10,7 @@ maintainer:         Neil Mitchell <ndmitchell@gmail.com>
 copyright:          Neil Mitchell 2011
 synopsis:           Build system creator
 description:
-    Write build systems. NOT READY FOR USE YET. DO NOT USE THIS PACKAGE.
+    Write build systems, mostly works but seriously early adopters only.
 homepage:           http://community.haskell.org/~ndm/shake/
 stability:          Beta
 
@@ -42,6 +42,7 @@ library
         Development.Shake.FilePath
 
     other-modules:
+        Development.Shake.Binary
         Development.Shake.Core
         Development.Shake.Database
         Development.Shake.Derived
@@ -60,3 +61,4 @@ executable shake
 
     other-modules:
         Examples.Tar.Main
+        Examples.Self.Main
