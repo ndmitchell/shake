@@ -117,11 +117,11 @@ In this section we describe the theory that underpins of \make{}, then the under
 While the \make{} tool is heavily file based, that is not an essential property of the ideas behind \make{}. We use the type |Key| for things that can be created or are dependencies (i.e. file names) and the type |Value| for the values associated with a |Key| (i.e.  file contents). Using this abstraction, we can model \make{} as:
 
 \begin{code}
-data Rule =
-    {creates  :: Key
-    ,depends  :: List alpha Key
-    ,action   :: List alpha Value -> Value
-    }
+data  Rule =
+      {  creates  :: Key
+      ,  depends  :: List alpha Key
+      ,  action   :: List alpha Value -> Value
+      }
 
 make :: Set Rule -> Key -> Value
 \end{code}
@@ -152,10 +152,10 @@ For a call to |make| to be valid, given a set of rules and a target, we require:
 Using the same terminology from the previous section, we can model our build tool as:
 
 \begin{code}
-data Rule =
-    {creates  :: Key
-    ,action   :: Action
-    }
+data  Rule =
+      {  creates  :: Key
+      ,  action   :: Action
+      }
 
 data Action  =  Depends Key (Value -> Action)
              |  Result Value
@@ -234,10 +234,10 @@ This scheme is limited to files, for two reasons:
 We can make these changes to produce:
 
 \begin{code}
-data Info = Info
-    {value :: Value
-    ,built :: Time
-    }
+data  Info = Info
+      {  value :: Value
+      ,  built :: Time
+      }
 
 history :: Key -> Maybe Info
 
@@ -276,11 +276,11 @@ Our original algorithm calculated every file repeatedly. We can easily add a cac
 To obtain minimal rebuilds across executions we can use the same approach as described in the previous section. However, we cannot determine whether a |history| is valid based on the rule, as we do not have the |depends| available, and do not want to rerun the |action| just to get the dependencies. Therefore, we just store the dependencies alongside.
 
 \begin{code}
-data Info = Info
-    {value :: Value
-    ,built :: Time
-    ,depends :: [Key]
-    }
+data  Info = Info
+      {  value :: Value
+      ,  built :: Time
+      ,  depends :: [Key]
+      }
 
 history :: Key -> Maybe Info
 
@@ -353,11 +353,11 @@ This script demonstrates a number of features of Shake based build systems:
 
 \begin{figure}
 \begin{code}
-data ShakeOptions = ShakeOptions
-    {shakeFiles :: FilePath
-    ,shakeParallel :: Int
-    ,ellipses
-    }
+data  ShakeOptions = ShakeOptions
+      {  shakeFiles :: FilePath
+      ,  shakeParallel :: Int
+      ,  ellipses
+      }
     deriving (Default)
 
 data Rules a
@@ -593,12 +593,12 @@ data Status  =  Loaded Info
              |  Building (MVar ()) (Maybe Info)
              |  Built Info
 
-data Info = Info
-    {  value :: Value
-    ,  built :: Time
-    ,  changed :: Value
-    ,  depends :: [[Key]]
-    }
+data  Info = Info
+      {  value :: Value
+      ,  built :: Time
+      ,  changed :: Value
+      ,  depends :: [[Key]]
+      }
 \end{code}
 
 The |Database| maps each |Key| to its |Status|. Draw a movement diagram.
@@ -824,17 +824,30 @@ However, we do far better for a null rebuild. We have essentially reduced it to 
 \section{Related Work}
 \label{sec:related_work}
 
-Build systems are an essential part of any large software project, yet often prove surprisingly tricky to get right. While most languages have a nice tool for building single language projects (ocamlbuild, ghc --make, Visual Studio projects), when building more complex multi-language projects, most people turn to \make{}. While there are many \make{} competitors (Scons, CMake, Ant), none have gained universal acceptance. We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
+Build systems are an essential part of any large software project, yet often prove surprisingly tricky to get right. While most languages have a nice tool for building single language projects (ocamlbuild, ghc --make, Visual Studio projects), when building more complex multi-language projects, most people turn to \make{}. While there are many \make{} competitors (Scons, CMake, Jam, Ant, Waf), none have gained universal acceptance. We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
 
-A standard build system generates a dependency graph for all files, and processes them to meet the dependency constraints.
+A standard build system generates a dependency graph for all files, and processes them to meet the dependency constraints. While many have taken the approach of packaging dependency graph functionality in alternative ways, we here review a build systems which have a particular approach:
+
+\subsection{Redo}
+
+https://github.com/apenwarr/redo
+
+Redo was originally described by djb, and then separately implemented later. It has several features in common with Shake, including the use of a central database to track dependencies. Focusing on the differences, each rule in a Redo script is a separate file. This reduces the abstraction, and complicates defining a build system, has a very limited rule matching format (just by extension), but has the upside of simplicity (there is no redo syntax, just shell script), and you can depend on the contents of a rule. You can only specify simple files like default.o, and it's hard to get them in the right place. The language of choice are shell scripts, although this can be altered with she-bang lines. The advantage of separate files is it can depend on a rule, which is cool. It doesn't have rules for anything other than files, which means it can't deal with multiple outputs nicely.
+
+\subsection{Ninja}
 
 Ninja the Chromium build system has dynamic dependencies (you can specify a rule that contains dependencies), multiple outputs. It focus on only running command lines, and is a bit more limited, but still encompasses many of the same ideas.
 
-gittup.org/tup
+http://martine.github.com/ninja/manual.html
 
-"redo"
+\subsection{Tup}
 
-https://github.com/nfjinjing/nemesis
+https://gittup.org/tup
+
+\subsection{Haskell Build Libraries}
+
+Haskell libraries: Blueprint, Coadjute, nemesis, cake, hake, hmk, zoom, openshake
+
 
 \section{Conclusions}
 \label{sec:conclusions}
