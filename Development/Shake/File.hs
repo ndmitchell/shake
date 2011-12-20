@@ -104,6 +104,8 @@ want xs = action $ need xs
 --
 --   To define a build system for multiple compiled languages, we recommend using @.asm.o@,
 --   @.cpp.o@, @.hs.o@, to indicate which language produces an object file.
+--   I.e., the file @foo.cpp@ produces object file @foo.cpp.o@.
+--
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
 (*>) test act = (test ?==) ?> act
 
@@ -118,7 +120,14 @@ want xs = action $ need xs
 --
 -- > "//*.c" ?== "foo/bar/baz.c"
 -- > "*.c" ?== "baz.c"
+-- > "//*.c" ?== "baz.c"
 -- > "test.c" ?== "test.c"
+--
+--   Examples that /don't/ match:
+--
+-- > "*.c" ?== "foor/bar.c"
+-- > "*/*.c" ?== "foo/bar/baz.c"
+--
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) ('/':'/':x) y = any (x ?==) $ y : [i | '/':i <- tails y]
 (?==) ('*':x) y = any (x ?==) $ a ++ take 1 b
