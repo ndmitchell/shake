@@ -565,7 +565,7 @@ We have implemented Shake, and used it extensively. In this section we sketch so
 \item[Correctness] -- we always execute enough rules to obtain correctness, but we never rebuild something that could be reused.
 \item[Efficiency] -- we aim to make the implementation efficient, while remembering that often executing a rule is expensive.
 \item[Parallelism] -- we try and do lots of work in parallel where possible.
-\item[Error feedback] -- if the build system fails for some reason, such as the rules being incorrect as per \S\ref{sec:theory_shake}, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it is required to make Shake usable.
+\item[Error feedback] -- if the build system fails for some reason, such as the rules being incorrect as per \S\ref{sec:theory_shake}, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it is necessary to make Shake usable.
 \end{description}
 
 \subsection{Dynamically Typed Values}
@@ -584,10 +584,11 @@ Implementing a |Binary| instance for |Any| is harder. Serialising a value is eas
 
 When deserialising, if we encounter a type not present in the table, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_makefile}).
 
-\subsection{Stored Data}
+\subsection{Shake State}
 
+\begin{figure}
 \begin{code}
-type Database = Map Key Status
+type State = Map Key Status
 
 data Status  =  Loaded Info
              |  Building (MVar ()) (Maybe Info)
@@ -601,125 +602,73 @@ data  Info = Info
       }
 \end{code}
 
-The |Database| maps each |Key| to its |Status|. Draw a movement diagram.
-
 \xymatrix{
  & \mathsf{Loaded}\ar@@/_1pc/[dr]^{Invalid}\ar@@/^1pc/[rr]^{Valid} & & \mathsf{Built} \\
-\mathit{From disk}\ar@@{-->}[ur] & & \mathsf{Building}\ar@@/_1pc/[ur]^{Finished} \\
-& Via \mathsf{need}\ar@@{-->}[ur]
+\mathsf{Database}\ar@@{-->}[ur] & & \mathsf{Building}\ar@@/_1pc/[ur]^{Finished} \\
+& \mathsf{Missing}\ar@@{-->}[ur]
 }
+\caption{The state of a Shake process.}
+\label{fig:state}
+\end{figure}
 
-none -> Loaded, loaded from disk
-none -> Building, file that was needed (Info is set to none)
-Loaded -> Building, was checked, found to be incorrect (Info is Just)
-Loaded -> Built, was checked, found to be correct
-Building -> Built, once it finishes
+The state of a running Shake program can be represented by the data type in Figure \ref{fig:state}. The |State| is a mapping from |Key| to |Status|, giving the status of each key the build system knows about. The |Status| data type has three constructors:
 
+\begin{description}
+\item[|Loaded|] is used for information that has been loaded from the database, but not yet checked against its history, or any stored value it may have.
+\item[|Building|] is used for a rule that is currently running, or has been queued for execution. If a key is needed that is already building, the thread that requires it should wait on the |MVar| until that rule has completed.
+\item[|Built|] is used for rules that were loaded and valid, or have finished building.
+\end{description}
 
-We enrich the |depends| field to be a list of keys. Things loaded from disk get |Loaded|, things which are built or have their loaded state validated are put into |Built| and things which are being built are in |Building|.
+The |Status| constructors also take an |Info|, which contains the same fields as in \S\label{sec:unchanging_files}, with one modification. To allow full parallelism when rebuilding dependent rules, we store |depends| as |[[Key]]| instead of just |[Key]| -- where each entry comes from one call to |apply|. When saving |State| to the database, we ignore the |Status| fields and save only the |Key|/|Info| mapping.
 
+With this state, it is relatively easy to implement the core of Shake -- the functions which are actually responsible for building account for less than 100 lines, most of which is dealing with parallelism. We execute the top-level |actions|, and whenever we call |apply|, we look up the state in the database, and use the transition diagram in Figure \ref{fig:state} to make sure everything is |Built| before continuing. We use the \prog{parallel-io} \cite{parallel-io} library to queue up rules to be run, which ensures we never have more than a user specified number of rules executing in parallel.
 
-
-Note that \make{} builds a graph, we can't do that. However, given the nature of the problem, we highly doubt that implementing \make{} by building a graph is the right approach! If we ignore parallelism and caching, we can build using a variable of the following type:
-
-\begin{code}
-type State = Map Key Status
-
-data Status  =  Building
-             |  Built Value
-\end{code}
-
-At every point we have a global |State| value, initially starting with an empty |Map|. When we try and build an action we add it to the |State| as |Building|. When we have built all it's dependencies, and run it, we add it to the |State| as |Built|. If while running the build system we encounter a |Building|, then we have a cycle where a |Key| depends on itself.
-
-When building a rule that has multiple outputs we always store it by the minimum |Key| value, which makes it consistent. Anything else that is done is put on the map with an |Also| pointing at the original key.
-
-Our TimeStamp can just be the number of runs, which means we can use a 32bit Int with no practical chance of overflowing. If values are equal then that is still safe.
-
-\subsubsection{Adding a Cache}
-\label{sec:theory_shake_cache}
-
-The standard behaviour for Shake is then to add a cache to get minimal rebuilding. Given a set of Key/Value pairs from last time, and a history trace.
-
-We add code to save |Key|/|Value|, which is a pain with the existential, but possible.
-
-Before running a rule, if we have something with an equal key
-
-\begin{code}
-data Status  =  Building
-             |  Built   Time Value [Key]
-             |  Loaded  Time Value [Key]
-\end{code}
-
-When you compute something, if it existed and had the same version, and is identical, keep the same number. You are dirty if the version numbers of your keys do not match your version number. This allows multiple rebuilds to work properly. Also have a cache which means you and all your children have up to date versions. Do not save that boolean.
-
-Version numbers let you load all the cache, validate and potentially rebuild some portion of the known universe, then save the cache back. As a result, some parts of the cache may have a much higher version than others, but you don't need to kill the rest until it gets broken. In any one run, a version number may only increase once at the same time as it gets its cached bit set to True.
-
-Important point: if you run something, and it's dependencies are dirty, but it gave the same answer, you can still use that in the cache.
-
-
-
-The reason for |[[Key]]| instead of just |[Key]| is so we figure out what can be checked in parallel.
-
-For each Key/Value pair we also store the Key/Value list that was accessed during that run. We can do this quite effectively:
-
-\begin{code}
--- Make sure key is in the cache, and has either has Equal or Different state.
-
-ask :: Value ->
-
-ask key =
-    if Doing then error "has a loop"
-    if Equal || Different then done
-    if Unchecked then
-        for each key
-            ensures x
-            if any are not equal then bail to Missing
-    if Missing then
-        run rule
-
-ensures
-\end{code}
-
-rule = if has a value in the history, then need all the keys from last time. If they are all currently equal to their historic values then move from history to current. Work by maintaining two dictionaries
-
-We also practically use a journal, so that hitting Ctrl+C doesn't break it. Do we need to remember if things are different/same when storing the cache?
-
-\subsubsection{Parallelism}
-
-Just add a lock in the Doing, use a thread pool and you are done. We always fork off all the rules in parallel, and modify the table atomically, but when checking equality we only fork threads if there is something to do (otherwise you end up with a lot of very small actions - since most just compare equalities).
-
-\begin{code}
-data Status
-    = Building Lock
-    | Built   Time Value [[Key]]
-    | Loaded  Time Value [[Key]]
-\end{code}
-
-We can optimise by running the check in parallel, and we also need to put a global lock around the map. We need to store the keys as a list so that when we have to rebuild N keys that have changed we can ensure they are done in parallel too.
-
-We also need to implement a journal, important for killed builds. The journal is idempotent.
+When running a large build system, it is common for it to fail before completing -- either because a rule raised an error, or the end user killing the build process. In these cases it is important that none of the work that has been performed is lost -- therefore we maintain a journal and every time a rule transitions from |Building| to |Built| we write that information immediately. If Shake completes successfully we delete the journal. If on restarting Shake has a journal file, we replay the journal onto the database.
 
 \subsection{Error Messages}
 
-We track the stack, so on errors when can show it nicely. We also have a @--verbose@ option to show all system commands called. These are seriously helpful for debugging. Also, all calls to |system| are wrapped and throw an error including their command line.
+To improve error messages we make a number of changes from the natural implementation:
 
-\subsection{Journaling}
-
-We journal step which moves something to Built as a result of changing it. That way
-
+\begin{itemize}
+\item We maintain a stack for each executing rule, containing the rules that required it. Whenever we invoke a rule, we check the stack for recursion in rules, giving a clear error message where otherwise there would have been an infinite loop.
+\item Whenever an error occurs, either when running a rule or trying to find a rule, we print the stack. The stack is particularly useful when there is no rule for a file, but the fact that file is required is itself suspicious.
+\item We have options to print every rule run, and every system command run. Whenever a system command fails, we reprint the command line after the failure.
+\end{itemize}
 
 \section{User Tools}
 \label{sec:tools}
 
+On top of Shake we can build a number of useful tools.
+
 \subsection{Profiling}
 
-We record trace information and build duration. We can then create a rich analysis toolbox.
+In addition to the information listed in |Info|, we also record the duration of each rule, excluding it's children. With this we can predict how long a rule will take to execute, and which rules are most expensive. We also have a trace associated with each rule, along with a trace function:
+
+\begin{code}
+traced :: String -> IO a -> Action a
+\end{code}
+
+This code allows us to tag a particular action with timing information and a message. Here we record the actual start and end times. We automatically insert such commands for all system commands. Given that most build commands are system commands, we can now trace how many system commands were executing at each stage. For example we can show the following graph.
+
+Storing the profile information is easy enough, but we also allow interactive filtering and reports with Javascript/HTML. We allow grouping of rules using the same wildcard syntax as in \ref{fig:file_rules}. Note that there is no way to group rules as per their definition with |rule|, since rules do not have a unique identifier or name -- only a higher order function to match them. We could require all rules to be given names, which would make profiling easier, but at the cost of complicating everything else. Given that profiling reports and viewed rarely, it seems the wrong trade off -- also people often want to slice in different ways. As an example, given a project with five subprojects, each of which consists of both C and Haskell, it is both interesting to see profiling information C vs Haskell, and also of the five projects against each other.
+
+In previous versions of Shake we only recorded profiling information when explicitly asked, and only start/end times of system commands. We found that by unconditionally enabling profiling, and by including more information, we were able to more accurately find bottlenecks.
 
 \subsection{Analysis}
 
-We have dependency information.
+Often, after running a compile, people ask ``Why did that file rebuild?''. Using the Shake analysis tools those questions can be answered. It naturally complements profiling, being that to improve the build you can speed up a rule, make it depend on less (so it rebuilds less often). Using the information stored by profiling we can also run what-if analysis, to figure out what the most expensive file in the project is. All the information is in Shake, but have found the following questions most likely:
+
+\begin{itemize}
+\item In my last execution, why was a particular file rebuilt? Shake can show the complete path of dependencies.
+\item What is the most expensive file to rebuild? Shake scans every file, assuming that there are no savings due to unchanging files (see \S\ref{sec:unchanging_files}, and produces a report. Often, after seeing the top candidate, the user wishes to exclude that and continue, so Shake produces the files in order.
+\item If I touch this file, what will rebuild? Shake provides similar answers to the previous questions, including a projected time.
+\end{itemize}
+
+Shake contains full information on dependencies, so could be used to answer more questions, but these seem to be the common ones.
 
 \subsection{Lint checking}
+
+In order to do lint checking we assume that the system has been cleaned first, we require a complete build to have been done, then a clean to be performed, then a rebuild to be performed in lint mode.
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -780,7 +729,9 @@ If you have a transitive dependency you can avoid it quite easily. Consider the 
 Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build.
 
 
+\subsection{Random Interleaving}
 
+It helps! Both checking for correct parallelism, and for speeding things up.
 
 \subsection{Rules to Follow}
 
@@ -846,7 +797,7 @@ https://gittup.org/tup
 
 \subsection{Haskell Build Libraries}
 
-Haskell libraries: Blueprint, Coadjute, nemesis, cake, hake, hmk, zoom, openshake
+Haskell libraries: Blueprint, Coadjute, nemesis, cake, hake, hmk, zoom, openshake, abba
 
 
 \section{Conclusions}
