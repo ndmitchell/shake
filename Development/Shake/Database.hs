@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.List
 import System.Directory
+import System.FilePath
 import System.IO
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
@@ -167,8 +168,8 @@ withDatabase filename version = bracket (openDatabase filename version) closeDat
 -- such as .database, .journal, .trace
 openDatabase :: FilePath -> Int -> IO Database
 openDatabase filename version = do
-    let dbfile = filename ++ ".database"
-        jfile = filename ++ ".journal"
+    let dbfile = filename <.> "database"
+        jfile = filename <.> "journal"
 
     (timestamp, status) <- readDatabase dbfile version
     timestamp <- return $ incTime timestamp
@@ -189,7 +190,7 @@ openDatabase filename version = do
 closeDatabase :: Database -> IO ()
 closeDatabase Database{..} = do
     status <- readVar status
-    writeDatabase (filename ++ ".database") version timestamp status
+    writeDatabase (filename <.> "database") version timestamp status
     closeJournal journal
 
 

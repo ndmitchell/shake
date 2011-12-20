@@ -32,7 +32,7 @@ import Development.Shake.Value
 
 -- | Options to control 'shake'.
 data ShakeOptions = ShakeOptions
-    {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.@).
+    {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud.
@@ -40,7 +40,7 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions "." 1 1 1
+shakeOptions = ShakeOptions ".shake" 1 1 1
 
 
 ---------------------------------------------------------------------
