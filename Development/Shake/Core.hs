@@ -3,7 +3,7 @@
 module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
     Rule(..), Rules, defaultRule, rule, action,
-    Action, apply, apply1, traced, currentRule,
+    Action, apply, apply1, traced, currentStack, currentRule,
     putLoud, putNormal, putQuiet
     ) where
 
@@ -247,12 +247,16 @@ traced msg act = Action $ do
     return res
 
 
+-- | Get the stack of 'Key's for the current rule - usually used to improve error messages.
+--   Returns '[]' if being run by 'action', otherwise returns the stack with the oldest rule
+--   first.
+currentStack :: Action [Key]
+currentStack = Action $ fmap reverse $ gets stack
+
+
 -- | Get the 'Key' for the currently executing rule - usally used to improve error messages.
 --   Returns 'Nothing' if being run by 'action'.
-currentRule :: Action (Maybe Key)
-currentRule = Action $ do
-    s <- get
-    return $ listToMaybe $ stack s
+currentRule = Action $ fmap listToMaybe $ gets stack
 
 
 putWhen :: (Int -> Bool) -> String -> Action ()
