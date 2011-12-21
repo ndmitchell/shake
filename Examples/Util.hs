@@ -38,7 +38,9 @@ assertContents file want = do
 
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
-noTest _ _ = return ()
+noTest build obj = do
+    build []
+    build []
 
 
 sleep :: Double -> IO ()
