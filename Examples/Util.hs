@@ -4,10 +4,16 @@ module Examples.Util where
 import Development.Shake
 import Development.Shake.FilePath
 
+import System.Directory
+import System.Environment
 
-shaken :: String -> ((String -> String) -> Rules ()) -> IO ()
-shaken name rules = shake shakeOptions{shakeFiles=out} $ rules (out++)
-    where out = "output/" ++ name ++ "/"
+
+shaken :: ((String -> String) -> Rules ()) -> IO ()
+shaken rules = do
+    name:args <- getArgs
+    let out = "output/" ++ name ++ "/"
+    createDirectoryIfMissing True out
+    withArgs args $ shake shakeOptions{shakeFiles=out} $ rules (out++)
 
 
 unobj :: FilePath -> FilePath

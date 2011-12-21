@@ -6,7 +6,7 @@ import Examples.Util
 
 
 main :: IO ()
-main = shaken "tar" $ \obj -> do
+main = shaken $ \obj -> do
     want [obj "result.tar"]
     obj "result.tar" *> \out -> do
         contents <- readFileLines "Examples/Tar/list.txt"

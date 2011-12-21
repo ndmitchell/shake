@@ -11,7 +11,7 @@ import Data.List
 
 
 main :: IO ()
-main = shaken "self" $ \obj -> do
+main = shaken $ \obj -> do
     let pkgs = "transformers binary unordered-containers parallel-io filepath directory process"
         flags = map ("-package=" ++) $ words pkgs
 
