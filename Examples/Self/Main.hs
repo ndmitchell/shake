@@ -3,6 +3,7 @@ module Examples.Self.Main(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import Examples.Util
 
 import Control.Monad
 import Data.Char
@@ -10,41 +11,39 @@ import Data.List
 
 
 main :: IO ()
-main = shake shakeOptions{shakeFiles="output/self", shakeVerbosity=2, shakeParallel=1} $ do
+main = shaken "self" $ \obj -> do
     let pkgs = "transformers binary unordered-containers parallel-io filepath directory process"
         flags = map ("-package=" ++) $ words pkgs
 
-    let out x = "output/self/" ++ x
-        unout x = dropDirectory1 $ dropDirectory1 x
-        moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
-    want [out "Main.exe"]
+    let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
+    want [obj "Main.exe"]
 
-    out "/*.exe" *> \res -> do
-        src <- readFileLines $ replaceExtension res "deps"
-        let os = map (out . moduleToFile "o") $ "Main":src
+    obj "/*.exe" *> \out -> do
+        src <- readFileLines $ replaceExtension out "deps"
+        let os = map (obj . moduleToFile "o") $ "Main":src
         need os
-        system' "ghc" $ ["-o",res] ++ os ++ flags
+        system' "ghc" $ ["-o",out] ++ os ++ flags
 
-    out "/*.deps" *> \res -> do
-        dep <- readFileLines $ replaceExtension res "dep"
-        let xs = map (out . moduleToFile "deps") dep
+    obj "/*.deps" *> \out -> do
+        dep <- readFileLines $ replaceExtension out "dep"
+        let xs = map (obj . moduleToFile "deps") dep
         need xs
         ds <- fmap (nub . sort . (++) dep . concat) $ mapM readFileLines xs
-        writeFileLines res ds
+        writeFileLines out ds
 
-    out "/*.dep" *> \res -> do
-        src <- readFile' $ unout $ replaceExtension res "hs"
+    obj "/*.dep" *> \out -> do
+        src <- readFile' $ unobj $ replaceExtension out "hs"
         let xs = hsImports src
         xs <- filterM (doesFileExist . moduleToFile "hs") xs
-        writeFileLines res xs
+        writeFileLines out xs
 
-    out "/*.hi" *> \res -> do
-        need [replaceExtension res "o"]
+    obj "/*.hi" *> \out -> do
+        need [replaceExtension out "o"]
 
-    out "/*.o" *> \res -> do
-        dep <- readFileLines $ replaceExtension res "dep"
-        let hs = unout $ replaceExtension res "hs"
-        need $ hs : map (out . moduleToFile "hi") dep
+    obj "/*.o" *> \out -> do
+        dep <- readFileLines $ replaceExtension out "dep"
+        let hs = unobj $ replaceExtension out "hs"
+        need $ hs : map (obj . moduleToFile "hi") dep
         system' "ghc" $ ["-c",hs,"-odir=output/self","-hidir=output/self","-i=output/self"] ++ flags
 
 
