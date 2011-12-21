@@ -1,4 +1,5 @@
-{-# LANGUAGE RecordWildCards, ExistentialQuantification, FunctionalDependencies, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
 
 module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
@@ -7,7 +8,9 @@ module Development.Shake.Core(
     putLoud, putNormal, putQuiet
     ) where
 
+import Prelude hiding (catch)
 import Control.Concurrent.ParallelIO.Local
+import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
@@ -37,10 +40,23 @@ data ShakeOptions = ShakeOptions
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud.
     }
+    deriving (Show, Eq, Ord, Read)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 1
+
+
+data ShakeException = ShakeException [Key] SomeException
+     deriving Typeable
+
+instance Exception ShakeException
+
+instance Show ShakeException where
+    show (ShakeException stack inner) = unlines $
+        "Error when running Shake build system:" :
+        map (("* " ++) . show) stack ++
+        [show inner]
 
 
 ---------------------------------------------------------------------
@@ -146,7 +162,13 @@ run ShakeOptions{..} rules = do
     withDatabase shakeFiles shakeVersion $ \database -> do
         withPool shakeParallel $ \pool -> do
             let s0 = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
-            parallel_ pool $ map (runAction s0) (actions rules)
+            parallel_ pool $ map (wrapStack [] . runAction s0) (actions rules)
+
+
+wrapStack :: [Key] -> IO a -> IO a
+wrapStack stk act = catch act $ \(SomeException e) -> case cast e of
+    Just s@ShakeException{} -> throw s
+    Nothing -> throw $ ShakeException stk $ SomeException e
 
 
 registerWitnesses :: Rules () -> IO ()
@@ -209,18 +231,18 @@ apply ks = Action $ do
                 Execute todo -> do
                     let bad = intersect (stack s) todo
                     if not $ null bad then
-                        error $ unlines $ "Invalid rules, recursion detected:" :
-                                          map (("  " ++) . show) (reverse (head bad:stack s))
+                        error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
                      else do
-                        discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t -> do
-                            start <- getCurrentTime
-                            let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
-                            (res,s2) <- runAction s2 $ do
-                                putNormal $ "# " ++ show t
-                                execute s t
-                            end <- getCurrentTime
-                            let x = duration start end - discount s2
-                            finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)
+                        discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t ->
+                            wrapStack (reverse $ t:stack s) $ do
+                                start <- getCurrentTime
+                                let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
+                                (res,s2) <- runAction s2 $ do
+                                    putNormal $ "# " ++ show t
+                                    execute s t
+                                end <- getCurrentTime
+                                let x = duration start end - discount s2
+                                finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)
                         loop
 
         discounted x = do

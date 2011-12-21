@@ -20,9 +20,8 @@ system' path args = do
     let cmd = unwords $ path2 : args
     putLoud cmd
     res <- liftIO $ rawSystem path2 args
-    when (res /= ExitSuccess) $ do
-        k <- currentRule
-        error $ "System command failed while building " ++ show k ++ ", " ++ cmd
+    when (res /= ExitSuccess) $
+        error $ "System command failed:\n" ++ cmd
 
 
 -- | @copyFile old new@ copies the existing file from @old@ to @new@. The @old@ file is has 'need' called on it
