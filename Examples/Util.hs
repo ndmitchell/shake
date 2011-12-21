@@ -23,7 +23,7 @@ shaken test rules = do
         "test":_ -> do
             putStrLn $ "## TESTING " ++ name
             test (`withArgs` run) (out++)
-        "clean":_ -> putStrLn $ "TODO: rm -rf " ++ out
+        "clean":_ -> removeDirectoryRecursive out
         _ -> withArgs args run
 
 
