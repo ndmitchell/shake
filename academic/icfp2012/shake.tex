@@ -41,9 +41,6 @@
 \authorinfo{Neil Mitchell}
            {\verb"ndmitchell@gmail.com"}
 
-\authorinfo{Max Bolingbroke}
-           {\verb"ndmitchell@gmail.com"}
-
 \maketitle
 
 \begin{comment}
@@ -512,6 +509,9 @@ We define new file rules with |(?>)|, which takes a predicate to match against t
 
 While |(?>)| is the ultimate file creation rule, we define two additional operators, in terms of a wildcard match operator |(?==)|. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation, we found that |(?>)| was used about 5\% of the time, |(**>)| was used about 10\% and |(*>)| was used about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is poorly designed and should be rethought (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
 
+As a practical concern, when writing file rules, often there are multiple types of object that build \file{*.o} files. This problem can be easily solved by making Haskell produce \file{*.hs.o}, C produce \file{*.c.o} etc.
+
+
 \subsection{Automatically Include Default Rules}
 \label{sec:include_default_rules}
 
@@ -621,9 +621,12 @@ The state of a running Shake program can be represented by the data type in Figu
 
 The |Status| constructors also take an |Info|, which contains the same fields as in \S\label{sec:unchanging_files}, with one modification. To allow full parallelism when rebuilding dependent rules, we store |depends| as |[[Key]]| instead of just |[Key]| -- where each entry comes from one call to |apply|. When saving |State| to the database, we ignore the |Status| fields and save only the |Key|/|Info| mapping.
 
-With this state, it is relatively easy to implement the core of Shake -- the functions which are actually responsible for building account for less than 100 lines, most of which is dealing with parallelism. We execute the top-level |actions|, and whenever we call |apply|, we look up the state in the database, and use the transition diagram in Figure \ref{fig:state} to make sure everything is |Built| before continuing. We use the \prog{parallel-io} \cite{parallel-io} library to queue up rules to be run, which ensures we never have more than a user specified number of rules executing in parallel.
+With this state, it is relatively easy to implement the core of Shake -- the functions which are actually responsible for building account for less than 100 lines, most of which is dealing with parallelism. We execute the top-level |actions|, and whenever we call |apply|, we look up the state in the database, and use the transition diagram in Figure \ref{fig:state} to make sure everything is |Built| before continuing.
+
+To implement parallelism we use the \prog{parallel-io} \cite{parallel-io} library to queue up rules to be run, which ensures we never have more than a user specified number of rules executing in parallel. The \prog{parallel-io} library deliberately randomises the order of computations it runs, as a result of the needs of Shake. By randomising the rules, we provoke failures earlier than we would other have. In addition, some stages of a build require different resources -- for example the compiler requires CPU while the linker requires disk access. If we are not careful, we can result in executing all compilers followed by all linkers. Using random ordering means we get a better mix, which gives a noticeable speedup -- measured at 20\% for some practical workloads.
 
 When running a large build system, it is common for it to fail before completing -- either because a rule raised an error, or the end user killing the build process. In these cases it is important that none of the work that has been performed is lost -- therefore we maintain a journal and every time a rule transitions from |Building| to |Built| we write that information immediately. If Shake completes successfully we delete the journal. If on restarting Shake has a journal file, we replay the journal onto the database.
+
 
 \subsection{Error Messages}
 
@@ -673,47 +676,50 @@ In order to do lint checking we assume that the system has been cleaned first, w
 \section{Evaluation}
 \label{sec:evaluation}
 
-We have used the resulting system extensively. It replaced a huge and error prone build system. Cite the 15\% study, and say we do very little.
+We have used a build system based on Shake at Standard Chartered for the last three years. Our build system has been an unqualified success -- while the complexity of our system has increased, the build system has been able to handle all the change with incremental extensions. When introduced it replaced an extensive \make{} based system, which ran to over 10,000 lines of script, was regularly incorrect and very slow. Introducing Shake made our build system 10x shorter and 2x faster, even with the constraint of remaining backwards compatible with the old build system. Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
+
+In a single run our build system typically checks 360,000, although certain options will cause it to do even more. Our build system has up to 20 levels deep of |apply| calls from the top-level |action| statement, but 80\% of build rules are between 3 and 7 steps deep.
+
+% [(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
+
+In developing our build system we have learnt a number of lessons -- both about best practices for structuring build systems, and how the underlying core of Shake can be used to deal with the complexities of real development. In this section we share some of those lessons.
+
+\subsection{Command Line Interface}
+
+While the |shake| function is suitable for use as |main|, it offers no support for command line arguments by default. We use the |shake| function in a program \prog{mk}, which handles command line options, allowing us to specify options, such as parallelism and producing profiling reports.
+
+One essential feature of any build tool is the @mk clean@ command, which deletes all build objects. We structure our build system to write all generated objects into a the folder \file{.make}, allowing us to implement @clean@ by deleting that folder. In a Shake system it is also possible to force a rebuild of all files by deleting the database. Finally, it is possible to clean a Shake build system by reading the database to determine which files were generated -- but we have found generating files alongside your source code to be unhelpful.
+
+One feature of \make{} is that the targets can be specified on the command line. We allow a similar tactic, allowing both individual files and sets of files to be enabled/disabled. As an example, a user may write @mk !DOCS@ to disable building documentation, or @mk index.html@ to only build the target \file{index.html}. We control these targets by passing a modified version of |want| to the functions specifying rules, which consults the command line arguments:
 
 \begin{code}
-
-hasFlag :: String -> Bool
-
-dotNet = do
-    ruleAlways $ do
-        res <- run1 $ Flag "DOTNETGEN"
-        when res $
-            addins <- run1 Addins
-            need [dist $ x <.> "dll" | x <- addins]
+documentation :: (String -> [FilePath] -> Rules()) -> Rules ()
+documentation wants = do
+    wants "DOCS" ["index.html"]
+    "index.html" *> \out -> ellipses
 \end{code}
-
-Typically a system checks 360,000 files in a run.
-
-Depths of files are:
-
-[(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
 
 \subsection{Multiple Outputs}
 
-GHC produces a .hi and a .o file. You can think of the .o file as depending on the entire contents of the file, and the .hi depending on only the type signatures. A single GHC invocation needs to do all the work to do both, but often it won't change the .hi file if it doesn't need to. The multiple results captures this perfectly.
+Some programs, such the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs as a result of one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, which the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to do both, but often the \file{.hi} file will be left unchanged. Producing two files captures this pattern. Unfortunately, many build systems (\make{} included) do not handle multiple outputs well. In Shake, it is usually possible to fake a dependency -- claiming that \file{Foo.hi} depends on \file{Foo.o}, while \file{Foo.o} depends on \file{Foo.hs}, thanks to suitable support for unchanging files (see \S\ref{sec:unchanging_files}).
 
-In most cases you can fake the dependency - i.e. say that Foo.o depends on both Foo.hs and Foo.hi - which may work, as whenever one gets built the other will be. However, consider a process that reads a file and splits it into the even numbers and the odd numbers, avoiding writing the file back if nothing has changed.
-
-Sometimes running one command will produce two outputs. As an example, running \prog{ghc} on \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. Some things (things importing \file{Foo.hs}) require \file{Foo.hi}. Some things, say linking, require \file{Foo.o}. We can fake this because we know that a change in the \file{*.o} timestamp changes the \file{*.hi} timestamp, so we can write:
+Unfortunately fake dependencies are not always enough. Consider a process that reads \file{numbers.txt} containing lines of numbers, and splits produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. Here there is no fake dependency that can solve the problem. Fortunately, the power of multiple types of rules comes to the rescue. We define a new type, |File2|, which stores two files.
 
 \begin{code}
-"*.hi" *> \hi ->
-    need [replaceExtension hi "o"]
+data File2 = File2 FilePath FilePath
+data FileTime2 = FileTime2 Int Int
 
-"*.o" *> \o ->
-    let hs = replaceExtension x "hs"
-    need [hs] -- and it's dependencies, but let's ignore that for now
-    system' "ghc" ["-c",hs]
+rules = do
+    rule $ \(File2 x y) -> if x /= "even.txt" || x /= "odd.txt" then Nothing else Just $ do
+        need ["numbers.txt"]
+        system' ["number-split","numbers.txt"]
+        liftM2 File2 (getFileTime x) (getFileTime y)
+
+    ["even.txt","odd.txt"] **> \_ ->
+        apply [File2 "even.txt" "odd.txt"]
 \end{code}
 
-Note that if we wrote it the other way, with the \file{*.o} depending on the \file{*.hi} then if the \file{*.hi} stayed the same we could end up screwed. We'd have written that neither file had changed, but both would have. Ouch. Also if we use SHA1 it's now not correct.
 
-We can work around the problem by introducing a new type, |File2| which stores two files. We can then ask for both files at once, which computes them and stores both timestamps. Now to compute either we depend on the Both rule, and since that always changes when either does, we're safe.
 
 \subsection{Transitive Dependencies}
 
@@ -723,54 +729,11 @@ We can also define a more specific one, based on the assumption that @#ifdef@ st
 
 If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
 
-
 \subsection{Build rules that change}
 
-Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build.
+Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build. We also in occasion depend on the file itself -- but that is only a crass generalisation, and is most useful when writing code generators.
 
-
-\subsection{Random Interleaving}
-
-It helps! Both checking for correct parallelism, and for speeding things up.
-
-\subsection{Rules to Follow}
-
-Put all generated files somewhere entirely separate, such as dist or |_make|. Do not comingle them.
-
-Make sure you normalise all filepaths, we recommend making them all relative to the root, never use combinations of @.@ and @/@ or @\\@.
-
-We also have found that when you use |(?>)| you are probably going too complicated. As an example:
-
-\begin{code}
-(\x ->  obj "/Root/*/*.hs" ?== x &&
-        not ("Generated" `isInfixOf` x) &&
-        not ("Hs" `isPrefixOf` takeFileName x))
-    ?> ellipses
-\end{code}
-
-This rule seems like a complete hack to me -- these special cases are likely added based on corners that should have been removed.
-
-\subsection{Cleaning}
-
-A standard feature of build systems is cleaning operations. We can rebuild everything by just deleting the cache. Also note that the cache may have garbage in -- things which are old, stale, and not useful. However, we don't make any attempt to delete them -- in practice wiping a rebuilding is sufficiently common. However, we could say that anything which has not been used gets cleared.
-
-\subsection{Lots of things generate .o files}
-
-Then change them to have an extra extension, such as .hs.o.
-
-\subsection{Command Line}
-
-Just use actionAllow to filter which things they are allowed to need. You should be very careful not to miss out on things that they actually use, as you'll like get an error.
-
-\subsection{Type Safety}
-
-The |rule|/|apply| functions are checked at runtime. However, since everyone uses sugared versions, that isn't an issue. It should be relatively easy to define a statically typed rule that accumulates its types used, but it's more complex.
-
-\subsection{Comparison to @ghc --make@}
-
-Compared to GHC --make, building the Shake project takes 9 seconds to compile, while GHC --make takes 6 seconds. The reason for the difference is that GHC has to analyse dependencies once, and can keep .hi information in memory. However, Shake can fight back with some parallelism - in the Shake demo, if we scale each compilation to 5seconds, then GHC would take at least 70 seconds, while Shake can gain with parallelism to take 45 seconds. Compared to something like gcc, which is always invoked in single mode, we do better.
-
-However, we do far better for a null rebuild. We have essentially reduced it to a question of which files already exist, and which timestamps do a set of files -- to rebuild GHC must ask at least these questions, and in practice will look at the insides of each file. As a result, we can do a minimal rebuild in 0.03 seconds, while GHC takes 0.6 seconds. Our only unnecesary overhead is reading in the database.
+We have actually moved most of our stuff into a build.mk file which is fully tracked, and would suggest others do the same. It should not be the build systems job to list which files go into a .c file, but perhaps have a list of those files somewhere in a text file.
 
 \section{Related Work}
 \label{sec:related_work}
@@ -784,6 +747,8 @@ A standard build system generates a dependency graph for all files, and processe
 https://github.com/apenwarr/redo
 
 Redo was originally described by djb, and then separately implemented later. It has several features in common with Shake, including the use of a central database to track dependencies. Focusing on the differences, each rule in a Redo script is a separate file. This reduces the abstraction, and complicates defining a build system, has a very limited rule matching format (just by extension), but has the upside of simplicity (there is no redo syntax, just shell script), and you can depend on the contents of a rule. You can only specify simple files like default.o, and it's hard to get them in the right place. The language of choice are shell scripts, although this can be altered with she-bang lines. The advantage of separate files is it can depend on a rule, which is cool. It doesn't have rules for anything other than files, which means it can't deal with multiple outputs nicely.
+
+It can only track decisions that are files, which is annoying.
 
 \subsection{Ninja}
 
@@ -799,6 +764,13 @@ https://gittup.org/tup
 
 Haskell libraries: Blueprint, Coadjute, nemesis, cake, hake, hmk, zoom, openshake, abba
 
+The |rule|/|apply| functions are checked at runtime. However, since everyone uses sugared versions, that isn't an issue. It should be relatively easy to define a statically typed rule that accumulates its types used, but it's more complex. OpenShake did it using type functions. If you thread the types through teh Rules type as a type argument you can also solve the serialisation of existentials.
+
+\subsection{Comparison to @ghc --make@}
+
+Compared to GHC --make, building the Shake project takes 9 seconds to compile, while GHC --make takes 6 seconds. The reason for the difference is that GHC has to analyse dependencies once, and can keep .hi information in memory. However, Shake can fight back with some parallelism - in the Shake demo, if we scale each compilation to 5seconds, then GHC would take at least 70 seconds, while Shake can gain with parallelism to take 45 seconds. Compared to something like gcc, which is always invoked in single mode, we do better.
+
+However, we do far better for a null rebuild. We have essentially reduced it to a question of which files already exist, and which timestamps do a set of files -- to rebuild GHC must ask at least these questions, and in practice will look at the insides of each file. As a result, we can do a minimal rebuild in 0.03 seconds, while GHC takes 0.6 seconds. Our only unnecesary overhead is reading in the database.
 
 \section{Conclusions}
 \label{sec:conclusions}
