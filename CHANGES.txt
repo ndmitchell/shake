@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.1.3
     Fix a bug where a file rule could return with a lazy error
     Make sure all the files are stored in binary, not text
     Fix a pattern match error in getDirectoryFiles
