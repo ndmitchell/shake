@@ -78,6 +78,7 @@ data Status
     = Building Barrier (Maybe Info)
     | Built  Info
     | Loaded Info
+      deriving Show
 
 
 ---------------------------------------------------------------------
