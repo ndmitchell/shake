@@ -18,13 +18,12 @@ shaken test rules = do
     name:args <- getArgs
     let out = "output/" ++ name ++ "/"
     createDirectoryIfMissing True out
-    let run = shake shakeOptions{shakeFiles=out} $ rules (out++)
     case args of
         "test":_ -> do
             putStrLn $ "## TESTING " ++ name
-            test (`withArgs` run) (out++)
+            test (\args -> withArgs (name:args) $ shaken test rules) (out++)
         "clean":_ -> removeDirectoryRecursive out
-        _ -> withArgs args run
+        _ -> withArgs args $ shake shakeOptions{shakeFiles=out} $ rules (out++)
 
 
 unobj :: FilePath -> FilePath
