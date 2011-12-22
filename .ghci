@@ -2,6 +2,8 @@
 :set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
 :load Main
 
+:def test const $ return ":main test"
+
 :{
 :def docs const $ return $ unlines
         [":docs_"
