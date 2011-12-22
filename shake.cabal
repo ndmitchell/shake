@@ -87,5 +87,8 @@ executable shake
         buildable: False
 
     other-modules:
-        Examples.Tar.Main
+        Examples.Util
         Examples.Self.Main
+        Examples.Test.Basic1
+        Examples.Test.Directory
+        Examples.Tar.Main
