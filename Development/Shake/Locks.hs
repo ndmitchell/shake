@@ -14,6 +14,7 @@ import Data.IORef
 
 -- | Like an MVar, but must always be full
 newtype Var a = Var (MVar a)
+instance Show (Var a) where show _ = "Var"
 
 newVar :: a -> IO (Var a)
 newVar = fmap Var . newMVar
@@ -34,6 +35,7 @@ modifyVar_ (Var x) f = modifyMVar_ x f
 -- Either Nothing to indicate it has been released already,
 -- or Just the list of actions to run when released
 newtype Barrier = Barrier (IORef (Maybe [IO ()]))
+instance Show Barrier where show _ = "Barrier"
 
 newBarrier :: IO Barrier
 newBarrier = fmap Barrier $ newIORef $ Just []
