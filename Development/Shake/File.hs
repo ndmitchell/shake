@@ -39,6 +39,15 @@ getFileTime x = do
         TOD t _ <- getModificationTime x
         return $ Just $ FileTime $ fromIntegral t
 
+getFileTimeErr :: String -> FilePath -> IO FileTime
+getFileTimeErr msg x = do
+    res <- getFileTime x
+    case res of
+        -- Important to raise an error in IO, not return a value which will error later
+        Nothing -> error $ msg ++ "\n" ++ x
+        Just x -> return x
+
+
 
 instance Rule File FileTime where
     validStored (File x) t = fmap (== Just t) $ getFileTime x
@@ -46,10 +55,8 @@ instance Rule File FileTime where
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = defaultRule $ \(File x) -> Just $ do
-    res <- liftIO $ getFileTime x
-    let msg = "Error, file does not exist and no available rule: " ++ x
-    return $ fromMaybe (error msg) res
+defaultRuleFile = defaultRule $ \(File x) -> Just $
+    liftIO $ getFileTimeErr "Error, file does not exist and no rule available:" x
 
 
 -- | Require that the following files are built before continuing. Particularly
@@ -85,9 +92,7 @@ want xs = action $ need xs
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        res <- liftIO $ getFileTime x
-        let msg = "Error, rule failed to build the file: " ++ x
-        return $ fromMaybe (error msg) res
+        liftIO $ getFileTimeErr "Error, rule failed to build the file:" x
 
 
 -- | Define a set of patterns, and if any of them match, run the associate rule. See '*>'.
