@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make sure all the files are stored in binary, not text
     Fix a pattern match error in getDirectoryFiles
 0.1.2
     Add a warning in the description

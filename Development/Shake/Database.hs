@@ -32,7 +32,10 @@ import Data.List
 import System.Directory
 import System.FilePath
 import System.IO
-import qualified Data.ByteString.Lazy.Char8 as LBS
+
+-- we want readFile/writeFile to be byte orientated, not do windows line end conversion
+import qualified Data.ByteString.Lazy as LBS (readFile,writeFile)
+import qualified Data.ByteString.Lazy.Char8 as LBS hiding (readFile,writeFile)
 
 
 -- Increment every time the on-disk format/semantics change,
@@ -235,7 +238,7 @@ data Journal = Journal
 
 openJournal :: FilePath -> Int -> IO Journal
 openJournal journalFile ver = do
-    h <- openFile journalFile WriteMode
+    h <- openBinaryFile journalFile WriteMode
     hSetFileSize h 0
     LBS.hPut h $ LBS.pack $ journalVersion ver
     witness <- currentWitness
