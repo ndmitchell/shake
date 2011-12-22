@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix a pattern match error in getDirectoryFiles
 0.1.2
     Add a warning in the description
 0.1.1

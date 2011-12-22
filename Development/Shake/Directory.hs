@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
 
 module Development.Shake.Directory(
     doesFileExist,
@@ -66,7 +66,7 @@ defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     defaultRule $ \(Exist x) -> Just $
         liftIO $ IO.doesFileExist x
-    defaultRule $ \x@GetDir{} -> Just $
+    defaultRule $ \(x :: GetDir) -> Just $
         liftIO $ getDir x
 
 
