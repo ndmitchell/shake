@@ -75,6 +75,7 @@ library
         Development.Shake.Derived
         Development.Shake.Directory
         Development.Shake.File
+        Development.Shake.FilePattern
         Development.Shake.Locks
         Development.Shake.TypeHash
         Development.Shake.Value

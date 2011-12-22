@@ -16,7 +16,7 @@ import qualified System.Directory as IO
 import System.FilePath
 
 import Development.Shake.Core
-import Development.Shake.File
+import Development.Shake.FilePattern
 
 
 
