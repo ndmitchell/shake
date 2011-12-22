@@ -7,7 +7,7 @@ import System.Environment
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.Test.Basic1 as Basic1
-import qualified Examples.Test.Basic1 as Directory
+import qualified Examples.Test.Directory as Directory
 
 
 fakes = ["clean" * clean, "test" * test]

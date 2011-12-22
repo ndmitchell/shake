@@ -3,18 +3,20 @@ module Examples.Test.Directory(main) where
 
 import Development.Shake
 import Examples.Util
+import System.Directory(createDirectory)
+
 
 main = shaken test $ \obj -> do
-    want [obj "files.lst","dirs.lst","exist.lst"]
-    obj "files.lst" *> \out ->
-        x <- getDirectoryFiles "*.txt"
+    want $ map obj ["files.lst","dirs.lst","exist.lst"]
+    obj "files.lst" *> \out -> do
+        x <- getDirectoryFiles (obj "") "*.txt"
         writeFileLines out x
-    obj "dirs.lst" *> \out ->
-        x <- getDirectoryDirs
-        writeFileLines out ""
-    obj "exist.lst" *> \out ->
+    obj "dirs.lst" *> \out -> do
+        x <- getDirectoryDirs (obj "")
+        writeFileLines out x
+    obj "exist.lst" *> \out -> do
         xs <- readFileLines $ obj "files.lst"
-        ys <- mapM doesFileExist $ xs ++ reverse xs
+        ys <- mapM (doesFileExist . obj) $ xs ++ map reverse xs
         writeFileLines out $ map show ys
 
 
@@ -27,7 +29,8 @@ test build obj = do
 
     writeFile (obj "A.txt") ""
     writeFile (obj "B.txt") ""
-    createDirectory "Foo.txt"
+    createDirectory (obj "Foo.txt")
+    sleep 1
     build []
     assertContents (obj "files.lst") $ unlines ["A.txt","B.txt"]
     assertContents (obj "dirs.lst") $ unlines ["Foo.txt"]
