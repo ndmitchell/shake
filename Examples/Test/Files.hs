@@ -2,6 +2,7 @@
 module Examples.Test.Files(main) where
 
 import Development.Shake
+import Development.Shake.FilePattern
 import Examples.Util
 import Data.List
 
@@ -16,6 +17,15 @@ main = shaken test $ \obj -> do
 
 
 test build obj = do
+    assert (compatible []) "compatible"
+    assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
+    assert (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
+    extract "//*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
+    extract "//*a.txt" "testa.txt" === ["","test"]
+    extract "//*a*.txt" "testada.txt" === ["","test","da"]
+    substitute ["","test","da"] "//*a*.txt" === "testada.txt"
+    substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
+
     let nums = unlines . map show
     writeFile (obj "numbers.txt") $ nums [1,2,4,5,2,3,1]
     build []
