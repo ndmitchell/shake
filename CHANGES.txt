@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Properly detect recursive rules, instead of looping
     Add *>> for building multiple files at once
 0.1.3
     Fix a bug where a file rule could return with a lazy error

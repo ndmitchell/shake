@@ -226,24 +226,24 @@ apply ks = Action $ do
             s <- get
             res <- liftIO $ request (database s) (stored s) $ map newKey ks
             case res of
-                Block act -> discounted (liftIO $ extraWorkerWhileBlocked (pool s) act) >> loop
+                Block (seen,act) -> do
+                    let bad = intersect (stack s) seen
+                    if not $ null bad
+                        then error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
+                        else discounted (liftIO $ extraWorkerWhileBlocked (pool s) act) >> loop
                 Response vs -> return $ map fromValue vs
                 Execute todo -> do
-                    let bad = intersect (stack s) todo
-                    if not $ null bad then
-                        error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
-                     else do
-                        discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t ->
-                            wrapStack (reverse $ t:stack s) $ do
-                                start <- getCurrentTime
-                                let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
-                                (res,s2) <- runAction s2 $ do
-                                    putNormal $ "# " ++ show t
-                                    execute s t
-                                end <- getCurrentTime
-                                let x = duration start end - discount s2
-                                finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)
-                        loop
+                    discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t ->
+                        wrapStack (reverse $ t:stack s) $ do
+                            start <- getCurrentTime
+                            let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
+                            (res,s2) <- runAction s2 $ do
+                                putNormal $ "# " ++ show t
+                                execute s t
+                            end <- getCurrentTime
+                            let x = duration start end - discount s2
+                            finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)
+                    loop
 
         discounted x = do
             start <- liftIO getCurrentTime

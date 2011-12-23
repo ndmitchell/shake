@@ -89,12 +89,12 @@ data Status
 
 data Response
     = Execute [Key] -- you need to execute these keys and call finished at least once before calling request again
-    | Block (IO ()) -- you need to block on at least one of these barriers before calling request again
+    | Block ([Key], IO ()) -- you need to block on at least one of these barriers before calling request again
     | Response [Value] -- actual result values, do not call request again
 
 data Response_ = Response_
     {execute :: [Key]
-    ,barriers :: [Barrier]
+    ,barriers :: [(Key,Barrier)]
     ,values :: [(Time,Value)]
     }
 
@@ -104,7 +104,7 @@ concatResponse xs = Response_ (concatMap execute xs) (concatMap barriers xs) (co
 toResponse :: Response_ -> Response
 toResponse Response_{..}
     | not $ null execute = Execute execute
-    | not $ null barriers = Block $ waitAnyBarrier barriers
+    | not $ null barriers = Block $ second waitAnyBarrier $ unzip barriers
     | otherwise = Response $ map snd values
 
 
@@ -123,7 +123,7 @@ request Database{..} validStored ks =
             s <- S.get
             case Map.lookup k s of
                 Nothing -> build k
-                Just (Building bar _) -> return $ Response_ [] [bar] []
+                Just (Building bar _) -> return $ Response_ [] [(k,bar)] []
                 Just (Built i) -> return $ Response_ [] [] [(changed i, value i)]
                 Just (Loaded i) ->
                     if not $ validStored k (value i)
