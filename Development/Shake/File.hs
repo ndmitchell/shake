@@ -71,7 +71,7 @@ want xs = action $ need xs
         liftIO $ getModTimeError "Error, rule failed to build the file:" x
 
 
--- | Define a set of patterns, and if any of them match, run the associate rule. See '*>'.
+-- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (**>) test act = (\x -> any (x ?==) test) ?> act
 
