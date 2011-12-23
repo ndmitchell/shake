@@ -12,7 +12,7 @@ import System.Environment
 
 shaken
     :: (([String] -> IO ()) -> (String -> String) -> IO ())
-    -> ((String -> String) -> Rules ())
+    -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
 shaken test rules = do
     name:args <- getArgs
@@ -23,7 +23,7 @@ shaken test rules = do
             putStrLn $ "## TESTING " ++ name
             test (\args -> withArgs (name:args) $ shaken test rules) (out++)
         "clean":_ -> removeDirectoryRecursive out
-        _ -> withArgs args $ shake shakeOptions{shakeFiles=out} $ rules (out++)
+        _ -> shake shakeOptions{shakeFiles=out} $ rules args (out++)
 
 
 unobj :: FilePath -> FilePath

@@ -7,7 +7,7 @@ import Examples.Util
 import Data.List
 
 
-main = shaken test $ \obj -> do
+main = shaken test $ \args obj -> do
     want $ map obj ["even.txt","odd.txt"]
     map obj ["even.txt","odd.txt"] *>> \[evens,odds] -> do
         src <- readFileLines $ obj "numbers.txt"

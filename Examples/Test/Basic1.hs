@@ -4,7 +4,7 @@ module Examples.Test.Basic1(main) where
 import Development.Shake
 import Examples.Util
 
-main = shaken test $ \obj -> do
+main = shaken test $ \args obj -> do
     want [obj "AB.txt"]
     obj "AB.txt" *> \out -> do
         need [obj "A.txt", obj "B.txt"]

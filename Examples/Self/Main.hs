@@ -11,12 +11,12 @@ import Data.List
 
 
 main :: IO ()
-main = shaken noTest $ \obj -> do
+main = shaken noTest $ \args obj -> do
     let pkgs = "transformers binary unordered-containers parallel-io filepath directory process"
         flags = map ("-package=" ++) $ words pkgs
 
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
-    want [obj "Main.exe"]
+    want $ if null args then [obj "Main.exe"] else args
 
     obj "/*.exe" *> \out -> do
         src <- readFileLines $ replaceExtension out "deps"

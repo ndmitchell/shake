@@ -6,7 +6,7 @@ import Examples.Util
 import System.Directory(createDirectory)
 
 
-main = shaken test $ \obj -> do
+main = shaken test $ \args obj -> do
     want $ map obj ["files.lst","dirs.lst","exist.lst"]
     obj "files.lst" *> \out -> do
         x <- getDirectoryFiles (obj "") "*.txt"
