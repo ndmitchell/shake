@@ -1,10 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Development.Shake.FilePattern(
-    FilePattern, (?==)
+    FilePattern, (?==),
+    compatible, extract, substitute
     ) where
 
 import Data.List
+import Data.Maybe
+
 
 -- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax
 --   and semantics of 'FilePattern' see '?=='.
@@ -30,9 +33,46 @@ type FilePattern = String
 -- > "*/*.c" ?== "foo/bar/baz.c"
 --
 (?==) :: FilePattern -> FilePath -> Bool
-(?==) ('/':'/':x) y = any (x ?==) $ y : [i | '/':i <- tails y]
-(?==) ('*':x) y = any (x ?==) $ a ++ take 1 b
-    where (a,b) = break ("/" `isPrefixOf`) $ tails y
-(?==) (x:xs) (y:ys) | x == y = xs ?== ys
+(?==) ('/':'/':p) x = any (p ?==) $ x : [i | '/':i <- tails x]
+(?==) ('*':p) x = any (p ?==) $ a ++ take 1 b
+    where (a,b) = break ("/" `isPrefixOf`) $ tails x
+(?==) (p:ps) (x:xs) | p == x = ps ?== xs
 (?==) [] [] = True
 (?==) _ _ = False
+
+
+-- | Do they have the same * and // counts in the same order
+compatible :: [FilePattern] -> Bool
+compatible [] = True
+compatible (x:xs) = all ((==) (f x) . f) xs
+    where
+        f ('*':xs) = '*':f xs
+        f ('/':'/':xs) = '/':f xs
+        f (x:xs) = f xs
+        f [] = []
+
+
+-- | Extract the items that match the wildcards. The pair must match with '?=='.
+extract :: FilePattern -> FilePath -> [String]
+extract p x = fromMaybe [] $ f p x
+    where
+        f ('/':'/':p) x = rest p $ ("",x) : [(pre++"/",i) | (pre,'/':i) <- zip (inits x) (tails x)]
+        f ('*':p) x = rest p $ a ++ take 1 b
+            where (a,b) = break (isPrefixOf "/" . snd) $ zip (inits x) (tails x)
+        f (p:ps) (x:xs) | p == x = f ps xs
+        f [] [] = Just []
+        f _ _ = Nothing
+
+        rest p xs = listToMaybe [(skip:res) | (skip,keep) <- xs, Just res <- [f p skip]]
+
+
+-- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.
+--
+-- > p '?==' x ==> substitute (extract p x) p == x
+substitute :: [String] -> FilePattern -> FilePath
+substitute = f
+    where
+        f (a:as) ('/':'/':ps) = a ++ f as ps
+        f (a:as) ('*':ps) = a ++ f as ps
+        f as (p:ps) = p : f as ps
+        f as [] = []
