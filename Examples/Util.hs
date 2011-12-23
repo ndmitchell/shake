@@ -29,11 +29,14 @@ shaken test rules = do
 unobj :: FilePath -> FilePath
 unobj = dropDirectory1 . dropDirectory1
 
+assert :: Bool -> String -> IO ()
+assert b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
+
 
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- readFile file
-    when (want /= got) $ error $ "File contents are wrong: " ++ file ++ show (want,got)
+    assert (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
 
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
