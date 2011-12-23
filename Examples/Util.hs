@@ -16,6 +16,7 @@ shaken
     -> IO ()
 shaken test rules = do
     name:args <- getArgs
+    putStrLn $ "## BUILD " ++ unwords (name:args)
     let out = "output/" ++ name ++ "/"
     createDirectoryIfMissing True out
     case args of
