@@ -710,7 +710,7 @@ data File2 = File2 FilePath FilePath
 data FileTime2 = FileTime2 Int Int
 
 rules = do
-    rule $ \(File2 x y) -> if x /= "even.txt" || x /= "odd.txt" then Nothing else Just $ do
+    rule $ \(File2 x y) -> if (x,y) /= ("even.txt","odd.txt") then Nothing else Just $ do
         need ["numbers.txt"]
         system' ["number-split","numbers.txt"]
         liftM2 File2 (getFileTime x) (getFileTime y)
