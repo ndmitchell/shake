@@ -94,5 +94,6 @@ executable shake
         Examples.Self.Main
         Examples.Test.Basic1
         Examples.Test.Directory
+        Examples.Test.Errors
         Examples.Test.Files
         Examples.Tar.Main
