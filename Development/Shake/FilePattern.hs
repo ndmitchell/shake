@@ -6,7 +6,6 @@ module Development.Shake.FilePattern(
     ) where
 
 import Data.List
-import Data.Maybe
 
 
 -- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax
@@ -54,16 +53,16 @@ compatible (x:xs) = all ((==) (f x) . f) xs
 
 -- | Extract the items that match the wildcards. The pair must match with '?=='.
 extract :: FilePattern -> FilePath -> [String]
-extract p x = fromMaybe [] $ f p x
+extract p x = head $ f p x ++ [[]]
     where
         f ('/':'/':p) x = rest p $ ("",x) : [(pre++"/",i) | (pre,'/':i) <- zip (inits x) (tails x)]
         f ('*':p) x = rest p $ a ++ take 1 b
             where (a,b) = break (isPrefixOf "/" . snd) $ zip (inits x) (tails x)
         f (p:ps) (x:xs) | p == x = f ps xs
-        f [] [] = Just []
-        f _ _ = Nothing
+        f [] [] = [[]]
+        f _ _ = []
 
-        rest p xs = listToMaybe [(skip:res) | (skip,keep) <- xs, Just res <- [f p skip]]
+        rest p xs = [(skip:res) | (skip,keep) <- xs, res <- f p keep]
 
 
 -- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.
