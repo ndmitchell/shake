@@ -25,6 +25,7 @@ module Development.Shake(
     module Development.Shake.Derived,
     -- * File rules
     module Development.Shake.File,
+    module Development.Shake.Files,
     module Development.Shake.FilePattern,
     -- * Directory rules
     module Development.Shake.Directory
@@ -34,6 +35,7 @@ import Development.Shake.Core hiding (run)
 import Development.Shake.Derived
 import Development.Shake.File hiding (defaultRuleFile)
 import Development.Shake.FilePattern(FilePattern, (?==))
+import Development.Shake.Files
 import Development.Shake.Directory hiding (defaultRuleDirectory)
 
 import qualified Development.Shake.Core as X

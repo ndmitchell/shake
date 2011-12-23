@@ -76,6 +76,7 @@ library
         Development.Shake.Directory
         Development.Shake.File
         Development.Shake.FilePattern
+        Development.Shake.Files
         Development.Shake.Locks
         Development.Shake.ModTime
         Development.Shake.TypeHash
