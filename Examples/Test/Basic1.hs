@@ -35,7 +35,7 @@ test build obj = do
     writeFile (obj "B.txt") "BBB"
     build ["AB.txt"]
     assertContents (obj "AB.txt") "AAABBB"
-    sleep 1
+    sleepModTime
     appendFile (obj "A.txt") "aaa"
     build ["AB.txt"]
     assertContents (obj "AB.txt") "AAAaaaBBB"
