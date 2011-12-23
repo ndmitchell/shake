@@ -20,7 +20,7 @@
 module Development.Shake(
     shake,
     -- * Core of Shake
-    module Development.Shake.Core,
+    module Development.Shake.Core, liftIO,
     -- * Utility functions
     module Development.Shake.Derived,
     -- * File rules
@@ -31,6 +31,7 @@ module Development.Shake(
     module Development.Shake.Directory
     ) where
 
+import Control.Monad.IO.Class
 import Development.Shake.Core hiding (run)
 import Development.Shake.Derived
 import Development.Shake.File hiding (defaultRuleFile)
