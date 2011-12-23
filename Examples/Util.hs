@@ -33,6 +33,10 @@ assert :: Bool -> String -> IO ()
 assert b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
 
 
+(===) :: (Show a, Eq a) => a -> a -> IO ()
+a === b = assert (a == b) $ "failed in ===\nLHS: " ++ show a ++ "\nRHS: " ++ show b
+
+
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- readFile file
