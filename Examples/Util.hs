@@ -52,3 +52,8 @@ noTest build obj = do
 
 sleep :: Double -> IO ()
 sleep x = threadDelay $ floor $ x * 1000000
+
+
+-- | Sleep long enough for the modification time resolution to catch up
+sleepModTime :: IO ()
+sleepModTime = sleep 1
