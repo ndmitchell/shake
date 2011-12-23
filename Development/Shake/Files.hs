@@ -18,14 +18,11 @@ import Development.Shake.FilePattern
 import Development.Shake.ModTime
 
 
-
-
 newtype Files = Files [FilePath]
     deriving (Typeable,Eq,Hashable,Binary)
 
 newtype FileTimes = FileTimes [ModTime]
     deriving (Typeable,Show,Eq,Hashable,Binary)
-
 
 instance Show Files where show (Files xs) = unwords xs
 
