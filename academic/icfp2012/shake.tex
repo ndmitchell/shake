@@ -671,7 +671,16 @@ Shake contains full information on dependencies, so could be used to answer more
 
 \subsection{Lint checking}
 
-In order to do lint checking we assume that the system has been cleaned first, we require a complete build to have been done, then a clean to be performed, then a rebuild to be performed in lint mode.
+There are two primary things we check for with lint:
+
+\subsubsection{Invariant information}
+
+Things like whether a file exists or not should be constant throughout, otherwise any files which don't know will get confused. This can be checked by cleaning, and then running. Any key that marks itself as invariant should not change during this process.
+
+\subsubsection{Dependency creation}
+
+When running a file we can ask what has been changed, and what has been used. When we run just a rule, but no dependencies, the list of things that change must all be things who had rules run on them, and the list of things that were used should be equivalent.
+
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -755,6 +764,8 @@ It can only track decisions that are files, which is annoying.
 Ninja the Chromium build system has dynamic dependencies (you can specify a rule that contains dependencies), multiple outputs. It focus on only running command lines, and is a bit more limited, but still encompasses many of the same ideas.
 
 http://martine.github.com/ninja/manual.html
+
+http://google-engtools.blogspot.com/2011/08/build-in-cloud-how-build-system-works.html
 
 \subsection{Tup}
 
