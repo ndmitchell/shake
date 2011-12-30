@@ -4,6 +4,7 @@ module Development.Shake.Files(
     (*>>)
     ) where
 
+import Control.DeepSeq
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
@@ -19,10 +20,10 @@ import Development.Shake.FileTime
 
 
 newtype Files = Files [FilePath]
-    deriving (Typeable,Eq,Hashable,Binary)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 newtype FileTimes = FileTimes [FileTime]
-    deriving (Typeable,Show,Eq,Hashable,Binary)
+    deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
 
 instance Show Files where show (Files xs) = unwords xs
 

@@ -10,6 +10,7 @@ module Development.Shake.Core(
 
 import Prelude hiding (catch)
 import Control.Concurrent.ParallelIO.Local
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
@@ -64,8 +65,8 @@ instance Show ShakeException where
 
 -- | Define a pair of types that can be used by Shake rules.
 class (
-    Show key, Typeable key, Eq key, Hashable key, Binary key,
-    Show value, Typeable value, Eq value, Hashable value, Binary value
+    Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key,
+    Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
     ) => Rule key value | key -> value where
     -- | Given that the database contains @key@/@value@, does that still match the on-disk contents?
     --
@@ -240,6 +241,7 @@ apply ks = Action $ do
                             (res,s2) <- runAction s2 $ do
                                 putNormal $ "# " ++ show t
                                 execute s t
+                            evaluate $ rnf res
                             end <- getCurrentTime
                             let x = duration start end - discount s2
                             finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)

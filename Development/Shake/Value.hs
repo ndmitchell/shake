@@ -10,6 +10,7 @@ module Development.Shake.Value(
     ) where
 
 import Development.Shake.Binary
+import Control.DeepSeq
 import Data.Hashable
 import Data.Typeable
 
@@ -24,15 +25,15 @@ import System.IO.Unsafe
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
-    deriving (Eq,Hashable,BinaryWith Witness)
+    deriving (Eq,Hashable,NFData,BinaryWith Witness)
 
-data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a) => Value a
+data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => Value a
 
 
-newKey :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> Key
+newKey :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> Key
 newKey = Key . newValue
 
-newValue :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> Value
+newValue :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> Value
 newValue = Value
 
 typeKey :: Key -> TypeRep
@@ -54,6 +55,9 @@ instance Show Key where
 instance Show Value where
     show (Value a) = show a
 
+instance NFData Value where
+    rnf (Value a) = rnf a
+
 instance Hashable Value where
     hash (Value a) = hash (typeOf a) `xor` hash a
 
@@ -70,7 +74,7 @@ instance Eq Value where
 witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
-registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a) => a -> IO ()
+registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> IO ()
 registerWitness x = modifyIORef witness $ Map.insert (typeOf x) (Value $ undefined `asTypeOf` x)
 
 

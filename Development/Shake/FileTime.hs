@@ -4,6 +4,8 @@ module Development.Shake.FileTime(
     FileTime, getModTimeError, getModTimeMaybe
     ) where
 
+import Control.Concurrent(threadDelay)
+import Control.DeepSeq
 import Data.Binary
 import Data.Hashable
 import Data.List
@@ -13,7 +15,7 @@ import System.Time
 
 
 newtype FileTime = FileTime Int
-    deriving (Typeable,Eq,Hashable,Binary,Show)
+    deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 
 getModTimeMaybe :: FilePath -> IO (Maybe FileTime)

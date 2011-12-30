@@ -12,7 +12,7 @@ import Data.List
 
 main :: IO ()
 main = shaken noTest $ \args obj -> do
-    let pkgs = "transformers binary unordered-containers parallel-io filepath directory process"
+    let pkgs = "transformers binary unordered-containers parallel-io filepath directory process access-time deepseq"
         flags = map ("-package=" ++) $ words pkgs
 
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext

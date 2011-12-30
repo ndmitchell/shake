@@ -6,6 +6,8 @@ module Development.Shake.File(
     (*>), (**>), (?>)
     ) where
 
+import Control.DeepSeq
+import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
@@ -20,7 +22,7 @@ import System.FilePath(takeDirectory)
 
 
 newtype File = File FilePath
-    deriving (Typeable,Eq,Hashable,Binary)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show File where show (File x) = x
 

@@ -6,6 +6,7 @@ module Development.Shake.Directory(
     defaultRuleDirectory
     ) where
 
+import Control.DeepSeq
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
@@ -21,7 +22,7 @@ import Development.Shake.FilePattern
 
 
 newtype Exist = Exist FilePath
-    deriving (Typeable,Eq,Hashable,Binary)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show Exist where
     show (Exist a) = "Exists? " ++ a
@@ -33,7 +34,12 @@ data GetDir
     | GetDirDirs {dir :: FilePath}
     deriving (Typeable,Show,Eq)
 newtype GetDir_ = GetDir_ [FilePath]
-    deriving (Typeable,Show,Eq,Hashable,Binary)
+    deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
+
+instance NFData GetDir where
+    rnf (GetDir a) = rnf a
+    rnf (GetDirFiles a b) = rnf a `seq` rnf b
+    rnf (GetDirDirs a) = rnf a
 
 instance Hashable GetDir where
     hash = hash . f
