@@ -638,6 +638,69 @@ To improve error messages we make a number of changes from the natural implement
 \item We have options to print every rule run, and every system command run. Whenever a system command fails, we reprint the command line after the failure.
 \end{itemize}
 
+\section{Evaluation}
+\label{sec:evaluation}
+
+We have used a build system based on Shake at Standard Chartered for the last three years. Our build system has been an unqualified success -- while the complexity of our system has increased, the build system has been able to handle all the change with incremental extensions. When introduced it replaced an extensive \make{} based system, which ran to over 10,000 lines of script, was regularly incorrect and very slow. Introducing Shake made our build system 10x shorter and 2x faster, even with the constraint of remaining backwards compatible with the old build system. Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
+
+In a single run our build system typically checks 360,000, although certain options will cause it to do even more. Our build system has up to 20 levels deep of |apply| calls from the top-level |action| statement, but 80\% of build rules are between 3 and 7 steps deep.
+
+% [(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
+
+In developing our build system we have learnt a number of lessons -- both about best practices for structuring build systems, and how the underlying core of Shake can be used to deal with the complexities of real development. In this section we share some of those lessons.
+
+\subsection{Command Line Interface}
+
+While the |shake| function is suitable for use as |main|, it offers no support for command line arguments by default. We use the |shake| function in a program \prog{mk}, which handles command line options, allowing us to specify options, such as parallelism and producing profiling reports.
+
+One essential feature of any build tool is the @mk clean@ command, which deletes all build objects. We structure our build system to write all generated objects into a the folder \file{.make}, allowing us to implement @clean@ by deleting that folder. In a Shake system it is also possible to force a rebuild of all files by deleting the database. Finally, it is possible to clean a Shake build system by reading the database to determine which files were generated -- but we have found generating files alongside your source code to be unhelpful.
+
+One feature of \make{} is that the targets can be specified on the command line. We allow a similar tactic, allowing both individual files and sets of files to be enabled/disabled. As an example, a user may write @mk !DOCS@ to disable building documentation, or @mk index.html@ to only build the target \file{index.html}. We control these targets by passing a modified version of |want| to the functions specifying rules, which consults the command line arguments:
+
+\begin{code}
+documentation :: (String -> [FilePath] -> Rules()) -> Rules ()
+documentation wants = do
+    wants "DOCS" ["index.html"]
+    "index.html" *> \out -> ellipses
+\end{code}
+
+\subsection{Multiple Outputs}
+\label{sec:multiple_outputs}
+
+Some programs, such the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs as a result of one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, which the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to do both, but often the \file{.hi} file will be left unchanged. Producing two files captures this pattern. Unfortunately, many build systems (\make{} included) do not handle multiple outputs well. In Shake, it is usually possible to fake a dependency -- claiming that \file{Foo.hi} depends on \file{Foo.o}, while \file{Foo.o} depends on \file{Foo.hs}, thanks to suitable support for unchanging files (see \S\ref{sec:unchanging_files}).
+
+Unfortunately fake dependencies are not always enough. Consider a process that reads \file{numbers.txt} containing lines of numbers, and splits produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. Here there is no fake dependency that can solve the problem. Fortunately, the power of multiple types of rules comes to the rescue. We define a new type, |File2|, which stores two files.
+
+\begin{code}
+data File2 = File2 FilePath FilePath
+data FileTime2 = FileTime2 Int Int
+
+rules = do
+    rule $ \(File2 x y) -> if (x,y) /= ("even.txt","odd.txt") then Nothing else Just $ do
+        need ["numbers.txt"]
+        system' ["number-split","numbers.txt"]
+        liftM2 File2 (getFileTime x) (getFileTime y)
+
+    ["even.txt","odd.txt"] **> \_ ->
+        apply [File2 "even.txt" "odd.txt"]
+\end{code}
+
+
+
+\subsection{Transitive Dependencies}
+
+We can define the implementation as... this only does one layer.
+
+We can also define a more specific one, based on the assumption that @#ifdef@ statements do not change the include files (a reasonable assumption in many cases).
+
+If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
+
+\subsection{Build rules that change}
+
+Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build. We also in occasion depend on the file itself -- but that is only a crass generalisation, and is most useful when writing code generators.
+
+We have actually moved most of our stuff into a build.mk file which is fully tracked, and would suggest others do the same. It should not be the build systems job to list which files go into a .c file, but perhaps have a list of those files somewhere in a text file.
+
 \section{User Tools}
 \label{sec:tools}
 
@@ -675,74 +738,42 @@ There are two primary things we check for with lint:
 
 \subsubsection{Invariant information}
 
-Things like whether a file exists or not should be constant throughout, otherwise any files which don't know will get confused. This can be checked by cleaning, and then running. Any key that marks itself as invariant should not change during this process.
+Things like whether a file exists or not should be constant throughout, otherwise any files which don't know will get confused. This can be checked by cleaning, and then running. Any key that marks itself as invariant should not change during this process. To do so, we add to the |Rule| class:
+
+\begin{code}
+invariant :: key -> Bool
+invariant _ = False
+\end{code}
 
 \subsubsection{Dependency creation}
 
 When running a file we can ask what has been changed, and what has been used. When we run just a rule, but no dependencies, the list of things that change must all be things who had rules run on them, and the list of things that were used should be equivalent.
 
-
-\section{Evaluation}
-\label{sec:evaluation}
-
-We have used a build system based on Shake at Standard Chartered for the last three years. Our build system has been an unqualified success -- while the complexity of our system has increased, the build system has been able to handle all the change with incremental extensions. When introduced it replaced an extensive \make{} based system, which ran to over 10,000 lines of script, was regularly incorrect and very slow. Introducing Shake made our build system 10x shorter and 2x faster, even with the constraint of remaining backwards compatible with the old build system. Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
-
-In a single run our build system typically checks 360,000, although certain options will cause it to do even more. Our build system has up to 20 levels deep of |apply| calls from the top-level |action| statement, but 80\% of build rules are between 3 and 7 steps deep.
-
-% [(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
-
-In developing our build system we have learnt a number of lessons -- both about best practices for structuring build systems, and how the underlying core of Shake can be used to deal with the complexities of real development. In this section we share some of those lessons.
-
-\subsection{Command Line Interface}
-
-While the |shake| function is suitable for use as |main|, it offers no support for command line arguments by default. We use the |shake| function in a program \prog{mk}, which handles command line options, allowing us to specify options, such as parallelism and producing profiling reports.
-
-One essential feature of any build tool is the @mk clean@ command, which deletes all build objects. We structure our build system to write all generated objects into a the folder \file{.make}, allowing us to implement @clean@ by deleting that folder. In a Shake system it is also possible to force a rebuild of all files by deleting the database. Finally, it is possible to clean a Shake build system by reading the database to determine which files were generated -- but we have found generating files alongside your source code to be unhelpful.
-
-One feature of \make{} is that the targets can be specified on the command line. We allow a similar tactic, allowing both individual files and sets of files to be enabled/disabled. As an example, a user may write @mk !DOCS@ to disable building documentation, or @mk index.html@ to only build the target \file{index.html}. We control these targets by passing a modified version of |want| to the functions specifying rules, which consults the command line arguments:
-
 \begin{code}
-documentation :: (String -> [FilePath] -> Rules()) -> Rules ()
-documentation wants = do
-    wants "DOCS" ["index.html"]
-    "index.html" *> \out -> ellipses
+data Observed alpha = Observed {created :: Maybe [alpha], used :: Maybe [alpha]}
+
+observed :: IO () -> IO (Observed key)
+observed act = act >> return (Observed Nothing Nothing)
 \end{code}
 
-\subsection{Multiple Outputs}
-
-Some programs, such the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs as a result of one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, which the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to do both, but often the \file{.hi} file will be left unchanged. Producing two files captures this pattern. Unfortunately, many build systems (\make{} included) do not handle multiple outputs well. In Shake, it is usually possible to fake a dependency -- claiming that \file{Foo.hi} depends on \file{Foo.o}, while \file{Foo.o} depends on \file{Foo.hs}, thanks to suitable support for unchanging files (see \S\ref{sec:unchanging_files}).
-
-Unfortunately fake dependencies are not always enough. Consider a process that reads \file{numbers.txt} containing lines of numbers, and splits produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. Here there is no fake dependency that can solve the problem. Fortunately, the power of multiple types of rules comes to the rescue. We define a new type, |File2|, which stores two files.
+Given a set of observations, we can check what a key used in its body, and what it declared to create. However, there are a number of situations where people don't write 100\% accurate dependencies, but the effect is equivalent. For example, assuming \file{temporary.txt} is unused in the result of the build system, the following two rules seem morally equivalent:
 
 \begin{code}
-data File2 = File2 FilePath FilePath
-data FileTime2 = FileTime2 Int Int
+"foo.txt" *> \out -> copyFile "bar.txt" out
 
-rules = do
-    rule $ \(File2 x y) -> if (x,y) /= ("even.txt","odd.txt") then Nothing else Just $ do
-        need ["numbers.txt"]
-        system' ["number-split","numbers.txt"]
-        liftM2 File2 (getFileTime x) (getFileTime y)
-
-    ["even.txt","odd.txt"] **> \_ ->
-        apply [File2 "even.txt" "odd.txt"]
+"foo.txt" *> \_ -> need ["temporary.txt"]
+"temporary.txt" *> \out -> do
+    copyFile "bar.txt" "foo.txt"
+    writeFileLines "temporary.txt" []
 \end{code}
 
+We can imagine more complex examples, and do define such examples in \ref{sec:multiple_outputs}. Therefore, we require the following properties:
 
-
-\subsection{Transitive Dependencies}
-
-We can define the implementation as... this only does one layer.
-
-We can also define a more specific one, based on the assumption that @#ifdef@ statements do not change the include files (a reasonable assumption in many cases).
-
-If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
-
-\subsection{Build rules that change}
-
-Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build. We also in occasion depend on the file itself -- but that is only a crass generalisation, and is most useful when writing code generators.
-
-We have actually moved most of our stuff into a build.mk file which is fully tracked, and would suggest others do the same. It should not be the build systems job to list which files go into a .c file, but perhaps have a list of those files somewhere in a text file.
+\begin{itemize}
+\item If you create a key that someone else requires, you must be a dependency of them.
+\item If you use a key, you must depend on that key directly.
+\item If you use a key but do not require it, you are safe, but conservative.
+\end{itemize}
 
 \section{Related Work}
 \label{sec:related_work}
