@@ -17,9 +17,9 @@ import Data.Typeable
 import System.Directory
 
 import Development.Shake.Core
+import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
-import System.FilePath
 
 
 newtype File = File FilePath
@@ -33,24 +33,24 @@ instance Rule File FileTime where
 
     observed act = do
         src <- getCurrentDirectory
-        old <- listFolder src
+        old <- listDir src
         sleepFileTime
         act
-        new <- listFolder src
+        new <- listDir src
         return $ compareItems old new
 
 
-data Item = ItemFolder [(String,Item)] -- sorted
+data Item = ItemDir [(String,Item)] -- sorted
           | ItemFile FileTime FileTime -- mod time, access time
 
-listFolder :: FilePath -> IO Item
-listFolder root = do
+listDir :: FilePath -> IO Item
+listDir root = do
     xs <- getDirectoryContents root
     xs <- return $ sort $ filter (not . all (== '.')) xs
-    fmap ItemFolder $ forM xs $ \x -> fmap ((,) x) $ do
+    fmap ItemDir $ forM xs $ \x -> fmap ((,) x) $ do
         let s = root </> x
         b <- doesFileExist s
-        if b then listFile s else listFolder s
+        if b then listFile s else listDir s
 
 listFile :: FilePath -> IO Item
 listFile x = do
@@ -59,7 +59,21 @@ listFile x = do
     return $ ItemFile mod acc
 
 compareItems :: Item -> Item -> Observed File
-compareItems _ _ = mempty
+compareItems = f ""
+    where
+        f path (ItemFile mod1 acc1) (ItemFile mod2 acc2) =
+            Observed (Just [File path | mod1 /= mod2]) (Just [File path | acc1 /= acc2])
+        f path (ItemDir xs) (ItemDir ys) = mconcat $ map g $ zips xs ys
+            where g (name, Just x, Just y) = f (path </> name) x y
+                  g (name, _, _) = Observed (Just [File $ path </> name]) Nothing
+        f path _ _ = Observed (Just [File path]) Nothing
+
+        zips :: Ord a => [(a,b)] -> [(a,b)] -> [(a, Maybe b, Maybe b)]
+        zips ((x1,x2):xs) ((y1,y2):ys)
+            | x1 == y1  = (x1,Just x2,Just y2):zips xs ys
+            | x1 <  y1  = (x1,Just x2,Nothing):zips xs ((y1,y2):ys)
+            | otherwise = (y1,Nothing,Just y2):zips ((x1,x2):xs) ys
+
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
