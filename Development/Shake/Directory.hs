@@ -14,11 +14,10 @@ import Data.Hashable
 import Data.List
 import Data.Typeable
 import qualified System.Directory as IO
-import System.FilePath
 
 import Development.Shake.Core
+import Development.Shake.FilePath
 import Development.Shake.FilePattern
-
 
 
 newtype Exist = Exist FilePath
@@ -32,9 +31,14 @@ data GetDir
     = GetDir {dir :: FilePath}
     | GetDirFiles {dir :: FilePath, pat :: FilePattern}
     | GetDirDirs {dir :: FilePath}
-    deriving (Typeable,Show,Eq)
+    deriving (Typeable,Eq)
 newtype GetDir_ = GetDir_ [FilePath]
     deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
+
+instance Show GetDir where
+    show (GetDir x) = "Listing " ++ x
+    show (GetDirFiles a b) = "Files " ++ a </> b
+    show (GetDirDirs x) = "Dirs " ++ x
 
 instance NFData GetDir where
     rnf (GetDir a) = rnf a
