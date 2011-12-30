@@ -1,10 +1,10 @@
 
-module Examples.Util where
+module Examples.Util(module Examples.Util, sleepFileTime) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import Development.Shake.FileTime
 
-import Control.Concurrent(threadDelay)
 import Control.Monad
 import System.Directory
 import System.Environment
@@ -48,12 +48,3 @@ noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
     build []
     build []
-
-
-sleep :: Double -> IO ()
-sleep x = threadDelay $ floor $ x * 1000000
-
-
--- | Sleep long enough for the modification time resolution to catch up
-sleepModTime :: IO ()
-sleepModTime = sleep 1

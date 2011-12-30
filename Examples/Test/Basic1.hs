@@ -35,7 +35,7 @@ test build obj = do
     writeFile (obj "B.txt") "BBB"
     build ["AB.txt"]
     assertContents (obj "AB.txt") "AAABBB"
-    sleepModTime
+    sleepFileTime
     appendFile (obj "A.txt") "aaa"
     build ["AB.txt"]
     assertContents (obj "AB.txt") "AAAaaaBBB"
@@ -43,12 +43,12 @@ test build obj = do
     writeFile (obj "zero.txt") "xxx"
     build ["twice.txt"]
     assertContents (obj "twice.txt") "xxx"
-    sleepModTime
+    sleepFileTime
     writeFile (obj "zero.txt") "yyy"
     build ["once.txt"]
     assertContents (obj "twice.txt") "xxx"
     assertContents (obj "once.txt") "yyy"
-    sleepModTime
+    sleepFileTime
     writeFile (obj "zero.txt") "zzz"
     build ["once.txt","twice.txt"]
     assertContents (obj "twice.txt") "zzz"

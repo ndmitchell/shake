@@ -30,7 +30,7 @@ test build obj = do
     writeFile (obj "A.txt") ""
     writeFile (obj "B.txt") ""
     createDirectory (obj "Foo.txt")
-    sleepModTime
+    sleepFileTime
     build []
     assertContents (obj "files.lst") $ unlines ["A.txt","B.txt"]
     assertContents (obj "dirs.lst") $ unlines ["Foo.txt"]
