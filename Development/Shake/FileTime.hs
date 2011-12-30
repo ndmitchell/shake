@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
-module Development.Shake.ModTime(
-    ModTime, getModTimeError, getModTimeMaybe
+module Development.Shake.FileTime(
+    FileTime, getModTimeError, getModTimeMaybe
     ) where
 
 import Data.Binary
@@ -12,19 +12,19 @@ import System.Directory
 import System.Time
 
 
-newtype ModTime = ModTime Int
+newtype FileTime = FileTime Int
     deriving (Typeable,Eq,Hashable,Binary,Show)
 
 
-getModTimeMaybe :: FilePath -> IO (Maybe ModTime)
+getModTimeMaybe :: FilePath -> IO (Maybe FileTime)
 getModTimeMaybe x = do
     b <- doesFileExist x
     if not b then return Nothing else do
         TOD t _ <- getModificationTime x
-        return $ Just $ ModTime $ fromIntegral t
+        return $ Just $ FileTime $ fromIntegral t
 
 
-getModTimeError :: String -> FilePath -> IO ModTime
+getModTimeError :: String -> FilePath -> IO FileTime
 getModTimeError msg x = do
     res <- getModTimeMaybe x
     case res of

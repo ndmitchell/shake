@@ -77,8 +77,8 @@ library
         Development.Shake.File
         Development.Shake.FilePattern
         Development.Shake.Files
+        Development.Shake.FileTime
         Development.Shake.Locks
-        Development.Shake.ModTime
         Development.Shake.TypeHash
         Development.Shake.Value
 

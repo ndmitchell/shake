@@ -15,7 +15,7 @@ import System.Directory
 
 import Development.Shake.Core
 import Development.Shake.FilePattern
-import Development.Shake.ModTime
+import Development.Shake.FileTime
 import System.FilePath(takeDirectory)
 
 
@@ -25,7 +25,7 @@ newtype File = File FilePath
 instance Show File where show (File x) = x
 
 
-instance Rule File ModTime where
+instance Rule File FileTime where
     validStored (File x) t = fmap (== Just t) $ getModTimeMaybe x
 
 
@@ -43,7 +43,7 @@ defaultRuleFile = defaultRule $ \(File x) -> Just $
 -- >     need [src]
 -- >     system' ["rot13",src,"-o",out]
 need :: [FilePath] -> Action ()
-need xs = (apply $ map File xs :: Action [ModTime]) >> return ()
+need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --

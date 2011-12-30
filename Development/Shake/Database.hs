@@ -40,8 +40,8 @@ import qualified Data.ByteString.Lazy.Char8 as LBS hiding (readFile,writeFile)
 
 -- Increment every time the on-disk format/semantics change,
 -- @i@ is for the users version number
-databaseVersion i = "SHAKE-DATABASE-1-" ++ show (i :: Int) ++ "\r\n"
-journalVersion i = "SHAKE-JOURNAL-1-" ++ show (i :: Int) ++ "\r\n"
+databaseVersion i = "SHAKE-DATABASE-2-" ++ show (i :: Int) ++ "\r\n"
+journalVersion i = "SHAKE-JOURNAL-2-" ++ show (i :: Int) ++ "\r\n"
 
 
 removeFile_ :: FilePath -> IO ()
