@@ -368,7 +368,8 @@ class (
     Typeable key, Typeable value,
     Hashable key, Hashable value,
     Eq key, Eq value,
-    Binary key, Binary value
+    Binary key, Binary value,
+    NFData key, NFData value
     ) => Rule key value | key -> value where
     validStored :: key -> value -> IO Bool
     validStored k v = return True
@@ -399,6 +400,7 @@ Every rule that is defined or applied in Shake must be a member of the |Rule| cl
 \item [Binary] We require |Binary| so we can store the values in a database, to achieve minimal rebuilds.
 \item [Hashable] We require |Hashable| to perform fast searching.
 \item [Show] We require |Show| for debugging messages and logging.
+\item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring that errors happen at the appropriate place.
 \end{description}
 
 Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining targets to build, we allow rules with no target, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate |IO alpha| to |Action alpha|.
