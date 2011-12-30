@@ -5,7 +5,8 @@ module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
     Rule(..), Rules, defaultRule, rule, action,
     Action, apply, apply1, traced, currentStack, currentRule,
-    putLoud, putNormal, putQuiet
+    putLoud, putNormal, putQuiet,
+    Observed(..)
     ) where
 
 import Prelude hiding (catch)
@@ -68,6 +69,7 @@ class (
     Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key,
     Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
     ) => Rule key value | key -> value where
+
     -- | Given that the database contains @key@/@value@, does that still match the on-disk contents?
     --
     --   As an example for filenames/timestamps, if the file exists and had the same timestamp, you
@@ -75,6 +77,29 @@ class (
     --   on disk, 'validStored' should always return 'True'.
     validStored :: key -> value -> IO Bool
     validStored _ _ = return True
+
+    -- | Return 'True' if the value should not be changed by the build system. Defaults to returning
+    --   'False'.
+    invariant :: key -> Bool
+    invariant _ = False
+
+    -- | Given an action, return what has changed, along with what you think should
+    --   have stayed the same.
+    observed :: IO () -> IO (Observed key)
+    observed act = act >> return (Observed Nothing Nothing)
+
+
+data Observed a = Observed
+    {changed :: Maybe [a]
+    ,used :: Maybe [a]
+    }
+
+instance Monoid (Observed a) where
+    mempty = Observed Nothing Nothing
+    mappend (Observed x1 y1) (Observed x2 y2) = Observed (f x1 x2) (f y1 y2)
+        where
+            f Nothing Nothing = Nothing
+            f a b = Just $ fromMaybe [] a ++ fromMaybe [] b
 
 
 data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))

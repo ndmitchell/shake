@@ -62,9 +62,11 @@ instance Binary GetDir where
 
 instance Rule Exist Bool where
     validStored (Exist x) b = fmap (== b) $ IO.doesFileExist x
+    invariant _ = True
 
 instance Rule GetDir GetDir_ where
     validStored x y = fmap (== y) $ getDir x
+    invariant _ = True
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.

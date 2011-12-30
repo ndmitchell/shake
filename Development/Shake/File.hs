@@ -12,13 +12,14 @@ import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
 import Data.List
+import Data.Monoid
 import Data.Typeable
 import System.Directory
 
 import Development.Shake.Core
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
-import System.FilePath(takeDirectory)
+import System.FilePath
 
 
 newtype File = File FilePath
@@ -29,6 +30,36 @@ instance Show File where show (File x) = x
 
 instance Rule File FileTime where
     validStored (File x) t = fmap (== Just t) $ getModTimeMaybe x
+
+    observed act = do
+        src <- getCurrentDirectory
+        old <- listFolder src
+        sleepFileTime
+        act
+        new <- listFolder src
+        return $ compareItems old new
+
+
+data Item = ItemFolder [(String,Item)] -- sorted
+          | ItemFile FileTime FileTime -- mod time, access time
+
+listFolder :: FilePath -> IO Item
+listFolder root = do
+    xs <- getDirectoryContents root
+    xs <- return $ sort $ filter (not . all (== '.')) xs
+    fmap ItemFolder $ forM xs $ \x -> fmap ((,) x) $ do
+        let s = root </> x
+        b <- doesFileExist s
+        if b then listFile s else listFolder s
+
+listFile :: FilePath -> IO Item
+listFile x = do
+    mod <- getModTime x
+    acc <- getAccTime x
+    return $ ItemFile mod acc
+
+compareItems :: Item -> Item -> Observed File
+compareItems _ _ = mempty
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
