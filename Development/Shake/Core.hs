@@ -95,6 +95,10 @@ data Observed a = Observed
     ,used :: Maybe [a]
     }
 
+instance Functor Observed where
+    fmap f (Observed a b) = Observed (g a) (g b)
+        where g = fmap (map f)
+
 instance Monoid (Observed a) where
     mempty = Observed Nothing Nothing
     mappend (Observed x1 y1) (Observed x2 y2) = Observed (f x1 x2) (f y1 y2)
