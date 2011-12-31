@@ -131,7 +131,7 @@ want xs = action $ need xs
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) test act = (\x -> any (x ?==) test) ?> act
+(**>) test act = (\x -> any (?== x) test) ?> act
 
 -- | Define a rule that matches a 'FilePattern'. No file required by the system must be
 --   matched by more than one pattern. For the pattern rules, see '?=='.
