@@ -15,7 +15,6 @@ module Development.Shake.FilePath(
 
 import System.FilePath.Posix hiding (isPathSeparator, normalise, (</>), combine)
 import qualified System.FilePath.Posix as Posix
-import System.FilePath (isPathSeparator)
 import qualified System.FilePath as Native
 
 
@@ -27,7 +26,7 @@ import qualified System.FilePath as Native
 -- > dropDirectory1 "aaa" == ""
 -- > dropDirectory1 "" == ""
 dropDirectory1 :: FilePath -> FilePath
-dropDirectory1 = drop 1 . dropWhile (not . isPathSeparator)
+dropDirectory1 = drop 1 . dropWhile (not . Native.isPathSeparator)
 
 
 -- | Take the first component of a 'FilePath'. Should only be used on
@@ -37,17 +36,17 @@ dropDirectory1 = drop 1 . dropWhile (not . isPathSeparator)
 -- > takeDirectory1 "aaa/" == "aaa"
 -- > takeDirectory1 "aaa" == "aaa"
 takeDirectory1 :: FilePath -> FilePath
-takeDirectory1 = takeWhile (not . isPathSeparator)
+takeDirectory1 = takeWhile (not . Native.isPathSeparator)
 
 
 -- | Normalise a 'FilePath', translating any path separators to @\/@.
 normalise :: FilePath -> FilePath
-normalise = map (\x -> if isPathSeparator x then '/' else x)
+normalise = map (\x -> if Native.isPathSeparator x then '/' else x)
 
 
 -- | Convert to native path separators, namely @\\@ on Windows. 
 toNative :: FilePath -> FilePath
-toNative = map (\x -> if isPathSeparator x then Native.pathSeparator else x)
+toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else x)
 
 
 -- | Combine two file paths, an alias for 'combine'.
