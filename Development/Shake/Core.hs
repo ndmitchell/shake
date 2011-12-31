@@ -10,6 +10,7 @@ module Development.Shake.Core(
     ) where
 
 import Prelude hiding (catch)
+import Control.Arrow
 import Control.Concurrent.ParallelIO.Local
 import Control.DeepSeq
 import Control.Exception
@@ -19,6 +20,7 @@ import Control.Monad.Trans.State
 import Data.Binary(Binary)
 import Data.Hashable
 import Data.Function
+import Data.IORef
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -86,14 +88,15 @@ class (
 
     -- | Given an action, return what has changed, along with what you think should
     --   have stayed the same.
-    observed :: IO () -> IO (Observed key)
-    observed act = act >> return (Observed Nothing Nothing)
+    observed :: IO a -> IO (Observed key, a)
+    observed = fmap ((,) mempty)
 
 
 data Observed a = Observed
     {changed :: Maybe [a]
     ,used :: Maybe [a]
     }
+    deriving (Show,Eq,Ord)
 
 instance Functor Observed where
     fmap f (Observed a b) = Observed (g a) (g b)
@@ -115,9 +118,14 @@ ruleKey = undefined
 ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
 ruleValue = undefined
 
-ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> Bool)
-ruleStored _ k v = unsafePerformIO $ validStored k v -- safe because of the invariants on validStored
+ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
+ruleStored _ = validStored
 
+ruleInvariant :: Rule key value => (key -> Maybe (Action value)) -> (key -> Bool)
+ruleInvariant _ = invariant
+
+ruleObserved :: Rule key value => (key -> Maybe (Action value)) -> (IO a -> IO (Observed key, a))
+ruleObserved _ = observed
 
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
@@ -175,7 +183,7 @@ data S = S
     {database :: Database
     ,pool :: Pool
     ,started :: UTCTime
-    ,stored :: Key -> Value -> Bool
+    ,stored :: Key -> Value -> IO Bool
     ,execute :: Key -> Action Value
     ,outputLock :: Var ()
     ,verbosity :: Int
@@ -196,31 +204,36 @@ newtype Action a = Action (StateT S IO a)
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 run :: ShakeOptions -> Rules () -> IO ()
-run opts@ShakeOptions{..} rules = do
+run opts@ShakeOptions{..} rs = do
     start <- getCurrentTime
-    registerWitnesses rules
+    registerWitnesses rs
     outputLock <- newVar ()
     withDatabase shakeFiles shakeVersion $ \database -> do
         withObserver database $ \observer ->
             withPool (if shakeLint then 1 else shakeParallel) $ \pool -> do
-                let s0 = S database pool start (createStored rules) (createExecute rules)
-                           outputLock shakeVerbosity observer [] [] 0 []
+                let s0 = S database pool start stored execute outputLock shakeVerbosity observer [] [] 0 []
                 if shakeLint
-                    then mapM_ (wrapStack [] . runAction s0 . applyKeyValue . return) =<< allKeys database
-                    else parallel_ pool $ map (wrapStack [] . runAction s0) (actions rules)
+                    then mapM_ (wrapStack [] . runAction s0 . applyKeyValue . return . fst) =<< allEntries database
+                    else parallel_ pool $ map (wrapStack [] . runAction s0) (actions rs)
     where
+        stored = createStored rs
+        execute = createExecute rs
+
         withObserver database act
             | not shakeLint = act $ \key val -> val
             | otherwise = do
-            keys <- allKeys database
-            act $ \key val -> val
-            {-
-            get the observed ones and record them
-            create an observer that looks at all the observation functions it can find
-            run the action
-            then figure out if the observations are consistent
-            write any failures to a lint report
-            -}
+            ents <- allEntries database
+            let invariants = [(k,v) | (k,v) <- ents, Just (_,_,(_,ARule r):_) <- [Map.lookup (typeKey k) $ rules rs], ruleInvariant r (fromKey k)]
+                observe = createObserver rs
+            badStart <- filterM (fmap not . uncurry stored) invariants
+            seen <- newIORef ([] :: [(Key,[Observed Key])])
+            act $ \key val -> do
+                obs <- observe val
+                atomicModifyIORef seen $ \xs -> ((key,obs):xs, ())
+            badEnd <- filterM (fmap not . uncurry stored) invariants
+            print =<< readIORef seen
+            when (not $ null $ badStart ++ badEnd) $
+                error "There were invariants that were broken"
 
 
 wrapStack :: [Key] -> IO a -> IO a
@@ -236,7 +249,17 @@ registerWitnesses Rules{..} =
         registerWitness $ ruleValue r
 
 
-createStored :: Rules () -> (Key -> Value -> Bool)
+createObserver :: Rules () -> (IO () -> IO [Observed Key])
+createObserver Rules{..} = f os
+    where
+        os = [obs | (k,v,(_,ARule r):_) <- Map.elems rules, let obs = fmap (first $ fmap newKey) . ruleObserved r]
+        f [] act = act >> return []
+        f (o:os) act = do
+            (x,xs) <- o $ f os act
+            return $ [x | x /= mempty] ++ xs
+
+
+createStored :: Rules () -> (Key -> Value -> IO Bool)
 createStored Rules{..} = \k v ->
     let (tk,tv) = (typeKey k, typeValue v) in
     case Map.lookup tk mp of
@@ -291,7 +314,8 @@ applyKeyValue ks = Action $ do
     where
         loop = do
             s <- get
-            res <- liftIO $ request (database s) (stored s) ks
+            let unsafeStored k v = unsafePerformIO $ stored s k v -- safe because of the invariants on validStored
+            res <- liftIO $ request (database s) unsafeStored ks
             case res of
                 Block (seen,act) -> do
                     let bad = intersect (stack s) seen
