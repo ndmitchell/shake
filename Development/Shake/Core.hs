@@ -231,9 +231,9 @@ run opts@ShakeOptions{..} rs = do
                 obs <- observe val
                 atomicModifyIORef seen $ \xs -> ((key,obs):xs, ())
             badEnd <- filterM (fmap not . uncurry stored) invariants
-            print =<< readIORef seen
             when (not $ null $ badStart ++ badEnd) $
-                error "There were invariants that were broken"
+                error "There were invariants that were broken" -- FIXME: Better error message
+            -- FIXME: Check the seen pile against the database
 
 
 wrapStack :: [Key] -> IO a -> IO a
