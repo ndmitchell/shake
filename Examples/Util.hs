@@ -6,7 +6,7 @@ import Development.Shake.FilePath
 import Development.Shake.FileTime
 
 import Control.Monad
-import System.Directory
+import System.Directory as IO
 import System.Environment
 
 
@@ -24,6 +24,15 @@ shaken test rules = do
             putStrLn $ "## TESTING " ++ name
             test (\args -> withArgs (name:args) $ shaken test rules) (out++)
         "clean":_ -> removeDirectoryRecursive out
+        "lint":args -> do
+            let dbfile = out ++ ".database"
+                tempfile = "output/" ++ name ++ ".database"
+            b <- IO.doesFileExist dbfile
+            when b $ renameFile dbfile tempfile
+            removeDirectoryRecursive out
+            createDirectoryIfMissing True out
+            when b $ renameFile tempfile dbfile
+            shake shakeOptions{shakeFiles=out, shakeLint=True} $ rules args (out++)
         _ -> shake shakeOptions{shakeFiles=out} $ rules args (out++)
 
 
