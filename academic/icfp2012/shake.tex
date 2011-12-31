@@ -763,9 +763,11 @@ When running a file we can ask what has been changed, and what has been used. Wh
 \begin{code}
 data Observed alpha = Observed {created :: Maybe [alpha], used :: Maybe [alpha]}
 
-observed :: IO () -> IO (Observed key)
-observed act = act >> return (Observed Nothing Nothing)
+observed :: IO alpha -> IO (Observed key, alpha)
+observed act = do res <- act; return (Observed Nothing Nothing, res)
 \end{code}
+
+Note that our original design simply passed an |IO ()| to observed, and required the function to execute it. Alas, this went wrong since it's too easy to write an incorrect version that fails to execute! Now, thanks to parametricity, if you don't pass an error back, you must have got it right!
 
 Given a set of observations, we can check what a key used in its body, and what it declared to create. However, there are a number of situations where people don't write 100\% accurate dependencies, but the effect is equivalent. For example, assuming \file{temporary.txt} is unused in the result of the build system, the following two rules seem morally equivalent:
 
