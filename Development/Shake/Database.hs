@@ -10,7 +10,8 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 
 module Development.Shake.Database(
     Database, withDatabase,
-    request, Response(..), finished
+    request, Response(..), finished,
+    allKeys
     ) where
 
 import Development.Shake.Binary
@@ -160,9 +161,29 @@ finished Database{..} k v depends duration traces = do
     releaseBarrier barrier
 
 
+-- | Return a list of keys in an order which would build them bottom up. Relies on the invariant
+--   that the database is not cyclic.
+allKeys :: Database -> IO [Key]
+allKeys Database{..} = do
+    status <- readVar status
+    return $ ordering [(k, getDeps v) | (k,v) <- Map.toList status]
+    where
+        getDeps (Built i) = concat $ depends i
+        getDeps (Loaded i) = concat $ depends i
+        getDeps (Building _ i) = maybe [] (concat . depends) i
+
+
+ordering :: Eq a => [(a, [a])] -> [a]
+ordering xs = f [(a, nub b `intersect` as) | let as = map fst xs, (a,b) <- xs]
+    where
+        f xs | null xs = []
+             | null now = error "Internal invariant broken, database seems to be cyclic (probably during lint)"
+             | otherwise = let ns = map fst now in ns ++ f [(a,b \\ ns) | (a,b) <- later]
+            where (now,later) = partition (null . snd) xs
+
+
 ---------------------------------------------------------------------
 -- DATABASE
-
 
 withDatabase :: FilePath -> Int -> (Database -> IO a) -> IO a
 withDatabase filename version = bracket (openDatabase filename version) closeDatabase
