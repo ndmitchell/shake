@@ -119,13 +119,13 @@ ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -
 ruleStored _ k v = unsafePerformIO $ validStored k v -- safe because of the invariants on validStored
 
 
+
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or more commonly using the 'Monad' instance and @do@ notation.
 data Rules a = Rules
     {value :: a -- not really used, other than for the Monad instance
     ,actions :: [Action ()]
-    -- FIXME: Should be Map TypeRep{k} (TypeRep{v}, [(Int,ARule)])
-    ,rules :: [(Int,ARule)] -- higher fst is higher priority
+    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Int,ARule)]) -- higher fst is higher priority
     }
 
 instance Monoid a => Monoid (Rules a) where
@@ -133,9 +133,12 @@ instance Monoid a => Monoid (Rules a) where
     mappend a b = (a >> b){value = value a `mappend` value b}
 
 instance Monad Rules where
-    return x = Rules x [] []
-    Rules v1 x1 x2 >>= f = Rules v2 (x1++y1) (x2++y2)
+    return x = Rules x [] (Map.fromList [])
+    Rules v1 x1 x2 >>= f = Rules v2 (x1++y1) (Map.unionWith g x2 y2)
         where Rules v2 y1 y2 = f v1
+              g (k, v1, xs) (_, v2, ys)
+                | v1 == v2 = (k, v1, xs ++ ys)
+                | otherwise = error $ "There are two incompatible rules for " ++ show k ++ ", producing " ++ show v1 ++ " and " ++ show v2
 
 instance Functor Rules where
     fmap f x = return . f =<< x
@@ -144,13 +147,19 @@ instance Functor Rules where
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
 --   All default rules must be disjoint.
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-defaultRule r = mempty{rules=[(0,ARule r)]}
+defaultRule = ruleWith 0
 
 
 -- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.
 --   To define lower priority rules use 'defaultRule'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-rule r = mempty{rules=[(1,ARule r)]}
+rule = ruleWith 1
+
+
+-- | Add a rule at a given priority.
+ruleWith :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
+ruleWith i r = mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
+    where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
 -- | Run an action, usually used for specifying top-level requirements.
@@ -222,38 +231,44 @@ wrapStack stk act = catch act $ \(SomeException e) -> case cast e of
 
 registerWitnesses :: Rules () -> IO ()
 registerWitnesses Rules{..} =
-    forM_ rules $ \(_, ARule r) -> do
+    forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
         registerWitness $ ruleKey r
         registerWitness $ ruleValue r
 
 
 createStored :: Rules () -> (Key -> Value -> Bool)
 createStored Rules{..} = \k v ->
-    let (tk,tv) = (typeKey k, typeValue v)
-        msg = "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
-              ", perhaps you are missing a call to defaultRule/rule?"
-    in (fromMaybe (error msg) $ Map.lookup tk mp) k v
-    where mp = Map.fromList
-                   [ (typeOf $ ruleKey r, stored)
-                   | (_,ARule r) <- rules
-                   , let stored k v = ruleStored r (fromKey k) (fromValue v)]
+    let (tk,tv) = (typeKey k, typeValue v) in
+    case Map.lookup tk mp of
+        Nothing -> error $
+            "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
+            ", perhaps you are missing a call to defaultRule/rule?"
+        Just (tv2,_) | tv2 /= tv -> error $
+            "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
+            ", but did find an instance Rule " ++ show tk ++ " " ++ show tv2 ++
+            ", perhaps you have the types wrong in your call to apply?"
+        Just (_, r) -> r k v
+    where
+        mp = flip Map.map rules $ \(k,v,(_,ARule r):_) -> (v, \kx vx -> ruleStored r (fromKey kx) (fromValue vx))
 
 
 createExecute :: Rules () -> (Key -> Action Value)
 createExecute Rules{..} = \k ->
-    let tk = typeKey k
-        rs = fromMaybe [] $ Map.lookup tk mp
-    in case filter (not . null) $ map (mapMaybe ($ k)) rs of
+    let tk = typeKey k in
+    case Map.lookup tk mp of
+        Nothing -> error $
+            "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ show tk ++
+            ", perhaps you are missing a call to defaultRule/rule?"
+        Just rs -> case filter (not . null) $ map (mapMaybe ($ k)) rs of
            [r]:_ -> r
            rs ->
               let s = if null rs then "no" else show (length $ head rs)
-              in error $ "Error: " ++ s ++ " rules match for Rule " ++ show tk ++
-                         ", with key " ++ show k
+              in error $ "Error: " ++ s ++ " rules match for Rule " ++ show k ++ " of type " ++ show tk
     where
-        mp = Map.map (map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)) $ Map.fromListWith (++)
-                 [ (typeOf $ ruleKey r, [(i,exec)])
-                 | (i,ARule r) <- rules
-                 , let exec k = fmap (fmap newValue) $ r (fromKey k)]
+        mp = flip Map.map rules $ \(_,_,rs) -> sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs]
+
+        sets :: Ord a => [(a, b)] -> [[b]]
+        sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
 
 
 runAction :: S -> Action a -> IO (a, S)
