@@ -41,12 +41,13 @@ data ShakeOptions = ShakeOptions
     ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud.
+    ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
     }
     deriving (Show, Eq, Ord, Read)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 1
+shakeOptions = ShakeOptions ".shake" 1 1 1 False
 
 
 data ShakeException = ShakeException [Key] SomeException
@@ -165,6 +166,7 @@ data S = S
     ,execute :: Key -> Action Value
     ,outputLock :: Var ()
     ,verbosity :: Int
+    ,observer :: Key -> IO () -> IO ()
     -- stack variables
     ,stack :: [Key] -- in reverse
     -- local variables
@@ -181,14 +183,31 @@ newtype Action a = Action (StateT S IO a)
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 run :: ShakeOptions -> Rules () -> IO ()
-run ShakeOptions{..} rules = do
+run opts@ShakeOptions{..} rules = do
     start <- getCurrentTime
     registerWitnesses rules
     outputLock <- newVar ()
     withDatabase shakeFiles shakeVersion $ \database -> do
-        withPool shakeParallel $ \pool -> do
-            let s0 = S database pool start (createStored rules) (createExecute rules) outputLock shakeVerbosity [] [] 0 []
-            parallel_ pool $ map (wrapStack [] . runAction s0) (actions rules)
+        withObserver database $ \observer ->
+            withPool (if shakeLint then 1 else shakeParallel) $ \pool -> do
+                let s0 = S database pool start (createStored rules) (createExecute rules)
+                           outputLock shakeVerbosity observer [] [] 0 []
+                if shakeLint
+                    then mapM_ (wrapStack [] . runAction s0 . applyKeyValue . return) =<< allKeys database
+                    else parallel_ pool $ map (wrapStack [] . runAction s0) (actions rules)
+    where
+        withObserver database act
+            | not shakeLint = act $ \key val -> val
+            | otherwise = do
+            keys <- allKeys database
+            act $ \key val -> val
+            {-
+            get the observed ones and record them
+            create an observer that looks at all the observation functions it can find
+            run the action
+            then figure out if the observations are consistent
+            write any failures to a lint report
+            -}
 
 
 wrapStack :: [Key] -> IO a -> IO a
@@ -244,23 +263,26 @@ duration start end = fromRational $ toRational $ end `diffUTCTime` start
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
 apply :: Rule key value => [key] -> Action [value]
-apply ks = Action $ do
-    modify $ \s -> s{depends=map newKey ks:depends s}
+apply ks = fmap (map fromValue) $ applyKeyValue $ map newKey ks
+
+applyKeyValue :: [Key] -> Action [Value]
+applyKeyValue ks = Action $ do
+    modify $ \s -> s{depends=ks:depends s}
     loop
     where
         loop = do
             s <- get
-            res <- liftIO $ request (database s) (stored s) $ map newKey ks
+            res <- liftIO $ request (database s) (stored s) ks
             case res of
                 Block (seen,act) -> do
                     let bad = intersect (stack s) seen
                     if not $ null bad
                         then error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
                         else discounted (liftIO $ extraWorkerWhileBlocked (pool s) act) >> loop
-                Response vs -> return $ map fromValue vs
+                Response vs -> return vs
                 Execute todo -> do
                     discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t ->
-                        wrapStack (reverse $ t:stack s) $ do
+                        wrapStack (reverse $ t:stack s) $ observer s t $ do
                             start <- getCurrentTime
                             let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
                             (res,s2) <- runAction s2 $ do
