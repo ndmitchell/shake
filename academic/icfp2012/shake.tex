@@ -736,7 +736,16 @@ Shake contains full information on dependencies, so could be used to answer more
 
 \subsection{Lint checking}
 
-There are two primary things we check for with lint:
+There are two primary things we check for with lint. To get a full build we build everything, run whatever clean action the user has specified, then rerun each rule. The best lint will come if you:
+
+* clean everything, apart from the database
+* build with --lint
+
+It's important when rebuilding to require the rules bottom up, i.e. the want statements should be replaced with something doing a bottom up traversal.
+
+lint with invariants can always be done very easily.
+
+lint with observations is much harder, since you don't want observations to overlap. that means you have to run the rules bottom up. or can try and subtract rules?
 
 \subsubsection{Invariant information}
 
