@@ -172,14 +172,13 @@ allKeys Database{..} = do
         getDeps (Loaded i) = concat $ depends i
         getDeps (Building _ i) = maybe [] (concat . depends) i
 
-
-ordering :: Eq a => [(a, [a])] -> [a]
-ordering xs = f [(a, nub b `intersect` as) | let as = map fst xs, (a,b) <- xs]
-    where
-        f xs | null xs = []
-             | null now = error "Internal invariant broken, database seems to be cyclic (probably during lint)"
-             | otherwise = let ns = map fst now in ns ++ f [(a,b \\ ns) | (a,b) <- later]
-            where (now,later) = partition (null . snd) xs
+        ordering :: Eq a => [(a, [a])] -> [a]
+        ordering xs = f [(a, nub b `intersect` as) | let as = map fst xs, (a,b) <- xs]
+            where
+                f xs | null xs = []
+                     | null now = error "Internal invariant broken, database seems to be cyclic (probably during lint)"
+                     | otherwise = let ns = map fst now in ns ++ f [(a,b \\ ns) | (a,b) <- later]
+                    where (now,later) = partition (null . snd) xs
 
 
 ---------------------------------------------------------------------
