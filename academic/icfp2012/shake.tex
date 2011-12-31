@@ -51,7 +51,7 @@
 \end{comment}
 
 \begin{abstract}
-Build tools, such as \make{}, are typically used for compiling source code into executables. Unfortunately, most build tools fail to properly deal with generated source files, especially when the dependencies of those generated files can only be determined after the files have been generated. In many large software systems generated files are common, resulting in awkward hacks to paper over build tool inadequacies. We describe how to generalise build tools to deal properly with generated files. We have implemented our ideas as the Haskell library Shake, which has been used by Standard Chartered for the last three years as the basis for a complex build system involving millions of lines of code in many languages.
+Build tools, such as \make{}, are typically used for compiling source code into executables. Unfortunately, most build tools fail to deal properly with generated source files, especially when the dependencies of those generated files can only be determined after the files have been generated. Generated files are common in many large software systems, resulting in awkward hacks to paper over build tool inadequacies. We describe how to generalise build tools to deal properly with generated files. We have implemented our ideas as the Haskell library Shake, which has been used by Standard Chartered for the last three years as the basis for a complex build system involving millions of lines of code in many languages.
 \end{abstract}
 
 \category{D.3}{Software}{Programming Languages}
