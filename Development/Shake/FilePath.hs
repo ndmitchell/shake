@@ -62,8 +62,4 @@ toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else
 combine :: FilePath -> FilePath -> FilePath
 combine x ('.':'.':'/':y) = combine (takeDirectory x) y
 combine x ('.':'/':y) = combine x y
-
-combine x y = normalise $ Native.combine x' y'
-  where
-    x' = toNative x
-    y' = toNative y
+combine x y = normalise $ Native.combine (toNative x) (toNative y)
