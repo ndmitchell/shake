@@ -220,7 +220,8 @@ run opts@ShakeOptions{..} rs = do
                     then mapM_ (wrapStack [] . runAction s0 . applyKeyValue . return . fst) =<< allEntries database
                     else parallel_ pool $ map (wrapStack [] . runAction s0) (actions rs)
         when shakeDump $ do
-            writeFile (shakeFiles ++ ".json") =<< showJSON database
+            json <- showJSON database
+            writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json
     where
         stored = createStored rs
         execute = createExecute rs
