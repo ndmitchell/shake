@@ -45,12 +45,13 @@ data ShakeOptions = ShakeOptions
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud.
     ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
                        --   /This feature has not yet been completed, and should not be used./
+    ,shakeDump :: Bool -- ^ Dump all profiling information to @'shakeFiles'.json@ (defaults to 'False').
     }
     deriving (Show, Eq, Ord, Read)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 1 False
+shakeOptions = ShakeOptions ".shake" 1 1 1 False False
 
 
 data ShakeException = ShakeException [Key] SomeException
@@ -218,6 +219,8 @@ run opts@ShakeOptions{..} rs = do
                 if shakeLint
                     then mapM_ (wrapStack [] . runAction s0 . applyKeyValue . return . fst) =<< allEntries database
                     else parallel_ pool $ map (wrapStack [] . runAction s0) (actions rs)
+        when shakeDump $ do
+            writeFile (shakeFiles ++ ".json") =<< showJSON database
     where
         stored = createStored rs
         execute = createExecute rs
