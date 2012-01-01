@@ -145,5 +145,6 @@ want xs = action $ need xs
 --   @.cpp.o@, @.hs.o@, to indicate which language produces an object file.
 --   I.e., the file @foo.cpp@ produces object file @foo.cpp.o@.
 --
+--   Note that matching is case-sensitive, even on Windows.
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
 (*>) test act = (test ?==) ?> act
