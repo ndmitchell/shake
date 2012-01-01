@@ -4,7 +4,7 @@
 module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
     Rule(..), Rules, defaultRule, rule, action,
-    Action, apply, apply1, traced, currentStack, currentRule,
+    Action, apply, apply1, traced,
     putLoud, putNormal, putQuiet,
     Observed(..)
     ) where
@@ -362,9 +362,11 @@ traced msg act = Action $ do
     modify $ \s -> s{traces = (msg,duration (started s) start, duration (started s) stop):traces s}
     return res
 
+{-
+-- Do not provide currentStack/currentRule, since they return [Key], and Key isn't an exported type.
 
 -- | Get the stack of 'Key's for the current rule - usually used to improve error messages.
---   Returns '[]' if being run by 'action', otherwise returns the stack with the oldest rule
+--   Returns @[]@ if being run by 'action', otherwise returns the stack with the oldest rule
 --   first.
 currentStack :: Action [Key]
 currentStack = Action $ fmap reverse $ gets stack
@@ -373,7 +375,7 @@ currentStack = Action $ fmap reverse $ gets stack
 -- | Get the 'Key' for the currently executing rule - usally used to improve error messages.
 --   Returns 'Nothing' if being run by 'action'.
 currentRule = Action $ fmap listToMaybe $ gets stack
-
+-}
 
 putWhen :: (Int -> Bool) -> String -> Action ()
 putWhen f msg = Action $ do
