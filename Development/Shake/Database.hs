@@ -192,8 +192,9 @@ showJSON Database{..} = do
                      ,"changed:" ++ showTime changed
                      ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
                      ,"execution:" ++ show execution] ++
-                     ["traces:" ++ show traces | traces /= []]
+                     ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | traces /= []]
                 showTime (Time i) = show i
+                showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
         f _ = []
     return $ "[" ++ intercalate "\n," (concatMap f $ Map.toList status) ++ "\n]"
