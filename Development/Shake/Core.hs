@@ -44,6 +44,7 @@ data ShakeOptions = ShakeOptions
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Int -- ^ 1 = normal, 0 = quiet, 2 = loud.
     ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
+                       --   /This feature has not yet been completed, and should not be used./
     }
     deriving (Show, Eq, Ord, Read)
 
