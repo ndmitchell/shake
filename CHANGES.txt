@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow deepseq-1.2
 0.1.4
     Don't export currentRule/currentStack
     Fix **>, was matching the wrong way round
