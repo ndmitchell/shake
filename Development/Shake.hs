@@ -20,16 +20,24 @@
 module Development.Shake(
     shake,
     -- * Core of Shake
-    module Development.Shake.Core, liftIO,
+    ShakeOptions(..), shakeOptions,
+    Rule(..), Rules, defaultRule, rule, action,
+    Action, apply, apply1, traced,
+    putLoud, putNormal, putQuiet,
+    Observed(..),
+    liftIO,
     -- * Utility functions
     module Development.Shake.Derived,
     -- * File rules
-    module Development.Shake.File,
+    need, want, (*>), (**>), (?>),
     module Development.Shake.Files,
-    module Development.Shake.FilePattern,
+    FilePattern, (?==),
     -- * Directory rules
-    module Development.Shake.Directory
+    doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs
     ) where
+
+-- I would love to use module export in the above export list, but alas Haddock
+-- then shows all the things that are hidden in the docs, which is terrible.
 
 import Control.Monad.IO.Class
 import Development.Shake.Core hiding (run)
