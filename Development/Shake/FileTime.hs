@@ -10,7 +10,6 @@ import Control.Concurrent(threadDelay)
 import Control.DeepSeq
 import Data.Binary
 import Data.Hashable
-import Data.List
 import Data.Typeable
 import System.Directory
 import System.Directory.AccessTime

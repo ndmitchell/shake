@@ -9,8 +9,6 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
-import Data.List
-import Data.Maybe
 import Data.Typeable
 
 import Development.Shake.Core
