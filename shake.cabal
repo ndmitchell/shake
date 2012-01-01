@@ -64,7 +64,7 @@ library
         parallel-io,
         transformers == 0.2.*,
         access-time == 0.1.*,
-        deepseq == 1.1.*
+        deepseq >= 1.1 && < 1.3
 
     exposed-modules:
         Development.Shake
