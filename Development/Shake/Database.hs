@@ -11,7 +11,7 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 module Development.Shake.Database(
     Database, withDatabase,
     request, Response(..), finished,
-    allEntries
+    allEntries, showJSON,
     ) where
 
 import Development.Shake.Binary
@@ -180,6 +180,23 @@ allEntries Database{..} = do
                      | null now = error "Internal invariant broken, database seems to be cyclic (probably during lint)"
                      | otherwise = let ns = map fst now in ns ++ f [(a,b \\ map fst ns) | (a,b) <- later]
                     where (now,later) = partition (null . snd) xs
+
+
+showJSON :: Database -> IO String
+showJSON Database{..} = do
+    status <- readVar status
+    let ids = Map.fromList $ zip (Map.keys status) [0..]
+        f (k, v) | Just Info{..} <- getInfo v =
+            let xs = ["name:" ++ show (show k)
+                     ,"built:" ++ showTime built
+                     ,"changed:" ++ showTime changed
+                     ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
+                     ,"execution:" ++ show execution] ++
+                     ["traces:" ++ show traces | traces /= []]
+                showTime (Time i) = show i
+            in  ["{" ++ intercalate ", " xs ++ "}"]
+        f _ = []
+    return $ "[" ++ intercalate "\n," (concatMap f $ Map.toList status) ++ "\n]"
 
 
 ---------------------------------------------------------------------
