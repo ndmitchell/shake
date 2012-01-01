@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Don't export currentRule/currentStack
     Fix **>, was matching the wrong way round
     Fix FilePath normalise so it works properly on Windows
     Properly detect recursive rules, instead of looping
