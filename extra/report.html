@@ -1,0 +1,90 @@
+<html>
+<head>
+<title>Shake Report</title>
+<style type="text/css">
+body {font-family: sans-serif;}
+</style>
+
+<script src="../output/self/.js"> </script>
+<script src="jquery-1.7.1.min.js"> </script>
+
+<script>
+// first find which runs have built data in them, sorted
+// built :: [Int]
+var built = function(){
+	var seen = {};
+	for (var i = 0; i < shake.length; i++)
+		seen[shake[i].built] = true;
+	var seen2 = [];
+	for (var i in seen)
+		seen2.push(i);
+	return seen2.sort(function cmp(a,b){return a-b;});
+}();
+
+// what is the index of the last build run
+// lastRun :: Int
+var lastRun = built.length == 0 ? 0 : built[built.length-1];
+
+function showTime(x){return x.toFixed(1) + "s";}
+function showShort(x){return x;}
+
+function plural(n,not1,is1){
+	return n == 1
+		? (is1 == undefined ? "" : is1)
+		: (not1 == undefined ? "s" : not1);
+}
+
+
+function summary()
+{
+	var countLast = 0;
+	var countUnchanged = 0, countUnchangedLast = 0;
+	var sumExecution = 0, sumExecutionLast = 0;
+	var maxExecution = 0;
+	var countTrace = 0, countTraceLast = 0;
+	var sumTrace = 0;
+	var maxTrace = 0;
+	for (var i = 0; i < shake.length; i++)
+	{
+		var isLast = shake[i].built == lastRun;
+		countLast += isLast ? 1 : 0;
+		countUnchanged += shake[i].built != shake[i].changed ? 1 : 0;
+		countUnchangedLast += isLast && shake[i].built != shake[i].changed ? 1 : 0;
+		sumExecution += shake[i].execution;
+		sumExecutionLast += isLast ? shake[i].execution : 0;
+		maxExecution = Math.max(maxExecution, shake[i].execution);
+		var traces = shake[i].traces;
+		for (var j = 0; traces && j < traces.length; j++)
+		{
+			countTrace += 1;
+			countTraceLast += isLast ? 1 : 0;
+			sumTrace += traces[j].stop - traces[j].start;
+			maxTrace = Math.max(maxTrace, traces[j].stop - traces[j].start);
+		}
+	}
+
+	$("#content").html(
+		"<ul>" +
+		"<li><b>Runs:</b> This database has tracked " + built.length + " run" + plural(built.length) + ".</li>" +
+		"<li><b>Rules:</b> There are " + shake.length + " rules (" + countLast + " rebuilt in the last run).</li>" +
+		"<li><b>Commands:</b> Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).</li>" +
+		"<li><b>Build time:</b> The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands (" + showTime(sumExecutionLast) + " is the build time of the last run).</li>" +
+		"<li><b>Longest steps:</b> The longest rule takes " + showTime(maxExecution) + ", and the longest traced command takes " + showTime(maxTrace) + ".</li>" +
+		"<li><b>Unchanging rules:</b> There are " + countUnchanged + " rules whose result did not change on execution (" + countUnchangedLast + " from the last run).</li>" +
+		"</ul>"
+	);
+}
+
+$(summary);
+
+</script>
+
+</head>
+
+<body>
+<h1>Shake Summary Report</h1>
+<div id="content">
+	Loading...
+</div>
+</body>
+</html>
