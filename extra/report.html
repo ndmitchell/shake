@@ -44,6 +44,7 @@ function summary()
 	var countTrace = 0, countTraceLast = 0;
 	var sumTrace = 0;
 	var maxTrace = 0;
+	var maxTraceStopLast = 0;
 	for (var i = 0; i < shake.length; i++)
 	{
 		var isLast = shake[i].built == lastRun;
@@ -54,16 +55,50 @@ function summary()
 		sumExecutionLast += isLast ? shake[i].execution : 0;
 		maxExecution = Math.max(maxExecution, shake[i].execution);
 		var traces = shake[i].traces;
-		for (var j = 0; traces && j < traces.length; j++)
+		if (!traces) continue;
+		for (var j = 0; j < traces.length; j++)
 		{
 			countTrace += 1;
 			countTraceLast += isLast ? 1 : 0;
 			sumTrace += traces[j].stop - traces[j].start;
 			maxTrace = Math.max(maxTrace, traces[j].stop - traces[j].start);
+			maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? traces[j].stop : 0);
 		}
 	}
 
+	var buckets = [];
+	var countBuckets = 100;
+	for (var i = 0; i <= countBuckets; i++)
+		buckets.push(0); // fill with 1 more element, but the last bucket will always be 0
+
+	for (var i = 0; i < shake.length; i++)
+	{
+		var traces = shake[i].traces;
+		if (!traces || shake[i].built != lastRun) continue;
+		for (var j = 0; j < traces.length; j++)
+		{
+			var start = traces[j].start * countBuckets / maxTraceStopLast;
+			var stop = traces[j].stop * countBuckets / maxTraceStopLast;
+			for (var k = Math.ceil(start); k < Math.floor(stop); k++)
+				buckets[k]++;
+			buckets[Math.floor(start)] += start - Math.floor(start);
+			buckets[Math.floor(stop)] += stop - Math.floor(stop);
+		}
+	}
+	var maxBucket = 0;
+	for (var i = 0; i < countBuckets; i++)
+		maxBucket = Math.max(maxBucket, buckets[i]);
+	maxBucket = Math.ceil(maxBucket);
+
+	var chart = "cht=lc&amp;chs=300x100&amp;chco=22AA47&amp;chm=B,6DC097,0,0,0&amp;chxt=y&amp;chxl=0:|0|" + maxBucket + "&amp;chls=3,1,0&amp;chd=t:";
+	for (var i = 0; i < countBuckets; i++)
+		chart += (i == 0 ? "" : ",") + (buckets[i] * 100 / maxBucket);
+
 	$("#content").html(
+		"<div style='float:right;margin-right:20px'>" +
+			"<b>Traced commands</b><br/>" +
+			"<img style='margin-top:5px;' width='300' height='100' src='https://chart.googleapis.com/chart?" + chart + "' />" +
+		"</div>" +
 		"<ul>" +
 		"<li><b>Runs:</b> This database has tracked " + built.length + " run" + plural(built.length) + ".</li>" +
 		"<li><b>Rules:</b> There are " + shake.length + " rules (" + countLast + " rebuilt in the last run).</li>" +
