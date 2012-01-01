@@ -82,19 +82,21 @@ class (
     validStored _ _ = return True
 
     -- | Return 'True' if the value should not be changed by the build system. Defaults to returning
-    --   'False'.
+    --   'False'. Only used when running under lint mode.
     invariant :: key -> Bool
     invariant _ = False
 
     -- | Given an action, return what has changed, along with what you think should
-    --   have stayed the same.
+    --   have stayed the same. Only used when running under lint mode.
     observed :: IO a -> IO (Observed key, a)
     observed = fmap ((,) mempty)
 
 
+-- | Determine what was observed to change. For each field @Nothing@ means you don't know anything, while
+--   @Just []@ means you know that nothing was changed/used.
 data Observed a = Observed
-    {changed :: Maybe [a]
-    ,used :: Maybe [a]
+    {changed :: Maybe [a] -- ^ A list of keys which had their value altered.
+    ,used :: Maybe [a] -- ^ A list of keys whose value was used.
     }
     deriving (Show,Eq,Ord)
 
