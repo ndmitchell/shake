@@ -347,6 +347,8 @@ applyKeyValue ks = Action $ do
                             (res,s2) <- runAction s2 $ do
                                 putNormal $ "# " ++ show t
                                 execute s t
+                            -- ensure we can't put bad data into the database
+                            evaluate $ rnf t
                             evaluate $ rnf res
                             end <- getCurrentTime
                             let x = duration start end - discount s2
