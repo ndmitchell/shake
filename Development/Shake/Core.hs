@@ -93,12 +93,12 @@ class (
     validStored _ _ = return True
 
     -- | Return 'True' if the value should not be changed by the build system. Defaults to returning
-    --   'False'. Only used when running under lint mode.
+    --   'False'. Only used when running with 'shakeLint'.
     invariant :: key -> Bool
     invariant _ = False
 
     -- | Given an action, return what has changed, along with what you think should
-    --   have stayed the same. Only used when running under lint mode.
+    --   have stayed the same. Only used when running with 'shakeLint'.
     observed :: IO a -> IO (Observed key, a)
     observed = fmap ((,) mempty)
 
