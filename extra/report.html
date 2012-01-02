@@ -3,10 +3,14 @@
 <title>Shake Report</title>
 <style type="text/css">
 body {font-family: sans-serif;}
+#details {font-size: 10pt;}
+td {vertical-align:top;}
+td.bar {vertical-align:middle;}
+.bar div {height: 10px; background-color:#6DC067;}
+.right {text-align: right;}
 </style>
 
 <script src="../output/self/.js"> </script>
-<script src="jquery-1.7.1.min.js"> </script>
 
 <script>
 // first find which runs have built data in them, sorted
@@ -26,6 +30,7 @@ var built = function(){
 var lastRun = built.length == 0 ? 0 : built[built.length-1];
 
 function showTime(x){return x.toFixed(1) + "s";}
+function showPerc(x){return (x*100).toFixed(1) + "%";}
 function showShort(x){return x;}
 
 function plural(n,not1,is1){
@@ -35,11 +40,13 @@ function plural(n,not1,is1){
 }
 
 
-function summary()
+function load()
 {
+	/////////////////////////////////////////////////////////////////
+	// SUMMARY INFORMATION
+
 	var countLast = 0;
-	var countUnchanged = 0, countUnchangedLast = 0;
-	var sumExecution = 0, sumExecutionLast = 0;
+	var sumExecution = 0;
 	var maxExecution = 0;
 	var countTrace = 0, countTraceLast = 0;
 	var sumTrace = 0;
@@ -49,10 +56,7 @@ function summary()
 	{
 		var isLast = shake[i].built == lastRun;
 		countLast += isLast ? 1 : 0;
-		countUnchanged += shake[i].built != shake[i].changed ? 1 : 0;
-		countUnchangedLast += isLast && shake[i].built != shake[i].changed ? 1 : 0;
 		sumExecution += shake[i].execution;
-		sumExecutionLast += isLast ? shake[i].execution : 0;
 		maxExecution = Math.max(maxExecution, shake[i].execution);
 		var traces = shake[i].traces;
 		if (!traces) continue;
@@ -65,6 +69,19 @@ function summary()
 			maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? traces[j].stop : 0);
 		}
 	}
+
+	var summary =
+		"<ul>" +
+		"<li><b>Runs:</b> This database has tracked " + built.length + " run" + plural(built.length) + ".</li>" +
+		"<li><b>Rules:</b> There are " + shake.length + " rules (" + countLast + " rebuilt in the last run).</li>" +
+		"<li><b>Commands:</b> Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).</li>" +
+		"<li><b>Build time:</b> The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands.</li>" +
+		"<li><b>Longest steps:</b> The longest rule takes " + showTime(maxExecution) + ", and the longest traced command takes " + showTime(maxTrace) + ".</li>" +
+		"</ul>";
+
+
+	/////////////////////////////////////////////////////////////////
+	// PARALLELISM GRAPH
 
 	var buckets = [];
 	var countBuckets = 100;
@@ -96,33 +113,81 @@ function summary()
 		maxBucket = Math.max(maxBucket, buckets[i]);
 	maxBucket = Math.ceil(maxBucket - 0.00001);
 
-	var chart = "cht=lc&amp;chs=300x100&amp;chco=22AA47&amp;chm=B,6DC097,0,0,0&amp;chxt=y&amp;chxl=0:|0|" + maxBucket + "&amp;chls=3,1,0&amp;chd=t:";
+	var url = "cht=lc&amp;chs=300x100&amp;chco=22AA47&amp;chm=B,6DC097,0,0,0&amp;chxt=y&amp;chxl=0:|0|" + maxBucket + "&amp;chls=3,1,0&amp;chd=t:";
 	for (var i = 0; i < countBuckets; i++)
-		chart += (i == 0 ? "" : ",") + (buckets[i] * 100 / maxBucket);
+		url += (i == 0 ? "" : ",") + (buckets[i] * 100 / maxBucket);
 
-	$("#content").html(
-		"<div style='float:right;margin-right:20px'>" +
-			"<b>Traced commands</b><br/>" +
-			"<img style='margin-top:5px;' width='300' height='100' src='https://chart.googleapis.com/chart?" + chart + "' />" +
-		"</div>" +
-		"<ul>" +
-		"<li><b>Runs:</b> This database has tracked " + built.length + " run" + plural(built.length) + ".</li>" +
-		"<li><b>Rules:</b> There are " + shake.length + " rules (" + countLast + " rebuilt in the last run).</li>" +
-		"<li><b>Commands:</b> Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).</li>" +
-		"<li><b>Build time:</b> The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands (" + showTime(sumExecutionLast) + " is the build time of the last run).</li>" +
-		"<li><b>Longest steps:</b> The longest rule takes " + showTime(maxExecution) + ", and the longest traced command takes " + showTime(maxTrace) + ".</li>" +
-		"<li><b>Unchanging rules:</b> There are " + countUnchanged + " rules whose result did not change on execution (" + countUnchangedLast + " from the last run).</li>" +
-		"</ul>"
-	);
+	var graph =
+		"<b>Traced commands</b><br/>" +
+		"<img style='margin-top:5px;' width='300' height='100' src='https://chart.googleapis.com/chart?" + url + "' />";
+
+
+	/////////////////////////////////////////////////////////////////
+	// MOST EXPENSIVE RULES
+
+	var top = shake.slice(0).sort(function(a,b){return b.execution-a.execution}).slice(0,15);
+	var rules = "<b>Expensive rules</b><br/><table id='details'>";
+	for (var i = 0; i < top.length; i++)
+	{
+		rules += "<tr>" +
+			"<td class='bar'><div style='width:" + (top[i].execution * 40 / top[0].execution) + "px;'> </div></td>" +
+			"<td class='right'>" + showTime(top[i].execution) + "</td>" +
+			"<td class='right'>" + showPerc(top[i].execution / sumExecution) + "</td>" +
+			"<td>" + top[i].name + "</td>" +
+			"</tr>";
+	}
+	rules += "</table>";
+
+
+	/////////////////////////////////////////////////////////////////
+	// MOST EXPENSIVE COMMANDS
+
+	var toolDict = {};
+	for (var i = 0; i < shake.length; i++)
+	{
+		var traces = shake[i].traces;
+		if (!traces) continue;
+		for (var j = 0; j < traces.length; j++)
+		{
+			var cmds = traces[j].command.split(" ");
+			var cmd = cmds[0] == "system" || cmds[0] == "system'" ? cmds[1] : cmds[0];
+			if (!toolDict[cmd]) toolDict[cmd] = {count:0, sum:0, name:cmd};
+			toolDict[cmd].count++;
+			toolDict[cmd].sum += traces[j].stop - traces[j].start;
+		}
+	}
+
+	var toolList = [];
+	for (var i in toolDict)
+		toolList.push(toolDict[i]);
+
+	toolList.sort(function(a,b){return b.sum-a.sum}).slice(0,15);
+	var commands = "<b>Expensive commands</b><br/><table id='details'>";
+	for (var i = 0; i < toolList.length; i++)
+	{
+		commands += "<tr>" +
+			"<td class='bar'><div style='width:" + (toolList[i].sum * 40 / toolList[0].sum) + "px;'> </div></td>" +
+			"<td class='right'>" + showTime(toolList[i].sum) + "</td>" +
+			"<td class='right'>" + showPerc(toolList[i].sum / sumExecution) + "</td>" +
+			"<td>" + toolList[i].count + " &times; " + toolList[i].name + "</td>" +
+			"</tr>";
+	}
+	commands += "</table>";
+
+
+	/////////////////////////////////////////////////////////////////
+	// FINISH
+
+	document.getElementById("content").innerHTML =
+		"<table><tr><td>" + summary + "</td><td style='padding-left:30px;'>" + graph + "</td></tr></table>" +
+		"<table style='margin-top:30px;'><tr><td>" + rules + "</td><td style='padding-left:30px;'>" + commands + "</td></tr></table>";
 }
-
-$(summary);
 
 </script>
 
 </head>
 
-<body>
+<body onload="load()">
 <h1>Shake Summary Report</h1>
 <div id="content">
 	Loading...
