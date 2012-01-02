@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add writeFileChanged
     Add systemOutput
     Add an Oracle module
     Add an explicit Verbosity type

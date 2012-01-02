@@ -6,6 +6,7 @@ import Control.Monad.IO.Class
 import System.Process
 import System.Directory
 import System.Exit
+import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
 import Development.Shake.File
@@ -59,3 +60,13 @@ readFileLines = fmap lines . readFile'
 -- | A version of 'writeFile'' which writes out a list of lines.
 writeFileLines :: FilePath -> [String] -> Action ()
 writeFileLines name = writeFile' name . unlines
+
+
+-- | Write a file, but only if the contents would change.
+writeFileChanged :: FilePath -> String -> Action ()
+writeFileChanged name x = liftIO $ do
+    b <- doesFileExist name
+    if not b then writeFile name x else do
+        orig <- BS.readFile name
+        let new = BS.pack x
+        when (orig /= new) $ BS.writeFile name new
