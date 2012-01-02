@@ -3,7 +3,7 @@ module Development.Shake.Derived where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import System.Cmd
+import System.Process
 import System.Directory
 import System.Exit
 
@@ -22,6 +22,19 @@ system' path args = do
     res <- traced ("system' " ++ cmd) $ rawSystem path2 args
     when (res /= ExitSuccess) $
         error $ "System command failed:\n" ++ cmd
+
+-- | Execute a system command, returning @(stdout,stderr)@.
+--   This function will raise an error if the exit code is non-zero.
+--   Before running 'systemOutput'' make sure you 'need' any required files.
+systemOutput :: FilePath -> [String] -> Action (String, String)
+systemOutput path args = do
+    let path2 = toNative path
+    let cmd = unwords $ path2 : args
+    putLoud cmd
+    (res,stdout,stderr) <- traced ("system' " ++ cmd) $ readProcessWithExitCode path2 args ""
+    when (res /= ExitSuccess) $
+        error $ "System command failed:\n" ++ cmd
+    return (stdout, stderr)
 
 
 -- | @copyFile old new@ copies the existing file from @old@ to @new@. The @old@ file is has 'need' called on it
