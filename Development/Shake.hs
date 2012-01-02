@@ -33,7 +33,9 @@ module Development.Shake(
     module Development.Shake.Files,
     FilePattern, (?==),
     -- * Directory rules
-    doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs
+    doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
+    -- * Oracle rules
+    module Development.Shake.Oracle
     ) where
 
 -- I would love to use module export in the above export list, but alas Haddock
@@ -46,6 +48,7 @@ import Development.Shake.File hiding (defaultRuleFile)
 import Development.Shake.FilePattern(FilePattern, (?==))
 import Development.Shake.Files
 import Development.Shake.Directory hiding (defaultRuleDirectory)
+import Development.Shake.Oracle
 
 import qualified Development.Shake.Core as X
 import qualified Development.Shake.File as X
