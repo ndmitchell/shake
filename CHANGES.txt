@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add an explicit Verbosity type
     Change to lower precedence for *> etc
 0.1.5
     Allow deepseq-1.2
