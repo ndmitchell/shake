@@ -12,17 +12,20 @@ import Data.List
 
 main :: IO ()
 main = shaken noTest $ \args obj -> do
-    let pkgs = "transformers binary unordered-containers parallel-io filepath directory process access-time deepseq"
-        flags = map ("-package=" ++) $ words pkgs
-
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
     want $ if null args then [obj "Main.exe"] else args
+
+    let ghc args = do
+            askOracle ["ghc-version"]
+            askOracle ["ghc-pkg"]
+            flags <- askOracle ["ghc-flags"]
+            system' "ghc" $ args ++ flags
 
     obj "/*.exe" *> \out -> do
         src <- readFileLines $ replaceExtension out "deps"
         let os = map (obj . moduleToFile "o") $ "Main":src
         need os
-        system' "ghc" $ ["-o",out] ++ os ++ flags
+        ghc $ ["-o",out] ++ os
 
     obj "/*.deps" *> \out -> do
         dep <- readFileLines $ replaceExtension out "dep"
@@ -44,9 +47,33 @@ main = shaken noTest $ \args obj -> do
         dep <- readFileLines $ replaceExtension out "dep"
         let hs = unobj $ replaceExtension out "hs"
         need $ hs : map (obj . moduleToFile "hi") dep
-        system' "ghc" $ ["-c",hs,"-odir=output/self","-hidir=output/self","-i=output/self"] ++ flags
+        ghc ["-c",hs,"-odir=output/self","-hidir=output/self","-i=output/self"]
 
+    obj ".pkgs" *> \out -> do
+        src <- readFile' "shake.cabal"
+        writeFileLines out $ sort $ cabalBuildDepends src
+
+    addOracle ["ghc-pkg"] $ do
+        (out,_) <- systemOutput "ghc-pkg" ["list","--simple-output"]
+        return $ words out
+
+    addOracle ["ghc-version"] $ do
+        (out,_) <- systemOutput "ghc" ["--version"]
+        return [out]
+
+    addOracle ["ghc-flags"] $ do
+        pkgs <- readFileLines $ obj ".pkgs"
+        return $ map ("-package=" ++) pkgs
+
+
+---------------------------------------------------------------------
+-- GRAB INFORMATION FROM FILES
 
 hsImports :: String -> [String]
 hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (not . isUpper) x
                | x <- lines xs, "import " `isPrefixOf` x]
+
+
+-- FIXME: Should actually parse the list from the contents of the .cabal file
+cabalBuildDepends :: String -> [String]
+cabalBuildDepends _ = words "transformers binary unordered-containers parallel-io filepath directory process access-time deepseq"
