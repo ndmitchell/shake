@@ -79,16 +79,22 @@ function summary()
 		{
 			var start = traces[j].start * countBuckets / maxTraceStopLast;
 			var stop = traces[j].stop * countBuckets / maxTraceStopLast;
-			for (var k = Math.ceil(start); k < Math.floor(stop); k++)
-				buckets[k]++;
-			buckets[Math.floor(start)] += start - Math.floor(start);
-			buckets[Math.floor(stop)] += stop - Math.floor(stop);
+
+			if (Math.floor(start) == Math.floor(stop))
+				buckets[Math.floor(start)] += stop - start;
+			else
+			{
+				for (var k = Math.ceil(start); k < Math.floor(stop); k++)
+					buckets[k]++;
+				buckets[Math.floor(start)] += Math.ceil(start) - start;
+				buckets[Math.floor(stop)] += stop - Math.floor(stop);
+			}
 		}
 	}
 	var maxBucket = 0;
 	for (var i = 0; i < countBuckets; i++)
 		maxBucket = Math.max(maxBucket, buckets[i]);
-	maxBucket = Math.ceil(maxBucket);
+	maxBucket = Math.ceil(maxBucket - 0.00001);
 
 	var chart = "cht=lc&amp;chs=300x100&amp;chco=22AA47&amp;chm=B,6DC097,0,0,0&amp;chxt=y&amp;chxl=0:|0|" + maxBucket + "&amp;chls=3,1,0&amp;chd=t:";
 	for (var i = 0; i < countBuckets; i++)
