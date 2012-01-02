@@ -16,6 +16,8 @@ import Development.Shake.File
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
 
+infix 1 *>>
+
 
 newtype Files = Files [FilePath]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
