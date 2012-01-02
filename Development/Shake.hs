@@ -34,31 +34,30 @@ module Development.Shake(
     FilePattern, (?==),
     -- * Directory rules
     doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
-    -- * Oracle rules
-    module Development.Shake.Oracle
+    -- * Additional rules
+    addOracle, askOracle
     ) where
 
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
 
 import Control.Monad.IO.Class
-import Development.Shake.Core hiding (run)
+import Development.Shake.Core
 import Development.Shake.Derived
-import Development.Shake.File hiding (defaultRuleFile)
-import Development.Shake.FilePattern(FilePattern, (?==))
+
+import Development.Shake.Directory
+import Development.Shake.File
+import Development.Shake.FilePattern
 import Development.Shake.Files
-import Development.Shake.Directory hiding (defaultRuleDirectory)
 import Development.Shake.Oracle
 
-import qualified Development.Shake.Core as X
-import qualified Development.Shake.File as X
-import qualified Development.Shake.Directory as X
 
 -- | Main entry point for running Shake build systems. For an example see "Development.Shake".
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts r = do
-    X.run opts $ do
+    run opts $ do
         r
-        X.defaultRuleFile
-        X.defaultRuleDirectory
+        defaultRuleFile
+        defaultRuleDirectory
+        defaultRuleRerun
     return ()
