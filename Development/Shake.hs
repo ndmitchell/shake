@@ -35,7 +35,8 @@ module Development.Shake(
     -- * Directory rules
     doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     -- * Additional rules
-    addOracle, askOracle
+    addOracle, askOracle,
+    alwaysRerun
     ) where
 
 -- I would love to use module export in the above export list, but alas Haddock
@@ -50,6 +51,7 @@ import Development.Shake.File
 import Development.Shake.FilePattern
 import Development.Shake.Files
 import Development.Shake.Oracle
+import Development.Shake.Rerun
 
 
 -- | Main entry point for running Shake build systems. For an example see "Development.Shake".
