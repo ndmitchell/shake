@@ -83,6 +83,7 @@ library
         Development.Shake.Locks
         Development.Shake.Oracle
         Development.Shake.TypeHash
+        Development.Shake.Rerun
         Development.Shake.Value
 
 executable shake
