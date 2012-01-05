@@ -20,7 +20,7 @@ system' path args = do
     let path2 = toNative path
     let cmd = unwords $ path2 : args
     putLoud cmd
-    res <- traced ("system' " ++ cmd) $ rawSystem path2 args
+    res <- traced ("system " ++ cmd) $ rawSystem path2 args
     when (res /= ExitSuccess) $
         error $ "System command failed:\n" ++ cmd
 
