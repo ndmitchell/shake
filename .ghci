@@ -15,3 +15,13 @@
         [":!cabal configure"
         ,":!cabal haddock"]
 :}
+
+:{
+:def prof \x -> return $ unlines
+        [":!" ++
+         "(if not exist output mkdir output) && " ++
+         "(if not exist output\\obj mkdir output\\obj) && " ++
+         "ghc -rtsopts -threaded -prof -auto-all -caf-all -package transformers --make Main.hs -w -odir output/obj -hidir output/obj -o output/obj/shake.exe"
+        ,":!output\\obj\\shake " ++ x ++ " +RTS -p"
+        ]
+:}
