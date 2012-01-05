@@ -1,0 +1,8 @@
+^dist$
+^output$
+^academic/.*/obj.*$
+^academic/.*/.*\.aux$
+^academic/.*/.*\.bbl$
+^academic/.*/.*\.blg$
+^academic/.*/.*\.dvi$
+^darcs-ssh$
