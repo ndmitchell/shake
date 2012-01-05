@@ -60,6 +60,7 @@ toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else
 -- > combine "aaa/bbb" "./ccc" == "aaa/bbb/ccc"
 -- > combine "aaa/bbb" "../ccc" == "aaa/ccc"
 combine :: FilePath -> FilePath -> FilePath
+combine "." y = y
 combine x ('.':'.':'/':y) = combine (takeDirectory x) y
 combine x ('.':'/':y) = combine x y
 combine x y = normalise $ Native.combine (toNative x) (toNative y)
