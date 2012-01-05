@@ -118,7 +118,7 @@ toResponse Response_{..}
 -- rebuild to an absolute minimum traversal in single-threaded fast-path code. We may pay more repeatedly
 -- calling 'request', but the depth of the call graph is low so it shouldn't be an issue, and with additional
 -- complexity it could be avoided.
-request :: Database -> (Key -> Value -> Bool) -> [Key] -> IO Response
+request :: Database -> (Key -> Value -> IO Bool) -> [Key] -> IO Response
 request Database{..} validStored ks =
      modifyVar status $ \v -> do
         (res, mp) <- S.runStateT (fmap concatResponse $ mapM f ks) v
@@ -131,10 +131,9 @@ request Database{..} validStored ks =
                 Nothing -> build k
                 Just (Building bar _) -> return $ Response_ [] [(k,bar)] []
                 Just (Built i) -> return $ Response_ [] [] [(changed i, value i)]
-                Just (Loaded i) ->
-                    if not $ validStored k (value i)
-                    then build k
-                    else validHistory k i (depends i)
+                Just (Loaded i) -> do
+                    valid <- liftIO $ validStored k $ value i
+                    if not valid then build k else validHistory k i (depends i)
 
         validHistory :: Key -> Info -> [[Key]] -> S.StateT (Map Key Status) IO Response_
         validHistory k i [] = do

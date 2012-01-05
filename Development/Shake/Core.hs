@@ -27,7 +27,6 @@ import Data.Maybe
 import Data.Monoid
 import Data.Time.Clock
 import Data.Typeable
-import System.IO.Unsafe
 
 import Development.Shake.Database
 import Development.Shake.Locks
@@ -333,8 +332,7 @@ applyKeyValue ks = Action $ do
     where
         loop = do
             s <- get
-            let unsafeStored k v = unsafePerformIO $ stored s k v -- safe because of the invariants on validStored
-            res <- liftIO $ request (database s) unsafeStored ks
+            res <- liftIO $ request (database s) (stored s) ks
             case res of
                 Block (seen,act) -> do
                     let bad = intersect (stack s) seen
