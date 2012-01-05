@@ -40,6 +40,98 @@ function plural(n,not1,is1){
 }
 
 
+function listEq(xs, ys)
+{
+	if (xs.length != ys.length) return false;
+	for (var i = 0; i < xs.length; i++)
+		if (xs[i] != ys[i]) return false;
+	return true;
+}
+
+// Return the n top entries, grouping as necessary by words
+// huffman :: Int -> [{sum :: Double, name :: String}] -> [{sum :: Double, count :: Int, name :: String}]
+function huffman(resultSize, xs)
+{
+	var val = {sum: 0, count: 0, children: {}};
+
+	for (var i = 0; i < xs.length; i++)
+	{
+		var val2 = val;
+		var ys = xs[i].name.split(' ');
+		for (var j = 0; j < ys.length; j++)
+		{
+			if (val2.children[ys[j]])
+				val2 = val2.children[ys[j]];
+			else
+			{
+				var t = {sum: 0, count: 0, children: {}};
+				val2.children[ys[j]] = t;
+				val2 = t;
+			}
+			val2.sum += xs[i].sum;
+			val2.count++;
+		}
+	}
+
+	function compress(val) // return the number of items
+	{
+		var n = 0;
+		for (var j in val.children)
+			n += compress(val.children[j]);
+		if (n == 1)
+			val.children = {};
+		return Math.max(1,n);
+	}
+	compress(val);
+
+	function flatten(path, val, res)
+	{
+		for (var i in val.children)
+		{
+			var ii = val.children[i];
+			var pp = path.slice(0);
+			pp.push(i);
+			res.push({sum:ii.sum, count:ii.count, name:pp, free:path.length==0});
+			flatten(pp,ii,res);
+		}
+	}
+	var flat = [];
+	flatten([], val, flat);
+
+	while(true)
+	{
+		// order everything
+		flat.sort(function(a,b){var i = b.sum - a.sum; return i != 0 ? i : b.count - a.count;});
+
+		// now, if something in the first n is not free, mark it free and delete anyone who relies on it
+		// then repeat, if nothing is not free, break
+		var cont = false;
+		for (var i = 0; i < resultSize; i++)
+		{
+			if (!flat[i].free)
+			{
+				cont = true;
+				flat[i].free = true;
+				for (var j = 0; j < flat.length; j++)
+				{
+					if (listEq(flat[i].name.slice(0,flat[i].name.length-1), flat[j].name))
+					{
+						flat[j].count -= flat[i].count;
+						flat[j].sum -= flat[i].sum;
+					}
+				}
+				break;
+			}
+		}
+		if (!cont) break;
+	}
+
+	for (var i = 0; i < flat.length; i++)
+		flat[i].name = flat[i].name.join(" ");
+	return flat.slice(0, resultSize);
+}
+
+
 function load()
 {
 	/////////////////////////////////////////////////////////////////
@@ -142,26 +234,16 @@ function load()
 	/////////////////////////////////////////////////////////////////
 	// MOST EXPENSIVE COMMANDS
 
-	var toolDict = {};
+	var tooList = [];
 	for (var i = 0; i < shake.length; i++)
 	{
 		var traces = shake[i].traces;
 		if (!traces) continue;
 		for (var j = 0; j < traces.length; j++)
-		{
-			var cmds = traces[j].command.split(" ");
-			var cmd = cmds[0] == "system" || cmds[0] == "system'" ? cmds[1] : cmds[0];
-			if (!toolDict[cmd]) toolDict[cmd] = {count:0, sum:0, name:cmd};
-			toolDict[cmd].count++;
-			toolDict[cmd].sum += traces[j].stop - traces[j].start;
-		}
+			tooList.push({name: traces[j].command, sum: traces[j].stop - traces[j].start});
 	}
 
-	var toolList = [];
-	for (var i in toolDict)
-		toolList.push(toolDict[i]);
-
-	toolList.sort(function(a,b){return b.sum-a.sum}).slice(0,15);
+	toolList = huffman(15, tooList);
 	var commands = "<b>Expensive commands</b><br/><table id='details'>";
 	for (var i = 0; i < toolList.length; i++)
 	{
@@ -169,7 +251,8 @@ function load()
 			"<td class='bar'><div style='width:" + (toolList[i].sum * 40 / toolList[0].sum) + "px;'> </div></td>" +
 			"<td class='right'>" + showTime(toolList[i].sum) + "</td>" +
 			"<td class='right'>" + showPerc(toolList[i].sum / sumExecution) + "</td>" +
-			"<td>" + toolList[i].count + " &times; " + toolList[i].name + "</td>" +
+			"<td class='right'>" + + toolList[i].count + "&nbsp;&times;</td>" +
+			"<td>" + toolList[i].name + "</td>" +
 			"</tr>";
 	}
 	commands += "</table>";
