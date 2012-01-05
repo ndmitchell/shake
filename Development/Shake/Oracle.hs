@@ -30,7 +30,18 @@ instance Rule Question Answer where
 -- > addOracle ["ghc-pkg","shake"] $ return ["1.0"]
 --
 --   If a rule depends on the GHC version, it can then use @'getOracle' ["ghc"]@, and
---   if the GHC version changes, the rule will rebuild.
+--   if the GHC version changes, the rule will rebuild. It is common for the value returned
+--   by 'askOracle' to be ignored.
+--
+--   The Oracle maps questions of @[String]@ and answers of @[String]@. This type is a
+--   compromise. Questions will often be the singleton list, but allowing a list of strings
+--   there is more flexibility for heirarchical schemes and grouping - i.e. to have
+--   @ghc-pkg shake@, @ghc-pkg base@ etc. The answers are often singleton lists, but
+--   sometimes are used as sets - for example the list of packages returned by @ghc-pkg@.
+--
+--   Actions passed to 'addOracle' will be run in every Shake execution they are required,
+--   there value will not be kept between runs. To get a similar behaviour using files, see
+--   'alwaysRerun'.
 addOracle :: [String] -> Action [String] -> Rules ()
 addOracle question act = rule $ \(Question q) ->
     if q == question then Just $ fmap Answer act else Nothing
