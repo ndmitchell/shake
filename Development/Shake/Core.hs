@@ -249,6 +249,9 @@ run opts@ShakeOptions{..} rs = do
             badEnd <- filterM (fmap not . uncurry stored) invariants
             when (not $ null $ badStart ++ badEnd) $
                 error "There were invariants that were broken" -- FIXME: Better error message
+            r <- readIORef seen
+            let f sel = show $ length $ concat $ mapMaybe sel $ concatMap snd r
+            putStrLn $ "Observed created = " ++ f changed ++ ", used = " ++ f used
             -- FIXME: Check the seen pile against the database
 
 
