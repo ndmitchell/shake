@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve FilePath.normalise
     Add writeFileChanged
     Add systemOutput
     Add an Oracle module
