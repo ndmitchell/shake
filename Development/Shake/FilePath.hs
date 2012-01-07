@@ -13,7 +13,7 @@ module Development.Shake.FilePath(
     toNative, (</>), combine,
     ) where
 
-import System.FilePath.Posix hiding (isPathSeparator, normalise, (</>), combine)
+import System.FilePath.Posix hiding (normalise, (</>), combine)
 import qualified System.FilePath as Native
 
 
