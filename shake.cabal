@@ -99,5 +99,6 @@ executable shake
         Examples.Test.Basic1
         Examples.Test.Directory
         Examples.Test.Errors
+        Examples.Test.FilePath
         Examples.Test.Files
         Examples.Tar.Main
