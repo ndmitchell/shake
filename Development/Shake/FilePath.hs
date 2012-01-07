@@ -15,6 +15,7 @@ module Development.Shake.FilePath(
 
 import System.FilePath.Posix hiding (normalise, (</>), combine)
 import qualified System.FilePath as Native
+import Data.List
 
 
 -- | Drop the first directory from a 'FilePath'. Should only be used on
@@ -38,9 +39,20 @@ takeDirectory1 :: FilePath -> FilePath
 takeDirectory1 = takeWhile (not . Native.isPathSeparator)
 
 
--- | Normalise a 'FilePath', translating any path separators to @\/@.
+-- | Normalise a 'FilePath', applying the standard 'FilePath' normalisation, plus
+--   translating any path separators to @\/@ and removing @foo\/..@ components where possible.
 normalise :: FilePath -> FilePath
-normalise = map (\x -> if Native.isPathSeparator x then '/' else x)
+normalise = intercalate "/" . dropDots . split . Native.normalise
+    where
+        dropDots = reverse . f 0 . reverse
+            where
+                f i ("..":xs) = f (i+1) xs
+                f 0 (x:xs) = x : f 0 xs
+                f i (x:xs) = f (i-1) xs
+                f i [] = replicate i ".."
+
+        split xs = a : if null b then [] else split $ tail b
+            where (a,b) = break Native.isPathSeparator xs
 
 
 -- | Convert to native path separators, namely @\\@ on Windows. 
