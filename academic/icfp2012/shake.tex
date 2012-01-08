@@ -9,6 +9,8 @@
 \usepackage{setspace}
 \usepackage{balance}
 \usepackage[all]{xy}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.5.1}
 
 \include{paper}
 %include paper.fmt
@@ -671,53 +673,94 @@ documentation wants = do
 
 Some programs, such as the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs as a result of one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, while the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to do both, but often the \file{.hi} file will be left unchanged. Producing two files captures this pattern. Unfortunately, many build systems (\make{} included) do not handle multiple outputs well. In Shake, it is usually possible to fake a dependency -- claiming that \file{Foo.hi} depends on \file{Foo.o}, while \file{Foo.o} depends on \file{Foo.hs}, thanks to suitable support for unchanging files (see \S\ref{sec:unchanging_files}).
 
-Unfortunately fake dependencies are not always enough. Consider a process that reads \file{numbers.txt} containing lines of numbers, and splits produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. Here there is no fake dependency that can solve the problem. Fortunately, the power of multiple types of rules comes to the rescue. We define a new type, |Files|, which stores many files.
+Unfortunately fake dependencies are not always suitable. Consider a process that reads \file{numbers.txt} containing lines of numbers, and produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. In this situation there is no fake dependency that properly captures the flow of updates. Fortunately, the power of multiple types of rules comes to the rescue. We can define a new type, |Files|, which is a rule that produces multiple files.
 
 \begin{code}
 data Files = Files [FilePath]
 data FileTimes = FileTimes [Int]
 
-rules = do
-    rule $ \(File2 x y) -> if [x,y] /= ["even.txt","odd.txt"] then Nothing else Just $ do
+multipleOutputs = do
+    rule $ \(Files xs) -> if xs /= ["even.txt","odd.txt"] then Nothing else Just $ do
         need ["numbers.txt"]
-        system' ["number-split","numbers.txt"]
-        liftM Files $ mapM getFileTime [x,y]
+        system' "number-split" ["numbers.txt"]
+        liftM FileTimes $ mapM getFileTime xs
 
     ["even.txt","odd.txt"] **> \_ ->
-        apply [File2 "even.txt" "odd.txt"]
+        apply1 $ Files ["even.txt","odd.txt"]
 \end{code}
 
-In the Shake library we provide |*>>| for generalising this pattern.
+Inside |multipleOutputs|, the call to |rule| declares a rule that can build both \file{even.txt} and \file{odd.txt} in a single step. We call the \prog{number-split} program, and get the file times for the results. On the |**>| line we define two rules to produce the output files, using the standard file creation rules as in Figure \ref{fig:file_rules}, by calling |apply1| with the list of files to create. If the build first requires \file{even.txt} then \prog{number-split} will be invoked, but a subsequent requirement on \file{odd.txt} will not force the program to be rerun.
+
+The Shake library provides a function |*>>| to capture this pattern, allowing an end user to write:
+
+\begin{code}
+["even.txt","odd.txt"] *>> \_ ->
+    need ["numbers.txt"]
+    system' "number-split" ["numbers.txt"]
+\end{code}
 
 \subsection{Transitive Dependencies}
 
-We can define the implementation as... this only does one layer.
+In build systems, it is common for the system to require the transitive dependencies. As an example, if \file{foo.c} does a @#include@ on \file{bar.h}, and \file{bar.h} in turn includes \file{baz.h}, then \file{foo.c} should be recompiled if either \file{bar.h} \textit{or} \file{baz.h} changes. A similar situation arises when linking Haskell programs -- any module transitively imported by the root module should be linked in. One option is to separately for each \file{*.c} file, scan all its dependencies and |need| them. However, that can significantly reduce performance, as if \file{bar.h} is included hundreds of times then it will be recomputed lots. We can also define a more specific one, based on the assumption that @#ifdef@ statements do not change the include files (a reasonable assumption in many cases).
 
-We can also define a more specific one, based on the assumption that @#ifdef@ statements do not change the include files (a reasonable assumption in many cases).
+Therefore, a standard pattern is to define \file{*.dep} as the immediate dependencies of a file, and \file{*.deps} as the transitive dependencies. Returning to the C include file example:
 
-If you have a transitive dependency you can avoid it quite easily. Consider the problem of .c/.h include files. We can define a correct implementation as...
+\begin{code}
+"*.deps" *> \out -> do
+    dep <- readFileLines $ replaceExtension out "dep"
+    deps <- mapM (readFileLines . (<.> "deps")) dep
+    writeFileLines out $ nub $ dep ++ concat deps
+
+["*.c.dep","*.h.dep"] **> \out -> do
+    src <- readFileLines $ dropExtension out
+    let incs = [init y | x <- src, Just y <- [stripPrefix "#include \"" x]]
+    writeFileLines out incs
+
+"*.c.o" *> \out -> do
+    need =<< readFileLines (replaceExtension out "deps")
+    system' "gcc" ["-c",dropExtension out,"-o",out]
+\end{code}
 
 \subsection{Build rules that change}
 
-Throughout this work, we assume that the build script does not change, merely the inputs. We make some allowances and checks for this case, but generally if you change the build script you should wipe the build. We also in occasion depend on the file itself -- but that is only a crass generalisation, and is most useful when writing code generators.
+Throughout this work, we assume that \textit{the build system does not change}, merely the inputs to the build system. While the build system does change more rarely than the rest of the code, in our case about 1.7\% of commits have touched the build system. However, there have been only a handful of times when a build system change required a complete rebuild to be performed. We manage build system changes with a number of strategies:
 
-We have actually moved most of our stuff into a build.mk file which is fully tracked, and would suggest others do the same. It should not be the build systems job to list which files go into a .c file, but perhaps have a list of those files somewhere in a text file.
+\paragraph{A |shakeVersion| field in |ShakeOptions|} We have a field named |shakeVersion| in the |ShakeOptions| record defined in Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, then this flag can be incremented to force a full rebuild. This is the nuclear option -- we have only had 8 such occurrences in the last three years, and none recently (as we have learnt how Shake can be used best).
+
+\paragraph{Depending on the build source file} A conservative strategy is to depend on the build system in each rule, and then if any of the build system changes rebuild everything from scratch. While that is an option, it would cause a significant number of redundant rebuilds. Instead, where we have files that specify code generators, which could conceptually be stored in separate programs, we put an explicit dependency and use |writeFileChanged| (see \S\ref{sec:derived}). Now, if the generator changes it will be run again, but typically only a handful of files will see an actual change, so very little is rebuilt.
+
+\paragraph{Make the build system interpret} Much information, such as what files a \file{*.c} file includes, can be computed from the source files. Where information cannot be computed, such as which files should be linked together to form an executable, we write small rule files which list the inputs to an object. The standard rule for linking depends on these rule files, and thus if the rules about what goes into an executable change the file is automatically rebuilt.
+
+\paragraph{Restarting rules} If Shake detects that a dependency has changed, it rebuilds the rule from the beginning. Due to the presence of the |[[Key]]| |depends| field, it never checks for rules that the previous step did not permit. The result is that most changes cause something in the dependencies to change, and thus the rule is rerun anyway.
+
+In practice we have not found changing the build system to be problematic. By moving settings out of the build system, into separate tracked rule files, and using the |shakeVersion| flag as a last resort, we see no issues. However, the only correct way to deal with a changing build system would be functional equality -- something that would be particularly useful to Shake.
 
 \section{User Tools}
 \label{sec:tools}
 
-On top of Shake we can build a number of useful tools.
+Shake, as described up until now, can provide a suitable replacement for \make{}. However, given the modern design of Shake, we can do better -- introducing tools to make build tool authors lives easier. In this section we describe three such tools that can be built on top of Shake -- a profiling tool to determine why the build is slow, an analysis tool to ask questions about the shape of the resultant build system and a lint tool to check that the build system is well formed in some sense.
 
 \subsection{Profiling}
 \label{sec:profiling}
 
-In addition to the information listed in |Info|, we also record the duration of each rule, excluding it's children. With this we can predict how long a rule will take to execute, and which rules are most expensive. We also have a trace associated with each rule, along with a trace function:
+We have built profiling support into the core of Shake. Since any execution of a rule is likely to be somewhat slow (most rules will be spawning system processes), we always collect profiling information. In addition to the information listed in |Info| from \S\ref{}, we also record the duration of each rule, excluding it's children. With this we can predict how long a rule will take to execute, and which rules are most expensive. We also have a trace associated with each rule, along with a trace function:
 
 \begin{code}
-traced :: String -> IO a -> Action a
+traced :: String -> IO alpha -> Action alpha
 \end{code}
 
-This code allows us to tag a particular action with timing information and a message. Here we record the actual start and end times. We automatically insert such commands for all system commands. Given that most build commands are system commands, we can now trace how many system commands were executing at each stage. For example we can show the following graph.
+\begin{figure}
+Include a graph here of the following data:
+
+% {(0,0.00) (1,0.00) (2,0.00) (3,0.00) (4,0.00) (5,0.00) (6,0.18) (7,1.04) (8,4.00) (9,4.00) (10,4.00) (11,4.00) (12,4.00) (13,3.98) (14,3.93) (15,3.16) (16,3.00) (17,3.00) (18,2.42) (19,1.00) (20,0.98) (21,1.00) (22,1.00) (23,1.00) (24,1.00) (25,1.00) (26,1.00) (27,0.95) (28,1.00) (29,1.00) (30,1.00) (31,1.00) (32,1.00) (33,1.00) (34,1.00) (35,1.00) (36,1.00) (37,1.39) (38,4.00) (39,4.00) (40,4.00) (41,4.00) (42,4.00) (43,4.00) (44,4.00) (45,2.70) (46,2.58) (47,2.00) (48,2.00) (49,1.75) (50,0.98) (51,1.00) (52,0.98) (53,1.00) (54,1.05) (55,4.00) (56,4.00) (57,4.00) (58,4.00) (59,4.00) (60,3.95) (61,3.96) (62,3.11) (63,3.00) (64,3.00) (65,2.34) (66,1.40) (67,1.00) (68,0.99) (69,1.00) (70,1.00) (71,1.00) (72,1.00) (73,1.00) (74,1.00) (75,1.00) (76,1.00) (77,1.00) (78,1.00) (79,1.00) (80,1.00) (81,1.00) (82,1.00) (83,1.00) (84,1.00) (85,1.00) (86,1.00) (87,1.00) (88,1.00) (89,1.00) (90,1.00) (91,1.00) (92,1.00) (93,1.00) (94,1.00) (95,1.00) (96,1.00) (97,1.00) (98,1.00) (99,1.00) (100,0.00)}
+
+This report details the parallelism obtained when trying to build a 25 module Haskell program with a maximum of 4 processors. The results show that for small periods of time 4 processor were used, but the dependencies meant that most of the time about 1.9 processors were in use. The bit at the start corresponds to scanning for dependencies, and the trail at the end corresponds to linking.
+
+\caption{Profile parallelism output}
+\label{fig:profile}
+\end{figure}
+
+This code allows us to tag a particular action with timing information and a message. Here we record the actual start and end times. We automatically insert such commands for all system commands. Given that most build commands are system commands, we can now trace how many system commands were executing at each stage. For example we can produce a parallelism graph as shown in Figure \ref{fig:profile}.
 
 Storing the profile information is easy enough, but we also allow interactive filtering and reports with Javascript/HTML. We allow grouping of rules using the same wildcard syntax as in \ref{fig:file_rules}. Note that there is no way to group rules as per their definition with |rule|, since rules do not have a unique identifier or name -- only a higher order function to match them. We could require all rules to be given names, which would make profiling easier, but at the cost of complicating everything else. Given that profiling reports and viewed rarely, it seems the wrong trade off -- also people often want to slice in different ways. As an example, given a project with five subprojects, each of which consists of both C and Haskell, it is both interesting to see profiling information C vs Haskell, and also of the five projects against each other.
 
@@ -816,11 +859,11 @@ http://google-engtools.blogspot.com/2011/08/build-in-cloud-how-build-system-work
 
 \subsection{Tup}
 
-https://gittup.org/tup
+https://gittup.org/tup works bottom up, rather
 
 \subsection{Haskell Build Libraries}
 
-Haskell libraries: Blueprint, Coadjute, nemesis, cake, hake, hmk, zoom, openshake, abba
+Haskell libraries: Blueprint, Coadjute, nemesis, cake x 2 (there are two distinct build libraries for Haskell named  cake!) hake, hmk, zoom, openshake, abba.
 
 The |rule|/|apply| functions are checked at runtime. However, since everyone uses sugared versions, that isn't an issue. It should be relatively easy to define a statically typed rule that accumulates its types used, but it's more complex. OpenShake did it using type functions. If you thread the types through teh Rules type as a type argument you can also solve the serialisation of existentials.
 
@@ -833,11 +876,15 @@ However, we do far better for a null rebuild. We have essentially reduced it to 
 \section{Conclusions}
 \label{sec:conclusions}
 
+We have shown how build systems can be generalised to support generated files.
+
 Shake is awesome. Any future work goes here.
+
+
 
 \subsection*{Acknowledgements}
 
-Thanks to Standard Chartered, where the software was developed. Thanks to Raphael Montelatici for the name Shake. Thanks to Evan Laforge for discussions, particularly about multiple files.
+Thanks to Standard Chartered, where the software was developed. Thanks to Raphael Montelatici for the name Shake. Thanks to Max Bolingbroke and Evan Laforge for many discussions about Shake.
 
 
 \bibliographystyle{plainnat}
