@@ -65,7 +65,7 @@ build-system, compilation, Haskell
 \section{Introduction}
 \label{sec:introduction}
 
-A build tool, such as \make{}, takes a set of input files, plus some rules, and produces some output files. Taking \make{} as an example, a build rule looks like:
+A build tool, such as \make{}, takes a set of input files, plus some build rules, and produces some output files. In \make{} a build rule can be defined as:
 
 \begin{code}
 {-"\textsf{result.tar : a.txt b.txt}"-}
@@ -74,7 +74,7 @@ A build tool, such as \make{}, takes a set of input files, plus some rules, and 
 
 \noindent This rule builds the tar archive \file{result.tar} from the inputs \file{a.txt} and \file{b.txt}. Whenever \file{a.txt} or \file{b.txt} changes \file{result.tar} will be regenerated.
 
-What if we want to build \file{result.tar} from the list of files in \file{list.txt}? \make{} offers no easy way to express this pattern (there are workarounds, discussed in \S\ref{sec:make_hacks}, but none are pleasant or effective). However, using the build tool we develop in this paper, we can write:
+What if we want to build \file{result.tar} from the list of files in \file{list.txt}? \make{} offers no easy way to express this pattern (there are workarounds, discussed in \S\ref{sec:make_hacks}, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
 
 \begin{code}
 "result.tar" *> \_ -> do
@@ -84,19 +84,19 @@ What if we want to build \file{result.tar} from the list of files in \file{list.
     system' "tar" $ ["-cf","result.tar"] ++ contents
 \end{code}
 
-This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read \file{list.txt}, and store each line in |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
+This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read each line from \file{list.txt} into the variable |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
 
 The key difference from \make{} (and nearly all other build tools) is that rather than specifying the dependencies of a rule \textit{in advance}, we allow further dependencies to be specified \textit{after} using previous dependencies. This difference is crucial to properly handle generated files.
 
-We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake properly handles generated files and includes the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow rules to be written using the full power of Haskell, including the use of modules and functions to properly structure large systems.
+We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake properly handles generated files and includes the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow rules to be written using the full power of Haskell, including the use of modules and functions to properly structure large build systems.
 
 \subsection{Contributions}
 
 \begin{itemize}
 \item We describe the theory underlying \make{} (\S\ref{sec:theory_make}), and how to revise this theory to properly handle generated files (\S\ref{sec:theory_shake}).
-\item We describe how to extend our theory with a cache, to enable minimal rebuilds (\S\ref{sec:theory_shake_cache}).
+\item We describe how to extend our theory to enable minimal rebuilds (\S\ref{sec:cached_shake}).
 \item We describe how to implement our build tool in Haskell, including how to present the underlying theory in a way that is practically usable (\S\ref{sec:user_view}), and how to implement it efficiently (\S\ref{sec:developer_view}). While Haskell is not essential to implement our build tool, it offers a number of advantages -- primarily making IO effects explicit and providing nice syntactic sugar.
-\item We describe how additional features can be added to our build tool, including a Lint tool (\S?), a profiling tool (\S?) and a dependency analysis tool (\S?).
+\item We describe how additional features can be added to our build tool, including a Lint tool (\S\ref{sec:lint}), a profiling tool (\S?) and a dependency analysis tool (\S?).
 \item We allow rule dependencies and targets to be arbitrary values. While we can represent files (\S?), we are also able to represent static configuration information (\S?), the list of files in a directory (\S?) and commands that produce multiple results (\S?).
 \item We have implemented a large build system using Shake (\S?). The build system is 9000 of lines of Haskell, building over a million lines of source code and over a million lines of generated code, written in many programming languages. We originally implemented this build system using \make{}, but the result was slow to run, hard to maintain, and frequently caused spurious compile failures. Since using Shake, our build system has ceased to be a problem.
 \item We give a number of guidelines to follow when using Shake, based on our experiences (\S?).
@@ -427,7 +427,7 @@ This rule creates \file{.config} by copying either \file{.config.user} if it exi
 import System.Directory as IO
 
 newtype Exist = Exist FilePath
--- plus instances for |Typeable|, |Show|, |Eq|, |Hashable| and |Binary|
+    deriving (Typeable, Show, Eq, Hashable, Binary, NFData)
 
 instance Rule Exist Bool where
     validStored (Exist x) b = liftM (== b) $ IO.doesFileExist x
@@ -448,7 +448,7 @@ We define |doesFileExist| in Figure \ref{fig:doesfileexist}. We first define a |
 
 We use a restricted module export list to export only |doesFileExist| and |defaultRuleDoesFileExist|, and thus we are guaranteed that the types match. Note that if a value changes we are likely to call |IO.doesFileExist| twice in a row, once to invalidate the old value in |validStored|, and once to compute the new value in |default_|. We can alleviate this problem with a single element cache -- although in practice we find it not to be a problem, since the operating system typically caches all file queries.
 
-We end with a note of caution. We require that any stored value remains consistent other than when a rule actively changes in. Since this rule does not force the existence of a file, it should not be used on any files that may be generated by the build system -- |doesFileExist| should return the same at the start and end of the compilation.
+We end with a note of caution. We require that any stored value remains consistent other than when a rule actively changes in. Since this rule does not force the existence of a file, it should not be used on any files that may be generated by the build system -- |doesFileExist| should return the same at the start and end of the compilation. This property can be checked with Lint mode as described in \S\ref{sec:lint}.
 
 \subsection{File Based Rules}
 
@@ -553,7 +553,7 @@ These operations mirror their standard counterparts, but automatically include a
 
 Here we use the additional function |writeFile'|, simply |writeFile| lifted to the |Action| monad. This rule would work correctly without the |need| call on the second line, as both |readFile'| calls include |need| within them. However, when running the build system in parallel, the additional |need| allows both dependencies to be computed at the same time, while the |need| calls inside |readFile'| serialise building of the dependencies.
 
-We define a number of additional functions for working with files. The functions |readFileLines|/|writeFileLines| deal with files which should be treated as a list of lines. The function |writeFileEq| writes a file, but only if the contents have changed, and is useful for avoiding redundant computation due to unchanging files (see \S\ref{sec:unchanging_files}).
+We define a number of additional functions for working with files. The functions |readFileLines|/|writeFileLines| deal with files which should be treated as a list of lines. The function |writeFileChanged| writes a file, but only if the contents have changed, and is useful for avoiding redundant computation due to unchanging files (see \S\ref{sec:unchanging_files}).
 
 We define the |system'| function which take a list of command line arguments, and escapes them as necessary, before calling the underlying |system| command. This function also contributes generates profiling information (see \S\ref{sec:profiling}). The |system'| function should be used carefully, as it cannot tell which files the system command may depend on, so explicit |need| commands must be used (see \S\ref{sec:lint} for ways to detect such a problem). We recommend writing wrappers around system commands which insert the appropriate |need| calls.
 
@@ -577,10 +577,10 @@ A single Shake program can use multiple types of keys and values. To work with h
 
 \begin{code}
 data Any = Any (forall alpha bullet
-    (Typeable alpha, Eq alpha, Binary alpha, Hashable alpha, Show alpha) => alpha)
+    (Typeable alpha, Eq alpha, Binary alpha, Hashable alpha, Show alpha, NFData alpha) => alpha)
 \end{code}
 
-This definition, using existentials \cite{existentials}, allows anything supporting all the type classes required to be stored with type |Any|. We can define |Key| and |Value| types in terms of |Any|. We can implement |Eq|, |Show| and |Hashable| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
+This definition, using existentials \cite{existentials}, allows anything supporting all the type classes required to be stored with type |Any|. We can define |Key| and |Value| types in terms of |Any|. We can implement |Eq|, |Show|, |Hashable| and |NFData| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
 
 Implementing a |Binary| instance for |Any| is harder. Serialising a value is easy, but deserialising a value is problematic -- we can deserialise a |TypeRep|, but then we need to obtain the |get| method from the |Binary| instance associated with that type. The solution is to keep a table mapping |TypeRep|s to |Any| values containing the appropriate |Binary| instance. This table must include every type stored in the file we are reading, or it cannot be deserialised. We populate the table using all rules defined by |rule| and |defaultRule| in |Rules| -- which means we cannot move |defaultRule| into the |Rule| type class, as then a type could be usefully used without appearing in |Rules|, and would not be missing from the table.
 
@@ -599,7 +599,7 @@ data Status  =  Loaded Info
 data  Info = Info
       {  value :: Value
       ,  built :: Time
-      ,  changed :: Value
+      ,  changed :: Time
       ,  depends :: [[Key]]
       }
 \end{code}
@@ -645,7 +645,7 @@ To improve error messages we make a number of changes from the natural implement
 
 We have used a build system based on Shake at Standard Chartered for the last three years. Our build system has been an unqualified success -- while the complexity of our system has increased, the build system has been able to handle all the change with incremental extensions. When introduced it replaced an extensive \make{} based system, which ran to over 10,000 lines of script, was regularly incorrect and very slow. Introducing Shake made our build system 10x shorter and 2x faster, even with the constraint of remaining backwards compatible with the old build system. Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
 
-In a single run our build system typically checks 360,000, although certain options will cause it to do even more. Our build system has up to 20 levels deep of |apply| calls from the top-level |action| statement, but 80\% of build rules are between 3 and 7 steps deep.
+In a single run our build system typically checks 360,000 rules, although certain configurations cause it to do even more work. Our build system has up to 20 levels deep of |apply| calls from the top-level |action| statement, but 80\% of build rules are between 3 and 7 steps deep.
 
 % [(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
 
@@ -653,11 +653,11 @@ In developing our build system we have learnt a number of lessons -- both about 
 
 \subsection{Command Line Interface}
 
-While the |shake| function is suitable for use as |main|, it offers no support for command line arguments by default. We use the |shake| function in a program \prog{mk}, which handles command line options, allowing us to specify options, such as parallelism and producing profiling reports.
+While the |shake| function can be used as |main|, it offers no support for command line arguments. We use the |shake| function to build a program \prog{mk}, which handles command line options, allowing us to specify some of the fields in |ShakeOptions| from Figure \ref{fig:shake_core}, such as parallelism and verbosity.
 
-One essential feature of any build tool is the @mk clean@ command, which deletes all build objects. We structure our build system to write all generated objects into a the folder \file{.make}, allowing us to implement @clean@ by deleting that folder. In a Shake system it is also possible to force a rebuild of all files by deleting the database. Finally, it is possible to clean a Shake build system by reading the database to determine which files were generated -- but we have found generating files alongside your source code to be unhelpful.
+One essential feature of any build tool is the @mk clean@ command, which deletes all build objects. Using Shake we could query the database to find all build results, and delete them. Alternatively, deleting the database will cause a full rebuild. However, we have found the most convenient solution is to create all build objects in a folder \file{.make}, and then clean by deleting that directory.
 
-One feature of \make{} is that the targets can be specified on the command line. We allow a similar tactic, allowing both individual files and sets of files to be enabled/disabled. As an example, a user may write @mk !DOCS@ to disable building documentation, or @mk index.html@ to only build the target \file{index.html}. We control these targets by passing a modified version of |want| to the functions specifying rules, which consults the command line arguments:
+One feature of \make{} is that the targets can be specified on the command line. We provide this feature, allowing both individual files and sets of files to be enabled/disabled. As an example, a user may write @mk !DOCS@ to disable building documentation, or @mk index.html@ to build only \file{index.html}. We control these targets by passing a modified version of |want| to the functions specifying rules, which consults the command line arguments:
 
 \begin{code}
 documentation :: (String -> [FilePath] -> Rules()) -> Rules ()
@@ -669,25 +669,25 @@ documentation wants = do
 \subsection{Multiple Outputs}
 \label{sec:multiple_outputs}
 
-Some programs, such the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs as a result of one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, which the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to do both, but often the \file{.hi} file will be left unchanged. Producing two files captures this pattern. Unfortunately, many build systems (\make{} included) do not handle multiple outputs well. In Shake, it is usually possible to fake a dependency -- claiming that \file{Foo.hi} depends on \file{Foo.o}, while \file{Foo.o} depends on \file{Foo.hs}, thanks to suitable support for unchanging files (see \S\ref{sec:unchanging_files}).
+Some programs, such as the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs as a result of one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, while the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to do both, but often the \file{.hi} file will be left unchanged. Producing two files captures this pattern. Unfortunately, many build systems (\make{} included) do not handle multiple outputs well. In Shake, it is usually possible to fake a dependency -- claiming that \file{Foo.hi} depends on \file{Foo.o}, while \file{Foo.o} depends on \file{Foo.hs}, thanks to suitable support for unchanging files (see \S\ref{sec:unchanging_files}).
 
-Unfortunately fake dependencies are not always enough. Consider a process that reads \file{numbers.txt} containing lines of numbers, and splits produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. Here there is no fake dependency that can solve the problem. Fortunately, the power of multiple types of rules comes to the rescue. We define a new type, |File2|, which stores two files.
+Unfortunately fake dependencies are not always enough. Consider a process that reads \file{numbers.txt} containing lines of numbers, and splits produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update a file that has not changed. Here there is no fake dependency that can solve the problem. Fortunately, the power of multiple types of rules comes to the rescue. We define a new type, |Files|, which stores many files.
 
 \begin{code}
-data File2 = File2 FilePath FilePath
-data FileTime2 = FileTime2 Int Int
+data Files = Files [FilePath]
+data FileTimes = FileTimes [Int]
 
 rules = do
-    rule $ \(File2 x y) -> if (x,y) /= ("even.txt","odd.txt") then Nothing else Just $ do
+    rule $ \(File2 x y) -> if [x,y] /= ["even.txt","odd.txt"] then Nothing else Just $ do
         need ["numbers.txt"]
         system' ["number-split","numbers.txt"]
-        liftM2 File2 (getFileTime x) (getFileTime y)
+        liftM Files $ mapM getFileTime [x,y]
 
     ["even.txt","odd.txt"] **> \_ ->
         apply [File2 "even.txt" "odd.txt"]
 \end{code}
 
-
+In the Shake library we provide |*>>| for generalising this pattern.
 
 \subsection{Transitive Dependencies}
 
@@ -709,6 +709,7 @@ We have actually moved most of our stuff into a build.mk file which is fully tra
 On top of Shake we can build a number of useful tools.
 
 \subsection{Profiling}
+\label{sec:profiling}
 
 In addition to the information listed in |Info|, we also record the duration of each rule, excluding it's children. With this we can predict how long a rule will take to execute, and which rules are most expensive. We also have a trace associated with each rule, along with a trace function:
 
@@ -723,6 +724,7 @@ Storing the profile information is easy enough, but we also allow interactive fi
 In previous versions of Shake we only recorded profiling information when explicitly asked, and only start/end times of system commands. We found that by unconditionally enabling profiling, and by including more information, we were able to more accurately find bottlenecks.
 
 \subsection{Analysis}
+\label{sec:analysis}
 
 Often, after running a compile, people ask ``Why did that file rebuild?''. Using the Shake analysis tools those questions can be answered. It naturally complements profiling, being that to improve the build you can speed up a rule, make it depend on less (so it rebuilds less often). Using the information stored by profiling we can also run what-if analysis, to figure out what the most expensive file in the project is. All the information is in Shake, but have found the following questions most likely:
 
@@ -735,6 +737,7 @@ Often, after running a compile, people ask ``Why did that file rebuild?''. Using
 Shake contains full information on dependencies, so could be used to answer more questions, but these seem to be the common ones.
 
 \subsection{Lint checking}
+\label{sec:lint}
 
 There are two primary things we check for with lint. To get a full build we build everything, run whatever clean action the user has specified, then rerun each rule. The best lint will come if you:
 
