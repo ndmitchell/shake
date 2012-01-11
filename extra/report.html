@@ -106,7 +106,7 @@ function huffman(resultSize, xs)
 		// now, if something in the first n is not free, mark it free and delete anyone who relies on it
 		// then repeat, if nothing is not free, break
 		var cont = false;
-		for (var i = 0; i < resultSize; i++)
+		for (var i = 0; i < Math.min(resultSize, flat.length); i++)
 		{
 			if (!flat[i].free)
 			{
