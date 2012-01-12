@@ -676,7 +676,7 @@ In Shake, it is usually possible to fake multiple outputs with single file depen
 
 \begin{itemize}
 \item If \file{Foo.hi} is deleted \textit{without} also deleting \file{Foo.o}, then \file{Foo.hi} will not be rebuilt and the build system will be incorrect.
-\item If \prog{ghc} updates \file{Foo.hi}, but manages to determine it does not need to update \file{Foo.o}, then \file{Foo.hi} will not be marked as dirty and the build system will be inconsistent.
+\item If \prog{ghc} updates \file{Foo.hi}, but manages to determine it does not need to update \file{Foo.o}, then \file{Foo.hi} will not be marked as dirty and the build will be incorrect.
 \end{itemize}
 
 Despite these limitations, the fake single file dependency is usually sufficient. However, consider a command that reads \file{numbers.txt} containing lines of numbers, and produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update an output file that has not changed. In this situation there is no fake dependency that properly captures the flow of updates. Fortunately, we can capture the proper meaning by introducing a new type or rule, for rules which produce multiple files.
@@ -744,29 +744,33 @@ In practice we have not found changing the build system to be problematic. By mo
 \section{User Tools}
 \label{sec:tools}
 
-Shake, as described up until now, can provide a suitable replacement for \make{}. However, given the modern design of Shake, we can do better -- introducing tools to make build tool authors lives easier. In this section we describe three such tools that have been built on top of Shake -- a profiling tool to determine why the build is slow, an analysis tool to ask questions about the shape of the build dependencies and a lint tool to check that the build system is consistent.
+In addition to standard build functionality, Shake also provides additional features to make build tool authors lives easier. In this section we describe three features that have been built on top of Shake -- a profiling tool to determine what took most time, an analysis tool to query the build dependencies and a lint tool to check that the build system is sensible.
 
 \subsection{Profiling}
 \label{sec:profiling}
 
-Shake records additional information when executing rules, in order to produce profiling reports, hopefully allowing build system authors to speed up their build. Shake collects two pieces of profile record.
+Shake records two separate pieces of profiling information.
 
-\paragraph{Rule execution times} When running a rule we record the execution time, excluding any time to build its dependencies. From this information, we can predict how long a rule will take to execute, and which rules are most expensive. The important thing is we can aggregate this information over multiple build runs, so can produce a hypothetical build time, ignoring parallelism.
+\paragraph{Rule execution times} When running a rule we record the execution time, excluding any time to build its dependencies. From this information, we can determine which rules are most expensive. This information can be aggregated from different build runs, allowing us to produce a total build time, ignoring parallelism, even if only a handful of rules were executed in the last run.
 
-\paragraph{Traced IO actions} We also provide a trace function:
+\paragraph{Traced IO actions} Most time consuming rules invoke IO actions, typically system commands. We provide a trace function:
 
 \begin{code}
 traced :: String -> IO alpha -> Action alpha
 \end{code}
 
-All traced actions are stored with the rule that invoked them, along with a human readable message, and the start and end times. We automatically include traces for all system commands. Given that most build commands are system commands, we can now trace how many system commands were executing at each stage. For example we can produce a parallelism graph as shown in Figure \ref{fig:profile}. This only deals with one build system execution, but lets us measure the parallelism.
-
-Storing the profile information is easy enough, but we also allow interactive filtering and reports with Javascript/HTML. We allow grouping of rules using the same wildcard syntax as in \ref{fig:file_rules}. Note that there is no way to group rules as per their definition with |rule|, since rules do not have a unique identifier or name -- only a higher order function to match them. We could require all rules to be given names, which would make profiling easier, but at the cost of complicating everything else. Given that profiling reports and viewed rarely, it seems the wrong trade off -- also people often want to slice in different ways. As an example, given a project with five subprojects, each of which consists of both C and Haskell, it is both interesting to see profiling information C vs Haskell, and also of the five projects against each other.
+\noindent All actions run by |traced| are stored by the rule that invoked them, along with a human readable message (the first argument), and the start and end times. We automatically call |traced| when running system commands. The execution time of IO actions can be aggregated from different build runs, similar to rule execution times. In addition, taking only IO actions from a single run, we can determine how many IO actions were executing at each point in time -- allowing us to produce a parallelism graph as shown in Figure \ref{fig:profile}.
 
 We have built profiling support into the core of Shake. Since any execution of a rule is likely to be somewhat slow (most rules will be spawning system processes), we always collect profiling information. In previous versions of Shake we only recorded profiling information when explicitly asked, and only start/end times of system commands. We found that by unconditionally enabling profiling, and by including more information, we were able to more accurately find bottlenecks.
 
 \subsection{Analysis}
 \label{sec:analysis}
+
+The Shake database records the dependencies of each item, allowing a full dependency graph to be produced. However, for any project of moderate size, the result is rarely human readable -- although through judicious filtering it is possible to produce something useful (see Figure \ref{fig:analysis} for an example). Instead, we have found that writing passes to answer specific questions
+
+Instead
+
+Show me a full dependency graph. While this question is asked, for larger projects it rarely produces something human readable -- although through judicious filtering we have produced useful graphs. A far more interesting problem is to state a list of expected invariants on the build system (e.g. modules outside |Development.Shake| should not be importing things from inside |Development.Shake| directly).
 
 Often, after running a compile, people ask ``Why did that file rebuild?''. Using the Shake analysis tools those questions can be answered. It naturally complements profiling, being that to improve the build you can speed up a rule, make it depend on less (so it rebuilds less often). Using the information stored by profiling we can also run what-if analysis, to figure out what the most expensive file in the project is. All the information is in Shake, but have found the following questions most likely:
 
@@ -774,10 +778,12 @@ Often, after running a compile, people ask ``Why did that file rebuild?''. Using
 \item In my last execution, why was a particular file rebuilt? Shake can show the complete path of dependencies.
 \item What is the most expensive file to rebuild? Shake scans every file, assuming that there are no savings due to unchanging files (see \S\ref{sec:unchanging_files}, and produces a report. Often, after seeing the top candidate, the user wishes to exclude that and continue, so Shake produces the files in order.
 \item If I touch this file, what will rebuild? Shake provides similar answers to the previous questions, including a projected time.
-\item Show me a full dependency graph. While this question is asked, for larger projects it rarely produces something human readable -- although through judicious filtering we have produced useful graphs. A far more interesting problem is to state a list of expected invariants on the build system (e.g. modules outside |Development.Shake| should not be importing things from inside |Development.Shake| directly).
+\item
 \end{itemize}
 
 Shake contains full information on dependencies, so could be used to answer more questions, but these seem to be the common ones.
+
+
 
 \subsection{Profiling and Analysis}
 
