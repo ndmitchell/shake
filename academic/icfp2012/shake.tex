@@ -731,13 +731,15 @@ Therefore, a standard pattern is to define \file{*.dep} as the immediate depende
 
 Throughout this work, we assume that \textit{the build system does not change}, merely the inputs to the build system. While the build system does change more rarely than the rest of the code, in our case about 1.7\% of commits have touched the build system. However, there have been only a handful of times when a build system change required a complete rebuild to be performed. We manage build system changes with a number of strategies:
 
-\paragraph{A |shakeVersion| field in |ShakeOptions|} We have a field named |shakeVersion| in the |ShakeOptions| record defined in Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, then this flag can be incremented to force a full rebuild. This is the nuclear option -- we have only had 8 such occurrences in the last three years, and none recently (as we have learnt how Shake can be used best).
+\paragraph{A \textsf{shakeVersion} field in \textsf{ShakeOptions}} We have a field named |shakeVersion| in the |ShakeOptions| record defined in Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, then this flag can be incremented to force a full rebuild. This is the nuclear option -- we have only had 8 such occurrences in the last three years, and none recently (as we have learnt how Shake can be used best).
 
 \paragraph{Depending on the build source file} A conservative strategy is to depend on the build system in each rule, and then if any of the build system changes rebuild everything from scratch. While that is an option, it would cause a significant number of redundant rebuilds. Instead, where we have files that specify code generators, which could conceptually be stored in separate programs, we put an explicit dependency and use |writeFileChanged| (see \S\ref{sec:derived}). Now, if the generator changes it will be run again, but typically only a handful of files will see an actual change, so very little is rebuilt.
 
 \paragraph{Make the build system interpret} Much information, such as what files a \file{*.c} file includes, can be computed from the source files. Where information cannot be computed, such as which files should be linked together to form an executable, we write small rule files which list the inputs to an object. The standard rule for linking depends on these rule files, and thus if the rules about what goes into an executable change the file is automatically rebuilt.
 
 \paragraph{Restarting rules} If Shake detects that a dependency has changed, it rebuilds the rule from the beginning. Due to the presence of the |[[Key]]| |depends| field, it never checks for rules that the previous step did not permit. The result is that most changes cause something in the dependencies to change, and thus the rule is rerun anyway.
+
+\smallskip\smallskip
 
 In practice we have not found changing the build system to be problematic. By moving settings out of the build system, into separate tracked rule files, and using the |shakeVersion| flag as a last resort, we see no issues. However, the only correct way to deal with a changing build system would be functional equality -- something that would be particularly useful to Shake.
 
@@ -761,29 +763,23 @@ traced :: String -> IO alpha -> Action alpha
 
 \noindent All actions run by |traced| are stored by the rule that invoked them, along with a human readable message (the first argument), and the start and end times. We automatically call |traced| when running system commands. The execution time of IO actions can be aggregated from different build runs, similar to rule execution times. In addition, taking only IO actions from a single run, we can determine how many IO actions were executing at each point in time -- allowing us to produce a parallelism graph as shown in Figure \ref{fig:profile}.
 
-We have built profiling support into the core of Shake. Since any execution of a rule is likely to be somewhat slow (most rules will be spawning system processes), we always collect profiling information. In previous versions of Shake we only recorded profiling information when explicitly asked, and only start/end times of system commands. We found that by unconditionally enabling profiling, and by including more information, we were able to more accurately find bottlenecks.
+\smallskip\smallskip
+
+We have built profiling support into the core of Shake. Since any execution of a rule is likely to take some time (most rules will be spawning system processes), the overhead of profiling information is negligible. In previous versions of Shake we only recorded profiling information when explicitly asked, but found that users often wanted to profile the build run that had just completed -- always recording profile information makes that possible.
 
 \subsection{Analysis}
 \label{sec:analysis}
 
-The Shake database records the dependencies of each item, allowing a full dependency graph to be produced. However, for any project of moderate size, the result is rarely human readable -- although through judicious filtering it is possible to produce something useful (see Figure \ref{fig:analysis} for an example). Instead, we have found that writing passes to answer specific questions
-
-Instead
-
-Show me a full dependency graph. While this question is asked, for larger projects it rarely produces something human readable -- although through judicious filtering we have produced useful graphs. A far more interesting problem is to state a list of expected invariants on the build system (e.g. modules outside |Development.Shake| should not be importing things from inside |Development.Shake| directly).
-
-Often, after running a compile, people ask ``Why did that file rebuild?''. Using the Shake analysis tools those questions can be answered. It naturally complements profiling, being that to improve the build you can speed up a rule, make it depend on less (so it rebuilds less often). Using the information stored by profiling we can also run what-if analysis, to figure out what the most expensive file in the project is. All the information is in Shake, but have found the following questions most likely:
+The Shake database records the dependencies of each item, allowing a full dependency graph to be produced after the rules have been run. However, for any project of moderate size, a picture of the dependency graph is rarely comprehensible -- although through judicious filtering it is possible to produce something useful (see Figure \ref{fig:analysis} for an example). Instead, we have found value in that writing passes to answer specific questions, such as:
 
 \begin{itemize}
-\item In my last execution, why was a particular file rebuilt? Shake can show the complete path of dependencies.
-\item What is the most expensive file to rebuild? Shake scans every file, assuming that there are no savings due to unchanging files (see \S\ref{sec:unchanging_files}, and produces a report. Often, after seeing the top candidate, the user wishes to exclude that and continue, so Shake produces the files in order.
-\item If I touch this file, what will rebuild? Shake provides similar answers to the previous questions, including a projected time.
-\item
+\item Why was a particular file rebuilt in the last build run? Shake shows the complete path of dependencies.
+\item If I touch a file, what will rebuild? Shake computes the list of rules that depend on that file, including indirect dependencies, but assuming no unchanging files (see \S\ref{sec:unchanging_files}.
+\item What is the most expensive file to change? For each leaf of the graph, Shake computes all dependencies, and then uses execution times from profiling to determine the most expensive file.
+\item Do my dependencies follow some layering principle? For example, I would not expect any files outside |Development.Shake.*| to import any modules from inside that module tree, other than |Development.Shake| itself. Many large projects are structured into isolated layers, which can be validated by the build system.
 \end{itemize}
 
-Shake contains full information on dependencies, so could be used to answer more questions, but these seem to be the common ones.
-
-
+Shake can export the full dependency graph, so additional queries can be written.
 
 \subsection{Profiling and Analysis}
 
@@ -799,16 +795,21 @@ Shake contains full information on dependencies, so could be used to answer more
 \label{fig:analysis}
 \end{figure}
 
-As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program from scratch with a maximum of four processors -- for a comparison with \prog{ghc --make} see \S\ref{sec:ghc-make}\footnote{The program in question is actually the Shake build system, which is being compiled using itself.}. The entire process takes 10.35 seconds, but spends 19.34 seconds executing rules, giving a parallel speed up of 1.9 times.
+As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program\footnote{The program is Shake itself, which can be compiled using Shake.} from scratch with a maximum of four processors -- for a comparison with \prog{ghc --make} see \S\ref{sec:ghc-make}. The entire process takes 10.35 seconds, but spends 19.34 seconds executing rules, giving a parallel speed up of 1.9 times.
 
 Figure \ref{fig:profile} shows the number of traced system commands executing at any point during the build. We see a start up period where zero commands are running and the build system is checking for dependencies, followed by three spikes up to four processors, followed by a tail of using one processor.
 
-Turning to the dependency graph in Figure \ref{fig:analysis}, we have the |Main| module at the top labelled 3. This graph shows the dependencies of the \file{.hi} files, after hiding three leaf utility modules which are include in many places and have no dependencies (they add lots of arcs, obscuring the real dependency graph). It is clear the build proceeds in three stages, with bottle-neck dependencies marked 1, 2 and 3. These three dependencies account for the three periods of one processor usage. The final tail of one processor includes both compilation of the main module (which profiling reports takes 0.23 seconds) and linking (which takes 2.31 seconds).
+Turning to the dependency graph in Figure \ref{fig:analysis}, we have the |Main| module at the top labelled 3. This graph shows the dependencies of the \file{.hi} files, after hiding three leaf utility modules which are include in many places and have no dependencies (they add lots of lines, obscuring the real dependency graph). It is clear the build proceeds in three stages, with bottle-neck dependencies marked 1, 2 and 3. These three dependencies account for the three periods of one processor usage. The final tail of one processor includes both compilation of the main module (which profiling tells us takes 0.23 seconds) and linking (which takes 2.31 seconds).
 
-This example shows how Shake's profiling and analysis reports can be used to improve build performance. If the bottle-neck modules could be split up, or if their compilation time was reduced (particularly for those marked 1, which account for a longer single processor section), the overall build speed would increase. In practice, we have found that for large build systems, where Shake is building multiple targets, the parallelism usually stays at the maximum (or just below it) for most of the build time, before reducing down to one processor as the last few tasks complete.
+This example shows how Shake's profiling and analysis reports can be used to improve build performance. If the bottle-neck modules could be split up, or if their compilation time was reduced (particularly for those marked 1, which account for a longer single processor section), the overall build speed would increase. In practice, we have found that for large build systems, where Shake is building multiple targets, the parallelism usually stays at the maximum (or fractionally below it) for most of the build time, before reducing down to one processor as the last few tasks complete.
 
 \subsection{Lint checking}
 \label{sec:lint}
+
+Writing a large build system is a complex endeavour.
+
+Can we roll it right back? Look which files a system command uses, and from that build the profiling report? Might work better on Windows.
+
 
 There are two primary things we check for with lint. To get a full build we build everything, run whatever clean action the user has specified, then rerun each rule. The best lint will come if you:
 
@@ -865,41 +866,49 @@ We can imagine more complex examples, and do define such examples in \ref{sec:mu
 \section{Related Work}
 \label{sec:related_work}
 
-Build systems are an essential part of any large software project, yet often prove surprisingly tricky to get right. While most languages have a nice tool for building single language projects (ocamlbuild, ghc --make, Visual Studio projects), when building more complex multi-language projects, most people turn to \make{}. While there are many \make{} competitors (Scons, CMake, Jam, Ant, Waf), none have gained universal acceptance. We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
+Build systems can be divided into two categories -- those which target single-language projects with fixed rules (e.g. \prog{ocamlbuild}, \prog{ghc --make}, Visual Studio projects), and those which are more general allowing user specified rules (e.g. \make{} and Shake). Focusing on the second category, the defacto standard is \make{}, but there are many \make{} competitors (notably Ant, CMake, Jam, Scons and Waf). Most of these tools read a rule list, generate a dependency graph, then execute commands while traversing that graph.
 
-Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
-
-A standard build system generates a dependency graph for all files, and processes them to meet the dependency constraints. While many have taken the approach of packaging dependency graph functionality in alternative ways, we here review a build systems which have a particular approach:
+Since the number of build systems is vast, we have focused on four build systems which take different approaches (Redo, Ninja, Fabricate and Tup). Interestingly, the only thing all four systems have in common is that they require some external database of build data, which is used in addition to the rules and the file system. Unlike Shake, all these build systems are strictly limited to files.
 
 \subsection{Redo}
 
-https://github.com/apenwarr/redo
+% https://github.com/apenwarr/redo
 
-Redo was originally described by djb, and then separately implemented later. It has several features in common with Shake, including the use of a central database to track dependencies. Focusing on the differences, each rule in a Redo script is a separate file. This reduces the abstraction, and complicates defining a build system, has a very limited rule matching format (just by extension), but has the upside of simplicity (there is no redo syntax, just shell script), and you can depend on the contents of a rule. You can only specify simple files like default.o, and it's hard to get them in the right place. The language of choice are shell scripts, although this can be altered with she-bang lines. The advantage of separate files is it can depend on a rule, which is cool. It doesn't have rules for anything other than files, which means it can't deal with multiple outputs nicely.
+The Redo build system \cite{redo} is certainly the most similar to Shake in its underlying theory. Rules are run starting at the target. A rule may call |redo-ifchange| (similar to |need|) to ensure that this rule is repeated if any of the file arguments change. Rules can be specified to build either a specific named file, or a set of files ending with a particular extension -- more precise rules can be implemented by defining a single rule with different behaviors based on the output filename.
 
-It can only track decisions that are files, which is annoying.
+While Redo is similar to Shake in theory, the practical implementation is significantly different, resulting in different levels of power. Instead of having a single rule store, Redo stores each rule in a separate file, and the script language is simply shell script, where |redo-ifchange| is a program. The advantage of separate files is that Redo is able to depend on the actual rule to build the output, meaning if the build system changes the correct and minimal build elements will be rebuilt. However, separating each build rule makes it harder to reason about the build system, and eliminates many potential uses of abstraction. Redo does not support unchanging files, doesn't work on Windows, and has no support for multiple outputs.
 
 \subsection{Ninja}
 
-Ninja the Chromium build system has dynamic dependencies (you can specify a rule that contains dependencies), multiple outputs. It focus on only running command lines, and is a bit more limited, but still encompasses many of the same ideas.
+% http://martine.github.com/ninja/manual.html
 
-http://martine.github.com/ninja/manual.html
-
-http://google-engtools.blogspot.com/2011/08/build-in-cloud-how-build-system-works.html
+The Ninja build system \cite{ninja} is designed as a two-stage build system -- users specify their build rules in some high-level manner, which is then translated to a set of Ninja build rules. As a result, the Ninja build system is not designed to be general purpose and configuration choices are expected to be resolved by the first level. The Ninja target language supports three dependency features above \make{}. Firstly, a rule can depend on the list of files contained in another file, allowing dynamic dependencies. Secondly, the command line for each rule is tracked, resulting in a rebuild if the rule itself changes. Thirdly, a rule can generate multiple outputs, which are properly tracked.
 
 \subsection{Tup}
 
-https://gittup.org/tup works bottom up, rather
+% http://gittup.org/tup/build_system_rules_and_algorithms.pdf
+
+The Tup build system \cite{tup} is designed as an incremental build system. Tup has a similar dependency structure to \make{}, but has a significantly different implementation. Instead of scanning all dependencies, it expects the operating system to supply a list of changed files, avoiding the overhead of checking which files have changed. For large build systems the result can be a significant speed improvement for builds with few files to be rebuilt. We believe a similar implementation strategy could be applied to Shake, also turning it into an incremental system.
+
+Another significant difference in Tup is the automatic treatment of dead build objects. If a rule to build \file{foo} is deleted from the rule list, then Tup automatically deletes the file \file{foo} from the file system, by seeing what has changed in the build rules. The problem of old build objects remaining can be serious, resulting in builds succeeding that should have failed, and that will fail as soon as a clean build is performed (to alleviate this risk, we use an overnight build which starts from scratch). However, there is equally a risk that a user will modify a build object, then remove the rule for the object turning it from a build object to a source file -- in this situation, deleting the file would be most unwelcome. We could add support for this in Shake, but chose not to.
+
+As a concrete example, we have a configuration to generate a visual studio project file, which is then modified by the user. Deleting that file would be unwelcome.
+
+\subsection{Fabricate}
+
+% http://code.google.com/p/fabricate/
+
+The key innovation in the Fabricate build system \cite{Fabircate} is that dependencies do not need to be given explicitly. A build system is described as a Python program, which primarily executes system commands in order. While executing the commands, Fabricate uses system tracing (strace \cite{strace} on Linux) to record which files are accessed. In future runs, if the same system command is reached but none of its required files have changed, the command is skipped. The resulting build systems are simple, and avoid the difficulties of correctly specifying dependencies.
+
+There are two inherent difficulties for designing a build system without explicit dependencies. Firstly, the system tracing mechanisms on different platforms are varied, and in particular on Windows are somewhat fragile, requiring hooking system libraries. Secondly, parallelism needs to be expressed manually -- Fabricate requires the addition of explicit grouping annotations before parallelism can be used.
 
 \subsection{Haskell Build Libraries}
 
-Haskell libraries: Blueprint, Coadjute, nemesis, cake x 2 (there are two distinct build libraries for Haskell named  cake!) hake, hmk, zoom, openshake, abba.
-
-The |rule|/|apply| functions are checked at runtime. However, since everyone uses sugared versions, that isn't an issue. It should be relatively easy to define a statically typed rule that accumulates its types used, but it's more complex. OpenShake did it using type functions. If you thread the types through teh Rules type as a type argument you can also solve the serialisation of existentials.
+There are a surprising number of Haskell libraries implementing a full dependency based build system -- we are aware of ten (Abba, Blueprint, Coadjute, Cake, Cake\footnote{There are two distinct build libraries for Haskell named Cake!}, Hake, Hmk, Nemesis, OpenShake and Zoom). Of these, the two Cake libraries and OpenShake are derived from an early presentation of the principles behind Shake, before the source code was available. The primary difference from the Cake libraries is that Shake as presented in this paper allows multiple different types of build rule, while the Cakes allow only file rules. Compared to OpenShake \cite{openshake}, we have opted to have |rule|/|apply| based on dynamic types, and then expect everyone to use sugared versions to regain static guarantees of type safety. In contrast, OpenShake uses type functions \cite{type_functions} to statically track the available rule types, reducing some of the complexity we tackle with serialisation in \S\ref{sec:dynamically_typed} -- but compared to the similarities, this difference is minor.
 
 \subsection{Comparison to @ghc --make@}
 
-Compared to GHC --make, building the Shake project takes 9 seconds to compile, while GHC --make takes 6 seconds. The reason for the difference is that GHC has to analyse dependencies once, and can keep .hi information in memory. However, Shake can fight back with some parallelism - in the Shake demo, if we scale each compilation to 5seconds, then GHC would take at least 70 seconds, while Shake can gain with parallelism to take 45 seconds. Compared to something like gcc, which is always invoked in single mode, we do better.
+Compared to GHC --make, building the Shake project takes 10.35 seconds to compile, while GHC --make takes ? seconds. The reason for the difference is that GHC has to analyse dependencies once, and can keep .hi information and package database information in memory. However, Shake can fight back with some parallelism - in the Shake demo, if we scale each compilation to 5seconds, then GHC would take at least 70 seconds, while Shake can gain with parallelism to take 45 seconds. Compared to something like gcc, which is always invoked in single mode, we do better.
 
 However, we do far better for a null rebuild. We have essentially reduced it to a question of which files already exist, and which timestamps do a set of files -- to rebuild GHC must ask at least these questions, and in practice will look at the insides of each file. As a result, we can do a minimal rebuild in 0.03 seconds, while GHC takes 0.6 seconds. Our only unnecesary overhead is reading in the database.
 
@@ -910,7 +919,11 @@ We have shown how build systems can be generalised to support generated files.
 
 Shake is awesome. Any future work goes here.
 
+We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- including handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
 
+Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
+
+Build systems are an essential part of any large software project.
 
 \subsection*{Acknowledgements}
 

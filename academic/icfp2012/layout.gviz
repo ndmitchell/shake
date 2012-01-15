@@ -1,3 +1,5 @@
+# dot layout.gviz -Teps -olayout.eps
+
 digraph shake{
 
 "Development.Shake"[label="2"];
@@ -82,10 +84,4 @@ digraph shake{
 "Development.Shake" -> "Development.Shake.Oracle";
 "Development.Shake" -> "Development.Shake.Rerun";
 
-"Main" -> "Examples.Tar.Main";
-"Main" -> "Examples.Self.Main";
-"Main" -> "Examples.Test.Basic1";
-"Main" -> "Examples.Test.Directory";
-"Main" -> "Examples.Test.Errors";
-"Main" -> "Examples.Test.Files";
 }
