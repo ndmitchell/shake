@@ -33,7 +33,7 @@ shaken test rules = do
             createDirectoryIfMissing True out
             when b $ renameFile tempfile dbfile
             shake shakeOptions{shakeFiles=out, shakeLint=True} $ rules args (out++)
-        _ -> shake shakeOptions{shakeFiles=out, shakeDump=True, shakeParallel=4} $ rules args (out++)
+        _ -> shake shakeOptions{shakeFiles=out, shakeDump=True, shakeVerbosity=Diagnostic, shakeParallel=4} $ rules args (out++)
 
 
 unobj :: FilePath -> FilePath

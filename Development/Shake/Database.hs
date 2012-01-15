@@ -65,6 +65,7 @@ data Database = Database
     ,journal :: Journal
     ,filename :: FilePath
     ,version :: Int -- user supplied version
+    ,logger :: String -> IO () -- logging function
     }
 
 data Info = Info
@@ -128,22 +129,30 @@ request Database{..} validStored ks =
         f k = do
             s <- S.get
             case Map.lookup k s of
-                Nothing -> build k
-                Just (Building bar _) -> return $ Response_ [] [(k,bar)] []
+                Nothing -> do liftIO $ logger $ "building " ++ arg k ++ " because it is not in the database"; build k
+                Just (Building bar _) -> do liftIO $ logger $ "already building " ++ arg k; return $ Response_ [] [(k,bar)] []
                 Just (Built i) -> return $ Response_ [] [] [(changed i, value i)]
                 Just (Loaded i) -> do
                     valid <- liftIO $ validStored k $ value i
-                    if not valid then build k else validHistory k i (depends i)
+                    liftIO $ logger $ "validStored " ++ arg k ++ " = " ++ show valid
+                    if valid then validHistory k i (depends i) else do
+                        liftIO $ logger $ "building " ++ arg k ++ " because is not validStored"; build k
+
+        arg xs = let s = show xs; b = ' ' `elem` s in ['('|b] ++ s ++ [')'|b]
 
         validHistory :: Key -> Info -> [[Key]] -> S.StateT (Map Key Status) IO Response_
         validHistory k i [] = do
+            liftIO $ logger $ "marked as valid " ++ arg k
             S.modify $ Map.insert k $ Built i
             return $ Response_ [] [] [(changed i, value i)]
         validHistory k i (x:xs) = do
             r@Response_{..} <- fmap concatResponse $ mapM f x
             if not $ null execute && null barriers then return r
              else if all ((<= built i) . fst) values then validHistory k i xs
-             else build k
+             else do
+                let bad = head [kk | (kk,(tt,_)) <- zip x values, tt > built i]
+                liftIO $ logger $ "building " ++ arg k ++ " because of " ++ arg bad
+                build k
 
         build :: Key -> S.StateT (Map Key Status) IO Response_
         build k = do
@@ -156,6 +165,7 @@ request Database{..} validStored ks =
 
 finished :: Database -> Key -> Value -> [[Key]] -> Double -> [(String,Double,Double)] -> IO ()
 finished Database{..} k v depends duration traces = do
+    logger $ "finished building " ++ show k
     let info = Info v timestamp timestamp depends duration traces
     (info2, barrier) <- modifyVar status $ \mp -> return $
         let Just (Building bar old) = Map.lookup k mp
@@ -202,14 +212,14 @@ showJSON Database{..} = do
 ---------------------------------------------------------------------
 -- DATABASE
 
-withDatabase :: FilePath -> Int -> (Database -> IO a) -> IO a
-withDatabase filename version = bracket (openDatabase filename version) closeDatabase
+withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO a) -> IO a
+withDatabase logger filename version = bracket (openDatabase logger filename version) closeDatabase
 
 
 -- Files are named based on the FilePath, but with different extensions,
 -- such as .database, .journal, .trace
-openDatabase :: FilePath -> Int -> IO Database
-openDatabase filename version = do
+openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO Database
+openDatabase logger filename version = do
     let dbfile = filename <.> "database"
         jfile = filename <.> "journal"
 

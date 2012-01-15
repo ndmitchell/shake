@@ -71,6 +71,7 @@ data Verbosity
     | Quiet  -- ^ Only output essential messages (typically errors)
     | Normal -- ^ Output normal messages (typically errors and warnings)
     | Loud   -- ^ Output lots of messages (typically errors, warnings and status updates)
+    | Diagnostic -- ^ Output messages for virtually everything (for debugging a build system)
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable)
 
 
@@ -220,7 +221,7 @@ run opts@ShakeOptions{..} rs = do
     start <- getCurrentTime
     registerWitnesses rs
     outputLock <- newVar ()
-    withDatabase shakeFiles shakeVersion $ \database -> do
+    withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
         withObserver database $ \observer ->
             withPool (if shakeLint then 1 else shakeParallel) $ \pool -> do
                 let s0 = S database pool start stored execute outputLock shakeVerbosity observer [] [] 0 []
@@ -233,6 +234,9 @@ run opts@ShakeOptions{..} rs = do
     where
         stored = createStored rs
         execute = createExecute rs
+
+        logger outputLock | shakeVerbosity >= Diagnostic = \msg -> modifyVar_ outputLock $ const $ putStrLn $ "% " ++ msg
+                          | otherwise = const $ return ()
 
         withObserver database act
             | not shakeLint = act $ \key val -> val
@@ -398,8 +402,7 @@ putWhen :: (Verbosity -> Bool) -> String -> Action ()
 putWhen f msg = Action $ do
     s <- get
     when (f $ verbosity s) $
-        liftIO $ modifyVar_ (outputLock s) $ const $
-            putStrLn msg
+        liftIO $ modifyVar_ (outputLock s) $ const $ putStrLn msg
 
 
 -- | Write a message to the output when the verbosity is appropriate.
