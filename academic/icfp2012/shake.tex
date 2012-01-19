@@ -32,7 +32,7 @@
 \newcommand{\make}{\prog{make}}
 
 \begin{document}
-\conferenceinfo{ICFP'12,} {September 27--29, 2010, Baltimore, Maryland, USA.}
+\conferenceinfo{ICFP'12,} {September 10--12, 2012, Copenhagen, Denmark.}
 \CopyrightYear{2012}
 \copyrightdata{978-1-60558-794-3/10/09}
 
@@ -77,7 +77,7 @@ A build tool, such as \make{} \cite{make,recursive_make}, takes a set of input f
 
 \noindent This rule builds the tar archive \file{result.tar} from the inputs \file{a.txt} and \file{b.txt}. Whenever \file{a.txt} or \file{b.txt} changes \file{result.tar} will be regenerated.
 
-What if we want to build \file{result.tar} from the list of files in \file{list.txt}? \make{} offers no easy way to express this pattern (there are workarounds, discussed in \S\ref{sec:make_hacks}, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
+What if we want to build \file{result.tar} from the list of files in \file{list.txt}? Unfortunately, \make{} offers no easy way to express this pattern (there are workarounds, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
 
 \begin{code}
 "result.tar" *> \_ -> do
@@ -99,10 +99,9 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 \item We describe the theory underlying \make{} (\S\ref{sec:theory_make}), and how to revise this theory to properly handle generated files (\S\ref{sec:theory_shake}).
 \item We describe how to extend our theory to enable minimal rebuilds (\S\ref{sec:cached_shake}).
 \item We describe how to implement our build tool in Haskell, including how to present the underlying theory in a way that is practically usable (\S\ref{sec:user_view}), and how to implement it efficiently (\S\ref{sec:developer_view}). While Haskell is not essential to implement our build tool, it offers a number of advantages -- primarily making IO effects explicit and providing nice syntactic sugar.
-\item We describe how additional features can be added to our build tool, including a Lint tool (\S\ref{sec:lint}), a profiling tool (\S?) and a dependency analysis tool (\S?).
-\item We allow rule dependencies and targets to be arbitrary values. While we can represent files (\S?), we are also able to represent static configuration information (\S?), the list of files in a directory (\S?) and commands that produce multiple results (\S?).
-\item We have implemented a large build system using Shake (\S?). The build system is 9000 of lines of Haskell, building over a million lines of source code and over a million lines of generated code, written in many programming languages. We originally implemented this build system using \make{}, but the result was slow to run, hard to maintain, and frequently caused spurious compile failures. Since using Shake, our build system has ceased to be a problem.
-\item We give a number of guidelines to follow when using Shake, based on our experiences (\S?).
+\item We describe how additional features can be added to our build tool, including a Lint tool (\S\ref{sec:lint}), a profiling tool (\S\ref{sec:profiling}) and a dependency analysis tool (\S\ref{sec:analysis}).
+\item We allow rule dependencies and targets to be arbitrary values. While we can represent files (\S\ref{sec:file_rules}), we can also represent static configuration information, the existence of files in a directory (\S\ref{sec:exists_rule}) and commands that produce multiple results (\S\ref{sec:multiple_outputs}).
+\item We have implemented a large build system using Shake (\S\ref{sec:evaluation}). The build system is 9000 of lines of Haskell, building over a million lines of source code and over a million lines of generated code, written in many programming languages. We originally implemented this build system using \make{}, but the result was slow to run, hard to maintain, and frequently caused spurious compile failures. Since using Shake, our build system has ceased to be a problem. This experience suggests a number of guidelines to follow when using Shake.
 \end{itemize}
 
 
@@ -352,10 +351,10 @@ The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we 
 This script demonstrates a number of features of Shake based build systems:
 
 \begin{itemize}
-\item It's a full Haskell program with a |main| entry point. While |main| can simply call |shake|, it can also do anything it likes, such as command line processing (see \S?).
-\item The call to |getDirectoryFiles| is tracked (see \S?), if the results change, it will trigger a rebuild.
+\item It's a full Haskell program with a |main| entry point. While |main| can simply call |shake|, it can also do anything it likes, such as command line processing (see \S\ref{sec:command_line}).
+\item The call to |getDirectoryFiles| is tracked (see \S\ref{sec:other_rule_types}), if the results change, it will trigger a rebuild.
 \item We run arbitrary system commands in the internals.
-\item We fully track the dynamic dependencies introduced by header files. The function |cIncludes| given a source file returns all the files required by transitive @#include@ directives. (In \S? we show a better way to define transitive dependencies.)
+\item We fully track the dynamic dependencies introduced by header files. The function |cIncludes| given a source file returns all the files required by transitive @#include@ directives. (In \S\ref{sec:transitive} we show a better way to define transitive dependencies.)
 \end{itemize}
 
 \subsection{Core Shake}
@@ -415,13 +414,14 @@ Every rule that is defined or applied in Shake must be a member of the |Rule| cl
 \item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring that errors happen at the appropriate place.
 \end{description}
 
-Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:user_view_files}. Instead of defining targets to build, we allow rules with no target, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate |IO alpha| to |Action alpha|.
+Standard Shake rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the steps necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no standard rules match -- for an example see \S\ref{sec:file_rules}. Instead of defining targets to build, we allow rules with no target, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define rules in a build system, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate |IO alpha| to |Action alpha|.
 
 The |apply1| function takes a |key|, builds it, and returns the associated |value|. The |apply1| function finds a rule of the appropriate type whose application returns |Just|, then runs the action. The |apply| function can be thought of as |mapM apply1|, but is defined to build all necessary dependencies in parallel (see \S\ref{sec:parallelism}).
 
 We have deliberately kept the core of Shake small and extensible, supporting all instantiations of |Key|/|Value| outside, thus focusing purely on the building side. We describe how to implement this core in \S\ref{sec:developer_view}.
 
 \subsection{Defining Rule Types}
+\label{sec:exists_rule}
 
 To work correctly, the |key|/|value| types of |apply1| and |rule| must match each other. To aid end users, we suggest that most rule authors define sugar functions, as we have done for the rule types included with Shake. The simplest rule available is one that determines if a file exists, similar to the standard function |System.Directory.doesFileExist|, but where the dependency is tracked. As an example, consider the following rule:
 
@@ -463,6 +463,7 @@ We use a restricted module export list to export only |doesFileExist| and |defau
 We end with a note of caution. We require that any stored value remains consistent other than when a rule actively changes in. Since this rule does not force the existence of a file, it should not be used on any files that may be generated by the build system -- |doesFileExist| should return the same at the start and end of the compilation. This property can be checked with Lint mode as described in \S\ref{sec:lint}.
 
 \subsection{File Based Rules}
+\label{sec:file_rules}
 
 \begin{figure}
 \begin{code}
@@ -528,6 +529,7 @@ As a practical concern, when writing file rules, often there are multiple types 
 
 \subsection{Automatically Include Default Rules}
 \label{sec:include_default_rules}
+\label{sec:other_rule_types}
 
 With the rule types already defined, users can write a build system using Shake. Unfortunately, if the user forgets to include the rule |defaultRuleFile|, there is likely to be a runtime error. Instead of requiring the user to remember to include the default rules, we instead define a wrapper function |shake| which includes all default rules available:
 
@@ -541,7 +543,10 @@ shake opts rules = run opts $ do
 
 The astute reader may be wondering why we can't move |defaultRule| into the |Rule| type class, and avoid requiring such a wrapper. Alas, that solution doesn't work for reasons described in \S\ref{sec:dynamically_typed}, because we always need to have an explicit rules of each type to deserialise dynamically typed values.
 
+We also include a bunch of other rules, including a tracked version of |getDirectoryFiles|, oracle information etc. \todo{complete this}
+
 \subsection{Additional Functions}
+\label{sec:derived}
 
 Using the file rules from the previous section, we can define new versions of operations such as |readFile|/|copyFile|, which automatically call |need|:
 
@@ -597,9 +602,10 @@ This definition, using existentials \cite{existentials}, allows anything support
 
 Implementing a |Binary| instance for |Any| is harder. Serialising a value is easy, but deserialising a value is problematic -- we can deserialise a |TypeRep|, but then we need to obtain the |get| method from the |Binary| instance associated with that type. The solution is to keep a table mapping |TypeRep|s to |Any| values containing the appropriate |Binary| instance. This table must include every type stored in the file we are reading, or it cannot be deserialised. We populate the table using all rules defined by |rule| and |defaultRule| in |Rules| -- which means we cannot move |defaultRule| into the |Rule| type class, as then a type could be usefully used without appearing in |Rules|, and would not be missing from the table.
 
-When deserialising, if we encounter a type not present in the table, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_makefile}).
+When deserialising, if we encounter a type not present in the table, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_rules}).
 
 \subsection{Shake State}
+\label{sec:parallelism}
 
 \begin{figure}
 \begin{code}
@@ -636,7 +642,7 @@ The state of a running Shake program can be represented by the data type in Figu
 \item[|Built|] is used for rules that were loaded and valid, or have finished building.
 \end{description}
 
-The |Status| constructors also take an |Info|, which contains the same fields as in \S\label{sec:unchanging_files}, with one modification. To allow full parallelism when rebuilding dependent rules, we store |depends| as |[[Key]]| instead of just |[Key]| -- where each entry comes from one call to |apply|. When saving |State| to the database, we ignore the |Status| fields and save only the |Key|/|Info| mapping.
+The |Status| constructors also take an |Info|, which contains the same fields as in \S\ref{sec:unchanging_files}, with one modification. To allow full parallelism when rebuilding dependent rules, we store |depends| as |[[Key]]| instead of just |[Key]| -- where each entry comes from one call to |apply|. When saving |State| to the database, we ignore the |Status| fields and save only the |Key|/|Info| mapping.
 
 With this state, it is relatively easy to implement the core of Shake -- the functions which are actually responsible for building account for less than 100 lines, most of which is dealing with parallelism. We execute the top-level |actions|, and whenever we call |apply|, we look up the state in the database, and use the transition diagram in Figure \ref{fig:state} to make sure everything is |Built| before continuing.
 
@@ -667,6 +673,7 @@ We have used a build system based on Shake at Standard Chartered for the last th
 In implementing our build system we have learnt a number of lessons -- both about best practices for structuring build systems, and how the underlying core of Shake can be used to deal with the complexities of real development. In this section we share some of those lessons.
 
 \subsection{Command Line Interface}
+\label{sec:command_line}
 
 While the |shake| function can be used as |main|, it offers no support for command line arguments. We use the |shake| function to build a program \prog{mk}, which handles command line options, allowing us to specify some of the fields in |ShakeOptions| (Figure \ref{fig:shake_core}), such as parallelism and verbosity.
 
@@ -721,6 +728,7 @@ The Shake library provides a function |*>>| to capture this pattern, allowing an
 \end{code}
 
 \subsection{Transitive Dependencies}
+\label{sec:transitive}
 
 In build systems, it is common for the system to require the transitive dependencies. As an example, if \file{foo.c} does a @#include@ on \file{bar.h}, and \file{bar.h} in turn includes \file{baz.h}, then \file{foo.c} should be recompiled if either \file{bar.h} \textit{or} \file{baz.h} changes. A similar situation arises when linking Haskell programs -- any module transitively imported by the root module should be linked in. One option is to separately for each \file{*.c} file, scan all its dependencies and |need| them. However, that can significantly reduce performance, as if \file{bar.h} is included hundreds of times then it will be recomputed lots. We can also define a more specific one, based on the assumption that @#ifdef@ statements do not change the include files (a reasonable assumption in many cases).
 
@@ -744,6 +752,7 @@ Therefore, a standard pattern is to define \file{*.dep} as the immediate depende
 \end{code}
 
 \subsection{Build rules that change}
+\label{sec:changing_rules}
 
 Throughout this work, we assume that \textit{the build system does not change}, merely the inputs to the build system. While the build system does change more rarely than the rest of the code, in our case about 1.7\% of commits have touched the build system. However, there have been only a handful of times when a build system change required a complete rebuild to be performed. We manage build system changes with a number of strategies:
 
