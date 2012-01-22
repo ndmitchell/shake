@@ -1,5 +1,6 @@
 
 module Development.Shake.Locks(
+    Lock, newLock, withLock,
     Var, newVar, readVar, modifyVar, modifyVar_,
     Barrier, newBarrier, releaseBarrier, waitBarrier, waitAnyBarrier
     ) where
@@ -7,6 +8,20 @@ module Development.Shake.Locks(
 import Control.Concurrent
 import Control.Monad
 import Data.IORef
+
+
+---------------------------------------------------------------------
+-- LOCK
+
+-- | Like an MVar, but has no value
+newtype Lock = Lock (MVar ())
+instance Show Lock where show _ = "Lock"
+
+newLock :: IO Lock
+newLock = fmap Lock $ newMVar ()
+
+withLock :: Lock -> IO a -> IO a
+withLock (Lock x) = withMVar x . const
 
 
 ---------------------------------------------------------------------
