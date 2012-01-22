@@ -51,17 +51,17 @@ removeFile_ x = catch (removeFile x) (\(e :: SomeException) -> return ())
 
 type Map = Map.HashMap
 
-newtype Time = Time Int
+newtype Step = Step Int
     deriving (Eq,Ord,Show)
 
-incTime (Time i) = Time $ i + 1
+incStep (Step i) = Step $ i + 1
 
 
 
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
     {status :: Var (Map Key Status)
-    ,timestamp :: Time
+    ,timestamp :: Step
     ,journal :: Journal
     ,filename :: FilePath
     ,version :: Int -- user supplied version
@@ -70,8 +70,8 @@ data Database = Database
 
 data Info = Info
     {value :: Value -- the value associated with the Key
-    ,built :: Time -- the timestamp for deciding if it's valid
-    ,changed :: Time -- when it was actually run
+    ,built :: Step -- the timestamp for deciding if it's valid
+    ,changed :: Step -- when it was actually run
     ,depends :: [[Key]] -- dependencies
     ,execution :: Double -- how long it took when it was last run (seconds)
     ,traces :: [(String, Double, Double)] -- a trace of the expensive operations (start/end in seconds since beginning of run)
@@ -102,7 +102,7 @@ data Response
 data Response_ = Response_
     {execute :: [Key]
     ,barriers :: [(Key,Barrier)]
-    ,values :: [(Time,Value)]
+    ,values :: [(Step,Value)]
     }
 
 concatResponse :: [Response_] -> Response_
@@ -197,12 +197,12 @@ showJSON Database{..} = do
     let ids = Map.fromList $ zip (Map.keys status) [0..]
         f (k, v) | Just Info{..} <- getInfo v =
             let xs = ["name:" ++ show (show k)
-                     ,"built:" ++ showTime built
-                     ,"changed:" ++ showTime changed
+                     ,"built:" ++ showStep built
+                     ,"changed:" ++ showStep changed
                      ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
                      ,"execution:" ++ show execution] ++
                      ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | traces /= []]
-                showTime (Time i) = show i
+                showStep (Step i) = show i
                 showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
         f _ = []
@@ -224,7 +224,7 @@ openDatabase logger filename version = do
         jfile = filename <.> "journal"
 
     (timestamp, status) <- readDatabase dbfile version
-    timestamp <- return $ incTime timestamp
+    timestamp <- return $ incStep timestamp
     
     b <- doesFileExist jfile
     (status,timestamp) <- if not b then return (status,timestamp) else do
@@ -232,7 +232,7 @@ openDatabase logger filename version = do
         removeFile_ jfile
         -- the journal potentially things at the current timestamp, so increment my timestamp
         writeDatabase dbfile version timestamp status
-        return (status, incTime timestamp)
+        return (status, incStep timestamp)
 
     status <- newVar status
     journal <- openJournal jfile version
@@ -246,7 +246,7 @@ closeDatabase Database{..} = do
     closeJournal journal
 
 
-writeDatabase :: FilePath -> Int -> Time -> Map Key Status -> IO ()
+writeDatabase :: FilePath -> Int -> Step -> Map Key Status -> IO ()
 writeDatabase file version timestamp status = do
     ws <- currentWitness
     LBS.writeFile file $
@@ -254,9 +254,9 @@ writeDatabase file version timestamp status = do
         encode (timestamp, Witnessed ws $ Statuses status)
 
 
-readDatabase :: FilePath -> Int -> IO (Time, Map Key Status)
+readDatabase :: FilePath -> Int -> IO (Step, Map Key Status)
 readDatabase file version = do
-    let zero = (Time 1, Map.fromList [])
+    let zero = (Step 1, Map.fromList [])
     b <- doesFileExist file
     if not b
         then return zero
@@ -332,9 +332,9 @@ closeJournal Journal{..} =
 ---------------------------------------------------------------------
 -- SERIALISATION
 
-instance Binary Time where
-    put (Time i) = put i
-    get = fmap Time get
+instance Binary Step where
+    put (Step i) = put i
+    get = fmap Step get
 
 
 data Witnessed a = Witnessed Witness a
