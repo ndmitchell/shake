@@ -66,6 +66,9 @@ type Time = Double -- how far you are through this run, in seconds
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
+type Trace = (String, Time, Time)
+
+
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
     {status :: Var (Map Key Status)
@@ -82,7 +85,7 @@ data Info = Info
     ,changed :: Step -- when it was actually run
     ,depends :: [[Key]] -- dependencies
     ,execution :: Duration -- how long it took when it was last run (seconds)
-    ,traces :: [(String, Time, Time)] -- a trace of the expensive operations (start/end in seconds since beginning of run)
+    ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     }
     deriving Show
 
@@ -171,7 +174,7 @@ request Database{..} validStored ks =
             return $ Response_ [k] [] []
 
 
-finished :: Database -> Key -> Value -> [[Key]] -> Duration -> [(String,Time,Time)] -> IO ()
+finished :: Database -> Key -> Value -> [[Key]] -> Duration -> [Trace] -> IO ()
 finished Database{..} k v depends duration traces = do
     logger $ "finished building " ++ show k
     let info = Info v timestamp timestamp depends duration traces
