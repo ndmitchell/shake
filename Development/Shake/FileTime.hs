@@ -2,8 +2,7 @@
 
 module Development.Shake.FileTime(
     FileTime, sleepFileTime,
-    getModTime, getModTimeError, getModTimeMaybe,
-    getAccTime
+    getModTime, getModTimeError, getModTimeMaybe
     ) where
 
 import Control.Concurrent(threadDelay)
@@ -12,7 +11,6 @@ import Data.Binary
 import Data.Hashable
 import Data.Typeable
 import System.Directory
-import System.Directory.AccessTime
 import System.Time
 
 
@@ -38,12 +36,6 @@ getModTimeError msg x = do
 getModTime :: FilePath -> IO FileTime
 getModTime x = do
     TOD t _ <- getModificationTime x
-    return $ FileTime $ fromIntegral t
-
-
-getAccTime :: FilePath -> IO FileTime
-getAccTime x = do
-    TOD t _ <- getAccessTime x
     return $ FileTime $ fromIntegral t
 
 

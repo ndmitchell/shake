@@ -7,14 +7,12 @@ module Development.Shake.File(
     ) where
 
 import Control.DeepSeq
-import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
 import Data.List
 import Data.Maybe
-import Data.Monoid
 import Data.Typeable
 import System.Directory
 
@@ -35,6 +33,7 @@ instance Show File where show (File x) = x
 instance Rule File FileTime where
     validStored (File x) t = fmap (== Just t) $ getModTimeMaybe x
 
+{-
     observed act = do
         src <- getCurrentDirectory
         old <- listDir src
@@ -86,7 +85,7 @@ compareItems = f ""
             | x1 <  y1  = (x1,Just x2,Nothing):zips xs ((y1,y2):ys)
             | otherwise = (y1,Nothing,Just y2):zips ((x1,x2):xs) ys
         zips xs ys = [(a,Just b,Nothing) | (a,b) <- xs] ++ [(a,Nothing,Just b) | (a,b) <- ys]
-
+-}
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.

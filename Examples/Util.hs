@@ -24,6 +24,7 @@ shaken test rules = do
             putStrLn $ "## TESTING " ++ name
             test (\args -> withArgs (name:args) $ shaken test rules) (out++)
         "clean":_ -> removeDirectoryRecursive out
+{-
         "lint":args -> do
             let dbfile = out ++ ".database"
                 tempfile = "output/" ++ name ++ ".database"
@@ -33,6 +34,7 @@ shaken test rules = do
             createDirectoryIfMissing True out
             when b $ renameFile tempfile dbfile
             shake shakeOptions{shakeFiles=out, shakeLint=True} $ rules args (out++)
+-}
         _ -> shake shakeOptions{shakeFiles=out, shakeDump=True} $ rules args (out++)
 
 

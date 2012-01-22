@@ -10,7 +10,6 @@ module Development.Shake.Core(
     ) where
 
 import Prelude hiding (catch)
-import Control.Arrow
 import Development.Shake.Pool
 import Control.DeepSeq
 import Control.Exception
@@ -20,7 +19,6 @@ import Control.Monad.Trans.State
 import Data.Binary(Binary)
 import Data.Hashable
 import Data.Function
-import Data.IORef
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -42,15 +40,15 @@ data ShakeOptions = ShakeOptions
     ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
-    ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
-                       --   /This feature has not yet been completed, and should not be used./
-    ,shakeDump :: Bool -- ^ Dump all profiling information to @'shakeFiles'.json@ (defaults to 'False').
+--    ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
+--                       --   /This feature has not yet been completed, and should not be used./
+    ,shakeDump :: Bool -- ^ Dump all profiling information to @'shakeFiles'.js@ (defaults to 'False').
     }
     deriving (Show, Eq, Ord, Read)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False False
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False
 
 
 data ShakeException = ShakeException [Key] SomeException
@@ -92,6 +90,7 @@ class (
     validStored :: key -> value -> IO Bool
     validStored _ _ = return True
 
+{-
     -- | Return 'True' if the value should not be changed by the build system. Defaults to returning
     --   'False'. Only used when running with 'shakeLint'.
     invariant :: key -> Bool
@@ -101,6 +100,7 @@ class (
     --   have stayed the same. Only used when running with 'shakeLint'.
     observed :: IO a -> IO (Observed key, a)
     observed = fmap ((,) mempty)
+-}
 
 
 -- | Determine what was observed to change. For each field @Nothing@ means you don't know anything, while
@@ -133,12 +133,6 @@ ruleValue = undefined
 
 ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
 ruleStored _ = validStored
-
-ruleInvariant :: Rule key value => (key -> Maybe (Action value)) -> (key -> Bool)
-ruleInvariant _ = invariant
-
-ruleObserved :: Rule key value => (key -> Maybe (Action value)) -> (IO a -> IO (Observed key, a))
-ruleObserved _ = observed
 
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
@@ -200,7 +194,6 @@ data S = S
     ,execute :: Key -> Action Value
     ,outputLock :: Var ()
     ,verbosity :: Verbosity
-    ,observer :: Key -> IO () -> IO ()
     -- stack variables
     ,stack :: [Key] -- in reverse
     -- local variables
@@ -222,10 +215,9 @@ run opts@ShakeOptions{..} rs = do
     registerWitnesses rs
     outputLock <- newVar ()
     withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
-        withObserver database $ \observer ->
-            runPool shakeParallel $ \pool -> do
-                let s0 = S database pool start stored execute outputLock shakeVerbosity observer [] [] 0 []
-                mapM_ (addPool pool . wrapStack [] . runAction s0) (actions rs)
+        runPool shakeParallel $ \pool -> do
+            let s0 = S database pool start stored execute outputLock shakeVerbosity [] [] 0 []
+            mapM_ (addPool pool . wrapStack [] . runAction s0) (actions rs)
         when shakeDump $ do
             json <- showJSON database
             writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json
@@ -235,25 +227,6 @@ run opts@ShakeOptions{..} rs = do
 
         logger outputLock | shakeVerbosity >= Diagnostic = \msg -> modifyVar_ outputLock $ const $ putStrLn $ "% " ++ msg
                           | otherwise = const $ return ()
-
-        withObserver database act
-            | not shakeLint = act $ \key val -> val
-            | otherwise = do
-            ents <- allEntries database
-            let invariants = [(k,v) | (k,v) <- ents, Just (_,_,(_,ARule r):_) <- [Map.lookup (typeKey k) $ rules rs], ruleInvariant r (fromKey k)]
-                observe = createObserver rs
-            badStart <- filterM (fmap not . uncurry stored) invariants
-            seen <- newIORef ([] :: [(Key,[Observed Key])])
-            act $ \key val -> do
-                obs <- observe val
-                atomicModifyIORef seen $ \xs -> ((key,obs):xs, ())
-            badEnd <- filterM (fmap not . uncurry stored) invariants
-            when (not $ null $ badStart ++ badEnd) $
-                error "There were invariants that were broken" -- FIXME: Better error message
-            r <- readIORef seen
-            let f sel = show $ length $ concat $ mapMaybe sel $ concatMap snd r
-            putStrLn $ "Observed created = " ++ f changed ++ ", used = " ++ f used
-            -- FIXME: Check the seen pile against the database
 
 
 wrapStack :: [Key] -> IO a -> IO a
@@ -267,16 +240,6 @@ registerWitnesses Rules{..} =
     forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
         registerWitness $ ruleKey r
         registerWitness $ ruleValue r
-
-
-createObserver :: Rules () -> (IO () -> IO [Observed Key])
-createObserver Rules{..} = f os
-    where
-        os = [obs | (k,v,(_,ARule r):_) <- Map.elems rules, let obs = fmap (first $ fmap newKey) . ruleObserved r]
-        f [] act = act >> return []
-        f (o:os) act = do
-            (x,xs) <- o $ f os act
-            return $ [x | x /= mempty] ++ xs
 
 
 createStored :: Rules () -> (Key -> Value -> IO Bool)
