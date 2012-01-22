@@ -82,6 +82,7 @@ library
         Development.Shake.FileTime
         Development.Shake.Locks
         Development.Shake.Oracle
+        Development.Shake.Pool
         Development.Shake.TypeHash
         Development.Shake.Rerun
         Development.Shake.Value
