@@ -45,6 +45,9 @@ databaseVersion i = "SHAKE-DATABASE-2-" ++ show (i :: Int) ++ "\r\n"
 journalVersion i = "SHAKE-JOURNAL-2-" ++ show (i :: Int) ++ "\r\n"
 
 
+---------------------------------------------------------------------
+-- UTILITY TYPES AND FUNCTIONS
+
 removeFile_ :: FilePath -> IO ()
 removeFile_ x = catch (removeFile x) (\(e :: SomeException) -> return ())
 
@@ -56,7 +59,12 @@ newtype Step = Step Int
 
 incStep (Step i) = Step $ i + 1
 
+type Duration = Double -- duration in seconds
+type Time = Double -- how far you are through this run, in seconds
 
+
+---------------------------------------------------------------------
+-- CENTRAL TYPES
 
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
@@ -73,8 +81,8 @@ data Info = Info
     ,built :: Step -- the timestamp for deciding if it's valid
     ,changed :: Step -- when it was actually run
     ,depends :: [[Key]] -- dependencies
-    ,execution :: Double -- how long it took when it was last run (seconds)
-    ,traces :: [(String, Double, Double)] -- a trace of the expensive operations (start/end in seconds since beginning of run)
+    ,execution :: Duration -- how long it took when it was last run (seconds)
+    ,traces :: [(String, Time, Time)] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     }
     deriving Show
 
@@ -163,7 +171,7 @@ request Database{..} validStored ks =
             return $ Response_ [k] [] []
 
 
-finished :: Database -> Key -> Value -> [[Key]] -> Double -> [(String,Double,Double)] -> IO ()
+finished :: Database -> Key -> Value -> [[Key]] -> Duration -> [(String,Time,Time)] -> IO ()
 finished Database{..} k v depends duration traces = do
     logger $ "finished building " ++ show k
     let info = Info v timestamp timestamp depends duration traces
