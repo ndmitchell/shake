@@ -1,6 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, UndecidableInstances #-}
-{-# OPTIONS -fno-warn-unused-binds #-} -- for fields used just for docs
 {-
 Files stores the meta-data so its very important its always accurate
 We can't rely on getting a Ctrl+C at the end, so we'd better write out a journal
@@ -11,26 +10,28 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 module Development.Shake.Database(
     Time, Duration, Trace,
     Database, withDatabase,
-    request, Response(..), finished,
+    Ops(..), force,
     allEntries, showJSON,
     ) where
 
 import Development.Shake.Binary
-import Development.Shake.Locks
+import Development.Shake.Pool
 import Development.Shake.Value
+import Development.Shake.Locks
 
 import Prelude hiding (catch)
 import Control.Arrow
+import Control.Concurrent
 import Control.Exception
 import Control.Monad
-import Control.Monad.IO.Class
-import qualified Control.Monad.Trans.State as S
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.Char
 import qualified Data.HashMap.Strict as Map
+import Data.IORef
 import Data.Maybe
 import Data.List
+import Data.Time.Clock
 import System.Directory
 import System.FilePath
 import System.IO
@@ -64,6 +65,10 @@ type Duration = Double -- duration in seconds
 type Time = Double -- how far you are through this run, in seconds
 
 
+duration :: UTCTime -> UTCTime -> Double
+duration start end = fromRational $ toRational $ end `diffUTCTime` start
+
+
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
@@ -72,127 +77,210 @@ type Trace = (String, Time, Time)
 
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
-    {status :: Var (Map Key Status)
-    ,timestamp :: Step
+    {lock :: Lock
+    ,status :: IORef (Map Key Status)
+    ,step :: Step
     ,journal :: Journal
     ,filename :: FilePath
     ,version :: Int -- user supplied version
     ,logger :: String -> IO () -- logging function
     }
 
-data Info = Info
+data Status
+    = Ready Result -- I have a value
+    | Error SomeException -- I have been run and raised an error
+    | Loaded Result -- Loaded from the database
+    | Dirty (Maybe Result) -- One of my dependents is in Error or Dirty
+    | Checking Pending Result -- Currently checking if I am valid
+    | Building Pending (Maybe Result) -- Currently building
+
+data Result = Result
     {value :: Value -- the value associated with the Key
-    ,built :: Step -- the timestamp for deciding if it's valid
-    ,changed :: Step -- when it was actually run
+    ,built :: Step -- when it was actually run
+    ,changed :: Step -- the step for deciding if it's valid
     ,depends :: [[Key]] -- dependencies
     ,execution :: Duration -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     }
-    deriving Show
+
+type Pending = IORef (IO ())
+    -- you must run this action when you finish, while holding DB lock
+    -- after you have set the result to Error, Ready or Dirty (checking only)
 
 
-data Status
-    = Building Barrier (Maybe Info)
-    | Built  Info
-    | Loaded Info
-      deriving Show
+getResult :: Status -> Maybe Result
+getResult (Ready r) = Just r
+getResult (Loaded r) = Just r
+getResult (Checking _ r) = Just r
+getResult (Dirty r) = r
+getResult (Building _ r) = r
+getResult _ = Nothing
 
-getInfo :: Status -> Maybe Info
-getInfo (Built i) = Just i
-getInfo (Loaded i) = Just i
-getInfo (Building _ i) = i
+getPending :: Status -> Maybe Pending
+getPending (Checking p _) = Just p
+getPending (Building p _) = Just p
+getPending _ = Nothing
 
 
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-data Response
-    = Execute [Key] -- you need to execute these keys and call finished at least once before calling request again
-    | Block ([Key], IO ()) -- you need to block on at least one of these barriers before calling request again
-    | Response [Value] -- actual result values, do not call request again
-
-data Response_ = Response_
-    {execute :: [Key]
-    ,barriers :: [(Key,Barrier)]
-    ,values :: [(Step,Value)]
+data Ops = Ops
+    {valid :: Key -> Value -> IO Bool
+    ,exec :: Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
     }
 
-concatResponse :: [Response_] -> Response_
-concatResponse xs = Response_ (concatMap execute xs) (concatMap barriers xs) (concatMap values xs)
 
-toResponse :: Response_ -> Response
-toResponse Response_{..}
-    | not $ null execute = Execute execute
-    | not $ null barriers = Block $ second waitAnyBarrier $ unzip barriers
-    | otherwise = Response $ map snd values
-
-
--- The idea behind request is that we do as much as we can with a single lock, which reduces a clean
--- rebuild to an absolute minimum traversal in single-threaded fast-path code. We may pay more repeatedly
--- calling 'request', but the depth of the call graph is low so it shouldn't be an issue, and with additional
--- complexity it could be avoided.
-request :: Database -> (Key -> Value -> IO Bool) -> [Key] -> IO Response
-request Database{..} validStored ks =
-     modifyVar status $ \v -> do
-        (res, mp) <- S.runStateT (fmap concatResponse $ mapM f ks) v
-        return (mp, toResponse res)
+-- | Return either an exception (crash), or (how much time you spent waiting, the value)
+force :: Pool -> Database -> Ops -> [Key] -> IO (Either SomeException (Duration,[Value]))
+force pool Database{..} Ops{..} ks =
+    join $ withLock lock $ do
+        vs <- mapM evalRECB ks
+        let errs = [e | Error e <- vs]
+        if all isReady vs then
+            return $ return $ Right (0, [value r | Ready r <- vs])
+         else if not $ null errs then
+            return $ return $ Left $ head errs
+         else do
+            let cb = filter (isCheckingBuilding . snd) $ zip ks vs
+            wait <- newEmptyMVar
+            todo <- newIORef $ Just $ length cb
+            forM_ cb $ \(k,v) -> do
+                let act = do
+                        t <- readIORef todo
+                        when (isJust t) $ do
+                            s <- readIORef status
+                            case Map.lookup k s of
+                                Just (Error e) -> do
+                                    writeIORef todo Nothing
+                                    putMVar wait $ Left e
+                                Just (Dirty r) -> do
+                                    Building p _ <- evalB k r
+                                    modifyIORef p (>> act) -- try again
+                                Just Ready{} | fromJust t == 1 -> do
+                                    writeIORef todo Nothing
+                                    putMVar wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
+                                Just Ready{} ->
+                                    writeIORef todo $ fmap (subtract 1) t
+                modifyIORef (fromJust $ getPending v) (>> act)
+            return $ do
+                t1 <- getCurrentTime
+                res <- blockPool $ readMVar wait
+                case res of
+                    Left e -> return $ Left e
+                    Right v -> do
+                        t2 <- getCurrentTime
+                        return $ Right (duration t1 t2,v)
     where
-        f :: Key -> S.StateT (Map Key Status) IO Response_
-        f k = do
-            s <- S.get
+        k #= v = modifyIORef status (Map.insert k v) >> return v
+
+        isErrorDirty Error{} = True
+        isErrorDirty Dirty{} = True
+        isErrorDirty _ = False
+
+        isCheckingBuilding Checking{} = True
+        isCheckingBuilding Building{} = True
+        isCheckingBuilding _ = False
+
+        isReady Ready{} = True
+        isReady _ = False
+
+        -- Rules for each eval* function
+        -- * Must NOT lock
+        -- * Must have an equal return to what is stored in the db at that point
+        -- * Must return only one of the items in its suffix
+
+
+        evalRECB :: Key -> IO Status
+        evalRECB k = do
+            res <- evalREDCB k
+            case res of
+                Dirty r -> evalB k r
+                res -> return res
+
+
+        evalB :: Key -> Maybe Result -> IO Status
+        evalB k r = do
+            s <- readIORef status
+            pend <- newIORef (return ())
+            addPool pool $ do
+                res <- exec k
+                ans <- withLock lock $ do
+                    ans <- k #= case res of
+                        Left err -> Error err
+                        Right (v,depends,execution,traces) ->
+                            let c | Just r <- r, value r == v = changed r
+                                  | otherwise = step
+                            in Ready $ Result{value=v,changed=c,built=step,..}
+                    join $ readIORef pend
+                    return ans
+                case ans of
+                    Ready r -> appendJournal journal k r -- leave the DB lock before appending
+                    _ -> return ()
+            k #= Building pend r
+
+
+        evalREDCB :: Key -> IO Status
+        evalREDCB k = do
+            s <- readIORef status
             case Map.lookup k s of
-                Nothing -> do liftIO $ logger $ "building " ++ arg k ++ " because it is not in the database"; build k
-                Just (Building bar _) -> do liftIO $ logger $ "already building " ++ arg k; return $ Response_ [] [(k,bar)] []
-                Just (Built i) -> return $ Response_ [] [] [(changed i, value i)]
-                Just (Loaded i) -> do
-                    valid <- liftIO $ validStored k $ value i
-                    liftIO $ logger $ "validStored " ++ arg k ++ " = " ++ show valid
-                    if valid then validHistory k i (depends i) else do
-                        liftIO $ logger $ "building " ++ arg k ++ " because is not validStored"; build k
+                Nothing -> evalB k Nothing
+                Just (Loaded r) -> do
+                    b <- valid k (value r)
+                    if not b then evalB k $ Just r else checkREDCB k r (depends r)
+                Just res -> return res
 
-        arg xs = let s = show xs; b = ' ' `elem` s in ['('|b] ++ s ++ [')'|b]
 
-        validHistory :: Key -> Info -> [[Key]] -> S.StateT (Map Key Status) IO Response_
-        validHistory k i [] = do
-            liftIO $ logger $ "marked as valid " ++ arg k
-            S.modify $ Map.insert k $ Built i
-            return $ Response_ [] [] [(changed i, value i)]
-        validHistory k i (x:xs) = do
-            r@Response_{..} <- fmap concatResponse $ mapM f x
-            if not $ null execute && null barriers then return r
-             else if all ((<= built i) . fst) values then validHistory k i xs
+        checkREDCB :: Key -> Result -> [[Key]] -> IO Status
+        checkREDCB k r [] = do
+            k #= Ready r
+        checkREDCB k r (ds:rest) = do
+            vs <- mapM evalREDCB ds
+            let cb = filter (isCheckingBuilding . snd) $ zip ds vs
+            if any isErrorDirty vs then
+                k #= Dirty (Just r)
+             else if any (> built r) [changed | Ready Result{..} <- vs] then
+                evalB k $ Just r
+             else if null cb then
+                checkREDCB k r rest
              else do
-                let bad = head [kk | (kk,(tt,_)) <- zip x values, tt > built i]
-                liftIO $ logger $ "building " ++ arg k ++ " because of " ++ arg bad
-                build k
+                todo <- newIORef $ Just $ length cb -- how many to do
+                pend <- newIORef $ return ()
+                forM_ cb $ \(d,i) ->
+                    modifyIORef (fromJust $ getPending i) $ flip (>>) $ do
+                        t <- readIORef todo
+                        when (isJust t) $ do
+                            s <- readIORef status
+                            case Map.lookup d s of
+                                Just v | isErrorDirty v -> do
+                                    writeIORef todo Nothing
+                                    k #= Dirty (Just r)
+                                    join $ readIORef pend
+                                Just (Ready r2)
+                                    | changed r2 > built r -> do
+                                        writeIORef todo Nothing
+                                        Building p _ <- evalB k $ Just r
+                                        modifyIORef p (>> join (readIORef pend))                                            
+                                    | fromJust t == 1 -> do
+                                        writeIORef todo Nothing
+                                        res <- checkREDCB k r rest
+                                        case getPending res of
+                                            Nothing -> join $ readIORef pend
+                                            Just p -> modifyIORef p (>> join (readIORef pend))
+                                    | otherwise ->
+                                        writeIORef todo $ fmap (subtract 1) t
+                k #= Checking pend r
 
-        build :: Key -> S.StateT (Map Key Status) IO Response_
-        build k = do
-            bar <- liftIO newBarrier
-            S.modify $ \mp ->
-                let info = case Map.lookup k mp of Nothing -> Nothing; Just (Loaded i) -> Just i
-                in Map.insert k (Building bar info) mp
-            return $ Response_ [k] [] []
 
-
-finished :: Database -> Key -> Value -> [[Key]] -> Duration -> [Trace] -> IO ()
-finished Database{..} k v depends duration traces = do
-    logger $ "finished building " ++ show k
-    let info = Info v timestamp timestamp depends duration traces
-    (info2, barrier) <- modifyVar status $ \mp -> return $
-        let Just (Building bar old) = Map.lookup k mp
-            info2 = if isJust old && value (fromJust old) == value info then info{changed=changed $ fromJust old} else info
-        in (Map.insert k (Built info2) mp, (info2, bar))
-    appendJournal journal k info2
-    releaseBarrier barrier
-
+---------------------------------------------------------------------
+-- QUERY DATABASE
 
 -- | Return a list of keys in an order which would build them bottom up. Relies on the invariant
 --   that the database is not cyclic.
 allEntries :: Database -> IO [(Key,Value)]
 allEntries Database{..} = do
-    status <- readVar status
-    return $ ordering [((k, value i), concat $ depends i) | (k,v) <- Map.toList status, Just i <- [getInfo v]]
+    status <- readIORef status
+    return $ ordering [((k, value i), concat $ depends i) | (k,v) <- Map.toList status, Just i <- [getResult v]]
     where
         ordering :: Eq a => [((a,b), [a])] -> [(a,b)]
         ordering xs = f [(a, nub b `intersect` as) | let as = map (fst . fst) xs, (a,b) <- xs]
@@ -205,9 +293,9 @@ allEntries Database{..} = do
 
 showJSON :: Database -> IO String
 showJSON Database{..} = do
-    status <- readVar status
+    status <- readIORef status
     let ids = Map.fromList $ zip (Map.keys status) [0..]
-        f (k, v) | Just Info{..} <- getInfo v =
+        f (k, v) | Just Result{..} <- getResult v =
             let xs = ["name:" ++ show (show k)
                      ,"built:" ++ showStep built
                      ,"changed:" ++ showStep changed
@@ -235,35 +323,36 @@ openDatabase logger filename version = do
     let dbfile = filename <.> "database"
         jfile = filename <.> "journal"
 
-    (timestamp, status) <- readDatabase dbfile version
-    timestamp <- return $ incStep timestamp
+    lock <- newLock
+    (step, status) <- readDatabase dbfile version
+    step <- return $ incStep step
     
     b <- doesFileExist jfile
-    (status,timestamp) <- if not b then return (status,timestamp) else do
+    (status,step) <- if not b then return (status,step) else do
         status <- replayJournal jfile version status
         removeFile_ jfile
-        -- the journal potentially things at the current timestamp, so increment my timestamp
-        writeDatabase dbfile version timestamp status
-        return (status, incStep timestamp)
+        -- the journal potentially things at the current step, so increment my step
+        writeDatabase dbfile version step status
+        return (status, incStep step)
 
-    status <- newVar status
+    status <- newIORef status
     journal <- openJournal jfile version
     return Database{..}
 
 
 closeDatabase :: Database -> IO ()
 closeDatabase Database{..} = do
-    status <- readVar status
-    writeDatabase (filename <.> "database") version timestamp status
+    status <- readIORef status
+    writeDatabase (filename <.> "database") version step status
     closeJournal journal
 
 
 writeDatabase :: FilePath -> Int -> Step -> Map Key Status -> IO ()
-writeDatabase file version timestamp status = do
+writeDatabase file version step status = do
     ws <- currentWitness
     LBS.writeFile file $
         (LBS.pack $ databaseVersion version) `LBS.append`
-        encode (timestamp, Witnessed ws $ Statuses status)
+        encode (step, Witnessed ws $ Statuses status)
 
 
 readDatabase :: FilePath -> Int -> IO (Step, Map Key Status)
@@ -323,7 +412,7 @@ replayJournal file ver mp = catch (do
         return mp
 
 
-appendJournal :: Journal -> Key -> Info -> IO ()
+appendJournal :: Journal -> Key -> Result -> IO ()
 appendJournal Journal{..} k i = modifyVar_ handle $ \v -> case v of
     Nothing -> return Nothing
     Just h -> do
@@ -360,18 +449,14 @@ instance BinaryWith Witness a => Binary (Witnessed a) where
 newtype Statuses = Statuses {fromStatuses :: Map Key Status}
 
 instance BinaryWith Witness Statuses where
-    putWith ws (Statuses x) = putWith ws [(k,i) | (k,v) <- Map.toList x, Just i <- [f v]]
-        where
-            f (Building _ i) = i
-            f (Built i) = Just i
-            f (Loaded i) = Just i
+    putWith ws (Statuses x) = putWith ws [(k,i) | (k,v) <- Map.toList x, Just i <- [getResult v]]
     getWith ws = do
         x <- getWith ws
         return $ Statuses $ Map.fromList $ map (second Loaded) x
 
-instance BinaryWith Witness Info where
-    putWith ws (Info x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> putWith ws x4 >> put x5 >> put x6
-    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- getWith ws; x5 <- get; x6 <- get; return $ Info x1 x2 x3 x4 x5 x6
+instance BinaryWith Witness Result where
+    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> putWith ws x4 >> put x5 >> put x6
+    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- getWith ws; x5 <- get; x6 <- get; return $ Result x1 x2 x3 x4 x5 x6
 
 
 readFileVer :: FilePath -> String -> IO LBS.ByteString

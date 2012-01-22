@@ -11,7 +11,7 @@ module Development.Shake.Core(
 
 import Prelude hiding (catch)
 import Control.Arrow
-import Control.Concurrent.ParallelIO.Local
+import Development.Shake.Pool
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -223,11 +223,9 @@ run opts@ShakeOptions{..} rs = do
     outputLock <- newVar ()
     withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
         withObserver database $ \observer ->
-            withPool (if shakeLint then 1 else shakeParallel) $ \pool -> do
+            runPool shakeParallel $ \pool -> do
                 let s0 = S database pool start stored execute outputLock shakeVerbosity observer [] [] 0 []
-                if shakeLint
-                    then mapM_ (wrapStack [] . runAction s0 . applyKeyValue . return . fst) =<< allEntries database
-                    else parallel_ pool $ map (wrapStack [] . runAction s0) (actions rs)
+                mapM_ (addPool pool . wrapStack [] . runAction s0) (actions rs)
         when shakeDump $ do
             json <- showJSON database
             writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json
@@ -332,39 +330,28 @@ apply ks = fmap (map fromValue) $ applyKeyValue $ map newKey ks
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
     modify $ \s -> s{depends=ks:depends s}
-    loop
-    where
-        loop = do
-            s <- get
-            res <- liftIO $ request (database s) (stored s) ks
-            case res of
-                Block (seen,act) -> do
-                    let bad = intersect (stack s) seen
-                    if not $ null bad
-                        then error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
-                        else discounted (liftIO $ extraWorkerWhileBlocked (pool s) act) >> loop
-                Response vs -> return vs
-                Execute todo -> do
-                    discounted $ liftIO $ parallel_ (pool s) $ flip map todo $ \t ->
-                        wrapStack (reverse $ t:stack s) $ observer s t $ do
-                            start <- getCurrentTime
-                            let s2 = s{depends=[], stack=t:stack s, discount=0, traces=[]}
-                            (res,s2) <- runAction s2 $ do
-                                putNormal $ "# " ++ show t
-                                execute s t
-                            -- ensure we can't put bad data into the database
-                            evaluate $ rnf t
-                            evaluate $ rnf res
-                            end <- getCurrentTime
-                            let x = duration start end - discount s2
-                            finished (database s) t res (reverse $ depends s2) x (reverse $ traces s2)
-                    loop
-
-        discounted x = do
-            start <- liftIO getCurrentTime
-            res <- x
-            end <- liftIO getCurrentTime
-            modify $ \s -> s{discount=discount s + duration start end}
+    s <- get
+    let bad = intersect (stack s) ks
+    when (not $ null bad) $ 
+        error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
+    let exec k = try $ wrapStack (reverse $ k:stack s) $ do
+            evaluate k
+            start <- getCurrentTime
+            let s2 = s{depends=[], stack=k:stack s, discount=0, traces=[]}
+            (res,s2) <- runAction s2 $ do
+                putNormal $ "# " ++ show k
+                execute s k
+            end <- getCurrentTime
+            let x = duration start end - discount s2
+            let ans = (res, reverse $ depends s2, x, reverse $ traces s2)
+            evaluate ans
+            return ans
+    res <- liftIO $ force (pool s) (database s) (Ops (stored s) exec) ks
+    case res of
+        Left err -> throw err
+        Right (d, vs) -> do
+            modify $ \s -> s{discount=discount s + d}
+            return vs
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
