@@ -7,12 +7,9 @@ module Development.Shake.File(
     ) where
 
 import Control.DeepSeq
-import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
-import Data.List
-import Data.Maybe
 import Data.Typeable
 import System.Directory
 
