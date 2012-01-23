@@ -212,7 +212,6 @@ eval pool Database{..} Ops{..} ks =
 
         evalB :: [Key] -> Key -> Maybe Result -> IO Status
         evalB stack k r = do
-            s <- readIORef status
             pend <- newIORef (return ())
             addPool pool $ do
                 res <- exec stack k
