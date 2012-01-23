@@ -650,6 +650,9 @@ To implement parallelism we use the \prog{parallel-io} \cite{parallel-io} librar
 
 When running a large build system, it is common for it to fail before completing -- either because a rule raised an error, or the end user killing the build process. In these cases it is important that none of the work that has been performed is lost -- therefore we maintain a journal and every time a rule transitions from |Building| to |Built| we write that information immediately. If Shake completes successfully we delete the journal. If on restarting Shake has a journal file, we replay the journal onto the database.
 
+You have to be non-deterministic! If you find someone is changed, you can kick off a build immediately. However, if you find they are dirty, you want to give up. Whichever gets checked first will end up winning, but the alternative is waiting until you know, which is a bad plan.
+
+You may run entirely redundant rules, since once you start, you finish. A good idea for resource management.
 
 \subsection{Error Messages}
 
