@@ -4,7 +4,6 @@ module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where
 
 import Control.Concurrent
 import Control.Exception hiding (blocked)
-import Control.Monad
 import Development.Shake.Locks
 import qualified Data.HashSet as Set
 

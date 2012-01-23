@@ -6,7 +6,6 @@ module Development.Shake.Locks(
     ) where
 
 import Control.Concurrent
-import Control.Monad
 
 
 ---------------------------------------------------------------------
