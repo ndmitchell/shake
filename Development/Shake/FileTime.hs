@@ -1,11 +1,10 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Development.Shake.FileTime(
-    FileTime, sleepFileTime,
-    getModTime, getModTimeError, getModTimeMaybe
+    FileTime,
+    getModTimeError, getModTimeMaybe
     ) where
 
-import Control.Concurrent(threadDelay)
 import Control.DeepSeq
 import Data.Binary
 import Data.Hashable
@@ -37,8 +36,3 @@ getModTime :: FilePath -> IO FileTime
 getModTime x = do
     TOD t _ <- getModificationTime x
     return $ FileTime $ fromIntegral t
-
-
--- | Sleep long enough for the modification time resolution to catch up
-sleepFileTime :: IO ()
-sleepFileTime = threadDelay 1000000 -- 1 second
