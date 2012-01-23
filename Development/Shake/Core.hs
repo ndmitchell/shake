@@ -43,7 +43,7 @@ data ShakeOptions = ShakeOptions
 --                       --   /This feature has not yet been completed, and should not be used./
     ,shakeDump :: Bool -- ^ Dump all profiling information to @'shakeFiles'.js@ (defaults to 'False').
     }
-    deriving (Show, Eq, Ord, Read)
+    deriving (Show, Eq, Ord)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
