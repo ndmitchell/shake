@@ -101,4 +101,5 @@ executable shake
         Examples.Test.Errors
         Examples.Test.FilePath
         Examples.Test.Files
+        Examples.Test.Pool
         Examples.Tar.Main
