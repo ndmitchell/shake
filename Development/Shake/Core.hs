@@ -195,7 +195,7 @@ data S = S
     ,started :: IO Time
     ,stored :: Key -> Value -> IO Bool
     ,execute :: Key -> Action Value
-    ,outputLock :: Var ()
+    ,output :: String -> IO ()
     ,verbosity :: Verbosity
     -- stack variables
     ,stack :: [Key] -- in reverse
@@ -216,9 +216,14 @@ run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = do
     start <- startTime
     registerWitnesses rs
-    outputLock <- newVar ()
-    except <- newVar (Nothing :: Maybe SomeException)
 
+    output <- do
+        lock <- newLock
+        return $ withLock lock . putStrLn
+
+    let logger = if shakeVerbosity >= Diagnostic then output . ("% "++) else const $ return ()
+
+    except <- newVar (Nothing :: Maybe SomeException)
     let staunch act | not shakeStaunch = act >> return ()
                     | otherwise = do
             res <- try act
@@ -226,24 +231,17 @@ run opts@ShakeOptions{..} rs = do
                 Left err -> do
                     modifyVar_ except $ \v -> return $ Just $ fromMaybe err v
                     let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
-                    when (shakeVerbosity >= Quiet) $
-                        modifyVar_ outputLock $ const $ putStrLn msg
+                    when (shakeVerbosity >= Quiet) $ output msg
                 Right _ -> return ()
 
-    withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
+    withDatabase logger shakeFiles shakeVersion $ \database -> do
         runPool shakeThreads $ \pool -> do
-            let s0 = S database pool start stored execute outputLock shakeVerbosity [] [] 0 []
+            let s0 = S database pool start (createStored rs) (createExecute rs) output shakeVerbosity [] [] 0 []
             mapM_ (addPool pool . staunch . wrapStack [] . runAction s0) (actions rs)
         when shakeDump $ do
             json <- showJSON database
             writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json
     maybe (return ()) throwIO =<< readVar except
-    where
-        stored = createStored rs
-        execute = createExecute rs
-
-        logger outputLock | shakeVerbosity >= Diagnostic = \msg -> modifyVar_ outputLock $ const $ putStrLn $ "% " ++ msg
-                          | otherwise = const $ return ()
 
 
 wrapStack :: [Key] -> IO a -> IO a
@@ -349,7 +347,7 @@ putWhen :: (Verbosity -> Bool) -> String -> Action ()
 putWhen f msg = Action $ do
     s <- get
     when (f $ verbosity s) $
-        liftIO $ modifyVar_ (outputLock s) $ const $ putStrLn msg
+        liftIO $ output s msg
 
 
 -- | Write a message to the output when the verbosity is appropriate.
