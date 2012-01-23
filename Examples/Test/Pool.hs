@@ -49,3 +49,14 @@ test build obj = do
             modifyMVar_ done $ const $ return True
     done <- readMVar done
     assert done "Blocking works"
+
+    -- check someone spawned when at zero todo still gets run
+    done <- newMVar False
+    runPool 1 $ \pool -> do
+        addPool pool $ do
+            sleep 0.1
+            addPool pool $ do
+                sleep 0.1
+                modifyMVar_ done $ const $ return True
+    done <- readMVar done
+    assert done "Waiting on someone works"
