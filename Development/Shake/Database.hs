@@ -148,8 +148,6 @@ data Ops = Ops
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
     ,exec :: [Key] -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
-    ,diagnostics :: String -> IO ()
-        -- ^ Print out a diagnostics message (usually just ignores the message)
     }
 
 
@@ -200,7 +198,7 @@ eval pool Database{..} Ops{..} ks =
             s <- readIORef status
             writeIORef status $ Map.insert k v s
             let shw = head . words . show
-            diagnostics $ maybe "Missing" shw (Map.lookup k s) ++ " -> " ++ shw v ++ ", " ++ show k
+            logger $ maybe "Missing" shw (Map.lookup k s) ++ " -> " ++ shw v ++ ", " ++ show k
             return v
 
         isErrorDirty Error{} = True

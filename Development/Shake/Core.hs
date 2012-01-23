@@ -300,10 +300,7 @@ applyKeyValue ks = Action $ do
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate ans
             return ans
-    let diag = if verbosity s >= Diagnostic
-               then \msg -> modifyVar_ (outputLock s) $ const $ putStrLn $ "% " ++ msg
-               else const $ return ()
-    res <- liftIO $ eval (pool s) (database s) (Ops (stored s) exec diag) ks
+    res <- liftIO $ eval (pool s) (database s) (Ops (stored s) exec) ks
     case res of
         Left err -> throw err
         Right (d, vs) -> do
