@@ -29,8 +29,8 @@ var built = function(){
 // lastRun :: Int
 var lastRun = built.length == 0 ? 0 : built[built.length-1];
 
-function showTime(x){return x.toFixed(1) + "s";}
-function showPerc(x){return (x*100).toFixed(1) + "%";}
+function showTime(x){return x.toFixed(2) + "s";}
+function showPerc(x){return (x*100).toFixed(2) + "%";}
 function showShort(x){return x;}
 
 function plural(n,not1,is1){
