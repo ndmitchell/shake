@@ -188,7 +188,7 @@ data S = S
     -- global constants
     {database :: Database
     ,pool :: Pool
-    ,started :: UTCTime
+    ,started :: IO Time
     ,stored :: Key -> Value -> IO Bool
     ,execute :: Key -> Action Value
     ,outputLock :: Var ()
@@ -210,7 +210,7 @@ newtype Action a = Action (StateT S IO a)
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = do
-    start <- getCurrentTime
+    start <- startTime
     registerWitnesses rs
     outputLock <- newVar ()
     withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
@@ -329,10 +329,11 @@ apply1 = fmap head . apply . return
 --   The 'system'' command automatically calls 'traced'.
 traced :: String -> IO a -> Action a
 traced msg act = Action $ do
-    start <- liftIO getCurrentTime
+    s <- get
+    start <- liftIO $ started s
     res <- liftIO act
-    stop <- liftIO getCurrentTime
-    modify $ \s -> s{traces = (msg,duration (started s) start, duration (started s) stop):traces s}
+    stop <- liftIO $ started s
+    modify $ \s -> s{traces = (msg,start,stop):traces s}
     return res
 
 
