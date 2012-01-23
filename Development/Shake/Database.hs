@@ -134,6 +134,7 @@ getPending _ = Nothing
 data Ops = Ops
     {valid :: Key -> Value -> IO Bool
     ,exec :: [Key] -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
+    ,diagnostics :: String -> IO ()
     }
 
 
@@ -183,7 +184,12 @@ eval pool Database{..} Ops{..} ks =
                         t2 <- getCurrentTime
                         return $ Right (duration t1 t2,v)
     where
-        k #= v = modifyIORef status (Map.insert k v) >> return v
+        k #= v = do
+            s <- readIORef status
+            writeIORef status $ Map.insert k v s
+            let shw = head . words . show
+            diagnostics $ maybe "Missing" shw (Map.lookup k s) ++ " -> " ++ shw v ++ ", " ++ show k
+            return v
 
         isErrorDirty Error{} = True
         isErrorDirty Dirty{} = True
