@@ -5,6 +5,7 @@ import Development.Shake
 import Development.Shake.FilePath
 import Development.Shake.FileTime
 
+import Control.Concurrent
 import Control.Monad
 import System.Directory as IO
 import System.Environment
@@ -59,3 +60,7 @@ noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
     build []
     build []
+
+
+sleep :: Double -> IO ()
+sleep x = threadDelay $ ceiling $ x * 1000000
