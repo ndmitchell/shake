@@ -11,11 +11,18 @@
 :def hlint const $ return $ unlines [":hlint_",":!start report.html"]
 
 :{
-:def prof \x -> return $ unlines
-        [":!" ++
-         "(if not exist output mkdir output) && " ++
-         "(if not exist output\\obj mkdir output\\obj) && " ++
-         "ghc -rtsopts -threaded -prof -auto-all -caf-all -package transformers --make Main.hs -w -odir output/obj -hidir output/obj -o output/obj/shake.exe"
-        ,":!output\\obj\\shake " ++ x ++ " +RTS -p"
+let _ghci_make name flags =
+        ":!" ++
+        "(if not exist output mkdir output) && " ++
+        "(if not exist output\\obj mkdir output\\obj) && " ++
+        "(if not exist output\\obj\\" ++ name ++ " mkdir output\\obj\\" ++ name ++ ") && " ++
+        "ghc " ++ flags ++ " -hide-package hashmap -package transformers --make Main.hs -w -odir output/obj/" ++ name ++ " -hidir output/obj/" ++ name ++ " -o output/obj/" ++ name ++ "/shake.exe"
+:}
+
+:{
+:def prof_ \x -> return $ unlines
+        [_ghci_make "prof" "-rtsopts -threaded -prof -auto-all -caf-all"
+        ,":!output\\obj\\prof\\shake " ++ x ++ " +RTS -p"
         ]
 :}
+:def prof \x -> return $ unlines [":prof_ " ++ x,":!start shake.prof"]
