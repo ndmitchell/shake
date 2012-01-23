@@ -49,8 +49,12 @@ shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 Normal False
 
 
-data ShakeException = ShakeException [String] SomeException
-     deriving Typeable
+-- | All forseen exception conditions thrown by Shake, such problems with the rules or errors when executing
+--   rules, will be raised using this exception type.
+data ShakeException = ShakeException
+    [String] -- ^ Entries on the stack, starting at the top of the stack.
+    SomeException -- ^ Inner exception that was raised.
+    deriving Typeable
 
 instance Exception ShakeException
 
