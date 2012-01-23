@@ -1,7 +1,8 @@
 
 module Development.Shake.Locks(
     Lock, newLock, withLock,
-    Var, newVar, readVar, modifyVar, modifyVar_
+    Var, newVar, readVar, modifyVar, modifyVar_,
+    Barrier, newBarrier, signalBarrier, waitBarrier,
     ) where
 
 import Control.Concurrent
@@ -40,3 +41,20 @@ modifyVar (Var x) f = modifyMVar x f
 
 modifyVar_ :: Var a -> (a -> IO a) -> IO ()
 modifyVar_ (Var x) f = modifyMVar_ x f
+
+
+---------------------------------------------------------------------
+-- BARRIER
+
+-- | Starts out empty, then is filled exactly once
+newtype Barrier a = Barrier (MVar a)
+instance Show (Barrier a) where show _ = "Barrier"
+
+newBarrier :: IO (Barrier a)
+newBarrier = fmap Barrier newEmptyMVar
+
+signalBarrier :: Barrier a -> a -> IO ()
+signalBarrier (Barrier x) = putMVar x
+
+waitBarrier :: Barrier a -> IO a
+waitBarrier (Barrier x) = readMVar x
