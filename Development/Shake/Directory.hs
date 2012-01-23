@@ -111,6 +111,6 @@ getDir x = fmap (GetDir_ . sort) $ f x . filter validName =<< IO.getDirectoryCon
         validName = not . all (== '.')
 
         f GetDir{} xs = return xs
-        f GetDirFiles{} xs = flip filterM xs $ \s -> do
+        f GetDirFiles{} xs = flip filterM xs $ \s ->
             if not $ pat x ?== s then return False else IO.doesFileExist $ dir x </> s
         f GetDirDirs{} xs = flip filterM xs $ \s -> IO.doesDirectoryExist $ dir x </> s

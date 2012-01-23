@@ -18,7 +18,7 @@ test build obj = do
     -- check that it aims for exactly the limit
     forM_ [1..6] $ \n -> do
         var <- newMVar (0,0) -- (maximum, current)
-        runPool n $ \pool -> do
+        runPool n $ \pool ->
             forM_ [1..5] $ \i ->
                 addPool pool $ do
                     modifyMVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
@@ -54,7 +54,7 @@ test build obj = do
 
     -- check someone spawned when at zero todo still gets run
     done <- newMVar False
-    runPool 1 $ \pool -> do
+    runPool 1 $ \pool ->
         addPool pool $ do
             wait
             addPool pool $ do

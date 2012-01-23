@@ -177,7 +177,7 @@ eval pool Database{..} Ops{..} ks =
                                 Just (Dirty r) -> do
                                     Building p _ <- evalB [] k r
                                     addPending p act -- try again
-                                Just (Building p _) -> do
+                                Just (Building p _) ->
                                     -- can only happen if two people are waiting on the same Dirty
                                     -- the first gets kicked, and sets it to Building, meaning the second sees Building
                                     -- very subtle!
@@ -237,7 +237,7 @@ eval pool Database{..} Ops{..} ks =
                         Right (v,depends,execution,traces) ->
                             let c | Just r <- r, value r == v = changed r
                                   | otherwise = step
-                            in Ready $ Result{value=v,changed=c,built=step,..}
+                            in Ready Result{value=v,changed=c,built=step,..}
                     join $ readIORef pend
                     return ans
                 case ans of
@@ -258,7 +258,7 @@ eval pool Database{..} Ops{..} ks =
 
 
         checkREDCB :: [Key] -> Key -> Result -> [[Key]] -> IO Status
-        checkREDCB stack k r [] = do
+        checkREDCB stack k r [] =
             k #= Ready r
         checkREDCB stack k r (ds:rest) = do
             vs <- mapM (evalREDCB (k:stack)) ds
@@ -380,7 +380,7 @@ writeDatabase :: FilePath -> Int -> Step -> Map Key Status -> IO ()
 writeDatabase file version step status = do
     ws <- currentWitness
     LBS.writeFile file $
-        (LBS.pack $ databaseVersion version) `LBS.append`
+        LBS.pack (databaseVersion version) `LBS.append`
         encode (step, Witnessed ws $ Statuses status)
 
 

@@ -53,7 +53,7 @@ test build obj = do
     when b $ removeFile $ obj "staunch1"
     crash ["staunch1","staunch2","--threads2"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
-    assert (not b) $ "File should not exist, should have crashed first"
+    assert (not b) "File should not exist, should have crashed first"
     crash ["staunch1","staunch2","--threads2","--staunch"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
-    assert b $ "File should exist, staunch should have let it be created"
+    assert b "File should exist, staunch should have let it be created"

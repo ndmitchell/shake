@@ -62,7 +62,7 @@ extract p x = head $ f p x ++ [[]]
         f [] [] = [[]]
         f _ _ = []
 
-        rest p xs = [(skip:res) | (skip,keep) <- xs, res <- f p keep]
+        rest p xs = [skip:res | (skip,keep) <- xs, res <- f p keep]
 
 
 -- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.

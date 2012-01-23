@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 
 -- | Thread pool implementation.
 module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where

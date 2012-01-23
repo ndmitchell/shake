@@ -49,7 +49,7 @@ ps *>> act
         "All patterns to *>> must have the same number and position of // and * wildcards\n" ++
         unwords ps
     | otherwise = do
-        forM ps $ \p ->
+        forM_ ps $ \p ->
             p *> \file -> do
                 apply1 $ Files $ map (substitute $ extract p file) ps :: Action FileTimes
                 return ()

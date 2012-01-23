@@ -305,8 +305,8 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
     modify $ \s -> s{depends=ks:depends s}
     s <- get
-    let bad = intersect (stack s) ks
-    when (not $ null bad) $ 
+    let bad = stack s `intersect` ks
+    unless (null bad) $ 
         error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
     let exec more_stack k = let stack2 = k : more_stack ++ stack s in try $ wrapStack (reverse stack2) $ do
             evaluate k

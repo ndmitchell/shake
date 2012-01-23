@@ -19,7 +19,7 @@ newtype FileTime = FileTime Int
 
 
 getModTimeMaybe :: FilePath -> IO (Maybe FileTime)
-getModTimeMaybe x = do
+getModTimeMaybe x =
     fmap Just (getModTime x) `catchIOError` \e ->
         if isDoesNotExistError e then return Nothing else ioError e
 
