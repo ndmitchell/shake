@@ -32,16 +32,17 @@ import Development.Shake.Value
 ---------------------------------------------------------------------
 -- OPTIONS
 
--- | Options to control 'shake'.
+-- | Options to control the execution of Shake, usually specified by overriding fields in
+--   'shakeOptions':
+--
+--   @'shakeOptions'{'shakeThreads'=4, 'shakeDump'=True}@
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
-    ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
+    ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild (defaults to @1@).
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
---    ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
---                       --   /This feature has not yet been completed, and should not be used./
-    ,shakeDump :: Bool -- ^ Dump all profiling information to @'shakeFiles'.js@ (defaults to 'False').
+    ,shakeDump :: Bool -- ^ Dump all profiling information to 'shakeFiles' plus the extension @.js@ (defaults to 'False').
     }
     deriving (Show, Eq, Ord)
 
@@ -67,13 +68,13 @@ instance Show ShakeException where
         [show inner]
 
 
--- | The verbosity data type
+-- | The verbosity data type, specified in 'shakeVerbosity'.
 data Verbosity
-    = Silent -- ^ Don't print out any messages
-    | Quiet  -- ^ Only output essential messages (typically errors)
-    | Normal -- ^ Output normal messages (typically errors and warnings)
-    | Loud   -- ^ Output lots of messages (typically errors, warnings and status updates)
-    | Diagnostic -- ^ Output messages for virtually everything (for debugging a build system)
+    = Silent -- ^ Don't print any messages.
+    | Quiet  -- ^ Only print essential messages (typically errors).
+    | Normal -- ^ Print normal messages (typically errors and warnings).
+    | Loud   -- ^ Print lots of messages (typically errors, warnings and status updates).
+    | Diagnostic -- ^ Print messages for virtually everything (for debugging a build system).
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable)
 
 
@@ -140,7 +141,7 @@ ruleStored _ = validStored
 
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
---   with either the 'Monoid' instance, or more commonly using the 'Monad' instance and @do@ notation.
+--   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 data Rules a = Rules
     {value :: a -- not really used, other than for the Monad instance
     ,actions :: [Action ()]
@@ -327,13 +328,14 @@ applyKeyValue ks = Action $ do
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
---   use 'apply' to allow the potential for parallelism.
+--   use 'apply' to allow parallelism.
 apply1 :: Rule key value => key -> Action value
 apply1 = fmap head . apply . return
 
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
---   The 'system'' command automatically calls 'traced'.
+--   The 'system'' command automatically calls 'traced'. The trace list is used for profile reports
+--   (see 'shakeDump').
 traced :: String -> IO a -> Action a
 traced msg act = Action $ do
     s <- get

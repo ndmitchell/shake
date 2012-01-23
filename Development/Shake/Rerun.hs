@@ -23,12 +23,12 @@ instance Rule AlwaysRerun Dirty where
     validStored _ _ = return False
 
 
--- | Always rerun the associated action. Useful for defining rules that look something
---   up in the environment. For example:
+-- | Always rerun the associated action. Useful for defining rules that query
+--   the environment. For example:
 --
 -- > "ghcVersion.txt" *> \out -> do
 -- >     alwaysRerun
--- >     (stdout,_) <- systemOutput' "ghc" "--version"
+-- >     (stdout,_) <- systemOutput' "ghc" ["--version"]
 -- >     writeFile' out stdout
 alwaysRerun :: Action ()
 alwaysRerun = do Dirty _ <- apply1 $ AlwaysRerun (); return ()
