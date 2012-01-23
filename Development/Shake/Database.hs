@@ -46,15 +46,14 @@ databaseVersion i = "SHAKE-DATABASE-2-" ++ show (i :: Int) ++ "\r\n"
 journalVersion i = "SHAKE-JOURNAL-2-" ++ show (i :: Int) ++ "\r\n"
 
 
----------------------------------------------------------------------
--- UTILITY TYPES AND FUNCTIONS
-
 removeFile_ :: FilePath -> IO ()
 removeFile_ x = catch (removeFile x) (\(e :: SomeException) -> return ())
 
-
 type Map = Map.HashMap
 
+
+---------------------------------------------------------------------
+-- UTILITY TYPES
 
 newtype Step = Step Int deriving (Eq,Ord,Show)
 
