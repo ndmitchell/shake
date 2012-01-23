@@ -132,8 +132,11 @@ getPending _ = Nothing
 
 data Ops = Ops
     {valid :: Key -> Value -> IO Bool
+        -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
     ,exec :: [Key] -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
+        -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     ,diagnostics :: String -> IO ()
+        -- ^ Print out a diagnostics message (usually just ignores the message)
     }
 
 
