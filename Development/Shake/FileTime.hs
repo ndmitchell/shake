@@ -11,6 +11,7 @@ import Data.Hashable
 import Data.Typeable
 import System.Directory
 import System.IO.Error
+import Control.Exception
 import System.Time
 
 
@@ -20,7 +21,7 @@ newtype FileTime = FileTime Int
 
 getModTimeMaybe :: FilePath -> IO (Maybe FileTime)
 getModTimeMaybe x =
-    fmap Just (getModTime x) `catchIOError` \e ->
+    fmap Just (getModTime x) `Control.Exception.catch` \e ->
         if isDoesNotExistError e then return Nothing else ioError e
 
 
