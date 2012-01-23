@@ -13,16 +13,28 @@
 :{
 let _ghci_make name flags =
         ":!" ++
-        "(if not exist output mkdir output) && " ++
-        "(if not exist output\\obj mkdir output\\obj) && " ++
-        "(if not exist output\\obj\\" ++ name ++ " mkdir output\\obj\\" ++ name ++ ") && " ++
-        "ghc " ++ flags ++ " -hide-package hashmap -package transformers --make Main.hs -w -odir output/obj/" ++ name ++ " -hidir output/obj/" ++ name ++ " -o output/obj/" ++ name ++ "/shake.exe"
+        "(if not exist .hpc mkdir .hpc) && " ++
+        "(if not exist .hpc\\" ++ name ++ " mkdir .hpc\\" ++ name ++ ") && " ++
+        "ghc " ++ flags ++ " -hide-package hashmap -package transformers --make Main.hs -w -odir .hpc/" ++ name ++ " -hidir .hpc/" ++ name ++ " -o .hpc/" ++ name ++ "/shake.exe"
 :}
 
 :{
 :def prof_ \x -> return $ unlines
         [_ghci_make "prof" "-rtsopts -threaded -prof -auto-all -caf-all"
-        ,":!output\\obj\\prof\\shake " ++ x ++ " +RTS -p"
+        ,":!.hpc\\prof\\shake " ++ x ++ " +RTS -p"
         ]
 :}
 :def prof \x -> return $ unlines [":prof_ " ++ x,":!start shake.prof"]
+
+:{
+:def hpc_ const $ return $ unlines
+        [_ghci_make "hpc" "-fhpc"
+        ,":!del shake.tix"
+        ,":!.hpc\\hpc\\shake"
+        ,":!.hpc\\hpc\\shake clean"
+        ,":!.hpc\\hpc\\shake test"
+        ,":!hpc.exe markup shake.tix --destdir=.hpc"
+        ,":!hpc.exe report shake.tix"
+        ,":!del shake.tix"]
+:}
+:def hpc \x -> return $ unlines [":hpc_",":!start .hpc\\hpc_index_fun.html"]
