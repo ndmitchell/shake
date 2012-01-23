@@ -47,7 +47,7 @@ main = shaken noTest $ \args obj -> do
         dep <- readFileLines $ replaceExtension out "dep"
         let hs = unobj $ replaceExtension out "hs"
         need $ hs : map (obj . moduleToFile "hi") dep
-        ghc ["-c",hs,"-odir=output/self","-hidir=output/self","-i=output/self"]
+        ghc ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"]
 
     obj ".pkgs" *> \out -> do
         src <- readFile' "shake.cabal"
@@ -76,4 +76,6 @@ hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (no
 
 -- FIXME: Should actually parse the list from the contents of the .cabal file
 cabalBuildDepends :: String -> [String]
-cabalBuildDepends _ = words "transformers binary unordered-containers parallel-io filepath directory process access-time deepseq"
+cabalBuildDepends _ = words $
+    "base transformers binary unordered-containers hashable time old-time bytestring " ++
+    "filepath directory process deepseq"
