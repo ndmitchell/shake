@@ -61,7 +61,6 @@ library
         unordered-containers,
         bytestring,
         time,
-        parallel-io,
         transformers == 0.2.*,
         deepseq >= 1.1 && < 1.3
 
