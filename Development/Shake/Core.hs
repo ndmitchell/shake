@@ -49,7 +49,7 @@ shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 Normal False
 
 
-data ShakeException = ShakeException [Key] SomeException
+data ShakeException = ShakeException [String] SomeException
      deriving Typeable
 
 instance Exception ShakeException
@@ -57,7 +57,7 @@ instance Exception ShakeException
 instance Show ShakeException where
     show (ShakeException stack inner) = unlines $
         "Error when running Shake build system:" :
-        map (("* " ++) . show) stack ++
+        map ("* " ++) stack ++
         [show inner]
 
 
@@ -230,7 +230,7 @@ run opts@ShakeOptions{..} rs = do
 wrapStack :: [Key] -> IO a -> IO a
 wrapStack stk act = catch act $ \(SomeException e) -> case cast e of
     Just s@ShakeException{} -> throw s
-    Nothing -> throw $ ShakeException stk $ SomeException e
+    Nothing -> throw $ ShakeException (map show stk) $ SomeException e
 
 
 registerWitnesses :: Rules () -> IO ()
