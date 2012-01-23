@@ -68,16 +68,16 @@ build-system, compilation, Haskell
 \section{Introduction}
 \label{sec:introduction}
 
-A build tool, such as \make{} \cite{make,recursive_make}, takes a set of input files, plus some build rules, and produces some output files. In \make{} a build rule can be defined as:
+A build tool, such as \make{} \cite{make,recursive_make}, takes a set of input files, plus some build rules, and produces some output files. Using \make{}, a build rule can be written as:
 
 \begin{code}
-{-"\textsf{result.tar : a.txt b.txt}"-}
-    {-"\textsf{tar -cf result.tar a.txt b.txt}"-}
+{-"\textsf{result.tar : file1 file2}"-}
+    {-"\textsf{tar -cf result.tar file1 file2}"-}
 \end{code}
 
-\noindent This rule builds the tar archive \file{result.tar} from the inputs \file{a.txt} and \file{b.txt}. Whenever \file{a.txt} or \file{b.txt} changes \file{result.tar} will be regenerated.
+\noindent This rule says that the file \file{result.tar} depends on the inputs \file{file1} and \file{file2} (first line), and provides a command to build \file{result.tar} (second line). Whenever \file{file1} or \file{file2} change, the command will be run, and \file{result.tar} will be regenerated.
 
-What if we want to build \file{result.tar} from the list of files in \file{list.txt}? Unfortunately, \make{} offers no easy way to express this pattern (there are workarounds, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
+But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} are no longer static, but depend on the contents of \file{list.txt}. Unfortunately, \make{} offers no easy way to express this pattern (there are workarounds, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
 
 \begin{code}
 "result.tar" *> \_ -> do
@@ -87,9 +87,12 @@ What if we want to build \file{result.tar} from the list of files in \file{list.
     system' "tar" $ ["-cf","result.tar"] ++ contents
 \end{code}
 
-This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read each line from \file{list.txt} into the variable |contents| -- which is a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program specifying the files in |contents|. If \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
+This rule describes how to build \file{result.tar}. We depend on (|need|) the file \file{list.txt}. We read each line from \file{list.txt} into the variable |contents| -- being a list of the files that should go into \file{result.tar}. Next, we depend on all the files in |contents|, and finally call the \prog{tar} program. If either \file{list.txt} changes, or any of the files listed by \file{list.txt} change, then \file{result.tar} will be rebuilt.
 
-The key difference from \make{} (and nearly all other build tools) is that rather than specifying the dependencies of a rule \textit{in advance}, we allow further dependencies to be specified \textit{after} using previous dependencies. This difference is crucial to properly handle generated files.
+The key difference from \make{} (and nearly all other build tools) is that rather than specifying the dependencies of a rule \textit{in advance}, we allow further dependencies to be specified \textit{after} examining the results of previous dependencies. This difference is crucial to accurately describe many dependency relationships. The particular example that made us explore this is, particularly for generated files. With generated files you want to generate the file, then examine it to determine its dependencies -- the atlernative is trying to guess at it's dependencies before running the generator, which is error prone.
+
+\todo{is this a build system for generated files? if so, argue why make doesn't do generated files. is it just about complete dependencies?}
+
 
 We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake properly handles generated files and includes the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change), and parallelising the build (running multiple independent rules at the same time). By implementing Shake as a Haskell library we allow rules to be written using the full power of Haskell, including the use of modules and functions to properly structure large build systems.
 
@@ -110,7 +113,7 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 
 \todo{there should be more examples, more code, more intuition -- less detail}
 
-In this section we describe the theory that underpins of \make{}, then the underlying theory of our build system, named Shake. We then describe how to support minimal rebuilds in both theories. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to implement these ideas in a usable tool.
+In this section we describe the theory that underpins of non-recursive \make{} \cite{non-recursive_make}, then the underlying theory of our build system, named Shake. We then describe how to support minimal rebuilds in both theories. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to implement these ideas in a usable tool.
 
 \subsection{Intuition}
 
