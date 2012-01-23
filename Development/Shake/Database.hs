@@ -55,17 +55,23 @@ removeFile_ x = catch (removeFile x) (\(e :: SomeException) -> return ())
 
 type Map = Map.HashMap
 
-newtype Step = Step Int
-    deriving (Eq,Ord,Show)
+
+newtype Step = Step Int deriving (Eq,Ord,Show)
 
 incStep (Step i) = Step $ i + 1
 
+
 type Duration = Double -- duration in seconds
+
+duration :: IO a -> IO (Duration, a)
+duration act = do
+    start <- getCurrentTime
+    res <- act
+    end <- getCurrentTime
+    return (fromRational $ toRational $ end `diffUTCTime` start, res)
+
+
 type Time = Double -- how far you are through this run, in seconds
-
-
-duration :: UTCTime -> UTCTime -> Double
-duration start end = fromRational $ toRational $ end `diffUTCTime` start
 
 
 ---------------------------------------------------------------------
@@ -178,13 +184,10 @@ eval pool Database{..} Ops{..} ks =
                                     writeIORef todo $ fmap (subtract 1) t
                 addPending (fromJust $ getPending v) act
             return $ do
-                t1 <- getCurrentTime
-                res <- blockPool pool $ waitBarrier wait
-                case res of
-                    Left e -> return $ Left e
-                    Right v -> do
-                        t2 <- getCurrentTime
-                        return $ Right (duration t1 t2,v)
+                (dur,res) <- duration $ blockPool pool $ waitBarrier wait
+                return $ case res of
+                    Left e -> Left e
+                    Right v -> Right (dur,v)
     where
         k #= v = do
             s <- readIORef status
