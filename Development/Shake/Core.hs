@@ -310,13 +310,13 @@ applyKeyValue ks = Action $ do
     unless (null bad) $ 
         error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
     let exec more_stack k = let stack2 = k : more_stack ++ stack s in try $ wrapStack (reverse stack2) $ do
-            evaluate k
+            evaluate $ rnf k
             let s2 = s{depends=[], stack=stack2, discount=0, traces=[]}
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putNormal $ "# " ++ show k
                 execute s k
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
-            evaluate ans
+            evaluate $ rnf ans
             return ans
     res <- liftIO $ eval (pool s) (database s) (Ops (stored s) exec) ks
     case res of
