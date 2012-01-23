@@ -4,6 +4,7 @@ module Main where
 import Data.Maybe
 import System.Environment
 
+import Examples.Util(flags)
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.Test.Basic1 as Basic1
@@ -27,7 +28,12 @@ main :: IO ()
 main = do
     xs <- getArgs
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
-        Nothing -> error $ "Enter one of the examples: " ++ unwords (map fst $ fakes ++ mains)
+        Nothing -> putStrLn $ unlines
+            ["Welcome to the Shake demo"
+            ,""
+            ,unwords $ "Modes:" : map fst fakes
+            ,unwords $ "Demos:" : map fst mains
+            ,unwords $ "Flags:" : flags]
         Just main -> main
 
 
