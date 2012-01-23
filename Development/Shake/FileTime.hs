@@ -10,6 +10,7 @@ import Data.Binary
 import Data.Hashable
 import Data.Typeable
 import System.Directory
+import System.IO.Error
 import System.Time
 
 
@@ -19,15 +20,15 @@ newtype FileTime = FileTime Int
 
 getModTimeMaybe :: FilePath -> IO (Maybe FileTime)
 getModTimeMaybe x = do
-    b <- doesFileExist x
-    if b then fmap Just $ getModTime x else return Nothing
+    fmap Just (getModTime x) `catchIOError` \e ->
+        if isDoesNotExistError e then return Nothing else ioError e
 
 
 getModTimeError :: String -> FilePath -> IO FileTime
 getModTimeError msg x = do
     res <- getModTimeMaybe x
     case res of
-        -- Important to raise an error in IO, not return a value which will error later
+        -- Make sure you raise an error in IO, not return a value which will error later
         Nothing -> error $ msg ++ "\n" ++ x
         Just x -> return x
 
