@@ -1,4 +1,4 @@
-:set -package transformers
+:set -package transformers -hide-package hashmap
 :set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
 :load Main
 
