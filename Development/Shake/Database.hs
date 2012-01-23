@@ -93,6 +93,7 @@ data Status
     | Dirty (Maybe Result) -- One of my dependents is in Error or Dirty
     | Checking Pending Result -- Currently checking if I am valid
     | Building Pending (Maybe Result) -- Currently building
+      deriving Show
 
 data Result = Result
     {value :: Value -- the value associated with the Key
@@ -101,11 +102,16 @@ data Result = Result
     ,depends :: [[Key]] -- dependencies
     ,execution :: Duration -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
-    }
+    } deriving Show
 
-type Pending = IORef (IO ())
+newtype Pending = Pending (IORef (IO ()))
     -- you must run this action when you finish, while holding DB lock
     -- after you have set the result to Error, Ready or Dirty (checking only)
+
+addPending :: Pending -> IO () -> IO ()
+addPending (Pending p) act = modifyIORef p (>> act)
+
+instance Show Pending where show _ = "Pending"
 
 
 getResult :: Status -> Maybe Result
@@ -156,13 +162,18 @@ eval pool Database{..} Ops{..} ks =
                                     putMVar wait $ Left e
                                 Just (Dirty r) -> do
                                     Building p _ <- evalB k r
-                                    modifyIORef p (>> act) -- try again
+                                    addPending p act -- try again
+                                Just (Building p _) -> do
+                                    -- can only happen if two people are waiting on the same Dirty
+                                    -- the first gets kicked, and sets it to Building, meaning the second sees Building
+                                    -- very subtle!
+                                    addPending p act
                                 Just Ready{} | fromJust t == 1 -> do
                                     writeIORef todo Nothing
                                     putMVar wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
                                 Just Ready{} ->
                                     writeIORef todo $ fmap (subtract 1) t
-                modifyIORef (fromJust $ getPending v) (>> act)
+                addPending (fromJust $ getPending v) act
             return $ do
                 t1 <- getCurrentTime
                 res <- blockPool pool $ readMVar wait
@@ -217,7 +228,7 @@ eval pool Database{..} Ops{..} ks =
                 case ans of
                     Ready r -> appendJournal journal k r -- leave the DB lock before appending
                     _ -> return ()
-            k #= Building pend r
+            k #= Building (Pending pend) r
 
 
         evalREDCB :: Key -> IO Status
@@ -247,7 +258,7 @@ eval pool Database{..} Ops{..} ks =
                 todo <- newIORef $ Just $ length cb -- how many to do
                 pend <- newIORef $ return ()
                 forM_ cb $ \(d,i) ->
-                    modifyIORef (fromJust $ getPending i) $ flip (>>) $ do
+                    addPending (fromJust $ getPending i) $ do
                         t <- readIORef todo
                         when (isJust t) $ do
                             s <- readIORef status
@@ -260,16 +271,19 @@ eval pool Database{..} Ops{..} ks =
                                     | changed r2 > built r -> do
                                         writeIORef todo Nothing
                                         Building p _ <- evalB k $ Just r
-                                        modifyIORef p (>> join (readIORef pend))                                            
+                                        addPending p $ join $ readIORef pend
                                     | fromJust t == 1 -> do
                                         writeIORef todo Nothing
                                         res <- checkREDCB k r rest
                                         case getPending res of
                                             Nothing -> join $ readIORef pend
-                                            Just p -> modifyIORef p (>> join (readIORef pend))
+                                            Just p -> addPending p $ join $ readIORef pend
                                     | otherwise ->
                                         writeIORef todo $ fmap (subtract 1) t
-                k #= Checking pend r
+                                Just (Building p _) -> do
+                                    writeIORef todo Nothing
+                                    addPending p $ join $ readIORef pend
+                k #= Checking (Pending pend) r
 
 
 ---------------------------------------------------------------------
