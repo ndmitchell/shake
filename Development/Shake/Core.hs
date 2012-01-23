@@ -35,7 +35,7 @@ import Development.Shake.Value
 -- | Options to control 'shake'.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
-    ,shakeParallel :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
+    ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
 --    ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
@@ -217,7 +217,7 @@ run opts@ShakeOptions{..} rs = do
     registerWitnesses rs
     outputLock <- newVar ()
     withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
-        runPool shakeParallel $ \pool -> do
+        runPool shakeThreads $ \pool -> do
             let s0 = S database pool start stored execute outputLock shakeVerbosity [] [] 0 []
             mapM_ (addPool pool . wrapStack [] . runAction s0) (actions rs)
         when shakeDump $ do
