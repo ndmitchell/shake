@@ -196,8 +196,8 @@ data S = S
     ,stack :: [Key] -- in reverse
     -- local variables
     ,depends :: [[Key]] -- built up in reverse
-    ,discount :: Double
-    ,traces :: [(String, Double, Double)] -- in reverse
+    ,discount :: Duration
+    ,traces :: [(String, Time, Time)] -- in reverse
     }
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'need' to execute files.
