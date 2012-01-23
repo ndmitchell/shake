@@ -39,7 +39,7 @@ Must spawn a fresh thread to do blockPool
 If any worker throws an exception, must signal to all the other workers
 -}
 
-data Pool = Pool Int (Var (Maybe S)) (MVar (Maybe SomeException))
+data Pool = Pool Int (Var (Maybe S)) (Barrier (Maybe SomeException))
 
 data S = S
     {threads :: Set.HashSet ThreadId
@@ -69,12 +69,12 @@ step pool@(Pool n var done) op = do
                     case res of
                         Left e -> onVar $ \s -> do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
-                            putMVar done $ Just e
+                            signalBarrier done $ Just e
                             return Nothing
                         Right _ -> step pool $ \s -> s{working = working s - 1, threads = Set.delete t $ threads s}
                 return $ Just s{working = working s + 1, todo = todo2, threads = Set.insert t $ threads s}
             Nothing | working s == 0 && blocked s == 0 -> do
-                putMVar done Nothing
+                signalBarrier done Nothing
                 return Nothing
             _ -> return $ Just s
 
@@ -90,12 +90,12 @@ blockPool :: Pool -> IO a -> IO a
 blockPool pool act = do
     step pool $ \s -> s{working = working s - 1, blocked = blocked s + 1}
     res <- act
-    var <- newEmptyMVar
+    var <- newBarrier
     let act = do
             step pool $ \s -> s{working = working s + 1, blocked = blocked s - 1}
-            putMVar var ()
+            signalBarrier var ()
     step pool $ \s -> s{todo = enqueuePriority act $ todo s}
-    takeMVar var
+    waitBarrier var
     return res
 
 
@@ -104,10 +104,10 @@ blockPool pool act = do
 runPool :: Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool n act = do
     s <- newVar $ Just emptyS
-    res <- newEmptyMVar
+    res <- newBarrier
     let pool = Pool n s res
     addPool pool $ act pool
-    res <- readMVar res
+    res <- waitBarrier res
     case res of
         Nothing -> return ()
         Just e -> throw e
