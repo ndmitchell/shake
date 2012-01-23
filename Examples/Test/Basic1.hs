@@ -3,6 +3,8 @@ module Examples.Test.Basic1(main) where
 
 import Development.Shake
 import Examples.Util
+import System.Directory
+
 
 main = shaken test $ \args obj -> do
     want $ map obj args
@@ -53,3 +55,7 @@ test build obj = do
     build ["once.txt","twice.txt"]
     assertContents (obj "twice.txt") "zzz"
     assertContents (obj "once.txt") "zzz"
+
+    removeFile $ obj "twice.txt"
+    build ["twice.txt"]
+    assertContents (obj "twice.txt") "zzz"
