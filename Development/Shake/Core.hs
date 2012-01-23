@@ -22,7 +22,6 @@ import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.Monoid
-import Data.Time.Clock
 import Data.Typeable
 
 import Development.Shake.Database
@@ -280,10 +279,6 @@ runAction :: S -> Action a -> IO (a, S)
 runAction s (Action x) = runStateT x s
 
 
-duration :: UTCTime -> UTCTime -> Double
-duration start end = fromRational $ toRational $ end `diffUTCTime` start
-
-
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
 apply :: Rule key value => [key] -> Action [value]
@@ -298,14 +293,11 @@ applyKeyValue ks = Action $ do
         error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
     let exec more_stack k = let stack2 = k : more_stack ++ stack s in try $ wrapStack (reverse stack2) $ do
             evaluate k
-            start <- getCurrentTime
             let s2 = s{depends=[], stack=stack2, discount=0, traces=[]}
-            (res,s2) <- runAction s2 $ do
+            (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putNormal $ "# " ++ show k
                 execute s k
-            end <- getCurrentTime
-            let x = duration start end - discount s2
-            let ans = (res, reverse $ depends s2, x, reverse $ traces s2)
+            let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate ans
             return ans
     let diag = if verbosity s >= Diagnostic

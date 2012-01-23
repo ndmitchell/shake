@@ -8,7 +8,7 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 -}
 
 module Development.Shake.Database(
-    Time, startTime, Duration, Trace,
+    Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), eval,
     allEntries, showJSON,
