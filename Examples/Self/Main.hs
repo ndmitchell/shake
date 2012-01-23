@@ -16,7 +16,7 @@ main = shaken noTest $ \args obj -> do
     want $ if null args then [obj "Main.exe"] else args
 
     let ghc args = do
-            askOracle ["ghc-version"]
+            -- since ghc-pkg includes the ghc package, it changes if the version does
             askOracle ["ghc-pkg"]
             flags <- askOracle ["ghc-flags"]
             system' "ghc" $ args ++ flags
@@ -56,10 +56,6 @@ main = shaken noTest $ \args obj -> do
     addOracle ["ghc-pkg"] $ do
         (out,_) <- systemOutput "ghc-pkg" ["list","--simple-output"]
         return $ words out
-
-    addOracle ["ghc-version"] $ do
-        (out,_) <- systemOutput "ghc" ["--version"]
-        return [out]
 
     addOracle ["ghc-flags"] $ do
         pkgs <- readFileLines $ obj ".pkgs"
