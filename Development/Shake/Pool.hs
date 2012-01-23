@@ -13,6 +13,8 @@ import qualified Data.HashSet as Set
 ---------------------------------------------------------------------
 -- SUPER QUEUE
 
+-- FIXME: The super queue should use randomness for the normal priority pile
+
 data SuperQueue a = SuperQueue [a] [a]
 
 newSuperQueue :: SuperQueue a
