@@ -6,6 +6,7 @@ import Development.Shake.FilePath
 
 import Control.Concurrent
 import Control.Monad
+import Data.List
 import System.Directory as IO
 import System.Environment
 
@@ -35,7 +36,29 @@ shaken test rules = do
             when b $ renameFile tempfile dbfile
             shake shakeOptions{shakeFiles=out, shakeLint=True} $ rules args (out++)
 -}
-        _ -> shake shakeOptions{shakeFiles=out, shakeDump=True} $ rules args (out++)
+        args -> do
+            (flags,args) <- return $ partition ("-" `isPrefixOf`) args
+            let f o x = let x2 = dropWhile (== '-') x in case lookup x2 flagList of
+                    Just op -> op o
+                    Nothing | "threads" `isPrefixOf` x2 -> o{shakeParallel=read $ drop 7 x2}
+                            | otherwise -> error $ "Don't know how to deal with flag: " ++ x
+            let opts = foldl' f shakeOptions{shakeFiles=out, shakeDump=True} $ flags
+            shake opts $ rules args (out++)
+
+
+flags :: [String]
+flags = "threads#" : map fst flagList
+
+
+flagList :: [(String, ShakeOptions -> ShakeOptions)]
+flagList = let (*) = (,) in
+    ["no-dump" * \o -> o{shakeDump=False}
+    ,"silent" * \o -> o{shakeVerbosity=Silent}
+    ,"quiet" * \o -> o{shakeVerbosity=Quiet}
+    ,"normal" * \o -> o{shakeVerbosity=Normal}
+    ,"loud" * \o -> o{shakeVerbosity=Loud}
+    ,"diagnostic" * \o -> o{shakeVerbosity=Diagnostic}
+    ]
 
 
 unobj :: FilePath -> FilePath
