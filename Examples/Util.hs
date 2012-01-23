@@ -24,6 +24,7 @@ shaken test rules = do
         "test":_ -> do
             putStrLn $ "## TESTING " ++ name
             test (\args -> withArgs (name:args) $ shaken test rules) (out++)
+            putStrLn $ "## FINISHED TESTING " ++ name
         "clean":_ -> removeDirectoryRecursive out
 {-
         "lint":args -> do
