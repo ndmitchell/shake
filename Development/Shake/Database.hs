@@ -165,7 +165,7 @@ eval pool Database{..} Ops{..} ks =
                 modifyIORef (fromJust $ getPending v) (>> act)
             return $ do
                 t1 <- getCurrentTime
-                res <- blockPool $ readMVar wait
+                res <- blockPool pool $ readMVar wait
                 case res of
                     Left e -> return $ Left e
                     Right v -> do

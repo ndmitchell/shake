@@ -29,8 +29,8 @@ addPool (Pool err done count) act = do
 
 
 -- | A blocking action is being run while on the pool, yeild your thread.
-blockPool :: IO a -> IO a
-blockPool act = act
+blockPool :: Pool -> IO a -> IO a
+blockPool pool act = act
 
 
 -- | Run all the tasks in the pool on the given number of works.
