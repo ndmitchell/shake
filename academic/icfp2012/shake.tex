@@ -823,6 +823,10 @@ Shake can export the full dependency graph, so additional queries can be written
 \label{fig:analysis}
 \end{figure}
 
+% REVISED NUMBERS on a laptop:
+% GHC build = 7.141 full, 0.453 minimal
+% Shake build = 11.828 full, 0.101 minimal (of which 0.6 is ghc-pkg, 75% of the rest is writing the db)
+
 As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program\footnote{The program is Shake itself, which can be compiled using Shake.} from scratch with a maximum of four processors. The entire process takes 6.35 seconds, but spends 11.82 seconds executing rules, giving a parallel speed up of 1.9 times. Executing the build system with no parallelism takes 11.57 seconds (likely due to reduced disk contention). \todo{confirm on desktop}
 
 Figure \ref{fig:profile} shows the number of traced system commands executing at any point during the build. We see a start up period where zero commands are running and the build system is checking for dependencies, followed by three spikes up to four processors, followed by a tail of using one processor.
