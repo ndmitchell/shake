@@ -297,10 +297,10 @@ applyKeyValue ks = Action $ do
     let bad = intersect (stack s) ks
     when (not $ null bad) $ 
         error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
-    let exec k = try $ wrapStack (reverse $ k:stack s) $ do
+    let exec more_stack k = let stack2 = k : more_stack ++ stack s in try $ wrapStack (reverse stack2) $ do
             evaluate k
             start <- getCurrentTime
-            let s2 = s{depends=[], stack=k:stack s, discount=0, traces=[]}
+            let s2 = s{depends=[], stack=stack2, discount=0, traces=[]}
             (res,s2) <- runAction s2 $ do
                 putNormal $ "# " ++ show k
                 execute s k

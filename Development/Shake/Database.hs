@@ -133,7 +133,7 @@ getPending _ = Nothing
 
 data Ops = Ops
     {valid :: Key -> Value -> IO Bool
-    ,exec :: Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
+    ,exec :: [Key] -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
     }
 
 
@@ -141,7 +141,7 @@ data Ops = Ops
 eval :: Pool -> Database -> Ops -> [Key] -> IO (Either SomeException (Duration,[Value]))
 eval pool Database{..} Ops{..} ks =
     join $ withLock lock $ do
-        vs <- mapM evalRECB ks
+        vs <- mapM (evalRECB []) ks
         let errs = [e | Error e <- vs]
         if all isReady vs then
             return $ return $ Right (0, [value r | Ready r <- vs])
@@ -161,7 +161,7 @@ eval pool Database{..} Ops{..} ks =
                                     writeIORef todo Nothing
                                     putMVar wait $ Left e
                                 Just (Dirty r) -> do
-                                    Building p _ <- evalB k r
+                                    Building p _ <- evalB [] k r
                                     addPending p act -- try again
                                 Just (Building p _) -> do
                                     -- can only happen if two people are waiting on the same Dirty
@@ -202,20 +202,20 @@ eval pool Database{..} Ops{..} ks =
         -- * Must return only one of the items in its suffix
 
 
-        evalRECB :: Key -> IO Status
-        evalRECB k = do
-            res <- evalREDCB k
+        evalRECB :: [Key] -> Key -> IO Status
+        evalRECB stack k = do
+            res <- evalREDCB stack k
             case res of
-                Dirty r -> evalB k r
+                Dirty r -> evalB stack k r
                 res -> return res
 
 
-        evalB :: Key -> Maybe Result -> IO Status
-        evalB k r = do
+        evalB :: [Key] -> Key -> Maybe Result -> IO Status
+        evalB stack k r = do
             s <- readIORef status
             pend <- newIORef (return ())
             addPool pool $ do
-                res <- exec k
+                res <- exec stack k
                 ans <- withLock lock $ do
                     ans <- k #= case res of
                         Left err -> Error err
@@ -231,29 +231,29 @@ eval pool Database{..} Ops{..} ks =
             k #= Building (Pending pend) r
 
 
-        evalREDCB :: Key -> IO Status
-        evalREDCB k = do
+        evalREDCB :: [Key] -> Key -> IO Status
+        evalREDCB stack k = do
             s <- readIORef status
             case Map.lookup k s of
-                Nothing -> evalB k Nothing
+                Nothing -> evalB stack k Nothing
                 Just (Loaded r) -> do
                     b <- valid k (value r)
-                    if not b then evalB k $ Just r else checkREDCB k r (depends r)
+                    if not b then evalB stack k $ Just r else checkREDCB stack k r (depends r)
                 Just res -> return res
 
 
-        checkREDCB :: Key -> Result -> [[Key]] -> IO Status
-        checkREDCB k r [] = do
+        checkREDCB :: [Key] -> Key -> Result -> [[Key]] -> IO Status
+        checkREDCB stack k r [] = do
             k #= Ready r
-        checkREDCB k r (ds:rest) = do
-            vs <- mapM evalREDCB ds
+        checkREDCB stack k r (ds:rest) = do
+            vs <- mapM (evalREDCB (k:stack)) ds
             let cb = filter (isCheckingBuilding . snd) $ zip ds vs
             if any isErrorDirty vs then
                 k #= Dirty (Just r)
              else if any (> built r) [changed | Ready Result{..} <- vs] then
-                evalB k $ Just r
+                evalB stack k $ Just r
              else if null cb then
-                checkREDCB k r rest
+                checkREDCB stack k r rest
              else do
                 todo <- newIORef $ Just $ length cb -- how many to do
                 pend <- newIORef $ return ()
@@ -270,11 +270,11 @@ eval pool Database{..} Ops{..} ks =
                                 Just (Ready r2)
                                     | changed r2 > built r -> do
                                         writeIORef todo Nothing
-                                        Building p _ <- evalB k $ Just r
+                                        Building p _ <- evalB stack k $ Just r
                                         addPending p $ join $ readIORef pend
                                     | fromJust t == 1 -> do
                                         writeIORef todo Nothing
-                                        res <- checkREDCB k r rest
+                                        res <- checkREDCB stack k r rest
                                         case getPending res of
                                             Nothing -> join $ readIORef pend
                                             Just p -> addPending p $ join $ readIORef pend
