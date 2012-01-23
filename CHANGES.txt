@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.2
     Add shakeStaunch
     Rename shakeParallel to shakeThreads
     Delete the lint support (never actually worked)
