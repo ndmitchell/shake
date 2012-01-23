@@ -8,7 +8,7 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 -}
 
 module Development.Shake.Database(
-    Time, Duration, Trace,
+    Time, startTime, Duration, Trace,
     Database, withDatabase,
     Ops(..), eval,
     allEntries, showJSON,
@@ -72,6 +72,14 @@ duration act = do
 
 
 type Time = Double -- how far you are through this run, in seconds
+
+-- | Call once at the start, then call repeatedly to get Time values out
+startTime :: IO (IO Time)
+startTime = do
+    start <- getCurrentTime
+    return $ do
+        end <- getCurrentTime
+        return $ fromRational $ toRational $ end `diffUTCTime` start
 
 
 ---------------------------------------------------------------------
