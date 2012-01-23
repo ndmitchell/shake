@@ -223,7 +223,11 @@ run opts@ShakeOptions{..} rs = do
                     | otherwise = do
             res <- try act
             case res of
-                Left err -> modifyVar_ except $ \v -> return $ Just $ fromMaybe err v
+                Left err -> do
+                    modifyVar_ except $ \v -> return $ Just $ fromMaybe err v
+                    let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
+                    when (shakeVerbosity >= Quiet) $
+                        modifyVar_ outputLock $ const $ putStrLn msg
                 Right _ -> return ()
 
     withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
