@@ -33,7 +33,13 @@ main = do
             ,""
             ,unwords $ "Modes:" : map fst fakes
             ,unwords $ "Demos:" : map fst mains
-            ,unwords $ "Flags:" : flags]
+            ,unwords $ "Flags:" : flags
+            ,""
+            ,"As an example, try:"
+            ,""
+            ,"  main self --threads2 --loud"
+            ,""
+            ,"Which will build Shake, using Shake, on 2 threads."]
         Just main -> main
 
 
