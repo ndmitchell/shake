@@ -7,6 +7,7 @@ import Examples.Util
 import Control.Exception hiding (assert)
 import Control.Monad
 import Data.List
+import System.Directory as IO
 
 
 main = shaken test $ \args obj -> do
@@ -28,6 +29,11 @@ main = shaken test $ \args obj -> do
     obj "stack2" *> \_ -> need [obj "stack3"]
     obj "stack3" *> \_ -> error "crash"
 
+    obj "staunch1" *> \out -> do
+        liftIO $ sleep 0.1
+        writeFile' out "test"
+    obj "staunch2" *> \_ -> error "crash"
+
 
 test build obj = do
     let crash args parts = do
@@ -42,3 +48,12 @@ test build obj = do
     crash ["recursive"] ["recursive"]
     crash ["systemcmd"] ["systemcmd","random_missing_command"]
     crash ["stack1"] ["stack1","stack2","stack3","crash"]
+
+    b <- IO.doesFileExist $ obj "staunch1"
+    when b $ removeFile $ obj "staunch1"
+    crash ["staunch1","staunch2","--threads2"] ["crash"]
+    b <- IO.doesFileExist $ obj "staunch1"
+    assert (not b) $ "File should not exist, should have crashed first"
+    crash ["staunch1","staunch2","--threads2","--staunch"] ["crash"]
+    b <- IO.doesFileExist $ obj "staunch1"
+    assert b $ "File should exist, staunch should have let it be created"
