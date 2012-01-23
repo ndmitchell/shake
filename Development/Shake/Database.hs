@@ -21,7 +21,6 @@ import Development.Shake.Locks
 
 import Prelude hiding (catch)
 import Control.Arrow
-import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import Data.Binary.Get
@@ -150,7 +149,7 @@ eval pool Database{..} Ops{..} ks =
             return $ return $ Left $ head errs
          else do
             let cb = filter (isCheckingBuilding . snd) $ zip ks vs
-            wait <- newEmptyMVar
+            wait <- newBarrier
             todo <- newIORef $ Just $ length cb
             forM_ cb $ \(k,v) -> do
                 let act = do
@@ -160,7 +159,7 @@ eval pool Database{..} Ops{..} ks =
                             case Map.lookup k s of
                                 Just (Error e) -> do
                                     writeIORef todo Nothing
-                                    putMVar wait $ Left e
+                                    signalBarrier wait $ Left e
                                 Just (Dirty r) -> do
                                     Building p _ <- evalB [] k r
                                     addPending p act -- try again
@@ -171,13 +170,13 @@ eval pool Database{..} Ops{..} ks =
                                     addPending p act
                                 Just Ready{} | fromJust t == 1 -> do
                                     writeIORef todo Nothing
-                                    putMVar wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
+                                    signalBarrier wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
                                 Just Ready{} ->
                                     writeIORef todo $ fmap (subtract 1) t
                 addPending (fromJust $ getPending v) act
             return $ do
                 t1 <- getCurrentTime
-                res <- blockPool pool $ readMVar wait
+                res <- blockPool pool $ waitBarrier wait
                 case res of
                     Left e -> return $ Left e
                     Right v -> do
