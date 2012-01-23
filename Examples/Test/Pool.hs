@@ -13,6 +13,8 @@ main = shaken test $ \args obj -> return ()
 
 
 test build obj = do
+    let wait = sleep 0.01
+
     -- check that it aims for exactly the limit
     forM_ [1..6] $ \n -> do
         var <- newMVar (0,0) -- (maximum, current)
@@ -20,7 +22,7 @@ test build obj = do
             forM_ [1..5] $ \i ->
                 addPool pool $ do
                     modifyMVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
-                    sleep 0.1
+                    wait
                     modifyMVar_ var $ \(mx,now) -> return (mx,now-1)
         res <- takeMVar var
         res === (min n 5, 0)
@@ -30,12 +32,12 @@ test build obj = do
     handle (\(ErrorCall msg) -> msg === "pass") $
         runPool 3 $ \pool -> do
             addPool pool $ do
-                sleep 0.1
+                wait
                 error "pass"
             addPool pool $ do
-                sleep 0.2
+                wait >> wait
                 throwTo self $ ErrorCall "fail" 
-    sleep 0.2 -- give chance for a delayed exception
+    wait >> wait -- give chance for a delayed exception
 
     -- check blocking works
     done <- newMVar False
@@ -43,7 +45,7 @@ test build obj = do
         var <- newEmptyMVar
         addPool pool $ do
             addPool pool $ do
-                sleep 0.1
+                wait
                 putMVar var ()
             blockPool pool $ takeMVar var
             modifyMVar_ done $ const $ return True
@@ -54,9 +56,9 @@ test build obj = do
     done <- newMVar False
     runPool 1 $ \pool -> do
         addPool pool $ do
-            sleep 0.1
+            wait
             addPool pool $ do
-                sleep 0.1
+                wait
                 modifyMVar_ done $ const $ return True
     done <- readMVar done
     assert done "Waiting on someone works"
