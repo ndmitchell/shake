@@ -38,6 +38,7 @@ data ShakeOptions = ShakeOptions
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild.
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
+    ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
 --    ,shakeLint :: Bool -- ^ Run under lint mode, when set implies 'shakeParallel' is @1@ (defaults to 'False').
 --                       --   /This feature has not yet been completed, and should not be used./
     ,shakeDump :: Bool -- ^ Dump all profiling information to @'shakeFiles'.js@ (defaults to 'False').
@@ -46,7 +47,7 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False False
 
 
 -- | All forseen exception conditions thrown by Shake, such problems with the rules or errors when executing
@@ -216,13 +217,23 @@ run opts@ShakeOptions{..} rs = do
     start <- startTime
     registerWitnesses rs
     outputLock <- newVar ()
+    except <- newVar (Nothing :: Maybe SomeException)
+
+    let staunch act | not shakeStaunch = act >> return ()
+                    | otherwise = do
+            res <- try act
+            case res of
+                Left err -> modifyVar_ except $ \v -> return $ Just $ fromMaybe err v
+                Right _ -> return ()
+
     withDatabase (logger outputLock) shakeFiles shakeVersion $ \database -> do
         runPool shakeThreads $ \pool -> do
             let s0 = S database pool start stored execute outputLock shakeVerbosity [] [] 0 []
-            mapM_ (addPool pool . wrapStack [] . runAction s0) (actions rs)
+            mapM_ (addPool pool . staunch . wrapStack [] . runAction s0) (actions rs)
         when shakeDump $ do
             json <- showJSON database
             writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json
+    maybe (return ()) throwIO =<< readVar except
     where
         stored = createStored rs
         execute = createExecute rs
