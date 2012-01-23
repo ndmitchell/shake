@@ -24,7 +24,6 @@ module Development.Shake(
     Rule(..), Rules, defaultRule, rule, action,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
-    Observed(..),
     liftIO,
     -- * Utility functions
     module Development.Shake.Derived,

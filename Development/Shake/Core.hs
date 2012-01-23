@@ -5,8 +5,7 @@ module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
     Rule(..), Rules, defaultRule, rule, action,
     Action, apply, apply1, traced,
-    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
-    Observed(..)
+    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet
     ) where
 
 import Prelude hiding (catch)
@@ -100,7 +99,6 @@ class (
     --   have stayed the same. Only used when running with 'shakeLint'.
     observed :: IO a -> IO (Observed key, a)
     observed = fmap ((,) mempty)
--}
 
 
 -- | Determine what was observed to change. For each field @Nothing@ means you don't know anything, while
@@ -121,6 +119,7 @@ instance Monoid (Observed a) where
         where
             f Nothing Nothing = Nothing
             f a b = Just $ fromMaybe [] a ++ fromMaybe [] b
+-}
 
 
 data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
