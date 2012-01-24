@@ -169,6 +169,7 @@ function load()
 		"<li><b>Commands:</b> Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).</li>" +
 		"<li><b>Build time:</b> The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands.</li>" +
 		"<li><b>Longest steps:</b> The longest rule takes " + showTime(maxExecution) + ", and the longest traced command takes " + showTime(maxTrace) + ".</li>" +
+		"<li><b>Parallelism:</b> Last run gave an average parallelism of " + (sumTrace / maxTraceStopLast).toFixed(2) + " times over " + showTime(maxTraceStopLast) + ".</li>" +
 		"</ul>";
 
 
