@@ -39,6 +39,7 @@ import Development.Shake.Value
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
+                         --   To enable parallelism you may need to compile with @-threaded@.
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild (defaults to @1@).
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
