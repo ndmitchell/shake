@@ -9,6 +9,7 @@ import Control.Monad
 import Data.List
 import System.Directory as IO
 import System.Environment
+import System.Random
 
 
 shaken
@@ -37,6 +38,13 @@ shaken test rules = do
             when b $ renameFile tempfile dbfile
             shake shakeOptions{shakeFiles=out, shakeLint=True} $ rules args (out++)
 -}
+
+        "perturb":args -> forever $ do
+            del <- removeFilesRandom out
+            threads <- randomRIO (1,4)
+            putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
+            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules args (out++)
+
         args -> do
             (flags,args) <- return $ partition ("-" `isPrefixOf`) args
             let f o x = let x2 = dropWhile (== '-') x in case lookup x2 flagList of
@@ -93,4 +101,33 @@ sleep x = threadDelay $ ceiling $ x * 1000000
 -- | Sleep long enough for the modification time resolution to catch up
 sleepFileTime :: IO ()
 sleepFileTime = sleep 1
+
+
+removeFilesRandom :: FilePath -> IO Int
+removeFilesRandom x = do
+    files <- getDirectoryContentsRecursive x
+    n <- randomRIO (0,length files)
+    rs <- replicateM (length files) (randomIO :: IO Double)
+    mapM_ (removeFile . snd) $ sort $ zip rs files
+    return n
+
+
+getDirectoryContentsRecursive :: FilePath -> IO [FilePath]
+getDirectoryContentsRecursive dir = do
+    xs <- IO.getDirectoryContents dir
+    (dirs,files) <- partitionM doesDirectoryExist [dir </> x | x <- xs, not $ isBadDir x]
+    rest <- concatMapM getDirectoryContentsRecursive dirs
+    return $ files++rest
+    where
+        isBadDir x = "." `isPrefixOf` x || "_" `isPrefixOf` x
+
+partitionM :: Monad m => (a -> m Bool) -> [a] -> m ([a], [a])
+partitionM f [] = return ([], [])
+partitionM f (x:xs) = do
+    res <- f x
+    (as,bs) <- partitionM f xs
+    return ([x|res]++as, [x|not res]++bs)
+
+concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
+concatMapM f = liftM concat . mapM f
 

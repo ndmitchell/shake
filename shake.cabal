@@ -87,6 +87,8 @@ library
 
 executable shake
     main-is: Main.hs
+    build-depends:
+        random
     if flag(testprog)
         buildable: True
     else
