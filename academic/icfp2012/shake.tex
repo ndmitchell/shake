@@ -68,16 +68,16 @@ build-system, compilation, Haskell
 \section{Introduction}
 \label{sec:introduction}
 
-A build tool, such as \make{} \cite{make,recursive_make}, takes a set of input files, plus some build rules, and produces some output files. Using \make{}, a build rule can be written as:
+A build tool, such as \make{} \cite{make}, takes a set of input files, plus some build rules, and produces some output files. Using \make{}, a build rule can be written as:
 
 \begin{code}
 {-"\textsf{result.tar : file1 file2}"-}
     {-"\textsf{tar -cf result.tar file1 file2}"-}
 \end{code}
 
-\noindent This rule says that the file \file{result.tar} depends on the inputs \file{file1} and \file{file2} (first line), and provides a command to build \file{result.tar} (second line). Whenever \file{file1} or \file{file2} change, the command will be run, and \file{result.tar} will be regenerated.
+\noindent This rule says that the file \file{result.tar} depends on the inputs \file{file1} and \file{file2} (first line), and provides a command to build \file{result.tar} (second line). Whenever \file{file1} or \file{file2} change, the command will be run, and \file{result.tar} will be built.
 
-But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} are no longer static, but depend on the contents of \file{list.txt}. Unfortunately, \make{} offers no easy way to express this pattern (there are workarounds, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
+But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} cannot be specified in advance, but depend on \textit{the contents} of \file{list.txt}. Unfortunately, \make{} offers no easy way to express this dependeny (there are workarounds, but none are pleasant or effective). Using the build tool we develop in this paper, we can write:
 
 \begin{code}
 "result.tar" *> \_ -> do
@@ -113,7 +113,7 @@ We have implemented our build tool as a Haskell library, named Shake, which is a
 
 \todo{there should be more examples, more code, more intuition -- less detail}
 
-In this section we describe the theory that underpins of non-recursive \make{} \cite{non-recursive_make}, then the underlying theory of our build system, named Shake. We then describe how to support minimal rebuilds in both theories. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to implement these ideas in a usable tool.
+In this section we describe the theory that underpins of non-recursive \make{} \cite{miller:recursive_make}, then the underlying theory of our build system, named Shake. We then describe how to support minimal rebuilds in both theories. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to implement these ideas in a usable tool.
 
 \subsection{Intuition}
 
@@ -409,7 +409,7 @@ We execute a set of rules with the |run| function, which also takes an options r
 Every rule that is defined or applied in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with the value stored externally. We require that each rule |key| has only one type of |value|, this restriction is not technically required, but forces users to keep their rules simple. Each |key|/|value| type must also be in several type classes:
 
 \begin{description}
-\item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, and to match on only one type at a time, we require a |Typeable| constraint, allowing us to obtain an explicit |TypeRep| \cite{typeable}.
+\item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, and to match on only one type at a time, we require a |Typeable| constraint, allowing us to obtain an explicit |TypeRep| \cite{lammel:syb}.
 \item [Eq] We require equality to match the values.
 \item [Binary] We require |Binary| so we can store the values in a database, to achieve minimal rebuilds.
 \item [Hashable] We require |Hashable| to perform fast searching.
@@ -564,7 +564,7 @@ copyFile' old new = need [old] >> liftIO (copyFile old new)
 These operations mirror their standard counterparts, but automatically include a |need| call. It is never harmful to include an additional call to |need|, in fact, sometimes it is beneficial! Consider the following example:
 
 \begin{code}
-"file.txt" *> \out ->
+"file.txt" *> \out -> do
     need [out ++ ".part1", out ++ ".part2"]
     part1 <- readFile' (out ++ ".part1")
     part2 <- readFile' (out ++ ".part2")
@@ -595,13 +595,13 @@ We have implemented Shake, and used it extensively. In this section we sketch so
 
 A single Shake program can use multiple types of keys and values. To work with heterogenous values in Haskell we define:
 
-\begin{code}
+\ignore\begin{code}
 data Any = Any (forall alpha bullet
     (  Typeable alpha, Eq alpha, Binary alpha
     ,  Hashable alpha, Show alpha, NFData alpha) => alpha)
 \end{code}
 
-This definition, using existentials \cite{existentials}, allows anything supporting all the type classes required to be stored with type |Any|. We can define |Key| and |Value| types in terms of |Any|. We can implement |Eq|, |Show|, |Hashable| and |NFData| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
+This definition, using existentials \cite{laufer:existentials}, allows anything supporting all the type classes required to be stored with type |Any|. We can define |Key| and |Value| types in terms of |Any|. We can implement |Eq|, |Show|, |Hashable| and |NFData| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
 
 Implementing a |Binary| instance for |Any| is harder. Serialising a value is easy, but deserialising a value is problematic -- we can deserialise a |TypeRep|, but then we need to obtain the |get| method from the |Binary| instance associated with that type. The solution is to keep a table mapping |TypeRep|s to |Any| values containing the appropriate |Binary| instance. This table must include every type stored in the file we are reading, or it cannot be deserialised. We populate the table using all rules defined by |rule| and |defaultRule| in |Rules| -- which means we cannot move |defaultRule| into the |Rule| type class, as then a type could be usefully used without appearing in |Rules|, and would not be missing from the table.
 
@@ -697,7 +697,7 @@ documentation wants = do
 \subsection{Multiple Outputs}
 \label{sec:multiple_outputs}
 
-Some programs, such as the Haskell compiler \prog{ghc} \cite{ghc}, can produce two outputs from one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, while the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to produce both, but often the \file{.hi} file will be left unchanged. Unfortunately, many build systems (including \make{}) do not handle multiple outputs well.
+Some programs, such as the Haskell compiler \prog{ghc} \cite{ghc7_2}, can produce two outputs from one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, while the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to produce both, but often the \file{.hi} file will be left unchanged. Unfortunately, many build systems (including \make{}) do not handle multiple outputs well.
 
 In Shake, it is usually possible to fake multiple outputs with single file dependencies -- claiming that \file{Foo.hi} depends on \file{Foo.o} with no action and \file{Foo.o} depends on \file{Foo.hs} by running \prog{ghc}. Thanks to support for unchanging files (see \S\ref{sec:unchanging_files}), the \file{.hi} file will not cause a rebuild unless it changes. However, this rule has two problems:
 
@@ -812,6 +812,8 @@ The Shake database records the dependencies of each item, allowing a full depend
 
 Shake can export the full dependency graph, so additional queries can be written.
 
+There have been alternative attempts at visualising build systems, such as \cite{adams:maintaining_build_systems}, which could be applied to the full dependency graph, and can scale much better.
+
 \subsection{Profiling and Analysis}
 
 \begin{figure}
@@ -841,7 +843,7 @@ This example shows how Shake's profiling and analysis reports can be used to imp
 
 \subsubsection{Comparison to @ghc --make@}
 
-Building the same project with the GHC compilation system (\prog{ghc --make}) takes 10.70 seconds, compared to Shake with 11.57 seconds for one processor and 6.35 seconds for four processors. The reason GHC is quicker on one processor is that GHC keeps all interface information and package database information in memory, whereas running separate \prog{ghc -c} compilation commands requires reloading this information each time. However, Shake is able to use parallelism to improve the build time, while GHC cannot.
+Building the same project with the GHC compilation system \cite{ghc7_2}, using \prog{ghc --make}, takes 10.70 seconds, compared to Shake with 11.57 seconds for one processor and 6.35 seconds for four processors. The reason GHC is quicker on one processor is that GHC keeps all interface information and package database information in memory, whereas running separate \prog{ghc -c} compilation commands requires reloading this information each time. However, Shake is able to use parallelism to improve the build time, while GHC cannot.
 
 % if we compile with -O1 instead of -O0 then GHC=13.375 while Shake=18.375, so it gets worse for Shake
 
@@ -915,6 +917,9 @@ We can imagine more complex examples, and do define such examples in \ref{sec:mu
 \section{Related Work}
 \label{sec:related_work}
 
+\todo{references}
+\todo{cite recursive make considered harmful}
+
 Build systems can be divided into two categories -- those which target single-language projects with fixed rules (e.g. \prog{ocamlbuild}, \prog{ghc --make}, Visual Studio projects), and those which are more general allowing user specified rules (e.g. \make{} and Shake). Focusing on the second category, the defacto standard is \make{}, but there are many \make{} competitors (notably Ant, CMake, Jam, Scons and Waf). Most of these tools read a rule list, generate a dependency graph, then execute commands while traversing that graph.
 
 Since the number of build systems is vast, we have focused on four build systems which take different approaches (Redo, Ninja, Fabricate and Tup). Interestingly, the main thing all four systems have in common is that they require some external database of build data, in addition to the rules and file system. Unlike Shake, all these build systems are strictly limited to files.
@@ -925,7 +930,7 @@ Since the number of build systems is vast, we have focused on four build systems
 
 The Redo build system \cite{redo} is certainly the most similar to Shake in its underlying theory. Rules are run starting at the target. A rule may call |redo-ifchange| (similar to |need|) to ensure that this rule is repeated if any of the file arguments change. Rules can be specified to build either a specific named file, or a set of files ending with a particular extension -- more precise rules can be implemented by defining a single rule with different behaviors based on the output filename.
 
-While Redo is similar to Shake in theory, the practical implementation is significantly different, resulting in different levels of power. Instead of having a single rule store, Redo stores each rule in a separate file, and the script language is simply shell script, where |redo-ifchange| is a program. The advantage of separate files is that Redo is able to depend on the actual rule to build the output, meaning if the build system changes the correct and minimal build elements will be rebuilt. However, separating each build rule makes it harder to reason about the build system, and eliminates many potential uses of abstraction. Redo does not support unchanging files, doesn't work on Windows, and has no support for multiple outputs.
+While Redo is similar to Shake in theory, the practical implementation is significantly different, resulting in different levels of power. Instead of having a single rule store, Redo stores each rule in a separate file, and the script language is simply shell script, where |redo-ifchange| is a program. The advantage of separate files is that Redo is able to depend on the actual rule to build the output, meaning if the build system changes the correct and minimal build elements will be rebuilt. However, separating each build rule makes it harder to reason about the build system, and eliminates many potential uses of abstraction \cite{jonge:build_components}. Redo does not support unchanging files, doesn't work on Windows, and has no support for multiple outputs.
 
 \subsection{Ninja}
 
@@ -945,13 +950,13 @@ Another significant difference in Tup is the automatic treatment of dead build o
 
 % http://code.google.com/p/fabricate/
 
-The key innovation in the Fabricate build system \cite{Fabircate} is that dependencies do not need to be given explicitly. A build system is described as a Python program, which primarily executes system commands in order. While executing the commands, Fabricate uses system tracing (strace \cite{strace} on Linux) to record which files are accessed. In future runs, if the same system command is reached but none of its required files have changed, the command is skipped. The resulting build systems are simple, and avoid the difficulties of correctly specifying dependencies.
+The key innovation in the Fabricate build system \cite{fabricate} is that dependencies do not need to be given explicitly. A build system is described as a Python program, which primarily executes system commands in order. While executing the commands, Fabricate uses system tracing (strace on Linux) to record which files are accessed. In future runs, if the same system command is reached but none of its required files have changed, the command is skipped. The resulting build systems are simple, and avoid the difficulties of correctly specifying dependencies.
 
 There are two inherent difficulties for designing a build system without explicit dependencies. Firstly, the system tracing mechanisms on different platforms are varied, and in particular on Windows are somewhat fragile, requiring hooking system libraries or checking for last-access times. Secondly, parallelism needs to be expressed manually -- Fabricate requires the addition of explicit grouping annotations before parallelism can be used.
 
 \subsection{Haskell Build Libraries}
 
-There are a surprising number of Haskell libraries implementing a full dependency based build system -- we are aware of ten excluding Shake (Abba, Blueprint, Coadjute, Cake, Cake\footnote{There are two distinct build libraries for Haskell named Cake!}, Hake, Hmk, Nemesis, OpenShake and Zoom). Of these, the two Cake libraries and OpenShake are derived from an early presentation of the principles behind Shake, before the source code was available. The primary difference from the Cake libraries is that Shake as presented in this paper allows multiple different types of build rule, while the Cake libraries only allow file rules. Compared to OpenShake \cite{openshake}, we have opted to have |rule|/|apply| based on dynamic types, and then expect everyone to use sugared versions to regain static guarantees of type safety. In contrast, OpenShake uses type functions \cite{type_functions} to statically track the available rule types, reducing the complexity of serialisation (see \S\ref{sec:dynamically_typed}), but increasing the complexity of the library -- but compared to the similarities, this difference is minor.
+There are a surprising number of Haskell libraries implementing a full dependency based build system -- we are aware of ten excluding Shake (Abba, Blueprint, Coadjute, Cake, Cake\footnote{There are two distinct build libraries for Haskell named Cake!}, Hake, Hmk, Nemesis, OpenShake and Zoom). Of these, the two Cake libraries and OpenShake are derived from an early presentation of the principles behind Shake, before the source code was available. The primary difference from the Cake libraries is that Shake as presented in this paper allows multiple different types of build rule, while the Cake libraries only allow file rules. Compared to OpenShake \cite{openshake}, we have opted to have |rule|/|apply| based on dynamic types, and then expect everyone to use sugared versions to regain static guarantees of type safety. In contrast, OpenShake uses type functions \cite{schrijvers:type_functions} to statically track the available rule types, reducing the complexity of serialisation (see \S\ref{sec:dynamically_typed}), but increasing the complexity of the library -- but compared to the similarities, this difference is minor.
 
 \section{Conclusions}
 \label{sec:conclusions}
@@ -964,9 +969,11 @@ Shake is awesome. Any future work goes here.
 
 We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- including handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
 
-Surveys have found that about 15\% of development work is expended on the build system \cite{make_survey}, we do far less.
+Surveys have found that about 15\% of development work is expended on the build system \cite{mcintosh:build_maintenance}, we do far less.
 
 Build systems are an essential part of any large software project.
+
+Implement the lint system.
 
 \subsection*{Acknowledgements}
 
