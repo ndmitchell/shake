@@ -925,26 +925,26 @@ There have been alternative attempts at visualising build systems, such as \cite
 \label{fig:analysis}
 \end{figure}
 
-% REVISED NUMBERS on a laptop:
-% GHC build = 7.141 full, 0.453 minimal
-% Shake build = 11.828 full, 0.101 minimal (of which 0.6 is ghc-pkg, 75% of the rest is writing the db)
-% When making, make sure you turn off profiling output, to get better benchmark numbers
+% FINAL NUMBERS
+% GHC full = 7.688
+% GHC zero = 0.532
+% Shake full -j1 = 11.828 (of which 11.702 is system commands)
+% Shake full -j4 = 7.414 (of which 12.906 is system commands)
+% Shake zero = 0.101 (of which 0.06 is ghc-pkg, 75% of the rest is writing the db)
 
-As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program\footnote{The program is Shake itself, which can be compiled using Shake.} from scratch with a maximum of four processors. The entire process takes 6.35 seconds, but spends 11.82 seconds executing rules, giving a parallel speed up of 1.9 times. Executing the build system with no parallelism takes 11.57 seconds (likely due to reduced disk contention). \todo{confirm on desktop}
+As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program\footnote{The program is Shake itself, which can be compiled using Shake.} from scratch with a maximum of four processors. The entire process takes 7.41 seconds, but spends 12.91 seconds executing rules, giving a parallel speed up of 1.7 times. Executing the build system with one processor takes 11.83 seconds, where the reduced time compared to the rule execution time is likely due to reduced disk contention.
 
 Figure \ref{fig:profile} shows the number of traced system commands executing at any point during the build. We see a start up period where zero commands are running and the build system is checking for dependencies, followed by three spikes up to four processors, followed by a tail of using one processor.
 
-Turning to the dependency graph in Figure \ref{fig:analysis}, we have the |Main| module at the top labelled 3. This graph shows the dependencies of the \file{.hi} files, after hiding three leaf utility modules which are include in many places and have no dependencies (they add lots of lines, obscuring the real dependency graph). It is clear the build proceeds in three stages, with bottle-neck dependencies marked 1, 2 and 3. These three dependencies account for the three periods of one processor usage. The final tail of one processor includes both compilation of the main module (which profiling tells us takes 0.23 seconds) and linking (which takes 2.31 seconds).
+Turning to the dependency graph in Figure \ref{fig:analysis}, we have the |Main| module at the top labelled 3. This graph shows the dependencies of the \file{.hi} files, after hiding three leaf utility modules which are include in many places and have no dependencies (they add lots of lines, obscuring the real dependency graph). It is clear the build proceeds in three stages, with bottle-neck dependencies marked 1, 2 and 3. These three dependencies account for the three periods of one processor usage. The final tail of one processor includes both compilation of the main module (which profiling tells us takes 0.23 seconds) and linking (which takes 1.54 seconds).
 
 This example shows how Shake's profiling and analysis reports can be used to improve build performance. If the bottle-neck modules could be split up, or if their compilation time was reduced (particularly for those marked 1, which account for a longer single processor section), the overall build speed would increase. In practice, we have found that for large build systems, where Shake is building multiple targets, the parallelism usually stays at the maximum (or fractionally below it) for most of the build time, before reducing down to one processor as the last few tasks complete.
 
 \subsubsection{Comparison to @ghc --make@}
 
-Building the same project with the GHC compilation system \cite{ghc7_2}, using \prog{ghc --make}, takes 10.70 seconds, compared to Shake with 11.57 seconds for one processor and 6.35 seconds for four processors. The reason GHC is quicker on one processor is that GHC keeps all interface information and package database information in memory, whereas running separate \prog{ghc -c} compilation commands requires reloading this information each time. However, Shake is able to use parallelism to improve the build time, while GHC cannot.
+Building the same project with the GHC compilation system \cite{ghc7_2}, using \prog{ghc --make}, takes 7.69 seconds, compared to Shake with 11.83 seconds for one processor and 7.41 seconds for four processors. The reason GHC is quicker on one processor is that GHC keeps all interface information and package database information in memory, whereas running separate \prog{ghc -c} compilation commands requires reloading this information each time. However, Shake is able to use parallelism to improve the build time, while GHC cannot.
 
-% if we compile with -O1 instead of -O0 then GHC=13.375 while Shake=18.375, so it gets worse for Shake
-
-When running the build system while nothing needs compiling, GHC takes 0.54 seconds and Shake takes 0.12 seconds. Of the 0.12 seconds required by Shake, 0.9 seconds is spent checking the GHC installation has not changed (running @ghc --version@ and @ghc-pkg list@) -- if the GHC installation is assumed to be constant Shake requires only 0.03 seconds. Shake is faster because it reads in one file (the database) then quickly checks |validStored| on a small number of files. GHC must at least query the same file information, but also has to construct a dependency graph, aggregating information from many files.
+When running the build system while nothing needs compiling, GHC takes 0.54 seconds and Shake takes 0.10 seconds. Of the 0.10 seconds required by Shake, 0.06 seconds is spent checking the GHC installation has not changed (running @ghc-pkg list@) -- if the GHC installation is assumed to be constant Shake requires only 0.04 seconds. Shake is faster because it reads in one file (the database) then quickly checks |validStored| on a small number of files. GHC must at least query the same file information, but also has to construct a dependency graph, aggregating information from many files. Of that 0.4 seconds, 0.3 is spent writing the database -- we suspect that effort spent improving the binary serialisation would pay off.
 
 % Compared to something like gcc, which is always invoked in single mode, we do better.
 % For something like C# we don't have a choice and always run it in --make mode.
@@ -1066,11 +1066,13 @@ Shake is awesome. Any future work goes here.
 
 We present Shake, a new build system based on a more powerful approach, which can do things \make{} cannot -- including handling generated files properly. We have implemented Shake in Haskell, as a Haskell library, and it is used heavily -- compiling 10's of millions of lines of code per day.
 
-Surveys have found that about 15\% of development work is expended on the build system \cite{mcintosh:build_maintenance}, we do far less.
+Surveys have found that about 15\% of development work is expended on the build system \cite{build_maintenance}, we  do far less.
 
 Build systems are an essential part of any large software project.
 
 Implement the lint system.
+
+Implementation could be faster, since 75\% of the null build read/writing the database. Perhaps if we didn't rewrite the database, but if the journal is below some threshold, just gave up?
 
 \subsection*{Acknowledgements}
 
