@@ -26,6 +26,10 @@
 %format context = "\Keyword{context}"
 %format dependsS = "\Varid{depends\!^{*}}"
 %format hashInclude = "\text{\sf ``\#include \textbackslash\char34\char34}"
+%format Rule_m = "\Varid{Rule_m}"
+%format Rule_s = "\Varid{Rule_s}"
+%format build_m = "\Varid{build_m}"
+%format build_s = "\Varid{build_s}"
 
 \hsdef{\begin{comment}
 alpha
@@ -176,35 +180,39 @@ In addition to more flexible dependencies (\S\ref{sec:theory}), Shake also inclu
 
 We have used Shake at Standard Chartered for the past three years (\S\ref{sec:evaluation}). Our Shake build system creates over 30,000 build objects, with more than a million lines of source code and a million lines of generated code, in many programming languages. We originally implemented this build system using \make{}, but the result was slow to run, hard to maintain, and frequently caused spurious compile failures. Switching to Shake made our build system 10 times shorter, made builds run twice as fast, and has solved our build system problems.
 
-\section{Delaying Dependency Specification}
+\section{Specifying Dependencies}
 \label{sec:theory}
 
-Most \make{}-like build systems start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results. However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies while running rules. The solution is simple -- we reject the idea of using a static dependency graph. In practice, we have found that eliminating an explicit dependency graph makes the the build system simpler!
+Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph. In practice, we have found that eliminating an explicit dependency graph makes implementing the build system \textit{simpler} (\S\ref{sec:shake_state}).
 
-In this section we describe the theory that underpins of the use of non-recursive \make{} as described by \citet{miller:recursive_make}, then show how to how the specification of dependencies. We then describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
+In this section we model the dependencies used in non-recursive \make{} as described by \citet{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
 
-\subsection{Moving Dependencies}
+\subsection{Moving Dependency Specification}
 
-If we assume that Key/Value is enough, and ignore any complexities of IO or parallellism, we can define:
+While the \make{} tool is heavily IO and file based, this is not an essential property of \make{}. To model dependency specification we use the type |Key| for things that can be created or are dependencies (i.e. file names) and the type |Value| for the values associated with a |Key| (i.e.  file contents). With these types, we can define our main |build| function as:
 
 \begin{code}
-make :: Set Rule -> Key -> Value
+build :: Set Rule -> Key -> Value
 \end{code}
 
-And then we can define a Rule in Make as:
+The |build| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to only building one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that rule the single target.
+
+Using |build|, we can mode \make{} by defining the |Rule| type as:
 
 \begin{code}
-data  Rule = Rule
+data  Rule_m = Rule_m
       {  creates  :: Key
       ,  depends  :: [Key]
       ,  action   :: [Value] -> Value
       }
 \end{code}
 
-Or a rule in Shake as:
+A \make{} |Rule| can be modelled as the |Key| it |creates|, the |Key|s it |depends| on, and the |action| that takes the depended upon |Value|s and produces the result |Value|.
+
+Using the same |build| function, we can model our enhanced dependency specification as:
 
 \begin{code}
-data  Rule = Rule
+data  Rule_s = Rule_s
       {  creates  :: Key
       ,  action   :: Action
       }
@@ -213,146 +221,81 @@ data Action  =  Depends Key (Value -> Action)
              |  Result Value
 \end{code}
 
-Note here that we can add additional dependencies as we are running. The second system is strictly more powerful.
+A Shake |Rule| can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Result| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and provides a new |Action|.
+
+The big difference is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, require additional dependencies. We can easily translate |Rule_m| to |Rule_s|, but the reverse is not possible -- |Rule_m| is strictly more powerful than |Rule_s|.
 
 \subsection{Correctness}
 
-A Make build system is correct if you can build a finite graph that produces the target, assuming all the action functions are total. Alternatively:
+Assuming a function named |(!)| which finds a |Rule| for a given |Key|, we can write a function to build |Rule_m| targets as follows:
 
 \begin{code}
-make rules target = run (rules ! target)
-    where run x = action x (map (make rules) (depends x))
+build_m rules target = run (rules ! target)
+    where run r = action r (map (build_m rules) (depends r))
 \end{code}
 
-If this function terminates then |make| is well specified.
+Starting at the |target| |Key|, we find the associated |Rule_m|, run |build_m| on its dependencies, and then run the |action|. A |Rule_m| build system is correct for a given target iff the |build_m| function is total. If we assume all |action|s are total, then |build_m| is total if you can build a finite dependency graph for the target. This property can be checked for a given target without running any actions.
 
-A Shake build system has a much less simple correctness property. However, it is simple to give a build system that never worries about rebuilding:
+We can write a similar function to build |Rule_s| targets as follows:
 
 \begin{code}
-make rules target = run (action (rules ! target))
+build_s rules target = run (action (rules ! target))
     where  run (Result val) = val
-           run (Depends dep act) = run (act (make rules dep))
+           run (Depends dep act) = run (act (build_s rules dep))
 \end{code}
 
-A Shake build system is correct iff the |shake| function is total, assuming |!| throws an exception if it can't find a rule.
+Starting at the |target| |Key|, we find the |action| from the associated |Rule_s|, and run it. If we encounter a |Result| we are done, and if we encounter a |Depends| we run |build_m| on that dependency before continuing. As before, a |Rule_s| build system is correct for a given target iff the |build_s| function is total. However, unlike before, there is no obvious way to predict termination in advance without detailed information about the |action| functions.
 
 \subsection{Minimal Rebuilds}
+\label{sec:minimal_rebuilds}
 
-Todo, needs to go here.
+One important property of build tools is ensuring minimal rebuilds, something we entirely ignored in the the previous section. In any execution of |build|, any |action| should be run at most once, a property that is easy to ensure with a simple cache. Additionally, if an |action| has the same inputs as the last time it was run, it should not be repeated. In this section we first explore how to avoid repeating actions whose inputs have not changed with |Rule_m|, enhancing the strategy followed by \make{}, then we apply the same ideas to |Rule_s|.
 
-
-
-\subsection{Intuition}
-
-Most build systems such as \make{} build a dependency graph from a set of rules, and then traverse that graph to build the result. An essential point is that the graph cannot change -- you cannot have graphs in the node which depend on things not yet defined. The fundamental problem with generated files is that you want to look at them to figure out what they depend on. The solution is to move dependency generation until after the file has been built, or other rules are built, but that means you cannot build a static graph.
-
-Make builds a static graph, which means you can't figure out as you are going. We don't! If you just recurse from beginning to end build artifacts fall out! The key intuition is that you can specify additional dependencies, after using previous dependencies. As we saw in the previous section, additional dependencies can be specified with need.
-
-\subsection{Theory of Make}
-\label{sec:theory_make}
-
-While the \make{} tool is heavily file based, that is not an essential property of the ideas behind \make{}. We use the type |Key| for things that can be created or are dependencies (i.e. file names) and the type |Value| for the values associated with a |Key| (i.e.  file contents). Using this abstraction, we can model \make{} as:
-
-\h{.theory1}\begin{code}
-data  Rule = Rule
-      {  creates  :: Key
-      ,  depends  :: List_alpha Key
-      ,  action   :: List_alpha Value -> Value
-      }
-
-make :: Set Rule -> Key -> Value
-\end{code}
-
-The |make| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key| it |creates|, the |Key|s it |depends| on, and the |action| that takes the depended upon |Value|s and produces the result |Value|. We use \h{type}|List_alpha bullet| to denote a list which must have length |alpha|, requiring that the |depends| list and the list passed to |action| are equal in length.
-
-We restrict our model to only building one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that rule the single target.
-
-\subsubsection{Correctness}
-
-We say a |Rule| is associated with a |Key| if it has that |Key| as its |creates| field. Given a |Rule| |r| we can define \ignore|dependsS r| as all the |Key|s this rule requires to run, including the dependencies of its dependencies. We can compute \ignore|dependsS r| as the union of \ignore|depends r| and \ignore|dependsS| on all the rules associated to \ignore|depends r|.
-
-For a call to |make| to be valid, given a set of rules and a target, we require:
-
-\begin{enumerate}
-\item \textit{No duplicate rules} - no |Key| may have two associated rules.
-\item \textit{No missing rules} - every item in a |depends| list must have an associated rule.
-\item \textit{Target rule} - there must be a rule associated with the target.
-\item \textit{Finite} - for all rules, \ignore|dependsS r| must be finite.
-\item \textit{Acyclic} - for all rules, \ignore|dependsS r| must not contain \ignore|creates r|.
-\end{enumerate}
-
-\noindent Given a valid call to |make|, there exists a finite list of |action|s that when run in order produces the result. Provided each |action| terminates, the result can be obtained.
-
-\subsection{Theory of Shake}
-\label{sec:theory_shake}
-
-Using the same terminology from the previous section, we can model our build tool as:
-
-\h{.theory2}\begin{code}
-data  Rule = Rule
-      {  creates  :: Key
-      ,  action   :: Action
-      }
-
-data Action  =  Depends Key (Value -> Action)
-             |  Result Value
-
-shake :: Set Rule -> Key -> Value
-\end{code}
-
-The |shake| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. A rule can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Result| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and provides a new |Action|.
-
-The big difference from |make| is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, require additional dependencies. We can easily translate a |make| |Rule| to a |shake| |Rule|, but the reverse is not true -- |shake| is strictly more powerful than |make|.
-
-\subsubsection{Correctness}
-
-A call to |shake| is correct if the |Value| associated with the target |Key| can be built. Unlike |make|, we cannot check this property before running any |action|s, since new dependencies can be added by running an |action|. Like |make|, we require that each |Key| is associated with exactly one |Rule|. Given a function which finds the rule associated with a key (|find|), we can run a build system as:
-
-\h{.theory2}\begin{code}
-shake rules target = fromKey target
-    where
-        fromKey k = fromAction (action (find rules k))
-
-        fromAction (Result val) = val
-        fromAction (Depends dep act) =
-            fromAction (act (fromKey dep))
-\end{code}
-
-To reduce a |Key|, we find its |Rule| and reduce its |Action|. To reduce an |Action|, if it is a |Result| we return the value, if it is a |Depends| we reduce the dependency then reduce the result of the action. Note that in this simple implementation every time a |Key| is required we compute its |Value| from scratch -- an action may be run many times.
-
-A call to |shake| is correct if it terminates. We can guarantee termination if:
-
-\begin{enumerate}
-\item We require that every |action| function terminates.
-\item To ensure that the recursion in |fromAction| terminates, we require that |Rule| produces a finite number of |Depends| constructors before producing a |Result|.
-\item To ensure that the recursion in |fromKey| terminates, we require that no |Rule| depends on its \h{.theory2}|creates| value, either directly or through a sequence of other rules.
-\item To ensure that the mutual recursion between |fromKey| and |fromAction| terminates, we require that there are a finite number of |Key| values required to build the |target|.
-\end{enumerate}
-
-%
-% \begin{itemize}
-% \item \textit{Result} rules are those whose |action| is a |Result|.
-% \item \textit{Reducible} rules are those which are not \textit{results}, but where the immediate dependencies are all \textit{results}.
-% \item \textit{Required} rules are those which are not \textit{results}, but which create something in the set of output keys, or who create something that a \textit{required} rule has in it's |Defer| list. We can guarantee that all \textit{required} rules must be evaluated for the build system to finish.
-% \end{itemize}
-%
-% Like in \make{}, the rules |creates| must all be distinct.
-%
-% Given a set of rules, we are finished when all the \textit{required} rules are \textit{results}. We can proceed one step by taking a rule that is both \textit{required} and \textit{reducible} and running the deferred function on it (\textit{reducing} it). If there are no rules that are both \textit{required} and \textit{reducible} then we are stuck, and the build system has a logical inconsistency, either because there is no rule to build something, or the build rules form a cycle.
-%
-% Note that we cannot know if the build system is consistent until it has completed. In particular, there are two ways for a build system to loop. Most obviously, an \textit{required} and \textit{reducible} rule could have a deferred action that never terminates. Alternatively, such a rule could immediately produce the same dependencies as previously, without making progress. We assume that each rule is structured in a way that there are a finite number of steps, and each step takes a finite amount of time (in practice, it is hard to write a rule that does not obey this property).
-%
-
-\subsection{Minimal Rebuilds in Make}
+\subsubsection{Minimal Rebuilds with |Rule_m|}
 \label{sec:cached_make}
 
-One of the important properties of \make{} is minimal rebuilds. In any execution of |make|, each |action| will be run at most once. If the last time the action was run it had the same inputs, the action will not be repeated. The \make{} tool uses file modification times, and assumes a target is valid if all its dependencies have older modification times. We can model this behaviour with a function that looks up the modification times:
+To avoid repeating actions whose inputs have not changed, \make{} does not run any actions where the input files have older modification times than the result file. We can use a similar scheme:
 
-\h{.theory1}\begin{code}
-history :: Key -> Maybe Value
+\begin{code}
+data Result = Result
+    {  key    :: Key
+    ,  value  :: Value
+    ,  built  :: Int
+    }
+
+skip :: Result -> [Result] -> Bool
+skip self deps = all ((<= built self) . built) deps
 \end{code}
 
-If we restrict ourselves to |Key|s which are files, and |Value|s which are modification times (as \make{} does), then we can write a function |modified| which returns |Just| the modification time, or |Nothing| to indicate the file does not exist (and thus has never been built). An |Rule|s |action| can be skipped if the |creates| file exists, and all the |depends| times are older. Before running a rules action, all its dependencies must already have been created, and thus history must always return |Just|. We can check if a Rule is valid with respect to the history with:
+Whenever an |action| is run, we create a |Result| containing the |Key| that action creates, the |Value| that is the result, and the time at which it was |built|. To store build times, we can keep use a variable that is incremented each run of the build system. With this scheme, if a file has already been built in a previous execution, and all its dependencies have been built, then we can use |skip| to test whether this action can be safely ignored, using the |value| stored in |Result|. Between build runs we must store all |Result| values, loading them in the next run.
+
+Compared to \make{} this scheme is more general, allowing more than just files. However, what if the |Value| is also stored on disk, but has changed? We can simply check for 
+
+
+which build-step it executes.
+
+
+ by storing results from previous actions, remembering the |Key|, |Value| and time the result with built
+
+
+
+Given a function |#| which returns Maybe 
+
+
+\h{.theory1}\begin{code}
+modified :: Key -> Maybe Value
+\end{code}
+
+If we restrict ourselves to |Key|s which are files, and |Value|s which are modification times (as \make{} does), then we can write a function |modified| which returns |Just| the modification time, or |Nothing| to indicate the file does not exist (and thus has never been built). A |Rule_m| can be skipped if:
+
+\begin{code}
+skip :: Rule_m -> Bool
+skip 
+    Nothing -> False
+    Just t -> all ((< t) . fromJust . modified) (depends r)
+\end{code}
+ 
+An |Rule|s |action| can be skipped if the |creates| file exists, and all the |depends| times are older. Before running a rules action, all its dependencies must already have been created, and thus history must always return |Just|. We can check if a Rule is valid with respect to the history with:
 
 \h{.theory1}\begin{code}
 validHistory :: Rule -> Bool
@@ -405,8 +348,10 @@ While the timestamp approach works reasonably for \make{}, it can fail if the sy
 
 After running an action, we typically store a new time in the |history|. However, if the result of the |action| has not changed we \textit{do not} update the time. This allows any files that depend on this file to avoid recalculation, which can significantly reduce the number of actions that need to be run.
 
-\subsection{Minimal Rebuilds in Shake}
+\subsubsection{Minimal Rebuilds with |Rule_s|}
 \label{sec:cached_shake}
+
+To achieve minimal rebuilds with |Rule_m| we rely crucially on having the dependencies available without executing the action. However, it's simple to solve in |Rule_s|, we simply store the |depends| list in |Result|.
 
 Our original algorithm calculated every file repeatedly. We can easily add a cache mapping |Key| to |Value| and avoid reducing a rule that has already been reduced in this execution.
 
@@ -441,6 +386,7 @@ all ((< built i) . changed . fromJust . history) (dependsUpon i)
 \end{code}
 
 By introducing two timestamps for a single |Key|, we can reduce the number of builds required. For certain practical examples, this improvement can reduce rebuild times after a change from many minutes to seconds.
+
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -757,6 +703,7 @@ When deserialising, if we encounter a type not present in the table, we ignore t
 
 \subsection{Shake State}
 \label{sec:parallelism}
+\label{sec:shake_state}
 
 \begin{figure}
 \h{.theory3}\begin{code}
@@ -784,6 +731,8 @@ data  Info = Info
 \end{figure}
 
 \todo{is this really the right state to track? figure out how to build stuff}
+
+Mention that the build system is simpler, or would be if we didn't have to do all the crazy stuff.
 
 For the null build, we optimise throughput, checking nothing twice, taking only 1 lock, and doing everything in a tight loop. For building, we optimise parallelism, starting new tasks as soon as possible.
 
