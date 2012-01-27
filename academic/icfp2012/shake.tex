@@ -30,6 +30,10 @@
 %format Rule_s = "\Varid{Rule_s}"
 %format build_m = "\Varid{build_m}"
 %format build_s = "\Varid{build_s}"
+%format Result_m = "\Varid{Result_m}"
+%format Result_s = "\Varid{Result_s}"
+%format skip_m = "\Varid{skip_m}"
+%format skip_s = "\Varid{skip_s}"
 
 \hsdef{\begin{comment}
 alpha
@@ -183,21 +187,21 @@ We have used Shake at Standard Chartered for the past three years (\S\ref{sec:ev
 \section{Specifying Dependencies}
 \label{sec:theory}
 
-Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph. In practice, we have found that eliminating an explicit dependency graph makes implementing the build system \textit{simpler} (\S\ref{sec:shake_state}).
+Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph. In practice, we have found that eliminating the explicit dependency graph makes implementing a build system \textit{simpler} (\S\ref{sec:shake_state}).
 
-In this section we model the dependencies used in non-recursive \make{} as described by \citet{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
+In this section we model the dependencies used in non-recursive \make{}, as described by \citet{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
 
 \subsection{Moving Dependency Specification}
 
-While the \make{} tool is heavily IO and file based, this is not an essential property of \make{}. To model dependency specification we use the type |Key| for things that can be created or are dependencies (i.e. file names) and the type |Value| for the values associated with a |Key| (i.e.  file contents). With these types, we can define our main |build| function as:
+While the \make{} tool is heavily IO and file based, that is not an essential property of \make{}. To model dependency information, we use the type |Key| for things that can be created or are dependencies (i.e. file names), and the type |Value| for the values associated with a |Key| (i.e.  file contents). With these types, we can define our main |build| function as:
 
 \begin{code}
 build :: Set Rule -> Key -> Value
 \end{code}
 
-The |build| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to only building one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that rule the single target.
+The |build| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to building only one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished rule that depends on all the targets and returns all their values, and then make that single rule the target.
 
-Using |build|, we can mode \make{} by defining the |Rule| type as:
+Using |build|, we can model \make{} by defining the |Rule| type as:
 
 \begin{code}
 data  Rule_m = Rule_m
@@ -207,9 +211,9 @@ data  Rule_m = Rule_m
       }
 \end{code}
 
-A \make{} |Rule| can be modelled as the |Key| it |creates|, the |Key|s it |depends| on, and the |action| that takes the depended upon |Value|s and produces the result |Value|.
+A \make{} |Rule| (|Rule_m|) can be modelled as the |Key| it |creates|, the |Key|s it |depends| on, and the |action| that takes the depended upon |Value|s and produces the result |Value|. Note that all dependencies for a rule are specified \textit{before} running the action.
 
-Using the same |build| function, we can model our enhanced dependency specification as:
+Using the same |build| function, we can model our enhanced dependency scheme as:
 
 \begin{code}
 data  Rule_s = Rule_s
@@ -221,9 +225,9 @@ data Action  =  Depends Key (Value -> Action)
              |  Result Value
 \end{code}
 
-A Shake |Rule| can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Result| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and provides a new |Action|.
+A Shake |Rule| (|Rule_s|) can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Result| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and provides a new |Action|.
 
-The big difference is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, require additional dependencies. We can easily translate |Rule_m| to |Rule_s|, but the reverse is not possible -- |Rule_m| is strictly more powerful than |Rule_s|.
+The big difference is the introduction of dynamic dependencies. A rule can dynamically, based on the values of previous dependencies, require additional dependencies. We can easily translate |Rule_m| to |Rule_s|, but the reverse is not possible -- |Rule_s| is strictly more powerful than |Rule_m|.
 
 \subsection{Correctness}
 
@@ -234,7 +238,7 @@ build_m rules target = run (rules ! target)
     where run r = action r (map (build_m rules) (depends r))
 \end{code}
 
-Starting at the |target| |Key|, we find the associated |Rule_m|, run |build_m| on its dependencies, and then run the |action|. A |Rule_m| build system is correct for a given target iff the |build_m| function is total. If we assume all |action|s are total, then |build_m| is total if you can build a finite dependency graph for the target. This property can be checked for a given target without running any actions.
+Starting at the |target| |Key|, we find the associated |Rule_m|, run |build_m| on its dependencies, and then run the |action|. A |Rule_m| build system is correct for a given target and set of rules iff the |build_m| function is total. If we assume all |action|s are total, then |build_m| is total if you can build a finite dependency graph for the target. This property can be checked without running any actions.
 
 We can write a similar function to build |Rule_s| targets as follows:
 
@@ -244,149 +248,91 @@ build_s rules target = run (action (rules ! target))
            run (Depends dep act) = run (act (build_s rules dep))
 \end{code}
 
-Starting at the |target| |Key|, we find the |action| from the associated |Rule_s|, and run it. If we encounter a |Result| we are done, and if we encounter a |Depends| we run |build_m| on that dependency before continuing. As before, a |Rule_s| build system is correct for a given target iff the |build_s| function is total. However, unlike before, there is no obvious way to predict termination in advance without detailed information about the |action| functions.
+Starting at the |target| |Key|, we find the |action| from the associated |Rule_s|, and run it. If we encounter a |Result| we are done; if we encounter a |Depends| we run |build_m| on that dependency before continuing. As before, a |Rule_s| build system is correct for a given target and set of rules iff the |build_s| function is total. However, unlike before, there is no obvious way to predict termination in advance without detailed information about the |action| functions.
 
 \subsection{Minimal Rebuilds}
 \label{sec:minimal_rebuilds}
 
-One important property of build tools is ensuring minimal rebuilds, something we entirely ignored in the the previous section. In any execution of |build|, any |action| should be run at most once, a property that is easy to ensure with a simple cache. Additionally, if an |action| has the same inputs as the last time it was run, it should not be repeated. In this section we first explore how to avoid repeating actions whose inputs have not changed with |Rule_m|, enhancing the strategy followed by \make{}, then we apply the same ideas to |Rule_s|.
+One important property of build tools is performing minimal rebuilds, something we ignored in the the previous section. In an execution of |build|, any action should be run at most once -- a property that is easy to ensure with a simple cache. Additionally, if an action has the same inputs as the last time it was run, it should not be repeated. In this section we first explore how to avoid repeating actions whose inputs have not changed with |Rule_m|, enhancing the scheme followed by \make{}, and then apply the same ideas to |Rule_s|.
 
 \subsubsection{Minimal Rebuilds with |Rule_m|}
 \label{sec:cached_make}
 
-To avoid repeating actions whose inputs have not changed, \make{} does not run any actions where the input files have older modification times than the result file. We can use a similar scheme:
+To avoid repeating actions whose inputs have not changed, \make{} does not run any actions where the input files have older modification times than the result file. We can use a similar scheme, adapted to work on arbitrary |Key|/|Value| types. Whenever an |action| is run, we create a |Result|:
 
 \begin{code}
-data Result = Result
-    {  key    :: Key
-    ,  value  :: Value
-    ,  built  :: Int
+data Result_m = Result_m
+    {  created  :: Key
+    ,  result   :: Value
+    ,  built    :: Time
     }
-
-skip :: Result -> [Result] -> Bool
-skip self deps = all ((<= built self) . built) deps
 \end{code}
 
-Whenever an |action| is run, we create a |Result| containing the |Key| that action creates, the |Value| that is the result, and the time at which it was |built|. To store build times, we can keep use a variable that is incremented each run of the build system. With this scheme, if a file has already been built in a previous execution, and all its dependencies have been built, then we can use |skip| to test whether this action can be safely ignored, using the |value| stored in |Result|. Between build runs we must store all |Result| values, loading them in the next run.
-
-Compared to \make{} this scheme is more general, allowing more than just files. However, what if the |Value| is also stored on disk, but has changed? We can simply check for 
-
-
-which build-step it executes.
-
-
- by storing results from previous actions, remembering the |Key|, |Value| and time the result with built
-
-
-
-Given a function |#| which returns Maybe 
-
-
-\h{.theory1}\begin{code}
-modified :: Key -> Maybe Value
-\end{code}
-
-If we restrict ourselves to |Key|s which are files, and |Value|s which are modification times (as \make{} does), then we can write a function |modified| which returns |Just| the modification time, or |Nothing| to indicate the file does not exist (and thus has never been built). A |Rule_m| can be skipped if:
+|Result_m| contains the |Key| the action |created|, the |result| |Value|, and the time when the result was |built|. We store all |Result_m| values between build runs, and skip rerunning a |Rule_m| if: 1) the |create| |Key| has a result available; 2) all the |depends| |Key|s have results available; and 3) the |built| field of the result associated with |create| is greater than or equal to all the |built| fields of the results associated with |depends|. Given a function named |ask| to lookup the associated result for a |Key|, which returns |Nothing| if the there is no associated result, we can write:
 
 \begin{code}
-skip :: Rule_m -> Bool
-skip 
-    Nothing -> False
-    Just t -> all ((< t) . fromJust . modified) (depends r)
-\end{code}
- 
-An |Rule|s |action| can be skipped if the |creates| file exists, and all the |depends| times are older. Before running a rules action, all its dependencies must already have been created, and thus history must always return |Just|. We can check if a Rule is valid with respect to the history with:
-
-\h{.theory1}\begin{code}
-validHistory :: Rule -> Bool
-validHistory r = case modified (creates r) of
-    Nothing -> False
-    Just t -> all ((< t) . fromJust . modified) (depends r)
+skip_m :: (Key -> Maybe Result_m) -> Rule_m -> Bool
+skip_m ask r  |  Just self  <- ask (creates r)
+              ,  Just deps  <- mapM ask (depends r)
+              =  all ((<= built self) . built) deps
 \end{code}
 
-This scheme is limited to files, for two reasons:
+The |skip_m| function returns |True| if a rules action does not need running. We first check that there is a |Result_m| associated with the |creates| of this rule, then that every |depends| has a result (using the |mapM| to require every |ask| call returns |Just|), then check that all dependencies were build before this action was run.
 
-\begin{enumerate}
-\item Our |history| function relies on being able to access the history for a previous run which is stored on disk. We can eliminate this problem by storing the information in a database as we are executing, and then reloading it from disk on each execution.
-\item Our |validHistory| function relies on a |Value| which is monotonically increasing (e.g. time). We can eliminate this problem if whenever we complete an action we give it a real timestamp.
-\end{enumerate}
+The \make{} approach of relying on the system time can fail if the system clock changes, or if a file is modified but has its value set to an older timestamp -- such as when extracting a backup which resets the timestamp. Therefore, instead of using the system time for |built|, we use the number of runs of this build system, and increment |Time| each run, guaranteeing that |Time| is monotonically increasing.
 
-We can make these changes to produce:
-
-\h{.theory1}\begin{code}
-data  Info = Info
-      {  value :: Value
-      ,  built :: Time
-      }
-
-history :: Key -> Maybe Info
-
-validHistory r = case history (creates r) of
-    Nothing -> False
-    Just i -> all ((< built i) . built . fromJust . history) (depends r)
-\end{code}
-
-However, this scheme is incorrect for |Value|s that are stored by both the file system \textit{and} in our database. Consider a file, which has a file system modification time, and also has a |Value| in our database. If the file is edited externally, then the |Value| in our database will be incorrect. We can solve this problem by also checking that, where the |Value| is stored externally, it is still consistent:
+A convenient property of the \make{} approach is that no additional data need be stored between runs, since the file system already stores modification times. In contrast, we must store the |Time| and |Result_m| values in some persistent data store (an additional data store is required for many advanced build systems, see \S\ref{sec:related_work}). However, for some types of rules, such as when |Value|s are filenames and |Key|s are modification times, we end with the |Value|s stored in both the data store \textit{and} the file system (or another persistent store). If an inconsistency is detected, we must remove our stored result. We can detect inconsistencies given the following function:
 
 \begin{code}
-data Stored = NeverStored | NotStored | Stored Value
-
-stored :: Key -> Stored
-
 validStored :: Key -> Value -> Bool
-validStored k v = case stored k of
-    NeverStored -> True
-    NotStored -> False
-    Stored value -> v == value
 \end{code}
 
-When attempting to read a value stored externally there are three possible states. Either the value is never stored, in which case it exists only in our database, and is always consistent. Or the value is sometimes stored, but not currently available externally -- such as a file that does not exist on disk, in which case the action must be rerun. Or the value is stored, and has an external value -- in which case the value is valid if it matches what we have stored. We can avoid running the action associated with a rule if it is valid with respect to the stored values, and with respect to the history.
-
-In order to remain consistent throughout the execution, we require that all |stored| values do \textit{not} change during the execution, other than as a result of running an |action| which |creates| it. The \make{} tool requires a similar property or it becomes inconsistent.
-
-While the timestamp approach works reasonably for \make{}, it can fail if the system clock changes, or if a file is modified but has its value set to an older timestamp -- such as when extracting a backup which resets the timestamp. Instead of relying on the system time, we can instead store a counter in our database, and increment it every time we require a time value, thus guaranteeing that our time is correctly ordered.
-
-After running an action, we typically store a new time in the |history|. However, if the result of the |action| has not changed we \textit{do not} update the time. This allows any files that depend on this file to avoid recalculation, which can significantly reduce the number of actions that need to be run.
+This function should return |True| when the |Key|/|Value| are not stored elsewhere, or when they are stored but the |Value| is consistent. As an example, for files |validStored| should return |True| only if the file exists, and has the same modification time.
 
 \subsubsection{Minimal Rebuilds with |Rule_s|}
 \label{sec:cached_shake}
 
-To achieve minimal rebuilds with |Rule_m| we rely crucially on having the dependencies available without executing the action. However, it's simple to solve in |Rule_s|, we simply store the |depends| list in |Result|.
+To achieve minimal rebuilds with |Rule_m| we rely on having the dependencies available without executing the action, something that is not available with |Rule_s|. To solve this problem, we include the list of dependencies in |Result_s|, and use them in |skip_s|:
 
-Our original algorithm calculated every file repeatedly. We can easily add a cache mapping |Key| to |Value| and avoid reducing a rule that has already been reduced in this execution.
+\begin{code}
+data Result_s = Result_s
+    {  created  :: Key
+    ,  result   :: Value
+    ,  built    :: Time
+    ,  depends  :: [Key]
+    }
 
-To obtain minimal rebuilds across executions we can use the same approach as described in the previous section. However, we cannot determine whether a |history| is valid based on the rule, as we do not have the |depends| available, and do not want to rerun the |action| just to get the dependencies. Therefore, we just store the dependencies alongside.
-
-\h{.theory2}\begin{code}
-data  Info = Info
-      {  value :: Value
-      ,  built :: Time
-      ,  depends :: [Key]
-      }
-
-history :: Key -> Maybe Info
-
-validHistory r = case history (creates r) of
-    Nothing -> False
-    Just i ->
-        all ((< built i) . built . fromJust . history) (depends i)
+skip_s ask r  |  Just self  <- ask (creates r)
+              ,  Just deps  <- mapM ask (depends self)
+              =  all ((<= built self) . built) deps
 \end{code}
 
-\noindent We can reuse the |validStored| unmodified.
+Compared to |skip_m|, we have made one change -- instead of using |depends r|, we use |depends self|. With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
 
 \subsubsection{Unchanging Files}
 \label{sec:unchanging_files}
 
-Now let us consider the case where a rule runs, but the result is the same as last time. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. In \make{}, the solution is to disallow such changes, and always \prog{touch} the result after a rule completes. However, we can do better, avoiding unnecessary computation.
+The \make{} tool has a requirement that a rule action \textit{must} modify the file it creates, otherwise the rule will be repeatedly rerun, as the result will remain older than its dependencies. However, since we are storing |built| separately from |result|, we can do better, eliminating some unnecessary rebuilds.
 
-Instead of storing just the built time, we can also store the |changed| time. Whenever we build a file we update its |built| time, but if the value is the same as last time, we leave its |changed| time the same. When checking |validHistory| we can replace the condition as:
+Instead of storing just the |built| time, we also store the |changed| time -- when the |result| last changed. Whenever we create a result we use the current time for |built|, but if the |result| |Value| is the same as last time, we leave its |changed| time the same. We can rewrite |skip_s| to take advantage of this additional information:
 
-\ignore\begin{code}
-all ((< built i) . changed . fromJust . history) (dependsUpon i)
+\begin{code}
+data Result_s = Result_s
+    {  created  :: Key
+    ,  result   :: Value
+    ,  built    :: Time
+    ,  depends  :: [Key]
+    ,  changed  :: Time
+    }
+
+skip_s ask r  |  Just self  <- ask (creates r)
+              ,  Just deps  <- mapM ask (depends self)
+              =  all ((<= built self) . changed) deps
 \end{code}
 
-By introducing two timestamps for a single |Key|, we can reduce the number of builds required. For certain practical examples, this improvement can reduce rebuild times after a change from many minutes to seconds.
+We have only changed the final line of |skip_s| -- instead of checking against the |built| time of the dependencies, we check against the |changed| time. Since it is always the case that |changed <= built|, |skip_s| will now return |True| more often.
 
+For certain practical examples, support for unchanging files can reduce rebuild times from many minutes to seconds. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. By supporting unchanging files we can avoid rebuilding everything depending on that generated file.
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -395,7 +341,6 @@ In order to make the theory from \S\ref{sec:theory} practically usable as a Hask
 
 \subsection{A Shake Example}
 
-\todo{fix the import below}
 \begin{figure}
 \begin{code}
 {-"\Keyword{import}\;\Conid{Development.Shake}"-}
@@ -962,6 +907,9 @@ When running the build system while nothing needs compiling, GHC takes 0.54 seco
 \label{sec:lint}
 
 \todo{write lint checking}
+
+In order to remain consistent throughout the execution, we require that all |stored| values do \textit{not} change during the execution, other than as a result of running an |action| which |creates| it. The \make{} tool requires a similar property or it becomes inconsistent.
+
 
 Writing a large build system is a complex endeavour.
 
