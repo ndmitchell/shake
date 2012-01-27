@@ -36,7 +36,7 @@
 %format skip_s = "\Varid{skip_s}"
 
 \hsdef{\begin{comment}
-alpha
+alpha,r,self
 IO,Main,Development.Shake
 Any,Eq,Show,Hashable,NFData,MonadIO,TypeRep
 contents
@@ -101,11 +101,16 @@ writeFile' :: FilePath -> String -> Action ()
 writeFileChanged :: FilePath -> String -> Action ()
 cIncludes :: FilePath -> IO [FilePath]
 \end{code}
-\h{.theory1}\begin{code}
-modified :: Key -> Maybe Double
+\h{.m}\begin{code}
+(!) :: Set Rule_m -> Key -> Rule_m
+data Rule
 \end{code}
-\h{.theory2}\begin{code}
-find :: Set Rule -> Key -> Rule
+\h{.s}\begin{code}
+(!) :: Set Rule_s -> Key -> Rule_s
+\end{code}
+\h{.s2}\begin{code}
+instance Eq (Result_s -> Time)
+instance Ord (Result_s -> Time)
 \end{code}
 \end{comment}
 
@@ -195,7 +200,7 @@ In this section we model the dependencies used in non-recursive \make{}, as desc
 
 While the \make{} tool is heavily IO and file based, that is not an essential property of \make{}. To model dependency information, we use the type |Key| for things that can be created or are dependencies (i.e. file names), and the type |Value| for the values associated with a |Key| (i.e.  file contents). With these types, we can define our main |build| function as:
 
-\begin{code}
+\h{.m}\begin{code}
 build :: Set Rule -> Key -> Value
 \end{code}
 
@@ -203,7 +208,7 @@ The |build| function takes a (possibly infinite) set of rules and the target |Ke
 
 Using |build|, we can model \make{} by defining the |Rule| type as:
 
-\begin{code}
+\h{.m}\begin{code}
 data  Rule_m = Rule_m
       {  creates  :: Key
       ,  depends  :: [Key]
@@ -215,7 +220,7 @@ A \make{} |Rule| (|Rule_m|) can be modelled as the |Key| it |creates|, the |Key|
 
 Using the same |build| function, we can model our enhanced dependency scheme as:
 
-\begin{code}
+\h{.s .s2}\begin{code}
 data  Rule_s = Rule_s
       {  creates  :: Key
       ,  action   :: Action
@@ -233,7 +238,7 @@ The big difference is the introduction of dynamic dependencies. A rule can dynam
 
 Assuming a function named |(!)| which finds a |Rule| for a given |Key|, we can write a function to build |Rule_m| targets as follows:
 
-\begin{code}
+\h{.m}\begin{code}
 build_m rules target = run (rules ! target)
     where run r = action r (map (build_m rules) (depends r))
 \end{code}
@@ -242,7 +247,7 @@ Starting at the |target| |Key|, we find the associated |Rule_m|, run |build_m| o
 
 We can write a similar function to build |Rule_s| targets as follows:
 
-\begin{code}
+\h{.s}\begin{code}
 build_s rules target = run (action (rules ! target))
     where  run (Result val) = val
            run (Depends dep act) = run (act (build_s rules dep))
@@ -260,7 +265,7 @@ One important property of build tools is performing minimal rebuilds, something 
 
 To avoid repeating actions whose inputs have not changed, \make{} does not run any actions where the input files have older modification times than the result file. We can use a similar scheme, adapted to work on arbitrary |Key|/|Value| types. Whenever an |action| is run, we create a |Result|:
 
-\begin{code}
+\h{.m}\begin{code}
 data Result_m = Result_m
     {  created  :: Key
     ,  result   :: Value
@@ -268,9 +273,9 @@ data Result_m = Result_m
     }
 \end{code}
 
-|Result_m| contains the |Key| the action |created|, the |result| |Value|, and the time when the result was |built|. We store all |Result_m| values between build runs, and skip rerunning a |Rule_m| if: 1) the |create| |Key| has a result available; 2) all the |depends| |Key|s have results available; and 3) the |built| field of the result associated with |create| is greater than or equal to all the |built| fields of the results associated with |depends|. Given a function named |ask| to lookup the associated result for a |Key|, which returns |Nothing| if the there is no associated result, we can write:
+|Result_m| contains the |Key| the action |created|, the |result| |Value|, and the time when the result was |built|. We store all |Result_m| values between build runs, and skip rerunning a |Rule_m| if: 1) the |creates| |Key| has a result available; 2) all the |depends| |Key|s have results available; and 3) the |built| field of the result associated with |creates| is greater than or equal to all the |built| fields of the results associated with |depends|. Given a function named |ask| to lookup the associated result for a |Key|, which returns |Nothing| if the there is no associated result, we can write:
 
-\begin{code}
+\h{.m}\begin{code}
 skip_m :: (Key -> Maybe Result_m) -> Rule_m -> Bool
 skip_m ask r  |  Just self  <- ask (creates r)
               ,  Just deps  <- mapM ask (depends r)
@@ -294,7 +299,7 @@ This function should return |True| when the |Key|/|Value| are not stored elsewhe
 
 To achieve minimal rebuilds with |Rule_m| we rely on having the dependencies available without executing the action, something that is not available with |Rule_s|. To solve this problem, we include the list of dependencies in |Result_s|, and use them in |skip_s|:
 
-\begin{code}
+\h{.s}\begin{code}
 data Result_s = Result_s
     {  created  :: Key
     ,  result   :: Value
@@ -307,7 +312,7 @@ skip_s ask r  |  Just self  <- ask (creates r)
               =  all ((<= built self) . built) deps
 \end{code}
 
-Compared to |skip_m|, we have made one change -- instead of using |depends r|, we use |depends self|. With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
+Compared to |skip_m|, we have made one change -- instead of using \h{.s}|depends r|, we use \h{.s}|depends self|. With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
 
 \subsubsection{Unchanging Files}
 \label{sec:unchanging_files}
@@ -316,7 +321,7 @@ The \make{} tool has a requirement that a rule action \textit{must} modify the f
 
 Instead of storing just the |built| time, we also store the |changed| time -- when the |result| last changed. Whenever we create a result we use the current time for |built|, but if the |result| |Value| is the same as last time, we leave its |changed| time the same. We can rewrite |skip_s| to take advantage of this additional information:
 
-\begin{code}
+\h{.s2}\begin{code}
 data Result_s = Result_s
     {  created  :: Key
     ,  result   :: Value
@@ -330,7 +335,7 @@ skip_s ask r  |  Just self  <- ask (creates r)
               =  all ((<= built self) . changed) deps
 \end{code}
 
-We have only changed the final line of |skip_s| -- instead of checking against the |built| time of the dependencies, we check against the |changed| time. Since it is always the case that |changed <= built|, |skip_s| will now return |True| more often.
+We have only changed the final line of |skip_s| -- instead of checking against the |built| time of the dependencies, we check against the |changed| time. Since it is always the case that \h{.s2}|changed <= built|, |skip_s| will now return |True| more often.
 
 For certain practical examples, support for unchanging files can reduce rebuild times from many minutes to seconds. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. By supporting unchanging files we can avoid rebuilding everything depending on that generated file.
 
@@ -908,7 +913,7 @@ When running the build system while nothing needs compiling, GHC takes 0.54 seco
 
 \todo{write lint checking}
 
-In order to remain consistent throughout the execution, we require that all |stored| values do \textit{not} change during the execution, other than as a result of running an |action| which |creates| it. The \make{} tool requires a similar property or it becomes inconsistent.
+In order to remain consistent throughout the execution, we require that all externally stored values do \textit{not} change during the execution, other than as a result of running an |action| which |creates| it. The \make{} tool requires a similar property or it becomes inconsistent.
 
 
 Writing a large build system is a complex endeavour.
