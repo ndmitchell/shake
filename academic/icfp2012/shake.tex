@@ -385,7 +385,7 @@ The build system produces (|want|'s) the file \file{Main}. To generate \file{Mai
 This example demonstrates a number of features of Shake based build systems:
 
 \begin{description}
-\item[It's Haskell] The |main| entry point can call |shake| directly, but it can also do command line processing (\S\ref{sec:command_line}), or anything else. We have defined a local function, |cIncludes|, helping us to split up the build system into reusable components.
+\item[It's Haskell] The |main| entry point can call |shake| directly, but it can also do command line processing (\S\ref{sec:command_line}), or anything else. We have defined a local function, |cIncludes|, helping us to split up the build system into reusable components. We use the filepath library.
 \item[Everything can be tracked] The call to |getDirectoryFiles| is tracked (see \S\ref{sec:directory_rule}) -- if the results change, it will trigger a rebuild. We track the dependencies introduced by @#include@ directives.
 \item[We use system commands] We use \prog{gcc} to compile, to link, and to determine the headers required by the C files. We can freely use both Haskell functions and system commands to generate the build results.
 \end{description}
