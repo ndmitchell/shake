@@ -7,6 +7,7 @@ import System.Environment
 import Examples.Util(flags)
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
+import qualified Examples.C.Main as C
 import qualified Examples.Test.Basic1 as Basic1
 import qualified Examples.Test.Directory as Directory
 import qualified Examples.Test.Errors as Errors
@@ -18,7 +19,7 @@ import qualified Examples.Test.Pool as Pool
 fakes = ["clean" * clean, "test" * test]
     where (*) = (,)
 
-mains = ["tar" * Tar.main, "self" * Self.main
+mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic1" * Basic1.main, "directory" * Directory.main, "errors" * Errors.main
         ,"filepath" * FilePath.main, "files" * Files.main, "pool" * Pool.main]
     where (*) = (,)

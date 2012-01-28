@@ -96,11 +96,12 @@ executable shake
 
     other-modules:
         Examples.Util
+        Examples.C.Main
         Examples.Self.Main
+        Examples.Tar.Main
         Examples.Test.Basic1
         Examples.Test.Directory
         Examples.Test.Errors
         Examples.Test.FilePath
         Examples.Test.Files
         Examples.Test.Pool
-        Examples.Tar.Main
