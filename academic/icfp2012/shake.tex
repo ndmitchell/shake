@@ -10,6 +10,7 @@
 \usepackage{balance}
 \usepackage[all]{xy}
 
+\newcommand{\backticks}[1]{\mathsf{\text{\textit{\`{}}}#1\!\text{\textit{\`{}}}}\;}
 
 \include{paper}
 %include paper.fmt
@@ -21,7 +22,7 @@
 %format *>> = "\mathbin{*\hspace{-5.8px}>\!\!>}"
 %format ?> = "\mathbin{\raisebox{-.7px}{?}\hspace{-4px}>}"
 %format ?== = "\mathbin{\raisebox{-.7px}{?}\hspace{-4px}\equiv}"
-%format `replaceExtension` = "\backtick{replaceExtension}"
+%format `replaceExtension` = "\backticks{replaceExtension}"
 %subst string a = "\!\text{\sf ``" a "\char34}\!"
 %format context = "\Keyword{context}"
 %format dependsS = "\Varid{depends\!^{*}}"
@@ -100,6 +101,7 @@ readFileLines :: FilePath -> Action [String]
 writeFile' :: FilePath -> String -> Action ()
 writeFileChanged :: FilePath -> String -> Action ()
 cIncludes :: FilePath -> IO [FilePath]
+systemOutput :: FilePath -> [String] -> Action (String, String)
 \end{code}
 \h{.m}\begin{code}
 (!) :: Set Rule_m -> Key -> Rule_m
@@ -342,7 +344,7 @@ For certain practical examples, support for unchanging files can reduce rebuild 
 \section{Shake in Haskell}
 \label{sec:user_view}
 
-In order to make the theory from \S\ref{sec:theory} practically usable as a Haskell library, we need to make a number of design decisions. In particular, we describe how to replace |Key| and |Value| with standard polymorphic values, how to integrate IO into the |action| function and how to define an infinite set of rules. We first present the interface to Shake, then in \S\ref{sec:developer_view} we describe how to implement the internals of the library.
+In this section we go from the theory of \S\ref{sec:theory} to a practical build tool, structured as a Haskell library. In particular, we describe how to replace |Key| and |Value| with standard polymorphism, how to integrate IO into the actions and how to define the set of rules. We present the interface to Shake, but leave most implementation concerns to \S\ref{sec:developer_view}.
 
 \subsection{A Shake Example}
 
@@ -354,35 +356,39 @@ import System.FilePath
 main = shake shakeOptions $ do
     want ["Main"]
 
-    "Main" *> \exe -> do
+    "Main" *> \out -> do
         cs <- getDirectoryFiles "." "*.c"
         let os = map (`replaceExtension` "o") cs
         need os
-        system' "gcc" $ ["-o",exe] ++ os
+        system' "gcc" $ ["-o",out] ++ os
 
-    "*.o" *> \o -> do
-        let c = replaceExtension o "c"
+    "*.o" *> \out -> do
+        let c = replaceExtension out "c"
         need [c]
-        headers <- liftIO (cIncludes c)
+        headers <- cIncludes c
         need headers
-        system' "gcc" ["-o",o,"-c",c]
+        system' "gcc" ["-o",out,"-c",c]
+
+cIncludes :: FilePath -> Action [FilePath]
+cIncludes x = do
+    (stdout,_) <- systemOutput "gcc" ["-MM",x]
+    return $ drop 2 $ words stdout
 \end{code}
-\caption{Demo build system in Shake.}
+\caption{A Shake build system for C code.}
 \label{fig:demo}
 \end{figure}
 
-We give an example Shake program in Figure \ref{fig:demo}. Running this program will build \file{Main} from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be recompiled.
+Figure \ref{fig:demo} shows an example build system in Shake. Running this program will build \file{Main} from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be recompiled.
 
-The script produces (|want|'s) the file \file{Main}. To generate \file{Main} we list all the \file{*.c} files in the current directory, change their extensions to \file{*.o}, require those files to be built (|need| them), then call \prog{gcc} to link them. To build any \file{*.o} file we take the associated \file{*.c}, make sure it's been built, then call the function |cIncludes| to get all headers it includes (|cIncludes| can be defined in terms of \prog{gcc -M}). We require those headers, then we call \prog{gcc} to do the compilation.
+The build system produces (|want|'s) the file \file{Main}. To generate \file{Main} we list all the C files in the current directory, change their extensions to \file{.o} (object files), require those files to be built (|need| them), then call \prog{gcc} to link them. To build an object file we take the associated C file and call the function |cIncludes| to get the headers it requires. We |need| those headers, then call \prog{gcc} to do the compilation. The |cIncludes| function works by calling \prog{gcc -MM}, causing \prog{gcc} to generate the dependency information to the standard output.
 
-This script demonstrates a number of features of Shake based build systems:
+This example demonstrates a number of features of Shake based build systems:
 
-\begin{itemize}
-\item It's a full Haskell program with a |main| entry point. While |main| can simply call |shake|, it can also do anything it likes, such as command line processing (see \S\ref{sec:command_line}).
-\item The call to |getDirectoryFiles| is tracked (see \S\ref{sec:other_rule_types}), if the results change, it will trigger a rebuild.
-\item We run arbitrary system commands in the internals.
-\item We fully track the dynamic dependencies introduced by header files. The function |cIncludes| given a source file returns all the files required by transitive @#include@ directives. (In \S\ref{sec:transitive} we show a better way to define transitive dependencies.)
-\end{itemize}
+\begin{description}
+\item[It's Haskell] The |main| entry point can call |shake| directly, but it can also do command line processing (\S\ref{sec:command_line}), or anything else. We have defined a local function, |cIncludes|, helping us to split up the build system into reusable components.
+\item[Everything can be tracked] The call to |getDirectoryFiles| is tracked (see \S\ref{sec:directory_rule}) -- if the results change, it will trigger a rebuild. We track the dependencies introduced by @#include@ directives.
+\item[We use system commands] We use \prog{gcc} to compile, to link, and to determine the headers required by the C files. We can freely use both Haskell functions and system commands to generate the build results.
+\end{description}
 
 \subsection{Core Shake}
 
@@ -463,6 +469,8 @@ type FilePattern = String
 
 \subsection{Defining Rule Types}
 \label{sec:exists_rule}
+
+\label{sec:directory_rule} \todo{should be defining a directory rule here, am pretty sure!}
 
 To work correctly, the |key|/|value| types of |apply1| and |rule| must match each other. To aid end users, we suggest that most rule authors define sugar functions, as we have done for the rule types included with Shake. The simplest rule available is one that determines if a file exists, similar to the standard function |System.Directory.doesFileExist|, but where the dependency is tracked. As an example, consider the following rule:
 
@@ -631,7 +639,7 @@ We have implemented Shake, and used it extensively. In this section we sketch so
 \item[Correctness] -- we always execute enough rules to obtain correctness, but we never rebuild something that could be reused.
 \item[Efficiency] -- we aim to make the implementation efficient, while remembering that often executing a rule is expensive.
 \item[Parallelism] -- we try and do lots of work in parallel where possible.
-\item[Error feedback] -- if the build system fails for some reason, such as the rules being incorrect as per \S\ref{sec:theory_shake}, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it is necessary to make Shake usable.
+\item[Error feedback] -- if the build system fails for some reason, such as the necessary build rules not existing, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it is necessary to make Shake usable.
 \end{description}
 
 \subsection{Dynamically Typed Values}
@@ -812,6 +820,8 @@ Therefore, a standard pattern is to define \file{*.dep} as the immediate depende
     need =<< readFileLines (replaceExtension out "deps")
     system' "gcc" ["-c",dropExtension out,"-o",out]
 \end{code}
+
+This system also works much better because any dependencies that are generated files are automatically asked for, rather than doing it as per the \S\ref{sec:user_view}, where any dependencies not yet generated would be skipped.
 
 \subsection{Build rules that change}
 \label{sec:changing_rules}
