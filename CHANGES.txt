@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.2.1
     Put diagnostics in more places
     Add a C example
 0.2
