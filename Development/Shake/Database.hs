@@ -212,6 +212,8 @@ eval pool Database{..} Ops{..} ks =
         isReady Ready{} = True
         isReady _ = False
 
+        atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
+
         -- Rules for each eval* function
         -- * Must NOT lock
         -- * Must have an equal return to what is stored in the db at that point
@@ -241,7 +243,9 @@ eval pool Database{..} Ops{..} ks =
                     join $ readIORef pend
                     return ans
                 case ans of
-                    Ready r -> appendJournal journal k r -- leave the DB lock before appending
+                    Ready r -> do
+                        logger $ "result " ++ atom k ++ " = " ++ atom (value r)
+                        appendJournal journal k r -- leave the DB lock before appending
                     _ -> return ()
             k #= Building (Pending pend) r
 
@@ -253,6 +257,7 @@ eval pool Database{..} Ops{..} ks =
                 Nothing -> evalB stack k Nothing
                 Just (Loaded r) -> do
                     b <- valid k (value r)
+                    logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (value r)
                     if not b then evalB stack k $ Just r else checkREDCB stack k r (depends r)
                 Just res -> return res
 
