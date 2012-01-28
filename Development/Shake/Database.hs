@@ -358,27 +358,35 @@ openDatabase logger filename version = do
         jfile = filename <.> "journal"
 
     lock <- newLock
+    logger $ "readDatabase " ++ dbfile
     (step, status) <- readDatabase dbfile version
     step <- return $ incStep step
     
     b <- doesFileExist jfile
     (status,step) <- if not b then return (status,step) else do
+        logger $ "replayJournal " ++ jfile
         status <- replayJournal jfile version status
         removeFile_ jfile
         -- the journal potentially things at the current step, so increment my step
         writeDatabase dbfile version step status
+        logger $ "rewriteDatabase " ++ jfile
         return (status, incStep step)
 
     status <- newIORef status
     journal <- openJournal jfile version
+    logger "openDatabase complete"
     return Database{..}
 
 
 closeDatabase :: Database -> IO ()
 closeDatabase Database{..} = do
     status <- readIORef status
-    writeDatabase (filename <.> "database") version step status
+    let dbfile = filename <.> "database"
+    logger $ "writeDatabase " ++ dbfile
+    writeDatabase dbfile version step status
+    logger $ "closeJournal"
     closeJournal journal
+    logger "closeDatabase complete"
 
 
 writeDatabase :: FilePath -> Int -> Step -> Map Key Status -> IO ()
