@@ -26,7 +26,7 @@ system' path args = do
 
 -- | Execute a system command, returning @(stdout,stderr)@.
 --   This function will raise an error if the exit code is non-zero.
---   Before running 'systemOutput'' make sure you 'need' any required files.
+--   Before running 'systemOutput' make sure you 'need' any required files.
 systemOutput :: FilePath -> [String] -> Action (String, String)
 systemOutput path args = do
     let path2 = toNative path
