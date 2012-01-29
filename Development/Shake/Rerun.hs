@@ -28,8 +28,8 @@ instance Rule AlwaysRerun Dirty where
 --
 -- > "ghcVersion.txt" *> \out -> do
 -- >     alwaysRerun
--- >     (stdout,_) <- systemOutput' "ghc" ["--version"]
--- >     writeFile' out stdout
+-- >     (stdout,_) <- systemOutput "ghc" ["--version"]
+-- >     writeFileChanged out stdout
 alwaysRerun :: Action ()
 alwaysRerun = do Dirty _ <- apply1 $ AlwaysRerun (); return ()
 
