@@ -94,18 +94,22 @@ defaultRuleFile = defaultRule $ \(File x) -> Just $
 -- | Require that the following files are built before continuing. Particularly
 --   necessary when calling 'system''. As an example:
 --
--- > "//*.rot13" *> \out -> do
--- >     let src = dropExtension out
--- >     need [src]
--- >     system' ["rot13",src,"-o",out]
+-- @
+--   \"//*.rot13\" '*>' \out -> do
+--       let src = dropExtension out
+--       'need' [src]
+--       'system'' [\"rot13\",src,\"-o\",out]
+-- @
 need :: [FilePath] -> Action ()
 need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --
--- > main = shake shakeOptions $ do
--- >    want ["Main.exe"]
--- >    ...
+-- @
+--   main = 'shake' 'shakeOptions' $ do
+--      'want' [\"Main.exe\"]
+--      ...
+-- @
 --
 --   This program will build @Main.exe@, given sufficient rules.
 want :: [FilePath] -> Rules ()
@@ -116,9 +120,11 @@ want xs = action $ need xs
 --   the second argument will be used to build it. Usually '*>' is sufficient, but '?>' gives
 --   additional power. For any file used by the build system, only one rule should return 'True'.
 --
--- > (all isUpper . takeBaseName) *> \out -> do
--- >     let src = replaceBaseName out $ map toLower $ takeBaseName out
--- >     writeFile' . map toUpper =<< readFile' src
+-- @
+--   (all isUpper . takeBaseName) '*>' \out -> do
+--       let src = replaceBaseName out $ map toLower $ takeBaseName out
+--       'writeFile'' . map toUpper =<< 'readFile'' src
+-- @
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 (?>) test act = rule $ \(File x) ->
     if not $ test x then Nothing else Just $ do
@@ -134,10 +140,12 @@ want xs = action $ need xs
 -- | Define a rule that matches a 'FilePattern'. No file required by the system must be
 --   matched by more than one pattern. For the pattern rules, see '?=='.
 --
--- > "*.asm.o" *> \out -> do
--- >     let src = dropExtension out
--- >     need [src]
--- >     system' ["as",src,"-o",out]
+-- @
+--   \"*.asm.o\" '*>' \out -> do
+--       let src = dropExtension out
+--       'need' [src]
+--       'system'' [\"as\",src,\"-o\",out]
+-- @
 --
 --   To define a build system for multiple compiled languages, we recommend using @.asm.o@,
 --   @.cpp.o@, @.hs.o@, to indicate which language produces an object file.

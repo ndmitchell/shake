@@ -26,10 +26,12 @@ instance Rule AlwaysRerun Dirty where
 -- | Always rerun the associated action. Useful for defining rules that query
 --   the environment. For example:
 --
--- > "ghcVersion.txt" *> \out -> do
--- >     alwaysRerun
--- >     (stdout,_) <- systemOutput "ghc" ["--version"]
--- >     writeFileChanged out stdout
+-- @
+--   \"ghcVersion.txt\" '*>' \out -> do
+--       'alwaysRerun'
+--       (stdout,_) <- 'systemOutput' \"ghc\" [\"--version\"]
+--       'writeFileChanged' out stdout
+-- @
 alwaysRerun :: Action ()
 alwaysRerun = do Dirty _ <- apply1 $ AlwaysRerun (); return ()
 
