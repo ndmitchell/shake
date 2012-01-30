@@ -10,7 +10,7 @@ The journal is idempotent, i.e. if we replay the journal twice all is good
 module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
-    Ops(..), eval,
+    Ops(..), build,
     allEntries, showJSON,
     ) where
 
@@ -152,8 +152,8 @@ data Ops = Ops
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-eval :: Pool -> Database -> Ops -> [Key] -> IO (Either SomeException (Duration,[Value]))
-eval pool Database{..} Ops{..} ks =
+build :: Pool -> Database -> Ops -> [Key] -> IO (Either SomeException (Duration,[Value]))
+build pool Database{..} Ops{..} ks =
     join $ withLock lock $ do
         vs <- mapM (evalRECB []) ks
         let errs = [e | Error e <- vs]

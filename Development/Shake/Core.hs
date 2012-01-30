@@ -320,7 +320,7 @@ applyKeyValue ks = Action $ do
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
-    res <- liftIO $ eval (pool s) (database s) (Ops (stored s) exec) ks
+    res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) ks
     case res of
         Left err -> throw err
         Right (d, vs) -> do
