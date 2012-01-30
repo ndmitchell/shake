@@ -200,8 +200,7 @@ Shake has been used at Standard Chartered for the past three years (\S\ref{sec:e
 \section{Specifying Dependencies}
 \label{sec:theory}
 
-Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph. In practice, we have found that eliminating the explicit dependency graph makes implementing a build system \textit{simpler} (\S\ref{sec:shake_state}).
-
+Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph. 
 In this section we model the dependencies used in non-recursive \make{}, as described by \citet{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
 
 \subsection{Moving Dependency Specification}
@@ -454,7 +453,7 @@ Every rule that is defined or applied in Shake must be a member of the |Rule| cl
 \item [Binary] We require |Binary| to store the values in a database, to achieve minimal rebuilds (\S\ref{sec:minimal_rebuilds}).
 \item [Hashable] We require |Hashable| to lookup entries quickly \cite{unordered-containers}.
 \item [Show] We require |Show| for debugging messages and logging (\S\ref{sec:profiling}).
-\item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring that errors occur in a timely manner (\S\ref{sec:shake_state}).
+\item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring that errors occur in a timely manner (\S\ref{sec:handling_errors}).
 \end{description}
 
 Normal rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the action necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no normal rules match -- for an example see \S\ref{sec:file_rules}. Instead of defining targets to build, we allow actions to be specified using |action|, which are always run. The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define many rules, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate \h{type}|IO alpha| to \h{type}|Action alpha|.
@@ -557,7 +556,7 @@ want xs = action $ need xs
 \end{figure}
 
 While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could equally be modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds with \prog{touch} is highly convenient. Of course, our design allows anyone to define a new file rule, based on file content hashes.
- 
+
 We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action demands all the modification times associated with the filenames, then throws away the result -- a computation depends on the time a file was built, but rarely uses the modification time in its computation. We define |want| as simply a |need| run as an action.
 
 We define |defaultFile| as a rule that checks if the file is already present, and if so uses it. Source files will have no associated rules to build them, so this rule just records their modification time. If a file has no rules (since any rules would be run in preference to the default rule), and does not exist, we give an error to the user. As with |defaultDir|, anyone using |want|/|need| should include |defaultFile| in their rule set.
@@ -627,10 +626,11 @@ Implementing a |Binary| instance for |Any| is harder. Serialising a value is eas
 When deserialising, if we encounter a type not present in the table, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked anyway (see \S\ref{sec:changing_rules}).
 
 \subsection{Handling Errors}
+\label{sec:handling_errors}
 
-To turn Shake into a practical system, we make a number of changes from the natural implementation, designed to improve the situation when errors occur.
+To turn Shake into a practical system, we make a number of changes from the natural implementation, designed to improve errors handling.
 
-\paragraph{Tracking the stack} We maintain a stack while executing rules, listing the keys that cause a rule to be executed. Whenever an error occurs, either when running a rule or trying to find a rule, we print the stack. The stack is particularly useful when there is no rule for a key, but the fact that key is required is itself suspicious. Before starting a rule we given an error if the key is already on the stack, which would indicate a key depends on itself. This check allows us to give a clear error message where otherwise there would have been an infinite loop.
+\paragraph{Tracking the stack} We maintain a stack while executing rules, listing the keys that cause a rule to be executed. Whenever an error occurs, either when running a rule or trying to find a rule, we print the stack. Whenever we execution an action, we force its result using the |NFData| instance, ensuring any errors are raised with the correct stack. We raise an error when trying to build a key that is already on the stack, which would indicate a key depends on itself. This check allows us to give a clear error message where otherwise there would have been an infinite loop.
 
 \paragraph{Tracing and diagnostics} We provide options to print every rule run, and every system command run. Whenever a system command fails, we reprint the command line after the failure, to ensure the command has not scrolled off the screen. We provide a diagnostics mode to print detailed information as the build progresses, helping to debug build systems.
 
@@ -638,58 +638,28 @@ To turn Shake into a practical system, we make a number of changes from the natu
 
 \subsection{Shake State}
 \label{sec:parallelism}
-\label{sec:shake_state}
 
-The central algorithm 
+The key algorithm in Shake is implemented in 130 lines of Haskell. It takes a list of keys, and produces either a list of values, or raises an error if one of the results raises an error. This algorithm is parameterised by a way to check a rule is valid, and a way to execute a rule. At its heart, each |Key| is in one of seven states, and this algorithm moves keys between those states. When implementing this algorithm, there are two primary concerns. Firstly, the algorithm must be correct and secondly it must be efficient.
 
-In the implementation of Shake there are several goals:
+On top of this algorithm, it is relatively easy to implement the core of Shake. We execute the top-level |action|s, and whenever we call |apply|, we look up the state in the database, and use the transition diagram in Figure \ref{fig:state} to make sure everything is |Built| before continuing.
 
+\subsubsection{Correctness}
 
-Efficient, in particular we want to avoid fork-bombing when we have nothing to do.
-
-Parallel - kick off tasks immediately.
-
-
-
-\begin{description}
-\item[Correctness] -- we always execute enough rules to obtain correctness, but we never rebuild something that could be reused.
-\item[Efficiency] -- we aim to make the implementation efficient, while remembering that often executing a rule is expensive.
-\item[Parallelism] -- we try and do lots of work in parallel where possible.
-\item[Error feedback] -- if the build system fails for some reason, such as the necessary build rules not existing, then it's nice to give useful error messages. While this may sometimes conflict with efficiency (maintaining extra state to only be used in an error), it is necessary to make Shake usable.
-\end{description}
+Must never run a rule twice. Must not start building something unless necessary, including checking for changing files. Must not throw an error that the build system did not cause. These two requirements are somewhat in conflict, to take advantage of unchanging files we must build a keys old dependencies before running the action. However, that might raise an error -- yet if we had rerun the rule from scratch, the build system may never have required that file. Therefore we need to note this state.
 
 \begin{figure}
-\h{.theory3}\begin{code}
-type State = Map Key Status
-
-data Status  =  Loaded Info
-             |  Building (MVar ()) (Maybe Info)
-             |  Built Info
-
-data  Info = Info
-      {  value :: Value
-      ,  built :: Time
-      ,  changed :: Time
-      ,  depends :: [[Key]]
-      }
-\end{code}
-
-\xymatrix{
- & \mathsf{Loaded}\ar@@/_1pc/[dr]^{Invalid}\ar@@/^1pc/[rr]^{Valid} & & \mathsf{Built} \\
-\mathsf{Database}\ar@@{-->}[ur] & & \mathsf{Building}\ar@@/_1pc/[ur]^{Finished} \\
-& \mathsf{Missing}\ar@@{-->}[ur]
-}
-\caption{The state of a Shake process.}
-\label{fig:state}
+\begin{center}
+\includegraphics[scale=0.5]{states.eps}
+\end{center}
+\caption{Result states and transitions.}
+\label{fig:states}
 \end{figure}
 
-\todo{is this really the right state to track? figure out how to build stuff}
-
-Mention that the build system is simpler, or would be if we didn't have to do all the crazy stuff.
-
-For the null build, we optimise throughput, checking nothing twice, taking only 1 lock, and doing everything in a tight loop. For building, we optimise parallelism, starting new tasks as soon as possible.
+The state transition is given in Figure \ref{fig:states}. A key starts as either loaded (we had a previous definition for it), or missing (it was previously unknown to the build system).  If the file was missing, and is required, we start building it, by running its action. Building terminates with either a result, or an error. If a file is loaded then when it is required we start checking it. If all the dependencies are ready, we check them and |validStored|, and transition to either |Building| (something is changed) or |Ready| (the previous result is valid). If one of the dependencies results in an error then if the key is directly required by |build| we switch to building, otherwise we switch to Dirty.
 
 The state of a running Shake program can be represented by the data type in Figure \ref{fig:state}. The |State| is a mapping from |Key| to |Status|, giving the status of each key the build system knows about. The |Status| data type has three constructors:
+
+In order to obtain correctness, we need 7 states. Explain each state.
 
 \begin{description}
 \item[|Loaded|] is used for information that has been loaded from the database, but not yet checked against its history, or any stored value it may have.
@@ -697,9 +667,20 @@ The state of a running Shake program can be represented by the data type in Figu
 \item[|Built|] is used for rules that were loaded and valid, or have finished building.
 \end{description}
 
+\subsubsection{Efficiency}
+
 The |Status| constructors also take an |Info|, which contains the same fields as in \S\ref{sec:unchanging_files}, with one modification. To allow full parallelism when rebuilding dependent rules, we store |depends| as \h{type}|[[Key]]| instead of just \h{type}|[Key]| -- where each entry comes from one call to |apply|. When saving |State| to the database, we ignore the |Status| fields and save only the |Key|/|Info| mapping.
 
-With this state, it is relatively easy to implement the core of Shake -- the functions which are actually responsible for building account for less than 100 lines, most of which is dealing with parallelism. We execute the top-level |action|s, and whenever we call |apply|, we look up the state in the database, and use the transition diagram in Figure \ref{fig:state} to make sure everything is |Built| before continuing.
+Maximise the parallelism up to a given limit, kick off things as soon as possible. A rebuild should be quick if nothing needs to change, ideally no locking. Once we start building something we always finish it.
+
+Must be fast, by making doing-nothing cheap, and by making doing-something parallel. We optimisitcally lock etc. while remembering that often executing a rule is expensive.
+
+We never move to the checking state unless we depend on someone who is building or checking, if we can check straight through we skip that.
+
+Thread pool here.
+
+For the null build, we optimise throughput, checking nothing twice, taking only 1 lock, and doing everything in a tight loop. For building, we optimise parallelism, starting new tasks as soon as possible.
+
 
 To implement parallelism we use our own parallel IO library to queue up rules to be run, which ensures we never have more than a user specified number of rules executing in parallel. The library deliberately randomises the order of computations it runs, as a result of the needs of Shake. By randomising the rules, we provoke failures earlier than we would other have. In addition, some stages of a build require different resources -- for example the compiler requires CPU while the linker requires disk access. If we are not careful, we can result in executing all compilers followed by all linkers. Using random ordering means we get a better mix, which gives a noticeable speedup -- measured at 20\% for some practical workloads.
 
