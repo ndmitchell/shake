@@ -87,8 +87,8 @@
      id="namedview3215"
      showgrid="false"
      inkscape:zoom="1"
-     inkscape:cx="-65.129223"
-     inkscape:cy="181.39177"
+     inkscape:cx="127.5"
+     inkscape:cy="165.57553"
      inkscape:window-x="-4"
      inkscape:window-y="-4"
      inkscape:window-maximized="1"
@@ -96,7 +96,7 @@
   <g
      class="node"
      id="node1"
-     transform="translate(6.785431,280.71909)">
+     transform="translate(6.785431,325.51909)">
     <title
        id="title3111">Missing</title>
     <ellipse
@@ -142,23 +142,6 @@
        font-size="14.00"
        y="-85.400002"
        x="151">Building</text>
-  </g>
-  <g
-     class="edge"
-     id="edge2"
-     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,-129.38303,260.69189)">
-    <title
-       id="title3125">Missing-&gt;Building</title>
-    <path
-       style="fill:none;stroke:#000000"
-       inkscape:connector-curvature="0"
-       id="path3127"
-       d="m 154.51302,-190.80781 c -0.853,24.561 -1.52502,43.56081 -2.52802,72.45381"
-       sodipodi:nodetypes="cc" />
-    <polygon
-       style="fill:#000000;stroke:#000000"
-       id="polygon3129"
-       points="148.477,-118.205 155.473,-117.962 155.473,-117.962 151.628,-108.09 " />
   </g>
   <g
      class="node"
@@ -230,7 +213,7 @@
   <g
      class="node"
      id="node4"
-     transform="translate(-23.919762,281.03021)">
+     transform="translate(-23.919762,325.83021)">
     <title
        id="title3160">Loaded</title>
     <ellipse
@@ -295,48 +278,6 @@
        points="99.76,-86.5001 99.7601,-93.5001 99.7601,-93.5001 109.76,-90 " />
   </g>
   <g
-     class="node"
-     id="node8"
-     transform="translate(-8.667701,267.2)">
-    <title
-       id="title3195">Dirty</title>
-    <ellipse
-       style="fill:none;stroke:#000000"
-       sodipodi:ry="18"
-       sodipodi:rx="29.0158"
-       sodipodi:cy="-162"
-       sodipodi:cx="99"
-       d="m 128.0158,-162 c 0,9.94113 -12.99082,18 -29.0158,18 -16.024984,0 -29.0158,-8.05887 -29.0158,-18 0,-9.94113 12.990816,-18 29.0158,-18 16.02498,0 29.0158,8.05887 29.0158,18 z"
-       id="ellipse3197"
-       ry="18"
-       rx="29.0158"
-       cy="-162"
-       cx="99" />
-    <text
-       style="font-size:14px;text-anchor:middle;font-family:'Times New Roman,serif'"
-       id="text3199"
-       font-size="14.00"
-       y="-157.39999"
-       x="99">Dirty</text>
-  </g>
-  <g
-     class="edge"
-     id="edge2-0"
-     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,14.984564,260.25384)">
-    <title
-       id="title3125-3">Missing-&gt;Building</title>
-    <path
-       style="fill:none;stroke:#000000"
-       inkscape:connector-curvature="0"
-       id="path3127-4"
-       d="m 154.51302,-190.80781 c -0.853,24.561 -1.52502,43.56081 -2.52802,72.45381"
-       sodipodi:nodetypes="cc" />
-    <polygon
-       style="fill:#000000;stroke:#000000"
-       id="polygon3129-1"
-       points="148.477,-118.205 155.473,-117.962 155.473,-117.962 151.628,-108.09 " />
-  </g>
-  <g
      class="edge"
      id="edge2-5"
      transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,-129.38345,334.56685)">
@@ -368,40 +309,6 @@
     <polygon
        style="fill:#000000;stroke:#000000"
        id="polygon3129-2-1"
-       points="155.473,-117.962 151.628,-108.09 148.477,-118.205 155.473,-117.962 " />
-  </g>
-  <g
-     class="edge"
-     id="edge2-5-8"
-     transform="matrix(0.71982462,-0.694156,0.694156,0.71982462,105.78492,333.44291)">
-    <title
-       id="title3125-9-1">Missing-&gt;Building</title>
-    <path
-       style="fill:none;stroke:#000000"
-       inkscape:connector-curvature="0"
-       id="path3127-3-6"
-       d="m 153.08519,-151.33729 c -0.853,24.561 -0.0972,4.09029 -1.10019,32.98329"
-       sodipodi:nodetypes="cc" />
-    <polygon
-       style="fill:#000000;stroke:#000000"
-       id="polygon3129-2-2"
-       points="155.473,-117.962 155.473,-117.962 151.628,-108.09 148.477,-118.205 " />
-  </g>
-  <g
-     class="edge"
-     id="edge2-5-8-2"
-     transform="matrix(-0.694156,-0.71982462,0.71982462,-0.694156,255.03456,155.0931)">
-    <title
-       id="title3125-9-1-0">Missing-&gt;Building</title>
-    <path
-       style="fill:none;stroke:#000000"
-       inkscape:connector-curvature="0"
-       id="path3127-3-6-3"
-       d="M 154.60843,-153.13536 151.985,-118.354"
-       sodipodi:nodetypes="cc" />
-    <polygon
-       style="fill:#000000;stroke:#000000"
-       id="polygon3129-2-2-3"
        points="155.473,-117.962 151.628,-108.09 148.477,-118.205 155.473,-117.962 " />
   </g>
   <g
@@ -441,7 +348,7 @@
   <g
      class="edge"
      id="edge2-5-2-2-5"
-     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,14.952575,140.93799)">
+     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,14.952575,185.73799)">
     <title
        id="title3125-9-0-8-6">Missing-&gt;Building</title>
     <path
@@ -458,7 +365,7 @@
   <g
      class="edge"
      id="edge2-5-2-2-5-3"
-     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,-129.44743,140.93799)">
+     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,-129.44743,185.73799)">
     <title
        id="title3125-9-0-8-6-1">Missing-&gt;Building</title>
     <path
@@ -471,5 +378,39 @@
        style="fill:#000000;stroke:#000000"
        id="polygon3129-2-1-1-6-7"
        points="155.473,-117.962 155.473,-117.962 151.628,-108.09 148.477,-118.205 " />
+  </g>
+  <g
+     class="edge"
+     id="edge2-5-1"
+     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,-129.44743,260.53799)">
+    <title
+       id="title3125-9-7">Missing-&gt;Building</title>
+    <path
+       style="fill:none;stroke:#000000"
+       inkscape:connector-curvature="0"
+       id="path3127-3-4"
+       d="m 152.9494,-145.11704 c -0.853,24.561 0.0386,-2.12996 -0.9644,26.76304"
+       sodipodi:nodetypes="cc" />
+    <polygon
+       style="fill:#000000;stroke:#000000"
+       id="polygon3129-2-0"
+       points="148.477,-118.205 155.473,-117.962 155.473,-117.962 151.628,-108.09 " />
+  </g>
+  <g
+     class="edge"
+     id="edge2-5-2-9"
+     transform="matrix(0.99941496,-0.03420176,0.03420176,0.99941496,14.552575,260.13799)">
+    <title
+       id="title3125-9-0-4">Missing-&gt;Building</title>
+    <path
+       style="fill:none;stroke:#000000"
+       inkscape:connector-curvature="0"
+       id="path3127-3-1-8"
+       d="m 152.9494,-145.11704 c -0.853,24.561 0.0386,-2.12996 -0.9644,26.76304"
+       sodipodi:nodetypes="cc" />
+    <polygon
+       style="fill:#000000;stroke:#000000"
+       id="polygon3129-2-1-8"
+       points="151.628,-108.09 148.477,-118.205 155.473,-117.962 155.473,-117.962 " />
   </g>
 </svg>
