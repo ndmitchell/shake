@@ -174,7 +174,7 @@ data Ops = Ops
 build :: Pool -> Database -> Ops -> [Key] -> IO (Either SomeException (Duration,[Value]))
 build pool Database{..} Ops{..} ks =
     join $ withLock lock $ do
-        vs <- mapM (evalRECB []) ks
+        vs <- mapM (reduce []) ks
         let errs = [e | Error e <- vs]
         if all isReady vs then
             return $ return $ Right (0, [value r | Ready r <- vs])
@@ -208,11 +208,11 @@ build pool Database{..} Ops{..} ks =
         -- Rules for each eval* function
         -- * Must NOT lock
         -- * Must have an equal return to what is stored in the db at that point
-        -- * Must return only one of the items in its suffix
+        -- * Must not return Loaded
 
 
-        evalB :: [Key] -> Key -> Maybe Result -> IO Waiting
-        evalB stack k r = do
+        run :: [Key] -> Key -> Maybe Result -> IO Waiting
+        run stack k r = do
             w <- newWaiting r
             addPool pool $ do
                 res <- exec stack k
@@ -233,34 +233,34 @@ build pool Database{..} Ops{..} ks =
             k #= w
 
 
-        evalRECB :: [Key] -> Key -> IO Status
-        evalRECB stack k = do
+        reduce :: [Key] -> Key -> IO Status
+        reduce stack k = do
             s <- readIORef status
             case Map.lookup k s of
-                Nothing -> evalB stack k Nothing
+                Nothing -> run stack k Nothing
                 Just (Loaded r) -> do
                     b <- valid k (value r)
                     logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (value r)
-                    if not b then evalB stack k $ Just r else checkRECB stack k r (depends r)
+                    if not b then run stack k $ Just r else check stack k r (depends r)
                 Just res -> return res
 
 
-        checkRECB :: [Key] -> Key -> Result -> [[Key]] -> IO Status
-        checkRECB stack k r [] =
+        check :: [Key] -> Key -> Result -> [[Key]] -> IO Status
+        check stack k r [] =
             k #= Ready r
-        checkRECB stack k r (ds:rest) = do
-            vs <- mapM (evalRECB (k:stack)) ds
+        check stack k r (ds:rest) = do
+            vs <- mapM (reduce (k:stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
-                evalB stack k $ Just r
+                run stack k $ Just r
              else if null ws then
-                checkRECB stack k r rest
+                check stack k r rest
              else do
                 self <- newWaiting $ Just r
                 waitFor ws $ \finish d -> do
                     s <- readIORef status
                     let buildIt = do
-                            b <- evalB stack k $ Just r
+                            b <- run stack k $ Just r
                             afterWaiting b $ runWaiting self
                             return True
                     case Map.lookup d s of
@@ -268,7 +268,7 @@ build pool Database{..} Ops{..} ks =
                         Just (Ready r2)
                             | changed r2 > built r -> buildIt
                             | finish -> do
-                                res <- checkRECB stack k r rest
+                                res <- check stack k r rest
                                 if not $ isWaiting res
                                     then runWaiting self
                                     else afterWaiting res $ runWaiting self
