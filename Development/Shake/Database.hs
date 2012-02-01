@@ -139,6 +139,18 @@ newWaiting r = do ref <- newIORef $ return (); return $ Waiting (Pending ref) r
 runWaiting :: Waiting -> IO ()
 runWaiting (Waiting (Pending p) _) = join $ readIORef p
 
+-- Wait for a set of actions to complete
+-- If the action returns True, the function will not be called again
+-- If the first argument is True, the thing is ended
+waitFor :: [(a, Waiting)] -> (Bool -> a -> IO Bool) -> IO ()
+waitFor ws@(_:_) act = do
+    todo <- newIORef $ length ws
+    forM_ ws $ \(k,w) -> afterWaiting w $ do
+        t <- readIORef todo
+        when (t /= 0) $ do
+            b <- act (t == 1) k
+            writeIORef todo $ if b then 0 else t - 1
+
 
 getResult :: Status -> Maybe Result
 getResult (Ready r) = Just r
@@ -169,22 +181,14 @@ build pool Database{..} Ops{..} ks =
          else if not $ null errs then
             return $ return $ Left $ head errs
          else do
-            let ws = filter (isWaiting . snd) $ zip ks vs
             wait <- newBarrier
-            todo <- newIORef $ Just $ length ws
-            forM_ ws $ \(k,w) -> afterWaiting w $ do
-                t <- readIORef todo
-                when (isJust t) $ do
-                    s <- readIORef status
-                    case Map.lookup k s of
-                        Just (Error e) -> do
-                            writeIORef todo Nothing
-                            signalBarrier wait $ Left e
-                        Just Ready{} | fromJust t == 1 -> do
-                            writeIORef todo Nothing
-                            signalBarrier wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
-                        Just Ready{} ->
-                            writeIORef todo $ fmap (subtract 1) t
+            waitFor (filter (isWaiting . snd) $ zip ks vs) $ \finish k -> do
+                s <- readIORef status
+                let done x = do signalBarrier wait x; return True
+                case Map.lookup k s of
+                    Just (Error e) -> done $ Left e
+                    Just Ready{} | finish -> done $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
+                                 | otherwise -> return False
             return $ do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait
                 return $ case res of
@@ -252,29 +256,24 @@ build pool Database{..} Ops{..} ks =
              else if null ws then
                 checkRECB stack k r rest
              else do
-                todo <- newIORef $ Just $ length ws -- how many to do
                 self <- newWaiting $ Just r
-                forM_ ws $ \(d,w) ->
-                    afterWaiting w $ do
-                        t <- readIORef todo
-                        when (isJust t) $ do
-                            s <- readIORef status
-                            let now = do
-                                    writeIORef todo Nothing
-                                    b <- evalB stack k $ Just r
-                                    afterWaiting b $ runWaiting self
-                            case Map.lookup d s of
-                                Just Error{} -> now
-                                Just (Ready r2)
-                                    | changed r2 > built r -> now
-                                    | fromJust t == 1 -> do
-                                        writeIORef todo Nothing
-                                        res <- checkRECB stack k r rest
-                                        if not $ isWaiting res
-                                            then runWaiting self
-                                            else afterWaiting res $ runWaiting self
-                                    | otherwise ->
-                                        writeIORef todo $ fmap (subtract 1) t
+                waitFor ws $ \finish d -> do
+                    s <- readIORef status
+                    let buildIt = do
+                            b <- evalB stack k $ Just r
+                            afterWaiting b $ runWaiting self
+                            return True
+                    case Map.lookup d s of
+                        Just Error{} -> buildIt
+                        Just (Ready r2)
+                            | changed r2 > built r -> buildIt
+                            | finish -> do
+                                res <- checkRECB stack k r rest
+                                if not $ isWaiting res
+                                    then runWaiting self
+                                    else afterWaiting res $ runWaiting self
+                                return True
+                            | otherwise -> return False
                 k #= self
 
 
