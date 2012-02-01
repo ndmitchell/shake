@@ -202,7 +202,6 @@ build pool Database{..} Ops{..} ks =
             logger $ maybe "Missing" shw (Map.lookup k s) ++ " -> " ++ shw v ++ ", " ++ show k
             return v
 
-
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
 
         -- Rules for each eval* function
@@ -210,6 +209,16 @@ build pool Database{..} Ops{..} ks =
         -- * Must have an equal return to what is stored in the db at that point
         -- * Must not return Loaded
 
+        reduce :: [Key] -> Key -> IO Status
+        reduce stack k = do
+            s <- readIORef status
+            case Map.lookup k s of
+                Nothing -> run stack k Nothing
+                Just (Loaded r) -> do
+                    b <- valid k (value r)
+                    logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (value r)
+                    if not b then run stack k $ Just r else check stack k r (depends r)
+                Just res -> return res
 
         run :: [Key] -> Key -> Maybe Result -> IO Waiting
         run stack k r = do
@@ -231,19 +240,6 @@ build pool Database{..} Ops{..} ks =
                         appendJournal journal k r -- leave the DB lock before appending
                     _ -> return ()
             k #= w
-
-
-        reduce :: [Key] -> Key -> IO Status
-        reduce stack k = do
-            s <- readIORef status
-            case Map.lookup k s of
-                Nothing -> run stack k Nothing
-                Just (Loaded r) -> do
-                    b <- valid k (value r)
-                    logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (value r)
-                    if not b then run stack k $ Just r else check stack k r (depends r)
-                Just res -> return res
-
 
         check :: [Key] -> Key -> Result -> [[Key]] -> IO Status
         check stack k r [] =
