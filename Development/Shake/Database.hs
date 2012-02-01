@@ -102,8 +102,7 @@ data Status
     = Ready Result -- I have a value
     | Error SomeException -- I have been run and raised an error
     | Loaded Result -- Loaded from the database
-    | Checking Pending Result -- Currently checking if I am valid
-    | Building Pending (Maybe Result) -- Currently building
+    | Waiting Pending (Maybe Result) -- Currently checking if I am valid or building
       deriving Show
 
 data Result = Result
@@ -115,27 +114,37 @@ data Result = Result
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
 
+
 newtype Pending = Pending (IORef (IO ()))
     -- you must run this action when you finish, while holding DB lock
     -- after you have set the result to Error or Ready
 
-addPending :: Pending -> IO () -> IO ()
-addPending (Pending p) act = modifyIORef p (>> act)
-
 instance Show Pending where show _ = "Pending"
+
+
+isError Error{} = True; isError _ = False
+isWaiting Waiting{} = True; isWaiting _ = False
+isReady Ready{} = True; isReady _ = False
+
+
+-- All the waiting operations are only valid when isWaiting
+type Waiting = Status
+
+afterWaiting :: Waiting -> IO () -> IO ()
+afterWaiting (Waiting (Pending p) _) act = modifyIORef p (>> act)
+
+newWaiting :: Maybe Result -> IO Waiting
+newWaiting r = do ref <- newIORef $ return (); return $ Waiting (Pending ref) r
+
+runWaiting :: Waiting -> IO ()
+runWaiting (Waiting (Pending p) _) = join $ readIORef p
 
 
 getResult :: Status -> Maybe Result
 getResult (Ready r) = Just r
 getResult (Loaded r) = Just r
-getResult (Checking _ r) = Just r
-getResult (Building _ r) = r
+getResult (Waiting _ r) = r
 getResult _ = Nothing
-
-getPending :: Status -> Maybe Pending
-getPending (Checking p _) = Just p
-getPending (Building p _) = Just p
-getPending _ = Nothing
 
 
 ---------------------------------------------------------------------
@@ -160,24 +169,22 @@ build pool Database{..} Ops{..} ks =
          else if not $ null errs then
             return $ return $ Left $ head errs
          else do
-            let cb = filter (isCheckingBuilding . snd) $ zip ks vs
+            let ws = filter (isWaiting . snd) $ zip ks vs
             wait <- newBarrier
-            todo <- newIORef $ Just $ length cb
-            forM_ cb $ \(k,v) -> do
-                let act = do
-                        t <- readIORef todo
-                        when (isJust t) $ do
-                            s <- readIORef status
-                            case Map.lookup k s of
-                                Just (Error e) -> do
-                                    writeIORef todo Nothing
-                                    signalBarrier wait $ Left e
-                                Just Ready{} | fromJust t == 1 -> do
-                                    writeIORef todo Nothing
-                                    signalBarrier wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
-                                Just Ready{} ->
-                                    writeIORef todo $ fmap (subtract 1) t
-                addPending (fromJust $ getPending v) act
+            todo <- newIORef $ Just $ length ws
+            forM_ ws $ \(k,w) -> afterWaiting w $ do
+                t <- readIORef todo
+                when (isJust t) $ do
+                    s <- readIORef status
+                    case Map.lookup k s of
+                        Just (Error e) -> do
+                            writeIORef todo Nothing
+                            signalBarrier wait $ Left e
+                        Just Ready{} | fromJust t == 1 -> do
+                            writeIORef todo Nothing
+                            signalBarrier wait $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
+                        Just Ready{} ->
+                            writeIORef todo $ fmap (subtract 1) t
             return $ do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait
                 return $ case res of
@@ -191,15 +198,6 @@ build pool Database{..} Ops{..} ks =
             logger $ maybe "Missing" shw (Map.lookup k s) ++ " -> " ++ shw v ++ ", " ++ show k
             return v
 
-        isError Error{} = True
-        isError _ = False
-
-        isCheckingBuilding Checking{} = True
-        isCheckingBuilding Building{} = True
-        isCheckingBuilding _ = False
-
-        isReady Ready{} = True
-        isReady _ = False
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
 
@@ -209,9 +207,9 @@ build pool Database{..} Ops{..} ks =
         -- * Must return only one of the items in its suffix
 
 
-        evalB :: [Key] -> Key -> Maybe Result -> IO Status
+        evalB :: [Key] -> Key -> Maybe Result -> IO Waiting
         evalB stack k r = do
-            pend <- newIORef (return ())
+            w <- newWaiting r
             addPool pool $ do
                 res <- exec stack k
                 ans <- withLock lock $ do
@@ -221,14 +219,14 @@ build pool Database{..} Ops{..} ks =
                             let c | Just r <- r, value r == v = changed r
                                   | otherwise = step
                             in Ready Result{value=v,changed=c,built=step,..}
-                    join $ readIORef pend
+                    runWaiting w
                     return ans
                 case ans of
                     Ready r -> do
                         logger $ "result " ++ atom k ++ " = " ++ atom (value r)
                         appendJournal journal k r -- leave the DB lock before appending
                     _ -> return ()
-            k #= Building (Pending pend) r
+            k #= w
 
 
         evalRECB :: [Key] -> Key -> IO Status
@@ -248,23 +246,23 @@ build pool Database{..} Ops{..} ks =
             k #= Ready r
         checkRECB stack k r (ds:rest) = do
             vs <- mapM (evalRECB (k:stack)) ds
-            let cb = filter (isCheckingBuilding . snd) $ zip ds vs
+            let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
                 evalB stack k $ Just r
-             else if null cb then
+             else if null ws then
                 checkRECB stack k r rest
              else do
-                todo <- newIORef $ Just $ length cb -- how many to do
-                pend <- newIORef $ return ()
-                forM_ cb $ \(d,i) ->
-                    addPending (fromJust $ getPending i) $ do
+                todo <- newIORef $ Just $ length ws -- how many to do
+                self <- newWaiting $ Just r
+                forM_ ws $ \(d,w) ->
+                    afterWaiting w $ do
                         t <- readIORef todo
                         when (isJust t) $ do
                             s <- readIORef status
                             let now = do
                                     writeIORef todo Nothing
-                                    Building p _ <- evalB stack k $ Just r
-                                    addPending p $ join $ readIORef pend
+                                    b <- evalB stack k $ Just r
+                                    afterWaiting b $ runWaiting self
                             case Map.lookup d s of
                                 Just Error{} -> now
                                 Just (Ready r2)
@@ -272,12 +270,12 @@ build pool Database{..} Ops{..} ks =
                                     | fromJust t == 1 -> do
                                         writeIORef todo Nothing
                                         res <- checkRECB stack k r rest
-                                        case getPending res of
-                                            Nothing -> join $ readIORef pend
-                                            Just p -> addPending p $ join $ readIORef pend
+                                        if not $ isWaiting res
+                                            then runWaiting self
+                                            else afterWaiting res $ runWaiting self
                                     | otherwise ->
                                         writeIORef todo $ fmap (subtract 1) t
-                k #= Checking (Pending pend) r
+                k #= self
 
 
 ---------------------------------------------------------------------
