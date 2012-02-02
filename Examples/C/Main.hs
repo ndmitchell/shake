@@ -11,12 +11,12 @@ main = shaken noTest $ \args obj -> do
 
     obj "Main.exe" *> \out -> do
         cs <- getDirectoryFiles src "*.c"
-        let os = map (obj . flip replaceExtension "o") cs
+        let os = map (obj . (<.> "o")) cs
         need os
         system' "gcc" $ ["-o",out] ++ os
 
-    obj "*.o" *> \out -> do
-        let c = src </> takeBaseName out <.> "c"
+    obj "*.c.o" *> \out -> do
+        let c = src </> takeBaseName out
         need [c]
         headers <- cIncludes c
         need $ map ((</>) src . takeFileName) headers
