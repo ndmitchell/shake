@@ -744,11 +744,11 @@ The Shake library provides a function |*>>| to capture this pattern, allowing an
 \subsection{Transitive Dependencies}
 \label{sec:transitive}
 
-In build systems, transitive dependencies are common -- where a rule depends on its children, plus their dependencies. As an example, if \file{foo.c} includes \file{bar.h}, and \file{bar.h} in turn includes \file{baz.h}, then \file{foo.c} should be recompiled if either \file{bar.h} \textit{or} \file{baz.h} changes. In \S\ref{sec:c_example} we saw a solution, using \prog{gcc -MM} to find the transitive dependencies of a \file{.c} file and then |need| on the results. This solution has two potential problems:
+In build systems, transitive dependencies are common -- where a rule depends on its children, plus their dependencies. As an example, if \file{foo.c} includes \file{bar.h}, and \file{bar.h} in turn includes \file{baz.h}, then \file{foo.c} should be recompiled if either \file{bar.h} \textit{or} \file{baz.h} changes. In \S\ref{sec:c_example} we saw a solution, using \prog{gcc} to find the transitive dependencies of a \file{.c} file and then |need| on the results. This solution has two potential problems:
 
 \begin{itemize}
 \item If \file{bar.h} is included by many files, then both it and any headers it includes will be scanned many times. In many cases the slowdown is small, but for some projects it can be significant.
-\item If \file{bar.h} is a generated file then using \prog{gcc -MM} will \textit{not} cause \file{bar.h} to be built. If the file is missing \prog{gcc} will fail, if it is present a stale value will be used when finding its dependencies. For projects generating header files, the \prog{gcc -MM} approach is unworkable.
+\item If \file{bar.h} is a generated file, using \prog{gcc} will \textit{not} cause \file{bar.h} to be built. If the file is missing \prog{gcc} will fail, if it is present a stale value will be used when finding its dependencies. For projects generating header files, using \prog{gcc} to scan for headers is unworkable.
 \end{itemize}
 
 \begin{figure}
@@ -775,7 +775,7 @@ In build systems, transitive dependencies are common -- where a rule depends on 
 We can solve these problems by using the rule for \file{*.c.o} from Figure \ref{fig:transitive_dependencies}. We use a \file{.dep} file to store the immediate dependencies of a file, and a \file{.deps} file to store the transitive dependencies. For example, \file{foo.c.dep} contains the dependency \file{bar.h} while \file{foo.c.deps} contains both \file{bar.h} and \file{baz.h}. The three build rules we use are:
 
 \begin{itemize}
-\item The \file{*.c.o} rule depends on the associated \file{.deps} file (ensuring it is correct) and then depends on its contents.
+\item The \file{*.c.o} rule depends on the associated \file{.deps} file (ensuring it is up to date) and then depends on its contents.
 \item The \file{*.deps} rule takes the \file{.dep} file, and all the \file{.deps} that points at, producing the transitive dependencies of its immediate dependencies. This rule can be used to find the transitive dependencies of anything with \file{.dep} rules, for example with Haskell files it would produce the set of files required for linking (namely the transitive dependencies of the imports).
 \item The \file{*.c.dep}/\file{*.h.dep} rule takes a source file and finds all one-level dependencies by scanning for all lines starting with @#include@. This rule makes a number of assumptions about the structure of the C files which are not true in general. In particular, it assumes that includes are not skipped by @#ifdef@ commands, that there is no extra whitespace, and that local includes are quoted while system includes use angle brackets. These assumptions can be relaxed, but are sufficient for many projects.
 \end{itemize}
@@ -783,17 +783,13 @@ We can solve these problems by using the rule for \file{*.c.o} from Figure \ref{
 \subsection{Build rules that change}
 \label{sec:changing_rules}
 
-Throughout this work, we assume that \textit{the build system does not change}, merely the inputs to the build system. In reality the build system does change, but it is rare that a full rebuild needs to be performed as a result. There are a number of ways to manage build system changes:
+Throughout this work, we assume \textit{the build rules do not change}, merely the dependencies of the rules. In reality, the build system does change, but in practice these changes are not problematic. We use three techniques to minimise the impact of changes:
 
-\paragraph{A \textsf{shakeVersion} field in \textsf{ShakeOptions}} We have a field named |shakeVersion| in the |ShakeOptions| record defined in Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, then this flag can be incremented to force a full rebuild. This is the nuclear option -- we have only had 8 such occurrences in the last three years, and none recently (as we have learnt how Shake can be used best).
+\paragraph{Use configuration files} Much build information, such as which files a C file includes, can be computed from source files. Where such information is not available, such as which C files should be linked together to form an executable, we use configuration files to provide the information. The rule for linking can depend on these configuration files, which will be properly tracked. By moving any regularly changing configuration into separate files we significantly reduce the number of build system changes.
 
-\paragraph{Depending on the build source file} A conservative strategy is to depend on the build system in each rule, and then if any of the build system changes rebuild everything from scratch. While that is an option, it would cause a significant number of redundant rebuilds. Instead, where we have files that specify code generators, which could conceptually be stored in separate programs, we put an explicit dependency and use |writeFileChanged| (see \S\ref{sec:derived}). Now, if the generator changes it will be run again, but typically only a handful of files will see an actual change, so very little is rebuilt.
+\paragraph{Depend on the build source} We should rerun a build rule if its action has changed. Lacking equality for functions, one approach is to depend on the build system source in each of the rules, then if \textit{any} rules change \textit{everything} will rebuild. While this option is safe, it would cause a significant number of redundant rebuilds. As a restricted version of this technique, where there are code generators as separate modules in the build system, for the generated file we put a dependency on the generator module and use |writeFileChanged| (\S\ref{sec:derived}). If the generator changes it will rerun, but typically only a few generated files will change, so little is rebuilt.
 
-\paragraph{Make the build system interpret} Much information, such as what files a \file{.c} file includes, can be computed from the source files. Where information cannot be computed, such as which files should be linked together to form an executable, we suggest writing small rule files which list the inputs to an object. The rule for linking can then depend on these rule files, and if the rules about what goes into an executable change the file is automatically rebuilt.
-
-\smallskip\smallskip
-
-In practice we have not found changing the build system to be problematic. By moving settings out of the build system, into separate tracked rule files, and using the |shakeVersion| flag as a last resort, others users are not seriously impacted by changing rules. However, the only correct way to deal with a changing build system would be function equality -- something that would be particularly useful to Shake.
+\paragraph{Use \textsf{shakeVersion}} There is a field named |shakeVersion| in the |ShakeOptions| record from Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, we increment this field to force a full rebuild. This option is a last resort, but ensures end users do not have to be aware when there is a build system change.
 
 \section{User Tools}
 \label{sec:tools}
