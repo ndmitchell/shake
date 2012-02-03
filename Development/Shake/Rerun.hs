@@ -13,10 +13,12 @@ import Development.Shake.Core
 
 
 newtype AlwaysRerun = AlwaysRerun ()
-    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+instance Show AlwaysRerun where show _ = "AlwaysRerun"
 
 newtype Dirty = Dirty ()
-    deriving (Show,Typeable,Hashable,Binary,NFData)
+    deriving (Typeable,Hashable,Binary,NFData)
+instance Show Dirty where show _ = "Dirty"
 instance Eq Dirty where a == b = False
 
 instance Rule AlwaysRerun Dirty where
