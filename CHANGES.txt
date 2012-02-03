@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Remove the Dirty state entirely (was incorrect)
 0.2.1
     Put diagnostics in more places
     Add a C example
