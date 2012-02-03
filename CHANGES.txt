@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a basic lint checking mode
     Remove the Dirty state entirely (was incorrect)
 0.2.1
     Put diagnostics in more places

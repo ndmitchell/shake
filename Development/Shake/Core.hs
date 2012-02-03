@@ -44,12 +44,13 @@ data ShakeOptions = ShakeOptions
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
     ,shakeDump :: Bool -- ^ Dump all profiling information to 'shakeFiles' plus the extension @.js@ (defaults to 'False').
+    ,shakeLint :: Bool -- ^ Perform basic sanity checks after building.
     }
     deriving (Show, Eq, Ord)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False False
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False False False
 
 
 -- | All forseen exception conditions thrown by Shake, such problems with the rules or errors when executing
@@ -237,10 +238,15 @@ run opts@ShakeOptions{..} rs = do
                     when (shakeVerbosity >= Quiet) $ output msg
                 Right _ -> return ()
 
+    let stored = createStored rs
+    let execute = createExecute rs
     withDatabase logger shakeFiles shakeVersion $ \database -> do
         runPool shakeThreads $ \pool -> do
-            let s0 = S database pool start (createStored rs) (createExecute rs) output shakeVerbosity [] [] 0 []
+            let s0 = S database pool start stored execute output shakeVerbosity [] [] 0 []
             mapM_ (addPool pool . staunch . wrapStack [] . runAction s0) (actions rs)
+        when shakeLint $ do
+            checkValid database stored
+            when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
         when shakeDump $ do
             json <- showJSON database
             writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json

@@ -11,7 +11,7 @@ module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), build,
-    allEntries, showJSON,
+    allEntries, showJSON, checkValid,
     ) where
 
 import Development.Shake.Binary
@@ -309,6 +309,25 @@ showJSON Database{..} = do
         f _ = []
     return $ "[" ++ intercalate "\n," (concatMap f $ Map.toList status) ++ "\n]"
 
+
+checkValid :: Database -> (Key -> Value -> IO Bool) -> IO ()
+checkValid Database{..} valid = do
+    status <- readIORef status
+    logger "Starting validity/lint checking"
+    bad <- fmap concat $ forM (Map.toList status) $ \(k,v) -> case v of
+        Ready r -> do
+            good <- valid k (value r)
+            logger $ "Checking if " ++ show k ++ " is " ++ show (value r) ++ ", " ++ if good then "passed" else "FAILED"
+            return [show k ++ " is no longer " ++ show (value r) | not good && not (special k)]
+        _ -> return []
+    if null bad
+        then logger "Validity/lint check passed"
+        else error $ unlines $ "Error: Dependencies have changed since being built:" : bad
+
+    where
+        -- special case for these things, since the purpose is to break the invariant
+        special k = s == "AlwaysRun" || "Oracle " `isPrefixOf` s
+            where s = show k
 
 ---------------------------------------------------------------------
 -- DATABASE
