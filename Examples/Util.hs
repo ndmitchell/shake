@@ -68,6 +68,7 @@ flagList = let (*) = (,) in
     ,"loud" * \o -> o{shakeVerbosity=Loud}
     ,"diagnostic" * \o -> o{shakeVerbosity=Diagnostic}
     ,"staunch" * \o -> o{shakeStaunch=True}
+    ,"lint" * \o -> o{shakeLint=True}
     ]
 
 
