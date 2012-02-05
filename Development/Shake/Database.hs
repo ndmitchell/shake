@@ -106,7 +106,7 @@ data Status
       deriving Show
 
 data Result = Result
-    {value :: Value -- the value associated with the Key
+    {result :: Value -- the result associated with the Key
     ,built :: Step -- when it was actually run
     ,changed :: Step -- the step for deciding if it's valid
     ,depends :: [[Key]] -- dependencies
@@ -177,7 +177,7 @@ build pool Database{..} Ops{..} ks =
         vs <- mapM (reduce []) ks
         let errs = [e | Error e <- vs]
         if all isReady vs then
-            return $ return $ Right (0, [value r | Ready r <- vs])
+            return $ return $ Right (0, [result r | Ready r <- vs])
          else if not $ null errs then
             return $ return $ Left $ head errs
          else do
@@ -187,7 +187,7 @@ build pool Database{..} Ops{..} ks =
                 let done x = do signalBarrier wait x; return True
                 case Map.lookup k s of
                     Just (Error e) -> done $ Left e
-                    Just Ready{} | finish -> done $ Right [value r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
+                    Just Ready{} | finish -> done $ Right [result r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
                                  | otherwise -> return False
             return $ do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait
@@ -215,8 +215,8 @@ build pool Database{..} Ops{..} ks =
             case Map.lookup k s of
                 Nothing -> run stack k Nothing
                 Just (Loaded r) -> do
-                    b <- valid k (value r)
-                    logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (value r)
+                    b <- valid k $ result r
+                    logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     if not b then run stack k $ Just r else check stack k r (depends r)
                 Just res -> return res
 
@@ -229,14 +229,14 @@ build pool Database{..} Ops{..} ks =
                     ans <- k #= case res of
                         Left err -> Error err
                         Right (v,depends,execution,traces) ->
-                            let c | Just r <- r, value r == v = changed r
+                            let c | Just r <- r, result r == v = changed r
                                   | otherwise = step
-                            in Ready Result{value=v,changed=c,built=step,..}
+                            in Ready Result{result=v,changed=c,built=step,..}
                     runWaiting w
                     return ans
                 case ans of
                     Ready r -> do
-                        logger $ "result " ++ atom k ++ " = " ++ atom (value r)
+                        logger $ "result " ++ atom k ++ " = " ++ atom (result r)
                         appendJournal journal k r -- leave the DB lock before appending
                     _ -> return ()
             k #= w
@@ -281,7 +281,7 @@ build pool Database{..} Ops{..} ks =
 allEntries :: Database -> IO [(Key,Value)]
 allEntries Database{..} = do
     status <- readIORef status
-    return $ ordering [((k, value i), concat $ depends i) | (k,v) <- Map.toList status, Just i <- [getResult v]]
+    return $ ordering [((k, result i), concat $ depends i) | (k,v) <- Map.toList status, Just i <- [getResult v]]
     where
         ordering :: Eq a => [((a,b), [a])] -> [(a,b)]
         ordering xs = f [(a, nub b `intersect` as) | let as = map (fst . fst) xs, (a,b) <- xs]
@@ -316,9 +316,9 @@ checkValid Database{..} valid = do
     logger "Starting validity/lint checking"
     bad <- fmap concat $ forM (Map.toList status) $ \(k,v) -> case v of
         Ready r -> do
-            good <- valid k (value r)
-            logger $ "Checking if " ++ show k ++ " is " ++ show (value r) ++ ", " ++ if good then "passed" else "FAILED"
-            return [show k ++ " is no longer " ++ show (value r) | not good && not (special k)]
+            good <- valid k (result r)
+            logger $ "Checking if " ++ show k ++ " is " ++ show (result r) ++ ", " ++ if good then "passed" else "FAILED"
+            return [show k ++ " is no longer " ++ show (result r) | not good && not (special k)]
         _ -> return []
     if null bad
         then logger "Validity/lint check passed"
