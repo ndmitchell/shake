@@ -817,7 +817,7 @@ The Shake database records the dependencies of each item, allowing a full depend
 
 \begin{itemize}
 \item Why was a particular file rebuilt in the last build run? Shake shows the complete path of dependencies.
-\item If I touch a file, what will rebuild? Shake computes the list of rules that depend on that file, including indirect dependencies, but assuming no unchanging files (see \S\ref{sec:unchanging_results}.
+\item If I touch a file, what will rebuild? Shake computes the list of rules that depend on that file, including indirect dependencies, but assuming no unchanging results (\S\ref{sec:unchanging_results}).
 \item What is the most expensive file to change? For each leaf of the graph, Shake computes all dependencies, and then uses execution times from profiling to determine the most expensive file.
 \item Do my dependencies follow some layering principle? For example, I would not expect any files outside \ignore|Development.Shake.*| to import any modules from inside that module tree, other than |Development.Shake| itself. Many large projects are structured into isolated layers, which can be validated by the build system.
 \end{itemize}
@@ -973,7 +973,7 @@ The Ninja build system \cite{ninja} is designed as a two-stage build system -- u
 
 % http://gittup.org/tup/build_system_rules_and_algorithms.pdf
 
-The Tup build system \cite{tup} is designed as an incremental build system. Tup has a similar dependency structure to \make{}, but has a significantly different implementation. Instead of scanning all dependencies, it expects the operating system to supply a list of changed files, avoiding the overhead of checking which files have changed. For large build systems the result can be a significant speed improvement for builds with few files to rebuild. We believe a similar implementation strategy could be applied to Shake, also turning it into an incremental system.
+The Tup build system \cite{tup} is designed as an incremental build system. Tup has a similar dependency structure to \make{}, but a significantly different implementation. Instead of scanning all dependencies, it expects the operating system to supply a list of changed files, avoiding the overhead of checking which files have changed. For large build systems the result can be a significant speed improvement for builds with few files to rebuild. We believe a similar implementation strategy could be applied to Shake, also turning it into an incremental system.
 
 Another significant difference in Tup is the treatment of dead build objects. If a rule to build \file{foo} is deleted from the rule list, then Tup automatically deletes the file \file{foo}. The problem of old build objects can be serious, resulting in builds succeeding that should have failed, and that will fail as soon as a clean build is performed (to alleviate this risk, we suggest an overnight build which starts from scratch). However, we have a build mode which generates a basic IDE project file, which is then modified by the user -- deleting that file after the build rule disappears would be most unwelcome. We could add support for deleting dead build objects to Shake, but chose not to.
 
