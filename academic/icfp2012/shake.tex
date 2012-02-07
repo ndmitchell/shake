@@ -135,8 +135,8 @@ instance Ord (Result_s -> Time)
 
 \preprintfooter{}   % 'preprint' option specified.
 
-\title{A Better Build System}
-% \subtitle{}
+\title{Shake Before Building}
+\subtitle{Accurate Dependencies for Build Systems}
 
 \authorinfo{Neil Mitchell}
            {\verb"ndmitchell@gmail.com"}
@@ -345,7 +345,7 @@ skip_s ask r  |  Just self  <- ask (creates r)
 
 We have only changed the final line of |skip_s| -- instead of checking against the |built| time of the dependencies, we check against their |changed| time. Since it is always the case that \h{.s2}|changed <= built|, |skip_s| will now return |True| more often.
 
-For certain practical examples, support for unchanging results can reduce rebuild times from many minutes to seconds. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. By supporting unchanging files we can avoid rebuilding everything depending on that generated file.
+In some situations, support for unchanging results can reduce rebuild times from many minutes to seconds. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. By supporting unchanging files we can avoid rebuilding everything depending on that generated file.
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -603,12 +603,12 @@ We define the |system'| function which runs a system command, but fails if the e
 \section{Implementing Shake}
 \label{sec:developer_view}
 
-We have implemented Shake, and used it extensively. In this section we sketch some of the main implementation challenges and how they can be overcome. We first describe how to implement multiple |key|/|value| types within a single build system, then how to deal with errors, and finally how to execute the rules efficiently and with maximum parallelism. Readers interested in the full implementation are welcome to download the associated implementation (see \S\ref{sec:introduction}).
+We have implemented Shake, and used it extensively. In this section we sketch some of the main implementation challenges and how they can be overcome. We first describe how handle different |key|/|value| types within a single build system, then how to deal with errors, and finally how to execute the rules efficiently and with maximum parallelism. Readers interested in the full implementation are encouraged to download the associated implementation (see \S\ref{sec:introduction}).
 
 \subsection{Dynamically Typed Values}
 \label{sec:dynamically_typed}
 
-A single Shake program can use multiple types of keys and values. To work with heterogenous values in Haskell we define:
+A single Shake program can use multiple types for keys and values. To work with heterogenous values in Haskell we define:
 
 \ignore\begin{code}
 data Any = Any (forall alpha bullet
@@ -616,26 +616,26 @@ data Any = Any (forall alpha bullet
     ,  Hashable alpha, Show alpha, NFData alpha) => alpha)
 \end{code}
 
-This definition, using existentials \cite{laufer:existentials}, allows anything supporting all the type classes required to be stored as type |Any|. We can define |Key| and |Value| types in terms of |Any|. We can implement |Eq|, |Show|, |Hashable| and |NFData| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
+This definition, using existentials \cite{laufer:existentials}, allows any type supporting all the required type classes to be stored as type |Any|. We define |Key| and |Value| as synonyms for |Any|. We can implement |Eq|, |Show|, |Hashable| and |NFData| instances for |Any| without difficulty, often by appealing to the |TypeRep| provided by the |Typeable| instance.
 
-Implementing a |Binary| instance for |Any| is harder. Serialising a value is easy, but deserialising a value is problematic -- we can deserialise a |TypeRep|, but then we need to obtain the |Binary| instance for that type. Our solution is to keep a mapping from |TypeRep| to |Any|, and after deserialising the |TypeRep| we lookup the associated |Any| and use that |Binary| instance. As a consequence, we cannot deserialise any file containing a |TypeRep| not present in our mapping. We generate the mapping from all rules defined in the |Rules| set. As a result, we cannot move |defaultRule| into the |Rule| type class, as then a type could be usefully used without being in the |Rules| set.
+Implementing a |Binary| instance for |Any| is harder. Serialising a value is easy, but deserialising a value is problematic -- we can deserialise a |TypeRep|, but then we need to obtain the |Binary| instance for that type. Our solution is to keep a mapping from |TypeRep| to |Any|, and after deserialising the |TypeRep| find the associated |Any| and use that |Binary| instance. As a consequence, we cannot deserialise any file containing a |TypeRep| not present in our mapping. We generate the mapping from all rules defined in the |Rules| set. Therefore we cannot move |defaultRule| into the |Rule| type class, as then a type could be usefully used without being present in the |Rules| set.
 
-When deserialising, if we encounter a type not present in the mapping, we ignore the entire database. This is pessimistic, but safe -- if the set of types has changed that implies the build system has changed, which is not tracked (see \S\ref{sec:changing_rules}).
+When deserialising, if we encounter a type not present in the mapping, we ignore the entire database. This behaviour is pessimistic, but safe -- if the set of rules has changed then the build system must have changed, which is not tracked (see \S\ref{sec:changing_rules}).
 
 \subsection{Handling Errors}
 \label{sec:handling_errors}
 
 To turn Shake into a practical system, we make a number of changes from the natural implementation, designed to improve error handling.
 
-\paragraph{Tracking the stack} We maintain a stack while executing rules, listing the keys that cause a rule to be executed. Whenever an error occurs, either when running a rule or trying to find a rule, we print the stack. Whenever we execution an action, we force its result using the |NFData| instance, ensuring any errors are raised with the correct stack. We raise an error when trying to build a key that is already on the stack, which would indicate a key depends on itself. This last check allows us to give a clear error message where otherwise there would have been an infinite loop.
+\paragraph{Tracking the stack} We maintain a stack while executing rules, listing the keys that cause a rule to be executed. Whenever an error occurs, either when running a rule or finding a rule, we print the stack. Whenever we execute an action, we force its result using the |NFData| instance, ensuring any errors are raised with the correct stack. We raise an error when trying to build a key that is already on the stack, which would indicate a key depends on itself. This last check provides a clear error message in place of an infinite loop.
 
-\paragraph{Tracing and diagnostics} We provide options to print every rule run, and every system command run. Whenever a system command fails, we reprint the command line after the failure, to ensure the command has not scrolled off the screen. We provide a diagnostics mode to print detailed information as the build progresses, helping to debug build systems.
+\paragraph{Tracing and diagnostics} We provide options to print every rule and system command run. Whenever a system command fails, we reprint the command line after the failure. We provide a diagnostic mode to print detailed information as the build progresses, helping to debug build systems.
 
-\paragraph{Resuming after errors} When running a large build system, it is common for it to fail before completing -- either from a rule raising an error, or the end user killing the build process. In these cases it is important that none of the work that has been performed is lost -- therefore we maintain a journal and every time a rule finishes running we immediately store the result. If Shake completes successfully we delete the journal. If on restarting Shake has a journal file, we replay the journal.
+\paragraph{Resuming after errors} When running a large build system, it is common for it to fail before completing -- either from a rule raising an error, or the end user killing the build process. In these cases it is important that none of the work that has been performed is lost -- therefore we maintain a journal and every time a rule completes we immediately store the result. If Shake finishes successfully we delete the journal. If a journal is present on startup, we use its results.
 
 \subsection{Build Algorithm}
 
-The internal state of Shake includes a mapping from each key to one of six status values. At the start of a build run, every key is either |Loaded| (was found in the database) or |Missing| (is not known to the build system). The build logic of Shake is implemented in a function named |build|, which modifies the state to ensure that a given key is either |Ready| (a result is available) or |Error| (there was an exception when running the rule). The |build| function is parameterised by a way to check a stored value is valid (|validStored| from \S\ref{sec:core_shake}) and a way to build a key (appealing to the defined |rule|s for that type). Using |build|, it is relatively easy to implement the core of Shake -- simply run all |action|s and make |apply| call |build| before looking up the status of a key.
+The internal state of Shake includes a mapping from each key to one of six status values. Initially every key is either |Loaded| (was found in the database) or |Missing| (is not known to the build system). The build logic of Shake is implemented in a function named |build|, which modifies the state to ensure that a given key is either |Ready| (a result is available) or |Error| (there was an exception when running the rule). The |build| function is parameterised by a way to check a stored value is valid (|validStored| from \S\ref{sec:core_shake}) and a way to build a key (appealing to the defined |rule|s for that type). Using |build|, it is relatively easy to implement the core of Shake -- simply run all |action|s and make |apply| call |build| before looking up the status of a key.
 
 Our implementation of the |build| function takes 100 lines of Haskell. When implementing |build| there are two goals, \textit{correctness} and \textit{efficiency}.
 
@@ -649,18 +649,18 @@ Our implementation of the |build| function takes 100 lines of Haskell. When impl
 \label{fig:states}
 \end{figure}
 
-For an implementation of |build| to be correct, it must always execute enough rules to ensure that the results are correct, but never execute rules that could have been safely skipped. We satisfy these constraints with the status transition diagram in Figure \ref{fig:states}. At the start of a build run all keys are either |Loaded| or |Missing|, and after calling |build| on a key, it is either |Result| or |Error|. We use |Checking| for keys that are being checked to see if they are correct or need rebuilding, and |Building| for rules that are currently being built. If a key is |Missing| and is demanded we have no choice but to start |Building| it. After |Building| a key, the action will either successfully produce a |Result|, or fail producing an |Error|.
+For an implementation of |build| to be correct, it must always execute enough rules to ensure all results are correct, but never execute rules that could have been safely skipped. We satisfy these constraints with the status transition diagram in Figure \ref{fig:states}. At the start of a build run all keys are either |Loaded| or |Missing|, and after calling |build| on a key, it is either |Result| or |Error|. We use |Checking| for keys that are being checked to see if they are correct or need rebuilding, and |Building| for rules that are currently being built. If a key is |Missing| and is required we have no choice but to start |Building| it. After |Building| a key, the action will either successfully produce a |Result|, or fail producing an |Error|.
 
-Most of the complexity of |build| comes from the |Checking| state, in order to support unchanging results (\S\ref{sec:unchanging_results}). When checking a key there are two possibilities -- either the check succeeds and we have a correct |Result|, or the check fails and we transition to |Building|. We first check the stored result using |validStored|, failing if the result is no longer valid. We then |build| each dependency in order, and fail if the dependency is |Error|, or if it has changed since we built this key. If all dependencies are checked successfully, we transition to |Result|.
+Most of the complexity of |build| comes from the |Checking| state, in order to support unchanging results (\S\ref{sec:unchanging_results}). When checking a key there are two possibilities -- either the check succeeds and we have a correct |Result|, or the check fails and we start |Building| it. We first check the stored result using |validStored|, failing if the result is no longer valid. We then |build| each dependency in order, and fail if the dependency is |Error|, or if it has changed since we built this key. If all dependencies are checked successfully, we transition to |Result|, without running the action.
 
-To check if a dependency has changed, we may end up building the dependency before running the rule that requires it. As a result, if a key ends up in the |Error| state, the build may still complete successfully. If the build system has changed, and the new rule no longer requires its previous dependency, then running the rule afresh may succeed. To reduce the possibility of building many redundant keys, we always check the dependencies of a rule in the order they were required, ensuring that if the rules are deterministic and have not changed since the previous build, then all executed rules will be required.
+To check if a dependency has changed, we may end up building a dependency before running the rule that requires it. As a result, if a key ends up in the |Error| state, the build may still complete successfully. If the build system has changed, and the new rule no longer requires its previous dependency, then running the rule afresh may succeed. To reduce the possibility of building many redundant keys, we always check the dependencies of a rule in the order they were required, ensuring that if the rules are deterministic and have not changed since the previous build, then all executed rules will be required.
 
 \subsubsection{Efficiency}
 \label{sec:parallelism}
 
-When implementing |build| there are two separate efficiency goals. If no rules need to be run (a common case), |build| should strive for low overhead, as the time of |build| is likely to be a significant proportion of the total time. If rules do need running, |build| should try to start the rules as early as possible, to maximise parallelism. In order to expose parallelism we make |build| take a set of keys, and store |depends| as \h{type}|[[Key]]| instead of just \h{type}|[Key]| -- where each item comes from one call to |apply|.
+When implementing |build| there are two separate efficiency goals. If no rules need to be run (a common case), |build| should strive for low overhead, as the time taken by |build| is likely to be a significant proportion of the total time. If rules do need running, |build| should start the rules as early as possible, to maximise parallelism. In order to expose parallelism we make |build| take a set of keys, and store |depends| as \h{type}|[[Key]]| instead of just \h{type}|[Key]| -- where each item comes from one call to |apply|.
 
-In some ways the goals of low overhead and high parallelism are in conflict -- the first is best served by being single threaded (avoiding locks and thread contention), while the second suggests spawning many threads whenever we encounter a set of activities that could potentially be run in parallel. Our approach is to use a thread pool for running rules, and a single lock to protect the state (no fine-grained locking). The |build| function takes the lock, and on a single thread, performs as many transitions as it can without blocking or running any rules. Any blocking is performed after the state lock has been released, and any rules are run by adding them to the thread pool and blocking on the result. By using a thread pool we obtain high levels of parallelism, and by having a single lock we can perform a build requiring no rules to be run with no thread contention.
+In some ways the goals of low overhead and high parallelism are in conflict -- the first is best served by being single threaded (avoiding locks and thread contention), while the second suggests spawning many threads whenever we encounter a set of activities that could potentially be run in parallel. Our approach is to use a thread pool for running rules, and a single lock to protect the state (no fine-grained locking). The |build| function takes the lock and, on a single thread, performs as many transitions as it can without blocking or running any rules. Any blocking is performed after the lock has been released, and any rules are run by adding them to the thread pool and blocking on the result. By using a thread pool we obtain high levels of parallelism, and by having a single lock we can perform a build requiring no rules to be run with no thread contention.
 
 Our thread pool obeys the |shakeThreads| flag (Figure \ref{fig:shake_core}), ensuring no more than a given maximum number of rules run in parallel. The thread pool is based around a pool of workers. If a new task is added to the pool, and less than |shakeThreads| workers are active, a new thread is spawned, otherwise it is queued until a worker completes. When a rule is blocked in |build|, waiting for dependencies to become available, we notify the thread pool to temporarily spawn another worker, ensuring maximum parallelism.
 
@@ -673,18 +673,18 @@ In order to reduce contention between processes, we run tasks added to the threa
 
 % [(0,2127),(1,22651),(2,190623),(3,64795),(4,15666),(5,22732),(6,10583),(7,11801),(8,5658),(9,5035),(10,3144),(11,2500),(12,974),(13,605),(14,251),(15,230),(16,73),(17,25),(18,25),(19,6),(20,1)]
 
-At Standard Chartered we have been using a build system based on Shake for three years. Before Shake we used \make{}, but \make{} was a poor fit for our project, primarily due to a large number of generated files. In common with many large projects, we were forced to split our build system into several phases, where one phase generated some files and \make{} rules which were then used by a subsequent phase. Before we switched to Shake, we had over 10,000 lines of \make{} rules which were very brittle and hard to extend.
+At Standard Chartered we have been using a build system based on Shake for three years. Before Shake we used \make{}, but \make{} was a poor fit for our project, primarily due to a large number of generated files. In common with many large projects, we were forced to split our build system into several phases, where one phase generated some files and \make{} rules which were then used by a subsequent phase. Before we switched to Shake, we had over 10,000 lines of \make{} rules which were brittle and hard to extend.
 
 Our Shake based build system has been an unqualified success -- while the complexity of our project has increased (more files, more compilers, more generators and more platforms), the build system has coped well. The first version of our Shake build system was under 1000 lines and matched everything the \make{} system did. Shake has been able to express all the dependencies correctly and directly, resulting in a robust build system.
 
-From experience implementing several build systems using Shake we have learnt a number of lessons -- both about best practices for structuring build systems, and how the underlying core of Shake can be used to deal with the complexities of real software. In this section we share some of those lessons.
+From experience implementing several build systems using Shake we have learnt a number of lessons -- both about best practices for structuring build systems, and how Shake can be used to deal with the complexities of real software. In this section we share some of those lessons.
 
 \subsection{Command Line Interface}
 \label{sec:command_line}
 
 While the |shake| function can be used as |main|, it offers no support for command line arguments. We use the |shake| function to build a program \prog{mk}, which handles command line options, allowing us to specify some of the fields in |ShakeOptions| (Figure \ref{fig:shake_core}), such as parallelism and verbosity.
 
-One essential feature of any build tool is the @clean@ command, which deletes all build objects. One approach would be to query the database to find all build results, and delete them. Alternatively, deleting the database will cause a full rebuild. However, we have found the most convenient solution is to create all build objects in a folder named \file{.make}, and clean our project by deleting that directory.
+One important feature of build tools is a @clean@ command to delete all build results. Using Shake we could query the database to find all build results, and delete them. Alternatively, deleting the database will cause a full rebuild. However, we have found the most convenient solution is to create all build objects in a directory named \file{.make}, and perform a @clean@ by deleting that directory.
 
 Using \make{}, you can specify build targets on the command line. We have implemented an enhanced version of this feature, allowing both individual files and sets of files to be enabled/disabled. As an example, a user may write @mk !DOCS@ to disable building documentation, or @mk index.html@ to build only \file{index.html}. We control these targets by passing a modified version of |want| to the functions specifying rules, which consults the command line arguments:
 
@@ -698,7 +698,7 @@ documentation wants = do
 \subsection{Multiple Outputs}
 \label{sec:multiple_outputs}
 
-Some programs, such as the Haskell compiler \prog{ghc} \cite{ghc7_2}, can produce two outputs from one action -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, while the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to produce both, but often the \file{.hi} file will be left unchanged. Unfortunately, many build systems (including \make{}) do not handle multiple outputs well.
+Some programs, such as the Haskell compiler \prog{ghc} \cite{ghc7_2}, can produce two outputs with one command -- compiling \file{Foo.hs} produces both \file{Foo.o} and \file{Foo.hi}. As a first approximation, the \file{.o} file depends on the entire contents of the file, while the \file{.hi} file depends only on the type signatures. A single \prog{ghc} invocation needs to do all the work to produce both, but often the \file{.hi} file will be left unchanged. Unfortunately, many build systems (including \make{}) do not handle multiple outputs well.
 
 In Shake, it is usually possible to fake multiple outputs with single file dependencies -- claiming that \file{Foo.hi} depends on \file{Foo.o} with no action and \file{Foo.o} depends on \file{Foo.hs} by running \prog{ghc}. Thanks to support for unchanging files (\S\ref{sec:unchanging_results}), if the \file{.hi} file does not change its dependencies will not be rebuilt. However, this formulation has two problems:
 
@@ -707,7 +707,7 @@ In Shake, it is usually possible to fake multiple outputs with single file depen
 \item If \prog{ghc} updates \file{Foo.hi}, but manages to determine it does not need to update \file{Foo.o}, then \file{Foo.hi} will not be marked as dirty and the build will be incorrect.
 \end{itemize}
 
-Despite these limitations, a fake dependency is sufficient for most circumstances. However, consider a command that reads \file{numbers.txt} containing lines of numbers, and produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update an output file that has not changed. In this situation there is no fake dependency that adequately captures the real dependency. Fortunately, we can capture the proper dependencies by introducing a new type of rule, for rules which produce multiple files.
+Despite these limitations, a fake dependency is sufficient in many circumstances. However, consider a command that reads \file{numbers.txt} containing lines of numbers, and produces \file{even.txt} and \file{odd.txt} -- each containing only the even or odd numbers -- but does not update an output file that has not changed. In this situation there is no fake dependency that adequately captures the real dependency. Fortunately, we can capture the proper dependencies by introducing a new type of rule, for rules which produce multiple files.
 
 \begin{code}
 data Files = Files [FilePath]
@@ -726,7 +726,7 @@ multipleOutputs = do
         return ()
 \end{code}
 
-Inside |multipleOutputs|, the call to |rule| declares a rule that can build both \file{even.txt} and \file{odd.txt} in a single step. We call the \prog{number-split} program, and get the file times for the results. On the |**>| line we define two rules to produce the output files, using the standard file creation rules from Figure \ref{fig:file_rules}, by calling |apply1| with the list of files to create. If the build first requires \file{even.txt} then \prog{number-split} will be invoked, but a subsequent requirement on \file{odd.txt} will not force the program to be rerun.
+Inside |multipleOutputs|, the call to |rule| declares a rule that can build both \file{even.txt} and \file{odd.txt} in a single step. We call the \prog{number-split} program, and get the file times for the results. On the |**>| line we define two rules to produce the output files, using the standard file creation rules from Figure \ref{fig:file_rules}, whose action calls |apply1| with the list of files to create. If the build first requires \file{even.txt} then \prog{number-split} will be invoked, but a subsequent requirement on \file{odd.txt} will not force the program to be rerun.
 
 The Shake library provides a function |*>>| to capture this pattern, allowing an end user to write:
 
@@ -739,7 +739,7 @@ The Shake library provides a function |*>>| to capture this pattern, allowing an
 \subsection{Transitive Dependencies}
 \label{sec:transitive}
 
-In build systems, transitive dependencies are common -- where a rule depends on its children, plus their dependencies. As an example, if \file{foo.c} includes \file{bar.h}, and \file{bar.h} in turn includes \file{baz.h}, then \file{foo.c} should be recompiled if either \file{bar.h} \textit{or} \file{baz.h} changes. In \S\ref{sec:c_example} we saw a solution, using \prog{gcc} to find the transitive dependencies of a \file{.c} file and then |need| on the results. This solution has two potential problems:
+In build systems, transitive dependencies are common -- where a rule depends on its children, plus their dependencies. As an example, if \file{foo.c} includes \file{bar.h}, and \file{bar.h} in turn includes \file{baz.h}, then \file{foo.c} should be recompiled if either \file{bar.h} \textit{or} \file{baz.h} changes. In \S\ref{sec:c_example} we saw a solution to include file dependencies, using \prog{gcc} to find the transitive dependencies of a \file{.c} file with |need| on the results. This solution has two potential problems:
 
 \begin{itemize}
 \item If \file{bar.h} is included by many files, then both it and any headers it includes will be scanned many times. In many cases the slowdown is small, but for some projects it can be significant.
@@ -772,43 +772,43 @@ We can solve these problems by using the rule for \file{*.c.o} from Figure \ref{
 \begin{itemize}
 \item The \file{*.c.o} rule depends on the associated \file{.deps} file (ensuring it is up to date) and then depends on its contents.
 \item The \file{*.deps} rule takes the \file{.dep} file, and all the \file{.deps} that points at, producing the transitive dependencies of its immediate dependencies. This rule can be used to find the transitive dependencies of anything with \file{.dep} rules, for example with Haskell files it would produce the set of files required for linking (namely the transitive dependencies of the imports).
-\item The \file{*.c.dep}/\file{*.h.dep} rule takes a source file and finds all one-level dependencies by scanning for all lines starting with @#include@. This rule makes a number of assumptions about the structure of the C files which are not true in general. In particular, it assumes that includes are not skipped by @#ifdef@ commands, that there is no extra whitespace, and that local includes are quoted while system includes use angle brackets. These assumptions can be relaxed, but are sufficient for many projects.
+\item The \file{*.c.dep}/\file{*.h.dep} rule takes a source file and finds all one-level dependencies by scanning for lines starting with @#include@. This rule makes a number of assumptions about the structure of the C files which are not true in general. In particular, it assumes that includes are not skipped by @#ifdef@ commands, that there is no extra whitespace, and that local includes are quoted while system includes use angle brackets. These assumptions can be relaxed, but are sufficient for many projects.
 \end{itemize}
 
 \subsection{Build rules that change}
 \label{sec:changing_rules}
 
-Throughout this work, we assume \textit{the build rules do not change}, merely the dependencies of the rules. In reality, the build system does change, but in practice these changes are not problematic. We use three techniques to minimise the impact of changes:
+Throughout this paper, we assume \textit{the build rules do not change}, merely the dependencies of the rules. In reality, the build system does change, but in practice these changes can be managed. We use three techniques to minimise the impact of build rule changes:
 
 \paragraph{Use configuration files} Much build information, such as which files a C file includes, can be computed from source files. Where such information is not available, such as which C files should be linked together to form an executable, we use configuration files to provide the information. The rule for linking can depend on these configuration files, which will be properly tracked. By moving any regularly changing configuration into separate files we significantly reduce the number of build system changes.
 
-\paragraph{Depend on the build source} We should rerun a build rule if its action has changed. Lacking equality for functions, one approach is to depend on the build system source in each of the rules, then if \textit{any} rules change \textit{everything} will rebuild. While this option is safe, it would cause a significant number of redundant rebuilds. As a restricted version of this technique, where there are code generators as separate modules in the build system, for the generated file we put a dependency on the generator module and use |writeFileChanged| (\S\ref{sec:derived}). If the generator changes it will rerun, but typically only a few generated files will change, so little is rebuilt.
+\paragraph{Depend on the build source} We should rerun a build rule if its action has changed. Lacking equality for functions, one approach is to depend on the build system source in each of the rules, then if \textit{any} actions change, \textit{everything} will rebuild. While this option is safe, it causes a significant number of redundant rebuilds. As a restricted version of this technique, where there are code generators as separate modules in the build system, for the generated file we put a dependency on the generator module and use |writeFileChanged| (\S\ref{sec:derived}). If the generator changes it will rerun, but typically only a few generated files will change, so little is rebuilt.
 
-\paragraph{Use \textsf{shakeVersion}} There is a field named |shakeVersion| in the |ShakeOptions| record from Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, we increment this field to force a full rebuild. This option is a last resort, but ensures end users do not have to be aware when there is a build system change.
+\paragraph{Use a version number} There is a field named |shakeVersion| in the |ShakeOptions| record from Figure \ref{fig:shake_core}. If the build system changes in a significant and incompatible way, we increment this field to force a full rebuild. This option is a last resort, but ensures end users do not need to be aware when the build system changes.
 
 \section{User Tools}
 \label{sec:tools}
 
-In addition to standard build functionality, Shake also provides additional features to make build tool authors lives easier. In this section we describe three features that have been built on top of Shake -- a profiling tool to determine what took most time, an analysis tool to query the build dependencies and a lint tool to check that the build system is sensible.
+In addition to performing builds, Shake provides features to help build system authors. In this section we describe three features that have been built on top of Shake -- a profiling tool to determine what took most time, an analysis tool to query the build dependencies and a dependency checking tool to ensure the build system is correct.
 
 \subsection{Profiling}
 \label{sec:profiling}
 
 Shake records two separate pieces of profiling information.
 
-\paragraph{Rule execution times} When running a rule we record the execution time, excluding any time to build its dependencies. From this information, we can determine which rules are most expensive. This information can be aggregated from different build runs, allowing us to produce a total build time, ignoring parallelism, even if only a handful of rules were executed in the last run.
+\paragraph{Rule execution times} When running a rule we record the execution time, excluding any time building its dependencies. Execution times can be combined from different build runs, allowing us to estimate the total build time, ignoring parallelism.
 
-\paragraph{Traced IO actions} Most time consuming rules invoke IO actions, typically system commands. We provide a trace function:
+\paragraph{Traced IO actions} Most time consuming rules invoke IO actions, typically system commands. To track these actions, we provide a trace function:
 
 \begin{code}
 traced :: String -> IO alpha -> Action alpha
 \end{code}
 
-\noindent All actions run by |traced| are stored by the rule that invoked them, along with a human readable message (the first argument), and the start and end times. We automatically call |traced| when running system commands. The execution time of IO actions can be aggregated from different build runs, similar to rule execution times. In addition, taking only IO actions from a single run, we can determine how many IO actions were executing at each point in time -- allowing us to produce a parallelism graph as shown in Figure \ref{fig:profile}.
+\noindent All actions run by |traced| are stored by the rule that invoked them, along with a human readable message (the first argument), and the start and end times. We automatically call |traced| when running system commands. If we examine traced actions from a single run, we can determine how many traced actions were executing at each point in time -- allowing us to produce a parallelism graph as shown in Figure \ref{fig:profile}.
 
 \smallskip\smallskip
 
-We have built profiling support into the core of Shake. Since any execution of a rule is likely to take some time (most rules will be spawning system processes), the overhead of profiling information is negligible. In previous versions of Shake we only recorded profiling information when explicitly asked, but found that users often wanted to profile the build run that had just completed -- always recording profile information makes that possible.
+We have built profiling support into the core of Shake. Since running a rule is likely to take some time (most rules will be spawning system processes), the overhead of recording profiling information is negligible. In previous versions of Shake we only recorded profiling information when explicitly asked, but found that users often wanted to profile the build run that had just completed -- always recording profile information makes that possible.
 
 \subsection{Analysis}
 \label{sec:analysis}
