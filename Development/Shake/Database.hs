@@ -342,12 +342,13 @@ openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO Database
 openDatabase logger filename version = do
     let dbfile = filename <.> "database"
         jfile = filename <.> "journal"
+    createDirectoryIfMissing True $ takeDirectory dbfile
 
     lock <- newLock
     logger $ "readDatabase " ++ dbfile
     (step, status) <- readDatabase dbfile version
     step <- return $ incStep step
-    
+
     b <- doesFileExist jfile
     (status,step) <- if not b then return (status,step) else do
         logger $ "replayJournal " ++ jfile

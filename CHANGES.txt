@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Create the shakeFiles directory if missing
 0.2.2
     Allow deepseq-1.3.*
     Add a basic lint checking mode
