@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Significant documentation improvements
 0.2.3
     Create the shakeFiles directory if missing
 0.2.2
