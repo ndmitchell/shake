@@ -44,7 +44,7 @@ data ShakeOptions = ShakeOptions
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
     ,shakeDump :: Bool -- ^ Dump all profiling information to 'shakeFiles' plus the extension @.js@ (defaults to 'False').
-    ,shakeLint :: Bool -- ^ Perform basic sanity checks after building.
+    ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     }
     deriving (Show, Eq, Ord)
 
