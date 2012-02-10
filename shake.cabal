@@ -39,7 +39,6 @@ extra-source-files:
     Examples/C/main.c
     Examples/Tar/list.txt
 
-
 source-repository head
     type:     darcs
     location: http://community.haskell.org/~ndm/darcs/shake/
