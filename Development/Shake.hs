@@ -18,7 +18,7 @@
 --   We define @main@ to call 'shake' with the default 'shakeOptions'. As the second argument to
 --   'shake', we provide a set of rules. There are two common forms of rules, 'want' to specify target files,
 --   and '*>' to define a rule which builds a 'FilePattern'. We use 'want' to require that after the build
---   completes the file @result.tar@ should be available.
+--   completes the file @result.tar@ should be ready.
 --
 --   The @*.tar@ rule describes how to build files with the extension @.tar@, including @result.tar@.
 --   We 'readFileLines' on @result.txt@, after changing the @.tar@ extension to @.txt@. We read each line
