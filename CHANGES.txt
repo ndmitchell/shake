@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.2.4
     Include the C example source files
     Significant documentation improvements
 0.2.3
