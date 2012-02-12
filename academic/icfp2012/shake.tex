@@ -1,6 +1,7 @@
 \documentclass[preprint]{sigplanconf}
 
-% Email drafts to: M. George Hansen, Evan Laforge, Ketil Malde, Sonke Hahn
+% Email drafts to: M. George Hansen, Ketil Malde
+% Draft requests sent to: Evan Laforge, Sonke Hahn
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -174,7 +175,7 @@ A build tool, such as \make{} \cite{make}, takes a set of build rules, plus some
 
 \noindent This rule says that the file \file{result.tar} depends on the inputs \file{file1} and \file{file2} (first line), and provides a command to build \file{result.tar} (second line). Whenever \file{file1} or \file{file2} change, the command will be run, and \file{result.tar} will be built.
 
-But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} cannot be specified in advance, but depend on \textit{the contents} of \file{list.txt}. Unfortunately, \make{} offers no easy way to express this dependency (there are workarounds, but none are pleasant or effective, see \S\ref{sec:make_hacks}). Using the build tool we develop in this paper, we can write:
+But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} cannot be specified in advance, but depend on \textit{the contents} of \file{list.txt}. Unfortunately, the \make{} dependency system offers no direct way to express this pattern (for workarounds see \S\ref{sec:make_hacks}). Using the build tool we develop in this paper, we can write:
 
 \h{expr}\begin{code}
 "result.tar" *> \_ -> do
@@ -202,6 +203,7 @@ Shake has been used at Standard Chartered for the past three years (\S\ref{sec:e
 \label{sec:theory}
 
 Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running the rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph.
+
 In this section we model the dependencies used in non-recursive \make{}, as described by \citet{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
 
 \subsection{Moving Dependency Specification}
@@ -392,7 +394,7 @@ The build system produces (|want|s) the file \file{Main}. To generate \file{Main
 This example demonstrates a number of features of Shake based build systems:
 
 \begin{description}
-\item[It's Haskell] The |main| entry point can call |shake| directly, but it can also do command line processing (\S\ref{sec:command_line}), or anything else. We have defined a local function, |cIncludes|, helping to split the build system into components that could be reused. We make use of the existing |filepath| library.
+\item[It's Haskell] The |main| entry point can call |shake| directly, but it can also do command line processing (\S\ref{sec:command_line}), or anything else. We have defined a local function, |cIncludes|, helping to split the build system into components that could be reused. We make use of the existing \ignore|filepath| library.
 \item[Accurate dependencies] The call to |getDirectoryFiles| is tracked (\S\ref{sec:directory_rule}) -- if the results change, it will trigger a rebuild. We track the dependencies introduced by @#include@ directives.
 \item[We use system commands] We use \prog{gcc} to compile, to link, and to determine the headers required by the C files. We can freely use both Haskell functions and system commands to generate build results.
 \end{description}
@@ -813,18 +815,16 @@ We have built profiling support into the core of Shake. Since running a rule is 
 \subsection{Analysis}
 \label{sec:analysis}
 
-The Shake database records the dependencies of each item, allowing a full dependency graph to be produced after the rules have been run. However, for any project of moderate size, a picture of the dependency graph is rarely comprehensible -- although through judicious filtering it is possible to produce something useful (see Figure \ref{fig:analysis} for an example). Instead, we have found value in that writing passes to answer specific questions, such as:
+The Shake database records the dependencies of each result, allowing a full dependency graph to be produced after the rules have been run. However, for any project of moderate size, a picture of the full dependency graph is rarely comprehensible -- although with judicious filtering it is possible to produce something useful (see Figure~\ref{fig:analysis} for an example). There has been some work on visualising large build systems, for example by \citet{adams:maintaining_build_systems}, but we have not yet tried applying it to Shake.
+
+Our approach to analysing the database has been to define queries which allow end users to answer specific questions about their build system. Some of the most useful queries include:
 
 \begin{itemize}
-\item Why was a particular file rebuilt in the last build run? Shake shows the complete path of dependencies.
-\item If I touch a file, what will rebuild? Shake computes the list of rules that depend on that file, including indirect dependencies, but assuming no unchanging results (\S\ref{sec:unchanging_results}).
-\item What is the most expensive file to change? For each leaf of the graph, Shake computes all dependencies, and then uses execution times from profiling to determine the most expensive file.
-\item Do my dependencies follow some layering principle? For example, I would not expect any files outside \ignore|Development.Shake.*| to import any modules from inside that module tree, other than |Development.Shake| itself. Many large projects are structured into isolated layers, which can be validated by the build system.
+\item Why was a particular result rebuilt? Shake shows the complete path of dependencies, including the most recently changing dependency.
+\item If I modify a file, what will rebuild? Shake computes the list of rules that depend on that file, including indirect dependencies, but assuming no unchanging results (\S\ref{sec:unchanging_results}).
+\item What is the most expensive file to change? For each leaf of the graph, Shake computes all dependencies, and then uses execution times from profiling to determine which causes most rebuilding.
+\item Do my dependencies follow some layering principle? Many large projects are structured into isolated layers, which can be validated by the build system. For example, I would not expect any files outside \ignore|Development.Shake.*| to import any modules from inside that module tree, other than |Development.Shake| itself.
 \end{itemize}
-
-Shake can export the full dependency graph, so additional queries can be written.
-
-There have been alternative attempts at visualising build systems, such as \cite{adams:maintaining_build_systems}, which could be applied to the full dependency graph, and can scale much better.
 
 \subsection{Profiling and Analysis}
 
@@ -847,7 +847,7 @@ There have been alternative attempts at visualising build systems, such as \cite
 % Shake full -j4 = 7.414 (of which 12.906 is system commands)
 % Shake zero = 0.101 (of which 0.06 is ghc-pkg, 75% of the rest is writing the db)
 
-As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program\footnote{The program is Shake itself, which can be compiled using Shake.} from scratch with a maximum of four processors. The entire process takes 7.41 seconds, but spends 12.91 seconds executing rules, giving a parallel speed up of 1.7 times. Executing the build system with one processor takes 11.83 seconds, where the reduced time compared to the rule execution time is likely due to reduced disk contention.
+As an example of the profiling and analysis tools in practice, see Figures \ref{fig:profile} and \ref{fig:analysis}. Both these diagrams are produced by building a 24 module Haskell program\footnote{The program is Shake itself, which can be compiled using Shake.} from scratch with a maximum of four processors. The entire process takes 7.41 seconds, but spends 12.91 seconds executing rules, giving a parallel speed up of 1.7 times. Executing the build system with one processor takes 11.83 seconds, where the reduction in rule execution time is likely due to reduced disk contention.
 
 Figure \ref{fig:profile} shows the number of traced system commands executing at any point during the build. We see a start up period where zero commands are running and the build system is checking for dependencies, followed by three spikes up to four processors, followed by a tail of using one processor.
 
@@ -856,12 +856,29 @@ Turning to the dependency graph in Figure \ref{fig:analysis}, we have the |Main|
 This example shows how Shake's profiling and analysis reports can be used to improve build performance. If the bottle-neck modules could be split up, or if their compilation time was reduced (particularly for those marked 1, which account for a longer single processor section), the overall build speed would increase. In practice, we have found that for large build systems, where Shake is building multiple targets, the parallelism usually stays at the maximum (or fractionally below it) for most of the build time, before reducing down to one processor as the last few tasks complete.
 
 \subsubsection{Comparison to @ghc --make@ and @make@}
+\label{sec:profiling_comparison}
 
-Building the same project with the GHC compilation system \cite{ghc7_2}, using \prog{ghc --make}, takes 7.69 seconds, compared to Shake with 11.83 seconds for one processor and 7.41 seconds for four processors. The reason GHC is quicker on one processor is that GHC keeps all interface information and package database information in memory, whereas running separate \prog{ghc -c} compilation commands requires reloading this information each time. However, Shake is able to use parallelism to improve the build time, while GHC cannot.
+\begin{figure}
+\begin{tabular*}{\columnwidth}{@@{\extracolsep{\fill}}lrrrr@@{\extracolsep{0cm}}}
+ & \prog{ghc} & Shake-1 & Shake-2 & \make{} \\
+Automatic dependencies & Yes & Yes & Yes & No \\
+Tracks GHC installation & Yes & Yes & No & No \\
+Build on 1 thread & 7.69 & 11.83 & 11.77 & 11.75 \\
+Build on 4 threads & 7.69 & 7.41 & 7.34 & 7.32 \\
+No rebuilding & 0.54 & 0.10 & 0.04 & 0.02 \\
+\end{tabular*}
+\\
 
-When running the build system while nothing needs compiling, GHC takes 0.54 seconds and Shake takes 0.10 seconds. Of the 0.10 seconds required by Shake, 0.06 seconds is spent checking the GHC installation has not changed (running @ghc-pkg list@) -- if the GHC installation is assumed to be constant Shake requires only 0.04 seconds. Shake is faster because it reads in one file (the database) then quickly checks |validStored| on a small number of files. GHC must at least query the same file information, but also has to construct a dependency graph, aggregating information from many files. Of that 0.04 seconds, 0.03 is spent writing the database -- we suspect that effort spent improving the binary serialisation would pay off.
+All times are in seconds. Shake-1 includes a call to @ghc-pkg list@ to track dependencies on GHC package versions, while Shake-2 assumes the GHC installation does not change.
+\caption{Build timing comparisons.}
+\label{fig:timings}
+\end{figure}
 
-We also checked against a \make{} file generated by \prog{ghc -M}. Unlike the Shake and @ghc --make@ solutions, this didn't perform any checking of the environment via ghc packages, and if the structure of the package changed, the file would need to have been regenerated. The \make{} solution was roughly 0.09 seconds faster in all situations (0.10 seconds faster at single threaded, 0.08 faster at parallel rebuilding and 0.09 at the nothing rebuild). Of the 0.09, 0.06 is due to running @ghc-pkg@ and 0.03 to writing out the database. That suggests that the other overheads, namely of checking and dynamically deciding what to compile, are negligible. The identical amount of parallelisation suggests that Shake really is as good as \make{} at finding parallel opportunities. The Shake experience will be better for the end user, since they don't have to regenerate their make file explicitly.
+Building the same project with the GHC compilation system \cite{ghc7_2}, namely \prog{ghc --make}, takes 7.69 seconds, compared to Shake with 11.83 seconds for one processor and 7.41 seconds for four processors, see Figure \ref{fig:timings}. The reason GHC is quicker on one processor is that GHC keeps all interface information and package database information in memory, whereas running separate \prog{ghc -c} compilation commands requires reloading this information each time. However, Shake is able to use parallelism to improve the build time, while GHC cannot.
+
+To run the build system when nothing needs compiling, GHC takes 0.54 seconds and Shake takes 0.10 seconds. Of the 0.10 seconds required by Shake, 0.06 seconds is spent checking the GHC installation has not changed (running @ghc-pkg list@) -- if the GHC installation is assumed to be constant Shake requires only 0.04 seconds. Shake is faster because it reads in one file (the database) then quickly checks |validStored| on a small number of files. GHC must at least query the same file information, but also has to construct a dependency graph, aggregating information from many files. Of the 0.04 seconds taken by Shake, 0.03 is spent writing the database -- we suspect effort spent improving the binary serialisation would pay off.
+
+We can build the same project with \make{}, generating dependency information using \prog{ghc -M}. Unlike Shake and \prog{ghc --make}, the end user is required to regenerate \make{} rules whenever the dependencies change and to clean the build whenever the GHC installation changes. Allowing \make{} to cope with these changes would be significantly harder, and would slow \make{} down by at least 0.12 seconds (@ghc-pkg@ and @ghc -M@ take 0.06 seconds each). The \make{} solution is about 0.08 seconds faster than Shake, or 0.02 seconds faster if Shake avoids tracking the GHC installation. The consistency in the parallel speedup between \make{} and Shake suggests both systems are able to extract the maximum parallelism in this example.
 
 % Compared to something like gcc, which is always invoked in single mode, we do better.
 % For something like C# we don't have a choice and always run it in --make mode.
@@ -990,22 +1007,21 @@ There are two inherent difficulties for build systems without explicit dependenc
 \subsection{Extending Make Dependencies}
 \label{sec:make_hacks}
 
-Specifying additional dependencies while building is critical for many projects. As a result, a number of techniques have been developed to specify additional dependencies in \make{}:
+Specifying additional dependencies while building is critical for many projects. As a result, a number of techniques have been developed to specify additional dependencies in \make{}. Most of these techniques rely on \textit{generating} some portion of the \make{} rules file, either before \make{} starts, or invoking \make{} multiple times. Taking the example from \S\ref{sec:introduction}, we can write it in \make{} as:
+
+\ignore\begin{code}
+{-"\textsf{result.tar : list.txt \$(shell cat list.txt)}"-}
+    {-"\textsf{cat list.txt}"-} | {-"\textsf{xargs tar -cf result.tar}"-}
+\end{code}
+
+Here \make{} is executing commands in two distinct phases -- the first phase generates the rules file, the second runs it. In many large projects, the first phase becomes expensive or complex, resulting in specific commands to such as @make depends@ to update the dependencies (as required by \S\ref{sec:evaluation} and \S\ref{sec:profiling_comparison}). Another approach is for \make{} to restart itself partway through the build, after modifying the build rules. However, multiple stages have many problems:
 
 \begin{itemize}
-\item Many large projects introduce a two stage build, where one phase generates \make{} rules, and a second stage runs them. Often the first stage will be invoked manually, for example with @make depends@, and will be run less frequently than @make@.
-\item Many \make{} implementations monitor their rule files (and any included rule files), and if they change, restart from the beginning. This feature allows dependencies to be regenerated by standard build rules.
+\item There is no limit to the number of build phases required, especially when files are generated by the build system. Shake was originally designed after determining a particular build system required seven stages.
+\item The introduction of stages breaks compositionality, requiring build system authors to globally separate results by stage. The \make{} rule above for \file{result.tar} fails if \file{list.txt} is itself built by the build system, whereas the Shake rule in \S\ref{sec:introduction} works in all cases.
+\item These approaches require generating \make{} rules as text, which are then reinterpreted by \make{}. As a result, while the Shake rule from \S\ref{sec:introduction} can handle spaces in file names, the \make{} rule cannot. Fortunately, many compilers already support generating well-formed \make{} rules for their dependencies.
+\item If multiple phases are all invoked every time the build system is run, then there is overhead due to restarting \make{}, rechecking previously checked rules and reducing parallelism opportunities. If different phases are invoked manually then the user has to be aware what has changed.
 \end{itemize}
-
-Both of these workarounds can help, but neither is a complete solution. Both add overhead due to restarting \make{} and rechecking previously checked rules and reducing parallelism opportunities. Both require programs to generate \make{} rules for their dependencies (although most compilers support generating \make{} rules automatically).
-
-%if 0
-    Many compilers, such as \prog{gcc}, can generate \make{} rules. Therefore, authors introduce rules that generate fragments of \make{} rules, and if they have changed, \make{} restarts automatically.
-
-
-Both of these workarounds can help, but neither is a complete solution. Both lose parallelism, and introduce additional overhead of restarting \make{}. Programs requiring restartable build systems are a pain, and involves lots of creating make rules (something made easier by the number of compilers that can already do this).
-%endif
-
 
 \subsection{Haskell Build Libraries}
 
@@ -1015,7 +1031,9 @@ There are a surprising number of Haskell libraries implementing a dependency awa
 \section{Conclusions and Future Work}
 \label{sec:conclusions}
 
-We have presented a build theory which allows specifying additional dependencies \textit{after} the build starts running rules. This additional flexibility is essential for many build systems, especially those where files are generated by rules. We have implemented our ideas in the Haskell library Shake, producing a user-friendly interface combined with an efficient and robust implementation. We have used Shake extensively, finding it much easier to use than \make{}, while also being more concise and providing improved performance.
+We have presented a build theory which allows specifying additional dependencies \textit{after} the build starts running rules. This additional flexibility is essential for many build systems, especially those where files are generated by rules. We have implemented our ideas in the Haskell library Shake, producing a user-friendly interface combined with an efficient and robust implementation. We have used Shake extensively, finding it much easier to use than \make{}, while also being more concise and, thanks to more accurate dependencies, providing improved performance (\S\ref{sec:evaluation}).
+
+Functional programming is important for Shake. The theory of build systems is naturally expressed using higher-order functions, where actions are functions from dependencies to results. Moving towards a practical build system, a major consideration is the treatment of IO -- we use monads to restrict where IO can be used, while also using them to track state in a thread-safe way. We make use of the flexible syntax of Haskell to allow Shake rules to be written with minimal syntactic overhead. Laziness is not necessary for Shake, and if ignored could cause problems, but eliminating laziness is simple (\S\ref{sec:handling_errors}).
 
 While we have optimised our build algorithms, saving the database is a noticeable bottleneck when builds run few actions, taking 75\% of the time. We suspect this step could be sped up, perhaps by switching to a different binary serialisation library. We have provided some tools on top of Shake, but improvements to the analysis feature would help Shake users, as would fully implementing the dependency checking. Some users have already begun work on general purpose build rules for common types of source code, which could reduce the effort required to make use of Shake.
 
