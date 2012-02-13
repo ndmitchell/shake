@@ -9,7 +9,6 @@ module Development.Shake.Core(
     ) where
 
 import Prelude hiding (catch)
-import Development.Shake.Pool
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -24,6 +23,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.Typeable
 
+import Development.Shake.Pool
 import Development.Shake.Database
 import Development.Shake.Locks
 import Development.Shake.Value
