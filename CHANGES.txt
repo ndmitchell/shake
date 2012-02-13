@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add Data instance for Verbosity
 0.2.4
     Include the C example source files
     Significant documentation improvements

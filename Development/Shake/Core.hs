@@ -15,6 +15,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import Data.Binary(Binary)
+import Data.Data
 import Data.Hashable
 import Data.Function
 import Data.List
@@ -77,7 +78,7 @@ data Verbosity
     | Normal -- ^ Print normal messages (typically errors and warnings).
     | Loud   -- ^ Print lots of messages (typically errors, warnings and status updates).
     | Diagnostic -- ^ Print messages for virtually everything (for debugging a build system).
-      deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable)
+      deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
 
 
 ---------------------------------------------------------------------
