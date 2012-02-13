@@ -47,7 +47,7 @@ data ShakeOptions = ShakeOptions
     ,shakeDump :: Bool -- ^ Dump all profiling information to 'shakeFiles' plus the extension @.js@ (defaults to 'False').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     }
-    deriving (Show, Eq, Ord)
+    deriving (Show,Eq,Ord,Typeable,Data)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
