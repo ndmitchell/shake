@@ -175,7 +175,7 @@ A build tool, such as \make{} \cite{make}, takes a set of build rules, plus some
 
 \noindent This rule says that the file \file{result.tar} depends on the inputs \file{file1} and \file{file2} (first line), and provides a command to build \file{result.tar} (second line). Whenever \file{file1} or \file{file2} change, the command will be run, and \file{result.tar} will be built.
 
-But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} cannot be specified in advance, but depend on \textit{the contents} of \file{list.txt}. Unfortunately, the \make{} dependency system offers no direct way to express this pattern (for workarounds see \S\ref{sec:make_hacks}). Using the build tool we develop in this paper, we can write:
+But imagine we want to build \file{result.tar} from the list of files stored in \file{list.txt}. The dependencies of \file{result.tar} cannot be specified in advance, but depend on \textit{the contents} of \file{list.txt}. Unfortunately, the \make{} dependency system cannot express this pattern (for workarounds see \S\ref{sec:make_hacks}). Using the build tool we describe in this paper, we can write:
 
 \h{expr}\begin{code}
 "result.tar" *> \_ -> do
@@ -189,13 +189,13 @@ This rule describes how to build \file{result.tar}. We depend on (|need|) the fi
 
 The key difference from \make{} (and nearly all other build tools) is that rather than specifying all dependencies \textit{in advance}, we allow further dependencies to be specified \textit{after} examining the results of previous dependencies. This difference is crucial to accurately describe many dependency relationships.
 
-Consider the problem of dependencies stemming from files included by a C source file. Many build tools require these dependencies to be specified manually. Some build tools can use two separate stages, where dependencies are computed (by scanning the files) and then built. But if the build system generates files and then compiles them, even a two stage system is insufficient, as the generated files are not available during the first phase. Our build tool has no such limitations -- it is able to easily handle generated files, even generated files which are only necessary due to being included by other generated files.
+Consider the problem of dependencies stemming from files included by a C source file. Many build tools require these dependencies to be specified manually. Some build tools allow two separate phases, where dependencies are computed (by scanning the files) before the build starts. But if the build system generates files and then compiles them, even a two stage system is insufficient, as the generated files are not available during the first phase. Our build tool has no such limitations -- it is able to easily handle generated files, even generated files which are only necessary due to being included by other generated files.
 
 \subsection{Contributions}
 
 We have implemented our build tool as a Haskell library, named Shake, which is available online\footnote{\url{http://hackage.haskell.org/package/shake}}. Shake provides a concise syntax for writing build systems (\S\ref{sec:user_view}), along with a high-performance implementation (\S\ref{sec:developer_view}). By implementing Shake as a Haskell library we allow rules to be written using the full power of Haskell, including the use of modules and functions to properly structure large build systems.
 
-In addition to more flexible dependencies (\S\ref{sec:theory}), Shake also includes the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change, \S\ref{sec:cached_shake}), and parallelising the build (running multiple independent rules at the same time, \S\ref{sec:parallelism}). We allow rules to operate over any values, not limited to files, allowing us to track additional dependencies (\S\ref{sec:directory_rule}) and properly handle commands producing multiple outputs (\S\ref{sec:multiple_outputs}). We have built a number of useful tools into Shake, including profiling (\S\ref{sec:profiling}), dependency analysis (\S\ref{sec:analysis}) and build rule checking (\S\ref{sec:lint}).
+In addition to more flexible dependencies (\S\ref{sec:theory}), Shake also includes the important features of \make{}, such as minimal rebuilds (running only a subset of the rules when some subset of the inputs change, \S\ref{sec:cached_shake}), and parallelising the build (running multiple independent rules at the same time, \S\ref{sec:parallelism}). We allow rules to operate over any values, not limited to files, allowing us to track non-file (\S\ref{sec:directory_rule}) and properly handle commands producing multiple outputs (\S\ref{sec:multiple_outputs}). We have built a number of useful tools into Shake, including profiling (\S\ref{sec:profiling}), dependency analysis (\S\ref{sec:analysis}) and build rule checking (\S\ref{sec:lint}).
 
 Shake has been used at Standard Chartered for the past three years (\S\ref{sec:evaluation}). The build system creates over 30,000 build objects, with more than a million lines of source code and a million lines of generated code, in many programming languages. We originally implemented this build system using \make{}, but the result was slow to run, hard to maintain, and frequently caused spurious compile failures. Switching to Shake made our build system ten times shorter, made builds run twice as fast, and has solved our build system problems.
 
@@ -204,11 +204,11 @@ Shake has been used at Standard Chartered for the past three years (\S\ref{sec:e
 
 Most \make{}-like build tools start by constructing a graph from the dependency information, then traverse the graph, running the rules to build the required results (or use a topological sort, giving a similar effect). However, any approach based on a static dependency graph cannot permit additional dependencies to be specified while running the rules. As we saw in \S\ref{sec:introduction}, many examples \textit{require} additional dependencies to be specified while running the rules. The solution is simple -- we reject the idea that build tools should use a static dependency graph.
 
-In this section we model the dependencies used in non-recursive \make{}, as described by \citet{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a usable tool.
+In this section we model the dependencies permitted by non-recursive \make{} \cite{miller:recursive_make}, along with our enhanced dependency scheme. We describe what it means for a build system to be correct, and how to support minimal rebuilds. In \S\ref{sec:user_view} and \S\ref{sec:developer_view} we show how to turn these ideas into a practical tool.
 
 \subsection{Moving Dependency Specification}
 
-While \make{} is heavily file and IO based, that is not an essential property of \make{}. To model dependency information, we use the type |Key| for things that can be created or are dependencies (i.e. file names), and the type |Value| for the values associated with a |Key| (i.e.  file contents). With these types, we can define our main |build| function as:
+While \make{} is heavily file and IO based, we choose to model the dependencies without these distractions. Our model uses the type |Key| for things that can be created or are dependencies (i.e. file names), and the type |Value| for the values associated with a |Key| (i.e.  file contents). With these types, we can define the main |build| function as:
 
 \h{.m}\begin{code}
 build :: Set Rule -> Key -> Value
@@ -268,7 +268,7 @@ Starting at the |target| |Key|, we find the |action| from the associated |Rule_s
 \subsection{Minimal Rebuilds}
 \label{sec:minimal_rebuilds}
 
-The build functions in the previous section may evaluate one action many times during a single run, but real build systems should minimise the number of actions run. In a single build run, any action should be performed at most once -- a property that is easy to guarantee with a simple cache. Additionally, if an actions dependencies have not changed since the last time it was run, it should not be repeated. In this section we first describe how to avoid repeating actions whose inputs have not changed using |Rule_m|, enhancing the scheme followed by \make{}, and then apply the same ideas to |Rule_s|.
+The build functions in the previous section may evaluate one action many times during a single run, but real build systems should minimise the number of actions run. In a single build run, any action should be performed at most once -- a property that is easy to guarantee with a simple cache. Additionally, if a rules dependencies have not changed since the last time its action was run, the action should not be rerun. In this section we first describe how to avoid repeating actions whose inputs have not changed using |Rule_m|, enhancing the scheme followed by \make{}, and then apply the same ideas to |Rule_s|.
 
 \subsubsection{Minimal Rebuilds with |Rule_m|}
 \label{sec:cached_make}
@@ -292,11 +292,11 @@ skip_m ask r  |  Just self  <- ask (creates r)
               =  all ((<= built self) . built) deps
 \end{code}
 
-The |skip_m| function returns |True| if the action for a rule does not need running. We first check that there is a |Result_m| associated with the |creates| of this rule, then that every |depends| has a result (using the |mapM| to require every |ask| call returns |Just|), then check that all dependencies were built before this rule was last run.
+The |skip_m| function returns |True| if the action for a rule does not need running. We first check that there is a |Result_m| associated with the |Key| this rule |creates|, then that every |depends| has a result (using the |mapM| to require every |ask| call returns |Just|), then check that all dependencies were built before this rule was last run.
 
-The \make{} approach of relying on the system time can fail if the system clock changes, or if a file is modified but has its value set to an older timestamp -- such as when extracting a backup which resets the timestamp. Therefore, instead of using the system time for |built|, we use the number of runs of this build system, incrementing |Time| each run, which guarantees that |Time| is monotonically increasing.
+The \make{} approach of relying on modification times can fail if the system clock changes, or if a file has its modification time set to a time in the past (such as when extracting a backup). Therefore, instead of using the system time for |built|, we use the number of runs of this build system, incrementing |Time| each run. This approach guarantees that |Time| is monotonically increasing.
 
-A convenient property of the \make{} approach is that no additional data need be stored between runs, since the file system already stores modification times. In contrast, we must store the |Time| and |Result_m| values in some persistent data store (interestingly, an additional data store is required for many advanced build systems, see \S\ref{sec:related_work}). However, for some types of rules, such as when |Value|s are filenames and |Key|s are modification times, we end with the |Value|s stored in both the data store \textit{and} the file system (or other persistent store). If an inconsistency is detected, we must discard our stored |Result_m|. To detect inconsistencies, we require the following function:
+A convenient property of the \make{} approach is that no additional data need be stored between runs, since the file system already stores modification times. In contrast, we must store the |Time| and |Result_m| values in some persistent data store (interestingly, an additional data store is required for many advanced build systems, see \S\ref{sec:related_work}). However, for some types of rules, such as when |Value|s are filenames and |Key|s are modification times, the |Value|s are stored in both the |Result_m| data store \textit{and} the file system. If an inconsistency is detected, we must discard our stored |Result_m|. To detect inconsistencies, we require the following function:
 
 \begin{code}
 validStored :: Key -> Value -> Bool
@@ -322,12 +322,12 @@ skip_s ask r  |  Just self  <- ask (creates r)
               =  all ((<= built self) . built) deps
 \end{code}
 
-Compared to |skip_m|, we have made one change -- instead of using \h{.s}|depends r|, we use \h{.s}|depends self|. With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
+Compared to |skip_m|, we have made one small change -- instead of using \h{.s}|depends r|, we use \h{.s}|depends self|. With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
 
 \subsubsection{Unchanging Results}
 \label{sec:unchanging_results}
 
-The \make{} tool has a requirement that a rule action \textit{must} modify the file it creates, otherwise the rule will be repeatedly rerun, as the result will remain older than its dependencies. However, since we are storing |built| separately from |result|, we can do better, eliminating some unnecessary rebuilds.
+The \make{} tool has a requirement that a rule action \textit{must} modify the file it creates, otherwise the rule will be repeatedly rerun, as the result will remain older than its dependencies. However, since we store |built| separately from |result|, we can eliminate some unnecessary rebuilds.
 
 Instead of storing just the |built| time, we also store the |changed| time -- when the |result| last changed. Whenever we create a result we use the current time for |built|, but if the |result| |Value| is the same as last time, we use the previous |changed| time. We can rewrite |skip_s| to take advantage of this additional information:
 
@@ -347,7 +347,7 @@ skip_s ask r  |  Just self  <- ask (creates r)
 
 We have only changed the final line of |skip_s| -- instead of checking against the |built| time of the dependencies, we check against their |changed| time. Since it is always the case that \h{.s2}|changed <= built|, |skip_s| will now return |True| more often.
 
-In some situations, support for unchanging results can reduce rebuild times from many minutes to seconds. As an example, consider a generated source file. If the generator changes it is necessary to regenerate the file, but there is a chance the result will be the same. By supporting unchanging files we can avoid rebuilding everything depending on that generated file.
+In some situations, support for unchanging results can reduce rebuild times from many minutes to seconds. As an example, consider a file generated by the build system. If the generator changes it is necessary to regenerate the file, but there is a chance the result will not have changed. By supporting unchanging files we can avoid rebuilding everything depending on that file.
 
 \section{Shake in Haskell}
 \label{sec:user_view}
@@ -389,7 +389,7 @@ cIncludes x = do
 
 Figure \ref{fig:demo} shows an example build system in Shake. Running this program will build \file{Main} from all the \file{*.c} files in the current directory. If we add or remove a \file{.c} file, or change any of the \file{.c} files or the header files they @#include@, then the necessary files will be rebuilt.
 
-The build system produces (|want|s) the file \file{Main}. To generate \file{Main} we list all the C files in the current directory, add the extension \file{.o} (object files), require those files to be built (|need| them), then call \prog{gcc} to link them. To build an object file we take the associated C file and call the function |cIncludes| to get the headers it requires. We |need| those headers, then call \prog{gcc} to do the compilation. The |cIncludes| function works by calling \prog{gcc -MM}, causing \prog{gcc} to generate the dependency information to the standard output.
+The build system produces (|want|s) the file \file{Main}. To generate \file{Main} we list all the C files in the current directory, add the extension \file{.o} (object files), require those files to be built (|need| them), then call \prog{gcc} to link them. To build an object file we take the associated C file and call the function |cIncludes| to get the headers it requires. We |need| those headers, then call \prog{gcc} to do the compilation. The |cIncludes| function works by calling \prog{gcc -MM}, causing \prog{gcc} to generate the dependency information on the standard output.
 
 This example demonstrates a number of features of Shake based build systems:
 
@@ -399,7 +399,7 @@ This example demonstrates a number of features of Shake based build systems:
 \item[We use system commands] We use \prog{gcc} to compile, to link, and to determine the headers required by the C files. We can freely use both Haskell functions and system commands to generate build results.
 \end{description}
 
-As a practical concern, for many larger projects there are often multiple compilers that produce object files with the \file{.o} extension. We solve this problem by making the Haskell compiler use the extension \file{.hs.o}, the C compiler use \file{.c.o} etc, allowing different rules for each type of object.
+As a practical concern, for many larger projects there are often multiple compilers that produce object files with the \file{.o} extension. We solve this problem by making the C compiler use the extension \file{.c.o}, the Haskell compiler use \file{.hs.o} etc, allowing different rules for each type of object.
 
 \subsection{Core Shake}
 \label{sec:core_shake}
@@ -446,26 +446,26 @@ apply1  :: Rule key value =>     key   -> Action    value
 \label{fig:shake_core}
 \end{figure}
 
-The core interface of Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|, and when defining a rule we can express dependencies with |apply|/|apply1|.
+The core interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|, and when defining a rule we can express dependencies with |apply|/|apply1|.
 
 We execute a set of rules with the |run| function, which also takes an options record. Typical options include which file to store the cached results (|shakeFiles|) and the number of processors to use (|shakeThreads|).
 
-Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with the value stored externally (\S\ref{sec:minimal_rebuilds}). Each |key| and |value| type must also be a member of several type classes:
+Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with any value stored externally (\S\ref{sec:minimal_rebuilds}). Each |key| and |value| type must also be a member of several type classes:
 
 \begin{description}
 \item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, we require a |Typeable| constraint, allowing us to obtain an explicit |TypeRep| \cite{lammel:syb}.
-\item [Binary] We require |Binary| to store the results in a database, to achieve minimal rebuilds (\S\ref{sec:minimal_rebuilds}).
-\item [Eq] We require equality to look up |key|s in the database and to test if |value|s have changed (\S\ref{sec:unchanging_results}).
-\item [Hashable] We require |Hashable| to accelerate looking up |key|s in the database (the |Hashable| requirement for |value| is currently unused, but included for consistency).
+\item [Binary] We require |Binary| serialisation, allowing us to store the results between runs, to achieve minimal rebuilds (\S\ref{sec:minimal_rebuilds}).
+\item [Eq] We require equality to look up results for |keys| and to test if |value|s have changed (\S\ref{sec:unchanging_results}).
+\item [Hashable] We require |Hashable| to accelerate looking up results for |key|s. The |Hashable| requirement for |value| is currently unused, but is included for consistency.
 \item [Show] We require |Show| for debugging messages, profiling and analysis (\S\ref{sec:handling_errors}, \S\ref{sec:profiling}).
-\item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring that errors occur in a timely manner (\S\ref{sec:handling_errors}).
+\item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring errors occur in a timely manner (\S\ref{sec:handling_errors}).
 \end{description}
 
-Normal rules are defined with |rule|, which requires a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the action necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no normal rules match -- for an example see \S\ref{sec:file_rules}. Instead of defining targets to build, we allow actions to be added to the rules using |action|, which are always run.
+Most rules are defined with |rule|, whose argument is a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the action necessary to build the associated |value|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no |rule|s match (see \S\ref{sec:file_rules}). Instead of defining targets to build, we use |action| to specify actions that are always run, which typically call |apply|.
 
-The |Rules| type is a |Monoid|, allowing two sets of rules to be appended to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| is often a more natural way to define many rules, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate \h{type}|IO alpha| to \h{type}|Action alpha|.
+The |Rules| type is a commutative |Monoid|, allowing two sets of rules to be joined to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| offers a very natural way to define rules, so we also make |Rules| a |Monad|. The |Action| type is a |Monad| and has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate \h{type}|IO alpha| to \h{type}|Action alpha|.
 
-The |apply1| function takes a |key|, ensures the |key| is built, and returns the associated |value|. The |apply| function can be thought of as |mapM apply1|, but may the necessary |key|s in parallel (\S\ref{sec:parallelism}).
+The |apply1| function takes a |key|, ensures the |key| is built, and returns the associated |value|. The |apply| function can be thought of as |mapM apply1|, but may build the necessary |key|s in parallel (\S\ref{sec:parallelism}).
 
 \subsection{Wildcard File Patterns}
 \label{sec:file_pattern}
@@ -562,13 +562,13 @@ defaultFile = defaultRule $ \(File x) -> Just $ do
 
 While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could either be modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds using the \prog{touch} command is highly convenient. Of course, our design allows anyone to define a new file rule, based on file content hashes.
 
-We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action demands all the modification times associated with the filenames, then throws them away -- a computation often depends on when a file was built, but rarely uses the actual modification time. We define |want| to specify targets, implemented as |need| run by |action|.
+We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action demands all the modification times associated with the filenames, then throws them away -- a computation often depends on when a file was modified, but rarely uses the actual modification time. We define |want| to specify targets, implemented as |need| run by |action|.
 
 We define |defaultFile| as a rule that checks if the file is already present, and if so uses it. Source files will have no associated rules to build them, so this rule just records their modification time. If a file has no rules (since any rules would be run in preference to the default rule), and does not exist, we raise an error. As with |defaultDir|, anyone using |want|/|need| should include |defaultFile| in their rule set.
 
 We define new file rules using |(?>)|, which takes a predicate to match against the file name and an action to run. This function ensures the correct |key|/|value| types, and obtains the modification time afterwards. Before running the action we create the directory containing the output file, an idea taken from the Ninja build system \cite{ninja}. We found that when running a large set of newly written rules, often one rule would create the output directory while another did not -- meaning some rule execution orderings worked while others failed. Automatically creating the output directory removes this source of failure.
 
-While |(?>)| is the ultimate file creation rule, we define two additional operators, using the file wildcard match operator |(?==)| (\S\ref{sec:file_pattern}). We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a very similar manner to \make{}. We also define |(**>)| for matching any one of a set of patterns. In our large evaluation (\S\ref{sec:evaluation}), we found that |(?>)| was used about 5\% of the time, |(**>)| about 10\% and |(*>)| about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is unnecessarily complex (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
+While |(?>)| is the ultimate file creation rule, we define two additional operators, using the file wildcard match operator |(?==)| from \S\ref{sec:file_pattern}. We define |(*>)| for matching a single pattern, for example |"*.c" *> ellipses|, in a similar style to \make{}. We define |(**>)| for matching any one of a set of patterns. In our large evaluation (\S\ref{sec:evaluation}), we found that |(?>)| was used about 5\% of the time, |(**>)| about 10\% and |(*>)| about 85\% of the time. In our experience, use of |(?>)| is a sign that the build system is unnecessarily complex (our large evaluation used |(?>)| exclusively for compatibility with the system it replaced).
 
 \subsection{Automatically Include Default Rules}
 \label{sec:include_default_rules}
@@ -585,19 +585,19 @@ shake opts rules = run opts $ do
 
 In addition to the directory and file rules, we also include rules that query the existence of files, always force a rule to rerun, store arbitrary configuration data in a tracked manner and build multiple files in one action. All these rules are defined similarly to the directory and file rules.
 
-The astute reader may be wondering why we can't move |defaultRule| into the |Rule| type class, and avoid requiring such a wrapper. Alas, that solution doesn't work because we need explicit rules of each type to deserialise dynamically typed values (for full details see \S\ref{sec:dynamically_typed}).
+The astute reader may be wondering why we can't move |defaultRule| into the |Rule| type class, and eliminate this wrapper. Alas, that solution doesn't work because we need explicit rules of each type to deserialise dynamically typed values (for full details see \S\ref{sec:dynamically_typed}).
 
 \subsection{Additional Functions}
 \label{sec:derived}
 
-Functions like |readFile| are only safe if the file being read has previously had |need| called on it, to both ensure it has been created if necessary, and that if it changes the rule will be rerun. To help build system authors, we define a safe wrapper, |readFile'|, which includes the call to |need|:
+The IO function |readFile| is only safe if the file being read has previously had |need| called on it, tracking the dependency (for more IO safety properties see \S\ref{sec:lint}). To help build system authors, we define a safe wrapper, |readFile'|, which includes the call to |need|:
 
 \begin{code}
 readFile' :: FilePath -> Action String
 readFile' x = need [x] >> liftIO (readFile x)
 \end{code}
 
-We also define a number of additional functions for working with files. The functions |readFileLines| and |writeFileLines| deal with files that should be treated as a list of lines. The function |writeFileChanged| writes a file, but only if the contents have changed, avoiding rebuilding by making use of unchanging results (\S\ref{sec:unchanging_results}).
+The function |readFileLines| is like |readFile'|, but splits the contents of the file into lines (therefore the first |need| call in the example in \S\ref{sec:introduction} is unnecessary, but not harmful, as |readFileLines| will also call |need|). We define |writeFileLines| for writing files containing a list of lines. The function |writeFileChanged| writes a file, but only if the contents have changed, avoiding rebuilding by making use of unchanging results (\S\ref{sec:unchanging_results}).
 
 We define the |system'| function which runs a system command, but fails if the exit code represents failure, and also records profiling information (see \S\ref{sec:profiling}). The |system'| function should be used carefully, as it cannot tell which files the system command may depend on, so explicit |need| commands must be used. We recommend writing wrappers around system commands which insert the appropriate |need| calls (see \S\ref{sec:lint} for ways to detect such a problems).
 
