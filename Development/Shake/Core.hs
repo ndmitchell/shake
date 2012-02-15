@@ -22,7 +22,6 @@ import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.Monoid
-import Data.Typeable
 
 import Development.Shake.Pool
 import Development.Shake.Database
