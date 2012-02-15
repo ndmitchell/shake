@@ -52,7 +52,7 @@ library
         base == 4.*,
         old-time,
         directory,
-        hashable,
+        hashable >= 1.1.2.3 && < 1.2,
         binary,
         filepath,
         process,
@@ -79,7 +79,6 @@ library
         Development.Shake.Locks
         Development.Shake.Oracle
         Development.Shake.Pool
-        Development.Shake.TypeHash
         Development.Shake.Rerun
         Development.Shake.Value
 

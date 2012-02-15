@@ -18,7 +18,6 @@ import Data.Bits
 import Data.IORef
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
-import Development.Shake.TypeHash()
 import System.IO.Unsafe
 
 
