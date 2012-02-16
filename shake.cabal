@@ -102,3 +102,4 @@ executable shake
         Examples.Test.FilePath
         Examples.Test.Files
         Examples.Test.Pool
+        Examples.Test.Resources

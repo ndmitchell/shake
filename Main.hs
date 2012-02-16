@@ -14,6 +14,7 @@ import qualified Examples.Test.Errors as Errors
 import qualified Examples.Test.Files as Files
 import qualified Examples.Test.FilePath as FilePath
 import qualified Examples.Test.Pool as Pool
+import qualified Examples.Test.Resources as Resources
 
 
 fakes = ["clean" * clean, "test" * test]
@@ -21,7 +22,7 @@ fakes = ["clean" * clean, "test" * test]
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic1" * Basic1.main, "directory" * Directory.main, "errors" * Errors.main
-        ,"filepath" * FilePath.main, "files" * Files.main, "pool" * Pool.main]
+        ,"filepath" * FilePath.main, "files" * Files.main, "pool" * Pool.main, "resources" * Resources.main]
     where (*) = (,)
 
 
