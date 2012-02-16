@@ -5,7 +5,8 @@ module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
     Rule(..), Rules, defaultRule, rule, action,
     Action, apply, apply1, traced,
-    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet
+    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
+    Resource, newResource, withResource
     ) where
 
 import Prelude hiding (catch)
@@ -201,6 +202,7 @@ data S = S
     ,execute :: Key -> Action Value
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
+    ,logger :: String -> IO ()
     -- stack variables
     ,stack :: [Key] -- in reverse
     -- local variables
@@ -242,7 +244,7 @@ run opts@ShakeOptions{..} rs = do
     let execute = createExecute rs
     withDatabase logger shakeFiles shakeVersion $ \database -> do
         runPool shakeThreads $ \pool -> do
-            let s0 = S database pool start stored execute output shakeVerbosity [] [] 0 []
+            let s0 = S database pool start stored execute output shakeVerbosity logger [] [] 0 []
             mapM_ (addPool pool . staunch . wrapStack [] . runAction s0) (actions rs)
         when shakeLint $ do
             checkValid database stored
@@ -375,3 +377,32 @@ putQuiet = putWhen (>= Quiet)
 --   not interleaved.
 getVerbosity :: Action Verbosity
 getVerbosity = Action $ gets verbosity
+
+
+-- | Run an action which uses part of a finite resource. For example, only
+--   one set of calls to the Excel API can occur at one time, therefore Excel is
+--   a finite resource of quantity 1. You can write:
+--
+-- @
+--do excel <- 'newResource' \"Excel\" 1
+--   shake shakeOptions{shakeThreads=2} $ do
+--       want [\"a.xls\",\"b.xls\"]
+--       \"*.xls\" *> \out ->
+--           'withResource' excel 1 $
+--               system' \"excel\" [out,...]
+-- @
+--
+--   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
+--   is better than 'MVar' as it will not block any other threads from executing.
+withResource :: Resource -> Int -> Action a -> Action a
+withResource r i act = Action $ do
+    s <- get
+    (res,s) <- liftIO $ bracket_
+        (do logger s $ "Trying to acquire " ++ show i ++ " quantity of " ++ show r
+            blockPool (pool s) $ acquireResource r i
+            logger s $ "Successfully acquired " ++ show i ++ " quantity of " ++ show r)
+        (do releaseResource r i
+            logger s $ "Released " ++ show i ++ " quantity of " ++ show r)
+        (runAction s act)
+    put s
+    return res

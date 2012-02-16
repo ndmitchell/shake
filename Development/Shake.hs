@@ -76,7 +76,9 @@ module Development.Shake(
     doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     -- * Additional rules
     addOracle, askOracle,
-    alwaysRerun
+    alwaysRerun,
+    -- * Finite resources
+    Resource, newResource, withResource
     ) where
 
 -- I would love to use module export in the above export list, but alas Haddock
