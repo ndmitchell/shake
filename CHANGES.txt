@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.2.6
     Improve the documentation code fragments (more links)
     Add support for managing finite resources
 0.2.5
