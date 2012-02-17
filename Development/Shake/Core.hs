@@ -384,11 +384,15 @@ withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = Action $ do
     s <- get
     (res,s) <- liftIO $ bracket_
-        (do logger s $ "Trying to acquire " ++ show i ++ " quantity of " ++ show r
-            blockPool (pool s) $ acquireResource r i
-            logger s $ "Successfully acquired " ++ show i ++ " quantity of " ++ show r)
+        (do res <- acquireResource r i
+            case res of
+                Nothing -> logger s $ show r ++ " acquired " ++ show i ++ " with no wait"
+                Just wait -> do
+                    logger s $ show r ++ " waiting to acquire " ++ show i
+                    blockPool (pool s) wait
+                    logger s $ show r ++ " acquired " ++ show i ++ " after waiting")
         (do releaseResource r i
-            logger s $ "Released " ++ show i ++ " quantity of " ++ show r)
+            logger s $ show r ++ " released " ++ show i)
         (runAction s act)
     put s
     return res

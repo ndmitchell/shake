@@ -93,16 +93,18 @@ newResource name mx = do
     return $ Resource name mx var
 
 
-acquireResource :: Resource -> Int -> IO ()
+-- | Try to acquire a resource. Returns Nothing to indicate you have acquired with no blocking, or Just act to
+--   say after act completes (which will block) then you will have the resource.
+acquireResource :: Resource -> Int -> IO (Maybe (IO ()))
 acquireResource r@(Resource name mx var) want
     | want < 0 = error $ "You cannot acquire a negative quantity of " ++ show r ++ ", requested " ++ show want
     | want > mx = error $ "You cannot acquire more than " ++ show mx ++ " of " ++ show r ++ ", requested " ++ show want
-    | otherwise = join $ modifyVar var $ \(available,waiting) ->
+    | otherwise = modifyVar var $ \(available,waiting) ->
         if want <= available then
-            return ((available - want, waiting), return ())
+            return ((available - want, waiting), Nothing)
         else do
             bar <- newBarrier
-            return ((available, waiting ++ [(want,signalBarrier bar ())]), waitBarrier bar)
+            return ((available, waiting ++ [(want,signalBarrier bar ())]), Just $ waitBarrier bar)
 
 
 -- | You should only ever releaseResource that you obtained with acquireResource.
