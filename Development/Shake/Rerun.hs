@@ -29,10 +29,10 @@ instance Rule AlwaysRerun Dirty where
 --   the environment. For example:
 --
 -- @
---   \"ghcVersion.txt\" '*>' \out -> do
---       'alwaysRerun'
---       (stdout,_) <- 'systemOutput' \"ghc\" [\"--version\"]
---       'writeFileChanged' out stdout
+-- \"ghcVersion.txt\" 'Development.Shake.*>' \\out -> do
+--     'alwaysRerun'
+--     (stdout,_) <- 'Development.Shake.systemOutput' \"ghc\" [\"--version\"]
+--     'Development.Shake.writeFileChanged' out stdout
 -- @
 alwaysRerun :: Action ()
 alwaysRerun = do Dirty _ <- apply1 $ AlwaysRerun (); return ()

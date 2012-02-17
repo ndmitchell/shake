@@ -35,10 +35,12 @@ instance Rule Files FileTimes where
 -- | Define a rule for building multiple files at the same time.
 --   As an example, a single invokation of GHC produces both @.hi@ and @.o@ files:
 --
--- > ["*.o","*.hi"] *>> \[o,hi] -> do
--- >    let hs = replaceExtension o "hs"
--- >    need ... -- all files the .hs import
--- >    system' "ghc" ["-c",hs]
+-- @
+-- [\"*.o\",\"*.hi\"] '*>>' \\[o,hi] -> do
+--     let hs = 'Development.Shake.FilePath.replaceExtension' o \"hs\"
+--     'Development.Shake.need' ... -- all files the .hs import
+--     'Development.Shake.system'' \"ghc\" [\"-c\",hs]
+-- @
 --
 --   However, in practice, it's usually easier to define rules with '*>' and make the @.hi@ depend
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must

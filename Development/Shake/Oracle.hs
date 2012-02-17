@@ -29,7 +29,7 @@ instance Rule Question Answer where
 -- > addOracle ["ghc"] $ return ["7.2.1"]
 -- > addOracle ["ghc-pkg","shake"] $ return ["1.0"]
 --
---   If a rule depends on the GHC version, it can then use @'getOracle' [\"ghc\"]@, and
+--   If a rule depends on the GHC version, it can then use @'askOracle' [\"ghc\"]@, and
 --   if the GHC version changes, the rule will rebuild. It is common for the value returned
 --   by 'askOracle' to be ignored.
 --
@@ -41,7 +41,7 @@ instance Rule Question Answer where
 --
 --   Actions passed to 'addOracle' will be run in every Shake execution they are required,
 --   their value will not be kept between runs. To get a similar behaviour using files, see
---   'alwaysRerun'.
+--   'Development.Shake.alwaysRerun'.
 addOracle :: [String] -> Action [String] -> Rules ()
 addOracle question act = rule $ \(Question q) ->
     if q == question then Just $ fmap Answer act else Nothing

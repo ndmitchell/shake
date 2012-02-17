@@ -64,13 +64,27 @@ waitBarrier (Barrier x) = readMVar x
 ---------------------------------------------------------------------
 -- RESOURCE
 
--- | A finite resource, see 'withResource' for details.
+-- | The type representing a finite resource. For example, only
+--   one set of calls to the Excel API can occur at one time, therefore Excel is
+--   a finite resource of quantity 1. You can write:
+--
+-- @
+-- do excel <- 'newResource' \"Excel\" 1
+--    'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
+--        'Development.Shake.want' [\"a.xls\",\"b.xls\"]
+--        \"*.xls\" 'Development.Shake.*>' \\out ->
+--            'Development.Shake.withResource' excel 1 $
+--                'Development.Shake.system'' \"excel\" [out,...]
+--  @
+--
+--   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
+--   is better than 'MVar' as it will not block any other threads from executing.
 data Resource = Resource String Int (Var (Int,[(Int,IO ())]))
 instance Show Resource where show (Resource name _ _) = "Resource " ++ name
 
 
 -- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
---   See 'withResource' for details.
+--   For an example see 'Resource'.
 newResource :: String -> Int -> IO Resource
 newResource name mx = do
     when (mx < 0) $

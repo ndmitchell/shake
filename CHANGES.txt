@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve the documentation code fragments (more links)
     Add support for managing finite resources
 0.2.5
     Require hashable-1.1.2.3, which has a TypeRep instance
