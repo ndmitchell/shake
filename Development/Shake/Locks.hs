@@ -64,9 +64,13 @@ waitBarrier (Barrier x) = readMVar x
 ---------------------------------------------------------------------
 -- RESOURCE
 
--- | The type representing a finite resource. For example, only
---   one set of calls to the Excel API can occur at one time, therefore Excel is
---   a finite resource of quantity 1. You can write:
+-- | The type representing a finite resource, which multiple build actions should respect.
+--   Created with 'newResource' in the 'IO' monad before calling 'Development.Shake.shake',
+--   and used with 'Development.Shake.withResource' in the 'Development.Shake.Action' monad
+--   when defining rules.
+--
+--   As an example, only one set of calls to the Excel API can occur at one time, therefore
+--   Excel is a finite resource of quantity 1. You can write:
 --
 -- @
 -- do excel <- 'newResource' \"Excel\" 1
@@ -79,6 +83,21 @@ waitBarrier (Barrier x) = readMVar x
 --
 --   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
 --   is better than 'MVar' as it will not block any other threads from executing.
+--
+--   As another example, calls to compilers are usually CPU bound but calls to linkers are usually
+--   disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit
+--   ourselves to 4 linkers with:
+--
+-- @
+-- do disk <- 'newResource' \"Disk\" 4
+--    'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=8} $ do
+--        'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
+--        \"*.exe\" 'Development.Shake.*>' \\out ->
+--            'Development.Shake.withResource' disk 1 $
+--                'Development.Shake.system'' \"ld\" [\"-o\",out,...]
+--        \"*.o\" 'Development.Shake.*>' \\out ->
+--            'Development.Shake.system'' \"cl\" [\"-o\",out,...]
+-- @
 data Resource = Resource String Int (Var (Int,[(Int,IO ())]))
 instance Show Resource where show (Resource name _ _) = "Resource " ++ name
 
