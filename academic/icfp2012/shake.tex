@@ -36,7 +36,7 @@
 %format <> = "\mathbin{\diamond}"
 
 \hsdef{\begin{comment}
-alpha,r,self
+alpha,r,self,old
 IO,Main,Development.Shake
 Any,Eq,Show,Hashable,NFData,MonadIO,TypeRep
 contents
@@ -313,7 +313,7 @@ data Result_s = Result_s
     ,  depends  :: [Key]
     }
 
-skip_m ask old r = all ((<= built old) . built . ask) (depends old)
+skip_s ask old r = all ((<= built old) . built . ask) (depends old)
 \end{code}
 
 Compared to |skip_m|, we have made one small change -- instead of using \h{.s}|depends r|, we use \h{.s}|depends old|. With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
@@ -334,7 +334,7 @@ data Result_s = Result_s
     ,  changed  :: Time
     }
 
-skip_m ask old r =
+skip_s ask old r =
     all ((<= built old) . changed . ask) (depends old)
 \end{code}
 
@@ -448,7 +448,7 @@ Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class
 \begin{description}
 \item [Typeable] We allow multiple types of rules in a single build system. To distinguish the types, we require a |Typeable| constraint, allowing us to obtain an explicit |TypeRep| \cite{lammel:syb}.
 \item [Binary] We require |Binary| serialisation, allowing us to store the results between runs, to achieve minimal rebuilds (\S\ref{sec:minimal_rebuilds}).
-\item [Eq] We require equality to look up results for |keys| and to test if |value|s have changed (\S\ref{sec:unchanging_results}).
+\item [Eq] We require equality to look up results for |key|s and to test if |value|s have changed (\S\ref{sec:unchanging_results}).
 \item [Hashable] We require |Hashable| to accelerate looking up results for |key|s. The |Hashable| requirement for |value| is currently unused, but is included for consistency.
 \item [Show] We require |Show| for debugging messages, profiling and analysis (\S\ref{sec:handling_errors}, \S\ref{sec:profiling}).
 \item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring errors occur in a timely manner (\S\ref{sec:handling_errors}).
