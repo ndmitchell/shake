@@ -28,7 +28,7 @@ type FilePattern = String
 --
 --   Examples that /don't/ match:
 --
--- > "*.c" ?== "foor/bar.c"
+-- > "*.c" ?== "foo/bar.c"
 -- > "*/*.c" ?== "foo/bar/baz.c"
 --
 (?==) :: FilePattern -> FilePath -> Bool
