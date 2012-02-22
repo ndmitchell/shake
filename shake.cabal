@@ -39,6 +39,15 @@ extra-source-files:
     Examples/C/main.c
     Examples/Tar/list.txt
 
+data-files:
+  html/*.png
+  html/*.min.js
+  html/*.min.css
+  html/report.html
+  html/jquery-1.6.4.min.js
+  html/jquery.flot.min.js
+  html/shake.js
+
 source-repository head
     type:     darcs
     location: http://community.haskell.org/~ndm/darcs/shake/
@@ -60,8 +69,10 @@ library
         bytestring,
         time,
         transformers == 0.2.*,
-        deepseq >= 1.1 && < 1.4
+        deepseq >= 1.1 && < 1.4,
+        HStringTemplate
 
+    cpp-options: -DCABAL
     exposed-modules:
         Development.Shake
         Development.Shake.FilePath
@@ -79,8 +90,10 @@ library
         Development.Shake.Locks
         Development.Shake.Oracle
         Development.Shake.Pool
+        Development.Shake.Report
         Development.Shake.Rerun
         Development.Shake.Value
+        Paths_shake
 
 executable shake
     main-is: Main.hs

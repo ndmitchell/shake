@@ -28,7 +28,7 @@ import Development.Shake.Pool
 import Development.Shake.Database
 import Development.Shake.Locks
 import Development.Shake.Value
-
+import Development.Shake.Report
 
 ---------------------------------------------------------------------
 -- OPTIONS
@@ -44,14 +44,14 @@ data ShakeOptions = ShakeOptions
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild (defaults to @1@).
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
-    ,shakeDump :: Bool -- ^ Dump all profiling information to 'shakeFiles' plus the extension @.js@ (defaults to 'False').
+    ,shakeDump :: Maybe FilePath -- ^ Dump all profiling information in HTML form to file (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     }
     deriving (Show,Eq,Ord,Typeable,Data)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False False False
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False
 
 
 -- | All forseen exception conditions thrown by Shake, such problems with the rules or errors when executing
@@ -249,9 +249,10 @@ run opts@ShakeOptions{..} rs = do
         when shakeLint $ do
             checkValid database stored
             when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
-        when shakeDump $ do
+        when (isJust shakeDump) $ do
             json <- showJSON database
-            writeFile (shakeFiles ++ ".js") $ "var shake =\n" ++ json
+            output "Building HTML report"
+            buildReport ("var shake =\n" ++ json) (fromJust shakeDump)
     maybe (return ()) throwIO =<< readVar except
 
 
