@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.2.8
     Rename shakeDump to shakeReport
     Add profile report generator
 0.2.7
