@@ -36,7 +36,7 @@ import Development.Shake.Report
 -- | Options to control the execution of Shake, usually specified by overriding fields in
 --   'shakeOptions':
 --
---   @ 'shakeOptions'{'shakeThreads'=4, 'shakeDump'=True}@
+--   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just "report.html"} @
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
@@ -346,7 +346,7 @@ apply1 = fmap head . apply . return
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
 --   The 'Develoment.Shake.system'' command automatically calls 'traced'. The trace list is used for profile reports
---   (see 'shakeDump').
+--   (see 'shakeReport').
 traced :: String -> IO a -> Action a
 traced msg act = Action $ do
     s <- get
