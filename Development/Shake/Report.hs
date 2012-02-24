@@ -8,7 +8,7 @@ import Paths_shake
 
 
 -- | Generates an HTML report given some build system
--- profiling data in JSON format.
+--   profiling data in JSON format.
 buildReport :: String -> FilePath -> IO ()
 buildReport json out = do
     htmlDir <- getDataFileName "html"
