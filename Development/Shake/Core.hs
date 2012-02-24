@@ -253,7 +253,7 @@ run opts@ShakeOptions{..} rs = do
             let file = fromJust shakeDump
             json <- showJSON database
             output $ "Writing HTML report to " ++ file
-            buildReport ("var shake =\n" ++ json) file
+            buildReport json file
     maybe (return ()) throwIO =<< readVar except
 
 
