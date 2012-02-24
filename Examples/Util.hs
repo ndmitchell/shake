@@ -61,7 +61,7 @@ flags = "threads#" : map fst flagList
 
 flagList :: [(String, ShakeOptions -> ShakeOptions)]
 flagList = let (*) = (,) in
-    ["no-dump" * \o -> o{shakeDump=Just "report.html"}
+    ["no-dump" * \o -> o{shakeDump=Nothing}
     ,"silent" * \o -> o{shakeVerbosity=Silent}
     ,"quiet" * \o -> o{shakeVerbosity=Quiet}
     ,"normal" * \o -> o{shakeVerbosity=Normal}
