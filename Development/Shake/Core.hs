@@ -250,9 +250,10 @@ run opts@ShakeOptions{..} rs = do
             checkValid database stored
             when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
         when (isJust shakeDump) $ do
+            let file = fromJust shakeDump
             json <- showJSON database
-            output "Building HTML report"
-            buildReport ("var shake =\n" ++ json) (fromJust shakeDump)
+            output $ "Writing HTML report to " ++ file
+            buildReport ("var shake =\n" ++ json) file
     maybe (return ()) throwIO =<< readVar except
 
 
