@@ -58,6 +58,8 @@
 --   a file with 'alwaysRerun' and 'writeFileChanged', or use 'addOracle'.
 --
 --   The theory behind an old version of Shake is described in a video at <http://vimeo.com/15465133>.
+--
+--   /Acknowledgements/: Thanks to Austin Seipp for properly integrating the profiling code.
 module Development.Shake(
     shake,
     -- * Core of Shake
