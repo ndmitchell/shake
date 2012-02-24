@@ -15,6 +15,9 @@ main = shaken noTest $ \args obj -> do
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
     want $ if null args then [obj "Main.exe"] else args
 
+    -- fixup to cope with Cabal's generated files
+    let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
+
     let ghc args = do
             -- since ghc-pkg includes the ghc package, it changes if the version does
             askOracle ["ghc-pkg"]
@@ -35,9 +38,9 @@ main = shaken noTest $ \args obj -> do
         writeFileLines out ds
 
     obj "/*.dep" *> \out -> do
-        src <- readFile' $ unobj $ replaceExtension out "hs"
+        src <- readFile' $ fixPaths $ unobj $ replaceExtension out "hs"
         let xs = hsImports src
-        xs <- filterM (doesFileExist . moduleToFile "hs") xs
+        xs <- filterM (doesFileExist . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
     obj "/*.hi" *> \out -> do
@@ -45,7 +48,7 @@ main = shaken noTest $ \args obj -> do
 
     obj "/*.o" *> \out -> do
         dep <- readFileLines $ replaceExtension out "dep"
-        let hs = unobj $ replaceExtension out "hs"
+        let hs = fixPaths $ unobj $ replaceExtension out "hs"
         need $ hs : map (obj . moduleToFile "hi") dep
         ghc ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"]
 

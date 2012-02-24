@@ -72,7 +72,6 @@ library
         deepseq >= 1.1 && < 1.4,
         HStringTemplate
 
-    cpp-options: -DCABAL
     exposed-modules:
         Development.Shake
         Development.Shake.FilePath

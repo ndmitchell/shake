@@ -1,29 +1,17 @@
-{-# LANGUAGE CPP #-}
 module Development.Shake.Report
        ( buildReport -- :: String -> FilePath -> IO ()
        ) where
 import Text.StringTemplate as T
 
-import System.IO.Unsafe
 import System.FilePath
-
-#ifdef CABAL
 import Paths_shake
-#endif
 
--- | Path to extras directory so we can find the report template, etc.
-htmlDir :: FilePath
-#ifndef CABAL
-htmlDir = "./html"
-#else
-htmlDir = unsafePerformIO $ getDataFileName "html"
-{-# NOINLINE htmlDir #-}
-#endif
 
 -- | Generates an HTML report given some build system
 -- profiling data in JSON format.
 buildReport :: String -> FilePath -> IO ()
 buildReport json out = do
+  htmlDir <- getDataFileName "html"
   report  <- readFile $ htmlDir </> "report.html"
   bcss    <- readFile $ htmlDir </> "bootstrap.min.css"
   brcss   <- readFile $ htmlDir </> "bootstrap-responsive.min.css"
