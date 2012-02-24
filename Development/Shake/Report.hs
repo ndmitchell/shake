@@ -1,7 +1,8 @@
+{-# LANGUAGE PatternGuards #-}
 
 module Development.Shake.Report(buildReport) where
 
-import Text.StringTemplate as T
+import Control.Monad
 import System.FilePath
 import Paths_shake
 
@@ -11,20 +12,15 @@ import Paths_shake
 buildReport :: String -> FilePath -> IO ()
 buildReport json out = do
     htmlDir <- getDataFileName "html"
-    report  <- readFile $ htmlDir </> "report.html"
-    bcss    <- readFile $ htmlDir </> "bootstrap.min.css"
-    brcss   <- readFile $ htmlDir </> "bootstrap-responsive.min.css"
-    bjs     <- readFile $ htmlDir </> "bootstrap.min.js"
-    jquery  <- readFile $ htmlDir </> "jquery-1.6.4.min.js"
-    flot    <- readFile $ htmlDir </> "jquery.flot.min.js"
-    shakejs <- readFile $ htmlDir </> "shake.js"
+    report <- readFile $ htmlDir </> "report.html"
+    let f name | name == "data" = return json
+               | otherwise = readFile $ htmlDir </> name
+    writeFile out =<< runTemplate f report
 
-    let t = T.setAttribute "bootstrapcss" bcss
-          $ T.setAttribute "bootstraprcss" brcss
-          $ T.setAttribute "bootstrapjs" bjs
-          $ T.setAttribute "jquery" jquery
-          $ T.setAttribute "flot" flot
-          $ T.setAttribute "shakejs" shakejs
-          $ T.setAttribute "shakedump" json
-          $ T.newSTMP report :: StringTemplate String
-    writeFile out $ T.render t
+
+-- | Template Engine
+runTemplate :: Monad m => (String -> m String) -> String -> m String
+runTemplate ask ('$':'$':xs) = liftM ('$':) $ runTemplate ask xs
+runTemplate ask ('$':xs) | (name,_:rest) <- break (== '$') xs = liftM2 (++) (ask name) (runTemplate ask rest)
+runTemplate ask (x:xs) = liftM (x:) $ runTemplate ask xs
+runTemplate ask [] = return []

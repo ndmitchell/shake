@@ -77,4 +77,4 @@ hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (no
 cabalBuildDepends :: String -> [String]
 cabalBuildDepends _ = words $
     "base transformers binary unordered-containers hashable time old-time bytestring " ++
-    "filepath directory process deepseq random HStringTemplate"
+    "filepath directory process deepseq random"
