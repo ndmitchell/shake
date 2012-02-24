@@ -44,7 +44,7 @@ data ShakeOptions = ShakeOptions
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild (defaults to @1@).
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
-    ,shakeDump :: Maybe FilePath -- ^ Dump all profiling information in HTML form to file (defaults to 'Nothing').
+    ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     }
     deriving (Show,Eq,Ord,Typeable,Data)
@@ -249,8 +249,8 @@ run opts@ShakeOptions{..} rs = do
         when shakeLint $ do
             checkValid database stored
             when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
-        when (isJust shakeDump) $ do
-            let file = fromJust shakeDump
+        when (isJust shakeReport) $ do
+            let file = fromJust shakeReport
             json <- showJSON database
             output $ "Writing HTML report to " ++ file
             buildReport json file
