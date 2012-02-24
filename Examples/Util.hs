@@ -51,7 +51,7 @@ shaken test rules = do
                     Just op -> op o
                     Nothing | "threads" `isPrefixOf` x2 -> o{shakeThreads=read $ drop 7 x2}
                             | otherwise -> error $ "Don't know how to deal with flag: " ++ x
-            let opts = foldl' f shakeOptions{shakeFiles=out, shakeDump=Just "report.html"} flags
+            let opts = foldl' f shakeOptions{shakeFiles=out, shakeDump=Just $ "output/" ++ name ++ "/report.html"} flags
             shake opts $ rules args (out++)
 
 
