@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add ?>> operator, a generalisation of *>>
 0.2.8
     Rename shakeDump to shakeReport
     Add profile report generator

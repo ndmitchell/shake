@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Development.Shake.Files(
-    (*>>)
+    (?>>), (*>>)
     ) where
 
 import Control.DeepSeq
@@ -9,6 +9,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
 import Data.Hashable
+import Data.Maybe
 import Data.Typeable
 
 import Development.Shake.Core
@@ -16,7 +17,7 @@ import Development.Shake.File
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
 
-infix 1 *>>
+infix 1 ?>>, *>>
 
 
 newtype Files = Files [FilePath]
@@ -57,4 +58,39 @@ ps *>> act
                 return ()
         rule $ \(Files xs) -> if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
             act xs
+            liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, *>> failed to build the file:") xs
+
+
+-- | Define a rule for building multiple files at the same time, a more powerful
+--   and more dangerous version of '*>>'.
+--
+--   Given an application @test ?>> ...@, @test@ should return @Just@ if the rule applies, and should
+--   return the list of files that will be produced. This list /must/ include the file passed as an argument and should
+--   obey the invariant:
+--
+-- > test x == Just ys ==> x `elem` ys && all ((== Just ys) . test) ys
+--
+--   As an example of a function satisfying the invariaint:
+--
+-- > test x | takeExtension x `elem` [".hi",".o"]
+-- >        = Just [dropExtension x <.> "hi", dropExtension x <.> "o"]
+-- > test _ = Nothing
+--
+--   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
+(?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
+(?>>) test act = do
+    let checkedTest x = case test x of
+            Nothing -> Nothing
+            Just ys | x `elem` ys && all ((== Just ys) . test) ys -> Just ys
+                    | otherwise -> error $ "Invariant broken in ?>> when trying on " ++ x
+
+    isJust . checkedTest ?> \x -> do
+        apply1 $ Files $ fromJust $ test x :: Action FileTimes
+        return ()
+
+    rule $ \(Files xs@(x:_)) -> case checkedTest x of
+        Just ys | ys == xs -> Just $ do
+            act xs
             liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, multi rule failed to build the file:") xs
+        Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
+        Nothing -> Nothing
