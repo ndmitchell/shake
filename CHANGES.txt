@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Don't write report generation messages in Quiet mode
     Add ?>> operator, a generalisation of *>>
 0.2.8
     Rename shakeDump to shakeReport
