@@ -34,7 +34,7 @@ systemOutput path args = do
     putLoud cmd
     (res,stdout,stderr) <- traced ("system' " ++ cmd) $ readProcessWithExitCode path2 args ""
     when (res /= ExitSuccess) $
-        error $ "System command failed:\n" ++ cmd
+        error $ "System command failed:\n" ++ cmd ++ "\n" ++ stderr
     return (stdout, stderr)
 
 
