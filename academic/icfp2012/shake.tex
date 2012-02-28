@@ -280,7 +280,7 @@ data Result_m = Result_m
     }
 \end{code}
 
-|Result_m| contains the |Key| the action |created|, the |result| |Value|, and the |Time| when the result was |built|. We store all |Result_m| values between build runs, and skip rerunning a |Rule_m| if the result was built more recently than its dependencies. In common with \make{}, we assume the rule |action|s do not change between runs (see \S\ref{sec:changing_rules} for workarounds). To determine if we should skip, we require the result for this rules key from the previous build run (named |old|) and a way to demand results for this build run (named |ask|):
+|Result_m| contains the |Key| the action |created|, the |result| |Value|, and the |Time| when the result was |built|. We store all |Result_m| values between build runs in a database, and skip rerunning a |Rule_m| if the result was built more recently than its dependencies. In common with \make{}, we assume the rule |action|s do not change between runs (see \S\ref{sec:changing_rules} for workarounds). To determine if we should skip, we require the result for this rules key from the previous build run (named |old|) and a way to demand results for this build run (named |ask|):
 
 \h{.m}\begin{code}
 skip_m :: (Key -> Result_m) -> Result_m -> Rule_m -> Bool
@@ -291,7 +291,7 @@ The |skip_m| function returns |True| if the action for a rule does not need runn
 
 The \make{} approach of relying on modification times can fail if the system clock changes, or if a file has its modification time set to a time in the past (such as when extracting a backup). Therefore, instead of using the system time for |built|, we use the number of runs of this build system, incrementing |Time| each run. This approach guarantees that |Time| is monotonically increasing.
 
-A convenient property of the \make{} approach is that no additional data need be stored between runs, since the file system already stores modification times. In contrast, we must store the |Time| and |Result_m| values in some persistent data store (interestingly, an additional data store is required for many advanced build systems, see \S\ref{sec:related_work}). However, for some types of rules, such as when |Key|s are filenames and |Value|s are modification times, the |Value|s are stored in both the |Result_m| data store \textit{and} the file system. If an inconsistency is detected, we must discard our stored |Result_m|. To detect inconsistencies, we require the following function:
+A convenient property of the \make{} approach is that no additional data need be stored between runs, since the file system already stores modification times. In contrast, we must store the |Time| and |Result_m| values in a database (interestingly, an additional data store is required for many advanced build systems, see \S\ref{sec:related_work}). However, for some types of rules, such as when |Key|s are filenames and |Value|s are modification times, the |Value|s are stored in both the |Result_m| database \textit{and} the file system. If an inconsistency is detected, we must discard our stored |Result_m|. To detect inconsistencies, we require the following function:
 
 \begin{code}
 validStored :: Key -> Value -> Bool
@@ -440,7 +440,7 @@ apply1  :: Rule key value =>     key   -> Action    value
 
 The core interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|, and when defining a rule we can express dependencies with |apply|/|apply1|.
 
-We execute a set of rules with the |run| function, which also takes an options record. Typical options include which file to store the cached results (|shakeFiles|) and the number of processors to use (|shakeThreads|).
+We execute a set of rules with the |run| function, which also takes an options record. Typical options include which file to use for the database (|shakeFiles|) and the number of processors to use (|shakeThreads|).
 
 Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with any value stored externally (\S\ref{sec:minimal_rebuilds}). Each |key| and |value| type must also be a member of several type classes:
 
@@ -455,7 +455,7 @@ Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class
 
 Most rules are defined with |rule|, whose argument is a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the action necessary to build the associated |value|. Compared to the theory from \S\ref{sec:theory}, |rule| can be thought of as defining a rule template, which matches a potentially infinite number of |key|s, allowing us to represent an infinite number of rules with a finite number of calls to |rule|. If two rules match the same key then an error is raised. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no |rule|s match (see \S\ref{sec:file_rules}). Instead of defining targets to build, we use |action| to specify actions that are always run, which typically call |apply|.
 
-The |Rules| type is a commutative |Monoid|, allowing two sets of rules to be joined to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| offers a very natural way to define a set of rules, allowing a set of rules to be introduced with |do| and then simply written below each other. To support a |Monad| instance for |Rules| we add an additional type parameter |alpha| (almost always instantiated to |()|) and make |(>>)| join two sets of rules.
+The |Rules| type is a commutative |Monoid|, allowing two sets of rules to be joined to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| offers a very natural way to define rules, allowing a set of rules to be introduced with |do| and then simply written below each other. To support a |Monad| instance for |Rules| we add an additional type parameter |alpha| (almost always instantiated to |()|) and make |(>>)| join two sets of rules.
 
 To define actions we use the |Action| type, which has a |Monad| instance to allow actions to be executed sequentially. The |Action| type has an instance for |MonadIO|, allowing users to call arbitrary |IO| functions using |liftIO| to translate \h{type}|IO alpha| to \h{type}|Action alpha|. Dependencies can be expressed using the function |apply1| which takes a |key|, ensures the |key| is built, and returns the associated |value|. The |apply| function can be thought of as |mapM apply1|, but may build the necessary |key|s in parallel (\S\ref{sec:parallelism}).
 
@@ -577,7 +577,7 @@ shake opts rules = run opts $ do
 
 In addition to the directory and file rules, we also include rules that query the existence of files, always force a rule to rerun, store arbitrary configuration data in a tracked manner and build multiple files in one action. All these rules are defined similarly to the directory and file rules.
 
-The astute reader may be wondering why we can't move |defaultRule| into the |Rule| type class, and eliminate this wrapper. Alas, that solution doesn't work because we need explicit rules of each type to deserialise dynamically typed values (for full details see \S\ref{sec:dynamically_typed}).
+The astute reader may be wondering why we can't specify default rules as an additional member in the |Rule| type class, allowing the default rule to be found using the types, and avoiding the need for the |shake| wrapper around |run|. Alas, that solution doesn't work because we need explicit rules of each type to deserialise dynamically typed values (for full details see \S\ref{sec:dynamically_typed}).
 
 \subsection{Additional Functions}
 \label{sec:derived}
@@ -671,7 +671,7 @@ In addition to performing builds, Shake provides features to help build system a
 
 Build systems using the theory from \S\ref{sec:theory} obtain dependencies using the |Depends| constructor, and cannot use a dependency without explicitly requesting it. However, practical build systems must integrate with IO (\S\ref{sec:user_view}), where dependencies are not always explicit. One build action can store some IO state (e.g. create a file), and another action can use that state (e.g. read the file) without a tracked dependency, leading to inconsistent builds. We have identified three requirements Shake build systems must follow:
 
-\paragraph{Requirement 1} If an IO action makes use of some IO state, then the rule must depend on that IO state. As an example, if a rule runs the copy command @cp from to@, then the rule must depend on @from@. In practice, we weaken this requirement in two ways. Firstly, we allow modification times to be stored as a proxy for the contents of a file, which is safe assuming any changes to a file result in changes to its modification time. Secondly, we only track file system changes within a specified directory (the users project), allowing the rule calling @cp@ to omit the dependency on the @cp@ executable, which is rarely of interest.
+\paragraph{Requirement 1} If an IO action makes use of some IO state, then the rule must depend on that IO state. As an example, if a rule runs the copy command @cp from to@, then the rule must depend on @from@. In practice, we weaken this requirement in two ways. Firstly, we allow modification times as a proxy for the contents of a file, which is safe assuming any changes to a file result in changes to its modification time. Secondly, we only track file system changes within a specified directory (the users project), allowing the rule calling @cp@ to omit the dependency on the @cp@ executable, which is rarely of interest.
 
 \paragraph{Requirement 2} If an IO action makes use of some IO state that is modified by the build system, then the rule must depend on that IO state \textit{before} performing the IO action. As an example, if a rule runs @cp from to@, and @from@ is generated by the build system, then the dependency on @from@ must be given before running @cp@. Looking at the build system in \S\ref{sec:c_example}, this build system first calls \prog{gcc} on the source files, then calls |need|, ensuring the header files are all dependencies (requirement 1 is satisfied). However, if we generate one of the header files, requirement 2 is violated because the |need| call comes after the first use -- we show how to solve this problem in \S\ref{sec:transitive}.
 
@@ -697,7 +697,7 @@ Shake records two separate pieces of profiling information.
 traced :: String -> IO alpha -> Action alpha
 \end{code}
 
-\noindent All actions run by |traced| are stored along with with a human readable message (the first argument), the key being built, and the start and end times. We automatically call |traced| when running system commands. If we examine traced actions from a single run, we can determine how many traced actions were executing at each point in time -- allowing us to produce a parallelism graph as shown in Figure \ref{fig:profile}.
+\noindent All actions run by |traced| are recorded along with with a human readable message (the first argument), the key being built, and the start and end times. We automatically call |traced| when running system commands. If we examine traced actions from a single run, we can determine how many traced actions were executing at each point in time -- allowing us to produce a parallelism graph as shown in Figure \ref{fig:profile}.
 
 \smallskip\smallskip
 
