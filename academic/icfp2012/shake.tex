@@ -303,10 +303,8 @@ To achieve minimal rebuilds with |Rule_m| we rely on having the dependencies ava
 
 \h{.s}\begin{code}
 data Result_s = Result_s
-    {  created  :: Key
-    ,  result   :: Value
-    ,  built    :: Time
-    ,  depends  :: [Key]
+    {  created :: Key, result :: Value, built :: Time
+    ,  depends :: [Key]
     }
 
 skip_s ask old r = all ((<= built old) . built . ask) (depends old)
@@ -323,11 +321,8 @@ Instead of storing just the |built| time, we also store the |changed| time -- wh
 
 \h{.s2}\begin{code}
 data Result_s = Result_s
-    {  created  :: Key
-    ,  result   :: Value
-    ,  built    :: Time
-    ,  depends  :: [Key]
-    ,  changed  :: Time
+    {  created :: Key, result :: Value, built :: Time, depends :: [Key]
+    ,  changed :: Time
     }
 
 skip_s ask old r =
@@ -400,7 +395,6 @@ data  ShakeOptions = ShakeOptions
       ,  shakeThreads  :: Int
       {-" ,  \ldots"-}
       }
-
 shakeOptions = ellipses -- default set of options
 
 data Rules alpha
@@ -636,7 +630,7 @@ Our implementation of the |build| function takes 100 lines of Haskell. When impl
 
 \begin{figure}
 \begin{center}
-\includegraphics[scale=0.6]{states.eps}
+\includegraphics[scale=0.55]{states.eps}
 \end{center}
 \caption{Building state transitions.}
 \label{fig:states}
@@ -719,13 +713,17 @@ Our approach to analysing the database is to define queries which allow end user
 \subsection{Profiling and Analysis}
 
 \begin{figure}
+\begin{center}
 \includegraphics[scale=0.7,angle=270]{profile.eps}
+\end{center}
 \caption{Build parallelism.}
 \label{fig:profile}
 \end{figure}
 
 \begin{figure}
-\includegraphics[scale=0.5]{layout.eps}
+\begin{center}
+\includegraphics[scale=0.41]{layout.eps}
+\end{center}
 \caption{Dependency graph.}
 \label{fig:analysis}
 \end{figure}
@@ -927,7 +925,7 @@ The Ninja build system \cite{ninja} is designed as a two-stage build system -- u
 
 % http://gittup.org/tup/build_system_rules_and_algorithms.pdf
 
-The Tup build system \cite{tup} is designed as an incremental build system. Tup has a similar dependency structure to \make{}, but a significantly different implementation. Instead of scanning all dependencies, it expects the operating system to supply a list of changed files, avoiding the overhead of checking which files have changed. For large build systems the result can be a significant speed improvement if there are only a few files to rebuild. We believe a similar implementation strategy could be applied to Shake.
+The Tup build system \cite{tup} is designed as an incremental build system. Tup has a similar dependency structure to \make{}, but a significantly different implementation. Instead of scanning all dependencies, it expects the operating system to supply a list of changed files, avoiding the overhead of checking which files have changed. For large build systems the result can be a significant speed improvement when rebuilding only a few files. We believe a similar implementation strategy could be applied to Shake.
 
 Another difference from \make{} is the treatment of dead build results. If a rule to build \file{foo} is deleted from the rule list, then Tup automatically deletes the file \file{foo}. The problem of dead build results is serious, resulting in builds succeeding that should have failed, and that will fail as soon as a clean build is performed (to reduce this risk, we suggest an overnight build which starts from scratch). However, it is often useful to have build modes which generate skeleton files which are then modified by the user -- deleting these files would be most unwelcome. It would be easy to add support for deleting dead build results to Shake, but we choose not to.
 
@@ -974,7 +972,7 @@ While we have optimised our build algorithms, saving the database is a noticeabl
 
 The \make{} tool has been ubiquitous for the last thirty years, specifying dependencies in advance and defining actions with shell scripting and a macro system. With Shake we offer more powerful dependencies, coupled with the Haskell language for defining actions. The dependencies allow more complex build systems to be specified in a more direct manner, while the use of Haskell allows abstraction and reuse. We hope these advantages are powerful enough to tempt many developers to consider Shake.
 
-\subsection*{Acknowledgements}
+\paragraph{Acknowledgements}
 
 Thanks to Standard Chartered, where Shake was initially developed, and to Raphael Montelatici for the name Shake. Thanks to Max Bolingbroke and Evan Laforge for many discussions about build systems. Thanks to S\"{o}nke Hahn, Evan Laforge, Roman Leshchinskiy and Raphael Montelatici for comments on drafts of this paper.
 
