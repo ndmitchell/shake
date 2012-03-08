@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve the documentation for withResource
     Fix the unordered-containers constraint, was too loose
     Don't write report generation messages in Quiet mode
     Add ?>> operator, a generalisation of *>>

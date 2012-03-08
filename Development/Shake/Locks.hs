@@ -82,7 +82,11 @@ waitBarrier (Barrier x) = readMVar x
 --  @
 --
 --   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
---   is better than 'MVar' as it will not block any other threads from executing.
+--   is better than 'MVar' as it will not block any other threads from executing. Be careful that the
+--   actions run within 'Development.Shake.withResource' do not themselves require further quantities of this resource, or
+--   you may get a \"thread blocked indefinitely in an MVar operation\" exception. Typically only
+--   system commands (such as 'Development.Shake.system'') will be run inside 'Development.Shake.withResource',
+--   not commands such as 'Development.Shake.need'.
 --
 --   As another example, calls to compilers are usually CPU bound but calls to linkers are usually
 --   disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit
