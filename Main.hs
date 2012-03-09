@@ -13,6 +13,7 @@ import qualified Examples.Test.Errors as Errors
 import qualified Examples.Test.Files as Files
 import qualified Examples.Test.FilePath as FilePath
 import qualified Examples.Test.Pool as Pool
+import qualified Examples.Test.Random as Random
 import qualified Examples.Test.Resources as Resources
 
 
@@ -21,7 +22,8 @@ fakes = ["clean" * clean, "test" * test]
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "directory" * Directory.main, "errors" * Errors.main
-        ,"filepath" * FilePath.main, "files" * Files.main, "pool" * Pool.main, "resources" * Resources.main]
+        ,"filepath" * FilePath.main, "files" * Files.main, "pool" * Pool.main, "random" * Random.main
+        ,"resources" * Resources.main]
     where (*) = (,)
 
 
@@ -49,4 +51,4 @@ clean = sequence_ [withArgs [name,"clean"] main | (name,main) <- mains]
 
 
 test :: IO ()
-test = sequence_ [withArgs [name,"test"] main | (name,main) <- mains]
+test = sequence_ [withArgs [name,"test"] main | (name,main) <- mains, name /= "random"]
