@@ -107,7 +107,7 @@ executable shake
         Examples.C.Main
         Examples.Self.Main
         Examples.Tar.Main
-        Examples.Test.Basic1
+        Examples.Test.Basic
         Examples.Test.Directory
         Examples.Test.Errors
         Examples.Test.FilePath

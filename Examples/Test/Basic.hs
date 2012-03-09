@@ -1,5 +1,5 @@
 
-module Examples.Test.Basic1(main) where
+module Examples.Test.Basic(main) where
 
 import Development.Shake
 import Examples.Util
