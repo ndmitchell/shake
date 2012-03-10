@@ -3,15 +3,19 @@ module Examples.Test.Random(main) where
 
 import Development.Shake
 import Examples.Util
+import Control.Exception
 import Control.Monad
+import Data.List
 import System.Random
+import System.Mem
+
 
 inputRange = [1..10]
 
 data Value = Single Int | Multiple [[Value]]
     deriving (Read,Show,Eq)
 
-data Source = Input Int | Output Int
+data Source = Input Int | Output Int | Bang
     deriving (Read,Show)
 
 data Logic = Logic Int [[Source]]
@@ -22,6 +26,7 @@ data Logic = Logic Int [[Source]]
 main = shaken test $ \args obj -> do
     let toFile (Input i) = obj $ "input-" ++ show i ++ ".txt"
         toFile (Output i) = obj $ "output-" ++ show i ++ ".txt"
+        toFile Bang = error "BANG"
 
     let randomSleep = liftIO $ do
             i <- randomRIO (0, 25)
@@ -40,6 +45,7 @@ main = shaken test $ \args obj -> do
 
 test build obj = forM_ [1..] $ \count -> do
     putStrLn $ "* PERFORMING RANDOM TEST " ++ show count
+    performGC -- close any handles left by crashing
     build ["clean"]
     build [] -- to create the directory
     forM inputRange $ \i ->
@@ -50,6 +56,16 @@ test build obj = forM_ [1..] $ \count -> do
     forM chng $ \i ->
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single $ negate i
     runLogic chng logic
+    forM inputRange $ \i ->
+        writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
+    logic <- addBang =<< addBang logic
+    j <- randomRIO (1::Int,6)
+    res <- try $ build $ ("--threads" ++ show j) : map show (logic ++ [Want [i | Logic i _ <- logic]])    
+    case res of
+        Left err
+            | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
+            | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
+        _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuild
     where
         runLogic :: [Int] -> [Logic] -> IO ()
         runLogic negated xs = do
@@ -71,6 +87,19 @@ test build obj = forM_ [1..] $ \count -> do
                 got <- fmap read $ readFile $ obj $ "output-" ++ show i ++ ".txt"
                 when (wanted /= got) $
                     error $ "INCORRECT VALUE for " ++ show i
+
+
+addBang :: [Logic] -> IO [Logic]
+addBang xs = do
+    i <- randomRIO (0, length xs - 1)
+    let (before,now:after) = splitAt i xs
+    now <- f now
+    return $ before ++ now : after
+    where
+        f (Logic log xs) = do
+            i <- randomRIO (0, length xs)
+            let (before,after) = splitAt i xs
+            return $ Logic log $ before ++ [Bang] : after
 
 
 randomLogic :: IO [Logic] -- only Logic constructors
