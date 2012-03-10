@@ -65,7 +65,7 @@ test build obj = forM_ [1..] $ \count -> do
         Left err
             | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
             | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
-        _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuild
+        _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
     where
         runLogic :: [Int] -> [Logic] -> IO ()
         runLogic negated xs = do
