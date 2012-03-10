@@ -59,7 +59,7 @@ test build obj = forM_ [1..] $ \count -> do
     forM inputRange $ \i ->
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
     logic <- addBang =<< addBang logic
-    j <- randomRIO (1::Int,6)
+    j <- randomRIO (1::Int,8)
     res <- try $ build $ ("--threads" ++ show j) : map show (logic ++ [Want [i | Logic i _ <- logic]])    
     case res of
         Left err
@@ -75,7 +75,7 @@ test build obj = forM_ [1..] $ \count -> do
                 i <- randomRIO (0, 5)
                 replicateM i $ randomElem poss
             sleepFileTime
-            j <- randomRIO (1::Int,6)
+            j <- randomRIO (1::Int,8)
             build $ ("--threads" ++ show j) : map show (xs ++ map Want wants)
 
             let value i = case [ys | Logic j ys <- xs, j == i] of
@@ -104,7 +104,7 @@ addBang xs = do
 
 randomLogic :: IO [Logic] -- only Logic constructors
 randomLogic = do
-    rules <- randomRIO (1,25)
+    rules <- randomRIO (1,100)
     f rules $ map Input inputRange
     where
         f 0 avail = return []
