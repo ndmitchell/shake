@@ -183,7 +183,7 @@ This rule describes how to build \file{result.tar}. We depend on (|need|) the fi
 
 The key difference from \make{} (and nearly all other build tools) is that rather than specifying all dependencies \textit{in advance}, we allow further dependencies to be specified \textit{after} examining the results of previous dependencies. This difference is crucial to accurately describe many dependency relationships.
 
-Consider the problem of dependencies stemming from files included by a C source file. Many build tools require these dependencies to be specified manually. Some build tools allow two separate phases, where dependencies are computed (by scanning the files) before the build starts. But if the build system generates C files and then compiles them, even a two phase system is insufficient, as the generated files are not available during the first phase. Our build tool has no such limitations -- it is able to easily handle generated files, even generated files which are only necessary due to being included by other generated files.
+Consider the problem of dependencies stemming from files included by a C source file. Some build tools require these dependencies to be specified manually. Other build tools allow two separate phases, where dependencies are computed before the build starts. But if the build system generates C files and then compiles them, even a two phase system is insufficient, as the generated files are not available during the first phase. Our build tool has no such limitations -- it is able to easily handle generated files, even generated files which are only necessary due to being included by other generated files.
 
 \subsection{Contributions}
 
@@ -208,7 +208,7 @@ While \make{} is heavily file and IO based, we choose to model the dependencies 
 build :: Set Rule -> Key -> Value
 \end{code}
 
-The |build| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to building only one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished key whose rule depends on the original targets and returns their values, and then use that key as the target.
+The |build| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to building only one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished key whose rule depends on the original targets and returns their values, and then use that key as the new target.
 
 Using |build|, we can model \make{} with the |Rule| type:
 
@@ -230,8 +230,8 @@ data  Rule_s = Rule_s
       ,  action   :: Action
       }
 
-data Action  =  Depends Key (Value -> Action)
-             |  Finished Value
+data Action  =  Finished Value
+             |  Depends Key (Value -> Action)
 \end{code}
 
 A Shake |Rule| (|Rule_s|) can be modelled as the |Key| it |creates|, and the |action| that creates the result. The |Action| either returns the |Finished| |Value|, or requires a new dependency with |Depends| -- specifying the |Key| it depends on, plus a function that takes the |Value| of that |Key| and produces a new |Action|.
@@ -262,12 +262,12 @@ Starting at the |target| |Key|, we find the |action| from the associated |Rule_s
 \subsection{Minimal Rebuilds}
 \label{sec:minimal_rebuilds}
 
-The build functions in the previous section may evaluate one rule many times during a single run, but real build systems should minimise the number of rules run. In a single build run, any rules action should be performed at most once -- a property that is easy to guarantee with a simple cache. Additionally, if a rules dependencies have not changed since the last time it was run, the rule should not be rerun. In this section we first describe how to avoid repeating rules whose dependencies have not changed using |Rule_m|, enhancing the scheme followed by \make{}, and then apply the same ideas to |Rule_s|.
+The build functions in the previous section may evaluate one rule many times during a single run, but real build systems should minimise the number of rules run. In a single build run, any rule should be run at most once -- a property that is easy to guarantee with a simple cache. Additionally, if a rules dependencies have not changed since the last time it was run, the rule should not be rerun. In this section we describe how to avoid repeating |Rule_m| rules whose dependencies have not changed, enhancing the scheme followed by \make{}, then apply the same ideas to |Rule_s|.
 
 \subsubsection{Minimal Rebuilds with |Rule_m|}
 \label{sec:cached_make}
 
-To avoid repeating rules whose dependencies have not changed, \make{} does not run any rules where the dependent files have older modification times than the result file. We use a similar scheme, adapted to work on arbitrary |Key|/|Value| types. Whenever a rule is run, we create a |Result_m|:
+To avoid repeating rules whose dependencies have not changed, \make{} does not run any rules where the dependent files have older modification times than the result file. We use a similar scheme, adapted for arbitrary |Key|/|Value| types. Whenever a rule is run, we create a |Result_m|:
 
 \h{.m}\begin{code}
 data Result_m = Result_m
@@ -277,11 +277,11 @@ data Result_m = Result_m
     }
 \end{code}
 
-|Result_m| contains the |Key| the rule |created|, the |result| |Value|, and the |Time| when the result was |built|. We store all |Result_m| values between build runs in a database, and skip rerunning a |Rule_m| if the result was built more recently than its dependencies. In common with \make{}, we assume the rules do not change between runs (see \S\ref{sec:changing_rules} for workarounds). To determine if we should skip, we require the result for this rules key from the previous build run (named |old|) and a way to demand results for this build run (named |ask|):
+|Result_m| contains the |Key| the rule |created|, the |result| |Value|, and the |Time| when the result was |built|. We store all |Result_m| values between build runs using a database, and skip rerunning a |Rule_m| if the result was built more recently than its dependencies. In common with \make{}, we assume the rules do not change between runs (see \S\ref{sec:changing_rules} for workarounds). To determine if we should skip, we require the result for this rules key from the previous build run (named |old|) and a way to demand results for this build run (named |ask|):
 
 \h{.m}\begin{code}
-skip_m :: (Key -> Result_m) -> Result_m -> Rule_m -> Bool
-skip_m ask old r = all ((<= built old) . built . ask) (depends r)
+skip_m :: Result_m -> (Key -> Result_m) -> Rule_m -> Bool
+skip_m old ask r = all ((<= built old) . built . ask) (depends r)
 \end{code}
 
 The |skip_m| function returns |True| if a rule does not need running. We require the results for all dependencies, then check that they were built before this rule was last run.
@@ -307,7 +307,7 @@ data Result_s = Result_s
     ,  depends :: [Key]
     }
 
-skip_s ask old r = all ((<= built old) . built . ask) (depends old)
+skip_s old ask r = all ((<= built old) . built . ask) (depends old)
 \end{code}
 
 Compared to |skip_m|, we have made one small change -- instead of using \h{.s}|depends r|, we use \h{.s}|depends old|. For the stored |depends| to be valid we rely on the rules |action| not changing, and that the |action| is pure (see \S\ref{sec:lint} for necessary restrictions when we allow IO actions). With this modification we are able to ensure minimal rebuilds using |Rule_s|. We still require the |validStored| check from the previous section.
@@ -325,7 +325,7 @@ data Result_s = Result_s
     ,  changed :: Time
     }
 
-skip_s ask old r =
+skip_s old ask r =
     all ((<= built old) . changed . ask) (depends old)
 \end{code}
 
@@ -431,7 +431,7 @@ apply1  :: Rule key value =>     key   -> Action    value
 
 The core interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|, and when defining a rule we can express dependencies with |apply|/|apply1|.
 
-We execute a set of rules with the |run| function, which also takes an options record. Typical options include which file to use for the database (|shakeFiles|) and the number of processors to use (|shakeThreads|).
+We execute a set of rules using the |run| function, which also takes an options record. Typical options include which file to use for the database (|shakeFiles|) and the number of processors to use (|shakeThreads|).
 
 Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with any value stored externally (\S\ref{sec:minimal_rebuilds}). Each |key| and |value| type must also be a member of several type classes:
 
@@ -453,7 +453,7 @@ To define actions we use the |Action| type, which has a |Monad| instance to allo
 \subsection{Wildcard File Patterns}
 \label{sec:file_pattern}
 
-The \make{} tool supports the syntax \textsf{\%.c} to match any files ending with \file{.c}. We define a similar notation, allowing |"*"| to match any part of a filename, and |"//"| to match any number of directories, using the definitions:
+The \make{} tool supports the syntax \textsf{\%.c} to match any files ending with \file{.c}. We define a similar notation, allowing |"*"| to match any part of a filename and |"//"| to match any number of directories, using the definitions:
 
 \begin{code}
 type FilePattern = String
@@ -545,11 +545,11 @@ defaultFile = defaultRule $ \(File x) -> Just $ do
 \label{fig:file_rules}
 \end{figure}
 
-While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could either be modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds using the \prog{touch} command is highly convenient. Of course, our design allows anyone to define a new file rule, based on file content hashes.
+While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could be either modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds using the \prog{touch} command is highly convenient. Of course, our design allows anyone to define a new type of file rule, based on file content hashes.
 
 We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action adds a dependency on all the modification times of the files, and is typically used before performing some IO action that uses the files. We define |want| to specify targets, implemented as |need| run by |action|.
 
-We define |defaultFile| as a rule that checks if the file is already present, and if so uses it. Source files will have no associated rules to build them, so this rule just records their modification time. If a file has no rules (since any rules would be run in preference to the default rule), and does not exist, we raise an error. As with |defaultDir|, anyone using |want|/|need| should include |defaultFile| in their rule set.
+We define |defaultFile| as a rule that checks if the file already exists, and if so uses it. Source files will have no associated rules to build them, so this rule just records their modification time. If a file has no rules (since any rules would be run in preference to the default rule), and does not exist, we raise an error. As with |defaultDir|, anyone using |want|/|need| should include |defaultFile| in their rule set.
 
 We define new file rules using |(?>)|, which takes a predicate to match against the file name and an action to run. This function ensures the correct |key|/|value| types, and obtains the modification time afterwards. Before running the action we create the directory containing the output file, an idea taken from the Ninja build system \cite{ninja}. We found that when running a large set of newly written rules, often one rule would create the output directory while another did not -- meaning some rule execution orderings worked while others failed. Automatically creating the output directory removes this source of failure.
 
@@ -636,9 +636,9 @@ Our implementation of the |build| function takes 100 lines of Haskell. When impl
 \label{fig:states}
 \end{figure}
 
-For an implementation of |build| to be correct, it must always execute enough rules to ensure all results are correct, but never execute rules that could have been safely skipped. We satisfy these constraints with the status transition diagram in Figure \ref{fig:states}. At the start of a build run all keys are either |Loaded| or |Missing|, and after calling |build| on a key, it is either |Ready| or |Error|. We use |Checking| for keys that are being checked to see if they are correct or need rebuilding, and |Building| for rules that are currently being built. If a key is |Missing| and is required we have no choice but to start |Building| it. After |Building| a key, the action will either complete successfully making the result |Ready|, or fail producing an |Error|.
+For an implementation of |build| to be correct, it must always execute enough rules to ensure all results are correct, but never execute rules that could have been safely skipped. We satisfy these constraints with the status transition diagram in Figure \ref{fig:states}. At the start of a build run all keys are either |Loaded| or |Missing|, and after calling |build| on a key, it is either |Ready| or |Error|. We use |Checking| for keys that are being checked to see if they can be skipped, and |Building| for rules that are currently being built. If a key is |Missing| and is required we have no choice but to start |Building| it. After |Building| a key, the action will either complete successfully making the result |Ready|, or fail producing an |Error|.
 
-Most of the complexity of |build| comes from the |Checking| state, which is necessary to support unchanging results (\S\ref{sec:unchanging_results}). When checking a key there are two possibilities -- either the check succeeds and the result is |Ready|, or the check fails and we start |Building| it. We first check the stored result using |validStored|, failing the check if the result is no longer valid. We then |build| each dependency in order, and fail the check if the dependency is |Error|, or if it has changed since we built this key. If all dependencies are checked successfully, we transition to |Ready|, without running the rule.
+Most of the complexity of |build| comes from the |Checking| state, which is necessary to support unchanging results (\S\ref{sec:unchanging_results}). When checking a key there are two possibilities -- either the check succeeds and the result is |Ready|, or the check fails and we start |Building| it. We first check the stored result using |validStored|, failing the check if the result is no longer valid. We then |build| each dependency in order, and fail the check if any dependency is |Error|, or has changed since we last built this key. If all dependencies are checked successfully, we transition to |Ready|, without running the rule.
 
 To support unchanging results, it is necessary to build dependencies \textit{before} running the rule requiring them. However, if the build system has been modified, and the rule no longer requires its previous dependencies, the dependencies may be built but not used. As a consequence, even if a key ends up in the |Error| state, the build may still complete successfully. To reduce the possibility of building many redundant keys we always check the dependencies of a rule in the order they were required, ensuring that if the rules are deterministic and have not been modified then all executed rules will be used.
 
@@ -647,9 +647,9 @@ To support unchanging results, it is necessary to build dependencies \textit{bef
 
 When implementing |build| there are two separate efficiency goals. If no rules need to be run (a common case), |build| should strive for low overhead, as the time taken by |build| is likely to be a significant proportion of the total time. If rules do need running, |build| should start the rules as early as possible, to maximise parallelism. In order to expose parallelism we make |build| take a set of keys, and store |depends| as \h{type}|[[Key]]| instead of just \h{type}|[Key]| -- where each item comes from one call to |apply|.
 
-In some ways the goals of low overhead and high parallelism are in conflict -- the first is best served by being single threaded (avoiding locks and thread contention), while the second suggests spawning many threads whenever we encounter a set of activities that could potentially be run in parallel. Our solution is to use a thread pool for running rules, a single lock to protect the state (no fine-grained locking) and a mutex for each |Checking|/|Building| state to allow other threads wait for a result to become available. The |build| function takes the lock and, on a single thread, performs as many transitions as it can without waiting on any mutex or running any rules. Any waiting is performed after the state lock has been released, and any rules are run by adding them to a thread pool and waiting for the result. By using a thread pool we obtain high levels of parallelism, and by having a single state lock we can perform a build requiring no rules to be run with no thread contention.
+In some ways the goals of low overhead and high parallelism are in conflict -- the first is best served by being single threaded (avoiding locks and thread contention), while the second suggests spawning many threads whenever we encounter a set of activities that could potentially be run in parallel. Our solution is to use a thread pool for running rules, a single lock to protect the state (no fine-grained locking) and a mutex for each |Checking|/|Building| state to allow other threads to wait for a result to become available. The |build| function takes the lock and, on a single thread, performs as many transitions as it can without waiting on a mutex or running any rules. Any waiting is performed after the state lock has been released, and any rules are run by adding them to a thread pool and waiting for the result. By using a thread pool we obtain high levels of parallelism, and by having a single state lock we can perform a build requiring no rules to be run with no thread contention.
 
-Our thread pool obeys the |shakeThreads| flag (Figure \ref{fig:shake_core}), ensuring no more than a given maximum number of rules run in parallel. The thread pool is based around a pool of workers. If a new task is added to the pool, and less than |shakeThreads| workers are active, a new thread is spawned, otherwise it is queued until a worker completes. When a rule is blocked in |build|, waiting for dependencies to become available, we notify the thread pool to temporarily spawn another worker, ensuring maximum parallelism.
+Our thread pool obeys the |shakeThreads| setting (Figure \ref{fig:shake_core}), ensuring no more than a given maximum number of rules run in parallel. The thread pool is based around a pool of workers. If a new task is added to the pool, and less than |shakeThreads| workers are active, a new thread is spawned, otherwise it is queued until a worker completes. When a rule is blocked in |build|, waiting for dependencies to become available, we notify the thread pool to temporarily spawn another worker, ensuring maximum parallelism.
 
 In order to reduce contention between processes, we run tasks added to the thread pool in a \textit{random} order. Often different build rules require different resources -- for example a compiler uses a lot of CPU while a linker does a lot of disk access. Running tasks in a deterministic order has the potential to always run all compilers followed by all linkers, resulting in lots of resource contention between different processes. A random ordering avoids the worst case scenario, and gives a noticeable speedup -- up to 20\% for some real build systems.
 
@@ -673,7 +673,7 @@ Build systems using the theory from \S\ref{sec:theory} obtain dependencies using
 \smallskip\smallskip
 \noindent Requirement 3 is simple to check -- after building we run |validStored| on all |Ready| results in the database (\S\ref{sec:parallelism}). We have implemented this feature as an option to Shake.
 
-To check requirements 1 and 2 requires knowing which IO state is used by an IO action. For simple IO actions (e.g. |readFile|) it is easy to determine which IO state will be used, but these simple actions can usually be wrapped to provide versions which are safe by definition (e.g. |readFile'|, \S\ref{sec:derived}). For more complex IO actions, in particular the |system'| command, determining the dependencies in advance is impossible to do in a general way. The only practical approach is to \textit{trace} which IO state is used, using a system tracing mechanism (such as @strace@). File system tracing (such as @inotify@ or checking file last-access times) can provide an approximation of which IO state is used, but cannot determine if the existence of a file is tested.
+To check requirements 1 and 2 requires knowing which IO state is used by an IO action. For simple IO actions (e.g. |readFile|) it is easy to determine which IO state will be used, but these simple actions can usually be wrapped to provide versions which are safe by construction (e.g. |readFile'|, \S\ref{sec:derived}). For more complex IO actions, in particular the |system'| command, determining the dependencies in advance is impossible to do in a general way. The only practical approach is to \textit{trace} which IO state is used, using a system tracing mechanism (such as @strace@). File system tracing (such as @inotify@ or checking file last-access times) can provide an approximation of which IO state is used, but cannot determine if the existence of a file is tested.
 
 The challenge when tracing IO state is cross-platform portability. Our first attempt was based around file last-access times, but on modern versions of Windows access times are turned off by default (but can be turned back on by an administrator), only accurate to one second (solvable by adding a one second delay after each IO action), and buffered for up to one hour (no feasible solution). There are no cross-platform tracing libraries, but other build systems which rely on tracing have been able to hook system libraries on Windows \cite{tup}, requiring 2000 lines of C code (more than the total size of Shake). We believe their approach could be reused in Shake, but licensing restrictions prevent us from reusing their code directly.
 
@@ -895,7 +895,7 @@ We can solve these problems by using the rule for \file{*.c.o} from Figure \ref{
 
 \begin{itemize}
 \item The \file{*.c.o} rule depends on the associated \file{.deps} file (ensuring it is up to date) and then depends on its contents.
-\item The \file{*.deps} rule takes the \file{.dep} file, and all the \file{.deps} that points at, producing the transitive dependencies of its immediate dependencies. This rule can be used to find the transitive dependencies of anything with \file{.dep} rules, for example with Haskell files it would produce the set of files required for linking (namely the transitive dependencies of the imports).
+\item The \file{*.deps} rule takes the \file{.dep} file, and all the \file{.deps} it points at, producing the transitive dependencies of its immediate dependencies. This rule can be used to find the transitive dependencies of anything with \file{.dep} rules, for example with Haskell files it would produce the set of files required for linking (namely the transitive dependencies of the imports).
 \item The \file{*.c.dep}/\file{*.h.dep} rule takes a source file and finds all one-level dependencies by scanning for lines starting with @#include@. This rule makes a number of assumptions about the structure of the C files which are not true in general. In particular, it assumes that includes are not skipped by @#ifdef@ commands, that there is no extra whitespace, and that local includes are quoted while system includes use angle brackets. These assumptions can be relaxed, but are sufficient for many projects.
 \end{itemize}
 
