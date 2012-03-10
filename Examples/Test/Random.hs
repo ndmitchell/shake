@@ -30,11 +30,12 @@ main = shaken test $ \args obj -> do
     forM_ (map read args) $ \x -> case x of
         Want xs -> want $ map (toFile . Output) xs
         Logic out srcs -> toFile (Output out) *> \out -> do
-            randomSleep
-            res <- forM srcs $ \src -> do
+            res <- fmap (show . Multiple) $ forM srcs $ \src -> do
+                randomSleep
                 need $ map toFile src
                 mapM (liftIO . fmap read . readFile . toFile) src
-            writeFileChanged out $ show $ Multiple res
+            randomSleep
+            writeFileChanged out res
 
 
 test build obj = forM_ [1..] $ \count -> do
