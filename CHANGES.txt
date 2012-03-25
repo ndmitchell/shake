@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow transformers-0.3.*
     Add a random script generator and tester
     Improve the documentation for withResource
     Fix the unordered-containers constraint, was too loose
