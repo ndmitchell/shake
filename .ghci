@@ -3,6 +3,7 @@
 :load Main Paths
 
 :def test const $ return ":main test"
+:def test_random const $ return ":main random test"
 
 :def docs_ const $ return $ unlines [":!cabal configure",":!cabal haddock"]
 :def docs const $ return $ unlines [":docs_",":!start dist\\doc\\html\\shake\\Development-Shake.html"]
