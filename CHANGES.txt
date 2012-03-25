@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.2.9
     Require unordered-containers 2.1 or higher, fixes bugs
     Allow transformers-0.3.*
     Add a random script generator and tester
