@@ -104,10 +104,17 @@ blockPool pool act = do
 runPool :: Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool n act = do
     s <- newVar $ Just emptyS
-    res <- newBarrier
-    let pool = Pool n s res
-    addPool pool $ act pool
-    res <- waitBarrier res
-    case res of
-        Nothing -> return ()
-        Just e -> throw e
+    let cleanup = modifyVar_ s $ \s -> do
+            -- if someone kills our thread, make sure we kill our child threads
+            case s of
+                Just s -> mapM_ killThread $ Set.toList $ threads s
+                Nothing -> return ()
+            return Nothing
+    flip onException cleanup $ do
+        res <- newBarrier
+        let pool = Pool n s res
+        addPool pool $ act pool
+        res <- waitBarrier res
+        case res of
+            Nothing -> return ()
+            Just e -> throw e

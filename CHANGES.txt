@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #545, make sure if shake is killed, it kills its children
 0.2.9
     Require unordered-containers 2.1 or higher, fixes bugs
     Allow transformers-0.3.*
