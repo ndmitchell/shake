@@ -50,7 +50,7 @@ test build obj = do
             blockPool pool $ takeMVar var
             modifyMVar_ done $ const $ return True
     done <- readMVar done
-    assert done "Blocking works"
+    assert done "Blocking"
 
     -- check someone spawned when at zero todo still gets run
     done <- newMVar False
@@ -61,4 +61,20 @@ test build obj = do
                 wait
                 modifyMVar_ done $ const $ return True
     done <- readMVar done
-    assert done "Waiting on someone works"
+    assert done "Waiting on someone"
+
+    -- check that killing a thread pool stops the tasks, bug 545
+    thread <- newEmptyMVar
+    done <- newEmptyMVar
+    res <- newMVar True
+    t <- forkIO $ finally (putMVar done ()) $ runPool 1 $ \pool ->
+        addPool pool $ do
+            t <- takeMVar thread
+            killThread t
+            wait -- allow the thread to die first
+            modifyMVar_ res (const $ return False)
+    putMVar thread t
+    takeMVar done
+    wait >> wait >> wait -- allow the bad thread to continue
+    res <- readMVar res
+    assert res "Early termination"
