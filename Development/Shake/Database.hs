@@ -333,7 +333,10 @@ checkValid Database{..} valid = do
 -- DATABASE
 
 withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO a) -> IO a
-withDatabase logger filename version = bracket (openDatabase logger filename version) closeDatabase
+withDatabase logger filename version act = do
+    -- expand the filename, in case pwd has changed by the close action
+    filename <- canonicalizePath filename
+    bracket (openDatabase logger filename version) closeDatabase act
 
 
 -- Files are named based on the FilePath, but with different extensions,
