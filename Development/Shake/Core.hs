@@ -36,7 +36,7 @@ import Development.Shake.Report
 -- | Options to control the execution of Shake, usually specified by overriding fields in
 --   'shakeOptions':
 --
---   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just "report.html"} @
+--   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just \"report.html\"} @
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
