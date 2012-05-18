@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add systemCwd for running with a particular current directory
     Ensure the database is saved to where it was created
     #545, make sure if shake is killed, it kills its children
 0.2.9

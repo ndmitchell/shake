@@ -24,6 +24,26 @@ system' path args = do
     when (res /= ExitSuccess) $
         error $ "System command failed:\n" ++ cmd
 
+
+-- | Execute a system command with a specified current working directory (first argument).
+--   This function will raise an error if the exit code is non-zero.
+--   Before running 'systemCwd' make sure you 'need' any required files.
+--
+-- > systemCwd "/usr/MyDirectory" "pwd" []
+systemCwd :: FilePath -> FilePath -> [String] -> Action ()
+systemCwd cwd path args = do
+    let path2 = toNative path
+    let cmd = unwords $ path2 : args
+    putLoud cmd
+    res <- traced ("system " ++ cmd) $ do
+        -- FIXME: Should I be using the non-exported System.Process.syncProcess?
+        --        That installs/removes signal handlers.
+        hdl <- runProcess path2 args (Just cwd) Nothing Nothing Nothing Nothing
+        waitForProcess hdl
+    when (res /= ExitSuccess) $
+        error $ "System command failed:\n" ++ cmd
+
+
 -- | Execute a system command, returning @(stdout,stderr)@.
 --   This function will raise an error if the exit code is non-zero.
 --   Before running 'systemOutput' make sure you 'need' any required files.
