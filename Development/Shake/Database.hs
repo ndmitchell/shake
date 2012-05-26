@@ -88,7 +88,7 @@ type Trace = (String, Time, Time)
 
 
 data Storage = Storage
-    {journal_ :: Journal
+    {journal_ :: Journal Witness
     ,filename :: FilePath
     ,version :: Int -- user supplied version
     ,database :: Database
@@ -368,8 +368,9 @@ openDatabase logger filename version = do
         return (status, incStep step)
 
     status <- newIORef status
-    journal_ <- openJournal jfile version
-    let journal = appendJournal journal_
+    witness <- currentWitness
+    journal_ <- openJournal jfile version witness
+    let journal k r = appendJournal journal_ (k,r)
     logger "openDatabase complete"
     return Storage{database=Database{..},..}
 
@@ -417,18 +418,17 @@ readDatabase file version = do
 ---------------------------------------------------------------------
 -- JOURNAL
 
-data Journal = Journal
+data Journal w = Journal
     {handle :: Var (Maybe Handle)
     ,journalFile :: FilePath
-    ,witness :: Witness
+    ,witness :: w
     }
 
-openJournal :: FilePath -> Int -> IO Journal
-openJournal journalFile ver = do
+openJournal :: Binary w => FilePath -> Int -> w -> IO (Journal w)
+openJournal journalFile ver witness = do
     h <- openBinaryFile journalFile WriteMode
     hSetFileSize h 0
     LBS.hPut h $ LBS.pack $ journalVersion ver
-    witness <- currentWitness
     writeChunk h $ encode witness
     hFlush h
     handle <- newVar $ Just h
@@ -450,15 +450,15 @@ replayJournal file ver mp = catch (do
         return mp
 
 
-appendJournal :: Journal -> Key -> Result -> IO ()
-appendJournal Journal{..} k i = modifyVar_ handle $ \v -> case v of
+appendJournal :: BinaryWith w v => Journal w -> v -> IO ()
+appendJournal Journal{..} value = modifyVar_ handle $ \v -> case v of
     Nothing -> return Nothing
     Just h -> do
-        writeChunk h $ runPut $ putWith witness (k,i)
+        writeChunk h $ runPut $ putWith witness value
         return $ Just h
 
 
-closeJournal :: Journal -> IO ()
+closeJournal :: Journal w -> IO ()
 closeJournal Journal{..} =
     modifyVar_ handle $ \v -> case v of
         Nothing -> return Nothing
