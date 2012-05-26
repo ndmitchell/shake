@@ -354,7 +354,8 @@ openDatabase logger filename version = do
 
     lock <- newLock
     logger $ "readDatabase " ++ dbfile
-    (step, status) <- fmap (fromMaybe (Step 1, Map.fromList [])) $ readDatabase dbfile version
+    (step, Statuses status) <- fmap (fromMaybe (Step 1, Statuses $ Map.fromList [])) $
+        readDatabase dbfile version (undefined :: Phantom Witness)
     step <- return $ incStep step
 
     b <- doesFileExist jfile
@@ -396,16 +397,16 @@ writeDatabase file version ws v =
         encode (Witnessed ws v)
 
 
-readDatabase :: FilePath -> Int -> IO (Maybe (Step, Map Key Status))
-readDatabase file version = do
+readDatabase :: forall w v . (Binary w, BinaryWith w v) => FilePath -> Int -> Phantom w -> IO (Maybe v)
+readDatabase file version _ = do
     b <- doesFileExist file
     if not b
         then return Nothing
         else catch (do
             src <- readFileVer file $ databaseVersion version
-            let Witnessed (_ :: Witness) (a, Statuses c) = decode src
+            let Witnessed (_ :: w) a = decode src
             -- FIXME: The LBS.length shouldn't be necessary, but it is
-            a `seq` c `seq` LBS.length src `seq` return $ Just (a,c)) $
+            a `seq` LBS.length src `seq` return $ Just a) $
             \(err :: SomeException) -> do
                 putStrLn $ unlines $
                     ("Error when reading Shake database " ++ file) :
