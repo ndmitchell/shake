@@ -403,8 +403,7 @@ readDatabase file version = do
         then return zero
         else catch (do
             src <- readFileVer file $ databaseVersion version
-            let (a,b) = fromWitnessed $ decode src
-                c = fromStatuses b
+            let Witnessed (_ :: Witness) (a, Statuses c) = decode src
             -- FIXME: The LBS.length shouldn't be necessary, but it is
             a `seq` c `seq` LBS.length src `seq` return (a,c)) $
             \(err :: SomeException) -> do
@@ -481,15 +480,14 @@ instance BinaryWith Witness Step where
     getWith _ = get
 
 
-data Witnessed a = Witnessed Witness a
-fromWitnessed (Witnessed _ x) = x
+data Witnessed w a = Witnessed w a
 
-instance BinaryWith Witness a => Binary (Witnessed a) where
+instance (Binary w, BinaryWith w a) => Binary (Witnessed w a) where
     put (Witnessed ws x) = put ws >> putWith ws x
     get = do ws <- get; x <- getWith ws; return $ Witnessed ws x
 
 -- Only for serialisation
-newtype Statuses = Statuses {fromStatuses :: Map Key Status}
+newtype Statuses = Statuses (Map Key Status)
 
 instance BinaryWith Witness Statuses where
     putWith ws (Statuses x) = putWith ws [(k,i) | (k,v) <- Map.toList x, Just i <- [getResult v]]
