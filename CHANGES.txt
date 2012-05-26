@@ -1,7 +1,7 @@
 Changelog for Shake
 
 0.2.11
-    IMPORANT: #546, don't save the database to where it was created
+    IMPORTANT: #546, don't save the database to where it was created
 0.2.10
     Add systemCwd for running with a particular current directory
     Ensure the database is saved to where it was created
