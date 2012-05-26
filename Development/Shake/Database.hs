@@ -339,10 +339,13 @@ data Storage = Storage
 
 
 withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO ()) -> IO ()
-withDatabase logger filename version act = do
-    -- expand the filename, in case pwd has changed by the close action
-    -- filename <- canonicalizePath filename
-    bracket (openDatabase logger filename version) closeDatabase (act . database)
+withDatabase logger filename version act = bracket
+    (openDatabase logger filename version)
+    (\s@Storage{database=Database{..}} -> do
+        status <- readIORef status
+        ws <- currentWitness
+        closeDatabase logger s ws (step, Statuses status))
+    (act . database)
 
 
 -- Files are named based on the FilePath, but with different extensions,
@@ -379,14 +382,12 @@ openDatabase logger filename version = do
     return Storage{database=Database{..},..}
 
 
-closeDatabase :: Storage -> IO ()
-closeDatabase Storage{database=Database{..},..} = do
-    status <- readIORef status
+closeDatabase :: (Binary w, BinaryWith w v) => (String -> IO ()) -> Storage -> w -> v -> IO ()
+closeDatabase logger Storage{..} ws v = do
     let dbfile = filename <.> "database"
     logger $ "writeDatabase " ++ dbfile
-    ws <- currentWitness
-    writeDatabase dbfile version ws (step, Statuses status)
-    logger $ "closeJournal"
+    writeDatabase dbfile version ws v
+    logger "closeJournal"
     closeJournal journal_
     logger "closeDatabase complete"
 
