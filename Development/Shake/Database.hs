@@ -87,15 +87,19 @@ startTime = do
 type Trace = (String, Time, Time)
 
 
+data Storage = Storage
+    {journal_ :: Journal
+    ,filename :: FilePath
+    ,version :: Int -- user supplied version
+    ,database :: Database
+    }
+
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
     {lock :: Lock
     ,status :: IORef (Map Key Status)
     ,step :: Step
-    ,journal_ :: Journal
     ,journal :: Key -> Result -> IO ()
-    ,filename :: FilePath
-    ,version :: Int -- user supplied version
     ,logger :: String -> IO () -- logging function
     }
 
@@ -337,12 +341,12 @@ withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO ()) -> I
 withDatabase logger filename version act = do
     -- expand the filename, in case pwd has changed by the close action
     -- filename <- canonicalizePath filename
-    bracket (openDatabase logger filename version) closeDatabase act
+    bracket (openDatabase logger filename version) closeDatabase (act . database)
 
 
 -- Files are named based on the FilePath, but with different extensions,
 -- such as .database, .journal, .trace
-openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO Database
+openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO Storage
 openDatabase logger filename version = do
     let dbfile = filename <.> "database"
         jfile = filename <.> "journal"
@@ -367,11 +371,11 @@ openDatabase logger filename version = do
     journal_ <- openJournal jfile version
     let journal = appendJournal journal_
     logger "openDatabase complete"
-    return Database{..}
+    return Storage{database=Database{..},..}
 
 
-closeDatabase :: Database -> IO ()
-closeDatabase Database{..} = do
+closeDatabase :: Storage -> IO ()
+closeDatabase Storage{database=Database{..},..} = do
     status <- readIORef status
     let dbfile = filename <.> "database"
     logger $ "writeDatabase " ++ dbfile
