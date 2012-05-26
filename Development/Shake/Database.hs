@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards, EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, UndecidableInstances #-}
 {-
 Files stores the meta-data so its very important its always accurate
@@ -360,7 +360,8 @@ openDatabase logger filename version = do
     b <- doesFileExist jfile
     (status,step) <- if not b then return (status,step) else do
         logger $ "replayJournal " ++ jfile
-        status <- replayJournal jfile version status
+        extra <- replayJournal (undefined :: Phantom Witness) jfile version
+        status <- return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) status extra
         removeFile_ jfile
         -- the journal potentially things at the current step, so increment my step
         writeDatabase dbfile version step status
@@ -434,20 +435,20 @@ openJournal journalFile ver witness = do
     handle <- newVar $ Just h
     return Journal{..}
 
+data Phantom w
 
-replayJournal :: FilePath -> Int -> Map Key Status -> IO (Map Key Status)
-replayJournal file ver mp = catch (do
+replayJournal :: forall w u . (Binary w, BinaryWith w u) => Phantom w -> FilePath -> Int -> IO [u]
+replayJournal _ file ver = catch (do
     src <- readFileVer file $ journalVersion ver
     let ws:rest = readChunks src
-    ws :: Witness <- return $ decode ws
-    rest <- return $ map (runGet (getWith ws)) rest
-    return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) mp rest)
+    ws :: w <- return $ decode ws
+    return $ map (runGet (getWith ws)) rest)
     $ \(err :: SomeException) -> do
         putStrLn $ unlines $
             ("Error when reading Shake journal " ++ file) :
             map ("  "++) (lines $ show err) ++
             ["All files built in the last exceution will be rebuilt"]
-        return mp
+        return []
 
 
 appendJournal :: BinaryWith w u => Journal w -> u -> IO ()
