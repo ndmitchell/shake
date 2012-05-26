@@ -42,8 +42,8 @@ import qualified Data.ByteString.Lazy.Char8 as LBS hiding (readFile,writeFile)
 
 -- Increment every time the on-disk format/semantics change,
 -- @i@ is for the users version number
-databaseVersion i = "SHAKE-DATABASE-2-" ++ show (i :: Int) ++ "\r\n"
-journalVersion i = "SHAKE-JOURNAL-2-" ++ show (i :: Int) ++ "\r\n"
+databaseVersion i = "SHAKE-DATABASE-3-" ++ show (i :: Int) ++ "\r\n"
+journalVersion i = "SHAKE-JOURNAL-3-" ++ show (i :: Int) ++ "\r\n"
 
 
 removeFile_ :: FilePath -> IO ()
@@ -392,7 +392,7 @@ writeDatabase file version step status = do
     ws <- currentWitness
     LBS.writeFile file $
         LBS.pack (databaseVersion version) `LBS.append`
-        encode (step, Witnessed ws $ Statuses status)
+        encode (Witnessed ws (step, Statuses status))
 
 
 readDatabase :: FilePath -> Int -> IO (Step, Map Key Status)
@@ -403,8 +403,8 @@ readDatabase file version = do
         then return zero
         else catch (do
             src <- readFileVer file $ databaseVersion version
-            let (a,b) = decode src
-                c = fromStatuses $ fromWitnessed b
+            let (a,b) = fromWitnessed $ decode src
+                c = fromStatuses b
             -- FIXME: The LBS.length shouldn't be necessary, but it is
             a `seq` c `seq` LBS.length src `seq` return (a,c)) $
             \(err :: SomeException) -> do
@@ -475,6 +475,10 @@ closeJournal Journal{..} =
 instance Binary Step where
     put (Step i) = put i
     get = fmap Step get
+
+instance BinaryWith Witness Step where
+    putWith _ x = put x
+    getWith _ = get
 
 
 data Witnessed a = Witnessed Witness a
