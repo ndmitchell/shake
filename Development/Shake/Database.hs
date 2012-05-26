@@ -450,11 +450,11 @@ replayJournal file ver mp = catch (do
         return mp
 
 
-appendJournal :: BinaryWith w v => Journal w -> v -> IO ()
-appendJournal Journal{..} value = modifyVar_ handle $ \v -> case v of
+appendJournal :: BinaryWith w u => Journal w -> u -> IO ()
+appendJournal Journal{..} u = modifyVar_ handle $ \v -> case v of
     Nothing -> return Nothing
     Just h -> do
-        writeChunk h $ runPut $ putWith witness value
+        writeChunk h $ runPut $ putWith witness u
         return $ Just h
 
 
