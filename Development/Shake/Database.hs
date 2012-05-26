@@ -87,13 +87,6 @@ startTime = do
 type Trace = (String, Time, Time)
 
 
-data Storage = Storage
-    {journal_ :: Journal Witness
-    ,filename :: FilePath
-    ,version :: Int -- user supplied version
-    ,database :: Database
-    }
-
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
     {lock :: Lock
@@ -336,6 +329,14 @@ checkValid Database{..} valid = do
 
 ---------------------------------------------------------------------
 -- DATABASE
+
+data Storage = Storage
+    {journal_ :: Journal Witness
+    ,filename :: FilePath
+    ,version :: Int -- user supplied version
+    ,database :: Database
+    }
+
 
 withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO ()) -> IO ()
 withDatabase logger filename version act = do
