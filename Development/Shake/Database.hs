@@ -92,7 +92,8 @@ data Database = Database
     {lock :: Lock
     ,status :: IORef (Map Key Status)
     ,step :: Step
-    ,journal :: Journal
+    ,journal_ :: Journal
+    ,journal :: Key -> Result -> IO ()
     ,filename :: FilePath
     ,version :: Int -- user supplied version
     ,logger :: String -> IO () -- logging function
@@ -237,7 +238,7 @@ build pool Database{..} Ops{..} ks =
                 case ans of
                     Ready r -> do
                         logger $ "result " ++ atom k ++ " = " ++ atom (result r)
-                        appendJournal journal k r -- leave the DB lock before appending
+                        journal k r -- leave the DB lock before appending
                     _ -> return ()
             k #= w
 
@@ -363,7 +364,8 @@ openDatabase logger filename version = do
         return (status, incStep step)
 
     status <- newIORef status
-    journal <- openJournal jfile version
+    journal_ <- openJournal jfile version
+    let journal = appendJournal journal_
     logger "openDatabase complete"
     return Database{..}
 
@@ -375,7 +377,7 @@ closeDatabase Database{..} = do
     logger $ "writeDatabase " ++ dbfile
     writeDatabase dbfile version step status
     logger $ "closeJournal"
-    closeJournal journal
+    closeJournal journal_
     logger "closeDatabase complete"
 
 
