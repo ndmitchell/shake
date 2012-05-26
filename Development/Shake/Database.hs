@@ -364,7 +364,8 @@ openDatabase logger filename version = do
         status <- return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) status extra
         removeFile_ jfile
         -- the journal potentially things at the current step, so increment my step
-        writeDatabase dbfile version step status
+        witness <- currentWitness
+        writeDatabase dbfile version witness (step, Statuses status)
         logger $ "rewriteDatabase " ++ jfile
         return (status, incStep step)
 
@@ -381,18 +382,18 @@ closeDatabase Storage{database=Database{..},..} = do
     status <- readIORef status
     let dbfile = filename <.> "database"
     logger $ "writeDatabase " ++ dbfile
-    writeDatabase dbfile version step status
+    ws <- currentWitness
+    writeDatabase dbfile version ws (step, Statuses status)
     logger $ "closeJournal"
     closeJournal journal_
     logger "closeDatabase complete"
 
 
-writeDatabase :: FilePath -> Int -> Step -> Map Key Status -> IO ()
-writeDatabase file version step status = do
-    ws <- currentWitness
+writeDatabase :: (Binary w, BinaryWith w v) => FilePath -> Int -> w -> v -> IO ()
+writeDatabase file version ws v =
     LBS.writeFile file $
         LBS.pack (databaseVersion version) `LBS.append`
-        encode (Witnessed ws (step, Statuses status))
+        encode (Witnessed ws v)
 
 
 readDatabase :: FilePath -> Int -> IO (Step, Map Key Status)
