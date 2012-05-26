@@ -332,7 +332,7 @@ checkValid Database{..} valid = do
 ---------------------------------------------------------------------
 -- DATABASE
 
-withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO a) -> IO a
+withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO ()) -> IO ()
 withDatabase logger filename version act = do
     -- expand the filename, in case pwd has changed by the close action
     -- filename <- canonicalizePath filename
