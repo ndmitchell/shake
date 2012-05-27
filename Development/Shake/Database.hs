@@ -334,29 +334,33 @@ data Storage = Storage
     {journal_ :: Journal Witness
     ,filename :: FilePath
     ,version :: Int -- user supplied version
-    ,database :: Database
     }
 
 
 withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO ()) -> IO ()
 withDatabase logger filename version act = bracket
-    (openDatabase logger filename version)
-    (\s@Storage{database=Database{..}} -> do
+    (do
+        (s, (step,status)) <- openDatabase logger filename version
+        status <- newIORef status
+        return (s, (step,status)))
+    (\(s, (step,status)) -> do
         status <- readIORef status
         ws <- currentWitness
         closeDatabase logger s ws (step, Statuses status))
-    (act . database)
+    (\(Storage{..}, (step,status)) -> do
+        let journal k r = appendJournal journal_ (k,r)
+        lock <- newLock
+        act Database{..})
 
 
 -- Files are named based on the FilePath, but with different extensions,
 -- such as .database, .journal, .trace
-openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO Storage
+openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO (Storage, (Step, Map Key Status))
 openDatabase logger filename version = do
     let dbfile = filename <.> "database"
         jfile = filename <.> "journal"
     createDirectoryIfMissing True $ takeDirectory dbfile
 
-    lock <- newLock
     logger $ "readDatabase " ++ dbfile
     (step, Statuses status) <- fmap (fromMaybe (Step 1, Statuses $ Map.fromList [])) $
         readDatabase dbfile version (undefined :: Phantom Witness)
@@ -374,12 +378,10 @@ openDatabase logger filename version = do
         logger $ "rewriteDatabase " ++ jfile
         return (status, incStep step)
 
-    status <- newIORef status
     witness <- currentWitness
     journal_ <- openJournal jfile version witness
-    let journal k r = appendJournal journal_ (k,r)
     logger "openDatabase complete"
-    return Storage{database=Database{..},..}
+    return (Storage{..}, (step, status))
 
 
 closeDatabase :: (Binary w, BinaryWith w v) => (String -> IO ()) -> Storage -> w -> v -> IO ()
