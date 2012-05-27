@@ -83,6 +83,10 @@ data Witness = Witness
     ,witnessOut :: Map.HashMap TypeRep Int -- for writing out, find the value
     }
 
+instance Eq Witness where
+    -- type names are ordered by the Map (on hash), so likely to remain reasonably consistent
+    -- regardless of the order of registerWitness calls
+    a == b = typeNames a == typeNames b
 
 currentWitness :: IO Witness
 currentWitness = do
