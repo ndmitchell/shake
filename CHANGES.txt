@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Complete rewrite of the storage layer and journal design
     IMPORTANT: Incompatible on disk format change
 0.2.11
     IMPORTANT: #546, don't save the database to where it was created

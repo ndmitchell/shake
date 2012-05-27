@@ -1,11 +1,6 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards, EmptyDataDecls #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, UndecidableInstances #-}
-{-
-Files stores the meta-data so its very important its always accurate
-We can't rely on getting a Ctrl+C at the end, so we'd better write out a journal
-But if we do happen to get a Ctrl+C then that is very handy
-The journal is idempotent, i.e. if we replay the journal twice all is good
--}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
@@ -18,36 +13,19 @@ import Development.Shake.Binary
 import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Locks
+import Development.Shake.Storage
 
+import Control.DeepSeq
+import Data.Hashable
+import Data.Typeable
 import Prelude hiding (catch)
-import Control.Arrow
 import Control.Exception
 import Control.Monad
-import Data.Binary.Get
-import Data.Binary.Put
-import Data.Char
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
 import Data.Maybe
 import Data.List
 import Data.Time.Clock
-import System.Directory
-import System.FilePath
-import System.IO
-
--- we want readFile/writeFile to be byte orientated, not do windows line end conversion
-import qualified Data.ByteString.Lazy as LBS (readFile,writeFile)
-import qualified Data.ByteString.Lazy.Char8 as LBS hiding (readFile,writeFile)
-
-
--- Increment every time the on-disk format/semantics change,
--- @i@ is for the users version number
-databaseVersion i = "SHAKE-DATABASE-3-" ++ show (i :: Int) ++ "\r\n"
-journalVersion i = "SHAKE-JOURNAL-3-" ++ show (i :: Int) ++ "\r\n"
-
-
-removeFile_ :: FilePath -> IO ()
-removeFile_ x = catch (removeFile x) (\(e :: SomeException) -> return ())
 
 type Map = Map.HashMap
 
@@ -55,7 +33,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
-newtype Step = Step Int deriving (Eq,Ord,Show)
+newtype Step = Step Int deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
 
@@ -327,210 +305,41 @@ checkValid Database{..} valid = do
         special k = s == "AlwaysRun" || "Oracle " `isPrefixOf` s
             where s = show k
 
+
 ---------------------------------------------------------------------
--- DATABASE
+-- STORAGE
 
-data Storage = Storage
-    {journal_ :: Journal Witness
-    ,filename :: FilePath
-    ,version :: Int -- user supplied version
-    }
+-- To simplify journaling etc we smuggle the Step in the database, with a special StepKey
+newtype StepKey = StepKey ()
+    deriving (Show,Eq,Typeable,Hashable,Binary,NFData)
 
+stepKey :: Key
+stepKey = newKey $ StepKey ()
 
-withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO ()) -> IO ()
-withDatabase logger filename version act = bracket
-    (do
-        (s, (step,status)) <- openDatabase logger filename version
-        status <- newIORef status
-        return (s, (step,status)))
-    (\(s, (step,status)) -> do
-        status <- readIORef status
-        ws <- currentWitness
-        closeDatabase logger s ws (step, Statuses status))
-    (\(Storage{..}, (step,status)) -> do
-        let journal k r = appendJournal journal_ (k,r)
-        lock <- newLock
-        act Database{..})
+toStepResult :: Step -> Result
+toStepResult i = Result (newValue i) i i [] 0 []
+
+fromStepResult :: Result -> Step
+fromStepResult = fromValue . result
 
 
--- Files are named based on the FilePath, but with different extensions,
--- such as .database, .journal, .trace
-openDatabase :: (String -> IO ()) -> FilePath -> Int -> IO (Storage, (Step, Map Key Status))
-openDatabase logger filename version = do
-    let dbfile = filename <.> "database"
-        jfile = filename <.> "journal"
-    createDirectoryIfMissing True $ takeDirectory dbfile
-
-    logger $ "readDatabase " ++ dbfile
-    (step, Statuses status) <- fmap (fromMaybe (Step 1, Statuses $ Map.fromList [])) $
-        readDatabase dbfile version (undefined :: Phantom Witness)
-    step <- return $ incStep step
-
-    b <- doesFileExist jfile
-    (status,step) <- if not b then return (status,step) else do
-        logger $ "replayJournal " ++ jfile
-        extra <- replayJournal (undefined :: Phantom Witness) jfile version
-        status <- return $ foldl' (\mp (k,v) -> Map.insert k (Loaded v) mp) status extra
-        removeFile_ jfile
-        -- the journal potentially things at the current step, so increment my step
-        witness <- currentWitness
-        writeDatabase dbfile version witness (step, Statuses status)
-        logger $ "rewriteDatabase " ++ jfile
-        return (status, incStep step)
-
+withDatabase :: (String -> IO ()) -> FilePath -> Int -> (Database -> IO a) -> IO a
+withDatabase logger filename version act = do
+    registerWitness $ StepKey ()
+    registerWitness $ Step 0
     witness <- currentWitness
-    journal_ <- openJournal jfile version witness
-    logger "openDatabase complete"
-    return (Storage{..}, (step, status))
+    withStorage logger filename version witness $ \mp journal -> do
+        status <- newIORef $ Map.map Loaded mp
+        let step = maybe (Step 1) (incStep . fromStepResult) $ Map.lookup stepKey mp
+        journal stepKey $ toStepResult step
+        lock <- newLock
+        act Database{..}
 
-
-closeDatabase :: (Binary w, BinaryWith w v) => (String -> IO ()) -> Storage -> w -> v -> IO ()
-closeDatabase logger Storage{..} ws v = do
-    let dbfile = filename <.> "database"
-    logger $ "writeDatabase " ++ dbfile
-    writeDatabase dbfile version ws v
-    logger "closeJournal"
-    closeJournal journal_
-    logger "closeDatabase complete"
-
-
-writeDatabase :: (Binary w, BinaryWith w v) => FilePath -> Int -> w -> v -> IO ()
-writeDatabase file version ws v =
-    LBS.writeFile file $
-        LBS.pack (databaseVersion version) `LBS.append`
-        encode (Witnessed ws v)
-
-
-readDatabase :: forall w v . (Binary w, BinaryWith w v) => FilePath -> Int -> Phantom w -> IO (Maybe v)
-readDatabase file version _ = do
-    b <- doesFileExist file
-    if not b
-        then return Nothing
-        else catch (do
-            src <- readFileVer file $ databaseVersion version
-            let Witnessed (_ :: w) a = decode src
-            -- FIXME: The LBS.length shouldn't be necessary, but it is
-            a `seq` LBS.length src `seq` return $ Just a) $
-            \(err :: SomeException) -> do
-                putStrLn $ unlines $
-                    ("Error when reading Shake database " ++ file) :
-                    map ("  "++) (lines $ show err) ++
-                    ["All files will be rebuilt"]
-                removeFile_ file -- so it doesn't error next time
-                return Nothing
-
-
----------------------------------------------------------------------
--- JOURNAL
-
-data Journal w = Journal
-    {handle :: Var (Maybe Handle)
-    ,journalFile :: FilePath
-    ,witness :: w
-    }
-
-openJournal :: Binary w => FilePath -> Int -> w -> IO (Journal w)
-openJournal journalFile ver witness = do
-    h <- openBinaryFile journalFile WriteMode
-    hSetFileSize h 0
-    LBS.hPut h $ LBS.pack $ journalVersion ver
-    writeChunk h $ encode witness
-    hFlush h
-    handle <- newVar $ Just h
-    return Journal{..}
-
-data Phantom w
-
-replayJournal :: forall w u . (Binary w, BinaryWith w u) => Phantom w -> FilePath -> Int -> IO [u]
-replayJournal _ file ver = catch (do
-    src <- readFileVer file $ journalVersion ver
-    let ws:rest = readChunks src
-    ws :: w <- return $ decode ws
-    return $ map (runGet (getWith ws)) rest)
-    $ \(err :: SomeException) -> do
-        putStrLn $ unlines $
-            ("Error when reading Shake journal " ++ file) :
-            map ("  "++) (lines $ show err) ++
-            ["All files built in the last exceution will be rebuilt"]
-        return []
-
-
-appendJournal :: BinaryWith w u => Journal w -> u -> IO ()
-appendJournal Journal{..} u = modifyVar_ handle $ \v -> case v of
-    Nothing -> return Nothing
-    Just h -> do
-        writeChunk h $ runPut $ putWith witness u
-        return $ Just h
-
-
-closeJournal :: Journal w -> IO ()
-closeJournal Journal{..} =
-    modifyVar_ handle $ \v -> case v of
-        Nothing -> return Nothing
-        Just h -> do
-            hClose h
-            removeFile_ journalFile
-            return Nothing
-
-
----------------------------------------------------------------------
--- SERIALISATION
-
-instance Binary Step where
-    put (Step i) = put i
-    get = fmap Step get
 
 instance BinaryWith Witness Step where
     putWith _ x = put x
     getWith _ = get
 
-
-data Witnessed w a = Witnessed w a
-
-instance (Binary w, BinaryWith w a) => Binary (Witnessed w a) where
-    put (Witnessed ws x) = put ws >> putWith ws x
-    get = do ws <- get; x <- getWith ws; return $ Witnessed ws x
-
--- Only for serialisation
-newtype Statuses = Statuses (Map Key Status)
-
-instance BinaryWith Witness Statuses where
-    putWith ws (Statuses x) = putWith ws [(k,i) | (k,v) <- Map.toList x, Just i <- [getResult v]]
-    getWith ws = do
-        x <- getWith ws
-        return $ Statuses $ Map.fromList $ map (second Loaded) x
-
 instance BinaryWith Witness Result where
     putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> putWith ws x4 >> put x5 >> put x6
     getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- getWith ws; x5 <- get; x6 <- get; return $ Result x1 x2 x3 x4 x5 x6
-
-
-readFileVer :: FilePath -> String -> IO LBS.ByteString
-readFileVer file ver = do
-    let ver2 = LBS.pack ver
-    src <- LBS.readFile file
-    unless (ver2 `LBS.isPrefixOf` src) $ do
-        let bad = LBS.takeWhile (\x -> isAlphaNum x || x `elem` "-_ ") $ LBS.take 50 src
-        error $ "Invalid version stamp\n" ++
-                "Expected: " ++ ver ++ "\n" ++
-                "Got     : " ++ LBS.unpack bad
-    return $ LBS.drop (fromIntegral $ length ver) src
-
-
-readChunks :: LBS.ByteString -> [LBS.ByteString]
-readChunks x
-    | Just (n, x) <- grab 4 x
-    , Just (y, x) <- grab (fromIntegral (decode n :: Word32)) x
-    = y : readChunks x
-    | otherwise = []
-    where
-        grab i x | LBS.length a == i = Just (a, b)
-                 | otherwise = Nothing
-            where (a,b) = LBS.splitAt i x
-
-
-writeChunk :: Handle -> LBS.ByteString -> IO ()
-writeChunk h x = do
-    let n = encode (fromIntegral $ LBS.length x :: Word32)
-    LBS.hPut h $ n `LBS.append` x
-    hFlush h
