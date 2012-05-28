@@ -18,3 +18,8 @@ instance (BinaryWith ctx a, BinaryWith ctx b) => BinaryWith ctx (a,b) where
 instance BinaryWith ctx a => BinaryWith ctx [a] where
     putWith ctx xs = put (length xs) >> mapM_ (putWith ctx) xs
     getWith ctx = do n <- get; replicateM n $ getWith ctx
+
+instance BinaryWith ctx a => BinaryWith ctx (Maybe a) where
+    putWith ctx Nothing = putWord8 0
+    putWith ctx (Just x) = putWord8 1 >> putWith ctx x
+    getWith ctx = do i <- getWord8; if i == 0 then return Nothing else fmap Just $ getWith ctx
