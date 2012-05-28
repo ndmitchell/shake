@@ -17,13 +17,13 @@ import Control.Monad
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.Char
+import Data.Hashable
 import qualified Data.HashMap.Strict as Map
+import Data.List
 import System.Directory
 import System.FilePath
 import System.IO
-import Data.Hashable
 
--- we want readFile/writeFile to be byte orientated, not do windows line end conversion
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
 
@@ -31,7 +31,7 @@ type Map = Map.HashMap
 
 -- Increment every time the on-disk format/semantics change,
 -- @i@ is for the users version number
-databaseVersion i = "SHAKE-DATABASE-3-" ++ show (i :: Int) ++ "\r\n"
+databaseVersion i = "SHAKE-DATABASE-4-" ++ show (i :: Int) ++ "\r\n"
 
 
 withStorage
@@ -41,7 +41,7 @@ withStorage
     -> FilePath                 -- ^ File prefix to use
     -> Int                      -- ^ User supplied version number
     -> w                        -- ^ Witness
-    -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
+    -> (Map k v -> (k -> Maybe v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage logger file version witness act = do
     let dbfile = file <.> "database"
@@ -80,7 +80,9 @@ withStorage logger file version witness act = do
                     [] -> return $ continue h Map.empty
                     w:xs -> do
                         let ws = decode w
-                        let mp = Map.fromList $ map (runGet $ getWith ws) xs
+                            f mp (k, Nothing) = Map.delete k mp
+                            f mp (k, Just v ) = Map.insert k v mp
+                            mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
                         if Map.null mp || (ws == witness && Map.size mp * 2 > length xs) then
                             return $ continue h mp
                          else do

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Journal error conditions, to ensure they don't repeat
     Better messages on invalid database versions
     Complete rewrite of the storage layer and journal design
     IMPORTANT: Incompatible on disk format change
