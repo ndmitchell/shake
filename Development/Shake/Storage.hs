@@ -59,11 +59,12 @@ withStorage logger file version witness act = do
 
         if not $ ver `LBS.isPrefixOf` src then do
             unless (LBS.null src) $ do
-                let bad = LBS.takeWhile (\x -> isAlphaNum x || x `elem` "-_ ") $ LBS.take 50 src
+                let good x = isAlphaNum x || x `elem` "-_ "
+                let bad = LBS.takeWhile good $ LBS.take 50 src
                 putStr $ unlines
                     ["Error when reading Shake database " ++ dbfile
                     ,"  Invalid version stamp detected"
-                    ,"  Expected: " ++ takeWhile (not . isSpace) (LBS.unpack ver)
+                    ,"  Expected: " ++ takeWhile good (LBS.unpack ver)
                     ,"  Found   : " ++ LBS.unpack bad
                     ,"All files will be rebuilt"]
             continue h Map.empty
