@@ -63,7 +63,7 @@ withStorage logger file version witness act = do
                 putStr $ unlines
                     ["Error when reading Shake database " ++ dbfile
                     ,"  Invalid version stamp detected"
-                    ,"  Expected: " ++ LBS.unpack ver
+                    ,"  Expected: " ++ takeWhile (not . isSpace) (LBS.unpack ver)
                     ,"  Found   : " ++ LBS.unpack bad
                     ,"All files will be rebuilt"]
             continue h Map.empty
