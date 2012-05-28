@@ -214,6 +214,7 @@ build pool Database{..} Ops{..} ks =
                     Ready r -> do
                         logger $ "result " ++ atom k ++ " = " ++ atom (result r)
                         journal k r -- leave the DB lock before appending
+                    -- FIXME: If we produce an error we do not serialise it, so it may repeatedly rebuild
                     _ -> return ()
             k #= w
 
