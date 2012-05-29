@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 {-
 This module stores the meta-data so its very important its always accurate
 We can't rely on getting any exceptions or termination at the end, so we'd better write out a journal
