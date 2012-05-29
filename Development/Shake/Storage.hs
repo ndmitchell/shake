@@ -68,7 +68,7 @@ withStorage logger file version witness act = do
                     ,"  Found   : " ++ LBS.unpack bad
                     ,"All files will be rebuilt"]
             continue h Map.empty
-        else
+         else
             -- make sure you are not handling exceptions from inside
             join $ handle (\(err :: SomeException) -> do
                 putStrLn $ unlines $
