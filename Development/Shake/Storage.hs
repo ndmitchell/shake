@@ -12,6 +12,7 @@ module Development.Shake.Storage(
 import Development.Shake.Binary
 
 import Prelude hiding (catch)
+import Control.Arrow
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -79,13 +80,20 @@ withStorage logger file version witness act = do
                     ["All files will be rebuilt"]
                 return $ continue h Map.empty) $
                 case readChunks $ LBS.drop (LBS.length ver) src of
-                    [] -> return $ continue h Map.empty
-                    w:xs -> do
+                    (_, []) -> return $ continue h Map.empty
+                    (slop, w:xs) -> do
                         let ws = decode w
                             f mp (k, Nothing) = Map.delete k mp
                             f mp (k, Just v ) = Map.insert k v mp
                             mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
-                        if Map.null mp || (ws == witness && Map.size mp * 2 > length xs) then
+                        if Map.null mp || (ws == witness && Map.size mp * 2 > length xs) then do
+                            -- make sure we reset to before the slop
+                            when (slop /= 0) $ do
+                                logger $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
+                                now <- hFileSize h
+                                hSetFileSize h $ now - slop
+                                hSeek h AbsoluteSeek $ now - slop
+                                hFlush h
                             return $ continue h mp
                          else do
                             logger "Compressing database"
@@ -119,12 +127,13 @@ withStorage logger file version witness act = do
                 hFlush h
 
 
-readChunks :: LBS.ByteString -> [LBS.ByteString]
+-- Return the amount of junk at the end, along with all the chunk
+readChunks :: LBS.ByteString -> (Integer, [LBS.ByteString])
 readChunks x
     | Just (n, x) <- grab 4 x
     , Just (y, x) <- grab (fromIntegral (decode n :: Word32)) x
-    = y : readChunks x
-    | otherwise = []
+    = second (y :) $ readChunks x
+    | otherwise = (toInteger $ LBS.length x, [])
     where
         grab i x | LBS.length a == i = Just (a, b)
                  | otherwise = Nothing
