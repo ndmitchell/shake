@@ -22,4 +22,8 @@ instance BinaryWith ctx a => BinaryWith ctx [a] where
 instance BinaryWith ctx a => BinaryWith ctx (Maybe a) where
     putWith ctx Nothing = putWord8 0
     putWith ctx (Just x) = putWord8 1 >> putWith ctx x
-    getWith ctx = do i <- getWord8; if i == 0 then return Nothing else fmap Just $ getWith ctx
+    getWith ctx = do i <- getWord8
+                     case i of
+                        0 -> return Nothing
+                        1 -> fmap Just $ getWith ctx
+                        _ -> error $ "Invalid index when reading Maybe, got " ++ show i
