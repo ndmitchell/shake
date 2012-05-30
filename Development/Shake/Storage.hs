@@ -12,6 +12,7 @@ module Development.Shake.Storage(
 import Development.Shake.Binary
 
 import Prelude hiding (catch)
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad
 import Data.Binary.Get
@@ -71,9 +72,10 @@ withStorage logger file version witness act = do
          else
             -- make sure you are not handling exceptions from inside
             join $ handle (\(err :: SomeException) -> do
+                msg <- showException err
                 putStrLn $ unlines $
                     ("Error when reading Shake database " ++ dbfile) :
-                    map ("  "++) (lines $ show err) ++
+                    map ("  "++) (lines msg) ++
                     ["All files will be rebuilt"]
                 return $ continue h Map.empty) $
                 case readChunks $ LBS.drop (LBS.length ver) src of
@@ -131,3 +133,11 @@ readChunks x
 toChunk :: LBS.ByteString -> LBS.ByteString
 toChunk x = n `LBS.append` x
     where n = encode (fromIntegral $ LBS.length x :: Word32)
+
+
+-- Some exceptions may have an error message which is itself an exception,
+-- make sure you show them properly
+showException :: SomeException -> IO String
+showException err = do
+    let msg = show err
+    catch (evaluate $ rnf msg `seq` msg) (\(_ :: SomeException) -> return "Unknown exception (error while showing error message)")

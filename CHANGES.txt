@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make storage work with exceptions whose messages raise errors
     Journal error conditions, to ensure they don't repeat
     Better messages on invalid database versions
     Complete rewrite of the storage layer and journal design
