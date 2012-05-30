@@ -113,9 +113,12 @@ instance BinaryWith Witness Value where
     getWith ws = do
         h <- get
         case Map.lookup h $ witnessIn ws of
-            Nothing -> error $
+            Nothing | h >= 0 && h < length (typeNames ws) -> error $
                 "Failed to find a type " ++ (typeNames ws !! fromIntegral h) ++ " which is stored in the database.\n" ++
                 "The most likely cause is that your build tool has changed significantly."
+            Nothing -> error $
+                -- should not happen, unless proper data corruption
+                "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
             Just (Value t) -> do
                 x <- get
                 return $ Value $ x `asTypeOf` t
