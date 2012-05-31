@@ -23,6 +23,7 @@ import Data.Hashable
 import qualified Data.HashMap.Strict as Map
 import Data.List
 import System.Directory
+import System.Exit
 import System.FilePath
 import System.IO
 
@@ -72,7 +73,7 @@ withStorage logger file version witness act = do
             continue h Map.empty
          else
             -- make sure you are not handling exceptions from inside
-            join $ handle (\(err :: SomeException) -> do
+            join $ handleJust (\e -> if asyncException e then Nothing else Just e) (\err -> do
                 msg <- showException err
                 putStrLn $ unlines $
                     ("Error when reading Shake database " ++ dbfile) :
@@ -151,3 +152,11 @@ showException :: SomeException -> IO String
 showException err = do
     let msg = show err
     catch (evaluate $ rnf msg `seq` msg) (\(_ :: SomeException) -> return "Unknown exception (error while showing error message)")
+
+
+-- | Is the exception asyncronous, not a "coding error" that should be ignored
+asyncException :: SomeException -> Bool
+asyncException e
+    | Just (_ :: AsyncException) <- fromException e = True
+    | Just (_ :: ExitCode) <- fromException e = True
+    | otherwise = False
