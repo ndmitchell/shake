@@ -116,7 +116,7 @@ withStorage logger file version witness act = do
             hSeek h AbsoluteSeek 0
             LBS.hPut h ver
             writeChunk h $ encode witness
-            mapM_ (writeChunk h . runPut . putWith witness) $ Map.toList mp
+            mapM_ (writeChunk h . runPut . putWith witness . second Just) $ Map.toList mp
             hFlush h
 
         -- continuation (since if we do a compress, h changes)
