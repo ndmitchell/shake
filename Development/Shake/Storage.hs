@@ -54,11 +54,14 @@ withStorage logger file version witness act = do
     -- complete a partially failed compress
     b <- doesFileExist bupfile
     when b $ do
+        logger $ "Backup file move to original"
         catch (removeFile dbfile) (\(e :: SomeException) -> return ())
         renameFile dbfile bupfile
 
     withBinaryFile dbfile ReadWriteMode $ \h -> do
-        src <- LBS.hGet h . fromInteger =<< hFileSize h
+        n <- hFileSize h
+        logger $ "Reading file of size " ++ show n
+        src <- LBS.hGet h $ fromInteger n
 
         if not $ ver `LBS.isPrefixOf` src then do
             unless (LBS.null src) $ do
@@ -81,13 +84,17 @@ withStorage logger file version witness act = do
                     ["All files will be rebuilt"]
                 return $ continue h Map.empty) $
                 case readChunks $ LBS.drop (LBS.length ver) src of
-                    (_, []) -> return $ continue h Map.empty
+                    (slop, []) -> do
+                        logger $ "Read 0 chunks, plus " ++ show slop ++ " slop"
+                        return $ continue h Map.empty
                     (slop, w:xs) -> do
+                        logger $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
+                        logger $ "Chunk sizes " ++ show (map LBS.length (w:xs))
                         let ws = decode w
                             f mp (k, Nothing) = Map.delete k mp
                             f mp (k, Just v ) = Map.insert k v mp
                             mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
-                        if Map.null mp || (ws == witness && Map.size mp * 2 > length xs) then do
+                        if Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2) then do
                             -- make sure we reset to before the slop
                             when (slop /= 0) $ do
                                 logger $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
@@ -95,6 +102,7 @@ withStorage logger file version witness act = do
                                 hSetFileSize h $ now - slop
                                 hSeek h AbsoluteSeek $ now - slop
                                 hFlush h
+                                logger $ "Drop complete"
                             return $ continue h mp
                          else do
                             logger "Compressing database"
@@ -109,15 +117,19 @@ withStorage logger file version witness act = do
     where
         ver = LBS.pack $ databaseVersion version
 
-        writeChunk h = LBS.hPut h . toChunk
+        writeChunk h s = do
+            logger $ "Writing chunk " ++ show (LBS.length s)
+            LBS.hPut h $ toChunk s
 
         reset h mp = do
+            logger $ "Resetting database to " ++ show (Map.size mp) ++ " elements"
             hSetFileSize h 0
             hSeek h AbsoluteSeek 0
             LBS.hPut h ver
             writeChunk h $ encode witness
             mapM_ (writeChunk h . runPut . putWith witness . second Just) $ Map.toList mp
             hFlush h
+            logger "Flush"
 
         -- continuation (since if we do a compress, h changes)
         continue h mp = do
@@ -126,6 +138,7 @@ withStorage logger file version witness act = do
             act mp $ \k v -> do
                 writeChunk h $ runPut $ putWith witness (k,v)
                 hFlush h
+                logger "Flush"
 
 
 -- Return the amount of junk at the end, along with all the chunk
