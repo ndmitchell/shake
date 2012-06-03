@@ -83,6 +83,8 @@ withStorage logger file version witness act = do
                     ("Error when reading Shake database " ++ dbfile) :
                     map ("  "++) (lines msg) ++
                     ["All files will be rebuilt"]
+                -- exitFailure -- should never happen without external corruption
+                               -- add back to check during random testing
                 return $ continue h Map.empty) $
                 case readChunks $ LBS.drop (LBS.length ver) src of
                     (slop, []) -> do
