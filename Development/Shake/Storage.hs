@@ -10,10 +10,10 @@ module Development.Shake.Storage(
     ) where
 
 import Development.Shake.Binary
+import Development.Shake.Locks
 
 import Prelude hiding (catch)
 import Control.Arrow
-import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -139,10 +139,10 @@ withStorage logger file version witness act = do
         continue h mp = do
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
-            lock <- newMVar ()
+            lock <- newLock
             act mp $ \k v -> do
                 -- QUESTION: Should the logging be on a different thread? Does that reduce blocking?
-                withMVar lock $ const $ writeChunk h $ runPut $ putWith witness (k,v)
+                withLock lock $ writeChunk h $ runPut $ putWith witness (k,v)
                 hFlush h
                 logger "Flush"
 
