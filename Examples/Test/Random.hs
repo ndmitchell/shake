@@ -7,7 +7,6 @@ import Control.Exception
 import Control.Monad
 import Data.List
 import System.Random
-import System.Mem
 import qualified Data.ByteString.Char8 as BS
 
 
@@ -46,7 +45,6 @@ main = shaken test $ \args obj -> do
 
 test build obj = forM_ [1..] $ \count -> do
     putStrLn $ "* PERFORMING RANDOM TEST " ++ show count
-    performGC -- close any handles left by crashing
     build ["clean"]
     build [] -- to create the directory
     forM inputRange $ \i ->
