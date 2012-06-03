@@ -47,15 +47,15 @@ test build obj = forM_ [1..] $ \count -> do
     putStrLn $ "* PERFORMING RANDOM TEST " ++ show count
     build ["clean"]
     build [] -- to create the directory
-    forM inputRange $ \i ->
+    forM_ inputRange $ \i ->
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
     logic <- randomLogic
     runLogic [] logic
     chng <- filterM (const randomIO) inputRange   
-    forM chng $ \i ->
+    forM_ chng $ \i ->
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single $ negate i
     runLogic chng logic
-    forM inputRange $ \i ->
+    forM_ inputRange $ \i ->
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
     logicBang <- addBang =<< addBang logic
     j <- randomRIO (1::Int,8)
