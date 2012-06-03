@@ -8,6 +8,7 @@ import Control.Monad
 import Data.List
 import System.Random
 import System.Mem
+import qualified Data.ByteString.Char8 as BS
 
 
 inputRange = [1..10]
@@ -38,7 +39,7 @@ main = shaken test $ \args obj -> do
             res <- fmap (show . Multiple) $ forM srcs $ \src -> do
                 randomSleep
                 need $ map toFile src
-                mapM (liftIO . fmap read . readFile . toFile) src
+                mapM (liftIO . fmap read . readFileStrict . toFile) src
             randomSleep
             writeFileChanged out res
 
@@ -84,7 +85,7 @@ test build obj = forM_ [1..] $ \count -> do
                         Output i -> value i
             forM_ (concat wants) $ \i -> do
                 let wanted = value i
-                got <- fmap read $ readFile $ obj $ "output-" ++ show i ++ ".txt"
+                got <- fmap read $ readFileStrict $ obj $ "output-" ++ show i ++ ".txt"
                 when (wanted /= got) $
                     error $ "INCORRECT VALUE for " ++ show i
 
@@ -121,3 +122,7 @@ randomElem :: [a] -> IO a
 randomElem xs = do
     i <- randomRIO (0, length xs - 1)
     return $ xs !! i
+
+
+readFileStrict :: FilePath -> IO String
+readFileStrict = fmap BS.unpack . BS.readFile
