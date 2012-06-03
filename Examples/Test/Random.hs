@@ -57,14 +57,15 @@ test build obj = forM_ [1..] $ \count -> do
     runLogic chng logic
     forM inputRange $ \i ->
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
-    logic <- addBang =<< addBang logic
+    logicBang <- addBang =<< addBang logic
     j <- randomRIO (1::Int,8)
-    res <- try $ build $ ("--threads" ++ show j) : map show (logic ++ [Want [i | Logic i _ <- logic]])    
+    res <- try $ build $ ("--threads" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
     case res of
         Left err
             | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
             | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
         _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
+    runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
     where
         runLogic :: [Int] -> [Logic] -> IO ()
         runLogic negated xs = do
