@@ -33,6 +33,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
+-- FIXME: Binary instance writes out 8 bytes, probably should be 2
 newtype Step = Step Int deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
@@ -81,6 +82,7 @@ data Status
     | Waiting Pending (Maybe Result) -- Currently checking if I am valid or building
       deriving Show
 
+-- FIXME: Probably want Step's to be strict and unpacked? Benchmark on a large example
 data Result = Result
     {result :: Value -- the result associated with the Key
     ,built :: Step -- when it was actually run
