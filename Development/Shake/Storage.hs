@@ -139,6 +139,7 @@ withStorage logger file version witness act = do
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
             lock <- newMVar ()
             act mp $ \k v -> do
+                -- QUESTION: Should the logging be on a different thread? Does that reduce blocking?
                 withMVar lock $ const $ writeChunk h $ runPut $ putWith witness (k,v)
                 hFlush h
                 logger "Flush"
