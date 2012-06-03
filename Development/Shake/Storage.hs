@@ -94,9 +94,10 @@ withStorage logger file version witness act = do
                             f mp (k, Nothing) = Map.delete k mp
                             f mp (k, Just v ) = Map.insert k v mp
                             mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
+                        -- if mp is null, continue will reset it, so no need to clean up
                         if Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2) then do
                             -- make sure we reset to before the slop
-                            when (slop /= 0) $ do
+                            when (not (Map.null mp) && slop /= 0) $ do
                                 logger $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
                                 now <- hFileSize h
                                 hSetFileSize h $ now - slop
