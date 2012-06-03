@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #550, ensure the journal thread is locked
     #550, if your thread dies while reading the database then die
     #550, ensure you reset to before the slop before writing
     If the witness table is completely corrupt give a better error

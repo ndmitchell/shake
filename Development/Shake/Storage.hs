@@ -13,6 +13,7 @@ import Development.Shake.Binary
 
 import Prelude hiding (catch)
 import Control.Arrow
+import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -136,8 +137,9 @@ withStorage logger file version witness act = do
         continue h mp = do
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
+            lock <- newMVar ()
             act mp $ \k v -> do
-                writeChunk h $ runPut $ putWith witness (k,v)
+                withMVar lock $ const $ writeChunk h $ runPut $ putWith witness (k,v)
                 hFlush h
                 logger "Flush"
 
