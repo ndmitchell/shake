@@ -2,8 +2,8 @@
 :set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
 :load Main Paths
 
-:def test const $ return ":main test"
-:def test_random const $ return ":main random test"
+:def test \x -> return $ ":main test " ++ x
+:def test_random \x -> return $ ":main random test " ++ x
 
 :def docs_ const $ return $ unlines [":!cabal configure",":!cabal haddock"]
 :def docs const $ return $ unlines [":docs_",":!start dist\\doc\\html\\shake\\Development-Shake.html"]
