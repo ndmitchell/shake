@@ -57,7 +57,7 @@ withStorage logger file version witness act = do
     when b $ do
         logger $ "Backup file move to original"
         catch (removeFile dbfile) (\(e :: SomeException) -> return ())
-        renameFile dbfile bupfile
+        renameFile bupfile dbfile
 
     withBinaryFile dbfile ReadWriteMode $ \h -> do
         n <- hFileSize h
