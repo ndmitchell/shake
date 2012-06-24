@@ -208,7 +208,7 @@ While \make{} is heavily file and IO based, we choose to model the dependencies 
 build :: Set Rule -> Key -> Value
 \end{code}
 
-The |build| function takes a (possibly infinite) set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to building only one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished key whose rule depends on the original targets and returns their values, and then use that key as the new target.
+The |build| function takes a set of rules and the target |Key| to build, and returns the |Value| associated with that |Key|. We restrict our model to building only one target, while \make{} allows multiple targets (i.e. a list of |Key|s to build). However, we can encode multiple targets by creating a distinguished key whose rule depends on the original targets and returns their values, and then use that key as the new target.
 
 Using |build|, we can model \make{} with the |Rule| type:
 
@@ -429,9 +429,9 @@ apply1  :: Rule key value =>     key   -> Action    value
 \label{fig:shake_core}
 \end{figure}
 
-The core interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. At its essence, a Shake build system is a set of rules. We can run the rules with |run|, create new rules with |rule|/|defaultRule|, and when defining a rule we can express dependencies with |apply|/|apply1|.
+The core interface to Shake is given in Figure \ref{fig:shake_core} -- everything else is defined on top. We can run the build system with |run|, specify targets with |action|, create new rules with |rule|/|defaultRule|, and express dependencies with |apply|/|apply1|.
 
-We execute a set of rules using the |run| function, which also takes an options record. Typical options include which file to use for the database (|shakeFiles|) and the number of processors to use (|shakeThreads|).
+We build the targets using the |run| function, which also takes an options record. Typical options include which file to use for the database (|shakeFiles|) and the number of processors to use (|shakeThreads|). To specify the targets to build we use |action|, specifying an action which is always run, typically calling |apply| to require keys to be built.
 
 Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class. The |Rule| class defines the method |validStored| to determine whether a value is consistent with any value stored externally (\S\ref{sec:minimal_rebuilds}). Each |key| and |value| type must also be a member of several type classes:
 
@@ -444,7 +444,7 @@ Every |key|/|value| rule pair used in Shake must be a member of the |Rule| class
 \item [NFData] We require |NFData| to ensure that values are fully evaluated when they are computed, ensuring errors occur in a timely manner (\S\ref{sec:handling_errors}).
 \end{description}
 
-Most rules are defined with |rule|, whose argument is a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the action that builds the associated |value|. Compared to the theory from \S\ref{sec:theory}, |rule| can be thought of as defining a rule template, which matches a potentially infinite number of |key|s, allowing us to represent an infinite number of rules with a finite number of calls to |rule|. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no |rule|s match (see \S\ref{sec:file_rules}). If two rules of the same priority match the same key then an error is raised. Instead of defining targets to build, we use |action| to specify actions that are always run, which typically call |apply|.
+Most rules are defined with |rule|, whose argument is a function which takes a single |key| value, and returns |Nothing| to indicate that this rule does not build this |key|, or |Just| with the action that builds the associated |value|. The function |defaultRule| allows a rule to be defined with a lower priority, which is used if no |rule|s match (see \S\ref{sec:file_rules}). If two rules of the same priority match the same key then an error is raised.
 
 The |Rules| type is a commutative |Monoid|, allowing two sets of rules to be joined to produce a new set of |Rules|. In practice, the syntactic sugar supported by |Monad| offers a very natural way to define rules, allowing a set of rules to be introduced with |do| and then simply written below each other. To support a |Monad| instance for |Rules| we add an additional type parameter |alpha| (almost always instantiated to |()|) and make |(>>)| join two sets of rules.
 
@@ -547,7 +547,7 @@ defaultFile = defaultRule $ \(File x) -> Just $ do
 
 While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could be either modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds using the \prog{touch} command is highly convenient when writing build rules. Of course, our design allows anyone to define a new type of file rule, based on file content hashes.
 
-We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action adds a dependency on all the modification times of the files, and is typically used before performing some IO action that uses the files. We define |want| to specify targets, implemented as |need| run by |action|.
+We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action adds a dependency on all the modification times of the files, and is typically used before performing some IO action that uses the files. We use |want| to specify the targets of the build system, implemented by calling |need| in an |action| that is always run.
 
 We define |defaultFile| as a rule that checks if the file already exists, and if so uses it. Source files will have no associated rules to build them, so this rule just records their modification time. If a file has no rules (since any rules would be run in preference to the default rule), and does not exist, we raise an error. As with |defaultDir|, anyone using |want|/|need| should include |defaultFile| in their rule set.
 
@@ -622,7 +622,7 @@ To turn Shake into a practical system, we make a number of changes from the natu
 
 \subsection{Build Algorithm}
 
-The internal state of Shake includes a mapping from each key to one of six status values. Initially every key is either |Loaded| (was found in the database) or |Missing| (is not known to the build system). The build logic of Shake is implemented in a function named |build|, which modifies the state to ensure that a given key is either |Ready| (a result is available) or |Error| (there was an exception when running the rule). The |build| function is parameterised by a way to check a stored value is valid (|validStored| from \S\ref{sec:core_shake}) and a way to build a key (appealing to the defined |rule|s for that type). Using |build|, it is relatively easy to implement the core of Shake -- simply run all |action|s and make |apply| call |build| before looking up the status of a key.
+The internal state of Shake includes a mapping from each key to one of six status values. Initially every key is either |Loaded| (was found in the database) or |Missing| (is not known to the build system). The build logic of Shake is implemented in a function named |build|, which modifies the state to ensure that a given key is either |Ready| (a result is available) or |Error| (there was an exception when running the rule). The |build| function is parameterised by a way to check a stored value is valid (using |validStored| from \S\ref{sec:core_shake}) and a way to build a key (appealing to the defined |rule|s for that type). Using |build|, it is relatively easy to implement the core of Shake -- simply run all |action|s and make |apply| call |build| before looking up the status of a key.
 
 Our implementation of the |build| function takes 100 lines of Haskell. When implementing |build| there are two goals, \textit{correctness} and \textit{efficiency}.
 
@@ -640,7 +640,7 @@ For an implementation of |build| to be correct, it must always execute enough ru
 
 Most of the complexity of |build| comes from the |Checking| state, which is necessary to support unchanging results (\S\ref{sec:unchanging_results}). When checking a key there are two possibilities -- either the check succeeds and the result is |Ready|, or the check fails and we start |Building| it. We first check the stored result using |validStored|, failing the check if the result is no longer valid. We then |build| each dependency in order, and fail the check if any dependency is |Error|, or has changed since we last built this key. If all dependencies are checked successfully, we transition to |Ready|, without running the rule.
 
-To support unchanging results, it is necessary to build dependencies \textit{before} running the rule requiring them. However, if the build system has been modified, and the rule no longer requires its previous dependencies, the dependencies may be built but not used. As a consequence, even if a key ends up in the |Error| state, the build may still complete successfully. To reduce the possibility of building many redundant keys we always check the dependencies of a rule in the order they were required, ensuring that if the rules are deterministic and have not been modified then all executed rules will be used.
+To support unchanging results, it is necessary to build dependencies \textit{before} running the rule requiring them -- only running the rule if a dependency has changed. Since the value of earlier dependencies may change subsequent dependencies, it is important to check dependencies in the order they were required. However, if the build system has been modified, and a rule no longer requires its previous dependencies, these previous dependencies will still be built, but not used. As a consequence, even if one of these unused dependencies results in an |Error|, the build may still complete successfully.
 
 \subsubsection{Efficiency}
 \label{sec:parallelism}
@@ -976,6 +976,9 @@ The \make{} tool has been ubiquitous for the last thirty years, specifying depen
 
 Thanks to Standard Chartered, where Shake was initially developed, and to Raphael Montelatici for the name Shake. Thanks to Max Bolingbroke and Evan Laforge for many discussions about build systems. Thanks to S\"{o}nke Hahn, Evan Laforge, Roman Leshchinskiy and Raphael Montelatici for comments on drafts of this paper.
 
+\vspace{2mm}
+\noindent
+\footnotesize{Neil Mitchell is employed by Standard Chartered Bank. This paper has been created in a personal capacity and Standard Chartered Bank does not accept liability for its content. Views expressed in this paper do not necessarily represent the views of Standard Chartered Bank.}
 
 \bibliographystyle{plainnat}
 \balance
