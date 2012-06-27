@@ -545,7 +545,7 @@ defaultFile = defaultRule $ \(File x) -> Just $ do
 \label{fig:file_rules}
 \end{figure}
 
-While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could be either modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds using the \prog{touch} command is highly convenient when writing build rules. Of course, our design allows anyone to define a new type of file rule, based on file content hashes.
+While our build system is not restricted to rules dealing with files, in practice many build systems are file orientated. When implementing file rules, the filename is an obvious |key|, but |value| could be either modification time or a hash of the file contents (e.g. SHA1). In practice, we found that using modification time is faster (significantly faster for large files) and being able to force rebuilds using the \prog{touch} command is highly convenient while developing build rules. Of course, our design allows anyone to define a new type of file rule, based on file content hashes.
 
 We define file rules in Figure \ref{fig:file_rules}. To force files to be built, we define |need| and |want|. The |need| action adds a dependency on all the modification times of the files, and is typically used before performing some IO action that uses the files. We use |want| to specify the targets of the build system, implemented by calling |need| in an |action| that is always run.
 
