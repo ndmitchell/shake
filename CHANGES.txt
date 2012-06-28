@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make the Monad/Monoid instance for Rules strict
 0.3
     #550, ensure the journal thread is locked
     #550, if your thread dies while reading the database then die

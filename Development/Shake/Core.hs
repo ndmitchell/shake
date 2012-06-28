@@ -157,9 +157,9 @@ instance Monoid a => Monoid (Rules a) where
 
 instance Monad Rules where
     return x = Rules x [] (Map.fromList [])
-    Rules v1 x1 x2 >>= f = Rules v2 (x1++y1) (Map.unionWith g x2 y2)
-        where Rules v2 y1 y2 = f v1
-              g (k, v1, xs) (_, v2, ys)
+    Rules v1 x1 x2 >>= f = case f v1 of
+        Rules v2 y1 y2 -> Rules v2 (x1++y1) (Map.unionWith g x2 y2)
+        where g (k, v1, xs) (_, v2, ys)
                 | v1 == v2 = (k, v1, xs ++ ys)
                 | otherwise = error $ "There are two incompatible rules for " ++ show k ++ ", producing " ++ show v1 ++ " and " ++ show v2
 
