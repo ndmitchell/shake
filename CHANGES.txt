@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add shakeDeterministic, along with a default random pool
     Make the Monad/Monoid instance for Rules strict
 0.3
     #550, ensure the journal thread is locked

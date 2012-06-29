@@ -46,12 +46,13 @@ data ShakeOptions = ShakeOptions
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
     ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
+    ,shakeDeterministic :: Bool -- ^ Build files in a detereminstic order, as far as possbile
     }
     deriving (Show,Eq,Ord,Typeable,Data)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False
 
 
 -- | All forseen exception conditions thrown by Shake, such problems with the rules or errors when executing
@@ -243,7 +244,7 @@ run opts@ShakeOptions{..} rs = do
     let stored = createStored rs
     let execute = createExecute rs
     withDatabase logger shakeFiles shakeVersion $ \database -> do
-        runPool shakeThreads $ \pool -> do
+        runPool shakeDeterministic shakeThreads $ \pool -> do
             let s0 = S database pool start stored execute output shakeVerbosity logger [] [] 0 []
             mapM_ (addPool pool . staunch . wrapStack [] . runAction s0) (actions rs)
         when shakeLint $ do

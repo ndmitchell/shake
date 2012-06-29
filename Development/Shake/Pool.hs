@@ -7,29 +7,61 @@ import Control.Exception hiding (blocked)
 import Development.Shake.Locks
 import qualified Data.HashSet as Set
 import Data.Maybe
+import System.IO.Unsafe
+import System.Random
 
 
 ---------------------------------------------------------------------
--- RANDOM QUEUE
+-- UNFAIR/RANDOM QUEUE
 
 -- Monad for non-deterministic (but otherwise pure) computations
 type NonDet a = IO a
 
-data RandomQueue a = RandomQueue [a] [a]
+nonDet :: NonDet [Bool]
+nonDet = do bs <- unsafeInterleaveIO nonDet
+            b <- randomIO
+            return $ b:bs
 
-newRandomQueue :: RandomQueue a
-newRandomQueue = RandomQueue [] []
+-- Left = deterministic list, Right = non-deterministic tree
+data Queue a = Queue [a] (Either [a] (Maybe (Tree a)))
 
-enqueuePriority :: a -> RandomQueue a -> RandomQueue a
-enqueuePriority x (RandomQueue p n) = RandomQueue (x:p) n
+newQueue :: Bool -> Queue a
+newQueue deterministic = Queue [] $ if deterministic then Left [] else Right Nothing
 
-enqueue :: a -> RandomQueue a -> NonDet (RandomQueue a)
-enqueue x (RandomQueue p n) = return $ RandomQueue p (x:n)
+enqueuePriority :: a -> Queue a -> Queue a
+enqueuePriority x (Queue p t) = Queue (x:p) t
 
-dequeue :: RandomQueue a -> Maybe (NonDet (a, RandomQueue a))
-dequeue (RandomQueue (p:ps) ns) = Just $ return (p, RandomQueue ps ns)
-dequeue (RandomQueue [] (n:ns)) = Just $ return (n, RandomQueue [] ns)
-dequeue (RandomQueue [] []) = Nothing
+enqueue :: a -> Queue a -> NonDet (Queue a)
+enqueue x (Queue p (Left xs)) = return $ Queue p $ Left $ x:xs
+enqueue x (Queue p (Right Nothing)) = return $ Queue p $ Right $ Just $ Leaf x
+enqueue x (Queue p (Right (Just t))) = do bs <- nonDet; return $ Queue p $ Right $ Just $ insertTree bs x t
+
+dequeue :: Queue a -> Maybe (NonDet (a, Queue a))
+dequeue (Queue (p:ps) t) = Just $ return (p, Queue ps t)
+dequeue (Queue [] (Left (x:xs))) = Just $ return (x, Queue [] $ Left xs)
+dequeue (Queue [] (Left [])) = Nothing
+dequeue (Queue [] (Right (Just t))) = Just $ do bs <- nonDet; (x,t) <- return $ removeTree bs t; return (x, Queue [] $ Right t)
+dequeue (Queue [] (Right Nothing)) = Nothing
+
+
+---------------------------------------------------------------------
+-- TREE
+
+-- Note that for a Random tree, since everything is Random, Branch x y =~= Branch y x
+data Tree a = Leaf a | Branch (Tree a) (Tree a)
+
+insertTree :: [Bool] -> a -> Tree a -> Tree a
+insertTree _ x (Leaf y) = Branch (Leaf x) (Leaf y)
+insertTree (b:bs) x (Branch y z) = if b then f y z else f z y
+    where f y z = Branch y (insertTree bs x z)
+
+removeTree :: [Bool] -> Tree a -> (a, Maybe (Tree a))
+removeTree _ (Leaf x) = (x, Nothing)
+removeTree (b:bs) (Branch y z) = if b then f y z else f z y
+    where
+        f y z = case removeTree bs z of
+                    (x, Nothing) -> (x, Just y)
+                    (x, Just z) -> (x, Just $ Branch y z)
 
 
 ---------------------------------------------------------------------
@@ -47,12 +79,12 @@ data S = S
     {threads :: Set.HashSet ThreadId
     ,working :: Int -- threads which are actively working
     ,blocked :: Int -- threads which are blocked
-    ,todo :: RandomQueue (IO ())
+    ,todo :: Queue (IO ())
     }
 
 
-emptyS :: S
-emptyS = S Set.empty 0 0 newRandomQueue
+emptyS :: Bool -> S
+emptyS deterministic = S Set.empty 0 0 $ newQueue deterministic
 
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
@@ -106,9 +138,9 @@ blockPool pool act = do
 
 -- | Run all the tasks in the pool on the given number of works.
 --   If any thread throws an exception, the exception will be reraised.
-runPool :: Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
-runPool n act = do
-    s <- newVar $ Just emptyS
+runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
+runPool deterministic n act = do
+    s <- newVar $ Just $ emptyS deterministic
     let cleanup = modifyVar_ s $ \s -> do
             -- if someone kills our thread, make sure we kill our child threads
             case s of
