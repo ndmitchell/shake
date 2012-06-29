@@ -6,12 +6,14 @@ import Control.Concurrent
 import Control.Exception hiding (blocked)
 import Development.Shake.Locks
 import qualified Data.HashSet as Set
+import Data.Maybe
 
 
 ---------------------------------------------------------------------
 -- RANDOM QUEUE
 
--- FIXME: The queue should use randomness for the normal priority pile
+-- Monad for non-deterministic (but otherwise pure) computations
+type NonDet a = IO a
 
 data RandomQueue a = RandomQueue [a] [a]
 
@@ -21,12 +23,12 @@ newRandomQueue = RandomQueue [] []
 enqueuePriority :: a -> RandomQueue a -> RandomQueue a
 enqueuePriority x (RandomQueue p n) = RandomQueue (x:p) n
 
-enqueue :: a -> RandomQueue a -> RandomQueue a
-enqueue x (RandomQueue p n) = RandomQueue p (x:n)
+enqueue :: a -> RandomQueue a -> NonDet (RandomQueue a)
+enqueue x (RandomQueue p n) = return $ RandomQueue p (x:n)
 
-dequeue :: RandomQueue a -> Maybe (a, RandomQueue a)
-dequeue (RandomQueue (p:ps) ns) = Just (p, RandomQueue ps ns)
-dequeue (RandomQueue [] (n:ns)) = Just (n, RandomQueue [] ns)
+dequeue :: RandomQueue a -> Maybe (NonDet (a, RandomQueue a))
+dequeue (RandomQueue (p:ps) ns) = Just $ return (p, RandomQueue ps ns)
+dequeue (RandomQueue [] (n:ns)) = Just $ return (n, RandomQueue [] ns)
 dequeue (RandomQueue [] []) = Nothing
 
 
@@ -55,12 +57,13 @@ emptyS = S Set.empty 0 0 newRandomQueue
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch working or todo
-step :: Pool -> (S -> S) -> IO ()
+step :: Pool -> (S -> NonDet S) -> IO ()
 step pool@(Pool n var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
     onVar $ \s -> do
-        s <- return $ op s
-        case dequeue (todo s) of
+        s <- op s
+        res <- maybe (return Nothing) (fmap Just) $ dequeue $ todo s
+        case res of
             Just (now, todo2) | working s < n -> do
                 -- spawn a new worker
                 t <- forkIO $ do
@@ -71,7 +74,7 @@ step pool@(Pool n var done) op = do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
                             signalBarrier done $ Just e
                             return Nothing
-                        Right _ -> step pool $ \s -> s{working = working s - 1, threads = Set.delete t $ threads s}
+                        Right _ -> step pool $ \s -> return s{working = working s - 1, threads = Set.delete t $ threads s}
                 return $ Just s{working = working s + 1, todo = todo2, threads = Set.insert t $ threads s}
             Nothing | working s == 0 && blocked s == 0 -> do
                 signalBarrier done Nothing
@@ -81,20 +84,22 @@ step pool@(Pool n var done) op = do
 
 -- | Add a new task to the pool
 addPool :: Pool -> IO a -> IO ()
-addPool pool act = step pool $ \s -> s{todo = enqueue (act >> return ()) (todo s)}
+addPool pool act = step pool $ \s -> do
+    todo <- enqueue (act >> return ()) (todo s)
+    return s{todo = todo}
 
 
 -- | A blocking action is being run while on the pool, yeild your thread.
 --   Should only be called by an action under addPool.
 blockPool :: Pool -> IO a -> IO a
 blockPool pool act = do
-    step pool $ \s -> s{working = working s - 1, blocked = blocked s + 1}
+    step pool $ \s -> return s{working = working s - 1, blocked = blocked s + 1}
     res <- act
     var <- newBarrier
     let act = do
-            step pool $ \s -> s{working = working s + 1, blocked = blocked s - 1}
+            step pool $ \s -> return s{working = working s + 1, blocked = blocked s - 1}
             signalBarrier var ()
-    step pool $ \s -> s{todo = enqueuePriority act $ todo s}
+    step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
     waitBarrier var
     return res
 
