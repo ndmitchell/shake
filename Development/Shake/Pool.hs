@@ -9,25 +9,25 @@ import qualified Data.HashSet as Set
 
 
 ---------------------------------------------------------------------
--- SUPER QUEUE
+-- RANDOM QUEUE
 
--- FIXME: The super queue should use randomness for the normal priority pile
+-- FIXME: The queue should use randomness for the normal priority pile
 
-data SuperQueue a = SuperQueue [a] [a]
+data RandomQueue a = RandomQueue [a] [a]
 
-newSuperQueue :: SuperQueue a
-newSuperQueue = SuperQueue [] []
+newRandomQueue :: RandomQueue a
+newRandomQueue = RandomQueue [] []
 
-enqueuePriority :: a -> SuperQueue a -> SuperQueue a
-enqueuePriority x (SuperQueue p n) = SuperQueue (x:p) n
+enqueuePriority :: a -> RandomQueue a -> RandomQueue a
+enqueuePriority x (RandomQueue p n) = RandomQueue (x:p) n
 
-enqueue :: a -> SuperQueue a -> SuperQueue a
-enqueue x (SuperQueue p n) = SuperQueue p (x:n)
+enqueue :: a -> RandomQueue a -> RandomQueue a
+enqueue x (RandomQueue p n) = RandomQueue p (x:n)
 
-dequeue :: SuperQueue a -> Maybe (a, SuperQueue a)
-dequeue (SuperQueue (p:ps) ns) = Just (p, SuperQueue ps ns)
-dequeue (SuperQueue [] (n:ns)) = Just (n, SuperQueue [] ns)
-dequeue (SuperQueue [] []) = Nothing
+dequeue :: RandomQueue a -> Maybe (a, RandomQueue a)
+dequeue (RandomQueue (p:ps) ns) = Just (p, RandomQueue ps ns)
+dequeue (RandomQueue [] (n:ns)) = Just (n, RandomQueue [] ns)
+dequeue (RandomQueue [] []) = Nothing
 
 
 ---------------------------------------------------------------------
@@ -45,12 +45,12 @@ data S = S
     {threads :: Set.HashSet ThreadId
     ,working :: Int -- threads which are actively working
     ,blocked :: Int -- threads which are blocked
-    ,todo :: SuperQueue (IO ())
+    ,todo :: RandomQueue (IO ())
     }
 
 
 emptyS :: S
-emptyS = S Set.empty 0 0 newSuperQueue
+emptyS = S Set.empty 0 0 newRandomQueue
 
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
