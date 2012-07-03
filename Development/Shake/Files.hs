@@ -11,6 +11,7 @@ import Data.Binary
 import Data.Hashable
 import Data.Maybe
 import Data.Typeable
+import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
 import Development.Shake.File
@@ -20,17 +21,22 @@ import Development.Shake.FileTime
 infix 1 ?>>, *>>
 
 
-newtype Files = Files [FilePath]
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+newtype Files = Files [BS.ByteString]
+    deriving (Typeable,Eq,Hashable,Binary)
+
+instance NFData Files where
+    rnf (Files xs) = f xs
+        where f [] = ()
+              f (x:xs) = x `seq` f xs
 
 newtype FileTimes = FileTimes [FileTime]
     deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
 
-instance Show Files where show (Files xs) = unwords xs
+instance Show Files where show (Files xs) = unwords $ map BS.unpack xs
 
 
 instance Rule Files FileTimes where
-    validStored (Files xs) (FileTimes ts) = fmap (== map Just ts) $ mapM getModTimeMaybe xs
+    validStored (Files xs) (FileTimes ts) = fmap (== map Just ts) $ mapM (getModTimeMaybe . BS.unpack) xs
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -54,11 +60,12 @@ ps *>> act
     | otherwise = do
         forM_ ps $ \p ->
             p *> \file -> do
-                apply1 $ Files $ map (substitute $ extract p file) ps :: Action FileTimes
+                apply1 $ Files $ map (BS.pack . substitute (extract p file)) ps :: Action FileTimes
                 return ()
-        rule $ \(Files xs) -> if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
-            act xs
-            liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, *>> failed to build the file:") xs
+        rule $ \(Files xs_) -> let xs = map BS.unpack xs_ in
+            if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
+                act xs
+                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, *>> failed to build the file:") xs
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
@@ -85,12 +92,13 @@ ps *>> act
                     | otherwise -> error $ "Invariant broken in ?>> when trying on " ++ x
 
     isJust . checkedTest ?> \x -> do
-        apply1 $ Files $ fromJust $ test x :: Action FileTimes
+        apply1 $ Files $ map BS.pack $ fromJust $ test x :: Action FileTimes
         return ()
 
-    rule $ \(Files xs@(x:_)) -> case checkedTest x of
-        Just ys | ys == xs -> Just $ do
-            act xs
-            liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, multi rule failed to build the file:") xs
-        Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
-        Nothing -> Nothing
+    rule $ \(Files xs_) -> let xs@(x:_) = map BS.unpack xs_ in
+        case checkedTest x of
+            Just ys | ys == xs -> Just $ do
+                act xs
+                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, multi rule failed to build the file:") xs
+            Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
+            Nothing -> Nothing
