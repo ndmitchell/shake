@@ -33,8 +33,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
--- FIXME: Binary instance writes out 8 bytes, probably should be 2
-newtype Step = Step Int deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
+newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
 
