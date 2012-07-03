@@ -16,6 +16,7 @@ import Data.Typeable
 
 import Data.Bits
 import Data.IORef
+import Data.List
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
 import System.IO.Unsafe
@@ -79,8 +80,8 @@ registerWitness x = modifyIORef witness $ Map.insert (typeOf x) (Value $ undefin
 
 data Witness = Witness
     {typeNames :: [String] -- the canonical data, the names of the types
-    ,witnessIn :: Map.HashMap Int Value -- for reading in, the find the values (some may be missing)
-    ,witnessOut :: Map.HashMap TypeRep Int -- for writing out, find the value
+    ,witnessIn :: Map.HashMap Word16 Value -- for reading in, the find the values (some may be missing)
+    ,witnessOut :: Map.HashMap TypeRep Word16 -- for writing out, find the value
     }
 
 instance Eq Witness where
@@ -114,7 +115,7 @@ instance BinaryWith Witness Value where
     getWith ws = do
         h <- get
         case Map.lookup h $ witnessIn ws of
-            Nothing | h >= 0 && h < length (typeNames ws) -> error $
+            Nothing | h >= 0 && h < genericLength (typeNames ws) -> error $
                 "Failed to find a type " ++ (typeNames ws !! fromIntegral h) ++ " which is stored in the database.\n" ++
                 "The most likely cause is that your build tool has changed significantly."
             Nothing -> error $
