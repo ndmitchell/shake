@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Switch to ByteString for storing File
     Add shakeDeterministic, along with a default random pool
     Make the Monad/Monoid instance for Rules strict
 0.3

@@ -12,6 +12,7 @@ import Data.Binary
 import Data.Hashable
 import Data.Typeable
 import System.Directory
+import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
 import Development.Shake.FilePath
@@ -21,14 +22,17 @@ import Development.Shake.FileTime
 infix 1 *>, ?>, **>
 
 
-newtype File = File FilePath
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+newtype File = File BS.ByteString
+    deriving (Typeable,Eq,Hashable,Binary)
 
-instance Show File where show (File x) = x
+instance NFData File where
+    rnf (File x) = x `seq` () -- since ByteString is strict
+
+instance Show File where show (File x) = BS.unpack x
 
 
 instance Rule File FileTime where
-    validStored (File x) t = fmap (== Just t) $ getModTimeMaybe x
+    validStored (File x) t = fmap (== Just t) $ getModTimeMaybe $ BS.unpack x
 
 {-
     observed act = do
@@ -88,7 +92,7 @@ compareItems = f ""
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(File x) -> Just $
-    liftIO $ getModTimeError "Error, file does not exist and no rule available:" x
+    liftIO $ getModTimeError "Error, file does not exist and no rule available:" (BS.unpack x)
 
 
 -- | Require that the following files are built before continuing. Particularly
@@ -101,7 +105,7 @@ defaultRuleFile = defaultRule $ \(File x) -> Just $
 --     'Development.Shake.system'' [\"rot13\",src,\"-o\",out]
 -- @
 need :: [FilePath] -> Action ()
-need xs = (apply $ map File xs :: Action [FileTime]) >> return ()
+need xs = (apply $ map (File . BS.pack) xs :: Action [FileTime]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --
@@ -126,7 +130,7 @@ want xs = action $ need xs
 --     'Development.Shake.writeFile'' . map toUpper =<< 'Development.Shake.readFile'' src
 -- @
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-(?>) test act = rule $ \(File x) ->
+(?>) test act = rule $ \(File x_) -> let x = BS.unpack x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
