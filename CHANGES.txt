@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    IMPORTANT: Incompatible on disk format change
     Switch to ByteString for storing File
     Add shakeDeterministic, along with a default random pool
     Make the Monad/Monoid instance for Rules strict
