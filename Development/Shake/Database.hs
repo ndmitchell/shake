@@ -84,10 +84,10 @@ data Status
 -- FIXME: Probably want Step's to be strict and unpacked? Benchmark on a large example
 data Result = Result
     {result :: Value -- the result associated with the Key
-    ,built :: Step -- when it was actually run
-    ,changed :: Step -- the step for deciding if it's valid
+    ,built :: {-# UNPACK #-} !Step -- when it was actually run
+    ,changed :: {-# UNPACK #-} !Step -- the step for deciding if it's valid
     ,depends :: [[Key]] -- dependencies
-    ,execution :: Duration -- how long it took when it was last run (seconds)
+    ,execution :: {-# UNPACK #-} !Duration -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
 
