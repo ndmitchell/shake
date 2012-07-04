@@ -21,9 +21,8 @@ newtype FileTime = FileTime Int
 
 
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
-getModTimeMaybe x =
-    fmap Just (getModTime x) `Control.Exception.catch` \e ->
-        if isDoesNotExistError e then return Nothing else ioError e
+getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $
+    fmap Just $ getModTime x
 
 
 getModTimeError :: String -> BS.ByteString -> IO FileTime
