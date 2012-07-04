@@ -21,8 +21,9 @@ newtype FileTime = FileTime Int
 
 
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
-getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $
-    fmap Just $ getModTime x
+getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+    TOD t _ <- getModificationTime $ BS.unpack x
+    return $ Just $ FileTime $ fromIntegral t
 
 
 getModTimeError :: String -> BS.ByteString -> IO FileTime
@@ -32,9 +33,3 @@ getModTimeError msg x = do
         -- Make sure you raise an error in IO, not return a value which will error later
         Nothing -> error $ msg ++ "\n" ++ BS.unpack x
         Just x -> return x
-
-
-getModTime :: BS.ByteString -> IO FileTime
-getModTime x = do
-    TOD t _ <- getModificationTime $ BS.unpack x
-    return $ FileTime $ fromIntegral t
