@@ -36,7 +36,7 @@ instance Show Files where show (Files xs) = unwords $ map BS.unpack xs
 
 
 instance Rule Files FileTimes where
-    validStored (Files xs) (FileTimes ts) = fmap (== map Just ts) $ mapM (getModTimeMaybe . BS.unpack) xs
+    validStored (Files xs) (FileTimes ts) = fmap (== map Just ts) $ mapM getModTimeMaybe xs
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -65,7 +65,7 @@ ps *>> act
         rule $ \(Files xs_) -> let xs = map BS.unpack xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                 act xs
-                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, *>> failed to build the file:") xs
+                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, *>> failed to build the file:") xs_
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
@@ -99,6 +99,6 @@ ps *>> act
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 act xs
-                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, multi rule failed to build the file:") xs
+                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, multi rule failed to build the file:") xs_
             Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
             Nothing -> Nothing

@@ -32,7 +32,7 @@ instance Show File where show (File x) = BS.unpack x
 
 
 instance Rule File FileTime where
-    validStored (File x) t = fmap (== Just t) $ getModTimeMaybe $ BS.unpack x
+    validStored (File x) t = fmap (== Just t) $ getModTimeMaybe x
 
 {-
     observed act = do
@@ -92,7 +92,7 @@ compareItems = f ""
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(File x) -> Just $
-    liftIO $ getModTimeError "Error, file does not exist and no rule available:" (BS.unpack x)
+    liftIO $ getModTimeError "Error, file does not exist and no rule available:" x
 
 
 -- | Require that the following files are built before continuing. Particularly
@@ -134,7 +134,7 @@ want xs = action $ need xs
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ getModTimeError "Error, rule failed to build the file:" x
+        liftIO $ getModTimeError "Error, rule failed to build the file:" x_
 
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
