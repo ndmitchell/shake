@@ -10,13 +10,19 @@ import Control.DeepSeq
 import Data.Binary
 import Data.Hashable
 import Data.Typeable
-import System.Directory
-import System.IO.Error
-import Control.Exception
-import System.Time
+import Data.Int
 import qualified Data.ByteString.Char8 as BS
 
-#ifdef mingw32_HOST_OS
+#define PORTABLE 0
+
+#if PORTABLE
+
+import System.IO.Error
+import Control.Exception
+import System.Directory
+import System.Time
+
+#elif defined mingw32_HOST_OS
 
 import Foreign
 import Foreign.C.Types
@@ -30,10 +36,10 @@ size_WIN32_FILE_ATTRIBUTE_DATA = 36
 
 index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
 
-#endif
+#else
 
-#if 0
-
+import System.IO.Error
+import Control.Exception
 import System.Posix.Files.ByteString
 
 #endif
@@ -45,7 +51,15 @@ newtype FileTime = FileTime Int32
 
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
 
-#ifdef mingw32_HOST_OS
+#if PORTABLE
+
+-- Portable fallback
+getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+    TOD t _ <- getModificationTime $ BS.unpack x
+    return $ Just $ FileTime $ fromIntegral t
+
+
+#elif defined mingw32_HOST_OS
 
 -- Directly against the Win32 API, twice as fast as the portable version
 getModTimeMaybe x = BS.useAsCString x $ \file ->
@@ -56,22 +70,14 @@ getModTimeMaybe x = BS.useAsCString x $ \file ->
             dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
             return $ Just $ FileTime dword
 
-#endif
-
-#if 0
+#else
 
 -- Directly against the unix library
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    CTime t <- fmap modificationTime $ getFileStatus x
-    return $ Just $ FileTime t
+    t <- fmap modificationTime $ getFileStatus x
+    return $ Just $ FileTime $ fromIntegral $ fromEnum t
 
 #endif
-
-
--- Portable fallback
-getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    TOD t _ <- getModificationTime $ BS.unpack x
-    return $ Just $ FileTime $ fromIntegral t
 
 
 getModTimeError :: String -> BS.ByteString -> IO FileTime
