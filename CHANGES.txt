@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Optimise modification time checking on Windows
     Make some fields smaller on disk
     IMPORTANT: Incompatible on disk format change
     Switch to ByteString for storing File

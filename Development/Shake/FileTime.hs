@@ -1,4 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
+{-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
 
 module Development.Shake.FileTime(
     FileTime,
@@ -15,12 +16,43 @@ import Control.Exception
 import System.Time
 import qualified Data.ByteString.Char8 as BS
 
+#ifdef mingw32_HOST_OS
 
-newtype FileTime = FileTime Int
+import Foreign
+import Foreign.C.Types
+
+type WIN32_FILE_ATTRIBUTE_DATA = Ptr ()
+type LPCSTR = Ptr CChar
+
+foreign import stdcall "Windows.h GetFileAttributesExA" c_getFileAttributesEx :: LPCSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+
+size_WIN32_FILE_ATTRIBUTE_DATA = 36
+
+index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
+
+#endif
+
+
+newtype FileTime = FileTime Int32
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
+
+#ifdef mingw32_HOST_OS
+
+-- Directly against the Win32 API, twice as fast as the portable version
+getModTimeMaybe x = BS.useAsCString x $ \file ->
+    allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA $ \info -> do
+        res <- c_getFileAttributesEx file 0 info
+        if not res then return Nothing else do
+            -- Technically a Word32, but we can treak it as an Int32 for peek
+            dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
+            return $ Just $ FileTime dword
+
+#endif
+
+-- Portable fallback
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     TOD t _ <- getModificationTime $ BS.unpack x
     return $ Just $ FileTime $ fromIntegral t
