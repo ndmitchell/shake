@@ -65,7 +65,7 @@ library
         binary,
         filepath,
         process,
-        unordered-containers >= 0.2.1 && < 0.3,
+        unordered-containers (>= 0.1.4.3 && < 0.2) || (>= 0.2.1 && < 0.3),
         bytestring,
         time,
         transformers >= 0.2 && < 0.4,
