@@ -8,6 +8,7 @@ import Examples.Util
 import Control.Monad
 import Data.Char
 import Data.List
+import System.Info
 
 
 main :: IO ()
@@ -75,6 +76,8 @@ hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (no
 
 -- FIXME: Should actually parse the list from the contents of the .cabal file
 cabalBuildDepends :: String -> [String]
-cabalBuildDepends _ = words $
+cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
+
+packages = words $
     "base transformers binary unordered-containers hashable time old-time bytestring " ++
     "filepath directory process deepseq random"

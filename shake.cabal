@@ -70,6 +70,8 @@ library
         time,
         transformers >= 0.2 && < 0.4,
         deepseq >= 1.1 && < 1.4
+    if !os(windows)
+        build-depends: unix
 
     exposed-modules:
         Development.Shake
