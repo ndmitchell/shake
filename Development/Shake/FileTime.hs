@@ -32,6 +32,12 @@ index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
 
 #endif
 
+#if 0
+
+import System.Posix.Files.ByteString
+
+#endif
+
 
 newtype FileTime = FileTime Int32
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
@@ -51,6 +57,16 @@ getModTimeMaybe x = BS.useAsCString x $ \file ->
             return $ Just $ FileTime dword
 
 #endif
+
+#if 0
+
+-- Directly against the unix library
+getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+    CTime t <- fmap modificationTime $ getFileStatus x
+    return $ Just $ FileTime t
+
+#endif
+
 
 -- Portable fallback
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
