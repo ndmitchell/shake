@@ -6,7 +6,6 @@ import Control.Concurrent
 import Control.Exception hiding (blocked)
 import Development.Shake.Locks
 import qualified Data.HashSet as Set
-import Data.Maybe
 import System.IO.Unsafe
 import System.Random
 
