@@ -65,8 +65,8 @@ startTime = do
 
 newtype Stack = Stack [Key]
 
-showStack :: Stack -> [String]
-showStack (Stack xs) = reverse $ map show xs
+showStack :: Database -> Stack -> IO [String]
+showStack db (Stack xs) = return $ reverse $ map show xs
 
 addStack :: Key -> Stack -> Stack
 addStack x (Stack xs) = Stack $ x : xs

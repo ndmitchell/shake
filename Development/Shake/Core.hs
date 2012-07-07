@@ -246,7 +246,7 @@ run opts@ShakeOptions{..} rs = do
     withDatabase logger shakeFiles shakeVersion $ \database -> do
         runPool shakeDeterministic shakeThreads $ \pool -> do
             let s0 = S database pool start stored execute output shakeVerbosity logger emptyStack [] 0 []
-            mapM_ (addPool pool . staunch . wrapStack emptyStack . runAction s0) (actions rs)
+            mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
         when shakeLint $ do
             checkValid database stored
             when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
@@ -259,10 +259,12 @@ run opts@ShakeOptions{..} rs = do
     maybe (return ()) throwIO =<< readVar except
 
 
-wrapStack :: Stack -> IO a -> IO a
+wrapStack :: IO [String] -> IO a -> IO a
 wrapStack stk act = catch act $ \(SomeException e) -> case cast e of
     Just s@ShakeException{} -> throw s
-    Nothing -> throw $ ShakeException (showStack stk) $ SomeException e
+    Nothing -> do
+        stk <- stk
+        throw $ ShakeException stk $ SomeException e
 
 
 registerWitnesses :: Rules () -> IO ()
@@ -320,7 +322,7 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
     modify $ \s -> s{depends=ks:depends s}
     s <- get
-    let exec stack k = try $ wrapStack stack $ do
+    let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
             (dur,(res,s2)) <- duration $ runAction s2 $ do
