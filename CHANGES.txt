@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Intern all keys, so they are only stored once
     Optimise modification time checking on Unix
     Optimise modification time checking on Windows
     Make some fields smaller on disk
