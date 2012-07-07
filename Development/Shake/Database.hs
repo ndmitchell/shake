@@ -70,7 +70,7 @@ data Database = Database
     {lock :: Lock
     ,status :: IORef (Map Key Status)
     ,step :: Step
-    ,journal :: Key -> Maybe Result -> IO ()
+    ,journal :: Update Key Result -> IO ()
     ,logger :: String -> IO () -- logging function
     }
 
@@ -214,10 +214,10 @@ build pool Database{..} Ops{..} ks =
                 case ans of
                     Ready r -> do
                         logger $ "result " ++ atom k ++ " = " ++ atom (result r)
-                        journal k $ Just r -- leave the DB lock before appending
+                        journal $ Insert k r -- leave the DB lock before appending
                     Error _ -> do
                         logger $ "result " ++ atom k ++ " = error"
-                        journal k Nothing
+                        journal $ Delete k
                     _ -> return ()
             k #= w
 
@@ -335,7 +335,7 @@ withDatabase logger filename version act = do
     withStorage logger filename version witness $ \mp journal -> do
         status <- newIORef $ Map.map Loaded mp
         let step = maybe (Step 1) (incStep . fromStepResult) $ Map.lookup stepKey mp
-        journal stepKey $ Just $ toStepResult step
+        journal $ Insert stepKey $ toStepResult step
         lock <- newLock
         act Database{..}
 
