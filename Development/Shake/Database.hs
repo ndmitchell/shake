@@ -6,6 +6,7 @@ module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), build,
+    Stack, emptyStack, showStack,
     allEntries, showJSON, checkValid,
     ) where
 
@@ -57,6 +58,26 @@ startTime = do
     return $ do
         end <- getCurrentTime
         return $ fromRational $ toRational $ end `diffUTCTime` start
+
+
+---------------------------------------------------------------------
+-- CALL STACK
+
+newtype Stack = Stack [Key]
+
+showStack :: Stack -> [String]
+showStack (Stack xs) = reverse $ map show xs
+
+addStack :: Key -> Stack -> Stack
+addStack x (Stack xs) = Stack $ x : xs
+
+checkStack :: [Key] -> Stack -> IO ()
+checkStack new (Stack old)
+    | bad:_ <- old `intersect` new = error $ "Invalid rules, recursion detected when trying to build: " ++ show bad
+    | otherwise = return ()
+
+emptyStack :: Stack
+emptyStack = Stack []
 
 
 ---------------------------------------------------------------------
@@ -142,16 +163,17 @@ getResult _ = Nothing
 data Ops = Ops
     {valid :: Key -> Value -> IO Bool
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
-    ,exec :: [Key] -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
+    ,exec :: Stack -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     }
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> [Key] -> IO (Either SomeException (Duration,[Value]))
-build pool Database{..} Ops{..} ks =
+build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,[Value]))
+build pool Database{..} Ops{..} stack ks = do
+    checkStack ks stack
     join $ withLock lock $ do
-        vs <- mapM (reduce []) ks
+        vs <- mapM (reduce stack) ks
         let errs = [e | Error e <- vs]
         if all isReady vs then
             return $ return $ Right (0, [result r | Ready r <- vs])
@@ -186,7 +208,7 @@ build pool Database{..} Ops{..} ks =
         -- * Must have an equal return to what is stored in the db at that point
         -- * Must not return Loaded
 
-        reduce :: [Key] -> Key -> IO Status
+        reduce :: Stack -> Key -> IO Status
         reduce stack k = do
             s <- readIORef status
             case Map.lookup k s of
@@ -197,11 +219,11 @@ build pool Database{..} Ops{..} ks =
                     if not b then run stack k $ Just r else check stack k r (depends r)
                 Just res -> return res
 
-        run :: [Key] -> Key -> Maybe Result -> IO Waiting
+        run :: Stack -> Key -> Maybe Result -> IO Waiting
         run stack k r = do
             w <- newWaiting r
             addPool pool $ do
-                res <- exec stack k
+                res <- exec (addStack k stack) k
                 ans <- withLock lock $ do
                     ans <- k #= case res of
                         Left err -> Error err
@@ -221,11 +243,11 @@ build pool Database{..} Ops{..} ks =
                     _ -> return ()
             k #= w
 
-        check :: [Key] -> Key -> Result -> [[Key]] -> IO Status
+        check :: Stack -> Key -> Result -> [[Key]] -> IO Status
         check stack k r [] =
             k #= Ready r
         check stack k r (ds:rest) = do
-            vs <- mapM (reduce (k:stack)) ds
+            vs <- mapM (reduce (addStack k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
                 run stack k $ Just r

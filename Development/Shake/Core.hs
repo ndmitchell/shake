@@ -205,7 +205,7 @@ data S = S
     ,verbosity :: Verbosity
     ,logger :: String -> IO ()
     -- stack variables
-    ,stack :: [Key] -- in reverse
+    ,stack :: Stack
     -- local variables
     ,depends :: [[Key]] -- built up in reverse
     ,discount :: Duration
@@ -245,8 +245,8 @@ run opts@ShakeOptions{..} rs = do
     let execute = createExecute rs
     withDatabase logger shakeFiles shakeVersion $ \database -> do
         runPool shakeDeterministic shakeThreads $ \pool -> do
-            let s0 = S database pool start stored execute output shakeVerbosity logger [] [] 0 []
-            mapM_ (addPool pool . staunch . wrapStack [] . runAction s0) (actions rs)
+            let s0 = S database pool start stored execute output shakeVerbosity logger emptyStack [] 0 []
+            mapM_ (addPool pool . staunch . wrapStack emptyStack . runAction s0) (actions rs)
         when shakeLint $ do
             checkValid database stored
             when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
@@ -259,10 +259,10 @@ run opts@ShakeOptions{..} rs = do
     maybe (return ()) throwIO =<< readVar except
 
 
-wrapStack :: [Key] -> IO a -> IO a
+wrapStack :: Stack -> IO a -> IO a
 wrapStack stk act = catch act $ \(SomeException e) -> case cast e of
     Just s@ShakeException{} -> throw s
-    Nothing -> throw $ ShakeException (map show stk) $ SomeException e
+    Nothing -> throw $ ShakeException (showStack stk) $ SomeException e
 
 
 registerWitnesses :: Rules () -> IO ()
@@ -320,19 +320,16 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
     modify $ \s -> s{depends=ks:depends s}
     s <- get
-    let bad = stack s `intersect` ks
-    unless (null bad) $ 
-        error $ "Invalid rules, recursion detected when trying to build: " ++ show (head bad)
-    let exec more_stack k = let stack2 = k : more_stack ++ stack s in try $ wrapStack (reverse stack2) $ do
+    let exec stack k = try $ wrapStack stack $ do
             evaluate $ rnf k
-            let s2 = s{depends=[], stack=stack2, discount=0, traces=[]}
+            let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putNormal $ "# " ++ show k
                 execute s k
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
-    res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) ks
+    res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) (stack s) ks
     case res of
         Left err -> throw err
         Right (d, vs) -> do
