@@ -5,7 +5,7 @@
 module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
-    Ops(..), build,
+    Ops(..), build, Depends,
     Stack, emptyStack, showStack,
     allEntries, showJSON, checkValid,
     ) where
@@ -160,23 +160,26 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
+newtype Depends = Depends {fromDepends :: [Key]}
+    deriving (NFData)
+
 data Ops = Ops
     {valid :: Key -> Value -> IO Bool
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
-    ,exec :: Stack -> Key -> IO (Either SomeException (Value, [[Key]], Duration, [Trace]))
+    ,exec :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     }
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,[Value]))
+build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
 build pool Database{..} Ops{..} stack ks = do
     checkStack ks stack
     join $ withLock lock $ do
         vs <- mapM (reduce stack) ks
         let errs = [e | Error e <- vs]
         if all isReady vs then
-            return $ return $ Right (0, [result r | Ready r <- vs])
+            return $ return $ Right (0, Depends ks, [result r | Ready r <- vs])
          else if not $ null errs then
             return $ return $ Left $ head errs
          else do
@@ -192,7 +195,7 @@ build pool Database{..} Ops{..} stack ks = do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait
                 return $ case res of
                     Left e -> Left e
-                    Right v -> Right (dur,v)
+                    Right v -> Right (dur,Depends ks,v)
     where
         k #= v = do
             s <- readIORef status
@@ -227,10 +230,10 @@ build pool Database{..} Ops{..} stack ks = do
                 ans <- withLock lock $ do
                     ans <- k #= case res of
                         Left err -> Error err
-                        Right (v,depends,execution,traces) ->
+                        Right (v,deps,execution,traces) ->
                             let c | Just r <- r, result r == v = changed r
                                   | otherwise = step
-                            in Ready Result{result=v,changed=c,built=step,..}
+                            in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
                     runWaiting w
                     return ans
                 case ans of

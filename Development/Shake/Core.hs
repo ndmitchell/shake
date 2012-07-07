@@ -207,7 +207,7 @@ data S = S
     -- stack variables
     ,stack :: Stack
     -- local variables
-    ,depends :: [[Key]] -- built up in reverse
+    ,depends :: [Depends] -- built up in reverse
     ,discount :: Duration
     ,traces :: [(String, Time, Time)] -- in reverse
     }
@@ -320,7 +320,6 @@ apply ks = fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
-    modify $ \s -> s{depends=ks:depends s}
     s <- get
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
@@ -334,8 +333,8 @@ applyKeyValue ks = Action $ do
     res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) (stack s) ks
     case res of
         Left err -> throw err
-        Right (d, vs) -> do
-            modify $ \s -> s{discount=discount s + d}
+        Right (dur, dep, vs) -> do
+            modify $ \s -> s{discount=discount s + dur, depends=dep : depends s}
             return vs
 
 
