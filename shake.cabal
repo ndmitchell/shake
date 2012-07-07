@@ -87,6 +87,7 @@ library
         Development.Shake.FilePattern
         Development.Shake.Files
         Development.Shake.FileTime
+        Development.Shake.Intern
         Development.Shake.Locks
         Development.Shake.Oracle
         Development.Shake.Pool

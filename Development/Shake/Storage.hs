@@ -6,7 +6,7 @@ We store a series of records, and if they contain twice as many records as neede
 -}
 
 module Development.Shake.Storage(
-    withStorage, Update(..)
+    withStorage
     ) where
 
 import Development.Shake.Binary
@@ -38,21 +38,6 @@ type Map = Map.HashMap
 databaseVersion i = "SHAKE-DATABASE-5-" ++ show (i :: Int) ++ "\r\n"
 
 
-data Update k v = Insert k v
-                | Delete k
-
-
-instance (BinaryWith w k, BinaryWith w v) => BinaryWith w (Update k v) where
-    putWith ctx (Insert k v) = do putWord8 0; putWith ctx k; putWith ctx v
-    putWith ctx (Delete k) = do putWord8 1; putWith ctx k
-
-    getWith ctx = do
-        i <- getWord8
-        case i of
-            0 -> liftM2 Insert (getWith ctx) (getWith ctx)
-            _ -> liftM Delete (getWith ctx)
-
-
 withStorage
     :: (Eq w, Eq k, Hashable k
        ,Binary w, BinaryWith w k, BinaryWith w v)
@@ -60,7 +45,7 @@ withStorage
     -> FilePath                 -- ^ File prefix to use
     -> Int                      -- ^ User supplied version number
     -> w                        -- ^ Witness
-    -> (Map k v -> (Update k v -> IO ()) -> IO a)  -- ^ Execute
+    -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage logger file version witness act = do
     let dbfile = file <.> "database"
@@ -109,8 +94,7 @@ withStorage logger file version witness act = do
                         logger $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
                         logger $ "Chunk sizes " ++ show (map LBS.length (w:xs))
                         let ws = decode w
-                            f mp (Delete k) = Map.delete k mp
-                            f mp (Insert k v ) = Map.insert k v mp
+                            f mp (k, v) = Map.insert k v mp
                             mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
                         -- if mp is null, continue will reset it, so no need to clean up
                         if Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2) then do
@@ -146,7 +130,7 @@ withStorage logger file version witness act = do
             hSeek h AbsoluteSeek 0
             LBS.hPut h ver
             writeChunk h $ encode witness
-            mapM_ (\(k,v) -> writeChunk h $ runPut $ putWith witness $ Insert k v) $ Map.toList mp
+            mapM_ (writeChunk h . runPut . putWith witness) $ Map.toList mp
             hFlush h
             logger "Flush"
 
@@ -155,9 +139,9 @@ withStorage logger file version witness act = do
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
             lock <- newLock
-            act mp $ \u -> do
+            act mp $ \k v -> do
                 -- QUESTION: Should the logging be on a different thread? Does that reduce blocking?
-                withLock lock $ writeChunk h $ runPut $ putWith witness u
+                withLock lock $ writeChunk h $ runPut $ putWith witness (k, v)
                 hFlush h
                 logger "Flush"
 

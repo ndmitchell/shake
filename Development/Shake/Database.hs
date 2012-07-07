@@ -15,7 +15,9 @@ import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Locks
 import Development.Shake.Storage
+import Development.Shake.Intern as Intern
 
+import Control.Arrow
 import Control.DeepSeq
 import Data.Hashable
 import Data.Typeable
@@ -59,22 +61,28 @@ startTime = do
         end <- getCurrentTime
         return $ fromRational $ toRational $ end `diffUTCTime` start
 
+whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
+whenJust (Just a) f = f a
+whenJust Nothing f = return ()
+
 
 ---------------------------------------------------------------------
 -- CALL STACK
 
-newtype Stack = Stack [Key]
+newtype Stack = Stack [Id]
 
 showStack :: Database -> Stack -> IO [String]
-showStack db (Stack xs) = return $ reverse $ map show xs
+showStack Database{..} (Stack xs) = do
+    status <- withLock lock $ readIORef status
+    return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) xs
 
-addStack :: Key -> Stack -> Stack
+addStack :: Id -> Stack -> Stack
 addStack x (Stack xs) = Stack $ x : xs
 
-checkStack :: [Key] -> Stack -> IO ()
+checkStack :: [Id] -> Stack -> Maybe Id
 checkStack new (Stack old)
-    | bad:_ <- old `intersect` new = error $ "Invalid rules, recursion detected when trying to build: " ++ show bad
-    | otherwise = return ()
+    | bad:_ <- old `intersect` new = Just bad
+    | otherwise = Nothing
 
 emptyStack :: Stack
 emptyStack = Stack []
@@ -89,9 +97,10 @@ type Trace = (String, Time, Time)
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
     {lock :: Lock
-    ,status :: IORef (Map Key Status)
+    ,intern :: IORef (Intern Key)
+    ,status :: IORef (Map Id (Key, Status))
     ,step :: Step
-    ,journal :: Update Key Result -> IO ()
+    ,journal :: Id -> (Key, Maybe Result) -> IO ()
     ,logger :: String -> IO () -- logging function
     }
 
@@ -100,6 +109,7 @@ data Status
     | Error SomeException -- I have been run and raised an error
     | Loaded Result -- Loaded from the database
     | Waiting Pending (Maybe Result) -- Currently checking if I am valid or building
+    | Missing -- I am only here because I got into the Intern table
       deriving Show
 
 -- FIXME: Probably want Step's to be strict and unpacked? Benchmark on a large example
@@ -107,7 +117,7 @@ data Result = Result
     {result :: Value -- the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- the step for deciding if it's valid
-    ,depends :: [[Key]] -- dependencies
+    ,depends :: [[Id]] -- dependencies
     ,execution :: {-# UNPACK #-} !Duration -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
@@ -160,7 +170,7 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-newtype Depends = Depends {fromDepends :: [Key]}
+newtype Depends = Depends {fromDepends :: [Id]}
     deriving (NFData)
 
 data Ops = Ops
@@ -174,34 +184,48 @@ data Ops = Ops
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
 build pool Database{..} Ops{..} stack ks = do
-    checkStack ks stack
     join $ withLock lock $ do
-        vs <- mapM (reduce stack) ks
+        is <- forM ks $ \k -> do
+            is <- readIORef intern
+            case Intern.lookup k is of
+                Just i -> return i
+                Nothing -> do
+                    (is, i) <- return $ Intern.add k is
+                    writeIORef intern is
+                    modifyIORef status $ Map.insert i (k,Missing)
+                    return i
+
+        whenJust (checkStack is stack) $ \bad -> do
+            status <- readIORef status
+            error $ "Invalid rules, recursion detected when trying to build: " ++ maybe "<unknown>" (show . fst) (Map.lookup bad status)
+
+        vs <- mapM (reduce stack) is
         let errs = [e | Error e <- vs]
         if all isReady vs then
-            return $ return $ Right (0, Depends ks, [result r | Ready r <- vs])
+            return $ return $ Right (0, Depends is, [result r | Ready r <- vs])
          else if not $ null errs then
             return $ return $ Left $ head errs
          else do
             wait <- newBarrier
-            waitFor (filter (isWaiting . snd) $ zip ks vs) $ \finish k -> do
+            waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
                 let done x = do signalBarrier wait x; return True
-                case Map.lookup k s of
-                    Just (Error e) -> done $ Left e
-                    Just Ready{} | finish -> done $ Right [result r | k <- ks, let Ready r = fromJust $ Map.lookup k s]
-                                 | otherwise -> return False
+                case Map.lookup i s of
+                    Just (_, Error e) -> done $ Left e
+                    Just (_, Ready{}) | finish -> done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                                      | otherwise -> return False
             return $ do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait
                 return $ case res of
                     Left e -> Left e
-                    Right v -> Right (dur,Depends ks,v)
+                    Right v -> Right (dur,Depends is,v)
     where
-        k #= v = do
+        (#=) :: Id -> (Key, Status) -> IO Status
+        i #= (k,v) = do
             s <- readIORef status
-            writeIORef status $ Map.insert k v s
+            writeIORef status $ Map.insert i (k,v) s
             let shw = head . words . show
-            logger $ maybe "Missing" shw (Map.lookup k s) ++ " -> " ++ shw v ++ ", " ++ show k
+            logger $ maybe "Missing" (shw . snd) (Map.lookup i s) ++ " -> " ++ shw v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
@@ -211,71 +235,72 @@ build pool Database{..} Ops{..} stack ks = do
         -- * Must have an equal return to what is stored in the db at that point
         -- * Must not return Loaded
 
-        reduce :: Stack -> Key -> IO Status
-        reduce stack k = do
+        reduce :: Stack -> Id -> IO Status
+        reduce stack i = do
             s <- readIORef status
-            case Map.lookup k s of
-                Nothing -> run stack k Nothing
-                Just (Loaded r) -> do
+            case Map.lookup i s of
+                Nothing -> error $ "Shake internal error: interned value " ++ show i ++ " is missing from the database"
+                Just (k, Missing) -> run stack i k Nothing
+                Just (k, Loaded r) -> do
                     b <- valid k $ result r
                     logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-                    if not b then run stack k $ Just r else check stack k r (depends r)
-                Just res -> return res
+                    if not b then run stack i k $ Just r else check stack i k r (depends r)
+                Just (k, res) -> return res
 
-        run :: Stack -> Key -> Maybe Result -> IO Waiting
-        run stack k r = do
+        run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
+        run stack i k r = do
             w <- newWaiting r
             addPool pool $ do
-                res <- exec (addStack k stack) k
+                res <- exec (addStack i stack) k
                 ans <- withLock lock $ do
-                    ans <- k #= case res of
+                    ans <- i #= (k, case res of
                         Left err -> Error err
                         Right (v,deps,execution,traces) ->
                             let c | Just r <- r, result r == v = changed r
                                   | otherwise = step
-                            in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
+                            in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..})
                     runWaiting w
                     return ans
                 case ans of
                     Ready r -> do
                         logger $ "result " ++ atom k ++ " = " ++ atom (result r)
-                        journal $ Insert k r -- leave the DB lock before appending
+                        journal i (k, Just r) -- leave the DB lock before appending
                     Error _ -> do
                         logger $ "result " ++ atom k ++ " = error"
-                        journal $ Delete k
+                        journal i (k, Nothing)
                     _ -> return ()
-            k #= w
+            i #= (k, w)
 
-        check :: Stack -> Key -> Result -> [[Key]] -> IO Status
-        check stack k r [] =
-            k #= Ready r
-        check stack k r (ds:rest) = do
-            vs <- mapM (reduce (addStack k stack)) ds
+        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
+        check stack i k r [] =
+            i #= (k, Ready r)
+        check stack i k r (ds:rest) = do
+            vs <- mapM (reduce (addStack i stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
-                run stack k $ Just r
+                run stack i k $ Just r
              else if null ws then
-                check stack k r rest
+                check stack i k r rest
              else do
                 self <- newWaiting $ Just r
                 waitFor ws $ \finish d -> do
                     s <- readIORef status
                     let buildIt = do
-                            b <- run stack k $ Just r
+                            b <- run stack i k $ Just r
                             afterWaiting b $ runWaiting self
                             return True
                     case Map.lookup d s of
-                        Just Error{} -> buildIt
-                        Just (Ready r2)
+                        Just (_, Error{}) -> buildIt
+                        Just (_, Ready r2)
                             | changed r2 > built r -> buildIt
                             | finish -> do
-                                res <- check stack k r rest
+                                res <- check stack i k r rest
                                 if not $ isWaiting res
                                     then runWaiting self
                                     else afterWaiting res $ runWaiting self
                                 return True
                             | otherwise -> return False
-                k #= self
+                i #= (k, self)
 
 
 ---------------------------------------------------------------------
@@ -286,7 +311,8 @@ build pool Database{..} Ops{..} stack ks = do
 allEntries :: Database -> IO [(Key,Value)]
 allEntries Database{..} = do
     status <- readIORef status
-    return $ ordering [((k, result i), concat $ depends i) | (k,v) <- Map.toList status, Just i <- [getResult v]]
+    return $ ordering [ ((k, result r), [k | i <- concat $ depends r, Just (k,_) <- [Map.lookup i status]])
+                      | (k, v) <- Map.elems status, Just r <- [getResult v]]
     where
         ordering :: Eq a => [((a,b), [a])] -> [(a,b)]
         ordering xs = f [(a, nub b `intersect` as) | let as = map (fst . fst) xs, (a,b) <- xs]
@@ -312,18 +338,18 @@ showJSON Database{..} = do
                 showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
         f _ = []
-    return $ "[" ++ intercalate "\n," (concatMap f $ Map.toList status) ++ "\n]"
+    return $ "[" ++ intercalate "\n," (concatMap f $ Map.elems status) ++ "\n]"
 
 
 checkValid :: Database -> (Key -> Value -> IO Bool) -> IO ()
 checkValid Database{..} valid = do
     status <- readIORef status
     logger "Starting validity/lint checking"
-    bad <- fmap concat $ forM (Map.toList status) $ \(k,v) -> case v of
-        Ready r -> do
-            good <- valid k (result r)
-            logger $ "Checking if " ++ show k ++ " is " ++ show (result r) ++ ", " ++ if good then "passed" else "FAILED"
-            return [show k ++ " is no longer " ++ show (result r) | not good && not (special k)]
+    bad <- fmap concat $ forM (Map.toList status) $ \(i,v) -> case v of
+        (key, Ready Result{..}) -> do
+            good <- valid key result
+            logger $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
+            return [show key ++ " is no longer " ++ show result | not good && not (special key)]
         _ -> return []
     if null bad
         then logger "Validity/lint check passed"
@@ -357,10 +383,19 @@ withDatabase logger filename version act = do
     registerWitness $ StepKey ()
     registerWitness $ Step 0
     witness <- currentWitness
-    withStorage logger filename version witness $ \mp journal -> do
-        status <- newIORef $ Map.map Loaded mp
-        let step = maybe (Step 1) (incStep . fromStepResult) $ Map.lookup stepKey mp
-        journal $ Insert stepKey $ toStepResult step
+    withStorage logger filename version witness $ \mp2 journal -> do
+        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
+
+        (mp1, stepId) <- case Intern.lookup stepKey mp1 of
+            Just stepId -> return (mp1, stepId)
+            Nothing -> do
+                (mp1, stepId) <- return $ Intern.add stepKey mp1
+                return (mp1, stepId)
+
+        intern <- newIORef mp1
+        status <- newIORef $ Map.map (second $ maybe Missing Loaded) mp2
+        let step = maybe (Step 1) (incStep . fromStepResult) $ join $ fmap snd $ Map.lookup stepId mp2
+        journal stepId $ (stepKey, Just $ toStepResult step)
         lock <- newLock
         act Database{..}
 
@@ -370,5 +405,5 @@ instance BinaryWith Witness Step where
     getWith _ = get
 
 instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> putWith ws x4 >> put x5 >> put x6
-    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- getWith ws; x5 <- get; x6 <- get; return $ Result x1 x2 x3 x4 x5 x6
+    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put x6
+    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- get; x5 <- get; x6 <- get; return $ Result x1 x2 x3 x4 x5 x6
