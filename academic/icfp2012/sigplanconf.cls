@@ -1030,7 +1030,7 @@
   \end{center}}
 
 \def \@settitlebanner {%
-  \if \@andp{\@preprint}{\@notp{\@emptydefp{\@titlebanner}}}%
+  \if \@notp{\@emptydefp{\@titlebanner}}%
     \vbox to 0pt{%
       \vskip -32pt
       \noindent \textbf{\@titlebanner}\par
