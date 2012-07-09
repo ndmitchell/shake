@@ -243,3 +243,55 @@ function load()
   commands += "</tbody>";
   $('#cmd-details').append(commands);
 }
+
+function rebuildCost()
+{
+    // first try and order the commands
+    var done = {};
+    var list = [];
+    while (list.length < shake.length)
+    {
+        var start = list.length;
+        for (var i = 0; i < shake.length; i++)
+        {
+            var deps = shake[i].depends;
+            var good = !(i in done);
+            for (var j = 0; j < deps.length; j++)
+                good = good && (deps[j] in done);
+            if (good)
+            {
+                list.push(i);
+                done[i] = true;
+            }
+        }
+        if (start === list.length)
+            break; // failed due to cycle
+    }
+
+    // now find out how expensive each one is
+    var costs = [];
+    for (var i = 0; i < list.length; i++)
+    {
+        var seen = {};
+        seen[list[i]] = true;
+        var tot = shake[list[i]].execution;
+        for (var j = i + 1; j < list.length; j++)
+        {
+            var deps = shake[list[j]].depends;
+            var dep = false;
+            for (var k = 0; k < deps.length; k++)
+                dep = dep || (deps[k] in seen);
+            if (dep)
+            {
+                seen[list[j]] = true;
+                tot += shake[list[j]].execution;
+            }
+        }
+        costs.push({name: shake[list[i]].name, cost: tot});
+    }
+    costs.sort(function(a,b){return a.cost-b.cost;});
+
+    // print it out
+    for (var i = 0; i < costs.length; i++)
+        console.log(costs[i].name + " " + costs[i].cost);
+}
