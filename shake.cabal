@@ -100,12 +100,24 @@ library
 
 executable shake
     main-is: Main.hs
-    build-depends:
-        random
     if flag(testprog)
         buildable: True
     else
         buildable: False
+    build-depends:
+        base == 4.*,
+        old-time,
+        directory,
+        hashable >= 1.1.2.3 && < 1.2,
+        binary,
+        filepath,
+        process,
+        unordered-containers (>= 0.1.4.3 && < 0.2) || (>= 0.2.1 && < 0.3),
+        bytestring,
+        time,
+        random,
+        transformers >= 0.2 && < 0.4,
+        deepseq >= 1.1 && < 1.4
 
     other-modules:
         Examples.Util
