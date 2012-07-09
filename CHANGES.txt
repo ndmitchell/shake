@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow unordered-containers < 0.2 again
     Intern all keys, so they are only stored once
     Optimise modification time checking on Unix
     Optimise modification time checking on Windows
