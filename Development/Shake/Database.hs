@@ -17,7 +17,6 @@ import Development.Shake.Locks
 import Development.Shake.Storage
 import Development.Shake.Intern as Intern
 
-import Control.Arrow
 import Control.DeepSeq
 import Data.Hashable
 import Data.Typeable
@@ -100,7 +99,7 @@ data Database = Database
     ,intern :: IORef (Intern Key)
     ,status :: IORef (Map Id (Key, Status))
     ,step :: Step
-    ,journal :: Id -> (Key, Maybe Result) -> IO ()
+    ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
     ,logger :: String -> IO () -- logging function
     }
 
@@ -264,10 +263,10 @@ build pool Database{..} Ops{..} stack ks = do
                 case ans of
                     Ready r -> do
                         logger $ "result " ++ atom k ++ " = " ++ atom (result r)
-                        journal i (k, Just r) -- leave the DB lock before appending
+                        journal i (k, Loaded r) -- leave the DB lock before appending
                     Error _ -> do
                         logger $ "result " ++ atom k ++ " = error"
-                        journal i (k, Nothing)
+                        journal i (k, Missing)
                     _ -> return ()
             i #= (k, w)
 
@@ -393,9 +392,11 @@ withDatabase logger filename version act = do
                 return (mp1, stepId)
 
         intern <- newIORef mp1
-        status <- newIORef $ Map.map (second $ maybe Missing Loaded) mp2
-        let step = maybe (Step 1) (incStep . fromStepResult) $ join $ fmap snd $ Map.lookup stepId mp2
-        journal stepId $ (stepKey, Just $ toStepResult step)
+        status <- newIORef mp2
+        let step = case Map.lookup stepId mp2 of
+                        Just (_, Loaded r) -> incStep $ fromStepResult r
+                        _ -> Step 1
+        journal stepId $ (stepKey, Loaded $ toStepResult step)
         lock <- newLock
         act Database{..}
 
@@ -407,3 +408,9 @@ instance BinaryWith Witness Step where
 instance BinaryWith Witness Result where
     putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put x6
     getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- get; x5 <- get; x6 <- get; return $ Result x1 x2 x3 x4 x5 x6
+
+instance BinaryWith Witness Status where
+    putWith ctx Missing = putWord8 0
+    putWith ctx (Loaded x) = putWord8 1 >> putWith ctx x
+    putWith ctx x = error $ "putWith: Cannot write Status with constructor " ++ head (words $ show x)
+    getWith ctx = do i <- getWord8; if i == 0 then return Missing else fmap Loaded $ getWith ctx
