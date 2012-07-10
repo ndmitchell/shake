@@ -301,6 +301,57 @@ function rebuildCost(sumExecution)
     }
     costs.sort(function(a,b){return b.cost-a.cost;});
 
+    $("#rebuild-cost input").live('input', function(){
+        try {
+            var regex = new RegExp($(this).val());
+            $(this).parent().removeClass("error").find("span").text("");
+        } catch(e) {
+            $(this).parent().addClass("error").find("span").text(e);
+            return;
+        }
+        var result1 = [];
+        var resultN = {};
+        for (var i = 0; i < costs.length; i++)
+        {
+            var res = regex.exec(costs[i].name);
+            if (res === null) continue;
+            if (res.length === 1)
+                result1.push(costs[i]);
+            else
+            {
+                var extra = "";
+                for (var j = 1; j < res.length; j++)
+                    extra += (extra === "" ? "" : " ") + res[j];
+                if (resultN[extra] === undefined)
+                    resultN[extra] = {name: extra, deps: {}, count: 0};
+                resultN[extra].deps[i] = true;
+                for (var j in costs[i].deps)
+                    resultN[extra].deps[j] = true;
+                resultN[extra].count++;
+            }
+        }
+        for (var i in resultN)
+        {
+            var cost = 0;
+            for (var j in resultN[i].deps)
+                cost += shake[j].execution;
+            result1.push({name: resultN[i].name + " (" + resultN[i].count + ")", cost: cost});
+        }
+        result1.sort(function(a,b){return b.cost - a.cost;});
+
+        var res = "";
+        for (var i = 0; i < Math.min(15,result1.length); i++)
+        {
+          res += "<tr>" +
+            "<td><div class='progress progress-success' style='height: 10px'>" +
+            "<div class='bar' style='width:" + (result1[i].cost * 40 / result1[0].cost) + "px;'></div></div></td>" +
+            "<td>" + showTime(result1[i].cost) + "</td>" +
+            "<td>" + showPerc(result1[i].cost / sumExecution) + "</td>" +
+            "<td>" + result1[i].name + "</td></tr>";
+        }
+        $("#rebuild-details tbody").empty().append(res);
+    });
+
     var res = "";
     for (var i = 0; i < Math.min(15,costs.length); i++)
     {
