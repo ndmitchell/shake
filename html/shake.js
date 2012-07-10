@@ -242,6 +242,11 @@ function load()
   }
   commands += "</tbody>";
   $('#cmd-details').append(commands);
+
+  /////////////////////////////////////////////////////////////////
+  // REBUILD COSTS
+
+  $('#rebuild-details').append(rebuildCost());
 }
 
 function rebuildCost()
@@ -289,9 +294,16 @@ function rebuildCost()
         }
         costs.push({name: shake[list[i]].name, cost: tot});
     }
-    costs.sort(function(a,b){return a.cost-b.cost;});
+    costs.sort(function(a,b){return b.cost-a.cost;});
 
-    // print it out
-    for (var i = 0; i < costs.length; i++)
-        console.log(costs[i].name + " " + costs[i].cost);
+    var res = "<tbody>";
+    for (var i = 0; i < Math.min(20,costs.length); i++)
+    {
+      res += "<tr>" +
+        "<td><div class='progress progress-success' style='height: 10px'>" +
+        "<div class='bar' style='width:" + (costs[i].cost * 40 / costs[0].cost) + "px;'></div></div></td>" +
+        "<td>" + showTime(costs[i].cost) + "</td><td>" + costs[i].name + "</td></tr>";
+    }
+    res += "</tbody>";
+    return res;
 }
