@@ -201,7 +201,7 @@ function load()
     // MOST EXPENSIVE RULES
 
     var top = shake.slice(0).sort(function(a,b){return b.execution-a.execution}).slice(0,15);
-    var rules = "<tbody>";
+    var rules = "";
     for (var i = 0; i < top.length; i++)
     {
         rules += "<tr>" +
@@ -212,8 +212,7 @@ function load()
             "<td>" + top[i].name + "</td>" +
             "</tr>";
     }
-    rules += "</tbody>";
-    $('#rule-details').append(rules);
+    $("#rule-details tbody").append(rules);
 
     /////////////////////////////////////////////////////////////////
     // MOST EXPENSIVE COMMANDS
@@ -228,7 +227,7 @@ function load()
     }
 
     toolList = huffman(15, tooList);
-    var commands = "<tbody>";
+    var commands = "";
     for (var i = 0; i < toolList.length; i++)
     {
         commands += "<tr>" +
@@ -240,13 +239,12 @@ function load()
             "<td>" + toolList[i].name + "</td>" +
             "</tr>";
     }
-    commands += "</tbody>";
-    $('#cmd-details').append(commands);
+    $("#cmd-details tbody").append(commands);
 
     /////////////////////////////////////////////////////////////////
     // REBUILD COSTS
 
-    $('#rebuild-details').append(rebuildCost(sumExecution));
+    $("#rebuild-details tbody").append(rebuildCost(sumExecution));
 }
 
 function rebuildCost(sumExecution)
@@ -303,7 +301,7 @@ function rebuildCost(sumExecution)
     }
     costs.sort(function(a,b){return b.cost-a.cost;});
 
-    var res = "<tbody>";
+    var res = "";
     for (var i = 0; i < Math.min(15,costs.length); i++)
     {
       res += "<tr>" +
@@ -313,6 +311,5 @@ function rebuildCost(sumExecution)
         "<td>" + showPerc(costs[i].cost / sumExecution) + "</td>" +
         "<td>" + costs[i].name + "</td></tr>";
     }
-    res += "</tbody>";
     return res;
 }
