@@ -297,7 +297,7 @@ function rebuildCost()
     costs.sort(function(a,b){return b.cost-a.cost;});
 
     var res = "<tbody>";
-    for (var i = 0; i < Math.min(20,costs.length); i++)
+    for (var i = 0; i < Math.min(15,costs.length); i++)
     {
       res += "<tr>" +
         "<td><div class='progress progress-success' style='height: 10px'>" +
