@@ -195,7 +195,7 @@ function load()
   plotvals = [];
   for (var i = 0; i < countBuckets; i++)
     plotvals.push([i, (buckets[i] * 100 / maxBucket)]);
-  $.plot($('#shakeplot'), [plotvals]);
+  $.plot($('#shakeplot'), [{color: '#5EB95E', data: plotvals}]);
 
   /////////////////////////////////////////////////////////////////
   // MOST EXPENSIVE RULES
