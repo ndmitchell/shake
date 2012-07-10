@@ -297,7 +297,7 @@ function rebuildCost(sumExecution)
         }
         for (var j in depsN)
             tot += shake[j].execution;
-        costs[list[i]] = {name : shake[list[i]].name, cost: tot, deps: depsN};
+        costs[list[i]] = {name : shake[list[i]].name, cost: tot, deps: depsN, key: list[i]};
     }
     costs.sort(function(a,b){return b.cost-a.cost;});
 
@@ -324,7 +324,7 @@ function rebuildCost(sumExecution)
                     extra += (extra === "" ? "" : " ") + res[j];
                 if (resultN[extra] === undefined)
                     resultN[extra] = {name: extra, deps: {}, count: 0};
-                resultN[extra].deps[i] = true;
+                resultN[extra].deps[costs[i].key] = true;
                 for (var j in costs[i].deps)
                     resultN[extra].deps[j] = true;
                 resultN[extra].count++;
