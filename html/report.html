@@ -26,24 +26,23 @@
         <h1>Shake Summary Report</h1>
       </div> <!-- /page-header -->
 
-      <div class="row">
-        <div class="span4" id="summary">
-          <h2>Overview</h2>
-        </div> <!-- /span -->
-        <div class="span8" id="graph">
-          <h2>Traced commands</h2>
-          <div id="shakeplot" style="width:80%;height:200px;"></div>
-        </div> <!-- /span -->
-      </div> <!-- /row -->
-      <hr>
-
 <ul class="nav nav-tabs" id="tabs">
-  <li class="active"><a href="#expensive-rules">Expensive rules</a></li>
+  <li class="active"><a href="#overview">Overview</a></li>
+  <li><a href="#expensive-rules">Expensive rules</a></li>
   <li><a href="#expensive-commands">Expensive commands</a></li>
 </ul>
  
 <div class="tab-content">
-  <div class="tab-pane active" id="expensive-rules">
+  <div class="tab-pane active" id="overview">
+        <div id="summary">
+        </div> <!-- /span -->
+        <div id="graph">
+          <h2>Traced commands</h2>
+          <div id="shakeplot" style="width:80%;height:200px;"></div>
+        </div> <!-- /span -->
+  </div>
+
+  <div class="tab-pane" id="expensive-rules">
     <table id='rule-details' class='table table-condensed'>
       <thead><tr>
         <th></th>
