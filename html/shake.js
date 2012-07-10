@@ -246,10 +246,10 @@ function load()
     /////////////////////////////////////////////////////////////////
     // REBUILD COSTS
 
-    $('#rebuild-details').append(rebuildCost());
+    $('#rebuild-details').append(rebuildCost(sumExecution));
 }
 
-function rebuildCost()
+function rebuildCost(sumExecution)
 {
     // first try and order the commands
     var done = {};
@@ -273,26 +273,33 @@ function rebuildCost()
             break; // failed due to cycle
     }
 
+    // find the reverse dependencies
+    var rdeps = [];
+    for (var i = 0; i < shake.length; i++)
+        rdeps[i] = {};
+    for (var i = 0; i < shake.length; i++)
+    {
+        var deps = shake[i].depends;
+        for (var j = 0; j < deps.length; j++)
+            rdeps[deps[j]][i] = true;
+    }
+
     // now find out how expensive each one is
     var costs = [];
-    for (var i = 0; i < list.length; i++)
+    for (var i = list.length - 1; i >= 0; i--)
     {
-        var seen = {};
-        seen[list[i]] = true;
+        var depsN = {};
         var tot = shake[list[i]].execution;
-        for (var j = i + 1; j < list.length; j++)
+        var deps1 = rdeps[list[i]];
+        for (var j in deps1)
         {
-            var deps = shake[list[j]].depends;
-            var dep = false;
-            for (var k = 0; k < deps.length; k++)
-                dep = dep || (deps[k] in seen);
-            if (dep)
-            {
-                seen[list[j]] = true;
-                tot += shake[list[j]].execution;
-            }
+            depsN[j] = true;
+            for (var k in costs[j].deps)
+                depsN[k] = true;
         }
-        costs.push({name: shake[list[i]].name, cost: tot});
+        for (var j in depsN)
+            tot += shake[j].execution;
+        costs[list[i]] = {name : shake[list[i]].name, cost: tot, deps: depsN};
     }
     costs.sort(function(a,b){return b.cost-a.cost;});
 
@@ -302,7 +309,9 @@ function rebuildCost()
       res += "<tr>" +
         "<td><div class='progress progress-success' style='height: 10px'>" +
         "<div class='bar' style='width:" + (costs[i].cost * 40 / costs[0].cost) + "px;'></div></div></td>" +
-        "<td>" + showTime(costs[i].cost) + "</td><td>" + costs[i].name + "</td></tr>";
+        "<td>" + showTime(costs[i].cost) + "</td>" +
+        "<td>" + showPerc(costs[i].cost / sumExecution) + "</td>" +
+        "<td>" + costs[i].name + "</td></tr>";
     }
     res += "</tbody>";
     return res;
