@@ -305,9 +305,10 @@ build pool Database{..} Ops{..} stack ks = do
 ---------------------------------------------------------------------
 -- QUERY DATABASE
 
--- | Find an ordering for the items such that no item points to an item before itself.
+-- | Given a map of representing a dependency order (with a show for error messages), find an ordering for the items such
+--   that no item points to an item before itself.
 --   Raise an error if you end up with a cycle.
-dependencyOrder :: Map Id (Key, Status) -> [Id]
+dependencyOrder :: (Eq a, Hashable a) => (a -> String) -> Map a [a] -> [a]
 -- Algorithm:
 --    Divide everyone up into those who have no dependencies [Id]
 --    And those who depend on a particular Id, Dep :-> Maybe [(Key,[Dep])]
@@ -315,16 +316,16 @@ dependencyOrder :: Map Id (Key, Status) -> [Id]
 --    For each with no dependencies, add to list, then take its dep hole and
 --    promote them either to Nothing (if ds == []) or into a new slot.
 --    k :-> Nothing means the key has already been freed
-dependencyOrder status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [(k,ds)]) | (k,d:ds) <- hasDeps]
+dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [(k,ds)]) | (k,d:ds) <- hasDeps]
     where
-        (noDeps, hasDeps) = partition (null . snd) [(i, maybe [] (concat . depends) $ getResult r) | (i, (_, r)) <- Map.toList status]
+        (noDeps, hasDeps) = partition (null . snd) $ Map.toList status
 
         f [] mp | null bad = []
                 | otherwise = error $ unlines $
                     "Internal invariant broken, database seems to be cyclic" :
                     map ("    " ++) bad ++
                     ["... plus " ++ show (length badOverflow) ++ " more ..." | not $ null badOverflow]
-            where (bad,badOverflow) = splitAt 10 $ [maybe "<unknown>" (show . fst) $ Map.lookup i status | (i, Just _) <- Map.toList mp]
+            where (bad,badOverflow) = splitAt 10 $ [shw i | (i, Just _) <- Map.toList mp]
 
         f (x:xs) mp = x : f (now++xs) later
             where Just free = Map.lookupDefault (Just []) x mp
@@ -339,8 +340,10 @@ dependencyOrder status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (+
 showJSON :: Database -> IO String
 showJSON Database{..} = do
     status <- readIORef status
-    let order = dependencyOrder status
-    let ids = Map.fromList $ zip order [0..]
+    let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
+        order = dependencyOrder shw $ Map.map (maybe [] (concat . depends) . getResult . snd) status
+        ids = Map.fromList $ zip order [0..]
+
         f (k, v) | Just Result{..} <- getResult v =
             let xs = ["name:" ++ show (show k)
                      ,"built:" ++ showStep built
