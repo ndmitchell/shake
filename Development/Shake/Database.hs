@@ -337,14 +337,20 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
             Just todo -> (free, Map.insert d (Just $ (k,ds) : todo) mp)
 
 
+-- | Eliminate all errors from the database, pretending they don't exist
+resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
+resultsOnly mp = Map.map (\(k, Ready r) -> (k, r{depends = map (filter (isJust . flip Map.lookup keep)) $ depends r})) keep
+    where keep = Map.filter (isReady . snd) mp
+
+
 showJSON :: Database -> IO String
 showJSON Database{..} = do
-    status <- readIORef status
+    status <- fmap resultsOnly $ readIORef status
     let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
-        order = dependencyOrder shw $ Map.map (maybe [] (concat . depends) . getResult . snd) status
+        order = dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]
 
-        f (k, v) | Just Result{..} <- getResult v =
+        f (k, Result{..})  =
             let xs = ["name:" ++ show (show k)
                      ,"built:" ++ showStep built
                      ,"changed:" ++ showStep changed
@@ -354,7 +360,6 @@ showJSON Database{..} = do
                 showStep (Step i) = show i
                 showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
-        f _ = []
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 
 
