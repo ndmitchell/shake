@@ -7,7 +7,7 @@ module Development.Shake.Database(
     Database, withDatabase,
     Ops(..), build, Depends,
     Stack, emptyStack, showStack,
-    allEntries, showJSON, checkValid,
+    showJSON, checkValid,
     ) where
 
 import Development.Shake.Binary
@@ -334,23 +334,6 @@ linear status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [
         g (free, mp) (k, d:ds) = case Map.lookupDefault (Just []) d mp of
             Nothing -> g (free, mp) (k, ds)
             Just todo -> (free, Map.insert d (Just $ (k,ds) : todo) mp)
-
-
--- | Return a list of keys in an order which would build them bottom up. Relies on the invariant
---   that the database is not cyclic.
-allEntries :: Database -> IO [(Key,Value)]
-allEntries Database{..} = do
-    status <- readIORef status
-    return $ ordering [ ((k, result r), [k | i <- concat $ depends r, Just (k,_) <- [Map.lookup i status]])
-                      | (k, v) <- Map.elems status, Just r <- [getResult v]]
-    where
-        ordering :: Eq a => [((a,b), [a])] -> [(a,b)]
-        ordering xs = f [(a, nub b `intersect` as) | let as = map (fst . fst) xs, (a,b) <- xs]
-            where
-                f xs | null xs = []
-                     | null now = error "Internal invariant broken, database seems to be cyclic (probably during lint)"
-                     | otherwise = let ns = map fst now in ns ++ f [(a,b \\ map fst ns) | (a,b) <- later]
-                    where (now,later) = partition (null . snd) xs
 
 
 showJSON :: Database -> IO String
