@@ -305,6 +305,37 @@ build pool Database{..} Ops{..} stack ks = do
 ---------------------------------------------------------------------
 -- QUERY DATABASE
 
+-- | Find a linear ordering for the items such that no item points to an item before itself.
+--   Raise an error if you end up with a cycle.
+linear :: Map Id (Key, Status) -> [Id]
+-- Algorithm:
+--    Divide everyone up into those who have no dependencies [Id]
+--    And those who depend on a particular Id, Dep :-> Maybe [(Key,[Dep])]
+--    Where d :-> Just (k, ds), k depends on firstly d, then remaining on ds
+--    For each with no dependencies, add to list, then take its dep hole and
+--    promote them either to Nothing (if ds == []) or into a new slot.
+--    k :-> Nothing means the key has already been freed
+linear status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [(k,ds)]) | (k,d:ds) <- hasDeps]
+    where
+        (noDeps, hasDeps) = partition (null . snd) [(i, maybe [] (concat . depends) $ getResult r) | (i, (_, r)) <- Map.toList status]
+
+        f [] mp | null bad = []
+                | otherwise = error $ unlines $
+                    "Internal invariant broken, database seems to be cyclic" :
+                    map ("    " ++) bad ++
+                    ["... plus " ++ show (length badOverflow) ++ " more ..." | not $ null badOverflow]
+            where (bad,badOverflow) = splitAt 10 $ [maybe "<unknown>" (show . fst) $ Map.lookup i status | (i, Just _) <- Map.toList mp]
+
+        f (x:xs) mp = x : f (now++xs) later
+            where Just free = Map.lookupDefault (Just []) x mp
+                  (now,later) = foldl' g ([], Map.insert x Nothing mp) free
+
+        g (free, mp) (k, []) = (k:free, mp)
+        g (free, mp) (k, d:ds) = case Map.lookupDefault (Just []) d mp of
+            Nothing -> g (free, mp) (k, ds)
+            Just todo -> (free, Map.insert d (Just $ (k,ds) : todo) mp)
+
+
 -- | Return a list of keys in an order which would build them bottom up. Relies on the invariant
 --   that the database is not cyclic.
 allEntries :: Database -> IO [(Key,Value)]
@@ -325,7 +356,8 @@ allEntries Database{..} = do
 showJSON :: Database -> IO String
 showJSON Database{..} = do
     status <- readIORef status
-    let ids = Map.fromList $ zip (Map.keys status) [0..]
+    let order = linear status
+    let ids = Map.fromList $ zip order [0..]
         f (k, v) | Just Result{..} <- getResult v =
             let xs = ["name:" ++ show (show k)
                      ,"built:" ++ showStep built
@@ -337,7 +369,7 @@ showJSON Database{..} = do
                 showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
         f _ = []
-    return $ "[" ++ intercalate "\n," (concatMap f $ Map.elems status) ++ "\n]"
+    return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 
 
 checkValid :: Database -> (Key -> Value -> IO Bool) -> IO ()
