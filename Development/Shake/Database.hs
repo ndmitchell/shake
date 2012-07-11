@@ -339,8 +339,8 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
 
 -- | Eliminate all errors from the database, pretending they don't exist
 resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
-resultsOnly mp = Map.map (\(k, Ready r) -> (k, r{depends = map (filter (isJust . flip Map.lookup keep)) $ depends r})) keep
-    where keep = Map.filter (isReady . snd) mp
+resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = map (filter (isJust . flip Map.lookup keep)) $ depends r})) keep
+    where keep = Map.filter (isJust . getResult . snd) mp
 
 
 showJSON :: Database -> IO String
