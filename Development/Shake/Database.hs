@@ -305,9 +305,9 @@ build pool Database{..} Ops{..} stack ks = do
 ---------------------------------------------------------------------
 -- QUERY DATABASE
 
--- | Find a linear ordering for the items such that no item points to an item before itself.
+-- | Find an ordering for the items such that no item points to an item before itself.
 --   Raise an error if you end up with a cycle.
-linear :: Map Id (Key, Status) -> [Id]
+dependencyOrder :: Map Id (Key, Status) -> [Id]
 -- Algorithm:
 --    Divide everyone up into those who have no dependencies [Id]
 --    And those who depend on a particular Id, Dep :-> Maybe [(Key,[Dep])]
@@ -315,7 +315,7 @@ linear :: Map Id (Key, Status) -> [Id]
 --    For each with no dependencies, add to list, then take its dep hole and
 --    promote them either to Nothing (if ds == []) or into a new slot.
 --    k :-> Nothing means the key has already been freed
-linear status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [(k,ds)]) | (k,d:ds) <- hasDeps]
+dependencyOrder status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [(k,ds)]) | (k,d:ds) <- hasDeps]
     where
         (noDeps, hasDeps) = partition (null . snd) [(i, maybe [] (concat . depends) $ getResult r) | (i, (_, r)) <- Map.toList status]
 
@@ -339,7 +339,7 @@ linear status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [
 showJSON :: Database -> IO String
 showJSON Database{..} = do
     status <- readIORef status
-    let order = linear status
+    let order = dependencyOrder status
     let ids = Map.fromList $ zip order [0..]
         f (k, v) | Just Result{..} <- getResult v =
             let xs = ["name:" ++ show (show k)
