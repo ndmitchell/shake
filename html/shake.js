@@ -247,7 +247,7 @@ function load()
     $("#rebuild-details tbody").append(rebuildCost(sumExecution));
 }
 
-function rebuildCost(sumExecution)
+function calcRdeps()
 {
     // find the reverse dependencies
     var rdeps = [];
@@ -259,24 +259,62 @@ function rebuildCost(sumExecution)
         for (var j = 0; j < deps.length; j++)
             rdeps[deps[j]][i] = true;
     }
+    for (var i = 0; i < rdeps.length; i++)
+    {
+        var ans = [];
+        for (var j in rdeps[i])
+            ans.push(j);
+        rdeps[i] = ans;
+    }
+    return rdeps;    
+}
+
+function calcCosts(rdeps)
+{
+    var costs = [];
+
+    function f(i)
+    {
+        var seen = {};
+        var tot = 0;
+        function g(i)
+        {
+            tot += shake[i].execution;
+            var deps = rdeps[i];
+            for (var j = 0, n = deps.length; j < n; j++)
+            {
+                var jj = deps[j];
+                if (!seen[jj])
+                {
+                    seen[jj] = true;
+                    g(jj);
+                }
+            }
+        }
+        g(i);
+        return tot;
+    }
+
+    var ones = 0;
+    for (var i = 0; i < shake.length; i++)
+    {
+        var tot;
+        if (shake[i].depends.length === 1)
+            tot = costs[shake[i].depends[0]].cost + shake[i].execution;
+        else
+            tot = f(i);
+        costs[i] = {name : shake[i].name, cost: tot, key: i};
+    }
+    return costs;
+}
+
+function rebuildCost(sumExecution)
+{
+    // find the reverse dependencies
+    var rdeps = calcRdeps();
 
     // now find out how expensive each one is
-    var costs = [];
-    for (var i = shake.length - 1; i >= 0; i--)
-    {
-        var depsN = {};
-        var tot = shake[i].execution;
-        var deps1 = rdeps[i];
-        for (var j in deps1)
-        {
-            depsN[j] = true;
-            for (var k in costs[j].deps)
-                depsN[k] = true;
-        }
-        for (var j in depsN)
-            tot += shake[j].execution;
-        costs[i] = {name : shake[i].name, cost: tot, deps: depsN, key: i};
-    }
+    var costs = calcCosts(rdeps);
     costs.sort(function(a,b){return b.cost-a.cost;});
 
     $("#rebuild-cost input").live('input', function(){
