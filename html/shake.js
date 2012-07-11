@@ -14,24 +14,27 @@ var built = function(){
 
 // what is the index of the last build run
 // lastRun :: Int
-var lastRun = built.length == 0 ? 0 : built[built.length-1];
+var lastRun = built.length === 0 ? 0 : built[built.length-1];
 
 function showTime(x){return x.toFixed(2) + "s";}
 function showPerc(x){return (x*100).toFixed(2) + "%";}
 function showShort(x){return x;}
 
 function plural(n,not1,is1){
-    return n == 1
-        ? (is1 == undefined ? "" : is1)
-        : (not1 == undefined ? "s" : not1);
+    return n === 1
+        ? (is1 === undefined ? "" : is1)
+        : (not1 === undefined ? "s" : not1);
 }
 
 
 function listEq(xs, ys)
 {
-    if (xs.length != ys.length) return false;
+    if (xs.length !== ys.length) return false;
     for (var i = 0; i < xs.length; i++)
-        if (xs[i] != ys[i]) return false;
+    {
+        if (xs[i] !== ys[i])
+            return false;
+    }
     return true;
 }
 
@@ -65,7 +68,7 @@ function huffman(resultSize, xs)
         var n = 0;
         for (var j in val.children)
             n += compress(val.children[j]);
-        if (n == 1)
+        if (n === 1)
             val.children = {};
         return Math.max(1,n);
     }
@@ -78,7 +81,7 @@ function huffman(resultSize, xs)
             var ii = val.children[i];
             var pp = path.slice(0);
             pp.push(i);
-            res.push({sum:ii.sum, count:ii.count, name:pp, free:path.length==0});
+            res.push({sum:ii.sum, count:ii.count, name:pp, free:path.length===0});
             flatten(pp,ii,res);
         }
     }
@@ -88,7 +91,7 @@ function huffman(resultSize, xs)
     while(true)
     {
         // order everything
-        flat.sort(function(a,b){var i = b.sum - a.sum; return i != 0 ? i : b.count - a.count;});
+        flat.sort(function(a,b){var i = b.sum - a.sum; return i !== 0 ? i : b.count - a.count;});
 
         // now, if something in the first n is not free, mark it free and delete anyone who relies on it
         // then repeat, if nothing is not free, break
@@ -133,7 +136,7 @@ function load()
     var maxTraceStopLast = 0;
     for (var i = 0; i < shake.length; i++)
     {
-        var isLast = shake[i].built == lastRun;
+        var isLast = shake[i].built === lastRun;
         countLast += isLast ? 1 : 0;
         sumExecution += shake[i].execution;
         maxExecution = Math.max(maxExecution, shake[i].execution);
@@ -172,13 +175,13 @@ function load()
     for (var i = 0; i < shake.length; i++)
     {
         var traces = shake[i].traces;
-        if (!traces || shake[i].built != lastRun) continue;
+        if (!traces || shake[i].built !== lastRun) continue;
         for (var j = 0; j < traces.length; j++)
         {
             var start = traces[j].start * countBuckets / maxTraceStopLast;
             var stop = traces[j].stop * countBuckets / maxTraceStopLast;
 
-            if (Math.floor(start) == Math.floor(stop))
+            if (Math.floor(start) === Math.floor(stop))
                 buckets[Math.floor(start)] += stop - start;
             else
             {
@@ -202,7 +205,7 @@ function load()
     /////////////////////////////////////////////////////////////////
     // MOST EXPENSIVE RULES
 
-    var top = shake.slice(0).sort(function(a,b){return b.execution-a.execution}).slice(0,15);
+    var top = shake.slice(0).sort(function(a,b){return b.execution-a.execution;}).slice(0,15);
     var rules = "";
     for (var i = 0; i < top.length; i++)
     {
