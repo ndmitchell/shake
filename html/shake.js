@@ -1,3 +1,5 @@
+"use strict";
+
 // first find which runs have built data in them, sorted
 // built :: [Int]
 var built = function(){
@@ -192,7 +194,7 @@ function load()
         maxBucket = Math.max(maxBucket, buckets[i]);
     maxBucket = Math.ceil(maxBucket - 0.00001);
 
-    plotvals = [];
+    var plotvals = [];
     for (var i = 0; i < countBuckets; i++)
         plotvals.push([i, (buckets[i] * 100 / maxBucket)]);
     $.plot($('#shakeplot'), [{color: '#5EB95E', data: plotvals}]);
@@ -226,7 +228,7 @@ function load()
             tooList.push({name: traces[j].command, sum: traces[j].stop - traces[j].start});
     }
 
-    toolList = huffman(15, tooList);
+    var toolList = huffman(15, tooList);
     var commands = "";
     for (var i = 0; i < toolList.length; i++)
     {
