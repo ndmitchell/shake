@@ -249,28 +249,6 @@ function load()
 
 function rebuildCost(sumExecution)
 {
-    // first try and order the commands
-    var done = {};
-    var list = [];
-    while (list.length < shake.length)
-    {
-        var start = list.length;
-        for (var i = 0; i < shake.length; i++)
-        {
-            var deps = shake[i].depends;
-            var good = !(i in done);
-            for (var j = 0; j < deps.length; j++)
-                good = good && (deps[j] in done);
-            if (good)
-            {
-                list.push(i);
-                done[i] = true;
-            }
-        }
-        if (start === list.length)
-            break; // failed due to cycle
-    }
-
     // find the reverse dependencies
     var rdeps = [];
     for (var i = 0; i < shake.length; i++)
@@ -284,11 +262,11 @@ function rebuildCost(sumExecution)
 
     // now find out how expensive each one is
     var costs = [];
-    for (var i = list.length - 1; i >= 0; i--)
+    for (var i = shake.length - 1; i >= 0; i--)
     {
         var depsN = {};
-        var tot = shake[list[i]].execution;
-        var deps1 = rdeps[list[i]];
+        var tot = shake[i].execution;
+        var deps1 = rdeps[i];
         for (var j in deps1)
         {
             depsN[j] = true;
@@ -297,7 +275,7 @@ function rebuildCost(sumExecution)
         }
         for (var j in depsN)
             tot += shake[j].execution;
-        costs[list[i]] = {name : shake[list[i]].name, cost: tot, deps: depsN, key: list[i]};
+        costs[i] = {name : shake[i].name, cost: tot, deps: depsN, key: i};
     }
     costs.sort(function(a,b){return b.cost-a.cost;});
 
