@@ -40,7 +40,6 @@ extra-source-files:
     Examples/Tar/list.txt
 
 data-files:
-    html/*.png
     html/*.min.js
     html/*.min.css
     html/report.html
