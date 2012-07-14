@@ -40,13 +40,9 @@ extra-source-files:
     Examples/Tar/list.txt
 
 data-files:
-    html/*.min.js
-    html/*.min.css
+    html/*.js
+    html/*.css
     html/report.html
-    html/jquery-1.7.2.min.js
-    html/jquery.flot.min.js
-    html/bootstrap-tab.js
-    html/shake.js
 
 source-repository head
     type:     darcs
