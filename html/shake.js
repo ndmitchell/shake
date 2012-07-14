@@ -9,7 +9,7 @@ var built = function(){
         seen[shake[i].built] = true;
     var seen2 = [];
     for (var i in seen)
-        seen2.push(i);
+        seen2.push(Number(i));
     return seen2.sort(function cmp(a,b){return a-b;});
 }();
 
