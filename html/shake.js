@@ -386,3 +386,13 @@ function rebuildCost(sumExecution)
     }
     return res;
 }
+
+
+function reportUnchanged()
+{
+    for (var i = 0; i < shake.length; i++)
+    {
+        if (shake[i].changed !== shake[i].built)
+            console.log(shake[i].name);
+    }
+}
