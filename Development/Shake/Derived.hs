@@ -20,7 +20,7 @@ system' path args = do
     let path2 = toNative path
     let cmd = unwords $ path2 : args
     putLoud cmd
-    res <- traced ("system " ++ cmd) $ rawSystem path2 args
+    res <- traced (takeBaseName path) $ rawSystem path2 args
     when (res /= ExitSuccess) $
         error $ "System command failed:\n" ++ cmd
 
@@ -35,7 +35,7 @@ systemCwd cwd path args = do
     let path2 = toNative path
     let cmd = unwords $ path2 : args
     putLoud cmd
-    res <- traced ("system " ++ cmd) $ do
+    res <- traced (takeBaseName path) $ do
         -- FIXME: Should I be using the non-exported System.Process.syncProcess?
         --        That installs/removes signal handlers.
         hdl <- runProcess path2 args (Just cwd) Nothing Nothing Nothing Nothing
@@ -52,7 +52,7 @@ systemOutput path args = do
     let path2 = toNative path
     let cmd = unwords $ path2 : args
     putLoud cmd
-    (res,stdout,stderr) <- traced ("system' " ++ cmd) $ readProcessWithExitCode path2 args ""
+    (res,stdout,stderr) <- traced (takeBaseName path) $ readProcessWithExitCode path2 args ""
     when (res /= ExitSuccess) $
         error $ "System command failed:\n" ++ cmd ++ "\n" ++ stderr
     return (stdout, stderr)
