@@ -1,21 +1,8 @@
 /*jsl:option explicit*/
 "use strict";
 
-// first find which runs have built data in them, sorted
-// built :: [Int]
-var built = function(){
-    var seen = {};
-    for (var i = 0; i < shake.length; i++)
-        seen[shake[i].built] = true;
-    var seen2 = [];
-    for (var i in seen)
-        seen2.push(Number(i));
-    return seen2.sort(function cmp(a,b){return a-b;});
-}();
-
-// what is the index of the last build run
-// lastRun :: Int
-var lastRun = built.length === 0 ? 0 : built[built.length-1];
+//////////////////////////////////////////////////////////////////////
+// UTILITIES
 
 function showTime(x){return x.toFixed(2) + "s";}
 function showPerc(x){return (x*100).toFixed(2) + "%";}
@@ -123,18 +110,36 @@ function huffman(resultSize, xs)
 }
 
 
-function load()
-{
-  /////////////////////////////////////////////////////////////////
-  // SUMMARY INFORMATION
+//////////////////////////////////////////////////////////////////////
+// DATA MANIPULATION/ADDITION
 
-    var countLast = 0;
-    var sumExecution = 0;
-    var maxExecution = 0;
-    var countTrace = 0, countTraceLast = 0;
-    var sumTrace = 0;
-    var maxTrace = 0;
-    var maxTraceStopLast = 0;
+// which runs have built data in them, sorted
+// built :: [Int]
+var built = function(){
+    var seen = {};
+    for (var i = 0; i < shake.length; i++)
+        seen[shake[i].built] = true;
+    var seen2 = [];
+    for (var i in seen)
+        seen2.push(Number(i));
+    return seen2.sort(function cmp(a,b){return a-b;});
+}();
+
+// what is the index of the last build run
+// lastRun :: Int
+var lastRun = built.length === 0 ? 0 : built[built.length-1];
+
+// Summary statistics
+var countLast = 0; // :: Int, number of rules run in 'lastRun'
+var sumExecution = 0; // :: Seconds, build time in total
+var maxExecution = 0; // :: Seconds, longest build rule
+var countTrace = 0, countTraceLast = 0; // :: Int, traced commands run
+var sumTrace = 0; // :: Seconds, time running traced commands
+var maxTrace = 0; // :: Seconds, lonest traced command
+var maxTraceStopLast = 0; // :: Seconds, time the last traced command stopped
+
+var _ = function(){
+    // Fold over shake to produce the summary
     for (var i = 0; i < shake.length; i++)
     {
         var isLast = shake[i].built === lastRun;
@@ -152,8 +157,72 @@ function load()
             maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? traces[j].stop : 0);
         }
     }
+}();
 
-    var summary =
+
+// Mutate the shake data, adding in rdeps, being the 1-level reverse dependencies
+function addRdeps()
+{
+    // find the reverse dependencies
+    var rdeps = [];
+    for (var i = 0; i < shake.length; i++)
+        rdeps[i] = {};
+    for (var i = 0; i < shake.length; i++)
+    {
+        var deps = shake[i].depends;
+        for (var j = 0, n = deps.length; j < n; j++)
+            rdeps[deps[j]][i] = true;
+    }
+    for (var i = 0; i < rdeps.length; i++)
+    {
+        var ans = [];
+        for (var j in rdeps[i])
+            ans.push(Number(j));
+        shake[i].rdeps = ans;
+    }
+}
+
+
+// Given an array of indices, calculate the cost to rebuild if all of them change
+// You must call addRdeps and addCost first
+function calcRebuildCosts(xs)
+{
+    var seen = {};
+    var tot = 0;
+    function f(i)
+    {
+        if (seen[i]) return;
+        seen[i] = true;
+        tot += shake[i].execution;
+        var deps = shake[i].rdeps;
+        for (var j = 0, n = deps.length; j < n; j++)
+            f(deps[j]);
+    }
+    if (xs.length === 1 && shake[xs[0]].depends.length === 1)
+        tot = shake[shake[xs[0]].depends[0]].cost + shake[xs[0]].execution;
+    else
+    {
+        for (var i = 0, n = xs.length; i < n; i++)
+            f(xs[i]);
+    }
+    return tot;
+}
+
+
+// Mutate the shake data, adding in cost, being the cost to rebuild if this item changes
+function addCost()
+{
+    for (var i = 0; i < shake.length; i++)
+        shake[i].cost = calcRebuildCosts([i]);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// REPORTS
+
+function reportSummary()
+{
+    var res =
         "<ul>" +
         "<li><strong>Runs:</strong> This database has tracked " + built.length + " run" + plural(built.length) + ".</li>" +
         "<li><strong>Rules:</strong> There are " + shake.length + " rules (" + countLast + " rebuilt in the last run).</li>" +
@@ -162,12 +231,12 @@ function load()
         "<li><strong>Longest steps:</strong> The longest rule takes " + showTime(maxExecution) + ", and the longest traced command takes " + showTime(maxTrace) + ".</li>" +
         "<li><strong>Parallelism:</strong> Last run gave an average parallelism of " + (sumTrace / maxTraceStopLast).toFixed(2) + " times over " + showTime(maxTraceStopLast) + ".</li>" +
         "</ul>";
-    $('#summary').append(summary);
+    return res;
+}
 
 
-    /////////////////////////////////////////////////////////////////
-    // PARALLELISM GRAPH
-
+function reportParallelismGraph()
+{
     var buckets = [];
     var countBuckets = 100;
     for (var i = 0; i <= countBuckets; i++)
@@ -201,16 +270,17 @@ function load()
     var plotvals = [];
     for (var i = 0; i < countBuckets; i++)
         plotvals.push([i, (buckets[i] * 100 / maxBucket)]);
-    $.plot($('#shakeplot'), [{color: '#5EB95E', data: plotvals}]);
+    return [{color: '#5EB95E', data: plotvals}];
+}
 
-    /////////////////////////////////////////////////////////////////
-    // MOST EXPENSIVE RULES
 
+function reportExpensiveRules()
+{
     var top = shake.slice(0).sort(function(a,b){return b.execution-a.execution;}).slice(0,15);
-    var rules = "";
+    var res = "";
     for (var i = 0; i < top.length; i++)
     {
-        rules += "<tr>" +
+        res += "<tr>" +
             "<td><div class='progress progress-success' style='height: 10px'>" +
             "<div class='bar' style='width:" + (top[i].execution * 40 / top[0].execution) + "px;'></div></div></td>" +
             "<td>" + showTime(top[i].execution) + "</td>" +
@@ -218,11 +288,12 @@ function load()
             "<td>" + top[i].name + "</td>" +
             "</tr>";
     }
-    $("#rule-details tbody").append(rules);
+    return res;
+}
 
-    /////////////////////////////////////////////////////////////////
-    // MOST EXPENSIVE COMMANDS
 
+function reportExpensiveCommands()
+{
     var tooList = [];
     for (var i = 0; i < shake.length; i++)
     {
@@ -233,10 +304,10 @@ function load()
     }
 
     var toolList = huffman(15, tooList);
-    var commands = "";
+    var res = "";
     for (var i = 0; i < toolList.length; i++)
     {
-        commands += "<tr>" +
+        res += "<tr>" +
             "<td><div class='progress progress-success' style='height: 10px'>" +
             "<div class='bar' style='width:" + (toolList[i].sum * 40 / toolList[0].sum) + "px;'></div></div></td>" +
             "<td>" + showTime(toolList[i].sum) + "</td>" +
@@ -245,84 +316,12 @@ function load()
             "<td>" + toolList[i].name + "</td>" +
             "</tr>";
     }
-    $("#cmd-details tbody").append(commands);
-
-    /////////////////////////////////////////////////////////////////
-    // REBUILD COSTS
-
-    $("#rebuild-details tbody").append(rebuildCost(sumExecution));
+    return res;
 }
 
-function calcRdeps()
+
+function reportRebuildCost()
 {
-    // find the reverse dependencies
-    var rdeps = [];
-    for (var i = 0; i < shake.length; i++)
-        rdeps[i] = {};
-    for (var i = 0; i < shake.length; i++)
-    {
-        var deps = shake[i].depends;
-        for (var j = 0; j < deps.length; j++)
-            rdeps[deps[j]][i] = true;
-    }
-    for (var i = 0; i < rdeps.length; i++)
-    {
-        var ans = [];
-        for (var j in rdeps[i])
-            ans.push(j);
-        rdeps[i] = ans;
-    }
-    return rdeps;    
-}
-
-function calcCosts(rdeps)
-{
-    var costs = [];
-
-    function f(i)
-    {
-        var seen = {};
-        var tot = 0;
-        function g(i)
-        {
-            tot += shake[i].execution;
-            var deps = rdeps[i];
-            for (var j = 0, n = deps.length; j < n; j++)
-            {
-                var jj = deps[j];
-                if (!seen[jj])
-                {
-                    seen[jj] = true;
-                    g(jj);
-                }
-            }
-        }
-        g(i);
-        return tot;
-    }
-
-    var ones = 0;
-    for (var i = 0; i < shake.length; i++)
-    {
-        var tot;
-        if (shake[i].depends.length === 1)
-            tot = costs[shake[i].depends[0]].cost + shake[i].execution;
-        else
-            tot = f(i);
-        costs[i] = {name : shake[i].name, cost: tot, key: i};
-    }
-    return costs;
-}
-
-function rebuildCost(sumExecution)
-{
-    // find the reverse dependencies
-    var rdeps = calcRdeps();
-
-    // now find out how expensive each one is
-    var costs = calcCosts(rdeps);
-    costs.sort(function(a,b){return b.cost-a.cost;});
-
     $("#rebuild-cost input").live('input', function(){
         try {
             var regex = new RegExp($(this).val());
@@ -333,12 +332,12 @@ function rebuildCost(sumExecution)
         }
         var result1 = [];
         var resultN = {};
-        for (var i = 0; i < costs.length; i++)
+        for (var i = 0; i < shake.length; i++)
         {
-            var res = regex.exec(costs[i].name);
+            var res = regex.exec(shake[i].name);
             if (res === null) continue;
             if (res.length === 1)
-                result1.push(costs[i]);
+                result1.push(shake[i]);
             else
             {
                 var extra = "";
@@ -346,45 +345,61 @@ function rebuildCost(sumExecution)
                     extra += (extra === "" ? "" : " ") + res[j];
                 if (resultN[extra] === undefined)
                     resultN[extra] = {name: extra, deps: {}, count: 0};
-                resultN[extra].deps[costs[i].key] = true;
-                for (var j in costs[i].deps)
-                    resultN[extra].deps[j] = true;
+                resultN[extra].deps[i] = true;
                 resultN[extra].count++;
             }
         }
         for (var i in resultN)
         {
-            var cost = 0;
+            var xs = [];
             for (var j in resultN[i].deps)
-                cost += shake[j].execution;
-            result1.push({name: resultN[i].name + " (" + resultN[i].count + ")", cost: cost});
+                xs.push(Number(j));
+            result1.push({name: resultN[i].name + " (" + resultN[i].count + ")", cost: calcRebuildCosts(xs)});
         }
-        result1.sort(function(a,b){return b.cost - a.cost;});
+        var top = result1.sort(function(a,b){return b.cost - a.cost;}).slice(0, 15);
 
         var res = "";
-        for (var i = 0; i < Math.min(15,result1.length); i++)
+        for (var i = 0; i < top.length; i++)
         {
           res += "<tr>" +
             "<td><div class='progress progress-success' style='height: 10px'>" +
-            "<div class='bar' style='width:" + (result1[i].cost * 40 / result1[0].cost) + "px;'></div></div></td>" +
-            "<td>" + showTime(result1[i].cost) + "</td>" +
-            "<td>" + showPerc(result1[i].cost / sumExecution) + "</td>" +
-            "<td>" + result1[i].name + "</td></tr>";
+            "<div class='bar' style='width:" + (top[i].cost * 40 / top[0].cost) + "px;'></div></div></td>" +
+            "<td>" + showTime(top[i].cost) + "</td>" +
+            "<td>" + showPerc(top[i].cost / sumExecution) + "</td>" +
+            "<td>" + top[i].name + "</td></tr>";
         }
         $("#rebuild-details tbody").empty().append(res);
     });
 
+    // Put them in order
+    var top = shake.slice(0).sort(function(a,b){return b.cost-a.cost;}).slice(0,15);
+
     var res = "";
-    for (var i = 0; i < Math.min(15,costs.length); i++)
+    for (var i = 0; i < top.length; i++)
     {
       res += "<tr>" +
         "<td><div class='progress progress-success' style='height: 10px'>" +
-        "<div class='bar' style='width:" + (costs[i].cost * 40 / costs[0].cost) + "px;'></div></div></td>" +
-        "<td>" + showTime(costs[i].cost) + "</td>" +
-        "<td>" + showPerc(costs[i].cost / sumExecution) + "</td>" +
-        "<td>" + costs[i].name + "</td></tr>";
+        "<div class='bar' style='width:" + (top[i].cost * 40 / top[0].cost) + "px;'></div></div></td>" +
+        "<td>" + showTime(top[i].cost) + "</td>" +
+        "<td>" + showPerc(top[i].cost / sumExecution) + "</td>" +
+        "<td>" + top[i].name + "</td></tr>";
     }
     return res;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// LOADING
+
+function load()
+{
+    $('#summary').append(reportSummary());
+    $.plot($('#shakeplot'), reportParallelismGraph());
+    $("#rule-details tbody").append(reportExpensiveRules());
+    $("#cmd-details tbody").append(reportExpensiveCommands());
+    addRdeps();
+    addCost();
+    $("#rebuild-details tbody").append(reportRebuildCost());
 }
 
 
