@@ -395,11 +395,14 @@ function load()
 {
     $('#summary').append(reportSummary());
     $.plot($('#shakeplot'), reportParallelismGraph());
-    $("#rule-details tbody").append(reportExpensiveRules());
-    $("#cmd-details tbody").append(reportExpensiveCommands());
-    addRdeps();
-    addCost();
-    $("#rebuild-details tbody").append(reportRebuildCost());
+    // Put everything not initially visible behind a timeout
+    window.setTimeout(function(){
+        $("#rule-details tbody").append(reportExpensiveRules());
+        $("#cmd-details tbody").append(reportExpensiveCommands());
+        addRdeps();
+        addCost();
+        $("#rebuild-details tbody").append(reportRebuildCost());
+    });
 }
 
 
