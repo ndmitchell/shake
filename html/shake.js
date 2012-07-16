@@ -4,7 +4,24 @@
 //////////////////////////////////////////////////////////////////////
 // UTILITIES
 
-function showTime(x){return x.toFixed(2) + "s";}
+function showTime(x)
+{
+    function digits(x){var s = String(x); return s.length === 1 ? "0" + s : s;}
+
+    if (x >= 360)
+    {
+        var x = Math.round(x / 60);
+        return Math.floor(x / 60) + "h" + digits(x % 60) + "m";
+    }
+    else if (x >= 60)
+    {
+        var x = Math.round(x);
+        return Math.floor(x / 60) + "m" + digits(x % 60) + "s";
+    }
+    else
+        return x.toFixed(2) + "s";
+}
+
 function showPerc(x){return (x*100).toFixed(2) + "%";}
 
 function plural(n,not1,is1){
