@@ -392,10 +392,15 @@ function reportRebuildCost()
 //////////////////////////////////////////////////////////////////////
 // LOADING
 
+function tickFormatter(i)
+{
+    return showTime(maxTraceStopLast * i / 100);
+}
+
 function load()
 {
     $('#summary').append(reportSummary());
-    $.plot($('#shakeplot'), reportParallelismGraph());
+    $.plot($('#shakeplot'), reportParallelismGraph(), {xaxis : {tickFormatter: tickFormatter}});
     // Put everything not initially visible behind a timeout
     window.setTimeout(function(){
         $("#rule-details tbody").append(reportExpensiveRules());
