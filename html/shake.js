@@ -6,7 +6,6 @@
 
 function showTime(x){return x.toFixed(2) + "s";}
 function showPerc(x){return (x*100).toFixed(2) + "%";}
-function showShort(x){return x;}
 
 function plural(n,not1,is1){
     return n === 1
