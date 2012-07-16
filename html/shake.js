@@ -269,7 +269,7 @@ function reportParallelismGraph()
 
     var plotvals = [];
     for (var i = 0; i < countBuckets; i++)
-        plotvals.push([i, (buckets[i] * 100 / maxBucket)]);
+        plotvals.push([i, (buckets[i] / maxBucket)]);
     return [{color: '#5EB95E', data: plotvals}];
 }
 
