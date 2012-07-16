@@ -134,7 +134,7 @@ var countLast = 0; // :: Int, number of rules run in 'lastRun'
 var sumExecution = 0; // :: Seconds, build time in total
 var maxExecution = 0; // :: Seconds, longest build rule
 var countTrace = 0, countTraceLast = 0; // :: Int, traced commands run
-var sumTrace = 0; // :: Seconds, time running traced commands
+var sumTrace = 0, sumTraceLast = 0; // :: Seconds, time running traced commands
 var maxTrace = 0; // :: Seconds, lonest traced command
 var maxTraceStopLast = 0; // :: Seconds, time the last traced command stopped
 
@@ -150,10 +150,12 @@ var _ = function(){
         if (!traces) continue;
         for (var j = 0; j < traces.length; j++)
         {
+            var time = traces[j].stop - traces[j].start;
             countTrace += 1;
             countTraceLast += isLast ? 1 : 0;
-            sumTrace += traces[j].stop - traces[j].start;
-            maxTrace = Math.max(maxTrace, traces[j].stop - traces[j].start);
+            sumTrace += time;
+            sumTraceLast += isLast ? time : 0;
+            maxTrace = Math.max(maxTrace, time);
             maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? traces[j].stop : 0);
         }
     }
@@ -229,7 +231,7 @@ function reportSummary()
         "<li><strong>Commands:</strong> Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).</li>" +
         "<li><strong>Build time:</strong> The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands.</li>" +
         "<li><strong>Longest steps:</strong> The longest rule takes " + showTime(maxExecution) + ", and the longest traced command takes " + showTime(maxTrace) + ".</li>" +
-        "<li><strong>Parallelism:</strong> Last run gave an average parallelism of " + (sumTrace / maxTraceStopLast).toFixed(2) + " times over " + showTime(maxTraceStopLast) + ".</li>" +
+        "<li><strong>Parallelism:</strong> Last run gave an average parallelism of " + (sumTraceLast / maxTraceStopLast).toFixed(2) + " times over " + showTime(maxTraceStopLast) + ".</li>" +
         "</ul>";
     return res;
 }
