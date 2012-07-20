@@ -120,7 +120,7 @@ addPool pool act = step pool $ \s -> do
     return s{todo = todo}
 
 
--- | A blocking action is being run while on the pool, yeild your thread.
+-- | A blocking action is being run while on the pool, yield your thread.
 --   Should only be called by an action under addPool.
 blockPool :: Pool -> IO a -> IO a
 blockPool pool act = do
