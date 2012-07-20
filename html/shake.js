@@ -8,7 +8,7 @@ function showTime(x)
 {
     function digits(x){var s = String(x); return s.length === 1 ? "0" + s : s;}
 
-    if (x >= 360)
+    if (x >= 3600)
     {
         var x = Math.round(x / 60);
         return Math.floor(x / 60) + "h" + digits(x % 60) + "m";
