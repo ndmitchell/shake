@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Ensure errors raised bubble up quickly
     Significant improvements to the profile output
     Only trace the program name by default, not the entire command
     Allow unordered-containers < 0.2 again

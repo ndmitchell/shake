@@ -391,7 +391,7 @@ withResource r i act = Action $ do
                 Nothing -> logger s $ show r ++ " acquired " ++ show i ++ " with no wait"
                 Just wait -> do
                     logger s $ show r ++ " waiting to acquire " ++ show i
-                    blockPool (pool s) wait
+                    blockPool (pool s) $ fmap ((,) False) wait
                     logger s $ show r ++ " acquired " ++ show i ++ " after waiting")
         (do releaseResource r i
             logger s $ show r ++ " released " ++ show i)

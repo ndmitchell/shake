@@ -122,15 +122,23 @@ addPool pool act = step pool $ \s -> do
 
 -- | A blocking action is being run while on the pool, yield your thread.
 --   Should only be called by an action under addPool.
-blockPool :: Pool -> IO a -> IO a
+--
+--   If the first part of the result is True then the result is sufficiently high
+--   priority that you may exceed the pool limit to get it done immediately.
+--   Always the result of a child thread raising an error, which will probably
+--   raise an error in the parent.
+blockPool :: Pool -> IO (Bool, a) -> IO a
 blockPool pool act = do
     step pool $ \s -> return s{working = working s - 1, blocked = blocked s + 1}
-    res <- act
+    (urgent,res) <- act
     var <- newBarrier
     let act = do
             step pool $ \s -> return s{working = working s + 1, blocked = blocked s - 1}
             signalBarrier var ()
-    step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
+    if urgent then
+        signalBarrier var () -- may exceed the pool count
+     else
+        step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
     waitBarrier var
     return res
 

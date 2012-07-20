@@ -210,8 +210,8 @@ build pool Database{..} Ops{..} stack ks = do
                 s <- readIORef status
                 let done x = do signalBarrier wait x; return True
                 case Map.lookup i s of
-                    Just (_, Error e) -> done $ Left e
-                    Just (_, Ready{}) | finish -> done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                    Just (_, Error e) -> done (True, Left e) -- on error make sure we immediately kick off our parent
+                    Just (_, Ready{}) | finish -> done (False, Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s])
                                       | otherwise -> return False
             return $ do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait

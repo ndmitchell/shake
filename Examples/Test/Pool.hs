@@ -48,7 +48,7 @@ test build obj = do
                 addPool pool $ do
                     wait
                     putMVar var ()
-                blockPool pool $ takeMVar var
+                blockPool pool $ fmap ((,) False) $ takeMVar var
                 modifyMVar_ done $ const $ return True
         done <- readMVar done
         assert done "Blocking"
