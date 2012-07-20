@@ -280,14 +280,10 @@ function reportParallelismGraph()
             }
         }
     }
-    var maxBucket = 0;
-    for (var i = 0; i < countBuckets; i++)
-        maxBucket = Math.max(maxBucket, buckets[i]);
-    maxBucket = Math.ceil(maxBucket - 0.00001);
 
     var plotvals = [];
     for (var i = 0; i < countBuckets; i++)
-        plotvals.push([i, (buckets[i] / maxBucket)]);
+        plotvals.push([i, buckets[i]]);
     return [{color: '#5EB95E', data: plotvals}];
 }
 
@@ -417,7 +413,7 @@ function tickFormatter(i)
 function load()
 {
     $('#summary').append(reportSummary());
-    $.plot($('#shakeplot'), reportParallelismGraph(), {xaxis : {tickFormatter: tickFormatter}});
+    $.plot($('#shakeplot'), reportParallelismGraph(), {yaxis : {min: 0}, xaxis : {tickFormatter: tickFormatter}});
     // Put everything not initially visible behind a timeout
     window.setTimeout(function(){
         $("#rule-details tbody").append(reportExpensiveRules());
