@@ -136,7 +136,7 @@ blockPool pool act = do
             step pool $ \s -> return s{working = working s + 1, blocked = blocked s - 1}
             signalBarrier var ()
     if urgent then
-        signalBarrier var () -- may exceed the pool count
+        act -- may exceed the pool count
      else
         step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
     waitBarrier var
