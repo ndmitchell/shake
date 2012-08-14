@@ -120,6 +120,15 @@ want :: [FilePath] -> Rules ()
 want xs = action $ need xs
 
 
+root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
+root help test act = rule $ \(File x_) -> let x = BS.unpack x_ in
+    if not $ test x then Nothing else Just $ do
+        liftIO $ createDirectoryIfMissing True $ takeDirectory x
+        act x
+        liftIO $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
+
+
+
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
 --   the second argument will be used to build it. Usually '*>' is sufficient, but '?>' gives
 --   additional power. For any file used by the build system, only one rule should return 'True'.
@@ -130,16 +139,12 @@ want xs = action $ need xs
 --     'Development.Shake.writeFile'' . map toUpper =<< 'Development.Shake.readFile'' src
 -- @
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-(?>) test act = rule $ \(File x_) -> let x = BS.unpack x_ in
-    if not $ test x then Nothing else Just $ do
-        liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        act x
-        liftIO $ getModTimeError "Error, rule failed to build the file:" x_
+(?>) = root "with ?>"
 
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) test act = (\x -> any (?== x) test) ?> act
+(**>) test = root "with **>" (\x -> any (?== x) test)
 
 -- | Define a rule that matches a 'FilePattern'. No file required by the system must be
 --   matched by more than one pattern. For the pattern rules, see '?=='.
@@ -157,4 +162,4 @@ want xs = action $ need xs
 --
 --   Note that matching is case-sensitive, even on Windows.
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) test act = (test ?==) ?> act
+(*>) test = root ("for " ++ show test) (test ?==)

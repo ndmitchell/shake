@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve the error message when failing to build a file
     Ensure errors raised bubble up quickly
     Significant improvements to the profile output
     Only trace the program name by default, not the entire command
