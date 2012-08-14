@@ -85,5 +85,5 @@ getModTimeError msg x = do
     res <- getModTimeMaybe x
     case res of
         -- Make sure you raise an error in IO, not return a value which will error later
-        Nothing -> error $ msg ++ "\n" ++ BS.unpack x
+        Nothing -> error $ msg ++ "\n  " ++ BS.unpack x
         Just x -> return x
