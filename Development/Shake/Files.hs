@@ -65,7 +65,7 @@ ps *>> act
         rule $ \(Files xs_) -> let xs = map BS.unpack xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                 act xs
-                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, *>> failed to build the file:") xs_
+                liftIO $ getFileTimes "*>>" xs_
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
@@ -99,6 +99,10 @@ ps *>> act
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 act xs
-                liftIO $ fmap FileTimes $ mapM (getModTimeError "Error, multi rule failed to build the file:") xs_
+                liftIO $ getFileTimes "?>>" xs_
             Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
             Nothing -> Nothing
+
+
+getFileTimes :: String -> [BS.ByteString] -> IO FileTimes
+getFileTimes name xs = fmap FileTimes $ mapM (getModTimeError ("Error, " ++ name ++ " rule failed to build the file:")) xs
