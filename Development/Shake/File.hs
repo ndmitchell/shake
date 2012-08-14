@@ -162,4 +162,4 @@ root help test act = rule $ \(File x_) -> let x = BS.unpack x_ in
 --
 --   Note that matching is case-sensitive, even on Windows.
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) test = root ("for " ++ show test) (test ?==)
+(*>) test = root (show test) (test ?==)
