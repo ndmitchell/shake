@@ -20,7 +20,6 @@ import Development.Shake.Intern as Intern
 import Control.DeepSeq
 import Data.Hashable
 import Data.Typeable
-import Prelude hiding (catch)
 import Control.Exception
 import Control.Monad
 import qualified Data.HashMap.Strict as Map

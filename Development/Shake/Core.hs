@@ -9,9 +9,8 @@ module Development.Shake.Core(
     Resource, newResource, withResource
     ) where
 
-import Prelude hiding (catch)
 import Control.DeepSeq
-import Control.Exception
+import Control.Exception as E
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
@@ -260,7 +259,7 @@ run opts@ShakeOptions{..} rs = do
 
 
 wrapStack :: IO [String] -> IO a -> IO a
-wrapStack stk act = catch act $ \(SomeException e) -> case cast e of
+wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
     Just s@ShakeException{} -> throw s
     Nothing -> do
         stk <- stk

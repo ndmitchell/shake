@@ -12,10 +12,9 @@ module Development.Shake.Storage(
 import Development.Shake.Binary
 import Development.Shake.Locks
 
-import Prelude hiding (catch)
 import Control.Arrow
 import Control.DeepSeq
-import Control.Exception
+import Control.Exception as E
 import Control.Monad
 import Data.Binary.Get
 import Data.Binary.Put
@@ -56,7 +55,7 @@ withStorage logger file version witness act = do
     b <- doesFileExist bupfile
     when b $ do
         logger $ "Backup file move to original"
-        catch (removeFile dbfile) (\(e :: SomeException) -> return ())
+        E.catch (removeFile dbfile) (\(e :: SomeException) -> return ())
         renameFile bupfile dbfile
 
     withBinaryFile dbfile ReadWriteMode $ \h -> do
@@ -169,7 +168,7 @@ toChunk x = n `LBS.append` x
 showException :: SomeException -> IO String
 showException err = do
     let msg = show err
-    catch (evaluate $ rnf msg `seq` msg) (\(_ :: SomeException) -> return "Unknown exception (error while showing error message)")
+    E.catch (evaluate $ rnf msg `seq` msg) (\(_ :: SomeException) -> return "Unknown exception (error while showing error message)")
 
 
 -- | Is the exception asyncronous, not a "coding error" that should be ignored

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Don't assume catch is exported by Prelude (GHC 7.6 compat)
     Improve the error message when failing to build with *>> or ?>>
     Introduce a portable flag, to switch to portable FileTime ops
     Improve the error message when failing to build a file
