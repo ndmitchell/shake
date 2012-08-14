@@ -18,7 +18,12 @@ import qualified Data.ByteString.Char8 as BS
 import System.IO.Error
 import Control.Exception
 import System.Directory
+
+#if __GLASGOW_HASKELL__ >= 706
+import Data.Time.Clock
+#else
 import System.Time
+#endif
 
 #elif defined mingw32_HOST_OS
 
@@ -53,9 +58,13 @@ getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
 
 -- Portable fallback
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    TOD t _ <- getModificationTime $ BS.unpack x
+    time <- getModificationTime $ BS.unpack x
+#if __GLASGOW_HASKELL__ >= 706
+    return $ Just $ FileTime $ floor $ utctDayTime time
+#else
+    let TOD t _ = time
     return $ Just $ FileTime $ fromIntegral t
-
+#endif
 
 #elif defined mingw32_HOST_OS
 
