@@ -79,6 +79,7 @@ unobj = dropDirectory1 . dropDirectory1
 assert :: Bool -> String -> IO ()
 assert b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
 
+infix 4 ===
 
 (===) :: (Show a, Eq a) => a -> a -> IO ()
 a === b = assert (a == b) $ "failed in ===\nLHS: " ++ show a ++ "\nRHS: " ++ show b
