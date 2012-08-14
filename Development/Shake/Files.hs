@@ -105,4 +105,12 @@ ps *>> act
 
 
 getFileTimes :: String -> [BS.ByteString] -> IO FileTimes
-getFileTimes name xs = fmap FileTimes $ mapM (getModTimeError ("Error, " ++ name ++ " rule failed to build the file:")) xs
+getFileTimes name xs = do
+    ys <- mapM getModTimeMaybe xs
+    case sequence ys of
+        Just ys -> return $ FileTimes ys
+        Nothing -> do
+            let missing = length $ filter isNothing ys
+            error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
+                    " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
+                    concat ["\n  " ++ BS.unpack x ++ if isNothing y then " - MISSING" else "" | (x,y) <- zip xs ys]
