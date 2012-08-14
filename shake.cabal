@@ -132,6 +132,7 @@ executable shake
         Examples.Test.Errors
         Examples.Test.FilePath
         Examples.Test.Files
+        Examples.Test.Journal
         Examples.Test.Pool
         Examples.Test.Random
         Examples.Test.Resources
