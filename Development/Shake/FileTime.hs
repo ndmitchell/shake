@@ -13,9 +13,7 @@ import Data.Typeable
 import Data.Int
 import qualified Data.ByteString.Char8 as BS
 
-#define PORTABLE 0
-
-#if PORTABLE
+#ifdef PORTABLE
 
 import System.IO.Error
 import Control.Exception
@@ -51,7 +49,7 @@ newtype FileTime = FileTime Int32
 
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
 
-#if PORTABLE
+#ifdef PORTABLE
 
 -- Portable fallback
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
