@@ -19,6 +19,9 @@ main = shaken test $ \args obj -> do
     obj "failcreate" *> \_ ->
         return ()
 
+    [obj "failcreates", obj "failcreates2"] *>> \_ ->
+        writeFile' (obj "failcreates") ""
+
     obj "recursive" *> \out ->
         need [out]
 
@@ -45,6 +48,7 @@ test build obj = do
 
     crash ["norule"] ["norule_isavailable"]
     crash ["failcreate"] ["failcreate"]
+    crash ["failcreates"] ["failcreates"]
     crash ["recursive"] ["recursive"]
     crash ["systemcmd"] ["systemcmd","random_missing_command"]
     crash ["stack1"] ["stack1","stack2","stack3","crash"]
