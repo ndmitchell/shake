@@ -52,6 +52,10 @@ flag testprog
     default: False
     description: Build the test program
 
+flag portable
+    default: False
+    description: Obtain FileTime using portable functions
+
 library
     build-depends:
         base == 4.*,
@@ -67,7 +71,10 @@ library
         random,
         transformers >= 0.2 && < 0.4,
         deepseq >= 1.1 && < 1.4
-    if !os(windows)
+
+    if flag(portable)
+        cpp-options: -DPORTABLE
+    elif !os(windows)
         build-depends: unix >= 2.5.1
 
     exposed-modules:

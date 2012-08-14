@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Introduce a portable flag, to switch to portable FileTime ops
     Improve the error message when failing to build a file
     Ensure errors raised bubble up quickly
     Significant improvements to the profile output
