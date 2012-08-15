@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Files(
     (?>>), (*>>)
@@ -60,7 +60,7 @@ ps *>> act
     | otherwise = do
         forM_ ps $ \p ->
             p *> \file -> do
-                apply1 $ Files $ map (BS.pack . substitute (extract p file)) ps :: Action FileTimes
+                _ :: FileTimes <- apply1 $ Files $ map (BS.pack . substitute (extract p file)) ps
                 return ()
         rule $ \(Files xs_) -> let xs = map BS.unpack xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
@@ -92,7 +92,7 @@ ps *>> act
                     | otherwise -> error $ "Invariant broken in ?>> when trying on " ++ x
 
     isJust . checkedTest ?> \x -> do
-        apply1 $ Files $ map BS.pack $ fromJust $ test x :: Action FileTimes
+        _ :: FileTimes <- apply1 $ Files $ map BS.pack $ fromJust $ test x
         return ()
 
     rule $ \(Files xs_) -> let xs@(x:_) = map BS.unpack xs_ in
