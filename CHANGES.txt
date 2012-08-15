@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Don't use syntax also stolen by QuasiQuotes
     Avoid warnings about unused monadic values
     Fix up getModificationTime for GHC 7.6
     Don't assume catch is exported by Prelude (GHC 7.6 compat)

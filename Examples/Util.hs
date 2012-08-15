@@ -129,7 +129,7 @@ partitionM f [] = return ([], [])
 partitionM f (x:xs) = do
     res <- f x
     (as,bs) <- partitionM f xs
-    return ([x|res]++as, [x|not res]++bs)
+    return $ if res then (x:as,bs) else (as,x:bs)
 
 concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
 concatMapM f = liftM concat . mapM f
