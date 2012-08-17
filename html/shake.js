@@ -129,24 +129,10 @@ function huffman(resultSize, xs)
 //////////////////////////////////////////////////////////////////////
 // DATA MANIPULATION/ADDITION
 
-// which runs have built data in them, sorted
-// built :: [Int]
-var built = function(){
-    var seen = {};
-    for (var i = 0; i < shake.length; i++)
-        seen[shake[i].built] = true;
-    var seen2 = [];
-    for (var i in seen)
-        seen2.push(Number(i));
-    return seen2.sort(function cmp(a,b){return a-b;});
-}();
-
-// what is the index of the last build run
-// lastRun :: Int
-var lastRun = built.length === 0 ? 0 : built[built.length-1];
 
 // Summary statistics
-var countLast = 0; // :: Int, number of rules run in 'lastRun'
+var countLast = 0; // :: Int, number of rules run in the last run
+var highestRun = 0; // :: Int, highest run you have seen (add 1 to get the count of runs)
 var sumExecution = 0; // :: Seconds, build time in total
 var maxExecution = 0; // :: Seconds, longest build rule
 var countTrace = 0, countTraceLast = 0; // :: Int, traced commands run
@@ -158,10 +144,11 @@ var _ = function(){
     // Fold over shake to produce the summary
     for (var i = 0; i < shake.length; i++)
     {
-        var isLast = shake[i].built === lastRun;
+        var isLast = shake[i].built === 0;
         countLast += isLast ? 1 : 0;
         sumExecution += shake[i].execution;
         maxExecution = Math.max(maxExecution, shake[i].execution);
+        highestRun = Math.max(highestRun, shake[i].changed); // changed is always greater or equal to built
         var traces = shake[i].traces;
         if (!traces) continue;
         for (var j = 0; j < traces.length; j++)
@@ -242,7 +229,7 @@ function reportSummary()
 {
     var res =
         "<ul>" +
-        "<li><strong>Runs:</strong> This database has tracked " + built.length + " run" + plural(built.length) + ".</li>" +
+        "<li><strong>Runs:</strong> This database has tracked " + (highestRun+1) + " run" + plural(highestRun+1) + ".</li>" +
         "<li><strong>Rules:</strong> There are " + shake.length + " rules (" + countLast + " rebuilt in the last run).</li>" +
         "<li><strong>Commands:</strong> Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).</li>" +
         "<li><strong>Build time:</strong> The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands.</li>" +
@@ -263,7 +250,7 @@ function reportParallelismGraph()
     for (var i = 0; i < shake.length; i++)
     {
         var traces = shake[i].traces;
-        if (!traces || shake[i].built !== lastRun) continue;
+        if (!traces || shake[i].built !== 0) continue;
         for (var j = 0; j < traces.length; j++)
         {
             var start = traces[j].start * countBuckets / maxTraceStopLast;

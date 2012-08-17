@@ -22,6 +22,7 @@ import Data.Hashable
 import Data.Typeable
 import Control.Exception
 import Control.Monad
+import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
 import Data.Maybe
@@ -345,9 +346,12 @@ resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends =
 showJSON :: Database -> IO String
 showJSON Database{..} = do
     status <- fmap resultsOnly $ readIORef status
-    let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
-        order = dependencyOrder shw $ Map.map (concat . depends . snd) status
+    let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
+                in dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]
+
+        steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
+                in Map.fromList $ zip (reverse $ sort xs) [0..]
 
         f (k, Result{..})  =
             let xs = ["name:" ++ show (show k)
@@ -356,7 +360,7 @@ showJSON Database{..} = do
                      ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
                      ,"execution:" ++ show execution] ++
                      ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | traces /= []]
-                showStep (Step i) = show i
+                showStep i = show $ fromJust $ Map.lookup i steps
                 showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
