@@ -25,6 +25,7 @@ h2 {margin-top: 20px; margin-bottom: 10px;}
 
 <ul class="nav nav-tabs" id="tabs">
     <li class="active"><a href="#overview">Overview</a></li>
+    <li><a href="#details">Details</a></li>
     <li><a href="#expensive-rules">Expensive rules</a></li>
     <li><a href="#expensive-commands">Expensive commands</a></li>
     <li><a href="#rebuild-cost">Rebuild costs</a></li>
@@ -41,6 +42,42 @@ h2 {margin-top: 20px; margin-bottom: 10px;}
             build system, using <a href="http://twitter.github.com/bootstrap">Bootstrap</a>,
             <a href="http://jquery.com">jQuery</a> and <a href="http://code.google.com/p/flot">flot</a>.
         </p>
+    </div>
+
+    <div class="tab-pane" id="details">
+        <table>
+            <tr>
+                <td>Rule filter</td>
+                <td><input type="text" id="rule-filter" /></td>
+                <td>
+                    <select id="rule-type">
+                        <option>By name</option>
+                        <option>This depends on</option>
+                        <option>This depends on (transitive)</option>
+                        <option>Depends on this</option>
+                        <option>Depends on this (transitive)</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Command filter</td>
+                <td><input id="command-filter" type="text" /></td>
+            </tr>
+            <tr>
+                <td>View</td>
+                <td><input name="view-type" id="view-rule" type="radio" checked="checked" /> Rule <input id="view-command" type="radio" name="view-type" /> Commands</td>
+            </tr>
+        </table>
+
+        <table id="details-output" class='table table-condensed'>
+            <thead><tr>
+                <th></th>
+                <th>Time</th>
+                <th>Overall</th>
+                <th>Rule</th>
+            </tr></thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <div class="tab-pane" id="expensive-rules">

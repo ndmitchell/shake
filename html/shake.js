@@ -420,3 +420,140 @@ function reportUnchanged()
             console.log(shake[i].name);
     }
 }
+
+
+/*
+data Query = Query
+    {ruleFilter :: String
+    ,ruleType :: Int
+    ,commandFilter :: String
+    ,viewRule :: Bool
+    }
+*/
+
+
+function getQuery() // :: IO Query
+{
+    return {ruleFilter: $("#rule-filter").text()
+           ,ruleType: $("#rule-type").val()
+           ,commandFilter: $("#command-filter").text()
+           ,viewRule: $("#view-rule").is(":checked")};
+}
+
+
+function onQuery(f) // :: IO () -> IO ()
+{
+    $("#rule-filter, #command-filter").live('input',f);
+    $("#rule-type, #view-rule, #view-command").change(f);
+}
+
+function runQuery(x) // :: Query -> Report
+{
+    var res = [];
+
+    if (x.viewRule)
+    {
+        for (var i = 0, n = shake.length; i < n; i++)
+        {
+            var o = shake[i];
+            res.push({rule: o.name, time: o.execution, unchanged: o.changed !== o.built, run: o.built});
+        }
+    }
+    else
+    {
+    }
+    return res;
+}
+
+var invertOrder = {rule: 0, run: 0};
+var keyName = {rule: "Rule", time: "Time", unchanged: "Unchanged", run: "Runs since"};
+
+var keyShow = {time: function(t)
+{
+    return showTime(t) + "</td><td>" + showPerc(t / sumExecution);
+}};
+
+var sortOrder = ["time"];
+
+function sortByOrder(a,b)
+{
+    for (var i = 0; i < sortOrder.length; i++)
+    {
+        var s = sortOrder[i];
+        if (!(s in a)) continue;
+        var aa = a[s];
+        var bb = b[s];
+        if (aa == bb) continue;
+        return aa > bb == (s in invertOrder) ? 1 : -1;
+    }
+}
+
+function setTable(xs) // :: Report -> IO ()
+{
+    $("#details-output > tbody").empty();
+    $("#details-output > thead").empty();
+    if (xs.length === 0) return;
+
+    var x0 = xs[0];
+    var ord = (sortOrder[0] in x0) && typeof x0[sortOrder[0]] === "number" ? sortOrder[0] : "";
+    if (ord !== "")
+        $("#details-output > thead").append("<th></th>");
+    for (var i in x0)
+    {
+        (function(i)
+        {
+            var hdr = $("<th" + (i == "time" ? " style='text-align:center;' colspan='2'" : "") + ">" + (i in keyName ? keyName[i] : i) + "</th>").click(function(){
+                var old = sortOrder;
+                sortOrder = [i];
+                for (var j = 0; j < old.length; j++)
+                {
+                    if (i !== old[j])
+                        sortOrder.push(old[j]);
+                }
+                setTable(xs);
+            });
+            $("#details-output > thead").append(hdr);
+        })(i); // loop closure
+    }
+
+    var top = xs.sort(sortByOrder).slice(0,50);
+
+    var s = "";
+    for (var i = 0; i < top.length; i++)
+    {
+        s += "<tr>";
+        var x = top[i];
+        if (ord !== "")
+            s += "<td><div class='progress progress-success' style='height: 10px'><div class='bar' style='width:" + (x[ord] * 40 / top[0][ord]) + "px;'></div><div></td>";
+        for (var j in x)
+            s += "<td>" + (j in keyShow ? keyShow[j](x[j]) : x[j]) + "</td>";
+        s += "</tr>";
+    }
+    $("#details-output > tbody").append(s);
+}
+
+$(function(){
+    var f = function(){setTable(runQuery(getQuery()));};
+    onQuery(f);
+    window.setTimeout(f);
+});
+
+
+/*
+query is a record with the search fields in
+report is the output of a table
+
+setQuery :: Query -> IO ()
+getQuery :: IO Query
+
+setTable :: Report -> IO ()
+
+runQuery :: Query -> Report
+
+Report is just a set of records, with predefined formatting for certain fields
+and field priorities
+
+Include things like, "unchanged", lastRun=1, cost-self, cost-children
+
+
+*/
