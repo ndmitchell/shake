@@ -35,7 +35,7 @@ instance Rule Question Answer where
 --
 --   The Oracle maps questions of @[String]@ and answers of @[String]@. This type is a
 --   compromise. Questions will often be the singleton list, but allowing a list of strings
---   there is more flexibility for heirarchical schemes and grouping - i.e. to have
+--   there is more flexible for hierarchical schemes and grouping - i.e. to have
 --   @ghc-pkg shake@, @ghc-pkg base@ etc. The answers are often singleton lists, but
 --   sometimes are used as sets - for example the list of packages returned by @ghc-pkg@.
 --

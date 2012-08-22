@@ -40,7 +40,7 @@
 -- * Put all result files in a distinguished directory, for example @_make@. You can implement a @clean@
 --   command by removing that directory, using 'removeDirectoryRecursive'.
 --
--- * To obtain paralell builds set 'shakeThreads' to a number greater than 1. You may also need to
+-- * To obtain parallel builds set 'shakeThreads' to a number greater than 1. You may also need to
 --   compile with @-threaded@.
 --
 -- * Often the 'want' commands will be determined by command line arguments, to mirror the behaviour of @make@
