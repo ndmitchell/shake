@@ -35,9 +35,9 @@ instance Rule Question Answer where
 --
 --   The Oracle maps questions of @[String]@ to answers of @[String]@. This type is a
 --   compromise. Questions will often be the singleton list, but allowing a list of strings
---   gives more flexibility for hierarchical schemes and grouping - i.e. to have
---   @ghc-pkg shake@, @ghc-pkg base@ etc. The answers are often singleton lists, but
---   sometimes are used as sets - for example the list of packages returned by @ghc-pkg@.
+--   allows hierarchical schemes such as @ghc-pkg shake@, @ghc-pkg base@ etc.
+--   The answers are often singleton lists, but sometimes are used as sets - for example
+--   the list of packages returned by @ghc-pkg@.
 --
 --   Actions passed to 'addOracle' will be run in every Shake execution they are required,
 --   their value will not be kept between runs. To get a similar behaviour using files, see
