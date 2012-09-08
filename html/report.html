@@ -18,21 +18,29 @@ body {margin-top: 15px;}
 h1 {margin-bottom: 10px;}
 h2 {margin-top: 20px; margin-bottom: 10px;}
 .tab-pane {margin-top: 5px;}
+.sorted {background: rgb(217,230,255);}
+
+#details-output .sortable {cursor: pointer;}
+#details-output th {vertical-align: top;}
+
+.erroroneous {background: #faa;}
+.error {border: 2px solid red; border-radius: 10px; padding: 5px; background: #faa;}
+
 </style>
 
     </head>
     <body onload="load()"><div class="container">
 
 <ul class="nav nav-tabs" id="tabs">
-    <li class="active"><a href="#overview">Overview</a></li>
-    <li><a href="#details">Details</a></li>
+    <li><a href="#overview">Overview</a></li>
+    <li class="active"><a href="#details">Details</a></li>
     <li><a href="#expensive-rules">Expensive rules</a></li>
     <li><a href="#expensive-commands">Expensive commands</a></li>
     <li><a href="#rebuild-cost">Rebuild costs</a></li>
 </ul>
  
 <div class="tab-content">
-    <div class="tab-pane active" id="overview">
+    <div class="tab-pane" id="overview">
         <h1>Build Profile Report</h1>
         <div id="summary"></div>
         <h2>Traced commands</h2>
@@ -44,39 +52,40 @@ h2 {margin-top: 20px; margin-bottom: 10px;}
         </p>
     </div>
 
-    <div class="tab-pane" id="details">
+    <div class="tab-pane active" id="details">
         <p style="color:#d00;">Warning: this view is still under active development</p>
-        <table>
-            <tr>
-                <td>Rule filter</td>
-                <td><input type="text" id="rule-filter" /></td>
-                <td>
-                    <select id="rule-type">
-                        <option>By name</option>
-                        <option>This depends on</option>
-                        <option>This depends on (transitive)</option>
-                        <option>Depends on this</option>
-                        <option>Depends on this (transitive)</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td>Command filter</td>
-                <td><input id="command-filter" type="text" /></td>
-            </tr>
-            <tr>
-                <td>View</td>
-                <td><input name="view-type" id="view-rule" type="radio" checked="checked" /> Rule <input id="view-command" type="radio" name="view-type" /> Commands</td>
-            </tr>
-        </table>
-
+        <p>
+            Advanced filter: <input id="advanced-filter" type="text" /><button id="advanced-apply">Apply</button>
+        </p>
         <table id="details-output" class='table table-condensed'>
-            <thead><tr>
-                <th></th>
-                <th>Time</th>
-                <th>Overall</th>
-                <th>Rule</th>
-            </tr></thead>
+            <thead>
+                <th><br/>Filter</th> <!-- bar -->
+                <th id="details-group" style="display:none;"><span class="sortable">Group</span></th>
+                <th><span class="sortable">Name</span><br/>
+                    <input type="text" id="rule-filter" style="width: 10em;" />
+                    <select id="rule-type" style="width: 11em;">
+                        <option value="byName">By name</option>
+                        <option value="thisDependsOn">This depends on</option>
+                        <option value="thisDependsOnTransitive">This depends on (transitive)</option>
+                        <option value="dependsOnThis">Depends on this</option>
+                        <option value="dependsOnThisTransitive">Depends on this (transitive)</option>
+                    </select>
+                </th>
+                <th colspan="2"><span class="sortable">Time</span></th>
+                <th colspan="2"><span class="sortable">Cost</span></th>
+                <th><span class="sortable">Unchanged</span><br/>
+                    <input style="width: 5em;" type="text" id="unchanged-filter" />
+                </th>
+                <th><span class="sortable">Runs&nbsp;since</span><br/>
+                    <input style="width: 5em;" type="text" id="runs-filter" />
+                </th>
+                <th><span class="sortable">Leaf</span><br/>
+                    <input style="width: 5em;" type="text" id="leaf-filter" />
+                </th>
+                <th><span class="sortable">Commands</span><br/>
+                    <input style="width: 10em;" type="text" id="command-filter" />
+                </th>
+            </thead>
             <tbody></tbody>
         </table>
     </div>

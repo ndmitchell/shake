@@ -424,27 +424,77 @@ function reportUnchanged()
 
 /*
 data Query = Query
-    {ruleFilter :: String
+    {ruleFilter :: RegExp
     ,ruleType :: Int
-    ,commandFilter :: String
-    ,viewRule :: Bool
+    ,commandFilter :: RegExp
+    ,advancedFilter :: Function(Record -> Bool)
+    ,viewRule :: RuleType
     }
 */
 
+var RuleType =
+    {ByName: 0
+    ,ThisDependsOn: 1
+    ,ThisDependsOnTransitive: 2
+    ,DependsOnThis: 3
+    ,DependsOnThisTransitive: 4
+    }
+
+
+
+function readFun(s)
+{
+    try {return Function("x","return " + s);}
+    catch (e){return undefined;}
+}
 
 function getQuery() // :: IO Query
 {
-    return {ruleFilter: $("#rule-filter").text()
-           ,ruleType: $("#rule-type").val()
-           ,commandFilter: $("#command-filter").text()
+    var query = "";
+    function addQuery(s)
+    {
+        query += (query !== "" && s !== "" ? " && " : "") + s;
+    }
+
+    var ruleFilter = $("#rule-filter").val();
+    var ruleType = $("#rule-type").val();
+
+    clearError("#rule-filter");
+    try {RegExp(ruleFilter);}
+    catch (e)
+    {
+        setError("#rule-filter", e);
+        return;
+    }
+    if (ruleFilter !== "") addQuery(ruleType + "(/" + ruleFilter + "/)");
+
+
+    var unchanged = $("#unchanged-filter").val().toLowerCase();
+    if (unchanged !== "") addQuery((unchanged[0] === "t" ? "" : "!") + "unchanged()");
+
+    var runs = $("#runs-filter").val();
+    if (runs !== "") addQuery("run() == " + runs);
+
+    var leaf = $("#leaf-filter").val().toLowerCase();
+    if (leaf !== "") addQuery((leaf[0] === "t" ? "" : "!") + "leaf()");
+
+    if (query === "") query = "true";
+    $("#advanced-filter").val(query);
+    return;
+
+
+    return {ruleFilter: RegExp($("#rule-filter").val())
+           ,ruleType: Number($("#rule-type").val())
+           ,commandFilter: RegExp($("#command-filter").val())
+           ,advancedFilter: readFun($("#advanced-filter").val())
            ,viewRule: $("#view-rule").is(":checked")};
 }
 
 
 function onQuery(f) // :: IO () -> IO ()
 {
-    $("#rule-filter, #command-filter").live('input',f);
-    $("#rule-type, #view-rule, #view-command").change(f);
+    $("#details-output input").live('input', f);
+    $("#details-output select").change(f);
 }
 
 function runQuery(x) // :: Query -> Report
@@ -453,11 +503,81 @@ function runQuery(x) // :: Query -> Report
 
     if (x.viewRule)
     {
+        var want = [];
         for (var i = 0, n = shake.length; i < n; i++)
         {
-            var o = shake[i];
-            res.push({rule: o.name, time: o.execution, unchanged: o.changed !== o.built, run: o.built});
+            if (x.ruleFilter.test(shake[i].name))
+                want.push(i);
         }
+        var add = function(i){
+            var o = shake[i];
+            res.push({rule: o.name, time: o.execution, cost: o.cost, unchanged: o.changed !== o.built, run: o.built, leaf: o.depends.length === 0});
+        }
+
+        var find = function(key){
+            var seen = {};
+            for (var i = 0; i < want.length; i++)
+            {
+                var deps = shake[want[i]][key];
+                for (var j = 0; j < deps.length; j++)
+                {
+                    if (deps[j] in seen) continue;
+                    seen[deps[j]] = true;
+                    add(deps[j]);
+                }
+            }
+        }
+
+        var findTransitive = function(key, dirFwd){
+            var want2 = {};
+            for (var i = 0; i < want.length; i++)
+                want2[want[i]] = true;
+            for (var i = 0; i < shake.length; i++)
+            {
+                var j = dirFwd ? i : shake.length - 1 - i;
+                if (!(j in want2)) continue;
+                add(j);
+                var ds = shake[j][key];
+                for (var k = 0; k < ds.length; k++)
+                    want2[ds[k]] = true;
+            }
+        }
+
+        switch (x.ruleType)
+        {
+        case RuleType.ByName:
+            for (var i = 0; i < want.length; i++)
+                add(want[i]);
+            break;
+
+        case RuleType.ThisDependsOn:
+            find("depends");
+            break;
+
+        case RuleType.DependsOnThis:
+            find("rdeps");
+            break;
+
+        case RuleType.ThisDependsOnTransitive:
+            findTransitive("depends", false);
+            break;
+
+        case RuleType.DependsOnThisTransitive:
+            findTransitive("rdeps", true);
+            break;
+        }
+
+        if (x.advancedFilter !== undefined)
+        {
+            var res2 = [];
+            for (var i = 0; i < res.length; i++)
+            {
+                if (x.advancedFilter(res[i]) !== false)
+                    res2.push(res[i]);
+            }
+            res = res2;
+        }
+
     }
     else
     {
@@ -466,12 +586,12 @@ function runQuery(x) // :: Query -> Report
 }
 
 var invertOrder = {rule: 0, run: 0};
-var keyName = {rule: "Rule", time: "Time", unchanged: "Unchanged", run: "Runs since"};
+var keyName = {rule: "Rule", time: "Time", cost: "Cost", unchanged: "Unchanged", run: "Runs&nbsp;since", leaf:"Leaf"};
 
-var keyShow = {time: function(t)
-{
-    return showTime(t) + "</td><td>" + showPerc(t / sumExecution);
-}};
+var keyShow =
+    {time: function(t){return showTime(t) + "</td><td>" + showPerc(t / sumExecution);}
+    ,cost: function(t){return showTime(t) + "</td><td>" + showPerc(t / sumExecution);}
+    };
 
 var sortOrder = ["time"];
 
@@ -491,30 +611,10 @@ function sortByOrder(a,b)
 function setTable(xs) // :: Report -> IO ()
 {
     $("#details-output > tbody").empty();
-    $("#details-output > thead").empty();
     if (xs.length === 0) return;
 
     var x0 = xs[0];
-    var ord = (sortOrder[0] in x0) && typeof x0[sortOrder[0]] === "number" ? sortOrder[0] : "";
-    if (ord !== "")
-        $("#details-output > thead").append("<th></th>");
-    for (var i in x0)
-    {
-        (function(i)
-        {
-            var hdr = $("<th" + (i == "time" ? " style='text-align:center;' colspan='2'" : "") + ">" + (i in keyName ? keyName[i] : i) + "</th>").click(function(){
-                var old = sortOrder;
-                sortOrder = [i];
-                for (var j = 0; j < old.length; j++)
-                {
-                    if (i !== old[j])
-                        sortOrder.push(old[j]);
-                }
-                setTable(xs);
-            });
-            $("#details-output > thead").append(hdr);
-        })(i); // loop closure
-    }
+    var ord = (sortOrder[0] in x0) && typeof x0[sortOrder[0]] === "number" && x0[sortOrder[0]] > 0 ? sortOrder[0] : "";
 
     var top = xs.sort(sortByOrder).slice(0,50);
 
@@ -523,7 +623,9 @@ function setTable(xs) // :: Report -> IO ()
     {
         s += "<tr>";
         var x = top[i];
-        if (ord !== "")
+        if (ord === "")
+            s += "<td><div style='width:40px'></div></td>";
+        else
             s += "<td><div class='progress progress-success' style='height: 10px'><div class='bar' style='width:" + (x[ord] * 40 / top[0][ord]) + "px;'></div><div></td>";
         for (var j in x)
             s += "<td>" + (j in keyShow ? keyShow[j](x[j]) : x[j]) + "</td>";
@@ -533,10 +635,33 @@ function setTable(xs) // :: Report -> IO ()
 }
 
 $(function(){
-    var f = function(){setTable(runQuery(getQuery()));};
+    addRdeps();
+    addCost();
+    //var f = function(){setTable(runQuery(getQuery()));};
+    var f = function(){getQuery();};
     onQuery(f);
     window.setTimeout(f);
+
+    $("#advanced-apply").click(function(){
+        setTable(runQuery2($("#advanced-filter").val()));
+    });
+    $("#advanced-filter").keyup(function(e){
+        if (e.which === 13 /* enter */)
+            $("#advanced-apply").click();
+    });
 });
+
+function clearError(element)
+{
+    $(element).removeClass("erroroneous");
+    $(element).next(".error").remove();
+}
+
+function setError(element, message)
+{
+    $(element).addClass("erroroneous");
+    $(element).after("<span class='error' title='" + message + "'><abbrev>Error!</span>");
+}
 
 
 /*
@@ -557,3 +682,118 @@ Include things like, "unchanged", lastRun=1, cost-self, cost-children
 
 
 */
+
+
+
+/////////////////////////////////////////////////////////////////////
+// FILTER AND GROUP EXECUTION ENVIRONMENT
+
+// These are global variables mutated/queried by query execution
+var queryKey = 0;
+var queryVal = {};
+var queryGroup = "";
+
+function runQuery2(s)
+{
+    var res = [];
+    var f = Function("return " + s);
+    for (queryKey = 0; queryKey < shake.length; queryKey++)
+    {
+        queryGroup = "";
+        queryVal = shake[queryKey];
+        if (f())
+        {
+            var o = queryVal;
+            res.push({rule: o.name, time: o.execution, cost: o.cost, unchanged: o.changed !== o.built, run: o.built, leaf: o.depends.length === 0});
+        }
+    }
+    return res;
+}
+
+function /* export */ addGroup(x)
+{
+    queryGroup += (queryGroup === "" ? "" : " ") + x;
+}
+
+function /* export */ leaf()
+{
+    return queryVal.depends.length === 0;
+}
+
+function /* export */ run()
+{
+    return queryVal.built;
+}
+
+function /* export */ unchanged()
+{
+    return queryVal.changed !== queryVal.built;
+}
+
+function /* export */ byName(r)
+{
+    var res = r.exec(queryVal.name);
+    if (res === null)
+        return false;
+    if (res.length !== 1)
+    {
+        for (var i = 1; i < res.length; i++)
+            query_addGroup(res[i]);
+    }
+    return true;
+}
+
+function findCache(f)
+{
+    var cache = {};
+    return function(r){
+        var s = cache[r.source];
+        if (s === undefined)
+        {
+            s = f(r);
+            cache[r.source] = s;
+        }
+        return queryKey in s;
+    }
+}
+
+function findDirect(key)
+{
+    return findCache(function(r){
+        var want = {};
+        for (var i = 0; i < shake.length; i++)
+        {
+            if (r.test(shake[i].name))
+            {
+                var deps = shake[i][key];
+                for (var j = 0; j < deps.length; j++)
+                    want[deps[j]] = true;
+            }
+        }
+        return want;
+    });
+}
+
+function findTransitive(key, dirFwd)
+{
+    return findCache(function(r){
+        var want = {};
+        for (var i = 0; i < shake.length; i++)
+        {
+            var j = dirFwd ? i : shake.length - 1 - i;
+            if ((j in want) || r.test(shake[j].name))
+            {
+                want[j] = true;
+                var deps = shake[j][key];
+                for (var k = 0; k < deps.length; k++)
+                    want[deps[k]] = true;
+            }
+        }
+        return want;
+    });
+}
+
+var /* export */ dependsOnThis = findDirect("rdeps");
+var /* export */ thisDependsOn = findDirect("depends");
+var /* export */ dependsOnThisTransitive = findTransitive("depends", false);
+var /* export */ thisDependsOnTransitive = findTransitive("rdeps", true);
