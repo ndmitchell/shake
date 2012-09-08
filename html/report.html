@@ -32,15 +32,15 @@ h2 {margin-top: 20px; margin-bottom: 10px;}
     <body onload="load()"><div class="container">
 
 <ul class="nav nav-tabs" id="tabs">
-    <li><a href="#overview">Overview</a></li>
-    <li class="active"><a href="#details">Details</a></li>
+    <li class="active"><a href="#overview">Overview</a></li>
+    <li><a href="#details">Details</a></li>
     <li><a href="#expensive-rules">Expensive rules</a></li>
     <li><a href="#expensive-commands">Expensive commands</a></li>
     <li><a href="#rebuild-cost">Rebuild costs</a></li>
 </ul>
- 
+
 <div class="tab-content">
-    <div class="tab-pane" id="overview">
+    <div class="tab-pane active" id="overview">
         <h1>Build Profile Report</h1>
         <div id="summary"></div>
         <h2>Traced commands</h2>
@@ -52,7 +52,7 @@ h2 {margin-top: 20px; margin-bottom: 10px;}
         </p>
     </div>
 
-    <div class="tab-pane active" id="details">
+    <div class="tab-pane" id="details">
         <p style="color:#d00;">Warning: this view is still under active development</p>
         <p>
             Advanced filter: <input id="advanced-filter" type="text" /><button id="advanced-apply">Apply</button>
@@ -129,7 +129,7 @@ h2 {margin-top: 20px; margin-bottom: 10px;}
         </table>
     </div>
 </div>
- 
+
 </div> <!-- /container -->
 
 <!-- Javascript placed at the end of the document so the pages load faster -->
