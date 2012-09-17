@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.3.2
     Fix cabal specification on non-Windows
 0.3.1
     Don't use syntax also stolen by QuasiQuotes
