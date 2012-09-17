@@ -1,5 +1,7 @@
 Changelog for Shake
 
+0.3.3
+    Minor refactorings
 0.3.2
     Fix cabal specification on non-Windows
 0.3.1
