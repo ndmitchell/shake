@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix cabal specification on non-Windows
 0.3.1
     Don't use syntax also stolen by QuasiQuotes
     Avoid warnings about unused monadic values

@@ -79,8 +79,9 @@ library
 
     if flag(portable)
         cpp-options: -DPORTABLE
-    elif !os(windows)
-        build-depends: unix >= 2.5.1
+    else
+        if !os(windows)
+            build-depends: unix >= 2.5.1
 
     exposed-modules:
         Development.Shake
