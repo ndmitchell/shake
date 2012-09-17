@@ -40,8 +40,13 @@ extra-source-files:
     Examples/Tar/list.txt
 
 data-files:
-    html/*.js
-    html/*.css
+    html/bootstrap.js
+    html/bootstrap.css
+    html/bootstrap-responsive.css
+    html/bootstrap-tab.js
+    html/jquery.js
+    html/jquery-flot.js
+    html/shake.js
     html/report.html
 
 source-repository head
