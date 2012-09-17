@@ -57,7 +57,9 @@
 --   that you suspect will change regularly (perhaps @ghc@ version number), either write the information to
 --   a file with 'alwaysRerun' and 'writeFileChanged', or use 'addOracle'.
 --
---   The theory behind an old version of Shake is described in a video at <http://vimeo.com/15465133>.
+--   The theory behind Shake is described in an ICFP 2012 paper, Shake Before Building -- Replacing Make with Haskell
+--   <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf>. The associated talk
+--   forms a short overview of Shake <http://www.youtube.com/watch?v=xYCPpXVlqFM>.
 --
 --   /Acknowledgements/: Thanks to Austin Seipp for properly integrating the profiling code.
 module Development.Shake(

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Update documentation with links to ICFP 2012 paper/talk
 0.3.3
     Minor refactorings
 0.3.2
