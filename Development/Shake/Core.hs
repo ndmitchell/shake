@@ -170,18 +170,20 @@ instance Functor Rules where
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
 --   All default rules must be disjoint.
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-defaultRule = ruleWith 0
+defaultRule = rulePriority 0
 
 
 -- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.
 --   To define lower priority rules use 'defaultRule'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-rule = ruleWith 1
+rule = rulePriority 1
 
 
--- | Add a rule at a given priority.
-ruleWith :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
-ruleWith i r = mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
+-- | Add a rule at a given priority, higher numbers correspond to higher-priority rules.
+--   The function 'defaultRule' is priority 0 and 'rule' is priority 1. All rules of the same
+--   priority must be disjoint.
+rulePriority :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
+rulePriority i r = mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 

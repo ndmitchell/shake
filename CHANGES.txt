@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Expose rulePriority
 0.3.4
     Update documentation with links to ICFP 2012 paper/talk
 0.3.3
