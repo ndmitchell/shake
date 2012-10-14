@@ -6,3 +6,4 @@
 ^academic/.*/.*\.blg$
 ^academic/.*/.*\.dvi$
 ^darcs-ssh$
+^.hpc$
