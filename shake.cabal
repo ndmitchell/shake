@@ -137,6 +137,7 @@ executable shake
         Examples.Test.Directory
         Examples.Test.Errors
         Examples.Test.FilePath
+        Examples.Test.FilePattern
         Examples.Test.Files
         Examples.Test.Journal
         Examples.Test.Pool
