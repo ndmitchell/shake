@@ -2,7 +2,6 @@
 module Examples.Test.Files(main) where
 
 import Development.Shake
-import Development.Shake.FilePattern
 import Examples.Util
 import Control.Monad
 import Data.List
@@ -23,15 +22,6 @@ main = shaken test $ \args obj -> do
 
 
 test build obj = do
-    assert (compatible []) "compatible"
-    assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
-    assert (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
-    extract "//*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
-    extract "//*a.txt" "testa.txt" === ["","test"]
-    extract "//*a*.txt" "testada.txt" === ["","test","da"]
-    substitute ["","test","da"] "//*a*.txt" === "testada.txt"
-    substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
-
     forM_ [[],["fun"]] $ \args -> do
         sleepFileTime
         let nums = unlines . map show
