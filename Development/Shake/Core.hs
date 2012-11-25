@@ -45,7 +45,7 @@ data ShakeOptions = ShakeOptions
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
     ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
-    ,shakeDeterministic :: Bool -- ^ Build files in a detereminstic order, as far as possbile
+    ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible
     }
     deriving (Show,Eq,Ord,Typeable,Data)
 
@@ -54,7 +54,7 @@ shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False
 
 
--- | All forseen exception conditions thrown by Shake, such problems with the rules or errors when executing
+-- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
 --   rules, will be raised using this exception type.
 data ShakeException = ShakeException
         [String] -- Entries on the stack, starting at the top of the stack.
@@ -219,7 +219,7 @@ newtype Action a = Action (StateT S IO a)
     deriving (Functor, Monad, MonadIO)
 
 
--- | This function is not actually exported, but Haddock is buggy. Please ignore.
+-- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = do
     start <- startTime

@@ -17,7 +17,7 @@ type FilePattern = String
 --
 -- * @*@ matches an entire path component, excluding any separators.
 --
--- * @\/\/@ matches an arbitrary number of path componenets.
+-- * @\/\/@ matches an arbitrary number of path components.
 --
 --   Some examples that match:
 --
