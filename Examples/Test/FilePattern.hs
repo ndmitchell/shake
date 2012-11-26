@@ -15,6 +15,9 @@ test build obj = do
     f True "test.c" "test.c"
     f False "*.c" "foor/bar.c"
     f False "*/*.c" "foo/bar/baz.c"
+    f False "foo//bar" "foobar"
+    f False "foo//bar" "foobar/bar"
+    f False "foo//bar" "foo/foobar"
 
     assert (compatible []) "compatible"
     assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
@@ -24,3 +27,25 @@ test build obj = do
     extract "//*a*.txt" "testada.txt" === ["","test","da"]
     substitute ["","test","da"] "//*a*.txt" === "testada.txt"
     substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
+
+
+---------------------------------------------------------------------
+-- LAZY SMALLCHECK PROPERTIES
+
+{-
+newtype Pattern = Pattern FilePattern deriving (Show,Eq)
+newtype Path    = Path    FilePath    deriving (Show,Eq)
+
+-- Since / and * are the only "interesting" elements, just add ab to round out the set
+
+instance Serial Pattern where
+    series = cons Pattern >< f
+        where f = cons [] \/ cons (:) >< const (drawnFrom "/*ab") >< f
+
+instance Serial Path where
+    series = cons Path >< f
+        where f = cons [] \/ cons (:) >< const (drawnFrom "/ab") >< f
+
+testSmallCheck = do
+    smallCheck 10 $ \(Pattern p) (Path x) -> p ?== x ==> substitute (extract p x) p == x
+-}

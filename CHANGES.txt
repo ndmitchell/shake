@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #571, vastly improve the correctness of FilePattern
     #574, documentation typos
     Expose rulePriority
 0.3.4
