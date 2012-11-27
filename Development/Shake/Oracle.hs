@@ -1,12 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Oracle(
-    addOracle, askOracle
+    addOracle, addOracles, askOracle
     ) where
 
 import Control.DeepSeq
 import Data.Binary
 import Data.Hashable
+import Data.List
 import Data.Typeable
 
 import Development.Shake.Core
@@ -45,6 +46,14 @@ instance Rule Question Answer where
 addOracle :: [String] -> Action [String] -> Rules ()
 addOracle question act = rule $ \(Question q) ->
     if q == question then Just $ fmap Answer act else Nothing
+
+
+-- | Add a function to generate an oracle, matching a prefix.
+--
+-- > addOracles ["reverse"] $ \xs -> return $ reverse xs
+addOracles :: [String] -> ([String] -> Action [String]) -> Rules ()
+addOracles pre act = rule $ \(Question q) ->
+    fmap (fmap Answer . act) $ stripPrefix pre q
 
 
 -- | Get information previously added with 'addOracle'.

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add addOracles, for implementing more advanced oracles
     Add withoutActions, for implementing command line arguments
 0.3.5
     #571, vastly improve the correctness of FilePattern

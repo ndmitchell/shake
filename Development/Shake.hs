@@ -79,7 +79,7 @@ module Development.Shake(
     -- * Directory rules
     doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     -- * Additional rules
-    addOracle, askOracle,
+    addOracle, addOracles, askOracle,
     alwaysRerun,
     -- * Finite resources
     Resource, newResource, withResource
