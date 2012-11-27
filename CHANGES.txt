@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.3.6
     Add addOracles, for implementing more advanced oracles
     Add withoutActions, for implementing command line arguments
 0.3.5
