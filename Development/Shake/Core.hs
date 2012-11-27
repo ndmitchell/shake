@@ -3,7 +3,7 @@
 
 module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
-    Rule(..), Rules, defaultRule, rule, action,
+    Rule(..), Rules, defaultRule, rule, action, skipActions,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
     Resource, newResource, withResource
@@ -190,6 +190,12 @@ rulePriority i r = mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
 -- | Run an action, usually used for specifying top-level requirements.
 action :: Action a -> Rules ()
 action a = mempty{actions=[a >> return ()]}
+
+
+-- | Skip all actions specified in a set of rules, usually used for implementing
+--   command line specification of what to build.
+skipActions :: Rules () -> Rules ()
+skipActions x = x{actions=[]}
 
 
 ---------------------------------------------------------------------
