@@ -3,7 +3,7 @@
 
 module Development.Shake.Core(
     ShakeOptions(..), shakeOptions, run,
-    Rule(..), Rules, defaultRule, rule, action, skipActions,
+    Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
     Resource, newResource, withResource
@@ -192,10 +192,10 @@ action :: Action a -> Rules ()
 action a = mempty{actions=[a >> return ()]}
 
 
--- | Skip all actions specified in a set of rules, usually used for implementing
+-- | Remove all actions specified in a set of rules, usually used for implementing
 --   command line specification of what to build.
-skipActions :: Rules () -> Rules ()
-skipActions x = x{actions=[]}
+withoutActions :: Rules () -> Rules ()
+withoutActions x = x{actions=[]}
 
 
 ---------------------------------------------------------------------
