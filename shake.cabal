@@ -128,6 +128,12 @@ executable shake
         transformers >= 0.2 && < 0.4,
         deepseq >= 1.1 && < 1.4
 
+    if flag(portable)
+        cpp-options: -DPORTABLE
+    else
+        if !os(windows)
+            build-depends: unix >= 2.5.1
+
     other-modules:
         Examples.Util
         Examples.C.Main
