@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.3.7
     Update the cabal file
 0.3.6
     Add addOracles, for implementing more advanced oracles
