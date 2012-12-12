@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix up FilePattern so "foo//bar" ?== "foo/bar"
 0.3.7
     Update the cabal file
 0.3.6

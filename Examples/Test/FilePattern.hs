@@ -18,6 +18,7 @@ test build obj = do
     f False "foo//bar" "foobar"
     f False "foo//bar" "foobar/bar"
     f False "foo//bar" "foo/foobar"
+    f True "foo//bar" "foo/bar"
 
     assert (compatible []) "compatible"
     assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"

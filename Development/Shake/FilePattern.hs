@@ -37,7 +37,8 @@ pattern :: [Lexeme] -> Regex
 pattern = Concat Start . foldr Concat End . map f
     where
         f Star = Bracket $ Repeat $ Not pathSeparators
-        f SlashSlash = let s = Start `Or` End `Or` Lit pathSeparators in Bracket $ s `Concat` Repeat Any `Concat` s
+        f SlashSlash = let s = Start `Or` End `Or` Lit pathSeparators in Bracket $
+                       Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)
         f (Char x) = Lit $ if x == '/' then pathSeparators else [x]
 
 
