@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow hashable-1.2
 0.3.8
     Fix up FilePattern so "foo//bar" ?== "foo/bar"
 0.3.7

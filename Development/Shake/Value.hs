@@ -59,7 +59,7 @@ instance NFData Value where
     rnf (Value a) = rnf a
 
 instance Hashable Value where
-    hash (Value a) = hash (typeOf a) `xor` hash a
+    hashWithSalt salt (Value a) = hashWithSalt salt (typeOf a) `xor` hashWithSalt salt a
 
 instance Eq Value where
     Value a == Value b = case cast b of

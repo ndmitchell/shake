@@ -46,7 +46,7 @@ instance NFData GetDir where
     rnf (GetDirDirs a) = rnf a
 
 instance Hashable GetDir where
-    hash = hash . f
+    hashWithSalt salt = hashWithSalt salt . f
         where f (GetDir x) = (0 :: Int, x, "")
               f (GetDirFiles x y) = (1, x, y)
               f (GetDirDirs x) = (2, x, "")
