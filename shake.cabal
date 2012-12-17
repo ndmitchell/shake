@@ -1,7 +1,7 @@
 cabal-version:      >= 1.8
 build-type:         Simple
 name:               shake
-version:            0.3.9
+version:            0.3.10
 license:            BSD3
 license-file:       LICENSE
 category:           Development
