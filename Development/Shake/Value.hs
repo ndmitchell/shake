@@ -15,6 +15,7 @@ import Data.Hashable
 import Data.Typeable
 
 import Data.Bits
+import Data.Function
 import Data.IORef
 import Data.List
 import Data.Maybe
@@ -77,6 +78,9 @@ witness = unsafePerformIO $ newIORef Map.empty
 registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> IO ()
 registerWitness x = modifyIORef witness $ Map.insert (typeOf x) (Value $ undefined `asTypeOf` x)
 
+toAscList :: Ord k => Map.HashMap k v -> [(k,v)]
+toAscList = sortBy (compare `on` fst) . Map.toList
+
 
 data Witness = Witness
     {typeNames :: [String] -- the canonical data, the names of the types
@@ -85,14 +89,14 @@ data Witness = Witness
     }
 
 instance Eq Witness where
-    -- type names are ordered by the Map (on hash), so likely to remain reasonably consistent
+    -- type names are ordered by TypeRep values, so should to remain reasonably consistent
     -- regardless of the order of registerWitness calls
     a == b = typeNames a == typeNames b
 
 currentWitness :: IO Witness
 currentWitness = do
     ws <- readIORef witness
-    let (ks,vs) = unzip $ Map.toList ws
+    let (ks,vs) = unzip $ toAscList ws
     return $ Witness (map show ks) (Map.fromList $ zip [0..] vs) (Map.fromList $ zip ks [0..])
 
 
@@ -100,7 +104,7 @@ instance Binary Witness where
     put (Witness ts _ _) = put ts
     get = do
         ts <- get
-        let ws = Map.toList $ unsafePerformIO $ readIORef witness
+        let ws = toAscList $ unsafePerformIO $ readIORef witness
         let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
         return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
 

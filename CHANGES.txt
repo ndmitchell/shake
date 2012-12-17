@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Don't rely on toList returning a consistent order
     Allow hashable-1.2
 0.3.8
     Fix up FilePattern so "foo//bar" ?== "foo/bar"
