@@ -78,8 +78,8 @@ witness = unsafePerformIO $ newIORef Map.empty
 registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> IO ()
 registerWitness x = modifyIORef witness $ Map.insert (typeOf x) (Value $ undefined `asTypeOf` x)
 
-toAscList :: Ord k => Map.HashMap k v -> [(k,v)]
-toAscList = sortBy (compare `on` fst) . Map.toList
+toAscList :: Show k => Map.HashMap k v -> [(k,v)]
+toAscList = sortBy (compare `on` show . fst) . Map.toList
 
 
 data Witness = Witness
