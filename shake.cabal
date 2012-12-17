@@ -38,6 +38,7 @@ extra-source-files:
     Examples/C/constants.h
     Examples/C/main.c
     Examples/Tar/list.txt
+    Paths.hs
 
 data-files:
     html/bootstrap.js

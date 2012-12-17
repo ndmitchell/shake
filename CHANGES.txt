@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add Paths.hs so you can run the tests from the tarball
 0.3.9
     Don't rely on toList returning a consistent order
     Allow hashable-1.2
