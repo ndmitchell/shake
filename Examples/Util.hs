@@ -22,9 +22,10 @@ shaken test rules = do
     let out = "output/" ++ name ++ "/"
     createDirectoryIfMissing True out
     case args of
-        "test":_ -> do
+        "test":extra -> do
             putStrLn $ "## TESTING " ++ name
-            test (\args -> withArgs (name:args) $ shaken test rules) (out++)
+            -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
+            test (\args -> withArgs (name:args ++ extra) $ shaken test rules) (out++)
             putStrLn $ "## FINISHED TESTING " ++ name
         "clean":_ -> removeDirectoryRecursive out
 {-

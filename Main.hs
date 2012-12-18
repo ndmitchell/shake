@@ -54,4 +54,6 @@ clean = sequence_ [withArgs [name,"clean"] main | (name,main) <- mains]
 
 
 test :: IO ()
-test = sequence_ [withArgs [name,"test"] main | (name,main) <- mains, name /= "random"]
+test = do
+    args <- getArgs
+    sequence_ [withArgs (name:"test":drop 1 args) main | (name,main) <- mains, name /= "random"]
