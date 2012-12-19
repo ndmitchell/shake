@@ -79,8 +79,12 @@ registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) =>
 registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ error msg `asTypeOf` x) mp, ())
     where msg = "Development.Shake.Value.registerWitness, witness of type " ++ show (typeOf x) ++ " demanded"
 
-toAscList :: Show k => Map.HashMap k v -> [(k,v)]
-toAscList = sortBy (compare `on` show . fst) . Map.toList
+
+-- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
+-- elements were added and stable between program executions.
+-- Cannot rely on hash (not pure in hashable-1.2) or compare (not available before 7.2)
+toStableList :: Map.HashMap TypeRep v -> [(TypeRep,v)]
+toStableList = sortBy (compare `on` show . fst) . Map.toList
 
 
 data Witness = Witness
@@ -90,14 +94,14 @@ data Witness = Witness
     }
 
 instance Eq Witness where
-    -- type names are ordered by TypeRep values, so should to remain reasonably consistent
-    -- regardless of the order of registerWitness calls
+    -- Type names are produced by toStableList so should to remain consistent
+    -- regardless of the order of registerWitness calls.
     a == b = typeNames a == typeNames b
 
 currentWitness :: IO Witness
 currentWitness = do
     ws <- readIORef witness
-    let (ks,vs) = unzip $ toAscList ws
+    let (ks,vs) = unzip $ toStableList ws
     return $ Witness (map show ks) (Map.fromList $ zip [0..] vs) (Map.fromList $ zip ks [0..])
 
 
@@ -105,7 +109,7 @@ instance Binary Witness where
     put (Witness ts _ _) = put ts
     get = do
         ts <- get
-        let ws = toAscList $ unsafePerformIO $ readIORefAfter ts witness
+        let ws = toStableList $ unsafePerformIO $ readIORefAfter ts witness
         let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
         return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
         where
