@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Ensure registering witnesses is thread safe
     Ensure GHC does not over-optimise type registration
 0.3.10
     Add Paths.hs so you can run the tests from the tarball
