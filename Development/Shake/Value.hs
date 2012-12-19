@@ -104,9 +104,14 @@ instance Binary Witness where
     put (Witness ts _ _) = put ts
     get = do
         ts <- get
-        let ws = toAscList $ unsafePerformIO $ readIORef witness
+        let ws = toAscList $ unsafePerformIO $ readIORefAfter ts witness
         let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
         return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
+        where
+            -- Read an IORef after examining a variable, used to avoid GHC over-optimisation
+            {-# NOINLINE readIORefAfter #-}
+            readIORefAfter :: a -> IORef b -> IO b
+            readIORefAfter v ref = v `seq` readIORef ref
 
 
 instance BinaryWith Witness Value where
