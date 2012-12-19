@@ -76,7 +76,8 @@ witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> IO ()
-registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ undefined `asTypeOf` x) mp, ())
+registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ error msg `asTypeOf` x) mp, ())
+    where msg = "Development.Shake.Value.registerWitness, witness of type " ++ show (typeOf x) ++ " demanded"
 
 toAscList :: Show k => Map.HashMap k v -> [(k,v)]
 toAscList = sortBy (compare `on` show . fst) . Map.toList
