@@ -32,7 +32,7 @@ instance Show File where show (File x) = BS.unpack x
 
 
 instance Rule File FileTime where
-    validStored (File x) t = fmap (== Just t) $ getModTimeMaybe x
+    storedValue (File x) = getModTimeMaybe x
 
 {-
     observed act = do

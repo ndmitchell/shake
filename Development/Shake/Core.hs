@@ -97,7 +97,7 @@ class (
     --   As an example for filenames/timestamps, if the file exists and had the same timestamp, you
     --   would return 'True', but otherwise return 'False'. For rule values which are not also stored
     --   on disk, 'validStored' should always return 'True'.
-    validStored :: key -> value -> IO Bool
+    storedValue :: key -> IO (Maybe value)
 
 {-
     -- | Return 'True' if the value should not be changed by the build system. Defaults to returning
@@ -141,7 +141,7 @@ ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
 ruleValue = undefined
 
 ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
-ruleStored _ = validStored
+ruleStored _ = \k v -> fmap (== Just v) $ storedValue k
 
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined

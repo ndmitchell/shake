@@ -22,7 +22,7 @@ instance Show Dirty where show _ = "Dirty"
 instance Eq Dirty where a == b = False
 
 instance Rule AlwaysRerun Dirty where
-    validStored _ _ = return False
+    storedValue _ = return Nothing
 
 
 -- | Always rerun the associated action. Useful for defining rules that query

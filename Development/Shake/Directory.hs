@@ -65,11 +65,11 @@ instance Binary GetDir where
 
 
 instance Rule Exist Bool where
-    validStored (Exist x) b = fmap (== b) $ IO.doesFileExist x
+    storedValue (Exist x) = fmap Just $ IO.doesFileExist x
     -- invariant _ = True
 
 instance Rule GetDir GetDir_ where
-    validStored x y = fmap (== y) $ getDir x
+    storedValue x = fmap Just $ getDir x
     -- invariant _ = True
 
 

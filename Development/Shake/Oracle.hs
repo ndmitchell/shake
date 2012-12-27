@@ -22,7 +22,7 @@ instance Show Question where
     show (Question xs) = "Oracle " ++ unwords xs
 
 instance Rule Question Answer where
-    validStored _ _ = return False
+    storedValue _ = return Nothing
 
 
 -- | Add extra information which your build should depend on. For example:

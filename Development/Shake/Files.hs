@@ -36,7 +36,7 @@ instance Show Files where show (Files xs) = unwords $ map BS.unpack xs
 
 
 instance Rule Files FileTimes where
-    validStored (Files xs) (FileTimes ts) = fmap (== map Just ts) $ mapM getModTimeMaybe xs
+    storedValue (Files xs) = fmap (fmap FileTimes . sequence) $ mapM getModTimeMaybe xs
 
 
 -- | Define a rule for building multiple files at the same time.
