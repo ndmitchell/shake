@@ -25,9 +25,9 @@ newtype Files = Files [BS.ByteString]
     deriving (Typeable,Eq,Hashable,Binary)
 
 instance NFData Files where
-    rnf (Files xs) = f xs
-        where f [] = ()
-              f (x:xs) = x `seq` f xs
+    -- some versions of ByteString do not have NFData instances, but seq is equivalent
+    -- for a strict bytestring. Therefore, we write our own instance.
+    rnf (Files xs) = rnf $ map (`seq` ()) xs
 
 newtype FileTimes = FileTimes [FileTime]
     deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
