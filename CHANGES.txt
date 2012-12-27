@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add statistics gathering function
     Ensure registering witnesses is thread safe
     Ensure GHC does not over-optimise type registration
 0.3.10

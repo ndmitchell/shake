@@ -6,6 +6,7 @@ module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), build, Depends,
+    ShakeStatistics(..), statistics,
     Stack, emptyStack, showStack,
     showJSON, checkValid,
     ) where
@@ -24,6 +25,7 @@ import Control.Exception
 import Control.Monad
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
+import Data.Data
 import Data.IORef
 import Data.Maybe
 import Data.List
@@ -300,6 +302,43 @@ build pool Database{..} Ops{..} stack ks = do
                                 return True
                             | otherwise -> return False
                 i #= (k, self)
+
+
+---------------------------------------------------------------------
+-- STATISTICS
+
+data ShakeStatistics = ShakeStatistics
+    {shakeRunning :: !Bool -- ^ Starts out True, becomes False once the thing has completed
+    ,shakeError :: !Bool
+    ,shakeSkipped :: {-# UNPACK #-} !Int
+    ,shakeBuilt :: {-# UNPACK #-} !Int
+    ,shakeTodo :: {-# UNPACK #-} !Int
+    ,shakeUnknown :: {-# UNPACK #-} !Int
+    ,shakeSkippedTime :: {-# UNPACK #-} !Double
+    ,shakeBuiltTime :: {-# UNPACK #-} !Double
+    ,shakeTodoTime :: {-# UNPACK #-} !Double
+    ,shakeUnknownTime :: {-# UNPACK #-} !Double
+    ,shakeTodoNoTime :: {-# UNPACK #-} !Int
+    }
+    deriving (Eq,Ord,Show,Data,Typeable)
+
+-- Does not need to set shakeRunning, done by something further up
+statistics :: Database -> IO ShakeStatistics
+statistics Database{..} = do
+    s <- readIORef status
+    return $ foldl' f zero $ map snd $ Map.elems s
+    where
+        zero = ShakeStatistics False False 0 0 0 0 0 0 0 0 0
+
+        f s (Ready Result{..}) = if step == built
+            then s{shakeBuilt = shakeBuilt s + 1, shakeBuiltTime = shakeBuiltTime s + execution}
+            else s{shakeSkipped = shakeSkipped s + 1, shakeSkippedTime = shakeSkippedTime s + execution}
+        f s (Error _) = s{shakeError=True}
+        f s (Loaded Result{..}) = s{shakeUnknown = shakeUnknown s + 1, shakeUnknownTime = shakeUnknownTime s + execution}
+        f s (Waiting _ r) = s{shakeTodo = shakeTodo s + 1
+                             ,shakeTodoTime = shakeTodoTime s + maybe 0 execution r
+                             ,shakeTodoNoTime = shakeTodoNoTime s + maybe 1 (const 0) r}
+        f s _ = s
 
 
 ---------------------------------------------------------------------

@@ -2,7 +2,7 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
 
 module Development.Shake.Core(
-    ShakeOptions(..), shakeOptions, run,
+    ShakeOptions(..), shakeOptions, ShakeStatistics(..), run,
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
@@ -22,6 +22,7 @@ import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.Monoid
+import Data.IORef
 
 import Development.Shake.Pool
 import Development.Shake.Database
@@ -46,12 +47,13 @@ data ShakeOptions = ShakeOptions
     ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible
+    ,shakeStatistics :: IO ShakeStatistics -> IO ()
     }
-    deriving (Show,Eq,Ord,Typeable,Data)
+    deriving (Typeable)
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (const $ return ())
 
 
 -- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
@@ -250,20 +252,23 @@ run opts@ShakeOptions{..} rs = do
 
     let stored = createStored rs
     let execute = createExecute rs
-    withDatabase logger shakeFiles shakeVersion $ \database -> do
-        runPool shakeDeterministic shakeThreads $ \pool -> do
-            let s0 = S database pool start stored execute output shakeVerbosity logger emptyStack [] 0 []
-            mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
-        when shakeLint $ do
-            checkValid database stored
-            when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
-        when (isJust shakeReport) $ do
-            let file = fromJust shakeReport
-            json <- showJSON database
-            when (shakeVerbosity >= Normal) $
-                putStrLn $ "Writing HTML report to " ++ file
-            buildReport json file
-    maybe (return ()) throwIO =<< readVar except
+    running <- newIORef True
+    flip finally (writeIORef running False) $ do
+        withDatabase logger shakeFiles shakeVersion $ \database -> do
+            shakeStatistics $ do running <- readIORef running; stats <- statistics database; return stats{shakeRunning=running}
+            runPool shakeDeterministic shakeThreads $ \pool -> do
+                let s0 = S database pool start stored execute output shakeVerbosity logger emptyStack [] 0 []
+                mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
+            when shakeLint $ do
+                checkValid database stored
+                when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
+            when (isJust shakeReport) $ do
+                let file = fromJust shakeReport
+                json <- showJSON database
+                when (shakeVerbosity >= Normal) $
+                    putStrLn $ "Writing HTML report to " ++ file
+                buildReport json file
+        maybe (return ()) throwIO =<< readVar except
 
 
 wrapStack :: IO [String] -> IO a -> IO a
