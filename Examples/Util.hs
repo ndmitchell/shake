@@ -71,7 +71,16 @@ flagList = let (*) = (,) in
     ,"staunch" * \o -> o{shakeStaunch=True}
     ,"deterministic" * \o -> o{shakeDeterministic=True}
     ,"lint" * \o -> o{shakeLint=True}
+    ,"stats" * \o -> o{shakeStatistics=showStatistics}
     ]
+
+showStatistics s = forkIO loop >> return ()
+    where loop = do
+            res <- s
+            when (shakeRunning res) $ do
+                putStrLn $ "STATISTICS: shakeTodoTime = " ++ show (shakeTodoTime res)
+                sleep 5
+                loop
 
 
 unobj :: FilePath -> FilePath
