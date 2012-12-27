@@ -98,7 +98,6 @@ class (
     --   would return 'True', but otherwise return 'False'. For rule values which are not also stored
     --   on disk, 'validStored' should always return 'True'.
     validStored :: key -> value -> IO Bool
-    validStored _ _ = return True
 
 {-
     -- | Return 'True' if the value should not be changed by the build system. Defaults to returning

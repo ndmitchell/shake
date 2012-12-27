@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Remove the default validStored class, almost never right
     Remove Eq/Ord/Data/Show from ShakeOptions (now contains a func)
     Add statistics gathering function
     Ensure registering witnesses is thread safe
