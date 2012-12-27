@@ -141,6 +141,8 @@ ruleKey = undefined
 ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
 ruleValue = undefined
 
+-- NOTE: We change the storedValue type so that we always pass in both key and value, rather than having
+--       value as a return param. That allows us to give better error messages (see createStored)
 ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
 ruleStored _ = \k v -> fmap (== Just v) $ storedValue k
 
