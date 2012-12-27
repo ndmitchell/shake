@@ -328,10 +328,9 @@ data ShakeStatistics = ShakeStatistics
 statistics :: Database -> IO ShakeStatistics
 statistics Database{..} = do
     s <- readIORef status
+    let zero = ShakeStatistics False False 0 0 0 0 0 0 0 0 0
     return $ foldl' f zero $ map snd $ Map.elems s
     where
-        zero = ShakeStatistics False False 0 0 0 0 0 0 0 0 0
-
         f s (Ready Result{..}) = if step == built
             then s{shakeBuilt = shakeBuilt s + 1, shakeBuiltTime = shakeBuiltTime s + execution}
             else s{shakeSkipped = shakeSkipped s + 1, shakeSkippedTime = shakeSkippedTime s + execution}
