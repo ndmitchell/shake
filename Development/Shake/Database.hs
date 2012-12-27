@@ -307,18 +307,20 @@ build pool Database{..} Ops{..} stack ks = do
 ---------------------------------------------------------------------
 -- STATISTICS
 
+-- | Information about the current state of the build, obtained by passing a callback function
+--   to 'shakeStatistics'. Typically a program will poll this value to provide progress messages.
 data ShakeStatistics = ShakeStatistics
-    {shakeRunning :: !Bool -- ^ Starts out True, becomes False once the thing has completed
-    ,shakeError :: !Bool
-    ,shakeSkipped :: {-# UNPACK #-} !Int
-    ,shakeBuilt :: {-# UNPACK #-} !Int
-    ,shakeTodo :: {-# UNPACK #-} !Int
-    ,shakeUnknown :: {-# UNPACK #-} !Int
-    ,shakeSkippedTime :: {-# UNPACK #-} !Double
-    ,shakeBuiltTime :: {-# UNPACK #-} !Double
-    ,shakeTodoTime :: {-# UNPACK #-} !Double
-    ,shakeUnknownTime :: {-# UNPACK #-} !Double
-    ,shakeTodoNoTime :: {-# UNPACK #-} !Int
+    {shakeRunning :: !Bool -- ^ Starts out True, becomes False once the build has completed
+    ,shakeError :: !Bool -- ^ Has any rule failed to build, does not always indicate the build will fail (but usually it will)
+    ,shakeSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state
+    ,shakeBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run
+    ,shakeTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built
+    ,shakeUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required
+    ,shakeSkippedTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeSkipped' rules in previous runs
+    ,shakeBuiltTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeBuilt' rules
+    ,shakeTodoTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeTodo' rules in a previous runs, where known (see 'shakeTodoNoTime')
+    ,shakeUnknownTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeUnknownTime' rules in previous runs
+    ,shakeTodoNoTime :: {-# UNPACK #-} !Int -- ^ Number of rules in 'shakeTodo' which have no known time (e.g. never built before)
     }
     deriving (Eq,Ord,Show,Data,Typeable)
 

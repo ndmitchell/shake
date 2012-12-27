@@ -47,7 +47,8 @@ data ShakeOptions = ShakeOptions
     ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible
-    ,shakeStatistics :: IO ShakeStatistics -> IO ()
+    ,shakeStatistics :: IO ShakeStatistics -> IO () -- ^ A function called when the build starts, including a way of obtaining
+                                                    --   information about the current state of the build
     }
     deriving Typeable
 
