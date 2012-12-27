@@ -49,7 +49,7 @@ data ShakeOptions = ShakeOptions
     ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible
     ,shakeStatistics :: IO ShakeStatistics -> IO ()
     }
-    deriving (Typeable)
+    deriving Typeable
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
