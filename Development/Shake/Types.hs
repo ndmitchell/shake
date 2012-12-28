@@ -11,7 +11,6 @@ import Data.Data
 --   to 'shakeProgress'. Typically a program will poll this value to provide progress messages.
 data Progress = Progress
     {isRunning :: !Bool -- ^ Starts out True, becomes False once the build has completed
-    ,shakeError :: !Bool -- ^ Has any rule failed to build, does not always indicate the build will fail (but usually it will)
     ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state
     ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run
     ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required

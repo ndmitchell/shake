@@ -313,13 +313,12 @@ build pool Database{..} Ops{..} assume stack ks = do
 progress :: Database -> IO Progress
 progress Database{..} = do
     s <- readIORef status
-    let zero = Progress False False 0 0 0 0 0 0 0 (0,0)
+    let zero = Progress False 0 0 0 0 0 0 0 (0,0)
     return $ foldl' f zero $ map snd $ Map.elems s
     where
         f s (Ready Result{..}) = if step == built
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + execution}
             else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + execution}
-        f s (Error _) = s{shakeError=True}
         f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + execution}
         f s (Waiting _ r) =
             let (d,c) = timeTodo s
