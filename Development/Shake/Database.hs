@@ -6,7 +6,7 @@ module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), build, Depends,
-    statistics,
+    progress,
     Stack, emptyStack, showStack,
     showJSON, checkValid,
     ) where
@@ -307,13 +307,13 @@ build pool Database{..} Ops{..} assume stack ks = do
 
 
 ---------------------------------------------------------------------
--- STATISTICS
+-- PROGRESS
 
 -- Does not need to set shakeRunning, done by something further up
-statistics :: Database -> IO ShakeStatistics
-statistics Database{..} = do
+progress :: Database -> IO Progress
+progress Database{..} = do
     s <- readIORef status
-    let zero = ShakeStatistics False False 0 0 0 0 0 0 0 0 0
+    let zero = Progress False False 0 0 0 0 0 0 0 0 0
     return $ foldl' f zero $ map snd $ Map.elems s
     where
         f s (Ready Result{..}) = if step == built

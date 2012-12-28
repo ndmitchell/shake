@@ -201,7 +201,7 @@ run opts@ShakeOptions{..} rs = do
     running <- newIORef True
     flip finally (writeIORef running False) $ do
         withDatabase logger shakeFiles shakeVersion $ \database -> do
-            shakeStatistics $ do running <- readIORef running; stats <- statistics database; return stats{shakeRunning=running}
+            shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{shakeRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
                 let s0 = S database pool start stored execute output shakeVerbosity logger shakeAssume emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)

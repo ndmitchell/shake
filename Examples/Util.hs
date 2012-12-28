@@ -71,16 +71,16 @@ flagList = let (*) = (,) in
     ,"staunch" * \o -> o{shakeStaunch=True}
     ,"deterministic" * \o -> o{shakeDeterministic=True}
     ,"lint" * \o -> o{shakeLint=True}
-    ,"stats" * \o -> o{shakeStatistics=showStatistics}
+    ,"stats" * \o -> o{shakeProgress=showProgress}
     ,"assume-clean" * \o -> o{shakeAssume=Just AssumeClean}
     ,"assume-dirty" * \o -> o{shakeAssume=Just AssumeDirty}
     ]
 
-showStatistics s = forkIO loop >> return ()
+showProgress s = forkIO loop >> return ()
     where loop = do
             res <- s
             when (shakeRunning res) $ do
-                putStrLn $ "STATISTICS: shakeTodoTime = " ++ show (shakeTodoTime res)
+                putStrLn $ "PROGRESS: shakeTodoTime = " ++ show (shakeTodoTime res)
                 sleep 5
                 loop
 

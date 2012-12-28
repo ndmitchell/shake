@@ -8,8 +8,8 @@ import Data.Data
 
 
 -- | Information about the current state of the build, obtained by passing a callback function
---   to 'shakeStatistics'. Typically a program will poll this value to provide progress messages.
-data ShakeStatistics = ShakeStatistics
+--   to 'shakeProgress'. Typically a program will poll this value to provide progress messages.
+data Progress = Progress
     {shakeRunning :: !Bool -- ^ Starts out True, becomes False once the build has completed
     ,shakeError :: !Bool -- ^ Has any rule failed to build, does not always indicate the build will fail (but usually it will)
     ,shakeSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state
@@ -43,8 +43,8 @@ data ShakeOptions = ShakeOptions
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible (defaults to 'False')
     ,shakeAssume :: Maybe Assume -- ^ TODO
-    ,shakeStatistics :: IO ShakeStatistics -> IO () -- ^ A function called when the build starts, including a way of obtaining
-                                                    --   information about the current state of the build
+    ,shakeProgress :: IO Progress -> IO () -- ^ A function called when the build starts, including a way of obtaining
+                                           --   information about the current state of the build
     }
     deriving Typeable
 
