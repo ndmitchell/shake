@@ -65,8 +65,11 @@ instance Show ShakeOptions where
                      ,"shakeProgress = <function>"]
 
 
+fieldsShakeOptions =
+    ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
+    ,"shakeLint", "shakeDeterministic", "shakeAssume", "shakeProgress"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
-conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" [] Prefix
+conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
 shakeOptionsRot x10 x1 x2 x3 x4 x5 x6 x7 x8 x9 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10
 
 instance Data ShakeOptions where
