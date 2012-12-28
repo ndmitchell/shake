@@ -317,15 +317,15 @@ progress Database{..} = do
     return $ foldl' f zero $ map snd $ Map.elems s
     where
         f s (Ready Result{..}) = if step == built
-            then s{shakeBuilt = shakeBuilt s + 1, shakeBuiltTime = shakeBuiltTime s + execution}
-            else s{shakeSkipped = shakeSkipped s + 1, shakeSkippedTime = shakeSkippedTime s + execution}
+            then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + execution}
+            else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + execution}
         f s (Error _) = s{shakeError=True}
-        f s (Loaded Result{..}) = s{shakeUnknown = shakeUnknown s + 1, shakeUnknownTime = shakeUnknownTime s + execution}
+        f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + execution}
         f s (Waiting _ r) =
-            let (d,c) = shakeTodoTime s
-                t | Just r <- r = let d2 = d + execution r in d2 `seq` (d2,c)
+            let (d,c) = timeTodo s
+                t | Just Result{..} <- r = let d2 = d + execution in d2 `seq` (d2,c)
                   | otherwise = let c2 = c + 1 in c2 `seq` (d,c2)
-            in s{shakeTodo = shakeTodo s + 1, shakeTodoTime = t}
+            in s{countTodo = countTodo s + 1, timeTodo = t}
         f s _ = s
 
 

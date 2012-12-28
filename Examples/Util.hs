@@ -79,8 +79,9 @@ flagList = let (*) = (,) in
 showProgress s = forkIO loop >> return ()
     where loop = do
             res <- s
-            when (shakeRunning res) $ do
-                putStrLn $ "PROGRESS: shakeTodoTime = " ++ show (shakeTodoTime res)
+            when (isRunning res) $ do
+                let (s,c) = timeTodo res
+                putStrLn $ "PROGRESS: timeTodo = " ++ show (ceiling s) ++ "s (+ " ++ show c ++ " unknown)"
                 sleep 5
                 loop
 
