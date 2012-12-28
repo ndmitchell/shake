@@ -6,7 +6,7 @@ module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), build, Depends,
-    ShakeStatistics(..), statistics,
+    ShakeStatistics(..), Assume(..), statistics,
     Stack, emptyStack, showStack,
     showJSON, checkValid,
     ) where
@@ -171,6 +171,8 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
+data Assume = AssumeClean | AssumeDirty deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
+
 newtype Depends = Depends {fromDepends :: [Id]}
     deriving (NFData)
 
@@ -183,8 +185,8 @@ data Ops = Ops
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
-build pool Database{..} Ops{..} stack ks = do
+build :: Pool -> Database -> Ops -> Maybe Assume -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
+build pool Database{..} Ops{..} assume stack ks = do
     join $ withLock lock $ do
         is <- forM ks $ \k -> do
             is <- readIORef intern
@@ -257,9 +259,11 @@ build pool Database{..} Ops{..} stack ks = do
                     ans <- i #= (k, case res of
                         Left err -> Error err
                         Right (v,deps,execution,traces) ->
-                            let c | Just r <- r, result r == v = changed r
-                                  | otherwise = step
-                            in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..})
+                            case assume of
+                                Just AssumeClean | Just r <- r -> Ready r{result=v}
+                                _ -> let c | Just r <- r, result r == v = changed r
+                                           | otherwise = step
+                                     in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..})
                     runWaiting w
                     return ans
                 case ans of

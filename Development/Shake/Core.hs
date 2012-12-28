@@ -2,7 +2,7 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
 
 module Development.Shake.Core(
-    ShakeOptions(..), shakeOptions, ShakeStatistics(..), run,
+    ShakeOptions(..), shakeOptions, Assume(..), ShakeStatistics(..), run,
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
@@ -46,7 +46,8 @@ data ShakeOptions = ShakeOptions
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
     ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
-    ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible
+    ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible (defaults to 'False')
+    ,shakeAssume :: Maybe Assume -- ^ TODO
     ,shakeStatistics :: IO ShakeStatistics -> IO () -- ^ A function called when the build starts, including a way of obtaining
                                                     --   information about the current state of the build
     }
@@ -54,7 +55,7 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (const $ return ())
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False Nothing (const $ return ())
 
 
 -- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
@@ -141,11 +142,6 @@ ruleKey = undefined
 ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
 ruleValue = undefined
 
--- NOTE: We change the storedValue type so that we always pass in both key and value, rather than having
---       value as a return param. That allows us to give better error messages (see createStored)
-ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
-ruleStored _ = \k v -> fmap (== Just v) $ storedValue k
-
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
@@ -215,6 +211,7 @@ data S = S
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
     ,logger :: String -> IO ()
+    ,assume :: Maybe Assume
     -- stack variables
     ,stack :: Stack
     -- local variables
@@ -252,14 +249,14 @@ run opts@ShakeOptions{..} rs = do
                     when (shakeVerbosity >= Quiet) $ output msg
                 Right _ -> return ()
 
-    let stored = createStored rs
-    let execute = createExecute rs
+    let stored = createStored shakeAssume rs
+    let execute = createExecute shakeAssume rs
     running <- newIORef True
     flip finally (writeIORef running False) $ do
         withDatabase logger shakeFiles shakeVersion $ \database -> do
             shakeStatistics $ do running <- readIORef running; stats <- statistics database; return stats{shakeRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = S database pool start stored execute output shakeVerbosity logger emptyStack [] 0 []
+                let s0 = S database pool start stored execute output shakeVerbosity logger shakeAssume emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database stored
@@ -288,8 +285,8 @@ registerWitnesses Rules{..} =
         registerWitness $ ruleValue r
 
 
-createStored :: Rules () -> (Key -> Value -> IO Bool)
-createStored Rules{..} = \k v ->
+createStored :: Maybe Assume -> Rules () -> (Key -> Value -> IO Bool)
+createStored assume Rules{..} = \k v ->
     let (tk,tv) = (typeKey k, typeValue v) in
     case Map.lookup tk mp of
         Nothing -> error $
@@ -301,26 +298,42 @@ createStored Rules{..} = \k v ->
             ", perhaps you have the types wrong in your call to apply?"
         Just (_, r) -> r k v
     where
-        mp = flip Map.map rules $ \(k,v,(_,ARule r):_) -> (v, \kx vx -> ruleStored r (fromKey kx) (fromValue vx))
+        mp = flip Map.map rules $ \(_,v,(_,ARule r):_) -> (v, \kx vx -> ruleStored r (fromKey kx) (fromValue vx))
+
+        -- NOTE: We change the storedValue type so that we always pass in both key and value, rather than having
+        --       value as a return param. That allows us to give better error messages (see createStored)
+        ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
+        ruleStored _ = if assume == Just AssumeDirty
+                       then \k v -> return False
+                       else \k v -> fmap (== Just v) $ storedValue k
 
 
-createExecute :: Rules () -> (Key -> Action Value)
-createExecute Rules{..} = \k ->
-    let tk = typeKey k in
-    case Map.lookup tk mp of
-        Nothing -> error $
-            "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ show tk ++
-            ", perhaps you are missing a call to defaultRule/rule?"
-        Just rs -> case filter (not . null) $ map (mapMaybe ($ k)) rs of
-           [r]:_ -> r
-           rs ->
-              let s = if null rs then "no" else show (length $ head rs)
-              in error $ "Error: " ++ s ++ " rules match for Rule " ++ show k ++ " of type " ++ show tk
+createExecute :: Maybe Assume -> Rules () -> (Key -> Action Value)
+createExecute assume Rules{..} = \k ->
+    let tk = typeKey k
+        norm = case Map.lookup tk mp of
+            Nothing -> error $
+                "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ show tk ++
+                ", perhaps you are missing a call to defaultRule/rule?"
+            Just rs -> case filter (not . null) $ map (mapMaybe ($ k)) rs of
+               [r]:_ -> r
+               rs ->
+                  let s = if null rs then "no" else show (length $ head rs)
+                  in error $ "Error: " ++ s ++ " rules match for Rule " ++ show k ++ " of type " ++ show tk
+        clean = case Map.lookup tk mpClean of
+            Nothing -> norm -- should reraise an error
+            Just stored -> do res <- liftIO $ stored k; maybe norm return res
+    in if assume == Just AssumeClean then clean else norm
     where
         mp = flip Map.map rules $ \(_,_,rs) -> sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs]
 
-        sets :: Ord a => [(a, b)] -> [[b]]
+        sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
+
+        mpClean = flip Map.map rules $ \(_,_,(_,ARule r):_) -> \k -> fmap (fmap newValue) $ ruleStored r $ fromKey k
+
+        ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
+        ruleStored _ = storedValue
 
 
 runAction :: S -> Action a -> IO (a, S)
@@ -344,7 +357,7 @@ applyKeyValue ks = Action $ do
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
-    res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) (stack s) ks
+    res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) (assume s) (stack s) ks
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
