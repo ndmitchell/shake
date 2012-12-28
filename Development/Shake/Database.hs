@@ -6,7 +6,7 @@ module Development.Shake.Database(
     Time, startTime, Duration, duration, Trace,
     Database, withDatabase,
     Ops(..), build, Depends,
-    ShakeStatistics(..), Assume(..), statistics,
+    statistics,
     Stack, emptyStack, showStack,
     showJSON, checkValid,
     ) where
@@ -16,6 +16,7 @@ import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Locks
 import Development.Shake.Storage
+import Development.Shake.Types
 import Development.Shake.Intern as Intern
 
 import Control.DeepSeq
@@ -171,8 +172,6 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-data Assume = AssumeClean | AssumeDirty deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
-
 newtype Depends = Depends {fromDepends :: [Id]}
     deriving (NFData)
 
@@ -310,23 +309,6 @@ build pool Database{..} Ops{..} assume stack ks = do
 
 ---------------------------------------------------------------------
 -- STATISTICS
-
--- | Information about the current state of the build, obtained by passing a callback function
---   to 'shakeStatistics'. Typically a program will poll this value to provide progress messages.
-data ShakeStatistics = ShakeStatistics
-    {shakeRunning :: !Bool -- ^ Starts out True, becomes False once the build has completed
-    ,shakeError :: !Bool -- ^ Has any rule failed to build, does not always indicate the build will fail (but usually it will)
-    ,shakeSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state
-    ,shakeBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run
-    ,shakeTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built
-    ,shakeUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required
-    ,shakeSkippedTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeSkipped' rules in previous runs
-    ,shakeBuiltTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeBuilt' rules
-    ,shakeTodoTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeTodo' rules in a previous runs, where known (see 'shakeTodoNoTime')
-    ,shakeUnknownTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeUnknownTime' rules in previous runs
-    ,shakeTodoNoTime :: {-# UNPACK #-} !Int -- ^ Number of rules in 'shakeTodo' which have no known time (e.g. never built before)
-    }
-    deriving (Eq,Ord,Show,Data,Typeable)
 
 -- Does not need to set shakeRunning, done by something further up
 statistics :: Database -> IO ShakeStatistics

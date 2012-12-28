@@ -89,6 +89,7 @@ module Development.Shake(
 -- then shows all the things that are hidden in the docs, which is terrible.
 
 import Control.Monad.IO.Class
+import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Derived
 

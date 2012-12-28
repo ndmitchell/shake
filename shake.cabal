@@ -105,6 +105,7 @@ library
         Development.Shake.Report
         Development.Shake.Rerun
         Development.Shake.Storage
+        Development.Shake.Types
         Development.Shake.Value
         Paths_shake
 
