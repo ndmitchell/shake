@@ -55,16 +55,6 @@ data ShakeOptions = ShakeOptions
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False Nothing (const $ return ())
 
-instance Show ShakeOptions where
-    show ShakeOptions{..} = "ShakeOptions {" ++ intercalate ", " fields ++ "}"
-        where
-            a * b = a ++ " = " ++ show b
-            fields = ["shakeFiles" * shakeFiles, "shakeThreads" * shakeThreads, "shakeVersion" * shakeVersion
-                     ,"shakeVerbosity" * shakeVerbosity, "shakeStaunch" * shakeStaunch, "shakeReport" * shakeReport
-                     ,"shakeLint" * shakeLint, "shakeDeterministic" * shakeDeterministic, "shakeAssume" * shakeAssume
-                     ,"shakeProgress = <function>"]
-
-
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeDeterministic", "shakeAssume", "shakeProgress"]
@@ -75,11 +65,21 @@ shakeOptionsRot x10 x1 x2 x3 x4 x5 x6 x7 x8 x9 = ShakeOptions x1 x2 x3 x4 x5 x6 
 instance Data ShakeOptions where
     gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10) =
         z (shakeOptionsRot x10) `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9
-
     gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ z $ shakeOptionsRot $ shakeProgress shakeOptions
-
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
+
+instance Show ShakeOptions where
+    show x = "ShakeOptions {" ++ intercalate ", " inner ++ ", shakeProgress = <function>}"
+        where
+            inner = zipWith (\x y -> x ++ " = " ++ y) fieldsShakeOptions $ gmapQ f x
+
+            f x | Just x <- cast x = show (x :: Int)
+                | Just x <- cast x = show (x :: FilePath)
+                | Just x <- cast x = show (x :: Verbosity)
+                | Just x <- cast x = show (x :: Bool)
+                | Just x <- cast x = show (x :: Maybe FilePath)
+                | Just x <- cast x = show (x :: Maybe Assume)
 
 
 -- NOTE: Not currently public, to avoid pinning down the API yet
