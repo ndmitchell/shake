@@ -65,6 +65,20 @@ instance Show ShakeOptions where
                      ,"shakeProgress = <function>"]
 
 
+tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
+conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" [] Prefix
+shakeOptionsRot x10 x1 x2 x3 x4 x5 x6 x7 x8 x9 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10
+
+instance Data ShakeOptions where
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10) =
+        z (shakeOptionsRot x10) `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9
+
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ z $ shakeOptionsRot $ shakeProgress shakeOptions
+
+    toConstr ShakeOptions{} = conShakeOptions
+    dataTypeOf _ = tyShakeOptions
+
+
 -- NOTE: Not currently public, to avoid pinning down the API yet
 -- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
 --   rules, will be raised using this exception type.
