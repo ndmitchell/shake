@@ -18,7 +18,7 @@ test build obj = do
     let set file c = writeFile (obj $ file : ".src") [c]
     let ask file c = do src <- readFile (obj $ file ++ ".out"); src === c
 
-    forM ['a'..'f'] $ \c -> set c c
+    forM_ ['a'..'f'] $ \c -> set c c
     build ["abc.out"]
     ask "abc" "abc"
 
