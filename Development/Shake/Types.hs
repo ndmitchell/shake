@@ -14,13 +14,12 @@ data Progress = Progress
     ,shakeError :: !Bool -- ^ Has any rule failed to build, does not always indicate the build will fail (but usually it will)
     ,shakeSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state
     ,shakeBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run
-    ,shakeTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built
     ,shakeUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required
+    ,shakeTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built
     ,shakeSkippedTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeSkipped' rules in previous runs
     ,shakeBuiltTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeBuilt' rules
-    ,shakeTodoTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeTodo' rules in a previous runs, where known (see 'shakeTodoNoTime')
     ,shakeUnknownTime :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeUnknownTime' rules in previous runs
-    ,shakeTodoNoTime :: {-# UNPACK #-} !Int -- ^ Number of rules in 'shakeTodo' which have no known time (e.g. never built before)
+    ,shakeTodoTime :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'shakeTodo' rules in a previous runs, plus number which have no known time (e.g. never built before)
     }
     deriving (Eq,Ord,Show,Data,Typeable)
 
