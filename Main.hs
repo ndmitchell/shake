@@ -7,6 +7,7 @@ import Examples.Util(flags)
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.C.Main as C
+import qualified Examples.Test.Assume as Assume
 import qualified Examples.Test.Basic as Basic
 import qualified Examples.Test.Directory as Directory
 import qualified Examples.Test.Errors as Errors
@@ -26,7 +27,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "directory" * Directory.main, "errors" * Errors.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
         ,"journal" * Journal.main, "pool" * Pool.main, "random" * Random.main
-        ,"resources" * Resources.main]
+        ,"resources" * Resources.main, "assume" * Assume.main]
     where (*) = (,)
 
 

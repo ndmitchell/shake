@@ -72,6 +72,8 @@ flagList = let (*) = (,) in
     ,"deterministic" * \o -> o{shakeDeterministic=True}
     ,"lint" * \o -> o{shakeLint=True}
     ,"stats" * \o -> o{shakeStatistics=showStatistics}
+    ,"assume-clean" * \o -> o{shakeAssume=Just AssumeClean}
+    ,"assume-dirty" * \o -> o{shakeAssume=Just AssumeDirty}
     ]
 
 showStatistics s = forkIO loop >> return ()
