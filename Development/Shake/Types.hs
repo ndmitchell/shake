@@ -1,10 +1,11 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types where
 
 import Control.Exception
 import Data.Data
+import Data.List
 
 
 -- | Information about the current state of the build, obtained by passing a callback function
@@ -49,6 +50,15 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False Nothing (const $ return ())
+
+instance Show ShakeOptions where
+    show ShakeOptions{..} = "ShakeOptions {" ++ intercalate ", " fields ++ "}"
+        where
+            a * b = a ++ " = " ++ show b
+            fields = ["shakeFiles" * shakeFiles, "shakeThreads" * shakeThreads, "shakeVersion" * shakeVersion
+                     ,"shakeVerbosity" * shakeVerbosity, "shakeStaunch" * shakeStaunch, "shakeReport" * shakeReport
+                     ,"shakeLint" * shakeLint, "shakeDeterministic" * shakeDeterministic, "shakeAssume" * shakeAssume
+                     ,"shakeProgress = <function>"]
 
 
 -- NOTE: Not currently public, to avoid pinning down the API yet
