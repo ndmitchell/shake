@@ -55,7 +55,7 @@ shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False Nothing (const $ return ())
 
 
-
+-- NOTE: Not currently public, to avoid pinning down the API yet
 -- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
 --   rules, will be raised using this exception type.
 data ShakeException = ShakeException
