@@ -466,7 +466,7 @@ withDatabase logger filename version act = do
         let step = case Map.lookup stepId mp2 of
                         Just (_, Loaded r) -> incStep $ fromStepResult r
                         _ -> Step 1
-        journal stepId $ (stepKey, Loaded $ toStepResult step)
+        journal stepId (stepKey, Loaded $ toStepResult step)
         lock <- newLock
         act Database{..}
 
