@@ -1,7 +1,11 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 
 -- | Types exposed to the user
-module Development.Shake.Types where
+module Development.Shake.Types(
+    Progress(..), Verbosity(..), Assume(..),
+    ShakeOptions(..), shakeOptions,
+    ShakeException(..)
+    ) where
 
 import Control.Exception
 import Data.Data
