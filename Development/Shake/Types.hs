@@ -1,6 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types where

@@ -26,7 +26,6 @@ import Control.Exception
 import Control.Monad
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
-import Data.Data
 import Data.IORef
 import Data.Maybe
 import Data.List
