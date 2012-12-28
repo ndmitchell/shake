@@ -1,6 +1,6 @@
 Changelog for Shake
 
-    Add shakeAssume to assume files are clean/dirty
+    #502, add shakeAssume to assume files are clean/dirty
     Remove validStored, replace with storedValue
     Remove the default validStored class, almost never right
     Remove Eq/Ord/Data/Show from ShakeOptions (now contains a func)
