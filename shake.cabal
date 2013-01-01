@@ -148,6 +148,7 @@ executable shake
         Examples.Tar.Main
         Examples.Test.Assume
         Examples.Test.Basic
+        Examples.Test.Benchmark
         Examples.Test.Directory
         Examples.Test.Errors
         Examples.Test.FilePath
