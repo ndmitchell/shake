@@ -48,9 +48,10 @@ shaken test rules = do
 
         args -> do
             (flags,args) <- return $ partition ("-" `isPrefixOf`) args
-            let f o x = let x2 = dropWhile (== '-') x in case lookup x2 flagList of
+            flags <- return $ map (dropWhile (== '-')) flags
+            let f o x = case lookup x flagList of
                     Just op -> op o
-                    Nothing | "threads" `isPrefixOf` x2 -> o{shakeThreads=read $ drop 7 x2}
+                    Nothing | "threads" `isPrefixOf` x -> o{shakeThreads=read $ drop 7 x}
                             | otherwise -> error $ "Don't know how to deal with flag: " ++ x
             let opts = foldl' f shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html"} flags
             shake opts $ rules args (out++)
