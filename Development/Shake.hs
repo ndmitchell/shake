@@ -65,7 +65,7 @@
 module Development.Shake(
     shake,
     -- * Core of Shake
-    ShakeOptions(..), Assume(..), shakeOptions, Progress(..),
+    ShakeOptions(..), shakeOptions, Assume(..), Progress(..),
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
