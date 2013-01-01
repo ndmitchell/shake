@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types(
@@ -14,27 +14,62 @@ import Data.List
 
 -- | Information about the current state of the build, obtained by passing a callback function
 --   to 'shakeProgress'. Typically a program will poll this value to provide progress messages.
+--   The following example displays the approximate single-threaded time remaining
+--   as the console title.
+--
+-- > showProgress :: IO Progress -> IO ()
+-- > showProgress progress = void $ forkIO loop
+-- >     where loop = do
+-- >             current <- progress
+-- >             when (isRunning current) $ do
+-- >                 let (s,c) = timeTodo current
+-- >                 setTitle $ "Todo = " ++ show (ceiling s) ++ "s (+ " ++ show c ++ " unknown)"
+-- >                 threadDelay $ 5 * 1000000
+-- >                 loop
+-- >
+-- > setTitle :: String -> IO ()
+-- > setTitle s = putStr $ "\ESC]0;" ++ s ++ "\BEL"
 data Progress = Progress
-    {isRunning :: !Bool -- ^ Starts out True, becomes False once the build has completed
-    ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state
-    ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run
-    ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required
-    ,countTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built
-    ,timeSkipped :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeSkipped' rules in previous runs
-    ,timeBuilt :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeBuilt' rules
-    ,timeUnknown :: {-# UNPACK #-} !Double -- ^ Time spent building 'shakeUnknownTime' rules in previous runs
-    ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'shakeTodo' rules in a previous runs, plus number which have no known time (e.g. never built before)
+    {isRunning :: !Bool -- ^ Starts out 'True', becomes 'False' once the build has completed.
+    ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
+    ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run.
+    ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required.
+    ,countTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built.
+    ,timeSkipped :: {-# UNPACK #-} !Double -- ^ Time spent building 'countSkipped' rules in previous runs.
+    ,timeBuilt :: {-# UNPACK #-} !Double -- ^ Time spent building 'countBuilt' rules.
+    ,timeUnknown :: {-# UNPACK #-} !Double -- ^ Time spent building 'countUnknown' rules in previous runs.
+    ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (e.g. never built before).
     }
     deriving (Eq,Ord,Show,Data,Typeable)
 
 
-data Assume = AssumeClean | AssumeDirty deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
+-- | The current assumptions made by the build system, used by 'shakeAssume'. These options
+--   allow the end user to specify that any rules run are either to be treated as clean, or as
+--   dirty, regardless of what the build system thinks.
+--
+--   These assumptions only operate on files reached by the current 'action' commands. Any
+--   other files in the database are left unchanged.
+data Assume
+    = AssumeDirty
+        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'storedValue' always
+        --   returning 'Nothing'. Useful to undo the results of 'AssumeClean', for benchmarking rebuild speed and
+        --   for rebuilding if untracked dependencies have changed. This assumption is safe, but may cause
+        --   more rebuilding than necessary.
+    | AssumeClean
+        -- ^ /This assumption is unsafe, and may lead to incorrect build results/.
+        --   Assume that all rules reached are clean and do not require rebuilding, provided the rule
+        --   has a 'storedValue'. Useful if you have modified a file in some inconsequential way, such as only
+        --   the comments or whitespace, and wish to avoid a rebuild.
+    deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
 -- | Options to control the execution of Shake, usually specified by overriding fields in
 --   'shakeOptions':
 --
 --   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just \"report.html\"} @
+--
+--   The 'Data' instance for this type reports the 'shakeProgress' field as abstract, because
+--   'Data' cannot be defined for functions.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
@@ -42,12 +77,12 @@ data ShakeOptions = ShakeOptions
     ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild (defaults to @1@).
     ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
     ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
-    ,shakeReport :: Maybe FilePath -- ^ Produce an HTML profiling report (defaults to 'Nothing').
+    ,shakeReport :: Maybe FilePath -- ^ Write an HTML profiling report to a file (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
-    ,shakeDeterministic :: Bool -- ^ Build files in a deterministic order, as far as possible (defaults to 'False')
-    ,shakeAssume :: Maybe Assume -- ^ TODO
-    ,shakeProgress :: IO Progress -> IO () -- ^ A function called when the build starts, including a way of obtaining
-                                           --   information about the current state of the build
+    ,shakeDeterministic :: Bool -- ^ Run rules in a deterministic order, as far as possible (defaults to 'False').
+    ,shakeAssume :: Maybe Assume -- ^ Assume all build objects are clean/dirty, see 'Assume' for details (defaults to 'Nothing').
+    ,shakeProgress :: IO Progress -> IO ()
+        -- ^ A function called when the build starts, allowing progress to be reported, see 'Progress' for details (defaults to no action).
     }
     deriving Typeable
 
