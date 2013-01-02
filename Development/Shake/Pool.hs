@@ -72,13 +72,13 @@ Must spawn a fresh thread to do blockPool
 If any worker throws an exception, must signal to all the other workers
 -}
 
-data Pool = Pool Int (Var (Maybe S)) (Barrier (Maybe SomeException))
+data Pool = Pool {-# UNPACK #-} !Int !(Var (Maybe S)) !(Barrier (Maybe SomeException))
 
 data S = S
     {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stackssss
-    ,working :: Int -- threads which are actively working
-    ,blocked :: Int -- threads which are blocked
-    ,todo :: Queue (IO ())
+    ,working :: {-# UNPACK #-} !Int -- threads which are actively working
+    ,blocked :: {-# UNPACK #-} !Int -- threads which are blocked
+    ,todo :: !(Queue (IO ()))
     }
 
 
