@@ -41,11 +41,11 @@ class (
     Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
     ) => Rule key value | key -> value where
 
-    -- | Retrieve the @value@ associated with a @key@, if it exists.
+    -- | Retrieve the @value@ associated with a @key@, if available.
     --
-    --   As an example for filenames/timestamps, if the file exists you would return 'Just'
-    --   and the timestamp, but otherwise return 'Nothing'. For rules whose values are not
-    --   stored on disk, 'storedValue' should always return 'Nothing'.
+    --   As an example for filenames/timestamps, if the file exists you should return 'Just'
+    --   the timestamp, but otherwise return 'Nothing'. For rules whose values are not
+    --   stored externally, 'storedValue' should always return 'Nothing'.
     storedValue :: key -> IO (Maybe value)
 
 {-
