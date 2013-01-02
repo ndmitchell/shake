@@ -139,11 +139,16 @@ withStorage logger file version flush witness act = do
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
             lock <- newLock
-            act mp $ \k v -> do
-                -- QUESTION: Should the logging be on a different thread? Does that reduce blocking?
-                withLock lock $ writeChunk h $ runPut $ putWith witness (k, v)
-                hFlush h
-                logger "Flush"
+            flushThread flush h $ \out ->
+                act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
+
+
+flushThread :: Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
+flushThread flush h act = do
+    lock <- newLock
+    act $ \s -> do
+        withLock lock $ LBS.hPut h s
+        hFlush h
 
 
 -- Return the amount of junk at the end, along with all the chunk
