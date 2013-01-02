@@ -41,11 +41,11 @@ class (
     Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
     ) => Rule key value | key -> value where
 
-    -- | Given that the database contains @key@/@value@, does that still match the on-disk contents?
+    -- | Retrieve the @value@ associated with a @key@, if it exists.
     --
-    --   As an example for filenames/timestamps, if the file exists and had the same timestamp, you
-    --   would return 'True', but otherwise return 'False'. For rule values which are not also stored
-    --   on disk, 'validStored' should always return 'True'.
+    --   As an example for filenames/timestamps, if the file exists you would return 'Just'
+    --   and the timestamp, but otherwise return 'Nothing'. For rules whose values are not
+    --   stored on disk, 'storedValue' should always return 'Nothing'.
     storedValue :: key -> IO (Maybe value)
 
 {-
