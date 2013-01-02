@@ -68,8 +68,8 @@ data Assume
 --
 --   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just \"report.html\"} @
 --
---   The 'Data' instance for this type reports the 'shakeProgress' field as abstract, because
---   'Data' cannot be defined for functions.
+--   The 'Data' instance for this type reports the 'shakeProgress' field as having the abstract type 'ShakeProgress',
+--   because 'Data' cannot be defined for functions.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
     ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
@@ -96,17 +96,17 @@ fieldsShakeOptions =
     ,"shakeLint", "shakeDeterministic", "shakeFlush", "shakeAssume", "shakeProgress"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-shakeOptionsRot y x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 y :: ShakeOptions
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 (fromProgress x11)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 y) =
-        z (shakeOptionsRot y) `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z $ shakeOptionsRot $ shakeProgress shakeOptions
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11) =
+        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` ShakeProgress x11
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
 instance Show ShakeOptions where
-    show x = "ShakeOptions {" ++ intercalate ", " inner ++ ", shakeProgress = <function>}"
+    show x = "ShakeOptions {" ++ intercalate ", " inner ++ "}"
         where
             inner = zipWith (\x y -> x ++ " = " ++ y) fieldsShakeOptions $ gmapQ f x
 
@@ -116,6 +116,25 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: Maybe FilePath)
                 | Just x <- cast x = show (x :: Maybe Assume)
+                | Just x <- cast x = show (x :: Maybe Double)
+                | Just x <- cast x = show (x :: ShakeProgress)
+                | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
+
+
+-- | Internal type, copied from Hide in Uniplate
+newtype ShakeProgress = ShakeProgress {fromProgress :: IO Progress -> IO ()}
+    deriving Typeable
+
+instance Show ShakeProgress where show _ = "<function>"
+
+instance Data ShakeProgress where
+    gfoldl k z x = z x
+    gunfold k z c = error "Development.Shake.Types.ShakeProgress: gunfold not implemented - data type has no constructors"
+    toConstr _ = error "Development.Shake.Types.ShakeProgress: toConstr not implemented - data type has no constructors"
+    dataTypeOf _ = tyShakeProgress
+
+tyShakeProgress = mkDataType "Development.Shake.Types.ShakeProgress" []
+
 
 
 -- NOTE: Not currently public, to avoid pinning down the API yet
