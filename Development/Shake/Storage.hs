@@ -43,10 +43,11 @@ withStorage
     => (String -> IO ())        -- ^ Logging function
     -> FilePath                 -- ^ File prefix to use
     -> Int                      -- ^ User supplied version number
+    -> Maybe Double             -- ^ How often to flush (Nothing = never, Just = seconds)
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage logger file version witness act = do
+withStorage logger file version flush witness act = do
     let dbfile = file <.> "database"
         bupfile = file <.> "bup"
     createDirectoryIfMissing True $ takeDirectory file

@@ -80,6 +80,7 @@ data ShakeOptions = ShakeOptions
     ,shakeReport :: Maybe FilePath -- ^ Write an HTML profiling report to a file (defaults to 'Nothing').
     ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
     ,shakeDeterministic :: Bool -- ^ Run rules in a deterministic order, as far as possible (defaults to 'False').
+    ,shakeFlush :: Maybe Double -- ^ How often to flush the journal file in seconds, or 'Nothing' to never flush explicitly (defaults to 'Just' 10)
     ,shakeAssume :: Maybe Assume -- ^ Assume all build objects are clean/dirty, see 'Assume' for details (defaults to 'Nothing').
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ A function called when the build starts, allowing progress to be reported, see 'Progress' for details (defaults to no action).
@@ -88,19 +89,19 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False Nothing (const $ return ())
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing (const $ return ())
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
-    ,"shakeLint", "shakeDeterministic", "shakeAssume", "shakeProgress"]
+    ,"shakeLint", "shakeDeterministic", "shakeFlush", "shakeAssume", "shakeProgress"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-shakeOptionsRot x10 x1 x2 x3 x4 x5 x6 x7 x8 x9 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10
+shakeOptionsRot y x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 y :: ShakeOptions
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10) =
-        z (shakeOptionsRot x10) `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ z $ shakeOptionsRot $ shakeProgress shakeOptions
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 y) =
+        z (shakeOptionsRot y) `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z $ shakeOptionsRot $ shakeProgress shakeOptions
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
