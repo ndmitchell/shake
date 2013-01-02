@@ -16,6 +16,7 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Exception as E
 import Control.Monad
+import Control.Concurrent
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.Char
@@ -143,12 +144,39 @@ withStorage logger file version flush witness act = do
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
 
+-- We avoid calling flush too often on SSD drives, as that can be slow
+-- Do not move writes to a separate thread, as then we'd have to marshal exceptions back which is tricky
 flushThread :: Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
 flushThread flush h act = do
+    alive <- newVar True
+    kick <- newEmptyMVar
+
+    case flush of
+        Nothing -> return ()
+        Just flush -> do
+            let delay = ceiling $ flush * 1000000
+            let loop = do
+                    takeMVar kick
+                    threadDelay delay
+                    b <- withVar alive $ \b -> do
+                        when b $ do
+                            tryTakeMVar kick
+                            hFlush h
+                        return b
+                    when b loop
+            forkIO $ do
+                let msg = "Warning: Flushing Shake journal failed, on abnormal termination you may lose some data, "
+                (loop >> return ()) `E.catch` \(e :: SomeException) -> putStrLn $ msg ++ show e
+            return ()
+
     lock <- newLock
-    act $ \s -> do
-        withLock lock $ LBS.hPut h s
-        hFlush h
+    (act $ \s -> do
+            withLock lock $ LBS.hPut h s
+            tryPutMVar kick ()
+            return ())
+        `finally` do
+            tryPutMVar kick ()
+            modifyVar_ alive $ const $ return False
 
 
 -- Return the amount of junk at the end, along with all the chunk

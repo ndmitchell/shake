@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add shakeFlush to control how often flush is called
     Fix a serious space leak in the thread pool
     #502, add shakeAssume to assume files are clean/dirty
     Remove validStored, replace with storedValue
