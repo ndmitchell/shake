@@ -1,7 +1,7 @@
 
 module Development.Shake.Locks(
     Lock, newLock, withLock,
-    Var, newVar, readVar, modifyVar, modifyVar_,
+    Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Resource, newResource, acquireResource, releaseResource
     ) where
@@ -42,6 +42,9 @@ modifyVar (Var x) f = modifyMVar x f
 
 modifyVar_ :: Var a -> (a -> IO a) -> IO ()
 modifyVar_ (Var x) f = modifyMVar_ x f
+
+withVar :: Var a -> (a -> IO b) -> IO b
+withVar (Var x) f = withMVar x f
 
 
 ---------------------------------------------------------------------
