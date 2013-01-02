@@ -38,7 +38,7 @@ data Progress = Progress
     ,timeSkipped :: {-# UNPACK #-} !Double -- ^ Time spent building 'countSkipped' rules in previous runs.
     ,timeBuilt :: {-# UNPACK #-} !Double -- ^ Time spent building 'countBuilt' rules.
     ,timeUnknown :: {-# UNPACK #-} !Double -- ^ Time spent building 'countUnknown' rules in previous runs.
-    ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (e.g. never built before).
+    ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (have never been built before).
     }
     deriving (Eq,Ord,Show,Data,Typeable)
 
@@ -58,8 +58,8 @@ data Assume
     | AssumeClean
         -- ^ /This assumption is unsafe, and may lead to incorrect build results/.
         --   Assume that all rules reached are clean and do not require rebuilding, provided the rule
-        --   has a 'storedValue'. Useful if you have modified a file in some inconsequential way, such as only
-        --   the comments or whitespace, and wish to avoid a rebuild.
+        --   has a 'storedValue' and has been built before. Useful if you have modified a file in some
+        --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
@@ -71,19 +71,44 @@ data Assume
 --   The 'Data' instance for this type reports the 'shakeProgress' field as having the abstract type 'ShakeProgress',
 --   because 'Data' cannot be defined for functions.
 data ShakeOptions = ShakeOptions
-    {shakeFiles :: FilePath -- ^ Where shall I store the database and journal files (defaults to @.shake@).
-    ,shakeThreads :: Int -- ^ What is the maximum number of rules I should run in parallel (defaults to @1@).
-                         --   To enable parallelism you may need to compile with @-threaded@.
-    ,shakeVersion :: Int -- ^ What is the version of your build system, increment to force a complete rebuild (defaults to @1@).
-    ,shakeVerbosity :: Verbosity -- ^ What messages to print out (defaults to 'Normal').
-    ,shakeStaunch :: Bool -- ^ Operate in staunch mode, where building continues even after errors (defaults to 'False').
-    ,shakeReport :: Maybe FilePath -- ^ Write an HTML profiling report to a file (defaults to 'Nothing').
-    ,shakeLint :: Bool -- ^ Perform basic sanity checks after building (defaults to 'False').
-    ,shakeDeterministic :: Bool -- ^ Run rules in a deterministic order, as far as possible (defaults to 'False').
-    ,shakeFlush :: Maybe Double -- ^ How often to flush the journal file in seconds, or 'Nothing' to never flush explicitly (defaults to 'Just' 10)
-    ,shakeAssume :: Maybe Assume -- ^ Assume all build objects are clean/dirty, see 'Assume' for details (defaults to 'Nothing').
+    {shakeFiles :: FilePath
+        -- ^ Defaults to @.shake@. The prefix of the filename used for storing Shake metadata files.
+        --   All metadata files will be named @'shakeFiles'./extension/@, for some @/extension/@.
+    ,shakeThreads :: Int
+        -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.
+        --   To enable parallelism you may need to compile with @-threaded@.
+        --   For many build systems, a number equal to or slightly less than the number of physical processors
+        --   works well.
+    ,shakeVersion :: Int
+        -- ^ Defaults to @1@. The version number of your build rules.
+        --   Increment the version number to force a complete rebuild, such as when making
+        --   significant changes to the rules that require a wipe. The version number should be
+        --   set in the source code, and not passed on the command line.
+    ,shakeVerbosity :: Verbosity
+        -- ^ Defaults to 'Normal'. What level of messages should be printed out.
+    ,shakeStaunch :: Bool
+        -- ^ Defaults to 'False'. Operate in staunch mode, where building continues even after errors,
+        --   similar to @make --keep-going@.
+    ,shakeReport :: Maybe FilePath
+        -- ^ Defaults to 'Nothing'. Write an HTML profiling report to a file, showing which
+        --   rules rebuilt, why, and how much time they took. Useful for improving the speed of your build systems.
+    ,shakeLint :: Bool
+        -- ^ Defaults to 'False'. Perform basic sanity checks after building, checking files have not been modified
+        --   several times during the build. These sanity checks fail to catch most interesting errors.
+    ,shakeDeterministic :: Bool
+        -- ^ Defaults to 'False'. Run rules in a deterministic order, as far as possible. Typically used in conjunction
+        --   with @'shakeThreads'=1@ for reproducing a build. If this field is set to 'False', Shake will run rules
+        --   in a random order, which typically decreases contention for resources and speeds up the build.
+    ,shakeFlush :: Maybe Double
+        -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
+        --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
+        --   'shakeFlush' seconds will be lost.
+    ,shakeAssume :: Maybe Assume
+        -- ^ Defaults to 'Nothing'. Assume all build objects are clean/dirty, see 'Assume' for details.
+        --   Can be used to implement @make --touch@.
     ,shakeProgress :: IO Progress -> IO ()
-        -- ^ A function called when the build starts, allowing progress to be reported, see 'Progress' for details (defaults to no action).
+        -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported,
+        --   see 'Progress' for details.
     }
     deriving Typeable
 

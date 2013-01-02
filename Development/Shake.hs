@@ -44,7 +44,7 @@
 --   compile with @-threaded@.
 --
 -- * Often the 'want' commands will be determined by command line arguments, to mirror the behaviour of @make@
---   targets.
+--   targets. For a default set of 'want' commands that you later override, 'withoutActions' can be useful.
 --
 -- * Lots of compilers produce @.o@ files. To avoid overlapping rules, use @.c.o@ for C compilers,
 --   @.hs.o@ for Haskell compilers etc.
