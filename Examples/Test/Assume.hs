@@ -35,3 +35,15 @@ test build obj = do
     sleepFileTime
     build ["abc.out"]
     ask "abc" "apz"
+
+    build ["bc.out","c.out"]
+    ask "bc" "pz"
+    set 'b' 'r'
+    set 'c' 'n'
+    sleepFileTime
+    build ["abc.out","--assume-clean"]
+    ask "abc" "apz"
+    build ["ab.out","--assume-dirty"]
+    ask "ab" "ar"
+    build ["c.out"]
+    ask "c" "z"
