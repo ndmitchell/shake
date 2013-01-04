@@ -15,7 +15,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import Data.Binary(Binary)
-import Data.Data
+import Data.Typeable
 import Data.Hashable
 import Data.Function
 import Data.List
