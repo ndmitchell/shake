@@ -17,18 +17,20 @@ import Data.List
 --   The following example displays the approximate single-threaded time remaining
 --   as the console title.
 --
--- > showProgress :: IO Progress -> IO ()
--- > showProgress progress = void $ forkIO loop
--- >     where loop = do
--- >             current <- progress
--- >             when (isRunning current) $ do
--- >                 let (s,c) = timeTodo current
--- >                 setTitle $ "Todo = " ++ show (ceiling s) ++ "s (+ " ++ show c ++ " unknown)"
--- >                 threadDelay $ 5 * 1000000
--- >                 loop
--- >
--- > setTitle :: String -> IO ()
--- > setTitle s = putStr $ "\ESC]0;" ++ s ++ "\BEL"
+-- @
+--showProgress :: IO 'Progress' -> IO ()
+--showProgress progress = void $ forkIO loop
+--    where loop = do
+--        current <- progress
+--        when ('isRunning' current) $ do
+--            let (s,c) = timeTodo current
+--            setTitle $ \"Todo = \" ++ show (ceiling s) ++ \"s (+ \" ++ show c ++ \" unknown)\"
+--            threadDelay $ 5 * 1000000
+--            loop
+--
+--setTitle :: String -> IO ()
+--setTitle s = putStr $ \"\\ESC]0;\" ++ s ++ \"\\BEL\"
+-- @
 data Progress = Progress
     {isRunning :: !Bool -- ^ Starts out 'True', becomes 'False' once the build has completed.
     ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
