@@ -67,16 +67,25 @@ match _ _ = []
 --
 --   Some examples that match:
 --
--- > "//*.c" ?== "foo/bar/baz.c"
--- > "*.c" ?== "baz.c"
--- > "//*.c" ?== "baz.c"
--- > "test.c" ?== "test.c"
+-- @
+-- \"//*.c\" '?==' \"foo\/bar\/baz.c\"
+-- \"*.c\" '?==' \"baz.c\"
+-- \"//*.c\" '?==' \"baz.c\"
+-- \"test.c\" '?==' \"test.c\"
+-- @
 --
 --   Examples that /don't/ match:
 --
--- > "*.c" ?== "foo/bar.c"
--- > "*/*.c" ?== "foo/bar/baz.c"
+-- @
+-- \"*.c\" '?==' \"foo\/bar.c\"
+-- \"*\/*.c\" '?==' \"foo\/bar\/baz.c\"
+-- @
 --
+--   An example that only matches on Windows:
+--
+-- @
+-- \"foo/bar\" '?==' \"foo\\\\bar\"
+-- @
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) p x = not $ null $ match (pattern $ lexer p) (True, x)
 
