@@ -75,13 +75,17 @@ ps *>> act
 --   return the list of files that will be produced. This list /must/ include the file passed as an argument and should
 --   obey the invariant:
 --
--- > test x == Just ys ==> x `elem` ys && all ((== Just ys) . test) ys
+-- @
+--test x == Just ys ==> x \`elem\` ys && all ((== Just ys) . test) ys
+-- @
 --
 --   As an example of a function satisfying the invariaint:
 --
--- > test x | takeExtension x `elem` [".hi",".o"]
--- >        = Just [dropExtension x <.> "hi", dropExtension x <.> "o"]
--- > test _ = Nothing
+-- @
+--test x | 'Development.Shake.FilePath.takeExtension' x \`elem\` [\".hi\",\".o\"]
+--        = Just ['Development.Shake.FilePath.dropExtension' x 'Development.Shake.FilePath.<.>' \"hi\", 'Development.Shake.FilePath.dropExtension' x 'Development.Shake.FilePath.<.>' \"o\"]
+--test _ = Nothing
+-- @
 --
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
