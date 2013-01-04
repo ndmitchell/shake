@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a Classes module
 0.4
     Add shakeFlush to control how often flush is called
     Fix a serious space leak in the thread pool

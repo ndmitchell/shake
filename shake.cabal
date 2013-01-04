@@ -91,6 +91,7 @@ library
 
     exposed-modules:
         Development.Shake
+        Development.Shake.Classes
         Development.Shake.FilePath
 
     other-modules:
