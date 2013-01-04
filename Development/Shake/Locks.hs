@@ -82,7 +82,7 @@ waitBarrier (Barrier x) = readMVar x
 --        \"*.xls\" 'Development.Shake.*>' \\out ->
 --            'Development.Shake.withResource' excel 1 $
 --                'Development.Shake.system'' \"excel\" [out,...]
---  @
+-- @
 --
 --   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
 --   is better than 'MVar' as it will not block any other threads from executing. Be careful that the
