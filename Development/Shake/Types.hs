@@ -49,18 +49,18 @@ data Progress = Progress
 --   allow the end user to specify that any rules run are either to be treated as clean, or as
 --   dirty, regardless of what the build system thinks.
 --
---   These assumptions only operate on files reached by the current 'action' commands. Any
+--   These assumptions only operate on files reached by the current 'Development.Shake.action' commands. Any
 --   other files in the database are left unchanged.
 data Assume
     = AssumeDirty
-        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'storedValue' always
+        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'Development.Shake.storedValue' always
         --   returning 'Nothing'. Useful to undo the results of 'AssumeClean', for benchmarking rebuild speed and
         --   for rebuilding if untracked dependencies have changed. This assumption is safe, but may cause
         --   more rebuilding than necessary.
     | AssumeClean
         -- ^ /This assumption is unsafe, and may lead to incorrect build results/.
         --   Assume that all rules reached are clean and do not require rebuilding, provided the rule
-        --   has a 'storedValue' and has been built before. Useful if you have modified a file in some
+        --   has a 'Development.Shake.storedValue' and has been built before. Useful if you have modified a file in some
         --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
