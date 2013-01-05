@@ -12,16 +12,16 @@ import Data.Typeable
 import Development.Shake.Core
 
 
-newtype AlwaysRerun = AlwaysRerun ()
+newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,NFData)
-instance Show AlwaysRerun where show _ = "AlwaysRerun"
+instance Show AlwaysRerunQ where show _ = "AlwaysRerunQ"
 
-newtype Dirty = Dirty ()
+newtype AlwaysRerunA = AlwaysRerunA ()
     deriving (Typeable,Hashable,Binary,NFData)
-instance Show Dirty where show _ = "Dirty"
-instance Eq Dirty where a == b = False
+instance Show AlwaysRerunA where show _ = "AlwaysRerunA"
+instance Eq AlwaysRerunA where a == b = False
 
-instance Rule AlwaysRerun Dirty where
+instance Rule AlwaysRerunQ AlwaysRerunA where
     storedValue _ = return Nothing
 
 
@@ -35,7 +35,7 @@ instance Rule AlwaysRerun Dirty where
 --     'Development.Shake.writeFileChanged' out stdout
 -- @
 alwaysRerun :: Action ()
-alwaysRerun = do Dirty _ <- apply1 $ AlwaysRerun (); return ()
+alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = defaultRule $ \AlwaysRerun{} -> Just $ return $ Dirty ()
+defaultRuleRerun = defaultRule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()

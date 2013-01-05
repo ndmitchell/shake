@@ -20,38 +20,44 @@ import Development.Shake.FilePath
 import Development.Shake.FilePattern
 
 
-newtype Exist = Exist FilePath
+newtype DoesFileExistQ = DoesFileExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show Exist where
-    show (Exist a) = "Exists? " ++ a
+instance Show DoesFileExistQ where
+    show (DoesFileExistQ a) = "Exists? " ++ a
+
+newtype DoesFileExistA = DoesFileExistA Bool
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show DoesFileExistA where
+    show (DoesFileExistA a) = show a
 
 
-data GetDir
+data GetDirectoryQ
     = GetDir {dir :: FilePath}
     | GetDirFiles {dir :: FilePath, pat :: FilePattern}
     | GetDirDirs {dir :: FilePath}
     deriving (Typeable,Eq)
-newtype GetDir_ = GetDir_ [FilePath]
+newtype GetDirectoryA = GetDirectoryA [FilePath]
     deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
 
-instance Show GetDir where
+instance Show GetDirectoryQ where
     show (GetDir x) = "Listing " ++ x
     show (GetDirFiles a b) = "Files " ++ a </> b
     show (GetDirDirs x) = "Dirs " ++ x
 
-instance NFData GetDir where
+instance NFData GetDirectoryQ where
     rnf (GetDir a) = rnf a
     rnf (GetDirFiles a b) = rnf a `seq` rnf b
     rnf (GetDirDirs a) = rnf a
 
-instance Hashable GetDir where
+instance Hashable GetDirectoryQ where
     hashWithSalt salt = hashWithSalt salt . f
         where f (GetDir x) = (0 :: Int, x, "")
               f (GetDirFiles x y) = (1, x, y)
               f (GetDirDirs x) = (2, x, "")
 
-instance Binary GetDir where
+instance Binary GetDirectoryQ where
     get = do
         i <- getWord8
         case i of
@@ -64,11 +70,11 @@ instance Binary GetDir where
     put (GetDirDirs x) = putWord8 2 >> put x
 
 
-instance Rule Exist Bool where
-    storedValue (Exist x) = fmap Just $ IO.doesFileExist x
+instance Rule DoesFileExistQ DoesFileExistA where
+    storedValue (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
     -- invariant _ = True
 
-instance Rule GetDir GetDir_ where
+instance Rule GetDirectoryQ GetDirectoryA where
     storedValue x = fmap Just $ getDir x
     -- invariant _ = True
 
@@ -76,15 +82,17 @@ instance Rule GetDir GetDir_ where
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    defaultRule $ \(Exist x) -> Just $
-        liftIO $ IO.doesFileExist x
-    defaultRule $ \(x :: GetDir) -> Just $
+    defaultRule $ \(DoesFileExistQ x) -> Just $
+        liftIO $ fmap DoesFileExistA $ IO.doesFileExist x
+    defaultRule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
 
 
 -- | Returns 'True' if the file exists.
 doesFileExist :: FilePath -> Action Bool
-doesFileExist = apply1 . Exist
+doesFileExist file = do
+    DoesFileExistA res <- apply1 $ DoesFileExistQ file
+    return res
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the files @.@ or @..@ (unlike the standard Haskell version). It is usually better to
@@ -102,11 +110,11 @@ getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 getDirectoryDirs :: FilePath -> Action [FilePath]
 getDirectoryDirs x = getDirAction $ GetDirDirs x
 
-getDirAction x = do GetDir_ y <- apply1 x; return y
+getDirAction x = do GetDirectoryA y <- apply1 x; return y
 
 
-getDir :: GetDir -> IO GetDir_
-getDir x = fmap (GetDir_ . sort) $ f x . filter validName =<< IO.getDirectoryContents (dir x)
+getDir :: GetDirectoryQ -> IO GetDirectoryA
+getDir x = fmap (GetDirectoryA . sort) $ f x . filter validName =<< IO.getDirectoryContents (dir x)
     where
         validName = not . all (== '.')
 

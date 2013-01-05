@@ -22,17 +22,19 @@ import Development.Shake.FileTime
 infix 1 *>, ?>, **>
 
 
-newtype File = File BS.ByteString
+newtype FileQ = FileQ BS.ByteString
     deriving (Typeable,Eq,Hashable,Binary)
 
-instance NFData File where
-    rnf (File x) = x `seq` () -- since ByteString is strict
+instance NFData FileQ where
+    rnf (FileQ x) = x `seq` () -- since ByteString is strict
 
-instance Show File where show (File x) = BS.unpack x
+instance Show FileQ where show (FileQ x) = BS.unpack x
 
+newtype FileA = FileA FileTime
+    deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
-instance Rule File FileTime where
-    storedValue (File x) = getModTimeMaybe x
+instance Rule FileQ FileA where
+    storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
 
 {-
     observed act = do
@@ -91,8 +93,8 @@ compareItems = f ""
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = defaultRule $ \(File x) -> Just $
-    liftIO $ getModTimeError "Error, file does not exist and no rule available:" x
+defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
+    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
 
 
 -- | Require that the following files are built before continuing. Particularly
@@ -105,7 +107,7 @@ defaultRuleFile = defaultRule $ \(File x) -> Just $
 --     'Development.Shake.system'' [\"rot13\",src,\"-o\",out]
 -- @
 need :: [FilePath] -> Action ()
-need xs = (apply $ map (File . BS.pack) xs :: Action [FileTime]) >> return ()
+need xs = (apply $ map (FileQ . BS.pack) xs :: Action [FileA]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --
@@ -121,11 +123,11 @@ want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = rule $ \(File x_) -> let x = BS.unpack x_ in
+root help test act = rule $ \(FileQ x_) -> let x = BS.unpack x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
+        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
 
 
 
