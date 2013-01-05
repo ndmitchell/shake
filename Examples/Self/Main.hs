@@ -1,7 +1,9 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Examples.Self.Main(main) where
 
 import Development.Shake
+import Development.Shake.Classes
 import Development.Shake.FilePath
 import Examples.Util
 
@@ -10,6 +12,9 @@ import Data.Char
 import Data.List
 import System.Info
 
+
+newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 main :: IO ()
 main = shaken noTest $ \args obj -> do
@@ -21,8 +26,8 @@ main = shaken noTest $ \args obj -> do
 
     let ghc args = do
             -- since ghc-pkg includes the ghc package, it changes if the version does
-            askOracle ["ghc-pkg"]
-            flags <- askOracle ["ghc-flags"]
+            askOracleWith (GhcPkg ()) [""]
+            flags <- askOracle $ GhcFlags ()
             system' "ghc" $ args ++ flags
 
     obj "/*.exe" *> \out -> do
@@ -57,11 +62,11 @@ main = shaken noTest $ \args obj -> do
         src <- readFile' "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
 
-    addOracle ["ghc-pkg"] $ do
+    addOracle $ \GhcPkg{} -> do
         (out,_) <- systemOutput "ghc-pkg" ["list","--simple-output"]
         return $ words out
 
-    addOracle ["ghc-flags"] $ do
+    addOracle $ \GhcFlags{} -> do
         pkgs <- readFileLines $ obj ".pkgs"
         return $ map ("-package=" ++) pkgs
 

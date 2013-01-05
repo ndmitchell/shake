@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Change the Oracle to be strongly typed
     Add a Classes module
 0.4
     Add shakeFlush to control how often flush is called
