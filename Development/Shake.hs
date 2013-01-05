@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 -- | This module is used for defining Shake build systems. As a simple example of a Shake build system,
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
@@ -66,6 +67,9 @@ module Development.Shake(
     shake,
     -- * Core of Shake
     ShakeOptions(..), shakeOptions, Assume(..), Progress(..),
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue,
+#endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
@@ -92,6 +96,9 @@ import Control.Monad.IO.Class
 import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Derived
+#if __GLASGOW_HASKELL__ >= 704
+import Development.Shake.Classes
+#endif
 
 import Development.Shake.Directory
 import Development.Shake.File

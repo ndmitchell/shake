@@ -2,6 +2,11 @@
 -- Allows the user to violate the functional dependency, but it has a runtime check so still safe
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 704
+{-# LANGUAGE ConstraintKinds #-}
+#endif
+
 module Development.Shake.Oracle(
     addOracle, askOracle, askOracleWith
     ) where
@@ -12,6 +17,7 @@ import Data.Hashable
 import Data.Typeable
 
 import Development.Shake.Core
+import Development.Shake.Classes
 
 
 -- Use should type names, since the names appear in the Haddock, and are too long if they are in full
@@ -20,9 +26,13 @@ newtype Q question = Q question
 newtype A answer = A answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-instance
-    (Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q
-    ,Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+instance (
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue q, ShakeValue a
+#else
+    Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q,
+    Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+#endif
     ) => Rule (Q q) (A a) where
     storedValue _ = return Nothing
 
@@ -68,25 +78,37 @@ instance
 --
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion "shake"@ to rebuild when @shake@ is upgraded.
-addOracle ::
-    (Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q
-    ,Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+addOracle :: (
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue q, ShakeValue a
+#else
+    Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q,
+    Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+#endif
     ) => (q -> Action a) -> Rules ()
 addOracle act = rule $ \(Q q) -> Just $ fmap A $ act q
 
 
 -- | Get information previously added with 'addOracle', the @question@/@answer@ types must match those provided
 --   to 'addOracle'.
-askOracle ::
-    (Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q
-    ,Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+askOracle :: (
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue q, ShakeValue a
+#else
+    Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q,
+    Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+#endif
     ) => q -> Action a
 askOracle question = do A answer <- apply1 $ Q question; return answer
 
 -- | Get information previously added with 'addOracle'. The second argument is unused, but can
 --   be useful to avoid ambiguous type error messages.
-askOracleWith ::
-    (Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q
-    ,Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+askOracleWith :: (
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue q, ShakeValue a
+#else
+    Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q,
+    Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
+#endif
     ) => q -> a -> Action a
 askOracleWith question _ = askOracle question

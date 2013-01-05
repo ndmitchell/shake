@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add the ShakeValue constraint synonym
     Change the Oracle to be strongly typed
     Add a Classes module
 0.4

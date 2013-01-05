@@ -1,6 +1,11 @@
 {-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
 
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 704
+{-# LANGUAGE ConstraintKinds #-}
+#endif
+
 module Development.Shake.Core(
     run,
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
@@ -14,9 +19,7 @@ import Control.Exception as E
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
-import Data.Binary(Binary)
 import Data.Typeable
-import Data.Hashable
 import Data.Function
 import Data.List
 import qualified Data.HashMap.Strict as Map
@@ -24,6 +27,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.IORef
 
+import Development.Shake.Classes
 import Development.Shake.Pool
 import Development.Shake.Database
 import Development.Shake.Locks
@@ -38,8 +42,12 @@ import Development.Shake.Types
 -- | Define a pair of types that can be used by Shake rules.
 --   To import all the type classes required see "Development.Shake.Classes".
 class (
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key, ShakeValue value
+#else
     Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key,
     Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
+#endif
     ) => Rule key value | key -> value where
 
     -- | Retrieve the @value@ associated with a @key@, if available.
