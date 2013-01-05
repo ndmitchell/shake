@@ -36,7 +36,7 @@ instance (
 --
 -- @
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
--- 'addOracle' $ \GhcVersion -> return \"7.2.1\"
+-- 'addOracle' $ \\GhcVersion -> return \"7.2.1\"
 -- @
 --
 --   If a rule depends on the GHC version, it can then use @'askOracle' GhcVersion@, and
