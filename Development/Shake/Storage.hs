@@ -35,7 +35,7 @@ type Map = Map.HashMap
 
 -- Increment every time the on-disk format/semantics change,
 -- @i@ is for the users version number
-databaseVersion i = "SHAKE-DATABASE-5-" ++ show (i :: Int) ++ "\r\n"
+databaseVersion i = "SHAKE-DATABASE-6-" ++ show (i :: Int) ++ "\r\n"
 
 
 withStorage
