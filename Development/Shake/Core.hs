@@ -36,6 +36,7 @@ import Development.Shake.Types
 -- RULES
 
 -- | Define a pair of types that can be used by Shake rules.
+--   To import all the type classes required see "Development.Shake.Classes".
 class (
     Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key,
     Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
@@ -45,7 +46,7 @@ class (
     --
     --   As an example for filenames/timestamps, if the file exists you should return 'Just'
     --   the timestamp, but otherwise return 'Nothing'. For rules whose values are not
-    --   stored externally, 'storedValue' should always return 'Nothing'.
+    --   stored externally, 'storedValue' should return 'Nothing'.
     storedValue :: key -> IO (Maybe value)
 
 {-
