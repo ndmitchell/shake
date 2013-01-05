@@ -238,8 +238,9 @@ createStored assume Rules{..} = \k v ->
     let (tk,tv) = (typeKey k, typeValue v) in
     case Map.lookup tk mp of
         Nothing -> error $
-            "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
-            ", perhaps you are missing a call to defaultRule/rule?"
+            "Error: couldn't find instance Rule " ++ showTypeRepBracket tk ++ " " ++ showTypeRepBracket tv ++
+            ", perhaps you are missing a call to " ++
+            (if isOracleTypes tk tv then "addOracle" else "defaultRule/rule") ++ "?"
         Just (tv2,_) | tv2 /= tv -> error $
             "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
             ", but did find an instance Rule " ++ show tk ++ " " ++ show tv2 ++
@@ -254,6 +255,17 @@ createStored assume Rules{..} = \k v ->
         ruleStored _ = if assume == Just AssumeDirty
                        then \k v -> return False
                        else \k v -> fmap (== Just v) $ storedValue k
+
+
+isOracleTypes :: TypeRep -> TypeRep -> Bool
+isOracleTypes tk tv = f tk "Q" && f tv "A"
+    where f t s = show (fst $ splitTyConApp t) == s
+
+showTypeRepBracket :: TypeRep -> String
+showTypeRepBracket ty = ['(' | not safe] ++ show ty ++ [')' | not safe]
+    where (t1,args) = splitTyConApp ty
+          st1 = show t1
+          safe = null args || st1 == "[]" || "(" `isPrefixOf` st1
 
 
 createExecute :: Maybe Assume -> Rules () -> (Key -> Action Value)
