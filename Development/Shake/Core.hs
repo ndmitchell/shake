@@ -266,7 +266,7 @@ createStored assume Rules{..} = \k v ->
 
 
 isOracleTypes :: TypeRep -> TypeRep -> Bool
-isOracleTypes tk tv = f tk "Q" && f tv "A"
+isOracleTypes tk tv = f tk "OracleQ" && f tv "OracleA"
     where f t s = show (fst $ splitTyConApp t) == s
 
 showTypeRepBracket :: TypeRep -> String

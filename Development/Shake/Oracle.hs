@@ -21,9 +21,9 @@ import Development.Shake.Classes
 
 
 -- Use should type names, since the names appear in the Haddock, and are too long if they are in full
-newtype Q question = Q question
+newtype OracleQ question = OracleQ question
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
-newtype A answer = A answer
+newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 instance (
@@ -33,7 +33,7 @@ instance (
     Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q,
     Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
 #endif
-    ) => Rule (Q q) (A a) where
+    ) => Rule (OracleQ q) (OracleA a) where
     storedValue _ = return Nothing
 
 
@@ -86,7 +86,7 @@ addOracle :: (
     Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
 #endif
     ) => (q -> Action a) -> Rules ()
-addOracle act = rule $ \(Q q) -> Just $ fmap A $ act q
+addOracle act = rule $ \(OracleQ q) -> Just $ fmap OracleA $ act q
 
 
 -- | Get information previously added with 'addOracle', the @question@/@answer@ types must match those provided
@@ -99,7 +99,7 @@ askOracle :: (
     Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
 #endif
     ) => q -> Action a
-askOracle question = do A answer <- apply1 $ Q question; return answer
+askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answer
 
 -- | Get information previously added with 'addOracle'. The second argument is unused, but can
 --   be useful to avoid ambiguous type error messages.

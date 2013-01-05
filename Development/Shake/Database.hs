@@ -408,7 +408,7 @@ checkValid Database{..} valid = do
 
     where
         -- special case for these things, since the purpose is to break the invariant
-        special k = s == "AlwaysRun" || "Oracle " `isPrefixOf` s
+        special k = s == "AlwaysRun" || "OracleQ " `isPrefixOf` s
             where s = show k
 
 
