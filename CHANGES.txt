@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.6
     Make addOracle return a result of askOracle
     Export the class bodies from Classes
     Don't export ShakeValue from Classes
