@@ -36,10 +36,10 @@ instance (
 --
 -- @
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
--- 'addOracle' $ \\GhcVersion -> return \"7.2.1\"
+-- 'addOracle' $ \\(GhcVersion _) -> return \"7.2.1\"
 -- @
 --
---   If a rule depends on the GHC version, it can then use @'askOracle' GhcVersion@, and
+--   If a rule depends on the GHC version, it can use @'askOracle' (GhcVersion ())@, and
 --   if the GHC version changes, the rule will rebuild. We use a @newtype@ around @()@ to
 --   allow the use of @GeneralizedNewtypeDeriving@. It is common for the value returned
 --   by 'askOracle' to be ignored, in which case 'askOracleWith' may help avoid ambiguous type
