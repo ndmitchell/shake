@@ -44,10 +44,11 @@ instance (
 --   allow the use of @GeneralizedNewtypeDeriving@. It is common for the value returned
 --   by 'askOracle' to be ignored, in which case 'askOracleWith' may help avoid ambiguous type
 --   messages -- although a wrapper function with an explicit type is encouraged.
+--   The result of 'addOracle' is simply 'askOracle' restricted to the specific type of the added oracle.
 --   To import all the type classes required see "Development.Shake.Classes".
 --
---   We require that each type of @question@ map to exactly one type of @answer@,
---   otherwise a runtime error will be raised.
+--   We require that each call to 'addOracle' uses a different type of @question@ from any
+--   other calls in a given set of 'Rule's, otherwise a runtime error will be raised.
 --
 --   Actions passed to 'addOracle' will be run in every build they are required,
 --   but if their value does not change they will not invalidate any rules depending on them.
@@ -60,15 +61,13 @@ instance (
 --newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 --
 --do
---    'addOracle' $ \\GhcPkgList{} -> do
+--    getPkgList <- 'addOracle' $ \\GhcPkgList{} -> do
 --        (out,_) <- 'systemOutput' \"ghc-pkg\" [\"list\",\"--simple-output\"]
 --        return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
---    let getPkgList = 'askOracleWith' (GhcPkgList ()) [(\"\",\"\")] 
 --    --
---    'addOracle' $ \\(GhcPkgVersion pkg) -> do
+--    getPkgVersion <- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
 --        pkgs <- getPkgList
 --        return $ lookup pkg pkgs
---    let getPkgVersion pkg = 'askOracleWith' (GhcPkgVersion pkg) (Just \"\")
 -- @
 --
 --   Using these definitions, any rule depending on the version of @shake@
@@ -80,8 +79,10 @@ addOracle :: (
     Show q, Typeable q, Eq q, Hashable q, Binary q, NFData q,
     Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
 #endif
-    ) => (q -> Action a) -> Rules ()
-addOracle act = rule $ \(OracleQ q) -> Just $ fmap OracleA $ act q
+    ) => (q -> Action a) -> Rules (q -> Action a)
+addOracle act = do
+    rule $ \(OracleQ q) -> Just $ fmap OracleA $ act q
+    return askOracle
 
 
 -- | Get information previously added with 'addOracle', the @question@/@answer@ types must match those provided
