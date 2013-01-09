@@ -21,7 +21,7 @@ import Control.DeepSeq
 import Control.Exception as E
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.State
+import Control.Monad.Trans.State as State
 import Data.Typeable
 import Data.Function
 import Data.List
@@ -330,7 +330,7 @@ apply ks = fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
-    s <- get
+    s <- State.get
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
@@ -344,7 +344,7 @@ applyKeyValue ks = Action $ do
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
-            modify $ \s -> s{discount=discount s + dur, depends=dep : depends s}
+            State.modify $ \s -> s{discount=discount s + dur, depends=dep : depends s}
             return vs
 
 
@@ -359,17 +359,17 @@ apply1 = fmap head . apply . return
 --   (see 'shakeReport').
 traced :: String -> IO a -> Action a
 traced msg act = Action $ do
-    s <- get
+    s <- State.get
     start <- liftIO $ started s
     res <- liftIO act
     stop <- liftIO $ started s
-    modify $ \s -> s{traces = (msg,start,stop):traces s}
+    State.modify $ \s -> s{traces = (msg,start,stop):traces s}
     return res
 
 
 putWhen :: (Verbosity -> Bool) -> String -> Action ()
 putWhen f msg = Action $ do
-    s <- get
+    s <- State.get
     when (f $ verbosity s) $
         liftIO $ output s msg
 
@@ -394,7 +394,7 @@ getVerbosity = Action $ gets verbosity
 -- | Run an action which uses part of a finite resource. For an example see 'Resource'.
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = Action $ do
-    s <- get
+    s <- State.get
     (res,s) <- liftIO $ bracket_
         (do res <- acquireResource r i
             case res of
@@ -406,5 +406,5 @@ withResource r i act = Action $ do
         (do releaseResource r i
             logger s $ show r ++ " released " ++ show i)
         (runAction s act)
-    put s
+    State.put s
     return res
