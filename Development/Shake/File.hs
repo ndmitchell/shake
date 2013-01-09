@@ -116,7 +116,7 @@ need xs = (apply $ map (FileQ . BS.pack) xs :: Action [FileA]) >> return ()
 --
 --   This program will build @Main.exe@, given sufficient rules.
 want :: [FilePath] -> Rules ()
-want xs = action $ need xs
+want = action . need
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
