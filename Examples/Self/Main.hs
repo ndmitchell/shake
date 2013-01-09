@@ -24,10 +24,18 @@ main = shaken noTest $ \args obj -> do
     -- fixup to cope with Cabal's generated files
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
 
+    ghcPkg <- addOracle $ \GhcPkg{} -> do
+        (out,_) <- systemOutput "ghc-pkg" ["list","--simple-output"]
+        return $ words out
+
+    ghcFlags <- addOracle $ \GhcFlags{} -> do
+        pkgs <- readFileLines $ obj ".pkgs"
+        return $ map ("-package=" ++) pkgs
+
     let ghc args = do
             -- since ghc-pkg includes the ghc package, it changes if the version does
-            askOracleWith (GhcPkg ()) [""]
-            flags <- askOracle $ GhcFlags ()
+            ghcPkg $ GhcPkg ()
+            flags <- ghcFlags $ GhcFlags ()
             system' "ghc" $ args ++ flags
 
     obj "/*.exe" *> \out -> do
@@ -61,14 +69,6 @@ main = shaken noTest $ \args obj -> do
     obj ".pkgs" *> \out -> do
         src <- readFile' "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
-
-    addOracle $ \GhcPkg{} -> do
-        (out,_) <- systemOutput "ghc-pkg" ["list","--simple-output"]
-        return $ words out
-
-    addOracle $ \GhcFlags{} -> do
-        pkgs <- readFileLines $ obj ".pkgs"
-        return $ map ("-package=" ++) pkgs
 
 
 ---------------------------------------------------------------------
