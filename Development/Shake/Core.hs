@@ -17,7 +17,6 @@ module Development.Shake.Core(
     Resource, newResource, withResource
     ) where
 
-import Control.DeepSeq
 import Control.Exception as E
 import Control.Monad
 import Control.Monad.IO.Class

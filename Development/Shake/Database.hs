@@ -11,6 +11,7 @@ module Development.Shake.Database(
     showJSON, checkValid,
     ) where
 
+import Development.Shake.Classes
 import Development.Shake.Binary
 import Development.Shake.Pool
 import Development.Shake.Value
@@ -19,9 +20,6 @@ import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Intern as Intern
 
-import Control.DeepSeq
-import Data.Hashable
-import Data.Typeable
 import Control.Exception
 import Control.Monad
 import qualified Data.HashSet as Set

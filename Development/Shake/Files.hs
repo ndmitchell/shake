@@ -4,16 +4,13 @@ module Development.Shake.Files(
     (?>>), (*>>)
     ) where
 
-import Control.DeepSeq
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.Binary
-import Data.Hashable
 import Data.Maybe
-import Data.Typeable
 import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
+import Development.Shake.Classes
 import Development.Shake.File
 import Development.Shake.FilePattern
 import Development.Shake.FileTime

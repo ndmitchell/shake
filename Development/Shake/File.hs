@@ -6,15 +6,12 @@ module Development.Shake.File(
     (*>), (**>), (?>)
     ) where
 
-import Control.DeepSeq
 import Control.Monad.IO.Class
-import Data.Binary
-import Data.Hashable
-import Data.Typeable
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
+import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.FileTime

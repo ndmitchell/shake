@@ -6,16 +6,14 @@ module Development.Shake.Directory(
     defaultRuleDirectory
     ) where
 
-import Control.DeepSeq
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary
-import Data.Hashable
 import Data.List
-import Data.Typeable
 import qualified System.Directory as IO
 
 import Development.Shake.Core
+import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
 

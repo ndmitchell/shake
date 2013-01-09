@@ -10,8 +10,7 @@ module Development.Shake.Value(
     ) where
 
 import Development.Shake.Binary
-import Control.DeepSeq
-import Data.Hashable
+import Development.Shake.Classes
 import Data.Typeable
 
 import Data.Bits

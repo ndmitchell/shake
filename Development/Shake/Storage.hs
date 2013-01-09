@@ -13,14 +13,13 @@ import Development.Shake.Binary
 import Development.Shake.Locks
 
 import Control.Arrow
-import Control.DeepSeq
 import Control.Exception as E
 import Control.Monad
 import Control.Concurrent
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.Char
-import Data.Hashable
+import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map
 import Data.List
 import System.Directory

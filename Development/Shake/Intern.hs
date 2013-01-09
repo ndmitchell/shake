@@ -5,10 +5,9 @@ module Development.Shake.Intern(
     empty, insert, add, lookup, toList, fromList
     ) where
 
-import Control.DeepSeq
 import Development.Shake.Binary
+import Development.Shake.Classes
 import Prelude hiding (lookup)
-import Data.Hashable
 import qualified Data.HashMap.Strict as Map
 
 

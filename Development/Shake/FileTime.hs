@@ -6,10 +6,7 @@ module Development.Shake.FileTime(
     getModTimeError, getModTimeMaybe
     ) where
 
-import Control.DeepSeq
-import Data.Binary
-import Data.Hashable
-import Data.Typeable
+import Development.Shake.Classes
 import Data.Int
 import qualified Data.ByteString.Char8 as BS
 

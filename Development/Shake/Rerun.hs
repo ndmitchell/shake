@@ -4,12 +4,8 @@ module Development.Shake.Rerun(
     defaultRuleRerun, alwaysRerun
     ) where
 
-import Control.DeepSeq
-import Data.Binary
-import Data.Hashable
-import Data.Typeable
-
 import Development.Shake.Core
+import Development.Shake.Classes
 
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
