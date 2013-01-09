@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Don't export ShakeValue from Classes
 0.5
     IMPORTANT: Incompatible on disk format change
     Add the ShakeValue constraint synonym

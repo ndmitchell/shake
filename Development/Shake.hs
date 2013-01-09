@@ -96,9 +96,6 @@ import Control.Monad.IO.Class
 import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Derived
-#if __GLASGOW_HASKELL__ >= 704
-import Development.Shake.Classes
-#endif
 
 import Development.Shake.Directory
 import Development.Shake.File

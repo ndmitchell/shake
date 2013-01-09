@@ -8,6 +8,9 @@
 
 module Development.Shake.Core(
     run,
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue,
+#endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet,
@@ -38,6 +41,18 @@ import Development.Shake.Types
 
 ---------------------------------------------------------------------
 -- RULES
+
+#if __GLASGOW_HASKELL__ >= 704
+-- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
+--   This alias is only available in GHC 7.4 and above, and requires the @ConstraintKinds@ extension.
+--
+--   To define your own values meeting the necessary constraints it is convenient to use the extensions
+--   @GeneralizedNewtypeDeriving@ and @DeriveDataTypeable@ to write:
+--
+-- > newtype MyType = MyType (String, Bool) deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
+#endif
+
 
 -- | Define a pair of types that can be used by Shake rules.
 --   To import all the type classes required see "Development.Shake.Classes".
