@@ -172,7 +172,7 @@ withoutActions x = x{actions=[]}
 ---------------------------------------------------------------------
 -- MAKE
 
-data S = S
+data SAction = SAction
     -- global constants
     {database :: Database
     ,pool :: Pool
@@ -193,7 +193,7 @@ data S = S
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'need' to execute files.
 --   Action values are used by 'rule' and 'action'.
-newtype Action a = Action (StateT S IO a)
+newtype Action a = Action (StateT SAction IO a)
     deriving (Monad, MonadIO, Functor, Applicative)
 
 
@@ -227,7 +227,7 @@ run opts@ShakeOptions{..} rs = do
         withDatabase logger shakeFiles shakeVersion shakeFlush $ \database -> do
             shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = S database pool start stored execute output shakeVerbosity logger shakeAssume emptyStack [] 0 []
+                let s0 = SAction database pool start stored execute output shakeVerbosity logger shakeAssume emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database stored
@@ -319,7 +319,7 @@ createExecute assume Rules{..} = \k ->
         ruleStored _ = storedValue
 
 
-runAction :: S -> Action a -> IO (a, S)
+runAction :: SAction -> Action a -> IO (a, SAction)
 runAction s (Action x) = runStateT x s
 
 
