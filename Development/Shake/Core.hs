@@ -21,6 +21,7 @@ import Control.Exception as E
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Writer.Strict
 import Control.Monad.Trans.State.Strict as State
 import Data.Typeable
 import Data.Function
@@ -116,26 +117,34 @@ ruleValue = undefined
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
-data Rules a = Rules
-    {value :: a -- not really used, other than for the Monad instance
-    ,actions :: [Action ()]
+newtype Rules a = Rules (Writer SRules a)
+    deriving (Monad, Functor, Applicative)
+
+newRules :: SRules -> Rules ()
+newRules = Rules . tell
+
+modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
+modifyRules f (Rules r) = Rules $ censor f r
+
+getRules :: Rules () -> SRules
+getRules (Rules r) = execWriter r
+
+
+data SRules = SRules
+    {actions :: [Action ()]
     ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Int,ARule)]) -- higher fst is higher priority
     }
 
-instance Monoid a => Monoid (Rules a) where
-    mempty = return mempty
-    mappend a b = (a >> b){value = value a `mappend` value b}
-
-instance Monad Rules where
-    return x = Rules x [] (Map.fromList [])
-    Rules v1 x1 x2 >>= f = case f v1 of
-        Rules v2 y1 y2 -> Rules v2 (x1++y1) (Map.unionWith g x2 y2)
-        where g (k, v1, xs) (_, v2, ys)
+instance Monoid SRules where
+    mempty = SRules [] (Map.fromList [])
+    mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
+        where f (k, v1, xs) (_, v2, ys)
                 | v1 == v2 = (k, v1, xs ++ ys)
                 | otherwise = error $ "There are two incompatible rules for " ++ show k ++ ", producing " ++ show v1 ++ " and " ++ show v2
 
-instance Functor Rules where
-    fmap f x = return . f =<< x
+instance Monoid a => Monoid (Rules a) where
+    mempty = return mempty
+    mappend a b = do a <- a; b <- b; return $ mappend a b
 
 
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
@@ -154,19 +163,19 @@ rule = rulePriority 1
 --   The function 'defaultRule' is priority 0 and 'rule' is priority 1. All rules of the same
 --   priority must be disjoint.
 rulePriority :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
-rulePriority i r = mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
+rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
 -- | Run an action, usually used for specifying top-level requirements.
 action :: Action a -> Rules ()
-action a = mempty{actions=[a >> return ()]}
+action a = newRules mempty{actions=[a >> return ()]}
 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing
 --   command line specification of what to build.
 withoutActions :: Rules () -> Rules ()
-withoutActions x = x{actions=[]}
+withoutActions = modifyRules $ \x -> x{actions=[]}
 
 
 ---------------------------------------------------------------------
@@ -201,6 +210,7 @@ newtype Action a = Action (StateT SAction IO a)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = do
     start <- startTime
+    rs <- return $ getRules rs
     registerWitnesses rs
 
     output <- do
@@ -249,15 +259,15 @@ wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
         throw $ ShakeException stk $ SomeException e
 
 
-registerWitnesses :: Rules () -> IO ()
-registerWitnesses Rules{..} =
+registerWitnesses :: SRules -> IO ()
+registerWitnesses SRules{..} =
     forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
         registerWitness $ ruleKey r
         registerWitness $ ruleValue r
 
 
-createStored :: Maybe Assume -> Rules () -> (Key -> Value -> IO Bool)
-createStored assume Rules{..} = \k v ->
+createStored :: Maybe Assume -> SRules -> (Key -> Value -> IO Bool)
+createStored assume SRules{..} = \k v ->
     let (tk,tv) = (typeKey k, typeValue v) in
     case Map.lookup tk mp of
         Nothing -> error $
@@ -291,8 +301,8 @@ showTypeRepBracket ty = ['(' | not safe] ++ show ty ++ [')' | not safe]
           safe = null args || st1 == "[]" || "(" `isPrefixOf` st1
 
 
-createExecute :: Maybe Assume -> Rules () -> (Key -> Action Value)
-createExecute assume Rules{..} = \k ->
+createExecute :: Maybe Assume -> SRules -> (Key -> Action Value)
+createExecute assume SRules{..} = \k ->
     let tk = typeKey k
         norm = case Map.lookup tk mp of
             Nothing -> error $
