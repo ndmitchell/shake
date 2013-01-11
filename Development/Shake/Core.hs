@@ -18,6 +18,7 @@ module Development.Shake.Core(
     ) where
 
 import Control.Exception as E
+import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State as State
@@ -193,7 +194,7 @@ data S = S
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'need' to execute files.
 --   Action values are used by 'rule' and 'action'.
 newtype Action a = Action (StateT S IO a)
-    deriving (Functor, Monad, MonadIO)
+    deriving (Monad, MonadIO, Functor, Applicative)
 
 
 -- | Internal main function (not exported publicly)

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add Applicative on Action
 0.6
     Make addOracle return a result of askOracle
     Export the class bodies from Classes
