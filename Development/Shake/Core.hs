@@ -187,7 +187,7 @@ data S = S
     ,stack :: Stack
     -- local variables
     ,depends :: [Depends] -- built up in reverse
-    ,discount :: Duration
+    ,discount :: !Duration
     ,traces :: [(String, Time, Time)] -- in reverse
     }
 
