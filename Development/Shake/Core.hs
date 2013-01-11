@@ -21,7 +21,7 @@ import Control.Exception as E
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.State as State
+import Control.Monad.Trans.State.Strict as State
 import Data.Typeable
 import Data.Function
 import Data.List
