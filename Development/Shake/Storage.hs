@@ -139,14 +139,14 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
             lock <- newLock
-            flushThread shakeFlush h $ \out ->
+            flushThread outputErr shakeFlush h $ \out ->
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
 
 -- We avoid calling flush too often on SSD drives, as that can be slow
 -- Do not move writes to a separate thread, as then we'd have to marshal exceptions back which is tricky
-flushThread :: Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
-flushThread flush h act = do
+flushThread :: (String -> IO ()) -> Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
+flushThread outputErr flush h act = do
     alive <- newVar True
     kick <- newEmptyMVar
 
