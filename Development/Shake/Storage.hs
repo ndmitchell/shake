@@ -67,7 +67,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
             unless (LBS.null src) $ do
                 let good x = isAlphaNum x || x `elem` "-_ "
                 let bad = LBS.takeWhile good $ LBS.take 50 src
-                putStr $ unlines
+                outputErr $ unlines
                     ["Error when reading Shake database " ++ dbfile
                     ,"  Invalid version stamp detected"
                     ,"  Expected: " ++ takeWhile good (LBS.unpack ver)
@@ -78,7 +78,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
             -- make sure you are not handling exceptions from inside
             join $ handleJust (\e -> if asyncException e then Nothing else Just e) (\err -> do
                 msg <- showException err
-                putStrLn $ unlines $
+                outputErr $ unlines $
                     ("Error when reading Shake database " ++ dbfile) :
                     map ("  "++) (lines msg) ++
                     ["All files will be rebuilt"]
@@ -117,6 +117,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
                                     logger "Compression complete"
                                     continue h mp
     where
+        outputErr = when (shakeVerbosity >= Quiet) . putStr
         ver = LBS.pack $ databaseVersion shakeVersion
 
         writeChunk h s = do
@@ -164,7 +165,7 @@ flushThread flush h act = do
                     when b loop
             forkIO $ do
                 let msg = "Warning: Flushing Shake journal failed, on abnormal termination you may lose some data, "
-                (loop >> return ()) `E.catch` \(e :: SomeException) -> putStrLn $ msg ++ show e
+                (loop >> return ()) `E.catch` \(e :: SomeException) -> outputErr $ msg ++ show e ++ "\n"
             return ()
 
     lock <- newLock

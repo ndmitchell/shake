@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Change the storage to not write messages on --silent
     Add Applicative on Rules
     Add Applicative on Action
 0.6
