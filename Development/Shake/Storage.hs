@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, PatternGuards, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards, NamedFieldPuns, FlexibleInstances, MultiParamTypeClasses #-}
 {-
 This module stores the meta-data so its very important its always accurate
 We can't rely on getting any exceptions or termination at the end, so we'd better write out a journal
@@ -11,6 +11,7 @@ module Development.Shake.Storage(
 
 import Development.Shake.Binary
 import Development.Shake.Locks
+import Development.Shake.Types
 
 import Control.Arrow
 import Control.Exception as E
@@ -40,17 +41,15 @@ databaseVersion i = "SHAKE-DATABASE-6-" ++ show (i :: Int) ++ "\r\n"
 withStorage
     :: (Eq w, Eq k, Hashable k
        ,Binary w, BinaryWith w k, BinaryWith w v)
-    => (String -> IO ())        -- ^ Logging function
-    -> FilePath                 -- ^ File prefix to use
-    -> Int                      -- ^ User supplied version number
-    -> Maybe Double             -- ^ How often to flush (Nothing = never, Just = seconds)
+    => ShakeOptions             -- ^ Storage options
+    -> (String -> IO ())        -- ^ Logging function
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage logger file version flush witness act = do
-    let dbfile = file <.> "database"
-        bupfile = file <.> "bup"
-    createDirectoryIfMissing True $ takeDirectory file
+withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logger witness act = do
+    let dbfile = shakeFiles <.> "database"
+        bupfile = shakeFiles <.> "bup"
+    createDirectoryIfMissing True $ takeDirectory shakeFiles
 
     -- complete a partially failed compress
     b <- doesFileExist bupfile
@@ -73,7 +72,7 @@ withStorage logger file version flush witness act = do
                     ,"  Invalid version stamp detected"
                     ,"  Expected: " ++ takeWhile good (LBS.unpack ver)
                     ,"  Found   : " ++ LBS.unpack bad
-                    ,"All files will be rebuilt"]
+                    ,"All rules will be rebuilt"]
             continue h Map.empty
          else
             -- make sure you are not handling exceptions from inside
@@ -118,7 +117,7 @@ withStorage logger file version flush witness act = do
                                     logger "Compression complete"
                                     continue h mp
     where
-        ver = LBS.pack $ databaseVersion version
+        ver = LBS.pack $ databaseVersion shakeVersion
 
         writeChunk h s = do
             logger $ "Writing chunk " ++ show (LBS.length s)
@@ -139,7 +138,7 @@ withStorage logger file version flush witness act = do
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
             lock <- newLock
-            flushThread flush h $ \out ->
+            flushThread shakeFlush h $ \out ->
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
 

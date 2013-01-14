@@ -234,7 +234,7 @@ run opts@ShakeOptions{..} rs = do
     let execute = createExecute shakeAssume rs
     running <- newIORef True
     flip finally (writeIORef running False) $ do
-        withDatabase logger shakeFiles shakeVersion shakeFlush $ \database -> do
+        withDatabase opts logger $ \database -> do
             shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
                 let s0 = SAction database pool start stored execute output shakeVerbosity logger shakeAssume emptyStack [] 0 []

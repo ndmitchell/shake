@@ -427,12 +427,12 @@ fromStepResult :: Result -> Step
 fromStepResult = fromValue . result
 
 
-withDatabase :: (String -> IO ()) -> FilePath -> Int -> Maybe Double -> (Database -> IO a) -> IO a
-withDatabase logger filename version flush act = do
+withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
+withDatabase opts logger act = do
     registerWitness $ StepKey ()
     registerWitness $ Step 0
     witness <- currentWitness
-    withStorage logger filename version flush witness $ \mp2 journal -> do
+    withStorage opts logger witness $ \mp2 journal -> do
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
 
         (mp1, stepId) <- case Intern.lookup stepKey mp1 of
