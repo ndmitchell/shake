@@ -119,7 +119,6 @@ instance Binary Witness where
 
 
 instance BinaryWith Witness Value where
-    -- FIXME: Should probably be writing out bytes, rather than 64 bit Int's
     putWith ws (Value x) = do
         let msg = "Internal error, could not find witness type for " ++ show (typeOf x)
         put $ fromMaybe (error msg) $ Map.lookup (typeOf x) (witnessOut ws)
