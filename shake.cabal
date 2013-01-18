@@ -156,6 +156,7 @@ executable shake
         Examples.Test.FilePattern
         Examples.Test.Files
         Examples.Test.Journal
+        Examples.Test.Oracle
         Examples.Test.Pool
         Examples.Test.Random
         Examples.Test.Resources

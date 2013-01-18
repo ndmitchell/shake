@@ -16,6 +16,7 @@ import qualified Examples.Test.Files as Files
 import qualified Examples.Test.FilePath as FilePath
 import qualified Examples.Test.FilePattern as FilePattern
 import qualified Examples.Test.Journal as Journal
+import qualified Examples.Test.Oracle as Oracle
 import qualified Examples.Test.Pool as Pool
 import qualified Examples.Test.Random as Random
 import qualified Examples.Test.Resources as Resources
@@ -28,7 +29,8 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "directory" * Directory.main, "errors" * Errors.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
         ,"journal" * Journal.main, "pool" * Pool.main, "random" * Random.main
-        ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main]
+        ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
+        ,"oracle" * Oracle.main]
     where (*) = (,)
 
 
