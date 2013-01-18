@@ -111,7 +111,6 @@ data Status
     | Missing -- I am only here because I got into the Intern table
       deriving Show
 
--- FIXME: Probably want Step's to be strict and unpacked? Benchmark on a large example
 data Result = Result
     {result :: Value -- the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- when it was actually run
