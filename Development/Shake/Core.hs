@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
 
 {-# LANGUAGE CPP #-}
@@ -185,6 +185,7 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 data RuleInfo = RuleInfo
     {stored :: Key -> IO (Maybe Value)
     ,execute :: Key -> Action Value
+    ,resultType :: TypeRep
     }
 
 data SAction = SAction
@@ -270,7 +271,7 @@ registerWitnesses SRules{..} =
 
 
 createRuleinfo :: Maybe Assume -> SRules -> Map.HashMap TypeRep RuleInfo
-createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,_,rs) -> RuleInfo (stored rs) (execute rs)
+createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
     where
         stored rs = if assume == Just AssumeDirty then const $ return Nothing else storedNorm rs
         storedNorm ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
@@ -320,7 +321,26 @@ runAction s (Action x) = runStateT x s
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
 apply :: Rule key value => [key] -> Action [value]
-apply ks = fmap (map fromValue) $ applyKeyValue $ map newKey ks
+apply = f
+    where
+        -- We don't want the forall in the Haddock docs
+        f :: forall key value . Rule key value => [key] -> Action [value]
+        f ks = do
+            ruleinfo <- Action $ State.gets ruleinfo
+            let tk = typeOf (undefined :: key)
+                tv = typeOf (undefined :: value)
+            case Map.lookup tk ruleinfo of
+                Nothing -> error $
+                    "Error: couldn't find any rules to build type " ++ showTypeRepBracket tk ++
+                    ", perhaps you are missing a call to " ++
+                    (if isOracleType tk then "addOracle" else "defaultRule/rule") ++ "?"
+                Just RuleInfo{resultType=tv2} | tv /= tv2 -> error $
+                    "Error: rule to build type " ++ showTypeRepBracket tk ++
+                    " produces " ++ showTypeRepBracket tv2 ++ " but used as " ++ showTypeRepBracket tv ++
+                    ", perhaps you have the wrong types in a call to " ++
+                    (if isOracleType tk then "askOracle" else "apply") ++ "?"
+                _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
+
 
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue ks = Action $ do
