@@ -101,6 +101,7 @@ data Database = Database
     ,step :: Step
     ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
     ,logger :: String -> IO () -- logging function
+    ,assume :: Maybe Assume
     }
 
 data Status
@@ -180,8 +181,8 @@ data Ops = Ops
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> Maybe Assume -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
-build pool Database{..} Ops{..} assume stack ks = do
+build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
+build pool Database{..} Ops{..} stack ks = do
     join $ withLock lock $ do
         is <- forM ks $ \k -> do
             is <- readIORef intern
@@ -447,7 +448,7 @@ withDatabase opts logger act = do
                         _ -> Step 1
         journal stepId (stepKey, Loaded $ toStepResult step)
         lock <- newLock
-        act Database{..}
+        act Database{assume=shakeAssume opts,..}
 
 
 instance BinaryWith Witness Step where

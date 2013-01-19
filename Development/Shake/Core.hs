@@ -196,7 +196,6 @@ data SAction = SAction
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
     ,logger :: String -> IO ()
-    ,assume :: Maybe Assume
     -- stack variables
     ,stack :: Stack
     -- local variables
@@ -241,7 +240,7 @@ run opts@ShakeOptions{..} rs = do
         withDatabase opts logger $ \database -> do
             shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = SAction database pool start ruleinfo output shakeVerbosity logger shakeAssume emptyStack [] 0 []
+                let s0 = SAction database pool start ruleinfo output shakeVerbosity logger emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database (runStored ruleinfo)
@@ -335,7 +334,7 @@ applyKeyValue ks = Action $ do
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
-    res <- liftIO $ build (pool s) (database s) (Ops (runStored (ruleinfo s)) exec) (assume s) (stack s) ks
+    res <- liftIO $ build (pool s) (database s) (Ops (runStored (ruleinfo s)) exec) (stack s) ks
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
