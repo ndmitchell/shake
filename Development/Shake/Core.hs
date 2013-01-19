@@ -182,13 +182,17 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 ---------------------------------------------------------------------
 -- MAKE
 
+data RuleInfo = RuleInfo
+    {stored :: Key -> IO (Maybe Value)
+    ,execute :: Key -> Action Value
+    }
+
 data SAction = SAction
     -- global constants
     {database :: Database
     ,pool :: Pool
     ,started :: IO Time
-    ,stored :: Key -> IO (Maybe Value)
-    ,execute :: Key -> Action Value
+    ,ruleinfo :: Map.HashMap TypeRep RuleInfo
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
     ,logger :: String -> IO ()
@@ -231,17 +235,16 @@ run opts@ShakeOptions{..} rs = do
                     when (shakeVerbosity >= Quiet) $ output msg
                 Right _ -> return ()
 
-    let stored = createStored shakeAssume rs
-    let execute = createExecute shakeAssume rs
+    let ruleinfo = createRuleinfo shakeAssume rs
     running <- newIORef True
     flip finally (writeIORef running False) $ do
         withDatabase opts logger $ \database -> do
             shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = SAction database pool start stored execute output shakeVerbosity logger shakeAssume emptyStack [] 0 []
+                let s0 = SAction database pool start ruleinfo output shakeVerbosity logger shakeAssume emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
-                checkValid database stored
+                checkValid database (runStored ruleinfo)
                 when (shakeVerbosity >= Loud) $ output "Lint checking succeeded"
             when (isJust shakeReport) $ do
                 let file = fromJust shakeReport
@@ -267,18 +270,37 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 
-createStored :: Maybe Assume -> SRules -> (Key -> IO (Maybe Value))
-createStored assume SRules{..} = \k ->
-    case Map.lookup (typeKey k) mp of
-        Nothing -> return Nothing
-        Just r -> r k
+createRuleinfo :: Maybe Assume -> SRules -> Map.HashMap TypeRep RuleInfo
+createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,_,rs) -> RuleInfo (stored rs) (execute rs)
     where
-        mp = flip Map.map rules $ \(_,_,(_,ARule r):_) -> fmap (fmap newValue) . ruleStored r . fromKey
+        stored rs = if assume == Just AssumeDirty then const $ return Nothing else storedNorm rs
+        storedNorm ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
+            where f :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
+                  f _ = storedValue
 
-        -- NOTE: We change the storedValue type so that we always pass in both key and value, rather than having
-        --       value as a return param. That allows us to give better error messages (see createStored)
-        ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
-        ruleStored _ = if assume == Just AssumeDirty then const (return Nothing) else storedValue
+        execute rs = if assume /= Just AssumeClean then exec else \k -> do res <- liftIO $ store k; maybe (exec k) return res 
+            where exec = executeNorm rs; store = storedNorm rs
+        executeNorm rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
+               [r]:_ -> r
+               rs -> let s = if null rs then "no" else show (length $ head rs)
+                     in error $ "Error: " ++ s ++ " rules match for Rule " ++ show k ++ " of type " ++ show (typeKey k)
+            where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 
+
+        sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
+        sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
+
+runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
+runStored mp k = case Map.lookup (typeKey k) mp of
+    Nothing -> return Nothing
+    Just v -> stored v k
+
+runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
+runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
+    Nothing -> error $
+        "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ showTypeRepBracket tk ++
+        ", perhaps you are missing a call to " ++
+        (if isOracleType tk then "addOracle" else "defaultRule/rule") ++ "?"
+    Just v -> execute v k
 
 
 isOracleType :: TypeRep -> Bool
@@ -290,35 +312,6 @@ showTypeRepBracket ty = ['(' | not safe] ++ show ty ++ [')' | not safe]
     where (t1,args) = splitTyConApp ty
           st1 = show t1
           safe = null args || st1 == "[]" || "(" `isPrefixOf` st1
-
-
-createExecute :: Maybe Assume -> SRules -> (Key -> Action Value)
-createExecute assume SRules{..} = \k ->
-    let tk = typeKey k
-        norm = case Map.lookup tk mp of
-            Nothing -> error $
-                "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ showTypeRepBracket tk ++
-                ", perhaps you are missing a call to " ++
-                (if isOracleType tk then "addOracle" else "defaultRule/rule") ++ "?"
-            Just rs -> case filter (not . null) $ map (mapMaybe ($ k)) rs of
-               [r]:_ -> r
-               rs ->
-                  let s = if null rs then "no" else show (length $ head rs)
-                  in error $ "Error: " ++ s ++ " rules match for Rule " ++ show k ++ " of type " ++ show tk
-        clean = case Map.lookup tk mpClean of
-            Nothing -> norm -- should reraise an error
-            Just stored -> do res <- liftIO $ stored k; maybe norm return res
-    in if assume == Just AssumeClean then clean else norm
-    where
-        mp = flip Map.map rules $ \(_,_,rs) -> sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs]
-
-        sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
-        sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
-
-        mpClean = flip Map.map rules $ \(_,_,(_,ARule r):_) -> \k -> fmap (fmap newValue) $ ruleStored r $ fromKey k
-
-        ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
-        ruleStored _ = storedValue
 
 
 runAction :: SAction -> Action a -> IO (a, SAction)
@@ -338,11 +331,11 @@ applyKeyValue ks = Action $ do
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putNormal $ "# " ++ show k
-                execute s k
+                runExecute (ruleinfo s) k
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
-    res <- liftIO $ build (pool s) (database s) (Ops (stored s) exec) (assume s) (stack s) ks
+    res <- liftIO $ build (pool s) (database s) (Ops (runStored (ruleinfo s)) exec) (assume s) (stack s) ks
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
