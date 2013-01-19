@@ -39,6 +39,7 @@ import Development.Shake.Locks
 import Development.Shake.Value
 import Development.Shake.Report
 import Development.Shake.Types
+import Development.Shake.Errors
 
 
 ---------------------------------------------------------------------
