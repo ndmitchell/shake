@@ -62,7 +62,7 @@ test build obj = do
 
     build ["+str-int","*str-int"]
     errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
-        "types wrong in your call to apply" -- FIXME: Should pass
+        "bad cast" -- FIXME: Should pass
 
     errors ["+str-int","+str-bool"] -- Two Oracles with the same question type
         "two incompatible rules"

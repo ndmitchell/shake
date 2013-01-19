@@ -172,7 +172,7 @@ newtype Depends = Depends {fromDepends :: [Id]}
     deriving (NFData)
 
 data Ops = Ops
-    {valid :: Key -> Value -> IO Bool
+    {valid :: Key -> IO (Maybe Value)
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
     ,exec :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
@@ -240,7 +240,7 @@ build pool Database{..} Ops{..} assume stack ks = do
                 Nothing -> error $ "Shake internal error: interned value " ++ show i ++ " is missing from the database"
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
-                    b <- valid k $ result r
+                    b <- fmap (== Just (result r)) $ valid k
                     logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     if not b then run stack i k $ Just r else check stack i k r (depends r)
                 Just (k, res) -> return res
@@ -389,13 +389,13 @@ showJSON Database{..} = do
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 
 
-checkValid :: Database -> (Key -> Value -> IO Bool) -> IO ()
+checkValid :: Database -> (Key -> IO (Maybe Value)) -> IO ()
 checkValid Database{..} valid = do
     status <- readIORef status
     logger "Starting validity/lint checking"
     bad <- fmap concat $ forM (Map.toList status) $ \(i,v) -> case v of
         (key, Ready Result{..}) -> do
-            good <- valid key result
+            good <- fmap (== Just result) $ valid key
             logger $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return [show key ++ " is no longer " ++ show result | not good && not (special key)]
         _ -> return []

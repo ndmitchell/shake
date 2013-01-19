@@ -186,7 +186,7 @@ data SAction = SAction
     {database :: Database
     ,pool :: Pool
     ,started :: IO Time
-    ,stored :: Key -> Value -> IO Bool
+    ,stored :: Key -> IO (Maybe Value)
     ,execute :: Key -> Action Value
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
@@ -266,33 +266,23 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 
-createStored :: Maybe Assume -> SRules -> (Key -> Value -> IO Bool)
-createStored assume SRules{..} = \k v ->
-    let (tk,tv) = (typeKey k, typeValue v) in
-    case Map.lookup tk mp of
-        Nothing -> error $
-            "Error: couldn't find instance Rule " ++ showTypeRepBracket tk ++ " " ++ showTypeRepBracket tv ++
-            ", perhaps you are missing a call to " ++
-            (if isOracleTypes tk tv then "addOracle" else "defaultRule/rule") ++ "?"
-        Just (tv2,_) | tv2 /= tv -> error $
-            "Error: couldn't find instance Rule " ++ show tk ++ " " ++ show tv ++
-            ", but did find an instance Rule " ++ show tk ++ " " ++ show tv2 ++
-            ", perhaps you have the types wrong in your call to apply?"
-        Just (_, r) -> r k v
+createStored :: Maybe Assume -> SRules -> (Key -> IO (Maybe Value))
+createStored assume SRules{..} = \k ->
+    case Map.lookup (typeKey k) mp of
+        Nothing -> return Nothing
+        Just r -> r k
     where
-        mp = flip Map.map rules $ \(_,v,(_,ARule r):_) -> (v, \kx vx -> ruleStored r (fromKey kx) (fromValue vx))
+        mp = flip Map.map rules $ \(_,_,(_,ARule r):_) -> fmap (fmap newValue) . ruleStored r . fromKey
 
         -- NOTE: We change the storedValue type so that we always pass in both key and value, rather than having
         --       value as a return param. That allows us to give better error messages (see createStored)
-        ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> value -> IO Bool)
-        ruleStored _ = if assume == Just AssumeDirty
-                       then \k v -> return False
-                       else \k v -> fmap (== Just v) $ storedValue k
+        ruleStored :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
+        ruleStored _ = if assume == Just AssumeDirty then const (return Nothing) else storedValue
 
 
-isOracleTypes :: TypeRep -> TypeRep -> Bool
-isOracleTypes tk tv = f tk "OracleQ" && f tv "OracleA"
-    where f t s = show (fst $ splitTyConApp t) == s
+isOracleType :: TypeRep -> Bool
+isOracleType t = con `elem` ["OracleQ","OracleA"]
+    where con = show $ fst $ splitTyConApp t
 
 showTypeRepBracket :: TypeRep -> String
 showTypeRepBracket ty = ['(' | not safe] ++ show ty ++ [')' | not safe]
@@ -306,8 +296,9 @@ createExecute assume SRules{..} = \k ->
     let tk = typeKey k
         norm = case Map.lookup tk mp of
             Nothing -> error $
-                "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ show tk ++
-                ", perhaps you are missing a call to defaultRule/rule?"
+                "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ showTypeRepBracket tk ++
+                ", perhaps you are missing a call to " ++
+                (if isOracleType tk then "addOracle" else "defaultRule/rule") ++ "?"
             Just rs -> case filter (not . null) $ map (mapMaybe ($ k)) rs of
                [r]:_ -> r
                rs ->
