@@ -343,8 +343,8 @@ apply = f
 
 
 applyKeyValue :: [Key] -> Action [Value]
-applyKeyValue ks = Action $ do
-    s <- State.get
+applyKeyValue ks = do
+    s <- Action State.get
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
@@ -358,7 +358,7 @@ applyKeyValue ks = Action $ do
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
-            State.modify $ \s -> s{discount=discount s + dur, depends=dep : depends s}
+            Action $ State.modify $ \s -> s{discount=discount s + dur, depends=dep : depends s}
             return vs
 
 
@@ -372,18 +372,18 @@ apply1 = fmap head . apply . return
 --   The 'Develoment.Shake.system'' command automatically calls 'traced'. The trace list is used for profile reports
 --   (see 'shakeReport').
 traced :: String -> IO a -> Action a
-traced msg act = Action $ do
-    s <- State.get
+traced msg act = do
+    s <- Action State.get
     start <- liftIO $ started s
     res <- liftIO act
     stop <- liftIO $ started s
-    State.modify $ \s -> s{traces = (BS.pack msg,start,stop):traces s}
+    Action $ State.modify $ \s -> s{traces = (BS.pack msg,start,stop):traces s}
     return res
 
 
 putWhen :: (Verbosity -> Bool) -> String -> Action ()
-putWhen f msg = Action $ do
-    s <- State.get
+putWhen f msg = do
+    s <- Action State.get
     when (f $ verbosity s) $
         liftIO $ output s msg
 
@@ -407,8 +407,8 @@ getVerbosity = Action $ gets verbosity
 
 -- | Run an action which uses part of a finite resource. For an example see 'Resource'.
 withResource :: Resource -> Int -> Action a -> Action a
-withResource r i act = Action $ do
-    s <- State.get
+withResource r i act = do
+    s <- Action State.get
     (res,s) <- liftIO $ bracket_
         (do res <- acquireResource r i
             case res of
@@ -420,5 +420,5 @@ withResource r i act = Action $ do
         (do releaseResource r i
             logger s $ show r ++ " released " ++ show i)
         (runAction s act)
-    State.put s
+    Action $ State.put s
     return res
