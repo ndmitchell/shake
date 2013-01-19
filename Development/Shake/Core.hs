@@ -27,6 +27,7 @@ import Data.Typeable
 import Data.Function
 import Data.List
 import qualified Data.HashMap.Strict as Map
+import qualified Data.ByteString.Char8 as BS
 import Data.Maybe
 import Data.Monoid
 import Data.IORef
@@ -364,7 +365,7 @@ traced msg act = Action $ do
     start <- liftIO $ started s
     res <- liftIO act
     stop <- liftIO $ started s
-    State.modify $ \s -> s{traces = (msg,start,stop):traces s}
+    State.modify $ \s -> s{traces = (BS.pack msg,start,stop):traces s}
     return res
 
 

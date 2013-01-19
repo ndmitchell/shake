@@ -24,6 +24,7 @@ import Control.Exception
 import Control.Monad
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
+import qualified Data.ByteString as BS
 import Data.IORef
 import Data.Maybe
 import Data.List
@@ -90,8 +91,7 @@ emptyStack = Stack []
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
-type Trace = (String, Time, Time)
-
+type Trace = (BS.ByteString, Time, Time) -- (message, start, end)
 
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
@@ -384,7 +384,7 @@ showJSON Database{..} = do
                      ,"execution:" ++ show execution] ++
                      ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | traces /= []]
                 showStep i = show $ fromJust $ Map.lookup i steps
-                showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show a ++ "}"
+                showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show (BS.unpack a) ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 

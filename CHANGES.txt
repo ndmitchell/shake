@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    IMPORTANT: Incompatible on disk format change
     Change the storage to not write messages on --silent
     Add Applicative on Rules
     Add Applicative on Action
