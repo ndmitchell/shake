@@ -197,7 +197,7 @@ data SAction = SAction
     -- local variables
     ,depends :: [Depends] -- built up in reverse
     ,discount :: !Duration
-    ,traces :: [(String, Time, Time)] -- in reverse
+    ,traces :: [Trace] -- in reverse
     }
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'need' to execute files.
