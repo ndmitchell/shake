@@ -15,6 +15,7 @@ import Development.Shake.Classes
 import Development.Shake.Binary
 import Development.Shake.Pool
 import Development.Shake.Value
+import Development.Shake.Errors
 import Development.Shake.Locks
 import Development.Shake.Storage
 import Development.Shake.Types
@@ -196,7 +197,7 @@ build pool Database{..} Ops{..} stack ks = do
 
         whenJust (checkStack is stack) $ \bad -> do
             status <- readIORef status
-            error $ "Invalid rules, recursion detected when trying to build: " ++ maybe "<unknown>" (show . fst) (Map.lookup bad status)
+            errorRuleRecursion $ fmap fst $ Map.lookup bad status
 
         vs <- mapM (reduce stack) is
         let errs = [e | Error e <- vs]

@@ -142,7 +142,7 @@ instance Monoid SRules where
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
         where f (k, v1, xs) (_, v2, ys)
                 | v1 == v2 = (k, v1, xs ++ ys)
-                | otherwise = error $ "There are two incompatible rules for " ++ show k ++ ", producing " ++ show v1 ++ " and " ++ show v2
+                | otherwise = errorIncompatibleRules k v1 v2
 
 instance Monoid a => Monoid (Rules a) where
     mempty = return mempty
@@ -283,8 +283,7 @@ createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (
             where exec = executeNorm rs; store = storedNorm rs
         executeNorm rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
-               rs -> let s = if null rs then "no" else show (length $ head rs)
-                     in error $ "Error: " ++ s ++ " rules match for Rule " ++ show k ++ " of type " ++ show (typeKey k)
+               rs -> errorMultipleRulesMatch k (length rs)
             where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
@@ -297,22 +296,8 @@ runStored mp k = case Map.lookup (typeKey k) mp of
 
 runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> error $
-        "Error: couldn't find any rules to build " ++ show k ++ " of type " ++ showTypeRepBracket tk ++
-        ", perhaps you are missing a call to " ++
-        (if isOracleType tk then "addOracle" else "defaultRule/rule") ++ "?"
+    Nothing -> errorNoRuleToBuildType tk (Just k) Nothing
     Just v -> execute v k
-
-
-isOracleType :: TypeRep -> Bool
-isOracleType t = con `elem` ["OracleQ","OracleA"]
-    where con = show $ fst $ splitTyConApp t
-
-showTypeRepBracket :: TypeRep -> String
-showTypeRepBracket ty = ['(' | not safe] ++ show ty ++ [')' | not safe]
-    where (t1,args) = splitTyConApp ty
-          st1 = show t1
-          safe = null args || st1 == "[]" || "(" `isPrefixOf` st1
 
 
 runAction :: SAction -> Action a -> IO (a, SAction)
@@ -331,15 +316,8 @@ apply = f
             let tk = typeOf (undefined :: key)
                 tv = typeOf (undefined :: value)
             case Map.lookup tk ruleinfo of
-                Nothing -> error $
-                    "Error: couldn't find any rules to build type " ++ showTypeRepBracket tk ++
-                    ", perhaps you are missing a call to " ++
-                    (if isOracleType tk then "addOracle" else "defaultRule/rule") ++ "?"
-                Just RuleInfo{resultType=tv2} | tv /= tv2 -> error $
-                    "Error: rule to build type " ++ showTypeRepBracket tk ++
-                    " produces " ++ showTypeRepBracket tv2 ++ " but used as " ++ showTypeRepBracket tv ++
-                    ", perhaps you have the wrong types in a call to " ++
-                    (if isOracleType tk then "askOracle" else "apply") ++ "?"
+                Nothing -> errorNoRuleToBuildType tk (fmap newKey $ listToMaybe ks) (Just tv)
+                Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap newKey $ listToMaybe ks) tv tv2
                 _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
