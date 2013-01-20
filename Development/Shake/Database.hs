@@ -174,9 +174,9 @@ newtype Depends = Depends {fromDepends :: [Id]}
     deriving (NFData)
 
 data Ops = Ops
-    {valid :: Key -> IO (Maybe Value)
+    {stored :: Key -> IO (Maybe Value)
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
-    ,exec :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
+    ,execute :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     }
 
@@ -242,7 +242,7 @@ build pool Database{..} Ops{..} stack ks = do
                 Nothing -> error $ "Shake internal error: interned value " ++ show i ++ " is missing from the database"
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
-                    b <- if assume == Just AssumeDirty then return False else fmap (== Just (result r)) $ valid k
+                    b <- if assume == Just AssumeDirty then return False else fmap (== Just (result r)) $ stored k
                     logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     if not b then run stack i k $ Just r else check stack i k r (depends r)
                 Just (k, res) -> return res
@@ -252,7 +252,7 @@ build pool Database{..} Ops{..} stack ks = do
             w <- newWaiting r
             addPool pool $ do
                 let norm = do
-                        res <- exec (addStack i stack) k
+                        res <- execute (addStack i stack) k
                         return $ case res of
                             Left err -> Error err
                             Right (v,deps,execution,traces) ->
@@ -261,7 +261,7 @@ build pool Database{..} Ops{..} stack ks = do
                                 in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
                 res <- case r of
                     Just r | assume == Just AssumeClean -> do
-                        v <- valid k
+                        v <- stored k
                         case v of
                             Just v -> return $ Ready r{result=v}
                             Nothing -> norm
@@ -400,12 +400,12 @@ showJSON Database{..} = do
 
 
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> IO ()
-checkValid Database{..} valid = do
+checkValid Database{..} stored = do
     status <- readIORef status
     logger "Starting validity/lint checking"
     bad <- fmap concat $ forM (Map.toList status) $ \(i,v) -> case v of
         (key, Ready Result{..}) -> do
-            good <- fmap (== Just result) $ valid key
+            good <- fmap (== Just result) $ stored key
             logger $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return [show key ++ " is no longer " ++ show result | not good && not (special key)]
         _ -> return []

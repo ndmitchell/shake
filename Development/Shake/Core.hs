@@ -289,12 +289,12 @@ createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
-    Just v -> stored v k
+    Just RuleInfo{..} -> stored k
 
 runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
     Nothing -> errorNoRuleToBuildType tk (Just k) Nothing -- Not sure if this is even possible, but best be safe
-    Just v -> execute v k
+    Just RuleInfo{..} -> execute k
 
 
 runAction :: SAction -> Action a -> IO (a, SAction)
