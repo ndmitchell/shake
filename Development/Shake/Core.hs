@@ -293,7 +293,7 @@ runStored mp k = case Map.lookup (typeKey k) mp of
 
 runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> errorNoRuleToBuildType tk (Just k) Nothing
+    Nothing -> errorNoRuleToBuildType tk (Just k) Nothing -- Not sure if this is even possible, but best be safe
     Just v -> execute v k
 
 
