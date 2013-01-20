@@ -274,14 +274,11 @@ registerWitnesses SRules{..} =
 createRuleinfo :: Maybe Assume -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
     where
-        stored rs = if assume == Just AssumeDirty then const $ return Nothing else storedNorm rs
-        storedNorm ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
+        stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
                   f _ = storedValue
 
-        execute rs = if assume /= Just AssumeClean then exec else \k -> do res <- liftIO $ store k; maybe (exec k) return res 
-            where exec = executeNorm rs; store = storedNorm rs
-        executeNorm rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
+        execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
                rs -> errorMultipleRulesMatch k (length rs)
             where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 

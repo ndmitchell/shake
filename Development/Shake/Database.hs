@@ -242,7 +242,7 @@ build pool Database{..} Ops{..} stack ks = do
                 Nothing -> error $ "Shake internal error: interned value " ++ show i ++ " is missing from the database"
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
-                    b <- fmap (== Just (result r)) $ valid k
+                    b <- if assume == Just AssumeDirty then return False else fmap (== Just (result r)) $ valid k
                     logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     if not b then run stack i k $ Just r else check stack i k r (depends r)
                 Just (k, res) -> return res
@@ -251,16 +251,24 @@ build pool Database{..} Ops{..} stack ks = do
         run stack i k r = do
             w <- newWaiting r
             addPool pool $ do
-                res <- exec (addStack i stack) k
+                let norm = do
+                        res <- exec (addStack i stack) k
+                        return $ case res of
+                            Left err -> Error err
+                            Right (v,deps,execution,traces) ->
+                                let c | Just r <- r, result r == v = changed r
+                                      | otherwise = step
+                                in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
+                res <- case r of
+                    Just r | assume == Just AssumeClean -> do
+                        v <- valid k
+                        case v of
+                            Just v -> return $ Ready r{result=v}
+                            Nothing -> norm
+                    _ -> norm
+
                 ans <- withLock lock $ do
-                    ans <- i #= (k, case res of
-                        Left err -> Error err
-                        Right (v,deps,execution,traces) ->
-                            case assume of
-                                Just AssumeClean | Just r <- r -> Ready r{result=v}
-                                _ -> let c | Just r <- r, result r == v = changed r
-                                           | otherwise = step
-                                     in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..})
+                    ans <- i #= (k, res)
                     runWaiting w
                     return ans
                 case ans of
