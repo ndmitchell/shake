@@ -193,7 +193,7 @@ data SAction = SAction
     -- global constants
     {database :: Database
     ,pool :: Pool
-    ,started :: IO Time
+    ,timestamp :: IO Time
     ,ruleinfo :: Map.HashMap TypeRep RuleInfo
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
@@ -350,10 +350,10 @@ apply1 = fmap head . apply . return
 traced :: String -> IO a -> Action a
 traced msg act = do
     s <- Action State.get
-    start <- liftIO $ started s
+    start <- liftIO $ timestamp s
     putNormal $ "# " ++ topStack (stack s) ++ " " ++ msg
     res <- liftIO act
-    stop <- liftIO $ started s
+    stop <- liftIO $ timestamp s
     Action $ State.modify $ \s -> s{traces = (BS.pack msg,start,stop):traces s}
     return res
 
