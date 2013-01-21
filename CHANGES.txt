@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a new Progress module for sensible progress messages
     Spawn shakeProgress on a separate thread, a safer default
     Improve the runtime error messages
     Add a quietly function, to hide traced commands

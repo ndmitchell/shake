@@ -74,19 +74,10 @@ flagList = let (*) = (,) in
     ,"staunch" * \o -> o{shakeStaunch=True}
     ,"deterministic" * \o -> o{shakeDeterministic=True}
     ,"lint" * \o -> o{shakeLint=True}
-    ,"stats" * \o -> o{shakeProgress=showProgress}
+    ,"progress" * \o -> o{shakeProgress=progressSimple}
     ,"assume-clean" * \o -> o{shakeAssume=Just AssumeClean}
     ,"assume-dirty" * \o -> o{shakeAssume=Just AssumeDirty}
     ]
-
-showProgress s = forkIO loop >> return ()
-    where loop = do
-            res <- s
-            when (isRunning res) $ do
-                let (s,c) = timeTodo res
-                putStrLn $ "PROGRESS: timeTodo = " ++ show (ceiling s) ++ "s (+ " ++ show c ++ " unknown)"
-                sleep 5
-                loop
 
 
 unobj :: FilePath -> FilePath

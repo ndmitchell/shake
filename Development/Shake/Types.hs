@@ -75,8 +75,9 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'Nothing'. Assume all build objects are clean/dirty, see 'Assume' for details.
         --   Can be used to implement @make --touch@.
     ,shakeProgress :: IO Progress -> IO ()
-        -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported,
-        --   see 'Progress' for details. This function will be called on its own thread.
+        -- ^ Defaults to no action. A function called on a separate thread when the build starts, allowing progress to be reported.
+        --   For applications that want to display progress messages, 'progressSimple' is often sufficient, but more advanced
+        --   users should look at "Development.Shake.Progress" and the 'Progress' data type.
     }
     deriving Typeable
 

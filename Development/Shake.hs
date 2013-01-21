@@ -66,7 +66,7 @@
 module Development.Shake(
     shake,
     -- * Core of Shake
-    ShakeOptions(..), shakeOptions, Assume(..), Progress(..),
+    ShakeOptions(..), shakeOptions, Assume(..), progressSimple,
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
@@ -96,6 +96,7 @@ import Control.Monad.IO.Class
 import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Derived
+import Development.Shake.Progress
 
 import Development.Shake.Directory
 import Development.Shake.File
