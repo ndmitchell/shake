@@ -7,7 +7,7 @@ module Development.Shake.Database(
     Database, withDatabase,
     Ops(..), build, Depends,
     progress,
-    Stack, emptyStack, showStack,
+    Stack, emptyStack, showStack, topStack,
     showJSON, checkValid,
     ) where
 
@@ -70,23 +70,26 @@ whenJust Nothing f = return ()
 ---------------------------------------------------------------------
 -- CALL STACK
 
-newtype Stack = Stack [Id]
+data Stack = Stack (Maybe Key) [Id]
 
 showStack :: Database -> Stack -> IO [String]
-showStack Database{..} (Stack xs) = do
+showStack Database{..} (Stack _ xs) = do
     status <- withLock lock $ readIORef status
     return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) xs
 
-addStack :: Id -> Stack -> Stack
-addStack x (Stack xs) = Stack $ x : xs
+addStack :: Id -> Key -> Stack -> Stack
+addStack x key (Stack _ xs) = Stack (Just key) $ x : xs
+
+topStack :: Stack -> String
+topStack (Stack key _) = maybe "<unknown>" show key
 
 checkStack :: [Id] -> Stack -> Maybe Id
-checkStack new (Stack old)
+checkStack new (Stack _ old)
     | bad:_ <- old `intersect` new = Just bad
     | otherwise = Nothing
 
 emptyStack :: Stack
-emptyStack = Stack []
+emptyStack = Stack Nothing []
 
 
 ---------------------------------------------------------------------
@@ -252,7 +255,7 @@ build pool Database{..} Ops{..} stack ks = do
             w <- newWaiting r
             addPool pool $ do
                 let norm = do
-                        res <- execute (addStack i stack) k
+                        res <- execute (addStack i k stack) k
                         return $ case res of
                             Left err -> Error err
                             Right (v,deps,execution,traces) ->
@@ -285,7 +288,7 @@ build pool Database{..} Ops{..} stack ks = do
         check stack i k r [] =
             i #= (k, Ready r)
         check stack i k r (ds:rest) = do
-            vs <- mapM (reduce (addStack i stack)) ds
+            vs <- mapM (reduce (addStack i k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
                 run stack i k $ Just r

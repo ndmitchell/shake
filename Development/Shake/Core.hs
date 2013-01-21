@@ -325,7 +325,7 @@ applyKeyValue ks = do
             evaluate $ rnf k
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
             (dur,(res,s2)) <- duration $ runAction s2 $ do
-                putNormal $ "# " ++ show k
+                putLoud $ "# " ++ show k
                 runExecute (ruleinfo s) k
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
@@ -351,6 +351,7 @@ traced :: String -> IO a -> Action a
 traced msg act = do
     s <- Action State.get
     start <- liftIO $ started s
+    putNormal $ "# " ++ topStack (stack s) ++ " " ++ msg
     res <- liftIO act
     stop <- liftIO $ started s
     Action $ State.modify $ \s -> s{traces = (BS.pack msg,start,stop):traces s}
