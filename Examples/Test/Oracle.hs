@@ -52,7 +52,7 @@ test build obj = do
                 Left (msg :: SomeException)
                     | err `isInfixOf` show msg -> return ()
                     | otherwise -> error $ "Bad error message, wanted: " ++ err ++ ", got: " ++ show msg
-    
+
     build ["+str-int","*str-int"]
     errors ["*str-int"] -- Building with an an Oracle that has been removed
         "missing a call to addOracle"
@@ -62,10 +62,17 @@ test build obj = do
 
     build ["+str-int","*str-int"]
     errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
-        "wrong types in a call to askOracle"
+        "askOracle is used at the wrong type"
 
     errors ["+str-int","+str-bool"] -- Two Oracles with the same question type
-        "two incompatible rules"
+        "Only one call to addOracle is allowed"
 
     errors ["+str-int","*str-bool"] -- Using an Oracle at the wrong answer type
-        "wrong types in a call to askOracle"
+        "askOracle is used at the wrong type"
+
+    build ["+str-int","+str-int"] -- Two Oracles work if they aren't used
+    errors ["+str-int","+str-int","*str-int"] -- Two Oracles fail if they are used
+        "Only one call to addOracle is allowed"
+
+    errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
+        "Only one call to addOracle is allowed"

@@ -280,7 +280,7 @@ createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
-               rs -> errorMultipleRulesMatch k (length rs)
+               rs -> errorMultipleRulesMatch (typeKey k) (show k) (length rs)
             where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
@@ -293,7 +293,7 @@ runStored mp k = case Map.lookup (typeKey k) mp of
 
 runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> errorNoRuleToBuildType tk (Just k) Nothing -- Not sure if this is even possible, but best be safe
+    Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing -- Not sure if this is even possible, but best be safe
     Just RuleInfo{..} -> execute k
 
 
@@ -313,8 +313,8 @@ apply = f
             let tk = typeOf (err "apply key" :: key)
                 tv = typeOf (err "apply type" :: value)
             case Map.lookup tk ruleinfo of
-                Nothing -> errorNoRuleToBuildType tk (fmap newKey $ listToMaybe ks) (Just tv)
-                Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap newKey $ listToMaybe ks) tv tv2
+                Nothing -> errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
+                Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
                 _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 

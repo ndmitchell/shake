@@ -200,7 +200,9 @@ build pool Database{..} Ops{..} stack ks = do
 
         whenJust (checkStack is stack) $ \bad -> do
             status <- readIORef status
-            errorRuleRecursion $ fmap fst $ Map.lookup bad status
+            uncurry errorRuleRecursion $ case Map.lookup bad status of
+                Nothing -> (Nothing, Nothing)
+                Just (k,_) -> (Just $ typeKey k, Just $ show k)
 
         vs <- mapM (reduce stack) is
         let errs = [e | Error e <- vs]

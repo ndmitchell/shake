@@ -11,6 +11,7 @@ module Development.Shake.Value(
 
 import Development.Shake.Binary
 import Development.Shake.Classes
+import Development.Shake.Errors
 import Data.Typeable
 
 import Data.Bits
@@ -20,10 +21,6 @@ import Data.List
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
 import System.IO.Unsafe
-
--- Can't live in Errors, since then we form a cycle
-err :: String -> a
-err msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
 
 
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
