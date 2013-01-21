@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
-{-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
 
 module Development.Shake.FileTime(
     FileTime,
