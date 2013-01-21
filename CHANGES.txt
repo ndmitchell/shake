@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a quietly function, to hide traced commands
     Print main status messages when running a traced command
     Display the exit code when a system command fails
     Fix AssumeClean when the result exists but has never been built

@@ -13,7 +13,7 @@ module Development.Shake.Core(
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
-    getVerbosity, putLoud, putNormal, putQuiet,
+    getVerbosity, putLoud, putNormal, putQuiet, quietly,
     Resource, newResource, withResource
     ) where
 
@@ -380,6 +380,21 @@ putQuiet = putWhen (>= Quiet)
 --   not interleaved.
 getVerbosity :: Action Verbosity
 getVerbosity = Action $ gets verbosity
+
+-- | Run an action with a particular verbosity level.
+withVerbosity :: Verbosity -> Action a -> Action a
+withVerbosity new act = do
+    old <- Action $ State.gets verbosity
+    Action $ State.modify $ \s -> s{verbosity=new}
+    res <- act
+    Action $ State.modify $ \s -> s{verbosity=old}
+    return res
+
+
+-- | Run an action with 'Quiet' verbosity, in particular messages produced by 'traced'
+--   (including from 'Development.Shake.system'') will not be printed to the screen.
+quietly :: Action a -> Action a
+quietly = withVerbosity Quiet
 
 
 -- | Run an action which uses part of a finite resource. For an example see 'Resource'.

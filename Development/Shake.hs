@@ -72,7 +72,7 @@ module Development.Shake(
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
-    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet,
+    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
     liftIO,
     -- * Utility functions
     module Development.Shake.Derived,
