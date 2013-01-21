@@ -76,7 +76,7 @@ data ShakeOptions = ShakeOptions
         --   Can be used to implement @make --touch@.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported,
-        --   see 'Progress' for details.
+        --   see 'Progress' for details. This function will be called on its own thread.
     }
     deriving Typeable
 

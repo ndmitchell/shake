@@ -19,6 +19,7 @@ module Development.Shake.Core(
 
 import Control.Exception as E
 import Control.Applicative
+import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
@@ -240,7 +241,7 @@ run opts@ShakeOptions{..} rs = do
     running <- newIORef True
     flip finally (writeIORef running False) $ do
         withDatabase opts logger $ \database -> do
-            shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
+            forkIO $ shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
                 let s0 = SAction database pool start ruleinfo output shakeVerbosity logger emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)

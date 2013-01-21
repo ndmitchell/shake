@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Spawn shakeProgress on a separate thread, a safer default
     Improve the runtime error messages
     Add a quietly function, to hide traced commands
     Print main status messages when running a traced command
