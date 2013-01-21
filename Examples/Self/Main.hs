@@ -25,7 +25,7 @@ main = shaken noTest $ \args obj -> do
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
 
     ghcPkg <- addOracle $ \GhcPkg{} -> do
-        (out,_) <- systemOutput "ghc-pkg" ["list","--simple-output"]
+        (out,_) <- quietly $ systemOutput "ghc-pkg" ["list","--simple-output"]
         return $ words out
 
     ghcFlags <- addOracle $ \GhcFlags{} -> do
