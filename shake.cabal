@@ -93,6 +93,7 @@ library
         Development.Shake
         Development.Shake.Classes
         Development.Shake.FilePath
+        Development.Shake.Progress
 
     other-modules:
         Development.Shake.Binary
