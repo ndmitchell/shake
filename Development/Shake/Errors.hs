@@ -4,7 +4,8 @@
 module Development.Shake.Errors(
     ShakeException(..),
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
-    errorMultipleRulesMatch, errorRuleRecursion
+    errorMultipleRulesMatch, errorRuleRecursion,
+    err
     ) where
 
 import Control.Exception
@@ -12,6 +13,9 @@ import Data.Typeable
 import Data.List
 import Development.Shake.Value
 
+
+err :: String -> a
+err msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
 
 errorNoRuleToBuildType :: TypeRep -> Maybe Key -> Maybe TypeRep -> a
 errorNoRuleToBuildType tk _ _ = error $

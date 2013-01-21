@@ -111,10 +111,10 @@ instance Monoid (Observed a) where
 data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
 
 ruleKey :: Rule key value => (key -> Maybe (Action value)) -> key
-ruleKey = undefined
+ruleKey = err "ruleKey"
 
 ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
-ruleValue = undefined
+ruleValue = err "ruleValue"
 
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
@@ -310,8 +310,8 @@ apply = f
         f :: forall key value . Rule key value => [key] -> Action [value]
         f ks = do
             ruleinfo <- Action $ State.gets ruleinfo
-            let tk = typeOf (undefined :: key)
-                tv = typeOf (undefined :: value)
+            let tk = typeOf (err "apply key" :: key)
+                tv = typeOf (err "apply type" :: value)
             case Map.lookup tk ruleinfo of
                 Nothing -> errorNoRuleToBuildType tk (fmap newKey $ listToMaybe ks) (Just tv)
                 Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap newKey $ listToMaybe ks) tv tv2

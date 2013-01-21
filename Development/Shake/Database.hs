@@ -239,7 +239,7 @@ build pool Database{..} Ops{..} stack ks = do
         reduce stack i = do
             s <- readIORef status
             case Map.lookup i s of
-                Nothing -> error $ "Shake internal error: interned value " ++ show i ++ " is missing from the database"
+                Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
                     b <- if assume == Just AssumeDirty then return False else fmap (== Just (result r)) $ stored k
@@ -471,5 +471,5 @@ instance BinaryWith Witness Result where
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0
     putWith ctx (Loaded x) = putWord8 1 >> putWith ctx x
-    putWith ctx x = error $ "putWith: Cannot write Status with constructor " ++ head (words $ show x)
+    putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ head (words $ show x)
     getWith ctx = do i <- getWord8; if i == 0 then return Missing else fmap Loaded $ getWith ctx

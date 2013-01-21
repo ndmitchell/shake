@@ -21,6 +21,10 @@ import Data.Maybe
 import qualified Data.HashMap.Strict as Map
 import System.IO.Unsafe
 
+-- Can't live in Errors, since then we form a cycle
+err :: String -> a
+err msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
+
 
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
@@ -46,8 +50,7 @@ fromKey :: Typeable a => Key -> a
 fromKey (Key v) = fromValue v
 
 fromValue :: Typeable a => Value -> a
-fromValue (Value x) = fromMaybe (error msg) $ cast x
-    where msg = "Internal error in Shake.fromValue, bad cast"
+fromValue (Value x) = fromMaybe (err "fromValue, bad cast") $ cast x
 
 instance Show Key where
     show (Key a) = show a
@@ -75,8 +78,8 @@ witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> IO ()
-registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ error msg `asTypeOf` x) mp, ())
-    where msg = "Development.Shake.Value.registerWitness, witness of type " ++ show (typeOf x) ++ " demanded"
+registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ err msg `asTypeOf` x) mp, ())
+    where msg = "registerWitness, type " ++ show (typeOf x)
 
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
@@ -120,7 +123,7 @@ instance Binary Witness where
 
 instance BinaryWith Witness Value where
     putWith ws (Value x) = do
-        let msg = "Internal error, could not find witness type for " ++ show (typeOf x)
+        let msg = "no witness for " ++ show (typeOf x)
         put $ fromMaybe (error msg) $ Map.lookup (typeOf x) (witnessOut ws)
         put x
 
