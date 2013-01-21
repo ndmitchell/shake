@@ -13,6 +13,10 @@ import Development.Shake.File
 import Development.Shake.FilePath
 
 
+checkExitCode :: String -> ExitCode -> Action ()
+checkExitCode cmd ExitSuccess = return ()
+checkExitCode cmd (ExitFailure i) = error $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
+
 -- | Execute a system command. This function will raise an error if the exit code is non-zero.
 --   Before running 'system'' make sure you 'need' any required files.
 system' :: FilePath -> [String] -> Action ()
@@ -21,8 +25,7 @@ system' path args = do
     let cmd = unwords $ path2 : args
     putLoud cmd
     res <- traced (takeBaseName path) $ rawSystem path2 args
-    when (res /= ExitSuccess) $
-        error $ "System command failed:\n" ++ cmd
+    checkExitCode cmd res
 
 
 -- | Execute a system command with a specified current working directory (first argument).
@@ -40,8 +43,7 @@ systemCwd cwd path args = do
         --        That installs/removes signal handlers.
         hdl <- runProcess path2 args (Just cwd) Nothing Nothing Nothing Nothing
         waitForProcess hdl
-    when (res /= ExitSuccess) $
-        error $ "System command failed:\n" ++ cmd
+    checkExitCode cmd res
 
 
 -- | Execute a system command, returning @(stdout,stderr)@.
@@ -53,8 +55,7 @@ systemOutput path args = do
     let cmd = unwords $ path2 : args
     putLoud cmd
     (res,stdout,stderr) <- traced (takeBaseName path) $ readProcessWithExitCode path2 args ""
-    when (res /= ExitSuccess) $
-        error $ "System command failed:\n" ++ cmd ++ "\n" ++ stderr
+    checkExitCode cmd res
     return (stdout, stderr)
 
 
