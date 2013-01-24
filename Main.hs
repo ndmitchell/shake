@@ -1,5 +1,8 @@
 module Main where
 
+import Control.Concurrent
+import Control.Monad
+import Data.List
 import Data.Maybe
 import System.Environment
 
@@ -61,4 +64,17 @@ clean extra = sequence_ [withArgs [name,"clean"] $ main extra | (name,main) <- m
 test :: IO () -> IO ()
 test _ = do
     args <- getArgs
-    sequence_ [withArgs (name:"test":drop 1 args) (main sleepFileTime) | (name,main) <- mains, name /= "random"]
+    one <- newMVar () -- Only one may execute at a time
+    let pause = do putMVar one (); sleepFileTime; takeMVar one
+    let tests = filter ((/= "random") . fst) mains
+    -- priority tests have more pauses in, so doing them sooner gets the whole tests done faster
+    let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
+    dones <- forM (priority ++ normal) $ \(name,main) -> do
+        done <- newEmptyMVar
+        forkIO $ do
+            takeMVar one
+            withArgs (name:"test":drop 1 args) $ main pause
+            putMVar one ()
+            putMVar done ()
+        return done
+    mapM_ takeMVar dones
