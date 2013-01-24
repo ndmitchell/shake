@@ -220,11 +220,12 @@ run opts@ShakeOptions{..} rs = do
     rs <- return $ getRules rs
     registerWitnesses rs
 
-    output <- do
+    outputLocked <- do
         lock <- newLock
         return $ withLock lock . putStrLn
 
-    let logger = if shakeVerbosity >= Diagnostic then output . ("% "++) else const $ return ()
+    let logger = if shakeVerbosity >= Diagnostic then outputLocked . ("% "++) else const $ return ()
+    let output = outputLocked . abbreviate shakeAbbreviations
 
     except <- newVar (Nothing :: Maybe SomeException)
     let staunch act | not shakeStaunch = act >> return ()
@@ -255,6 +256,18 @@ run opts@ShakeOptions{..} rs = do
                     putStrLn $ "Writing HTML report to " ++ file
                 buildReport json file
         maybe (return ()) throwIO =<< readVar except
+
+
+abbreviate :: [(String,String)] -> String -> String
+abbreviate [] = id
+abbreviate abbrev = f
+    where
+        -- order so longer appreviations are preferred
+        ordAbbrev = reverse $ sortBy (compare `on` length . fst) abbrev
+
+        f [] = []
+        f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
+        f (x:xs) = x : f xs
 
 
 wrapStack :: IO [String] -> IO a -> IO a

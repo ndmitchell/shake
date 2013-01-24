@@ -74,6 +74,9 @@ data ShakeOptions = ShakeOptions
     ,shakeAssume :: Maybe Assume
         -- ^ Defaults to 'Nothing'. Assume all build objects are clean/dirty, see 'Assume' for details.
         --   Can be used to implement @make --touch@.
+    ,shakeAbbreviations :: [(String,String)]
+        -- ^ Defaults to @[]@. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation.
+        --   Commonly used to replace the long paths (e.g. @.make/i586-linux-gcc/output@) with an abbreviation (e.g. @$OUT@).
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called on a separate thread when the build starts, allowing progress to be reported.
         --   For applications that want to display progress messages, 'progressSimple' is often sufficient, but more advanced
@@ -83,19 +86,19 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing (const $ return ())
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing [] (const $ return ())
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
-    ,"shakeLint", "shakeDeterministic", "shakeFlush", "shakeAssume", "shakeProgress"]
+    ,"shakeLint", "shakeDeterministic", "shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeProgress"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 (fromProgress x11)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 (fromProgress x12)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11) =
-        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` ShakeProgress x11
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12) =
+        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` ShakeProgress x12
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -111,6 +114,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Maybe FilePath)
                 | Just x <- cast x = show (x :: Maybe Assume)
                 | Just x <- cast x = show (x :: Maybe Double)
+                | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: ShakeProgress)
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
