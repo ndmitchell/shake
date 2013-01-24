@@ -8,9 +8,9 @@ module Development.Shake.File(
 
 import Control.Monad.IO.Class
 import System.Directory
-import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
+import Development.Shake.Types
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
@@ -19,19 +19,16 @@ import Development.Shake.FileTime
 infix 1 *>, ?>, **>
 
 
-newtype FileQ = FileQ BS.ByteString
-    deriving (Typeable,Eq,Hashable,Binary)
+newtype FileQ = FileQ BS
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance NFData FileQ where
-    rnf (FileQ x) = x `seq` () -- since ByteString is strict
-
-instance Show FileQ where show (FileQ x) = BS.unpack x
+instance Show FileQ where show (FileQ x) = unpack x
 
 newtype FileA = FileA FileTime
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule FileQ FileA where
-    storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
+    storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe $ unpack_ x
 
 {-
     observed act = do
@@ -91,7 +88,7 @@ compareItems = f ""
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
-    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
+    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" $ unpack_ x
 
 
 -- | Require that the following files are built before continuing. Particularly
@@ -104,7 +101,7 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 --     'Development.Shake.system'' [\"rot13\",src,\"-o\",out]
 -- @
 need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . BS.pack) xs :: Action [FileA]) >> return ()
+need xs = (apply $ map (FileQ . pack) xs :: Action [FileA]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --
@@ -120,11 +117,11 @@ want = action . need
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = rule $ \(FileQ x_) -> let x = BS.unpack x_ in
+root help test act = rule $ \(FileQ x_) -> let x = unpack x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
+        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") $ unpack_ x_
 
 
 
