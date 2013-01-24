@@ -23,25 +23,21 @@ test build obj = do
     ask "abc" "abc"
 
     set 'b' 'd'
-    sleepFileTime
-    build ["abc.out"]
+    build ["--presleep","abc.out"]
     ask "abc" "adc"
     set 'b' 'p'
-    sleepFileTime
-    build ["abc.out","--assume-clean"]
+    build ["--presleep","abc.out","--assume-clean"]
     build ["abc.out"]
     ask "abc" "adc"
     set 'c' 'z'
-    sleepFileTime
-    build ["abc.out"]
+    build ["--presleep","abc.out"]
     ask "abc" "apz"
 
     build ["bc.out","c.out"]
     ask "bc" "pz"
     set 'b' 'r'
     set 'c' 'n'
-    sleepFileTime
-    build ["abc.out","--assume-clean"]
+    build ["--presleep","abc.out","--assume-clean"]
     ask "abc" "apz"
     build ["ab.out","--assume-dirty"]
     ask "ab" "ar"

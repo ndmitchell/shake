@@ -33,8 +33,7 @@ test build obj = do
     writeFile (obj "A.txt") ""
     writeFile (obj "B.txt") ""
     createDirectory (obj "Foo.txt")
-    sleepFileTime
-    build []
+    build ["--presleep"]
     assertContents (obj "files.lst") $ unlines ["A.txt","B.txt"]
     assertContents (obj "dirs.lst") $ unlines ["Foo.txt"]
     assertContents (obj "exist.lst") $ unlines ["True","True","False","False"]
