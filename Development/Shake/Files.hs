@@ -7,9 +7,9 @@ module Development.Shake.Files(
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Maybe
-import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
+import Development.Shake.Types
 import Development.Shake.Classes
 import Development.Shake.File
 import Development.Shake.FilePattern
@@ -18,22 +18,17 @@ import Development.Shake.FileTime
 infix 1 ?>>, *>>
 
 
-newtype FilesQ = FilesQ [BS.ByteString]
-    deriving (Typeable,Eq,Hashable,Binary)
-
-instance NFData FilesQ where
-    -- some versions of ByteString do not have NFData instances, but seq is equivalent
-    -- for a strict bytestring. Therefore, we write our own instance.
-    rnf (FilesQ xs) = rnf $ map (`seq` ()) xs
+newtype FilesQ = FilesQ [BS]
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 newtype FilesA = FilesA [FileTime]
     deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
 
-instance Show FilesQ where show (FilesQ xs) = unwords $ map BS.unpack xs
+instance Show FilesQ where show (FilesQ xs) = unwords $ map unpack xs
 
 
 instance Rule FilesQ FilesA where
-    storedValue (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe xs
+    storedValue (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe $ map unpack_ xs
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -57,9 +52,9 @@ ps *>> act
     | otherwise = do
         forM_ ps $ \p ->
             p *> \file -> do
-                _ :: FilesA <- apply1 $ FilesQ $ map (BS.pack . substitute (extract p file)) ps
+                _ :: FilesA <- apply1 $ FilesQ $ map (pack . substitute (extract p file)) ps
                 return ()
-        rule $ \(FilesQ xs_) -> let xs = map BS.unpack xs_ in
+        rule $ \(FilesQ xs_) -> let xs = map unpack xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                 act xs
                 liftIO $ getFileTimes "*>>" xs_
@@ -93,10 +88,10 @@ ps *>> act
                     | otherwise -> error $ "Invariant broken in ?>> when trying on " ++ x
 
     isJust . checkedTest ?> \x -> do
-        _ :: FilesA <- apply1 $ FilesQ $ map BS.pack $ fromJust $ test x
+        _ :: FilesA <- apply1 $ FilesQ $ map pack $ fromJust $ test x
         return ()
 
-    rule $ \(FilesQ xs_) -> let xs@(x:_) = map BS.unpack xs_ in
+    rule $ \(FilesQ xs_) -> let xs@(x:_) = map unpack xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 act xs
@@ -105,13 +100,13 @@ ps *>> act
             Nothing -> Nothing
 
 
-getFileTimes :: String -> [BS.ByteString] -> IO FilesA
+getFileTimes :: String -> [BS] -> IO FilesA
 getFileTimes name xs = do
-    ys <- mapM getModTimeMaybe xs
+    ys <- mapM (getModTimeMaybe . unpack_) xs
     case sequence ys of
         Just ys -> return $ FilesA ys
         Nothing -> do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ BS.unpack x ++ if isNothing y then " - MISSING" else "" | (x,y) <- zip xs ys]
+                    concat ["\n  " ++ unpack x ++ if isNothing y then " - MISSING" else "" | (x,y) <- zip xs ys]
