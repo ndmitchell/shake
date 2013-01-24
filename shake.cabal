@@ -93,7 +93,6 @@ library
         Development.Shake
         Development.Shake.Classes
         Development.Shake.FilePath
-        Development.Shake.Progress
 
     other-modules:
         Development.Shake.Binary
@@ -110,6 +109,7 @@ library
         Development.Shake.Locks
         Development.Shake.Oracle
         Development.Shake.Pool
+        Development.Shake.Progress
         Development.Shake.Report
         Development.Shake.Rerun
         Development.Shake.Storage

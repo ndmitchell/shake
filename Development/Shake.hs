@@ -66,14 +66,19 @@
 module Development.Shake(
     shake,
     -- * Core of Shake
-    ShakeOptions(..), shakeOptions, Assume(..), progressSimple,
+    shakeOptions,
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
-    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
     liftIO,
+    -- * Configuration
+    ShakeOptions(..), Assume(..),
+    -- ** Progress reporting
+    Progress(..), progressSimple, progressDisplay, progressTitlebar,
+    -- ** Verbosity
+    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
     -- * Utility functions
     module Development.Shake.Derived,
     -- * File rules
