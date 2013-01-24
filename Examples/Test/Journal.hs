@@ -27,7 +27,7 @@ test build obj = do
     let change x = writeFile (obj $ x <.> "in") x
     let count x = do
             before <- readIORef rebuilt
-            build ["--postsleep"]
+            build ["--presleep"]
             after <- readIORef rebuilt
             x === after - before
 

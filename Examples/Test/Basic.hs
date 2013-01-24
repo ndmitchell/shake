@@ -27,21 +27,21 @@ main = shaken test $ \args obj -> do
 test build obj = do
     writeFile (obj "A.txt") "AAA"
     writeFile (obj "B.txt") "BBB"
-    build ["AB.txt","--postsleep"]
+    build ["AB.txt"]
     assertContents (obj "AB.txt") "AAABBB"
     appendFile (obj "A.txt") "aaa"
     build ["AB.txt"]
     assertContents (obj "AB.txt") "AAAaaaBBB"
 
     writeFile (obj "zero.txt") "xxx"
-    build ["twice.txt","--postsleep"]
+    build ["twice.txt","--presleep"]
     assertContents (obj "twice.txt") "xxx"
     writeFile (obj "zero.txt") "yyy"
-    build ["once.txt","--postsleep"]
+    build ["once.txt","--presleep"]
     assertContents (obj "twice.txt") "xxx"
     assertContents (obj "once.txt") "yyy"
     writeFile (obj "zero.txt") "zzz"
-    build ["once.txt","twice.txt"]
+    build ["once.txt","twice.txt","--presleep"]
     assertContents (obj "twice.txt") "zzz"
     assertContents (obj "once.txt") "zzz"
 
