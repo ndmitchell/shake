@@ -16,9 +16,10 @@ shaken
     :: (([String] -> IO ()) -> (String -> String) -> IO ())
     -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
-shaken test rules = do
+    -> IO ()
+shaken test rules sleeper = do
     name:args <- getArgs
-    when ("--sleep" `elem` args) sleepFileTime
+    when ("--sleep" `elem` args) sleeper
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let out = "output/" ++ name ++ "/"
     createDirectoryIfMissing True out
@@ -26,7 +27,7 @@ shaken test rules = do
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            test (\args -> withArgs (name:args ++ extra) $ shaken test rules) (out++)
+            test (\args -> withArgs (name:args ++ extra) $ shaken test rules sleeper) (out++)
             putStrLn $ "## FINISHED TESTING " ++ name
         "clean":_ -> removeDirectoryRecursive out
 {-

@@ -3,7 +3,7 @@ module Main where
 import Data.Maybe
 import System.Environment
 
-import Examples.Util(flags)
+import Examples.Util(flags, sleepFileTime)
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.C.Main as C
@@ -51,14 +51,14 @@ main = do
             ,"  main self --threads2 --loud"
             ,""
             ,"Which will build Shake, using Shake, on 2 threads."]
-        Just main -> main
+        Just main -> main sleepFileTime
 
 
-clean :: IO ()
-clean = sequence_ [withArgs [name,"clean"] main | (name,main) <- mains]
+clean :: IO () -> IO ()
+clean extra = sequence_ [withArgs [name,"clean"] $ main extra | (name,main) <- mains]
 
 
-test :: IO ()
-test = do
+test :: IO () -> IO ()
+test _ = do
     args <- getArgs
-    sequence_ [withArgs (name:"test":drop 1 args) main | (name,main) <- mains, name /= "random"]
+    sequence_ [withArgs (name:"test":drop 1 args) (main sleepFileTime) | (name,main) <- mains, name /= "random"]

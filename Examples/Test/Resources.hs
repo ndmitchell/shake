@@ -7,12 +7,12 @@ import Control.Monad
 import Data.IORef
 
 
-main = do
+main extra = do
     let cap = 2
 
     ref <- newIORef 0
     res <- newResource "test" cap
-    shaken test $ \args obj -> do
+    flip (shaken test) extra $ \args obj -> do
         want $ map obj ["file1.txt","file2.txt","file3.txt","file4.txt"]
         obj "*.txt" *> \out ->
             withResource res 1 $ do
