@@ -1,14 +1,17 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, PatternGuards #-}
+{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving, RecordWildCards, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types(
     Progress(..), Verbosity(..), Assume(..),
-    ShakeOptions(..), shakeOptions
+    ShakeOptions(..), shakeOptions,
+    BS, pack, unpack, pack_, unpack_
     ) where
 
 import Data.Data
 import Data.List
 import Development.Shake.Progress
+import Development.Shake.Classes
+import qualified Data.ByteString.Char8 as BS
 
 
 -- | The current assumptions made by the build system, used by 'shakeAssume'. These options
@@ -143,3 +146,27 @@ data Verbosity
     | Diagnostic -- ^ Print messages for virtually everything (for debugging a build system).
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
 
+
+---------------------------------------------------------------------
+-- BYTESTRING WRAPPER
+-- Only purpose is because ByteString does not have an NFData instance in older GHC
+
+newtype BS = BS BS.ByteString
+    deriving (Hashable, Binary, Eq, Ord, Show)
+
+instance NFData BS where
+    -- some versions of ByteString do not have NFData instances, but seq is equivalent
+    -- for a strict bytestring. Therefore, we write our own instance.
+    rnf (BS x) = x `seq` ()
+
+pack :: String -> BS
+pack = pack_ . BS.pack
+
+unpack :: BS -> String
+unpack = BS.unpack . unpack_
+
+pack_ :: BS.ByteString -> BS
+pack_ = BS
+
+unpack_ :: BS -> BS.ByteString
+unpack_ (BS x) = x
