@@ -64,8 +64,8 @@
 --
 --   /Acknowledgements/: Thanks to Austin Seipp for properly integrating the profiling code.
 module Development.Shake(
+    -- * Core
     shake,
-    -- * Core of Shake
     shakeOptions,
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
