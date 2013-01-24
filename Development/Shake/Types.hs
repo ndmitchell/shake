@@ -152,7 +152,7 @@ data Verbosity
 -- Only purpose is because ByteString does not have an NFData instance in older GHC
 
 newtype BS = BS BS.ByteString
-    deriving (Hashable, Binary, Eq, Ord, Show)
+    deriving (Hashable, Binary, Eq)
 
 instance NFData BS where
     -- some versions of ByteString do not have NFData instances, but seq is equivalent
