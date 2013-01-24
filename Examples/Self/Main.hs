@@ -16,7 +16,7 @@ import System.Info
 newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-main :: IO ()
+
 main = shaken noTest $ \args obj -> do
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
     want $ if null args then [obj "Main.exe"] else args

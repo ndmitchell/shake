@@ -5,7 +5,6 @@ import Development.Shake
 import Examples.Util
 
 
-main :: IO ()
 main = shaken noTest $ \args obj -> do
     want [obj "result.tar"]
     obj "result.tar" *> \out -> do
