@@ -18,6 +18,7 @@ shaken
     -> IO ()
 shaken test rules = do
     name:args <- getArgs
+    when ("--sleep" `elem` args) sleepFileTime
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let out = "output/" ++ name ++ "/"
     createDirectoryIfMissing True out
@@ -56,7 +57,6 @@ shaken test rules = do
                             | otherwise -> error $ "Don't know how to deal with flag: " ++ x
             when ("clean" `elem` flags) $ removeDirectoryRecursive out
             let opts = foldl' f shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html"} flags
-            when ("sleep" `elem` flags) sleepFileTime
             shake opts $ rules args (out++)
 
 
