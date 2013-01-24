@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
 
 module Development.Shake.Directory(
-    doesFileExist,
+    doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     defaultRuleDirectory
     ) where
@@ -29,6 +29,19 @@ newtype DoesFileExistA = DoesFileExistA Bool
 
 instance Show DoesFileExistA where
     show (DoesFileExistA a) = show a
+
+
+newtype DoesDirectoryExistQ = DoesDirectoryExistQ FilePath
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show DoesDirectoryExistQ where
+    show (DoesDirectoryExistQ a) = "Exists dir? " ++ a
+
+newtype DoesDirectoryExistA = DoesDirectoryExistA Bool
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show DoesDirectoryExistA where
+    show (DoesDirectoryExistA a) = show a
 
 
 data GetDirectoryQ
@@ -72,6 +85,10 @@ instance Rule DoesFileExistQ DoesFileExistA where
     storedValue (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
     -- invariant _ = True
 
+instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
+    storedValue (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
+    -- invariant _ = True
+
 instance Rule GetDirectoryQ GetDirectoryA where
     storedValue x = fmap Just $ getDir x
     -- invariant _ = True
@@ -82,6 +99,8 @@ defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     defaultRule $ \(DoesFileExistQ x) -> Just $
         liftIO $ fmap DoesFileExistA $ IO.doesFileExist x
+    defaultRule $ \(DoesDirectoryExistQ x) -> Just $
+        liftIO $ fmap DoesDirectoryExistA $ IO.doesDirectoryExist x
     defaultRule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
 
@@ -90,6 +109,12 @@ defaultRuleDirectory = do
 doesFileExist :: FilePath -> Action Bool
 doesFileExist file = do
     DoesFileExistA res <- apply1 $ DoesFileExistQ file
+    return res
+
+-- | Returns 'True' if the directory exists.
+doesDirectoryExist :: FilePath -> Action Bool
+doesDirectoryExist file = do
+    DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ file
     return res
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain

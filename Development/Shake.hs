@@ -86,7 +86,7 @@ module Development.Shake(
     module Development.Shake.Files,
     FilePattern, (?==),
     -- * Directory rules
-    doesFileExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
+    doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     -- * Additional rules
     addOracle, askOracle, askOracleWith,
     alwaysRerun,

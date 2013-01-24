@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add doesDirectoryExist function
     Add shakeAbbreviations feature
     Add a new Progress module for sensible progress messages
     Spawn shakeProgress on a separate thread, a safer default
