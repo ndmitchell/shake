@@ -2,17 +2,13 @@
 
 -- | Progress tracking
 module Development.Shake.Progress(
-    progressSimple, progressDisplay, progressTitlebar,
-    -- * More advanced functions
     Progress(..),
-    progressDone, progressTodo, progressFraction,
-    progressScale, progressSample
+    progressSimple, progressDisplay, progressTitlebar,
     ) where
 
 import Control.Concurrent
 import Data.Data
-import Data.IORef
-import Data.List
+import Data.Monoid
 import qualified Data.ByteString.Char8 as BS
 
 #ifdef mingw32_HOST_OS
@@ -59,24 +55,29 @@ data Progress = Progress
     }
     deriving (Eq,Ord,Show,Data,Typeable)
 
+instance Monoid Progress where
+    mempty = Progress True 0 0 0 0 0 0 0 (0,0)
+    mappend a b = Progress
+        {isRunning = isRunning a && isRunning b
+        ,countSkipped = countSkipped a + countSkipped b
+        ,countBuilt = countBuilt a + countBuilt b
+        ,countUnknown = countUnknown a + countUnknown b
+        ,countTodo = countTodo a + countTodo b
+        ,timeSkipped = timeSkipped a + timeSkipped b
+        ,timeBuilt = timeBuilt a + timeBuilt b
+        ,timeUnknown = timeUnknown a + timeUnknown b
+        ,timeTodo = let (a1,a2) = timeTodo a; (b1,b2) = timeTodo b
+                        x1 = a1 + b1; x2 = a2 + b2
+                    in x1 `seq` x2 `seq` (x1,x2)
+        }
 
--- | Scale to aim to hit 0 at the same time as the original, but reducing by 1 each time.
---   The current implementation uses interquartile mean of the deltas over a window of 100.
---   A result of 'Nothing' is given if it thinks the system will never terminate.
-progressScale :: IO (Double -> IO (Maybe Double))
-progressScale = do
-    vals <- newIORef []
-    return $ \v -> do
-        vs <- fmap ((v:) . take 100) $ readIORef vals
-        writeIORef vals vs
-        let xs = sort $ zipWith (-) vs $ tail vs
-            n = length xs `div` 4
-            xs2 = drop n $ reverse $ drop n xs
-            avg = genericLength xs2 / sum xs2
-        return $ if avg <= 0 then Nothing else Just $ v / avg
+-- Including timeSkipped gives a more truthful percent, but it drops more sharply
+-- which isn't what users probably want
+progressDone :: Progress -> Double
+progressDone Progress{..} = timeBuilt
 
 
--- | Time left todo, would be correct if building on one processor with the same performance as last time
+-- | Make a guess at the number of seconds to go, ignoring multiple threads
 progressTodo :: Progress -> Double
 progressTodo Progress{..} =
         fst timeTodo + (if avgSamples == 0 || snd timeTodo == 0 then 0 else fromIntegral (snd timeTodo) * avgTime)
@@ -84,40 +85,26 @@ progressTodo Progress{..} =
         avgTime = (timeBuilt + fst timeTodo) / fromIntegral avgSamples
         avgSamples = countBuilt + countTodo - snd timeTodo
 
--- | Time completed, would be correct if building on one processor with the same performance as last time.
---   Includes time from rules that were skipped.
-progressDone :: Progress -> Double
-progressDone Progress{..} = timeSkipped + timeBuilt
 
-
-progressFraction :: Progress -> Double
-progressFraction p = if b == 0 then 0 else t / b
-    where t = progressTodo p
-          b = t + progressDone p
-
--- | This function is asyncronous
-progressSample :: IO Progress -> Double -> (Maybe Progress -> IO ()) -> IO ()
-progressSample ask wait notify = do
-    threadDelay $ ceiling $ wait * 1000000
-    p <- ask
-    if not $ isRunning p then
-        notify Nothing
-     else do
-        notify $ Just p
-        progressSample ask wait notify
-
-
-progressDisplay :: (String -> IO ()) -> IO Progress -> IO ()
-progressDisplay disp ask = do
-    scale <- progressScale
-    progressSample ask 5 $ \p -> case p of
-        Nothing -> disp "Finished"
-        Just p -> do
-            time <- fmap (fmap (*5)) $ scale $ progressTodo p
-            disp $ maybe "?:??" (showSecs . ceiling) time ++ "m (" ++ show (ceiling $ progressFraction p * 100) ++ "%)"
+progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
+progressDisplay sample disp prog = loop 0
     where
-        showSecs i = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
-            where (mins,secs) = divMod i (60 :: Int)
+        loop steps = do
+            p <- prog
+            if not $ isRunning p then
+                disp "Finished"
+             else do
+                disp $ if steps == 0
+                    then "Starting..."
+                    else let done = progressDone p
+                             todo = progressTodo p
+                             comp = if done == 0 then todo else sample * todo / (done / fromIntegral steps)
+                             (mins,secs) = divMod (ceiling comp) (60 :: Int)
+                             time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
+                             perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
+                         in time ++ "m (" ++ perc ++ "%)" ++ "\a"
+                threadDelay $ ceiling $ sample * 1000000
+                loop $! steps+1
 
 
 -- | Set the title bar.
@@ -133,4 +120,4 @@ progressTitlebar x =
 -- | Simple function, sets the titlebar to the current progress every 5 seconds.
 --   Displays the time in both 
 progressSimple :: IO Progress -> IO ()
-progressSimple = progressDisplay progressTitlebar
+progressSimple = progressDisplay 5 progressTitlebar
