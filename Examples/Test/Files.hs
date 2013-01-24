@@ -25,6 +25,6 @@ test build obj = do
     forM_ [[],["fun"]] $ \args -> do
         let nums = unlines . map show
         writeFile (obj "numbers.txt") $ nums [1,2,4,5,2,3,1]
-        build ("--presleep":args)
+        build ("--sleep":args)
         assertContents (obj "even.txt") $ nums [2,4,2]
         assertContents (obj "odd.txt" ) $ nums [1,5,3,1]

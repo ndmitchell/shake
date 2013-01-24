@@ -23,21 +23,21 @@ test build obj = do
     ask "abc" "abc"
 
     set 'b' 'd'
-    build ["--presleep","abc.out"]
+    build ["--sleep","abc.out"]
     ask "abc" "adc"
     set 'b' 'p'
-    build ["--presleep","abc.out","--assume-clean"]
+    build ["--sleep","abc.out","--assume-clean"]
     build ["abc.out"]
     ask "abc" "adc"
     set 'c' 'z'
-    build ["--presleep","abc.out"]
+    build ["--sleep","abc.out"]
     ask "abc" "apz"
 
     build ["bc.out","c.out"]
     ask "bc" "pz"
     set 'b' 'r'
     set 'c' 'n'
-    build ["--presleep","abc.out","--assume-clean"]
+    build ["--sleep","abc.out","--assume-clean"]
     ask "abc" "apz"
     build ["ab.out","--assume-dirty"]
     ask "ab" "ar"

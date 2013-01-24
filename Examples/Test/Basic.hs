@@ -34,14 +34,14 @@ test build obj = do
     assertContents (obj "AB.txt") "AAAaaaBBB"
 
     writeFile (obj "zero.txt") "xxx"
-    build ["twice.txt","--presleep"]
+    build ["twice.txt","--sleep"]
     assertContents (obj "twice.txt") "xxx"
     writeFile (obj "zero.txt") "yyy"
-    build ["once.txt","--presleep"]
+    build ["once.txt","--sleep"]
     assertContents (obj "twice.txt") "xxx"
     assertContents (obj "once.txt") "yyy"
     writeFile (obj "zero.txt") "zzz"
-    build ["once.txt","twice.txt","--presleep"]
+    build ["once.txt","twice.txt","--sleep"]
     assertContents (obj "twice.txt") "zzz"
     assertContents (obj "once.txt") "zzz"
 
