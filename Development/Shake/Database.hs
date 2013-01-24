@@ -133,6 +133,12 @@ newtype Pending = Pending (IORef (IO ()))
 instance Show Pending where show _ = "Pending"
 
 
+statusType Ready{} = "Ready"
+statusType Error{} = "Error"
+statusType Loaded{} = "Loaded"
+statusType Waiting{} = "Waiting"
+statusType Missing{} = "Missing"
+
 isError Error{} = True; isError _ = False
 isWaiting Waiting{} = True; isWaiting _ = False
 isReady Ready{} = True; isReady _ = False
@@ -229,8 +235,7 @@ build pool Database{..} Ops{..} stack ks = do
         i #= (k,v) = do
             s <- readIORef status
             writeIORef status $ Map.insert i (k,v) s
-            let shw = head . words . show
-            logger $ maybe "Missing" (shw . snd) (Map.lookup i s) ++ " -> " ++ shw v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
+            logger $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
@@ -475,5 +480,5 @@ instance BinaryWith Witness Result where
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0
     putWith ctx (Loaded x) = putWord8 1 >> putWith ctx x
-    putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ head (words $ show x)
+    putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ statusType x
     getWith ctx = do i <- getWord8; if i == 0 then return Missing else fmap Loaded $ getWith ctx
