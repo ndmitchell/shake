@@ -160,5 +160,6 @@ executable shake
         Examples.Test.Journal
         Examples.Test.Oracle
         Examples.Test.Pool
+        Examples.Test.Progress
         Examples.Test.Random
         Examples.Test.Resources
