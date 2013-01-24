@@ -52,15 +52,17 @@ shaken test rules = do
             let f o x = case lookup x $ flagList name of
                     Just op -> op o
                     Nothing | "threads" `isPrefixOf` x -> o{shakeThreads=read $ drop 7 x}
-                            | x == "clean" -> o -- handled elsewhere
+                            | x `elem` ["clean","presleep","postsleep"] -> o -- handled elsewhere
                             | otherwise -> error $ "Don't know how to deal with flag: " ++ x
             when ("clean" `elem` flags) $ removeDirectoryRecursive out
             let opts = foldl' f shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html"} flags
+            when ("presleep" `elem` flags) sleepFileTime
             shake opts $ rules args (out++)
+            when ("postsleep" `elem` flags) sleepFileTime
 
 
 flags :: [String]
-flags = "threads#" : map fst (flagList "") ++ ["clean"]
+flags = "threads#" : map fst (flagList "") ++ ["clean","presleep","postsleep"]
 
 
 flagList :: String -> [(String, ShakeOptions -> ShakeOptions)]
