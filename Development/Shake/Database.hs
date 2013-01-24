@@ -29,6 +29,7 @@ import qualified Data.ByteString as BS
 import Data.IORef
 import Data.Maybe
 import Data.List
+import Data.Monoid
 import Data.Time.Clock
 
 type Map = Map.HashMap
@@ -325,8 +326,7 @@ build pool Database{..} Ops{..} stack ks = do
 progress :: Database -> IO Progress
 progress Database{..} = do
     s <- readIORef status
-    let zero = Progress False 0 0 0 0 0 0 0 (0,0)
-    return $ foldl' f zero $ map snd $ Map.elems s
+    return $ foldl' f mempty $ map snd $ Map.elems s
     where
         f s (Ready Result{..}) = if step == built
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + execution}
