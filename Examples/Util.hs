@@ -49,7 +49,7 @@ shaken test rules = do
         args -> do
             (flags,args) <- return $ partition ("-" `isPrefixOf`) args
             flags <- return $ map (dropWhile (== '-')) flags
-            let f o x = case lookup x flagList of
+            let f o x = case lookup x $ flagList name of
                     Just op -> op o
                     Nothing | "threads" `isPrefixOf` x -> o{shakeThreads=read $ drop 7 x}
                             | x == "clean" -> o -- handled elsewhere
@@ -60,11 +60,11 @@ shaken test rules = do
 
 
 flags :: [String]
-flags = "threads#" : map fst flagList ++ ["clean"]
+flags = "threads#" : map fst (flagList "") ++ ["clean"]
 
 
-flagList :: [(String, ShakeOptions -> ShakeOptions)]
-flagList = let (*) = (,) in
+flagList :: String -> [(String, ShakeOptions -> ShakeOptions)]
+flagList name = let (*) = (,) in
     ["no-dump" * \o -> o{shakeReport=Nothing}
     ,"silent" * \o -> o{shakeVerbosity=Silent}
     ,"quiet" * \o -> o{shakeVerbosity=Quiet}
@@ -77,6 +77,7 @@ flagList = let (*) = (,) in
     ,"progress" * \o -> o{shakeProgress=progressSimple}
     ,"assume-clean" * \o -> o{shakeAssume=Just AssumeClean}
     ,"assume-dirty" * \o -> o{shakeAssume=Just AssumeDirty}
+    ,"abbrev" * \o -> o{shakeAbbreviations=[(if name == "" then "output" else "output/" ++ name, "$OUT")]}
     ]
 
 
