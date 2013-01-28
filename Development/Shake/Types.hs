@@ -83,7 +83,7 @@ data ShakeOptions = ShakeOptions
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called on a separate thread when the build starts, allowing progress to be reported.
         --   For applications that want to display progress messages, 'progressSimple' is often sufficient, but more advanced
-        --   users should look at "Development.Shake.Progress" and the 'Progress' data type.
+        --   users should look at the 'Progress' data type.
     }
     deriving Typeable
 
