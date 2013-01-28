@@ -61,17 +61,17 @@ instance (
 --newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 --
 --do
---    getPkgList <- 'addOracle' $ \\GhcPkgList{} -> do
---        (out,_) <- 'systemOutput' \"ghc-pkg\" [\"list\",\"--simple-output\"]
+--    getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
+--        (out,_) <- 'Development.Shake.systemOutput' \"ghc-pkg\" [\"list\",\"--simple-output\"]
 --        return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
 --    --
---    getPkgVersion <- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
+--    getPkgVersion \<- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
 --        pkgs <- getPkgList
 --        return $ lookup pkg pkgs
 -- @
 --
 --   Using these definitions, any rule depending on the version of @shake@
---   should call @getPkgVersion "shake"@ to rebuild when @shake@ is upgraded.
+--   should call @getPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue q, ShakeValue a
