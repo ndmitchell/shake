@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards #-}
 
 module Development.Shake.Directory(
     doesFileExist, doesDirectoryExist,
@@ -136,13 +136,17 @@ getDirectoryDirs x = getDirAction $ GetDirDirs x
 
 getDirAction x = do GetDirectoryA y <- apply1 x; return y
 
+contents :: FilePath -> IO [FilePath]
+contents = fmap (filter $ not . all (== '.')) . IO.getDirectoryContents
+
+answer :: [FilePath] -> GetDirectoryA
+answer = GetDirectoryA . sort
 
 getDir :: GetDirectoryQ -> IO GetDirectoryA
-getDir x = fmap (GetDirectoryA . sort) $ f x . filter validName =<< IO.getDirectoryContents (dir x)
-    where
-        validName = not . all (== '.')
+getDir GetDir{..} = fmap answer $ contents dir
 
-        f GetDir{} xs = return xs
-        f GetDirFiles{} xs = flip filterM xs $ \s ->
-            if not $ any (?== s) $ pat x then return False else IO.doesFileExist $ dir x </> s
-        f GetDirDirs{} xs = flip filterM xs $ \s -> IO.doesDirectoryExist $ dir x </> s
+getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
+    where f x = IO.doesDirectoryExist $ dir </> x
+
+getDir GetDirFiles{..} = fmap answer $ filterM f =<< contents dir
+    where f x = if not $ any (?== x) pat then return False else IO.doesFileExist $ dir </> x
