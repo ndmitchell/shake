@@ -24,24 +24,8 @@ foreign import stdcall "Windows.h SetConsoleTitleA" c_setConsoleTitle :: LPCSTR 
 
 
 -- | Information about the current state of the build, obtained by passing a callback function
---   to 'shakeProgress'. Typically a program will poll this value to provide progress messages.
---   The following example displays the approximate single-threaded time remaining
---   as the console title.
---
--- @
---showProgress :: IO 'Progress' -> IO ()
---showProgress progress = void $ forkIO loop
---    where loop = do
---        current <- progress
---        when ('isRunning' current) $ do
---            let (s,c) = timeTodo current
---            setTitle $ \"Todo = \" ++ show (ceiling s) ++ \"s (+ \" ++ show c ++ \" unknown)\"
---            threadDelay $ 5 * 1000000
---            loop
---
---setTitle :: String -> IO ()
---setTitle s = putStr $ \"\\ESC]0;\" ++ s ++ \"\\BEL\"
--- @
+--   to 'Development.Shake.shakeProgress'. Typically a program will use 'progressDisplay' to poll this value and produce
+--   status messages, which is implemented using this data type.
 data Progress = Progress
     {isRunning :: !Bool -- ^ Starts out 'True', becomes 'False' once the build has completed.
     ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
@@ -86,6 +70,21 @@ progressTodo Progress{..} =
         avgSamples = countBuilt + countTodo - snd timeTodo
 
 
+-- | Given a sampling interval (in seconds) and a way to display the status message,
+--   produce a function suitable for using as 'Development.Shake.shakeProgress'.
+--   This function polls the progress information every /n/ seconds, produces a status
+--   message and displays it using the display function.
+--
+--   Typical status messages will take the form of @1:25m (15%)@, indicating that the build
+--   is predicted to complete in 1min 25sec, and 15% of the necessary build time has elapsed.
+--   This function uses past observations to predict future behaviour, and as such, is only
+--   guessing. The time is likely to go up as well as down, and will be less accurate from a
+--   clean build (as the system has fewer past observations).
+--
+--   The current implementation is to predict the time remaining (based on 'timeTodo') and the
+--   work already done ('timeBuilt'). The percentage is then calculated as @remaining / (done + remaining)@,
+--   while time left is calculated by scaling @remaining@ by the observed work rate in this build,
+--   namely @done / time_elapsed@.
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplay sample disp prog = loop 0
     where
@@ -107,7 +106,9 @@ progressDisplay sample disp prog = loop 0
                 loop $! steps+1
 
 
--- | Set the title bar.
+-- | Set the title of the current console window to the given text. On Windows
+--   this function uses the @SetConsoleTitle@ API, elsewhere it uses an xterm
+--   escape sequence. This function may not work for all terminals.
 progressTitlebar :: String -> IO ()
 progressTitlebar x =
 #ifdef mingw32_HOST_OS
@@ -117,7 +118,12 @@ progressTitlebar x =
 #endif
 
 
--- | Simple function, sets the titlebar to the current progress every 5 seconds.
---   Displays the time in both 
+-- | A simple method for displaying progress messages, suitable for using as
+--   'Development.Shake.shakeProgress'. This function writes the current progress to
+--   the titlebar every five seconds. The function is defined as:
+--
+-- @
+--progressSimple = 'progressDisplay' 5 'progressTitlebar'
+-- @
 progressSimple :: IO Progress -> IO ()
 progressSimple = progressDisplay 5 progressTitlebar
