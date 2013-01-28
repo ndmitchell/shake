@@ -103,7 +103,7 @@ assertContents file want = do
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
-    build []
+    build ["--abbrev"]
     build []
 
 
