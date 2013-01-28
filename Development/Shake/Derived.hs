@@ -1,5 +1,10 @@
 
-module Development.Shake.Derived where
+module Development.Shake.Derived(
+    system', systemCwd, systemOutput,
+    copyFile',
+    readFile', readFileLines,
+    writeFile', writeFileLines, writeFileChanged
+    ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
