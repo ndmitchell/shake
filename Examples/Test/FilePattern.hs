@@ -29,6 +29,15 @@ test build obj = do
     substitute ["","test","da"] "//*a*.txt" === "testada.txt"
     substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
 
+    directories1 "*.xml" === ("",False)
+    directories1 "//*.xml" === ("",True)
+    directories1 "foo//*.xml" === ("foo",True)
+    directories1 "foo/bar/*.xml" === ("foo/bar",False)
+    directories1 "*/bar/*.xml" === ("",True)
+    directories ["*.xml","//*.c"] === [("",True)]
+    directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
+    directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
+
 
 ---------------------------------------------------------------------
 -- LAZY SMALLCHECK PROPERTIES

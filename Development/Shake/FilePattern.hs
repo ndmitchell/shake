@@ -1,11 +1,17 @@
 
 module Development.Shake.FilePattern(
     FilePattern, (?==),
-    compatible, extract, substitute
+    compatible, extract, substitute,
+    directories, directories1
     ) where
 
 import System.FilePath(pathSeparators)
+import Data.List
+import Control.Arrow
 
+
+---------------------------------------------------------------------
+-- BASIC FILE PATTERN MATCHING
 
 -- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax
 --   and semantics of 'FilePattern' see '?=='.
@@ -15,6 +21,9 @@ type FilePattern = String
 data Lexeme = Star | SlashSlash | Char Char deriving (Show, Eq)
 
 isChar (Char _) = True; isChar _ = False
+isDull (Char x) = x /= '/'; isDull _ = False
+fromChar (Char x) = x
+
 
 data Regex = Lit [Char] | Not [Char] | Any
            | Start | End
@@ -89,6 +98,46 @@ match _ _ = []
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) p x = not $ null $ match (pattern $ lexer p) (True, x)
 
+
+---------------------------------------------------------------------
+-- DIRECTORY PATTERNS
+
+-- | Given a pattern, return the directory that requires searching,
+--   with 'True' if it requires a recursive search. Must be conservative.
+--   Examples:
+--
+-- > directories1 "*.xml" == ("",False)
+-- > directories1 "//*.xml" == ("",True)
+-- > directories1 "foo//*.xml" == ("foo",True)
+-- > directories1 "foo/bar/*.xml" == ("foo/bar",False)
+-- > directories1 "*/bar/*.xml" == ("",True)
+directories1 :: FilePattern -> (FilePath, Bool)
+directories1 = first (intercalate "/") . f . lexer
+    where
+        f xs | (a@(_:_),b:bs) <- span isDull xs, b `elem` [Char '/',SlashSlash] =
+                if b == SlashSlash then ([map fromChar a],True) else first (map fromChar a:) $ f bs
+             | all (\x -> isDull x || x == Star) xs = ([],False)
+             | otherwise = ([], True)
+
+
+-- | Given a set of patterns, produce a set of directories that require searching,
+--   with 'True' if it requires a recursive search. Must be conservative. Examples:
+--
+-- > directories ["*.xml","//*.c"] == [("",True)]
+-- > directories ["bar/*.xml","baz//*.c"] == [("bar",False),("baz",True)]
+-- > directories ["bar/*.xml","baz//*.c"] == [("bar",False),("baz",True)]
+directories :: [FilePattern] -> [(FilePath,Bool)]
+directories ps = foldl f xs xs
+    where
+        xs = nub $ map directories1 ps 
+
+        -- Eliminate anything which is a strict subset
+        f xs (x,True) = filter (\y -> not $ (x,False) == y || (x ++ "/") `isPrefixOf` fst y) xs
+        f xs _ = xs
+
+
+---------------------------------------------------------------------
+-- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
 
 -- | Do they have the same * and // counts in the same order
 compatible :: [FilePattern] -> Bool
