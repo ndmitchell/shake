@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
 
 {-# LANGUAGE CPP #-}
