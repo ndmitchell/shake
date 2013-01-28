@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Change getDirectoryFiles to take a set of file patterns
     Add doesDirectoryExist function
     Add shakeAbbreviations feature
     Add a new Progress module for sensible progress messages

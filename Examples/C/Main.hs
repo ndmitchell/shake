@@ -10,7 +10,7 @@ main = shaken noTest $ \args obj -> do
     want [obj "Main.exe"]
 
     obj "Main.exe" *> \out -> do
-        cs <- getDirectoryFiles src "*.c"
+        cs <- getDirectoryFiles src ["*.c"]
         let os = map (obj . (<.> "o")) cs
         need os
         system' "gcc" $ ["-o",out] ++ os

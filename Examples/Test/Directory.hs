@@ -9,7 +9,7 @@ import System.Directory(createDirectory)
 main = shaken test $ \args obj -> do
     want $ map obj ["files.lst","dirs.lst","exist.lst","foodirexist.lst"]
     obj "files.lst" *> \out -> do
-        x <- getDirectoryFiles (obj "") "*.txt"
+        x <- getDirectoryFiles (obj "") ["*.txt"]
         writeFileLines out x
     obj "dirs.lst" *> \out -> do
         x <- getDirectoryDirs (obj "")

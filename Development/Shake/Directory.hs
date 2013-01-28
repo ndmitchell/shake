@@ -46,7 +46,7 @@ instance Show DoesDirectoryExistA where
 
 data GetDirectoryQ
     = GetDir {dir :: FilePath}
-    | GetDirFiles {dir :: FilePath, pat :: FilePattern}
+    | GetDirFiles {dir :: FilePath, pat :: [FilePattern]}
     | GetDirDirs {dir :: FilePath}
     deriving (Typeable,Eq)
 newtype GetDirectoryA = GetDirectoryA [FilePath]
@@ -54,7 +54,8 @@ newtype GetDirectoryA = GetDirectoryA [FilePath]
 
 instance Show GetDirectoryQ where
     show (GetDir x) = "Listing " ++ x
-    show (GetDirFiles a b) = "Files " ++ a </> b
+    show (GetDirFiles a b) = "Files " ++ a </> ['{'|m] ++ unwords b ++ ['}'|m]
+        where m = length b > 1
     show (GetDirDirs x) = "Dirs " ++ x
 
 instance NFData GetDirectoryQ where
@@ -64,9 +65,9 @@ instance NFData GetDirectoryQ where
 
 instance Hashable GetDirectoryQ where
     hashWithSalt salt = hashWithSalt salt . f
-        where f (GetDir x) = (0 :: Int, x, "")
+        where f (GetDir x) = (0 :: Int, x, [])
               f (GetDirFiles x y) = (1, x, y)
-              f (GetDirDirs x) = (2, x, "")
+              f (GetDirDirs x) = (2, x, [])
 
 instance Binary GetDirectoryQ where
     get = do
@@ -124,9 +125,9 @@ doesDirectoryExist file = do
 getDirectoryContents :: FilePath -> Action [FilePath]
 getDirectoryContents x = getDirAction $ GetDir x
 
--- | Get the files in a directory that match a particular pattern.
+-- | Get the files in a directory that match any of a set of patterns.
 --   For the interpretation of the pattern see '?=='.
-getDirectoryFiles :: FilePath -> FilePattern -> Action [FilePath]
+getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
 -- | Get the directories contained by a directory, does not include @.@ or @..@.
@@ -143,5 +144,5 @@ getDir x = fmap (GetDirectoryA . sort) $ f x . filter validName =<< IO.getDirect
 
         f GetDir{} xs = return xs
         f GetDirFiles{} xs = flip filterM xs $ \s ->
-            if not $ pat x ?== s then return False else IO.doesFileExist $ dir x </> s
+            if not $ any (?== s) $ pat x then return False else IO.doesFileExist $ dir x </> s
         f GetDirDirs{} xs = flip filterM xs $ \s -> IO.doesDirectoryExist $ dir x </> s
