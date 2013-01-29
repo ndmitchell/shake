@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 
 module Examples.Test.Oracle(main) where
 
