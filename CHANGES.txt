@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.7
     Change getDirectoryFiles to take a set of file patterns
     Add doesDirectoryExist function
     Add shakeAbbreviations feature
