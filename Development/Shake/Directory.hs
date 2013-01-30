@@ -119,20 +119,32 @@ doesDirectoryExist file = do
     return res
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
---   the files @.@ or @..@ (unlike the standard Haskell version). It is usually better to
---   call either 'getDirectoryFiles' or 'getDirectoryDirs'. The resulting paths will be relative
+--   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative
 --   to the first argument.
+--
+--   It is usually simpler to call either 'getDirectoryFiles' or 'getDirectoryDirs'.
 getDirectoryContents :: FilePath -> Action [FilePath]
 getDirectoryContents x = getDirAction $ GetDir x
 
--- | Get the files in a directory that match any of a set of patterns.
---   For the interpretation of the pattern see '?=='. To match any file
---   in a subdirectory pass @\"//*.xml\"@. All returned values will be relative to the
---   filepath argument.
+-- | Get the files anywhere under a directory that match any of a set of patterns.
+--   For the interpretation of the patterns see '?=='. All results will be
+--   relative to the 'FilePath' argument. Some examples:
+--
+-- > getDirectoryFiles "Config" ["//*.xml"]
+-- >     -- All .xml files anywhere under the Config directory
+-- >     -- If Config/foo/bar.xml exists it will return ["foo/bar.xml"]
+-- > getDirectoryFiles "Modules" ["*.hs","*.lhs"]
+-- >     -- All .hs or .lhs in the Modules directory
+-- >     -- If Modules/foo.hs and Modules/foo.lhs exist, it will return ["foo.hs","foo.lhs"]
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
--- | Get the directories contained by a directory, does not include @.@ or @..@.
+-- | Get the directories in a directory, not including @.@ or @..@.
+--   All directories are relative to the argument directory.
+--
+-- > getDirectoryDirs "/Users"
+-- >    -- Return all directories in the /Users directory
+-- >    -- e.g. ["Emily","Henry","Neil"]
 getDirectoryDirs :: FilePath -> Action [FilePath]
 getDirectoryDirs x = getDirAction $ GetDirDirs x
 
