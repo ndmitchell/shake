@@ -45,12 +45,19 @@ test build obj = do
     let demand x ys = let f = showEsc x in do build [f]; assertContents (obj f) $ unlines $ words ys
     build ["clean"]
     demand " *.txt.files" ""
+    demand " //*.txt.files" ""
     demand ".dirs" ""
     demand "A.txt B.txt C.txt.exist" "00 00 00"
 
     writeFile (obj "A.txt") ""
     writeFile (obj "B.txt") ""
     createDirectory (obj "C.txt")
+    writeFile (obj "C.txt/D.txt") ""
+    writeFile (obj "C.txt/E.xtx") ""
     demand " *.txt.files" "A.txt B.txt"
     demand ".dirs" "C.txt"
     demand "A.txt B.txt C.txt.exist" "10 10 01"
+    demand " //*.txt.files" "A.txt B.txt C.txt/D.txt"
+    demand "C.txt *.txt.files" "D.txt"
+    demand " *.txt //*.xtx.files" "A.txt B.txt C.txt/E.xtx"
+    demand " C.txt/*.files" "C.txt/D.txt C.txt/E.xtx"
