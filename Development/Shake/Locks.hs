@@ -67,7 +67,7 @@ waitBarrier (Barrier x) = readMVar x
 ---------------------------------------------------------------------
 -- RESOURCE
 
--- | The type representing a finite resource, which multiple build actions should respect.
+-- | A type representing a finite resource, which multiple build actions should respect.
 --   Created with 'newResource' in the 'IO' monad before calling 'Development.Shake.shake',
 --   and used with 'Development.Shake.withResource' in the 'Development.Shake.Action' monad
 --   when defining rules.

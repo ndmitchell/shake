@@ -79,7 +79,7 @@ data ShakeOptions = ShakeOptions
         --   Can be used to implement @make --touch@.
     ,shakeAbbreviations :: [(String,String)]
         -- ^ Defaults to @[]@. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation.
-        --   Commonly used to replace the long paths (e.g. @.make/i586-linux-gcc/output@) with an abbreviation (e.g. @$OUT@).
+        --   Commonly used to replace the long paths (e.g. @.make\/i586-linux-gcc\/output@) with an abbreviation (e.g. @$OUT@).
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called on a separate thread when the build starts, allowing progress to be reported.
         --   For applications that want to display progress messages, 'progressSimple' is often sufficient, but more advanced
