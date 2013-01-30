@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow getDirectoryFiles to operate recursively
 0.7
     Change getDirectoryFiles to take a set of file patterns
     Add doesDirectoryExist function

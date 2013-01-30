@@ -126,7 +126,9 @@ getDirectoryContents :: FilePath -> Action [FilePath]
 getDirectoryContents x = getDirAction $ GetDir x
 
 -- | Get the files in a directory that match any of a set of patterns.
---   For the interpretation of the pattern see '?=='.
+--   For the interpretation of the pattern see '?=='. To match any file
+--   in a subdirectory pass @\"//*.xml\"@. All returned values will be relative to the
+--   filepath argument.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
@@ -139,6 +141,7 @@ getDirAction x = do GetDirectoryA y <- apply1 x; return y
 contents :: FilePath -> IO [FilePath]
 contents = fmap (filter $ not . all (== '.')) . IO.getDirectoryContents
 
+
 answer :: [FilePath] -> GetDirectoryA
 answer = GetDirectoryA . sort
 
@@ -148,5 +151,25 @@ getDir GetDir{..} = fmap answer $ contents dir
 getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
     where f x = IO.doesDirectoryExist $ dir </> x
 
-getDir GetDirFiles{..} = fmap answer $ filterM f =<< contents dir
-    where f x = if not $ any (?== x) pat then return False else IO.doesFileExist $ dir </> x
+getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
+    where
+        test = let ps = map (?==) pat in \x -> any ($ x) ps
+
+        f (dir2,False) = do
+            xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
+            flip filterM xs $ \x -> if not $ test x then return False else IO.doesFileExist $ dir </> x
+
+        f (dir2,True) = do
+            xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
+            (files,dirs) <- partitionM (\x -> IO.doesFileExist $ dir </> x) xs
+            rest <- concatMapM (\d -> f (d, True)) dirs
+            return $ filter test files ++ rest
+
+
+concatMapM f xs = fmap concat $ mapM f xs
+
+partitionM f [] = return ([], [])
+partitionM f (x:xs) = do
+    t <- f x
+    (a,b) <- partitionM f xs
+    return $ if t then (x:a,b) else (a,x:b)
