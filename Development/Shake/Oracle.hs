@@ -32,29 +32,31 @@ instance (
     storedValue _ = return Nothing
 
 
--- | Add extra information which your build should depend on. For example:
+-- | Add extra information which rules can depend on.
+--   An oracle is a function from a question type @q@, to an answer type @a@.
+--   As an example, we can define an oracle allowing you to depend on the current version of GHC:
 --
 -- @
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
--- 'addOracle' $ \\(GhcVersion _) -> return \"7.2.1\"
+-- 'addOracle' $ \\(GhcVersion _) -> fmap (last . words . fst) $ 'Development.Shake.systemOutput' \"ghc\" [\"--version\"]
 -- @
 --
---   If a rule depends on the GHC version, it can use @'askOracle' (GhcVersion ())@, and
---   if the GHC version changes, the rule will rebuild. We use a @newtype@ around @()@ to
---   allow the use of @GeneralizedNewtypeDeriving@. It is common for the value returned
---   by 'askOracle' to be ignored, in which case 'askOracleWith' may help avoid ambiguous type
---   messages -- although a wrapper function with an explicit type is encouraged.
---   The result of 'addOracle' is simply 'askOracle' restricted to the specific type of the added oracle.
---   To import all the type classes required see "Development.Shake.Classes".
+--   If a rule calls @'askOracle' (GhcVersion ())@, that rule will be rerun whenever the GHC version changes.
+--   Some notes:
 --
---   We require that each call to 'addOracle' uses a different type of @question@ from any
---   other calls in a given set of 'Rule's, otherwise a runtime error will be raised.
+-- * We define @GhcVersion@ with a @newtype@ around @()@, allowing the use of @GeneralizedNewtypeDeriving@.
+--   All the necessary type classes are exported from "Development.Shake.Classes".
 --
---   Actions passed to 'addOracle' will be run in every build they are required,
+-- * Each call to 'addOracle' must use a different type of question.
+--
+-- * Actions passed to 'addOracle' will be run in every build they are required,
 --   but if their value does not change they will not invalidate any rules depending on them.
---   To get a similar behaviour using files, see 'Development.Shake.alwaysRerun'.
+--   To get a similar behaviour using data stored in files, see 'Development.Shake.alwaysRerun'.
 --
---   As an example, consider tracking package versions installed with GHC:
+-- * If the value returned by 'askOracle' is ignored then 'askOracleWith' may help avoid ambiguous type messages.
+--   Alternatively, use the result of 'addOracle', which is 'askOracle' restricted to the correct type.
+--
+--   As a more complex example, consider tracking Haskell package versions:
 --
 -- @
 --newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
@@ -85,7 +87,7 @@ addOracle act = do
     return askOracle
 
 
--- | Get information previously added with 'addOracle', the @question@/@answer@ types must match those provided
+-- | Get information previously added with 'addOracle'. The question/answer types must match those provided
 --   to 'addOracle'.
 askOracle :: (
 #if __GLASGOW_HASKELL__ >= 704
@@ -97,8 +99,8 @@ askOracle :: (
     ) => q -> Action a
 askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answer
 
--- | Get information previously added with 'addOracle'. The second argument is unused, but can
---   be useful to avoid ambiguous type error messages.
+-- | Get information previously added with 'addOracle'. The second argument is not used, but can
+--   be useful to fix the answer type, avoiding ambiguous type error messages.
 askOracleWith :: (
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue q, ShakeValue a
