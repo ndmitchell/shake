@@ -27,7 +27,8 @@ shaken test rules sleeper = do
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            test (\args -> withArgs (name:args ++ extra) $ shaken test rules sleeper) (out++)
+            let obj x = if "/" `isPrefixOf` x then init out ++ x else out ++ x
+            test (\args -> withArgs (name:args ++ extra) $ shaken test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
         "clean":_ -> removeDirectoryRecursive out
 {-
