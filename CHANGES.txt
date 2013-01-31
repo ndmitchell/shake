@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.8
     Improve the Oracle documentation
     Allow getDirectoryFiles to operate recursively
 0.7
