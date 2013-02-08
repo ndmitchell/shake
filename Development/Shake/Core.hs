@@ -14,7 +14,9 @@ module Development.Shake.Core(
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
-    Resource, newResource, newResourceIO, withResource
+    Resource, newResource, newResourceIO, withResource,
+    -- Internal stuff
+    rulesIO
     ) where
 
 import Control.Exception as E

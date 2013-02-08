@@ -91,7 +91,9 @@ module Development.Shake(
     addOracle, askOracle, askOracleWith,
     alwaysRerun,
     -- * Finite resources
-    Resource, newResource, newResourceIO, withResource
+    Resource, newResource, newResourceIO, withResource,
+    -- * Cached file contents
+    newCache, newCacheIO
     ) where
 
 -- I would love to use module export in the above export list, but alas Haddock
