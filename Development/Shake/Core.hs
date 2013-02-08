@@ -119,7 +119,7 @@ ruleValue = err "ruleValue"
 
 -- | Define a set of rules. Rules can be created with calls to 'rule', 'defaultRule' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
-newtype Rules a = Rules (Writer SRules a)
+newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Monad, Functor, Applicative)
 
 newRules :: SRules -> Rules ()
@@ -128,8 +128,8 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-getRules :: Rules () -> SRules
-getRules (Rules r) = execWriter r
+getRules :: Rules () -> IO SRules
+getRules (Rules r) = execWriterT r
 
 
 data SRules = SRules
@@ -216,7 +216,7 @@ newtype Action a = Action (StateT SAction IO a)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = do
     start <- startTime
-    rs <- return $ getRules rs
+    rs <- getRules rs
     registerWitnesses rs
 
     outputLocked <- do
