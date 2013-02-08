@@ -19,6 +19,7 @@ import Control.Monad
 import Control.Concurrent
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.Time.Clock
 import Data.Char
 import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map
@@ -46,7 +47,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logger witness act = do
+withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shakeStorageLog} logger witness act = do
     let dbfile = shakeFiles <.> "database"
         bupfile = shakeFiles <.> "bup"
     createDirectoryIfMissing True $ takeDirectory shakeFiles
@@ -54,6 +55,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
     -- complete a partially failed compress
     b <- doesFileExist bupfile
     when b $ do
+        unexpected "Backup file exists, restoring over the previous file\n"
         logger $ "Backup file move to original"
         E.catch (removeFile dbfile) (\(e :: SomeException) -> return ())
         renameFile bupfile dbfile
@@ -82,14 +84,24 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
                     ("Error when reading Shake database " ++ dbfile) :
                     map ("  "++) (lines msg) ++
                     ["All files will be rebuilt"]
+                when shakeStorageLog $ do
+                    hSeek h AbsoluteSeek 0
+                    i <- hFileSize h
+                    bs <- LBS.hGet h $ fromInteger i
+                    let cor = shakeFiles <.> "corrupt"
+                    LBS.writeFile cor bs
+                    unexpected $ "Backup of corrupted file stored at " ++ cor ++ ", " ++ show i ++ " bytes\n"
+                    
                 -- exitFailure -- should never happen without external corruption
                                -- add back to check during random testing
                 return $ continue h Map.empty) $
                 case readChunks $ LBS.drop (LBS.length ver) src of
                     (slop, []) -> do
+                        when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         logger $ "Read 0 chunks, plus " ++ show slop ++ " slop"
                         return $ continue h Map.empty
                     (slop, w:xs) -> do
+                        when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         logger $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
                         logger $ "Chunk sizes " ++ show (map LBS.length (w:xs))
                         let ws = decode w
@@ -107,6 +119,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
                                 logger $ "Drop complete"
                             return $ continue h mp
                          else do
+                            unexpected "Compressing database\n"
                             logger "Compressing database"
                             hClose h -- two hClose are fine
                             return $ do
@@ -117,7 +130,13 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles} logg
                                     logger "Compression complete"
                                     continue h mp
     where
-        outputErr = when (shakeVerbosity >= Quiet) . putStr
+        unexpected x = when shakeStorageLog $ do
+            t <- getCurrentTime
+            appendFile (shakeFiles <.> "storage") $ "\n[" ++ show t ++ "]: " ++ x
+        outputErr x = do
+            when (shakeVerbosity >= Quiet) $ putStr x
+            unexpected x
+
         ver = LBS.pack $ databaseVersion shakeVersion
 
         writeChunk h s = do

@@ -77,6 +77,7 @@ flagList name = let (*) = (,) in
     ,"staunch" * \o -> o{shakeStaunch=True}
     ,"deterministic" * \o -> o{shakeDeterministic=True}
     ,"lint" * \o -> o{shakeLint=True}
+    ,"storage" * \o -> o{shakeStorageLog=True}
     ,"progress" * \o -> o{shakeProgress=progressSimple}
     ,"assume-clean" * \o -> o{shakeAssume=Just AssumeClean}
     ,"assume-dirty" * \o -> o{shakeAssume=Just AssumeDirty}
