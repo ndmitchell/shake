@@ -6,9 +6,11 @@ import Development.Shake.FilePath
 import Examples.Util
 import System.Directory(createDirectory)
 import Data.List
+import Control.Monad
+import System.Directory(getCurrentDirectory, setCurrentDirectory)
 
 
-    -- Use escape characters, _o=* _l=/ __=<space>
+-- Use escape characters, _o=* _l=/ __=<space>
 readEsc ('_':'o':xs) = '*' : readEsc xs
 readEsc ('_':'l':xs) = '/' : readEsc xs
 readEsc ('_':'_':xs) = ' ' : readEsc xs
@@ -40,6 +42,16 @@ main = shaken test $ \args obj -> do
         let bool x = if x then "1" else "0"
         writeFileLines out $ zipWith (\a b -> bool a ++ bool b) fs ds
 
+    obj "dots" *> \out -> do
+        cwd <- liftIO getCurrentDirectory
+        liftIO $ setCurrentDirectory $ obj ""
+        b1 <- liftM2 (==) (getDirectoryContents ".") (getDirectoryContents "")
+        b2 <- liftM2 (==) (getDirectoryDirs ".") (getDirectoryDirs "")
+        b3 <- liftM2 (==) (getDirectoryFiles "." ["*.txt"]) (getDirectoryFiles "" ["*.txt"])
+        b4 <- liftM2 (==) (getDirectoryFiles "." ["C.txt/*.txt"]) (getDirectoryFiles "" ["C.txt/*.txt"])
+        b5 <- liftM2 (==) (getDirectoryFiles "." ["//*.txt"]) (getDirectoryFiles "" ["//*.txt"])
+        liftIO $ setCurrentDirectory cwd
+        writeFileLines out $ map show [b1,b2,b3,b4,b5]
 
 test build obj = do
     let demand x ys = let f = showEsc x in do build [f]; assertContents (obj f) $ unlines $ words ys
@@ -61,3 +73,5 @@ test build obj = do
     demand "C.txt *.txt.files" "D.txt"
     demand " *.txt //*.xtx.files" "A.txt B.txt C.txt/E.xtx"
     demand " C.txt/*.files" "C.txt/D.txt C.txt/E.xtx"
+
+    demand "dots" "True True True True True"
