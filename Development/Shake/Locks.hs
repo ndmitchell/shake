@@ -68,20 +68,19 @@ waitBarrier (Barrier x) = readMVar x
 -- RESOURCE
 
 -- | A type representing a finite resource, which multiple build actions should respect.
---   Created with 'newResource' in the 'IO' monad before calling 'Development.Shake.shake',
---   and used with 'Development.Shake.withResource' in the 'Development.Shake.Action' monad
+--   Created with 'Development.Shake.newResource' and used with 'Development.Shake.withResource'
 --   when defining rules.
 --
 --   As an example, only one set of calls to the Excel API can occur at one time, therefore
 --   Excel is a finite resource of quantity 1. You can write:
 --
 -- @
--- do excel <- 'newResource' \"Excel\" 1
---    'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
---        'Development.Shake.want' [\"a.xls\",\"b.xls\"]
---        \"*.xls\" 'Development.Shake.*>' \\out ->
---            'Development.Shake.withResource' excel 1 $
---                'Development.Shake.system'' \"excel\" [out,...]
+-- 'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
+--    'Development.Shake.want' [\"a.xls\",\"b.xls\"]
+--    excel <- 'Development.Shake.newResource' \"Excel\" 1
+--    \"*.xls\" 'Development.Shake.*>' \\out ->
+--        'Development.Shake.withResource' excel 1 $
+--            'Development.Shake.system'' \"excel\" [out,...]
 -- @
 --
 --   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
@@ -96,21 +95,20 @@ waitBarrier (Barrier x) = readMVar x
 --   ourselves to 4 linkers with:
 --
 -- @
--- do disk <- 'newResource' \"Disk\" 4
---    'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=8} $ do
---        'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
---        \"*.exe\" 'Development.Shake.*>' \\out ->
---            'Development.Shake.withResource' disk 1 $
---                'Development.Shake.system'' \"ld\" [\"-o\",out,...]
---        \"*.o\" 'Development.Shake.*>' \\out ->
---            'Development.Shake.system'' \"cl\" [\"-o\",out,...]
+-- disk <- 'Development.Shake.newResource' \"Disk\" 4
+-- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
+--    \"*.exe\" 'Development.Shake.*>' \\out ->
+--        'Development.Shake.withResource' disk 1 $
+--            'Development.Shake.system'' \"ld\" [\"-o\",out,...]
+--    \"*.o\" 'Development.Shake.*>' \\out ->
+--        'Development.Shake.system'' \"cl\" [\"-o\",out,...]
 -- @
 data Resource = Resource String Int (Var (Int,[(Int,IO ())]))
 instance Show Resource where show (Resource name _ _) = "Resource " ++ name
 
 
--- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
---   For an example see 'Resource'. To perform the same operation in the 'Rules' Monad see 'newResource'.
+-- | A version of 'newResource' that runs in IO, and can be called before calling 'Development.Shake.shake'.
+--   Most people should use 'Development.Shake.newResource' instead.
 newResourceIO :: String -> Int -> IO Resource
 newResourceIO name mx = do
     when (mx < 0) $
