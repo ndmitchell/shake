@@ -105,21 +105,10 @@ import Development.Shake.Core
 import Development.Shake.Derived
 import Development.Shake.Progress
 
+import Development.Shake.Shake
 import Development.Shake.Directory
 import Development.Shake.File
 import Development.Shake.FilePattern
 import Development.Shake.Files
 import Development.Shake.Oracle
 import Development.Shake.Rerun
-
-
--- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".
---   Use 'ShakeOptions' to specify how the system runs, and 'Rules' to specify what to build.
-shake :: ShakeOptions -> Rules () -> IO ()
-shake opts r = do
-    run opts $ do
-        r
-        defaultRuleFile
-        defaultRuleDirectory
-        defaultRuleRerun
-    return ()
