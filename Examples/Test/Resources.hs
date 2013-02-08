@@ -11,9 +11,9 @@ main extra = do
     let cap = 2
 
     ref <- newIORef 0
-    res <- newResource "test" cap
     flip (shaken test) extra $ \args obj -> do
         want $ map obj ["file1.txt","file2.txt","file3.txt","file4.txt"]
+        res <- newResource "test" cap
         obj "*.txt" *> \out ->
             withResource res 1 $ do
                 old <- liftIO $ atomicModifyIORef ref $ \i -> (i+1,i)

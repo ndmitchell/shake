@@ -14,7 +14,7 @@ module Development.Shake.Core(
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
-    Resource, newResource, withResource
+    Resource, newResource, newResourceIO, withResource
     ) where
 
 import Control.Exception as E
@@ -121,6 +121,9 @@ ruleValue = err "ruleValue"
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Monad, Functor, Applicative)
+
+rulesIO :: IO a -> Rules a
+rulesIO = Rules . liftIO
 
 newRules :: SRules -> Rules ()
 newRules = Rules . tell
@@ -408,6 +411,12 @@ withVerbosity new act = do
 --   (including from 'Development.Shake.system'') will not be printed to the screen.
 quietly :: Action a -> Action a
 quietly = withVerbosity Quiet
+
+
+-- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
+--   For an example see 'Resource'.
+newResource :: String -> Int -> Rules Resource
+newResource name mx = rulesIO $ newResourceIO name mx
 
 
 -- | Run an action which uses part of a finite resource. For an example see 'Resource'.

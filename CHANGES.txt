@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add newResourceIO and move newResource into the Rules monad
     Add shakeStorageLog, to help diagnosing obscure database errors
 0.8
     Improve the Oracle documentation

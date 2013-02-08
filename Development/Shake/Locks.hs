@@ -3,7 +3,7 @@ module Development.Shake.Locks(
     Lock, newLock, withLock,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
-    Resource, newResource, acquireResource, releaseResource
+    Resource, newResourceIO, acquireResource, releaseResource
     ) where
 
 import Control.Concurrent
@@ -110,9 +110,9 @@ instance Show Resource where show (Resource name _ _) = "Resource " ++ name
 
 
 -- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
---   For an example see 'Resource'.
-newResource :: String -> Int -> IO Resource
-newResource name mx = do
+--   For an example see 'Resource'. To perform the same operation in the 'Rules' Monad see 'newResource'.
+newResourceIO :: String -> Int -> IO Resource
+newResourceIO name mx = do
     when (mx < 0) $
         error $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     var <- newVar (mx, [])
