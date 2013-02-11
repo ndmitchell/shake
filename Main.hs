@@ -72,7 +72,7 @@ test _ = do
     let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
     (dones,threads) <- fmap unzip $ forM (priority ++ normal) $ \(name,main) -> do
         done <- newEmptyMVar
-        thread <- forkIO $ flip onException (killThread self) $ do
+        thread <- forkIO $ handleJust (guard . (/=) ThreadKilled) (const $ killThread self) $ do
             takeMVar one
             withArgs (name:"test":drop 1 args) $ main pause
             putMVar one ()
