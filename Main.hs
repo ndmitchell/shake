@@ -70,12 +70,14 @@ test _ = do
     -- priority tests have more pauses in, so doing them sooner gets the whole tests done faster
     self <- myThreadId
     let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
-    dones <- forM (priority ++ normal) $ \(name,main) -> do
+    (dones,threads) <- fmap unzip $ forM (priority ++ normal) $ \(name,main) -> do
         done <- newEmptyMVar
-        forkIO $ flip onException (killThread self) $ do
+        thread <- forkIO $ flip onException (killThread self) $ do
             takeMVar one
             withArgs (name:"test":drop 1 args) $ main pause
             putMVar one ()
             putMVar done ()
-        return done
-    onException (mapM_ takeMVar dones) (putStrLn "TESTS FAILED")
+        return (done, thread)
+    onException (mapM_ takeMVar dones) $ do
+        mapM_ killThread threads
+        putStrLn "TESTS FAILED"
