@@ -96,6 +96,7 @@ library
         Development.Shake.FilePath
 
     other-modules:
+        Development.Shake.Args
         Development.Shake.Binary
         Development.Shake.Core
         Development.Shake.Database

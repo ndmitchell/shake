@@ -75,6 +75,8 @@ module Development.Shake(
     liftIO,
     -- * Configuration
     ShakeOptions(..), Assume(..),
+    -- ** Command line
+    shakeWithArgs, shakeOptDescrs,
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar,
     -- ** Verbosity
@@ -104,8 +106,9 @@ import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Derived
 import Development.Shake.Progress
-
+import Development.Shake.Args
 import Development.Shake.Shake
+
 import Development.Shake.Directory
 import Development.Shake.File
 import Development.Shake.FilePattern

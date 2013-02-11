@@ -12,6 +12,8 @@ import Development.Shake.Rerun
 
 -- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".
 --   Use 'ShakeOptions' to specify how the system runs, and 'Rules' to specify what to build.
+--
+--   To use command line flags to modify 'ShakeOptions' see 'Development.Shake.shakeWithArgs'.
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts r = do
     run opts $ do
