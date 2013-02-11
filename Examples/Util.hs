@@ -10,6 +10,7 @@ import Data.List
 import System.Directory as IO
 import System.Environment
 import System.Random
+import System.Console.GetOpt
 
 
 shaken
@@ -50,39 +51,12 @@ shaken test rules sleeper = do
             shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules args (out++)
 
         args -> do
-            (flags,args) <- return $ partition ("-" `isPrefixOf`) args
-            flags <- return $ map (dropWhile (== '-')) flags
-            let f o x = case lookup x $ flagList name of
-                    Just op -> op o
-                    Nothing | "threads" `isPrefixOf` x -> o{shakeThreads=read $ drop 7 x}
-                            | x `elem` ["clean","sleep"] -> o -- handled elsewhere
-                            | otherwise -> error $ "Don't know how to deal with flag: " ++ x
-            when ("clean" `elem` flags) $ removeDirectoryRecursive out
-            let opts = foldl' f shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html"} flags
-            shake opts $ rules args (out++)
-
-
-flags :: [String]
-flags = "threads#" : map fst (flagList "") ++ ["clean","sleep"]
-
-
-flagList :: String -> [(String, ShakeOptions -> ShakeOptions)]
-flagList name = let (*) = (,) in
-    ["no-dump" * \o -> o{shakeReport=Nothing}
-    ,"silent" * \o -> o{shakeVerbosity=Silent}
-    ,"quiet" * \o -> o{shakeVerbosity=Quiet}
-    ,"normal" * \o -> o{shakeVerbosity=Normal}
-    ,"loud" * \o -> o{shakeVerbosity=Loud}
-    ,"diagnostic" * \o -> o{shakeVerbosity=Diagnostic}
-    ,"staunch" * \o -> o{shakeStaunch=True}
-    ,"deterministic" * \o -> o{shakeDeterministic=True}
-    ,"lint" * \o -> o{shakeLint=True}
-    ,"storage" * \o -> o{shakeStorageLog=True}
-    ,"progress" * \o -> o{shakeProgress=progressSimple}
-    ,"assume-clean" * \o -> o{shakeAssume=Just AssumeClean}
-    ,"assume-dirty" * \o -> o{shakeAssume=Just AssumeDirty}
-    ,"abbrev" * \o -> o{shakeAbbreviations=[(if name == "" then "output" else "output/" ++ name, "$OUT")]}
-    ]
+            let (_,files,_) = getOpt Permute [] args
+            withArgs (args \\ files) $
+                shakeWithArgs
+                    (removeDirectoryRecursive out) 
+                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html"})
+                    (rules files (out++))
 
 
 unobj :: FilePath -> FilePath
@@ -105,7 +79,7 @@ assertContents file want = do
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
-    build ["--abbrev"]
+    build ["--abbrev=output=$OUT"]
     build []
 
 

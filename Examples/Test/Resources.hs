@@ -24,8 +24,8 @@ main extra = do
 
 test build obj = do
     build ["clean"]
-    build ["--threads2"]
+    build ["-j2"]
     build ["clean"]
-    build ["--threads4"]
+    build ["-j4"]
     build ["clean"]
-    build ["--threads10"]
+    build ["-j10"]

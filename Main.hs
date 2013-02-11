@@ -6,7 +6,7 @@ import Data.List
 import Data.Maybe
 import System.Environment
 
-import Examples.Util(flags, sleepFileTime)
+import Examples.Util(sleepFileTime)
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.C.Main as C
@@ -47,7 +47,6 @@ main = do
             ,""
             ,unwords $ "Modes:" : map fst fakes
             ,unwords $ "Demos:" : map fst mains
-            ,unwords $ "Flags:" : flags
             ,""
             ,"As an example, try:"
             ,""

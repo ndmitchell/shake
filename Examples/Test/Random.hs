@@ -59,7 +59,7 @@ test build obj = forM_ [1..] $ \count -> do
         writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
     logicBang <- addBang =<< addBang logic
     j <- randomRIO (1::Int,8)
-    res <- try $ build $ ("--threads" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
+    res <- try $ build $ ("-j" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
     case res of
         Left err
             | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
@@ -76,7 +76,7 @@ test build obj = forM_ [1..] $ \count -> do
                 replicateM i $ randomElem poss
             sleepFileTime
             j <- randomRIO (1::Int,8)
-            build $ ("--threads" ++ show j) : map show (xs ++ map Want wants)
+            build $ ("-j" ++ show j) : map show (xs ++ map Want wants)
 
             let value i = case [ys | Logic j ys <- xs, j == i] of
                     [ys] -> Multiple $ flip map ys $ map $ \i -> case i of
