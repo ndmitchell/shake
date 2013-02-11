@@ -94,6 +94,7 @@ library
         Development.Shake
         Development.Shake.Classes
         Development.Shake.FilePath
+        Development.Shake.Sys
 
     other-modules:
         Development.Shake.Args

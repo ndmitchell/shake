@@ -3,6 +3,7 @@ module Examples.C.Main(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import Development.Shake.Sys
 import Examples.Util
 
 main = shaken noTest $ \args obj -> do
@@ -13,14 +14,14 @@ main = shaken noTest $ \args obj -> do
         cs <- getDirectoryFiles src ["*.c"]
         let os = map (obj . (<.> "o")) cs
         need os
-        system' "gcc" $ ["-o",out] ++ os
+        sys "gcc -o" [out] os
 
     obj "*.c.o" *> \out -> do
         let c = src </> takeBaseName out
         need [c]
         headers <- cIncludes c
         need $ map ((</>) src . takeFileName) headers
-        system' "gcc" ["-o",out,"-c",c]
+        sys "gcc -o" [out] "-c" [c]
 
 cIncludes :: FilePath -> Action [FilePath]
 cIncludes x = do
