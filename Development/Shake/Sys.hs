@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 
--- | This module provides versions of the 'Development.Shake.system'' family of functions
+-- | This module provides versions of the 'Development.Shake.Derived.system'' family of functions
 --   which take a variable number of arguments.
 --
 --   All these functions take a variable number of arguments.
