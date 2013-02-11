@@ -9,6 +9,7 @@ import Development.Shake.File
 import Development.Shake.Progress
 import Development.Shake.Shake
 
+import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import Data.Either
@@ -55,6 +56,8 @@ shakeWithArgs clean baseOpts rules = do
      else if "clean" `elem` files then
         clean
      else do
+        when (Clean `elem` flagsExtra) clean
+        when (Pause `elem` flagsExtra) $ threadDelay 1000000
         curdir <- getCurrentDirectory
         let redir = case changeDirectory of
                 Nothing -> id
@@ -102,6 +105,8 @@ data Extra = ChangeDirectory FilePath
            | AssumeOld FilePath
            | PrintDirectory Bool
            | Help
+           | Clean
+           | Pause
              deriving Eq
 
 
@@ -110,6 +115,7 @@ shakeOptsEx =
 -- Options not in make --help are prefixed with {--}, rest 
 {--}[Left  $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,Left  $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
+{--},Right $ Option "c" ["clean"] (NoArg Clean) "Clean before building."
     ,Right $ Option "C" ["directory"] (ReqArg ChangeDirectory "DIRECTORY") "Change to DIRECTORY before doing anything."
     ,Left  $ Option "d" ["debug"] (noArg $ \s -> s{shakeVerbosity=Diagnostic}) "Print lots of debugging information."
 {--},Left  $ Option ""  ["deterministic"] (noArg $ \s -> s{shakeDeterministic=True}) "Build rules in a fixed order."
@@ -127,6 +133,7 @@ shakeOptsEx =
     ,Left  $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
     ,Left  $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
 {--},Left  $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
+{--},Right $ Option ""  ["pause"] (NoArg Pause) "Pause for a second before building."
 {--},Left  $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
     ,Left  $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=Quiet}) "Don't print much."
     ,Left  $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
