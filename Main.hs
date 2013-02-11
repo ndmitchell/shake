@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
@@ -67,13 +68,14 @@ test _ = do
     let pause = do putMVar one (); sleepFileTime; takeMVar one
     let tests = filter ((/= "random") . fst) mains
     -- priority tests have more pauses in, so doing them sooner gets the whole tests done faster
+    self <- myThreadId
     let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
     dones <- forM (priority ++ normal) $ \(name,main) -> do
         done <- newEmptyMVar
         forkIO $ do
             takeMVar one
-            withArgs (name:"test":drop 1 args) $ main pause
+            withArgs (name:"test":drop 1 args) $ onException (main pause) (killThread self)
             putMVar one ()
             putMVar done ()
         return done
-    mapM_ takeMVar dones
+    onException (mapM_ takeMVar dones) (putStrLn "TESTS FAILED")
