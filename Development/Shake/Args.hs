@@ -57,7 +57,7 @@ shakeWithArgs clean baseOpts rules = do
         clean
      else do
         when (Clean `elem` flagsExtra) clean
-        when (Pause `elem` flagsExtra) $ threadDelay 1000000
+        when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         curdir <- getCurrentDirectory
         let redir = case changeDirectory of
                 Nothing -> id
@@ -106,7 +106,7 @@ data Extra = ChangeDirectory FilePath
            | PrintDirectory Bool
            | Help
            | Clean
-           | Pause
+           | Sleep
              deriving Eq
 
 
@@ -131,9 +131,9 @@ shakeOptsEx =
 {--},Left  $ Option "r" ["report"] (OptArg (\x -> Right $ \s -> s{shakeReport=Just $ fromMaybe "report.html" x}) "FILE") "Write out profiling information [to report.html]."
 {--},Left  $ Option ""  ["rule-version"] (intArg "rule-version" "N" $ \x s -> s{shakeVersion=x}) "Version number of the build rules."
     ,Left  $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
+{--},Right $ Option ""  ["sleep"] (NoArg Sleep) "Sleep for a second before building."
     ,Left  $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
 {--},Left  $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-{--},Right $ Option ""  ["pause"] (NoArg Pause) "Pause for a second before building."
 {--},Left  $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
     ,Left  $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=Quiet}) "Don't print much."
     ,Left  $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
