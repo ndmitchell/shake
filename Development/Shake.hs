@@ -76,7 +76,7 @@ module Development.Shake(
     -- * Configuration
     ShakeOptions(..), Assume(..),
     -- ** Command line
-    shakeWithArgs, shakeOptDescrs,
+    shakeWithArgs, shakeOptDescrs, removeFiles,
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar,
     -- ** Verbosity

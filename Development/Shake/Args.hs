@@ -23,6 +23,7 @@ import System.Exit
 -- | Run a Shake build system supporting basic @make@ compatible command line arguments.
 --   Requires a way of cleaning the build objects (triggered by @clean@ as a target),
 --   a base set of options that may be overriden by command line flags, and the set of build rules.
+--   The function 'removeFiles' is often useful for producing a cleaning action.
 --
 --   The available command line options are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.

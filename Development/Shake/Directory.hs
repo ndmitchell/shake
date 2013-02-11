@@ -5,6 +5,7 @@ module Development.Shake.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv,
+    removeFiles,
     defaultRuleDirectory
     ) where
 
@@ -220,3 +221,32 @@ partitionM f (x:xs) = do
     t <- f x
     (a,b) <- partitionM f xs
     return $ if t then (x:a,b) else (a,x:b)
+
+
+-- | Remove all empty directories and files that match any of the patterns beneath a directory.
+--   Some examples:
+--
+-- @
+--   'removeFiles' \"output\" [\"\/\/*\"]
+--   'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"]
+-- @
+--
+--   This function is often useful when writing a \'clean\' function for your build system,
+--   often as the first argument to 'shakeWithArgs'.
+removeFiles :: FilePath -> [FilePattern] -> IO ()
+removeFiles dir ["//*"] = IO.removeDirectoryRecursive dir -- optimisation
+removeFiles dir pat = f "" >> return ()
+    where
+        test = let ps = map (?==) pat in \x -> any ($ x) ps
+
+        -- dir </> dir2 is the part to operate on, return True if you cleaned everything
+        f :: FilePath -> IO Bool
+        f dir2 = do
+            xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
+            (files,dirs) <- partitionM (\x -> IO.doesFileExist $ dir </> x) xs
+            noDirs <- fmap and $ mapM f dirs
+            let (del,keep) = partition test files
+            mapM_ IO.removeFile del
+            let die = noDirs && null keep
+            when die $ IO.removeDirectory $ dir </> dir2
+            return die
