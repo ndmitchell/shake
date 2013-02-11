@@ -72,9 +72,9 @@ test _ = do
     let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
     dones <- forM (priority ++ normal) $ \(name,main) -> do
         done <- newEmptyMVar
-        forkIO $ do
+        forkIO $ flip onException (killThread self) $ do
             takeMVar one
-            withArgs (name:"test":drop 1 args) $ onException (main pause) (killThread self)
+            withArgs (name:"test":drop 1 args) $ main pause
             putMVar one ()
             putMVar done ()
         return done
