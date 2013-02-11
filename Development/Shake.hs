@@ -89,8 +89,11 @@ module Development.Shake(
     FilePattern, (?==),
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
-    -- * Additional rules
+    -- * Environment rules
+    getEnv,
+    -- * Oracle rules
     addOracle, askOracle, askOracleWith,
+    -- * Special rules
     alwaysRerun,
     -- * Finite resources
     Resource, newResource, newResourceIO, withResource,

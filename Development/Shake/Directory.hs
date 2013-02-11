@@ -1,16 +1,21 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards #-}
 
+-- | Both System.Directory and System.Environment wrappers
 module Development.Shake.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
+    getEnv,
     defaultRuleDirectory
     ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
+import System.IO.Error
 import Data.Binary
 import Data.List
+import Data.Maybe
 import qualified System.Directory as IO
+import qualified System.Environment as IO
 
 import Development.Shake.Core
 import Development.Shake.Classes
@@ -42,6 +47,19 @@ newtype DoesDirectoryExistA = DoesDirectoryExistA Bool
 
 instance Show DoesDirectoryExistA where
     show (DoesDirectoryExistA a) = show a
+
+
+newtype GetEnvQ = GetEnvQ String
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show GetEnvQ where
+    show (GetEnvQ a) = "getEnv " ++ a
+
+newtype GetEnvA = GetEnvA (Maybe String)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show GetEnvA where
+    show (GetEnvA a) = fromMaybe "<unset>" a
 
 
 data GetDirectoryQ
@@ -90,6 +108,10 @@ instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
     storedValue (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
     -- invariant _ = True
 
+instance Rule GetEnvQ GetEnvA where
+    storedValue (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvIO x
+    -- invariant _ = True
+
 instance Rule GetDirectoryQ GetDirectoryA where
     storedValue x = fmap Just $ getDir x
     -- invariant _ = True
@@ -104,6 +126,8 @@ defaultRuleDirectory = do
         liftIO $ fmap DoesDirectoryExistA $ IO.doesDirectoryExist x
     defaultRule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
+    defaultRule $ \(GetEnvQ x) -> Just $
+        liftIO $ fmap GetEnvA $ getEnvIO x
 
 
 -- | Returns 'True' if the file exists.
@@ -117,6 +141,17 @@ doesDirectoryExist :: FilePath -> Action Bool
 doesDirectoryExist file = do
     DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ file
     return res
+
+-- | Return 'Just' the value of the environment variable, or 'Nothing'
+--   if the variable is not set.
+getEnv :: String -> Action (Maybe String)
+getEnv var = do
+    GetEnvA res <- apply1 $ GetEnvQ var
+    return res
+
+getEnvIO :: String -> IO (Maybe String)
+getEnvIO x = catchIOError (fmap Just $ IO.getEnv x) $
+    \e -> if isDoesNotExistError e then return Nothing else ioError e
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative
