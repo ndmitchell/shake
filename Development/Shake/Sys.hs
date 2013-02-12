@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
 -- | This module provides versions of the 'Development.Shake.Derived.system'' family of functions
 --   which take a variable number of arguments.
@@ -25,11 +25,11 @@ import Development.Shake.Core
 import Development.Shake.Derived
 
 
-type VarArgs a t = a 
+type a :-> t = a
 
 
 -- | A variable arity version of 'system''.
-sys :: SysArguments v => String -> VarArgs v (Action ())
+sys :: SysArguments v => String -> v :-> Action ()
 sys x = sys_ [] x
 
 class SysArguments t where sys_ :: [String] -> t
@@ -41,7 +41,7 @@ instance SysArguments (Action ()) where
 
 
 -- | A variable arity version of 'systemCwd'.
-sysCwd :: SysCwdArguments v => FilePath -> String -> VarArgs v (Action ())
+sysCwd :: SysCwdArguments v => FilePath -> String -> v :-> Action ()
 sysCwd dir x = sysCwd_ dir [] x
 
 class SysCwdArguments t where sysCwd_ :: FilePath -> [String] -> t
@@ -53,7 +53,7 @@ instance SysCwdArguments (Action ()) where
 
 
 -- | A variable arity version of 'systemOutput'.
-sysOutput :: SysOutputArguments v => String -> VarArgs v (Action (String, String))
+sysOutput :: SysOutputArguments v => String -> v :-> Action (String, String)
 sysOutput x = sysOutput_ [] x
 
 class SysOutputArguments t where sysOutput_ :: [String] -> t
@@ -65,7 +65,7 @@ instance SysOutputArguments (Action (String, String)) where
 
 
 -- | A variable arity function to accumulate a list of arguments.
-args :: ArgsArguments v => VarArgs v [String]
+args :: ArgsArguments v => v :-> [String]
 args = args_ []
 
 class ArgsArguments t where args_ :: [String] -> t
