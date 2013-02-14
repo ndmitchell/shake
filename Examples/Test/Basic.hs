@@ -48,3 +48,5 @@ test build obj = do
     removeFile $ obj "twice.txt"
     build ["twice.txt"]
     assertContents (obj "twice.txt") "zzz"
+
+    show shakeOptions === show shakeOptions
