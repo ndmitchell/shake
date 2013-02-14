@@ -96,7 +96,8 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing [] False (const $ return ()) (const putStrLn)
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing [] False (const $ return ())
+    (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
