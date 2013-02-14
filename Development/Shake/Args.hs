@@ -73,7 +73,9 @@ shakeWithArgs clean baseOpts rules = do
         when (shakeVerbosity shakeOpts >= Normal) $
             let esc code = if Color `elem` flagsExtra then escape code else id
             in case res of
-                Left err -> putStrLn $ esc "31" $ show (err :: SomeException)
+                Left err -> do
+                    putStrLn $ esc "31" $ show (err :: SomeException)
+                    exitFailure
                 Right x -> do
                     stop <- getCurrentTime
                     let tot = diffUTCTime stop start
