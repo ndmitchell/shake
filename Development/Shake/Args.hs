@@ -117,7 +117,7 @@ shakeOptsEx =
     ,Left  $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
 {--},Right $ Option "c" ["clean"] (NoArg Clean) "Clean before building."
     ,Right $ Option "C" ["directory"] (ReqArg ChangeDirectory "DIRECTORY") "Change to DIRECTORY before doing anything."
-    ,Left  $ Option "d" ["debug"] (noArg $ \s -> s{shakeVerbosity=Diagnostic}) "Print lots of debugging information."
+    ,Left  $ Option "d" ["debug"] (OptArg (\x -> Right $ \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x}) "FILE") "Print lots of debugging information."
 {--},Left  $ Option ""  ["deterministic"] (noArg $ \s -> s{shakeDeterministic=True}) "Build rules in a fixed order."
 {--},Left  $ Option "f" ["flush"] (intArg "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
 {--},Left  $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
@@ -152,3 +152,6 @@ shakeOptsEx =
         pairArg flag a f = flip ReqArg a $ \x -> case break (== '=') x of
             (a,'=':b) -> Right $ f (a,b)
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
+
+        outputDebug output Nothing = output
+        outputDebug output (Just file) = \v msg -> if v == Diagnostic then appendFile file msg else output v file
