@@ -47,7 +47,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shakeStorageLog} logger witness act = do
+withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
     let dbfile = shakeFiles <.> "database"
         bupfile = shakeFiles <.> "bup"
     createDirectoryIfMissing True $ takeDirectory shakeFiles
@@ -56,13 +56,13 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shake
     b <- doesFileExist bupfile
     when b $ do
         unexpected "Backup file exists, restoring over the previous file\n"
-        logger $ "Backup file move to original"
+        diagnostic $ "Backup file move to original"
         E.catch (removeFile dbfile) (\(e :: SomeException) -> return ())
         renameFile bupfile dbfile
 
     withBinaryFile dbfile ReadWriteMode $ \h -> do
         n <- hFileSize h
-        logger $ "Reading file of size " ++ show n
+        diagnostic $ "Reading file of size " ++ show n
         src <- LBS.hGet h $ fromInteger n
 
         if not $ ver `LBS.isPrefixOf` src then do
@@ -98,12 +98,12 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shake
                 case readChunks $ LBS.drop (LBS.length ver) src of
                     (slop, []) -> do
                         when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
-                        logger $ "Read 0 chunks, plus " ++ show slop ++ " slop"
+                        diagnostic $ "Read 0 chunks, plus " ++ show slop ++ " slop"
                         return $ continue h Map.empty
                     (slop, w:xs) -> do
                         when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
-                        logger $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
-                        logger $ "Chunk sizes " ++ show (map LBS.length (w:xs))
+                        diagnostic $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
+                        diagnostic $ "Chunk sizes " ++ show (map LBS.length (w:xs))
                         let ws = decode w
                             f mp (k, v) = Map.insert k v mp
                             mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
@@ -111,23 +111,23 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shake
                         if Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2) then do
                             -- make sure we reset to before the slop
                             when (not (Map.null mp) && slop /= 0) $ do
-                                logger $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
+                                diagnostic $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
                                 now <- hFileSize h
                                 hSetFileSize h $ now - slop
                                 hSeek h AbsoluteSeek $ now - slop
                                 hFlush h
-                                logger $ "Drop complete"
+                                diagnostic $ "Drop complete"
                             return $ continue h mp
                          else do
                             unexpected "Compressing database\n"
-                            logger "Compressing database"
+                            diagnostic "Compressing database"
                             hClose h -- two hClose are fine
                             return $ do
                                 renameFile dbfile bupfile
                                 withBinaryFile dbfile ReadWriteMode $ \h -> do
                                     reset h mp
                                     removeFile bupfile
-                                    logger "Compression complete"
+                                    diagnostic "Compression complete"
                                     continue h mp
     where
         unexpected x = when shakeStorageLog $ do
@@ -140,18 +140,18 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shake
         ver = LBS.pack $ databaseVersion shakeVersion
 
         writeChunk h s = do
-            logger $ "Writing chunk " ++ show (LBS.length s)
+            diagnostic $ "Writing chunk " ++ show (LBS.length s)
             LBS.hPut h $ toChunk s
 
         reset h mp = do
-            logger $ "Resetting database to " ++ show (Map.size mp) ++ " elements"
+            diagnostic $ "Resetting database to " ++ show (Map.size mp) ++ " elements"
             hSetFileSize h 0
             hSeek h AbsoluteSeek 0
             LBS.hPut h ver
             writeChunk h $ encode witness
             mapM_ (writeChunk h . runPut . putWith witness) $ Map.toList mp
             hFlush h
-            logger "Flush"
+            diagnostic "Flush"
 
         -- continuation (since if we do a compress, h changes)
         continue h mp = do
