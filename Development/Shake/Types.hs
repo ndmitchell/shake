@@ -39,7 +39,7 @@ data Assume
 --
 --   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just \"report.html\"} @
 --
---   The 'Data' instance for this type reports the 'shakeProgress' field as having the abstract type 'ShakeProgress',
+--   The 'Data' instance for this type reports the 'shakeProgress' field as having the abstract type 'Function',
 --   because 'Data' cannot be defined for functions.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
@@ -100,11 +100,11 @@ fieldsShakeOptions =
     ,"shakeProgress"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 (fromProgress x13)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 (fromFunction x13)
 
 instance Data ShakeOptions where
     gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13) =
-        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` ShakeProgress x13
+        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` Function x13
     gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
@@ -122,23 +122,23 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Maybe Assume)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
-                | Just x <- cast x = show (x :: ShakeProgress)
+                | Just x <- cast x = show (x :: Function (IO Progress -> IO ()))
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
 
 -- | Internal type, copied from Hide in Uniplate
-newtype ShakeProgress = ShakeProgress {fromProgress :: IO Progress -> IO ()}
+newtype Function a = Function {fromFunction :: a}
     deriving Typeable
 
-instance Show ShakeProgress where show _ = "<function>"
+instance Show (Function a) where show _ = "<function>"
 
-instance Data ShakeProgress where
+instance Typeable a => Data (Function a) where
     gfoldl k z x = z x
     gunfold k z c = error "Development.Shake.Types.ShakeProgress: gunfold not implemented - data type has no constructors"
     toConstr _ = error "Development.Shake.Types.ShakeProgress: toConstr not implemented - data type has no constructors"
-    dataTypeOf _ = tyShakeProgress
+    dataTypeOf _ = tyFunction
 
-tyShakeProgress = mkDataType "Development.Shake.Types.ShakeProgress" []
+tyFunction = mkDataType "Development.Shake.Types.Function" []
 
 
 -- | The verbosity data type, used by 'shakeVerbosity'.
