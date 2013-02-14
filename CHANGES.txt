@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add shakeOutput setting
     Add removeFiles function
     Add Sys module for writing consise system calls
     Add getEnv function

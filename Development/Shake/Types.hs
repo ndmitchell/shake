@@ -87,25 +87,29 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to no action. A function called on a separate thread when the build starts, allowing progress to be reported.
         --   For applications that want to display progress messages, 'progressSimple' is often sufficient, but more advanced
         --   users should look at the 'Progress' data type.
+    ,shakeOutput :: Verbosity -> String -> IO ()
+        -- ^ Defaults to writing using 'putStrLn'. A function called to output messages from Shake, along with the 'Verbosity' at
+        --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
+        --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
     }
     deriving Typeable
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing [] False (const $ return ())
+shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing [] False (const $ return ()) (const putStrLn)
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeDeterministic", "shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
-    ,"shakeProgress"]
+    ,"shakeProgress","shakeOutput"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 (fromFunction x13)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 = ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 (fromFunction x13) (fromFunction x14)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13) =
-        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` Function x13
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14) =
+        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` Function x13 `k` Function x14
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -123,6 +127,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Function (IO Progress -> IO ()))
+                | Just x <- cast x = show (x :: Function (Verbosity -> String -> IO ()))
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
 

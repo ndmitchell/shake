@@ -47,7 +47,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
+withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
     let dbfile = shakeFiles <.> "database"
         bupfile = shakeFiles <.> "bup"
     createDirectoryIfMissing True $ takeDirectory shakeFiles
@@ -134,7 +134,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeVersion,shakeFlush,shakeFiles,shake
             t <- getCurrentTime
             appendFile (shakeFiles <.> "storage") $ "\n[" ++ show t ++ "]: " ++ x
         outputErr x = do
-            when (shakeVerbosity >= Quiet) $ putStr x
+            when (shakeVerbosity >= Quiet) $ shakeOutput Quiet x
             unexpected x
 
         ver = LBS.pack $ databaseVersion shakeVersion
