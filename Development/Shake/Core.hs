@@ -202,7 +202,7 @@ data SAction = SAction
     ,ruleinfo :: Map.HashMap TypeRep RuleInfo
     ,output :: String -> IO ()
     ,verbosity :: Verbosity
-    ,logger :: String -> IO ()
+    ,diagnostic :: String -> IO ()
     -- stack variables
     ,stack :: Stack
     -- local variables
@@ -228,7 +228,7 @@ run opts@ShakeOptions{..} rs = do
         lock <- newLock
         return $ withLock lock . putStrLn
 
-    let logger = if shakeVerbosity >= Diagnostic then outputLocked . ("% "++) else const $ return ()
+    let diagnostic = if shakeVerbosity >= Diagnostic then outputLocked . ("% "++) else const $ return ()
     let output = outputLocked . abbreviate shakeAbbreviations
 
     except <- newVar (Nothing :: Maybe SomeException)
@@ -245,10 +245,10 @@ run opts@ShakeOptions{..} rs = do
     let ruleinfo = createRuleinfo shakeAssume rs
     running <- newIORef True
     flip finally (writeIORef running False) $ do
-        withDatabase opts logger $ \database -> do
+        withDatabase opts diagnostic $ \database -> do
             forkIO $ shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = SAction database pool start ruleinfo output shakeVerbosity logger emptyStack [] 0 []
+                let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database (runStored ruleinfo)
@@ -428,13 +428,13 @@ withResource r i act = do
     (res,s) <- liftIO $ bracket_
         (do res <- acquireResource r i
             case res of
-                Nothing -> logger s $ show r ++ " acquired " ++ show i ++ " with no wait"
+                Nothing -> diagnostic s $ show r ++ " acquired " ++ show i ++ " with no wait"
                 Just wait -> do
-                    logger s $ show r ++ " waiting to acquire " ++ show i
+                    diagnostic s $ show r ++ " waiting to acquire " ++ show i
                     blockPool (pool s) $ fmap ((,) False) wait
-                    logger s $ show r ++ " acquired " ++ show i ++ " after waiting")
+                    diagnostic s $ show r ++ " acquired " ++ show i ++ " after waiting")
         (do releaseResource r i
-            logger s $ show r ++ " released " ++ show i)
+            diagnostic s $ show r ++ " released " ++ show i)
         (runAction s act)
     Action $ State.put s
     return res
