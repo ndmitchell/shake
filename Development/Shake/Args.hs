@@ -9,6 +9,7 @@ import Development.Shake.File
 import Development.Shake.Progress
 import Development.Shake.Shake
 
+import Control.Arrow
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
@@ -32,8 +33,8 @@ shakeWithArgs :: IO () -> ShakeOptions -> Rules () -> IO ()
 shakeWithArgs clean baseOpts rules = do
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
-        (flags1,flagsExtra) = partitionEithers flags
-        (flagsError,flagsShake) = partitionEithers flags1
+        (flagsError,flag1) = partitionEithers flags
+        (flagsExtra,flagsShake) = first concat $ unzip flag1
         assumeNew = [x | AssumeNew x <- flagsExtra]
         assumeOld = [x | AssumeOld x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
@@ -66,7 +67,7 @@ shakeWithArgs clean baseOpts rules = do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
             shake shakeOpts $ if null files then rules else want files >> withoutActions rules
     where
-        opts = map (either (fmapOptDescr Left) (fmapOptDescr Right)) shakeOptsEx
+        opts = map snd shakeOptsEx
         showHelp = putStr $ unlines $ "Usage: shake [options] [target] ..." : "Options:" : showOptDescr opts
 
 
@@ -97,7 +98,7 @@ fmapOptDescr f (Option a b c d) = Option a b (g c) d
 --   in 'ShakeOptions'. The command line flags are @make@ compatible where possbile, but additional
 --   flags have been added for the extra options Shake supports.
 shakeOptDescrs :: [OptDescr (Either String (ShakeOptions -> ShakeOptions))]
-shakeOptDescrs = lefts shakeOptsEx
+shakeOptDescrs = [fmapOptDescr (either Left (Right . snd)) o | (True, o) <- shakeOptsEx]
 
 data Extra = ChangeDirectory FilePath
            | Version
@@ -110,47 +111,50 @@ data Extra = ChangeDirectory FilePath
              deriving Eq
 
 
-shakeOptsEx :: [Either (OptDescr (Either String (ShakeOptions -> ShakeOptions))) (OptDescr Extra)]
+-- | True if it has a potential effect on ShakeOptions
+shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
 shakeOptsEx =
--- Options not in make --help are prefixed with {--}, rest 
-{--}[Left  $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
-    ,Left  $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
-{--},Right $ Option "c" ["clean"] (NoArg Clean) "Clean before building."
-    ,Right $ Option "C" ["directory"] (ReqArg ChangeDirectory "DIRECTORY") "Change to DIRECTORY before doing anything."
-    ,Left  $ Option "d" ["debug"] (OptArg (\x -> Right $ \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x}) "FILE") "Print lots of debugging information."
-{--},Left  $ Option ""  ["deterministic"] (noArg $ \s -> s{shakeDeterministic=True}) "Build rules in a fixed order."
-{--},Left  $ Option "f" ["flush"] (intArg "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
-{--},Left  $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
-    ,Right $ Option "h" ["help"] (NoArg Help) "Print this message and exit."
-    ,Left  $ Option "j" ["jobs"] (intArg "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
-    ,Left  $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
-{--},Left  $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=True}) "Perform limited validation after the run."
-{--},Left  $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
-    ,Right $ Option "o" ["old-file","assume-old"] (ReqArg AssumeOld "FILE") "Consider FILE to be very old and don't remake it."
-{--},Left  $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
-{--},Left  $ Option "r" ["report"] (OptArg (\x -> Right $ \s -> s{shakeReport=Just $ fromMaybe "report.html" x}) "FILE") "Write out profiling information [to report.html]."
-{--},Left  $ Option ""  ["rule-version"] (intArg "rule-version" "N" $ \x s -> s{shakeVersion=x}) "Version number of the build rules."
-    ,Left  $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
-{--},Right $ Option ""  ["sleep"] (NoArg Sleep) "Sleep for a second before building."
-    ,Left  $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
-{--},Left  $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-{--},Left  $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
-    ,Left  $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=Quiet}) "Don't print much."
-    ,Left  $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
-    ,Left  $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=Loud}) "Print tracing information."
-    ,Right $ Option "v" ["version"] (NoArg Version) "Print the version number and exit."
-    ,Right $ Option "w" ["print-directory"] (NoArg $ PrintDirectory True) "Print the current directory."
-    ,Right $ Option ""  ["no-print-directory"] (NoArg $ PrintDirectory False) "Turn off -w, even if it was turned on implicitly."
-    ,Right $ Option "W" ["what-if","new-file","assume-new"] (ReqArg AssumeNew "FILE") "Consider FILE to be infinitely new."
+    [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
+    ,yes $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
+    ,no  $ Option "c" ["clean"] (NoArg $ Right ([Clean],id)) "Clean before building."
+    ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
+    ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
+    ,yes $ Option ""  ["deterministic"] (noArg $ \s -> s{shakeDeterministic=True}) "Build rules in a fixed order."
+    ,yes $ Option "f" ["flush"] (intArg "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
+    ,yes $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
+    ,no  $ Option "h" ["help"] (NoArg $ Right ([Help],id)) "Print this message and exit."
+    ,yes $ Option "j" ["jobs"] (intArg "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
+    ,yes $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
+    ,yes $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=True}) "Perform limited validation after the run."
+    ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
+    ,no  $ Option "o" ["old-file","assume-old"] (ReqArg (\x -> Right ([AssumeOld x],id)) "FILE") "Consider FILE to be very old and don't remake it."
+    ,yes $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
+    ,yes $ Option "r" ["report"] (OptArg (\x -> Right ([], \s -> s{shakeReport=Just $ fromMaybe "report.html" x})) "FILE") "Write out profiling information [to report.html]."
+    ,yes $ Option ""  ["rule-version"] (intArg "rule-version" "N" $ \x s -> s{shakeVersion=x}) "Version number of the build rules."
+    ,yes $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
+    ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
+    ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
+    ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
+    ,yes $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
+    ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=Quiet}) "Don't print much."
+    ,yes $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
+    ,yes $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=Loud}) "Print tracing information."
+    ,no  $ Option "v" ["version"] (NoArg $ Right ([Version],id)) "Print the version number and exit."
+    ,no  $ Option "w" ["print-directory"] (NoArg $ Right ([PrintDirectory True],id)) "Print the current directory."
+    ,no  $ Option ""  ["no-print-directory"] (NoArg $ Right ([PrintDirectory False],id)) "Turn off -w, even if it was turned on implicitly."
+    ,no  $ Option "W" ["what-if","new-file","assume-new"] (ReqArg (\x -> Right ([AssumeNew x],id)) "FILE") "Consider FILE to be infinitely new."
     ]
     where
-        noArg f = NoArg $ Right f
-        reqArg a f = ReqArg (Right . f) a
+        yes = (,) True
+        no  = (,) False
+
+        noArg f = NoArg $ Right ([], f)
+        reqArg a f = ReqArg (\x -> Right ([], f x)) a
         intArg flag a f = flip ReqArg a $ \x -> case reads x of
-            [(i,"")] | i >= 1 -> Right $ f i
+            [(i,"")] | i >= 1 -> Right ([],f i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a positive integral argument"
         pairArg flag a f = flip ReqArg a $ \x -> case break (== '=') x of
-            (a,'=':b) -> Right $ f (a,b)
+            (a,'=':b) -> Right ([],f (a,b))
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
 
         outputDebug output Nothing = output
