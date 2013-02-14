@@ -71,14 +71,15 @@ shakeWithArgs clean baseOpts rules = do
             try $ shake shakeOpts $ if null files then rules else want files >> withoutActions rules
 
         when (shakeVerbosity shakeOpts >= Normal) $
-            case res of
-                Left err -> putStrLn $ show (err :: SomeException)
+            let esc code = if Color `elem` flagsExtra then escape code else id
+            in case res of
+                Left err -> putStrLn $ esc "31" $ show (err :: SomeException)
                 Right x -> do
                     stop <- getCurrentTime
                     let tot = diffUTCTime stop start
                         (mins,secs) = divMod (ceiling tot) (60 :: Int)
                         time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
-                    putStrLn $ "Build completed in " ++ time ++ "m"
+                    putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
         opts = map snd shakeOptsEx
         showHelp = putStr $ unlines $ "Usage: shake [options] [target] ..." : "Options:" : showOptDescr opts
@@ -118,6 +119,7 @@ data Extra = ChangeDirectory FilePath
            | AssumeNew FilePath
            | AssumeOld FilePath
            | PrintDirectory Bool
+           | Color
            | Help
            | Clean
            | Sleep
@@ -129,6 +131,9 @@ unescape ('\ESC':'[':xs) = unescape $ drop 1 $ dropWhile (not . isAlpha) xs
 unescape (x:xs) = x : unescape xs
 unescape [] = []
 
+escape :: String -> String -> String
+escape code x = "\ESC[" ++ code ++ "m" ++ x ++ "\ESC[0m"
+
 
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
@@ -137,6 +142,7 @@ shakeOptsEx =
     ,yes $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
     ,no  $ Option "c" ["clean"] (NoArg $ Right ([Clean],id)) "Clean before building."
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
+    ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
     ,yes $ Option ""  ["deterministic"] (noArg $ \s -> s{shakeDeterministic=True}) "Build rules in a fixed order."
     ,yes $ Option "f" ["flush"] (intArg "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
@@ -180,3 +186,5 @@ shakeOptsEx =
         outputDebug output (Just file) = \v msg -> do
             when (v /= Diagnostic) $ output v msg
             appendFile file $ unescape msg
+
+        outputColor output v msg = output v $ escape "34" msg
