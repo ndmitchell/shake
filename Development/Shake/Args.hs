@@ -17,6 +17,7 @@ import Data.Char
 import Data.Either
 import Data.List
 import Data.Maybe
+import Data.Time.Clock
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
@@ -60,13 +61,24 @@ shakeWithArgs clean baseOpts rules = do
      else do
         when (Clean `elem` flagsExtra) clean
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
+        start <- getCurrentTime
         curdir <- getCurrentDirectory
         let redir = case changeDirectory of
                 Nothing -> id
                 Just d -> bracket_ (setCurrentDirectory d) (setCurrentDirectory curdir)
-        redir $ do
+        res <- redir $ do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
-            shake shakeOpts $ if null files then rules else want files >> withoutActions rules
+            try $ shake shakeOpts $ if null files then rules else want files >> withoutActions rules
+
+        when (shakeVerbosity shakeOpts >= Normal) $
+            case res of
+                Left err -> putStrLn $ show (err :: SomeException)
+                Right x -> do
+                    stop <- getCurrentTime
+                    let tot = diffUTCTime stop start
+                        (mins,secs) = divMod (ceiling tot) (60 :: Int)
+                        time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
+                    putStrLn $ "Build completed in " "" ++ time ++ "m"
     where
         opts = map snd shakeOptsEx
         showHelp = putStr $ unlines $ "Usage: shake [options] [target] ..." : "Options:" : showOptDescr opts
