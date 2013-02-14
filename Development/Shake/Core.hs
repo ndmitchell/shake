@@ -257,7 +257,7 @@ run opts@ShakeOptions{..} rs = do
                 let file = fromJust shakeReport
                 json <- showJSON database
                 when (shakeVerbosity >= Normal) $
-                    putStrLn $ "Writing HTML report to " ++ file
+                    output Normal $ "Writing HTML report to " ++ file
                 buildReport json file
         maybe (return ()) throwIO =<< readVar except
 
