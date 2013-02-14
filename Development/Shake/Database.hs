@@ -104,7 +104,7 @@ data Database = Database
     ,status :: IORef (Map Id (Key, Status))
     ,step :: Step
     ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
-    ,logger :: String -> IO () -- logging function
+    ,diagnostic :: String -> IO () -- logging function
     ,assume :: Maybe Assume
     }
 
@@ -234,7 +234,7 @@ build pool Database{..} Ops{..} stack ks = do
         i #= (k,v) = do
             s <- readIORef status
             writeIORef status $ Map.insert i (k,v) s
-            logger $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
+            diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
@@ -252,7 +252,7 @@ build pool Database{..} Ops{..} stack ks = do
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
                     b <- if assume == Just AssumeDirty then return False else fmap (== Just (result r)) $ stored k
-                    logger $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
+                    diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     if not b then run stack i k $ Just r else check stack i k r (depends r)
                 Just (k, res) -> return res
 
@@ -282,10 +282,10 @@ build pool Database{..} Ops{..} stack ks = do
                     return ans
                 case ans of
                     Ready r -> do
-                        logger $ "result " ++ atom k ++ " = " ++ atom (result r)
+                        diagnostic $ "result " ++ atom k ++ " = " ++ atom (result r)
                         journal i (k, Loaded r) -- leave the DB lock before appending
                     Error _ -> do
-                        logger $ "result " ++ atom k ++ " = error"
+                        diagnostic $ "result " ++ atom k ++ " = error"
                         journal i (k, Missing)
                     _ -> return ()
             i #= (k, w)
@@ -410,15 +410,15 @@ showJSON Database{..} = do
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> IO ()
 checkValid Database{..} stored = do
     status <- readIORef status
-    logger "Starting validity/lint checking"
+    diagnostic "Starting validity/lint checking"
     bad <- fmap concat $ forM (Map.toList status) $ \(i,v) -> case v of
         (key, Ready Result{..}) -> do
             good <- fmap (== Just result) $ stored key
-            logger $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
+            diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return [show key ++ " is no longer " ++ show result | not good && not (special key)]
         _ -> return []
     if null bad
-        then logger "Validity/lint check passed"
+        then diagnostic "Validity/lint check passed"
         else error $ unlines $ "Error: Dependencies have changed since being built:" : bad
 
     where
@@ -445,11 +445,11 @@ fromStepResult = fromValue . result
 
 
 withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
-withDatabase opts logger act = do
+withDatabase opts diagnostic act = do
     registerWitness $ StepKey ()
     registerWitness $ Step 0
     witness <- currentWitness
-    withStorage opts logger witness $ \mp2 journal -> do
+    withStorage opts diagnostic witness $ \mp2 journal -> do
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
 
         (mp1, stepId) <- case Intern.lookup stepKey mp1 of
