@@ -13,6 +13,7 @@ import Control.Arrow
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
+import Data.Char
 import Data.Either
 import Data.List
 import Data.Maybe
@@ -111,6 +112,12 @@ data Extra = ChangeDirectory FilePath
              deriving Eq
 
 
+unescape :: String -> String
+unescape ('\ESC':'[':xs) = unescape $ drop 1 $ dropWhile (not . isAlpha) xs
+unescape (x:xs) = x : unescape xs
+unescape [] = []
+
+
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
 shakeOptsEx =
@@ -160,4 +167,4 @@ shakeOptsEx =
         outputDebug output Nothing = output
         outputDebug output (Just file) = \v msg -> do
             when (v /= Diagnostic) $ output v msg
-            appendFile file msg
+            appendFile file $ unescape msg
