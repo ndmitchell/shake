@@ -154,4 +154,6 @@ shakeOptsEx =
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
 
         outputDebug output Nothing = output
-        outputDebug output (Just file) = \v msg -> if v == Diagnostic then appendFile file msg else output v file
+        outputDebug output (Just file) = \v msg -> do
+            when (v /= Diagnostic) $ output v msg
+            appendFile file msg
