@@ -423,7 +423,7 @@ checkValid Database{..} stored = do
 
     where
         -- special case for these things, since the purpose is to break the invariant
-        special k = s == "AlwaysRun" || "OracleQ " `isPrefixOf` s
+        special k = s == "AlwaysRerunQ" || "OracleQ " `isPrefixOf` s
             where s = show k
 
 
