@@ -40,7 +40,7 @@ main = shaken test $ \args obj -> do
 
 test build obj = do
     let crash args parts = do
-            res <- try $ build args
+            res <- try $ build $ "--quiet" : args
             case res of
                 Left (err :: SomeException) -> let s = show err in forM_ parts $ \p ->
                     assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p

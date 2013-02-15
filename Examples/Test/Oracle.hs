@@ -46,7 +46,7 @@ test build obj = do
 
     -- check error messages are good
     let errors args err = do
-            r <- try $ build args
+            r <- try $ build $ "--quiet" : args
             case r of
                 Right _ -> error $ "Expected to fail but succeeded, wanted: " ++ err
                 Left (msg :: SomeException)
