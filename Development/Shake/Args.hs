@@ -155,6 +155,7 @@ shakeOptsEx =
     ,yes $ Option "j" ["jobs"] (intArg "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
     ,yes $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
     ,yes $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=True}) "Perform limited validation after the run."
+    ,yes $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=False}) "Turn off --lint."
     ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,no  $ Option "o" ["old-file","assume-old"] (ReqArg (\x -> Right ([AssumeOld x],id)) "FILE") "Consider FILE to be very old and don't remake it."
     ,yes $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
