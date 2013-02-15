@@ -23,7 +23,7 @@ main = shaken test $ \args obj -> do
         '*':x | Just (_,use) <- lookup x tbl -> use
         '@':key -> do addOracle $ \() -> return key; return ()
         '%':name -> let o = obj "unit.txt" in do want [o]; o *> \_ -> do {askOracleWith () ""; writeFile' o name}
-
+        '!':name -> do want [obj "rerun"]; obj "rerun" *> \out -> do alwaysRerun; writeFile' out name
 
 test build obj = do
     build ["clean"]
@@ -43,6 +43,12 @@ test build obj = do
     assertContents (obj "unit.txt") "test"
     build ["@foo","%newer"]
     assertContents (obj "unit.txt") "test"
+
+    -- check always run works
+    build ["!foo"]
+    assertContents (obj "rerun") "foo"
+    build ["!bar"]
+    assertContents (obj "rerun") "bar"
 
     -- check error messages are good
     let errors args err = do
