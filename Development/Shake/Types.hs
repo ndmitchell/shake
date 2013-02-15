@@ -64,8 +64,9 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'Nothing'. Write an HTML profiling report to a file, showing which
         --   rules rebuilt, why, and how much time they took. Useful for improving the speed of your build systems.
     ,shakeLint :: Bool
-        -- ^ Defaults to 'False'. Perform basic sanity checks after building, checking files have not been modified
-        --   several times during the build. These sanity checks fail to catch most interesting errors.
+        -- ^ Defaults to 'False'. Perform basic sanity checks during building, checking the current directory
+        --   is not modified and that output files are not modified by multiple rules.
+        --   These sanity checks do not check for missing or redundant dependencies.
     ,shakeDeterministic :: Bool
         -- ^ Defaults to 'False'. Run rules in a deterministic order, as far as possible. Typically used in conjunction
         --   with @'shakeThreads'=1@ for reproducing a build. If this field is set to 'False', Shake will run rules
