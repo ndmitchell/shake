@@ -74,4 +74,5 @@ test build obj = do
     demand " *.txt //*.xtx.files" "A.txt B.txt C.txt/E.xtx"
     demand " C.txt/*.files" "C.txt/D.txt C.txt/E.xtx"
 
-    demand "dots" "True True True True True"
+    build ["dots","--no-lint"]
+    assertContents (obj "dots") $ unlines $ words "True True True True True"
