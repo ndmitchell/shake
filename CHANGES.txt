@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Change shakeVersion to be a String
     Stop alwaysRerun causing lint failures
     Make shakeLint check that the current directory does not change
     Add shakeOutput setting

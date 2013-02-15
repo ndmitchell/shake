@@ -50,9 +50,9 @@ data ShakeOptions = ShakeOptions
         --   To enable parallelism you may need to compile with @-threaded@.
         --   For many build systems, a number equal to or slightly less than the number of physical processors
         --   works well.
-    ,shakeVersion :: Int
-        -- ^ Defaults to @1@. The version number of your build rules.
-        --   Increment the version number to force a complete rebuild, such as when making
+    ,shakeVersion :: String
+        -- ^ Defaults to @"1"@. The version number of your build rules.
+        --   Change the version number to force a complete rebuild, such as when making
         --   significant changes to the rules that require a wipe. The version number should be
         --   set in the source code, and not passed on the command line.
     ,shakeVerbosity :: Verbosity
@@ -96,7 +96,7 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 1 Normal False Nothing False False (Just 10) Nothing [] False (const $ return ())
+shakeOptions = ShakeOptions ".shake" 1 "1" Normal False Nothing False False (Just 10) Nothing [] False (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 
 fieldsShakeOptions =
