@@ -21,6 +21,7 @@ shaken
 shaken test rules sleeper = do
     name:args <- getArgs
     when ("--sleep" `elem` args) sleeper
+    args <- return $ delete "--sleep" args
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let out = "output/" ++ name ++ "/"
     createDirectoryIfMissing True out
