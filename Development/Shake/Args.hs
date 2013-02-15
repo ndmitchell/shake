@@ -70,13 +70,15 @@ shakeWithArgs clean baseOpts rules = do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
             try $ shake shakeOpts $ if null files then rules else want files >> withoutActions rules
 
-        when (shakeVerbosity shakeOpts >= Normal) $
+        if shakeVerbosity shakeOpts < Normal then
+            either throwIO return res
+         else
             let esc code = if Color `elem` flagsExtra then escape code else id
             in case res of
                 Left err -> do
                     putStrLn $ esc "31" $ show (err :: SomeException)
                     exitFailure
-                Right x -> do
+                Right () -> do
                     stop <- getCurrentTime
                     let tot = diffUTCTime stop start
                         (mins,secs) = divMod (ceiling tot) (60 :: Int)
