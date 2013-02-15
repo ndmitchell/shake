@@ -33,6 +33,7 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.Monoid
 import Data.IORef
+import System.Directory
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -203,6 +204,7 @@ data SAction = SAction
     ,output :: Verbosity -> String -> IO ()
     ,verbosity :: Verbosity
     ,diagnostic :: String -> IO ()
+    ,lint :: String -> IO ()
     -- stack variables
     ,stack :: Stack
     -- local variables
@@ -242,13 +244,23 @@ run opts@ShakeOptions{..} rs = do
                     when (shakeVerbosity >= Quiet) $ output Quiet msg
                 Right _ -> return ()
 
+    lint <- if not shakeLint then return $ const $ return () else do
+        dir <- getCurrentDirectory
+        return $ \msg -> do
+            now <- getCurrentDirectory
+            when (dir /= now) $ error $
+                "Lint checking failed, current directory has changed\n" ++
+                "When:   " ++ msg ++ "\n" ++
+                "Wanted: " ++ dir ++ "\n" ++
+                "Got:    " ++ now
+
     let ruleinfo = createRuleinfo shakeAssume rs
     running <- newIORef True
     flip finally (writeIORef running False) $ do
         withDatabase opts diagnostic $ \database -> do
             forkIO $ shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic emptyStack [] 0 []
+                let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database (runStored ruleinfo)
@@ -342,9 +354,11 @@ applyKeyValue ks = do
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
+            lint s "before building"
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putLoud $ "# " ++ show k
                 runExecute (ruleinfo s) k
+            lint s "after building"
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
