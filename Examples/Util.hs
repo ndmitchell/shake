@@ -55,7 +55,7 @@ shaken test rules sleeper = do
             withArgs (args \\ files) $
                 shakeWithArgs
                     (removeDirectoryRecursive out) 
-                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html"})
+                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html", shakeLint=True})
                     (rules files (out++))
 
 
