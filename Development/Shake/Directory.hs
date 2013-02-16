@@ -9,6 +9,7 @@ module Development.Shake.Directory(
     defaultRuleDirectory
     ) where
 
+import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import System.IO.Error
@@ -151,7 +152,7 @@ getEnv var = do
     return res
 
 getEnvIO :: String -> IO (Maybe String)
-getEnvIO x = catchIOError (fmap Just $ IO.getEnv x) $
+getEnvIO x = Control.Exception.catch (fmap Just $ IO.getEnv x) $
     \e -> if isDoesNotExistError e then return Nothing else ioError e
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
