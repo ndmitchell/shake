@@ -19,7 +19,7 @@ test build obj = do
     let ask file c = do src <- readFile (obj $ file ++ ".out"); src === c
 
     forM_ ['a'..'f'] $ \c -> set c c
-    build ["abc.out"]
+    build ["--sleep","abc.out"]
     ask "abc" "abc"
 
     set 'b' 'd'
