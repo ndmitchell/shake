@@ -323,7 +323,7 @@ function reportExpensiveCommands()
 
 function reportRebuildCost()
 {
-    $("#rebuild-cost input").live('input', function(){
+    $("#rebuild-cost input").on('input', function(){
         try {
             var regex = new RegExp($(this).val());
             $(this).parent().removeClass("error").find("span").text("");
