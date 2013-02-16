@@ -24,7 +24,7 @@ import System.Environment
 import System.Exit
 
 
--- | Run a Shake build system supporting basic @make@ compatible command line arguments.
+-- | Run a build system using command line arguments for configuration.
 --   Requires a way of cleaning the build objects (triggered by @clean@ as a target),
 --   a base set of options that may be overriden by command line flags, and the set of build rules.
 --   The function 'removeFiles' is often useful for producing a cleaning action.
