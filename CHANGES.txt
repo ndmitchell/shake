@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.9
     Make the tests work on Linux
     Fix report generation on machines whose text format is not ASCII
     Make Directory functions work the same on Linux/Mac
