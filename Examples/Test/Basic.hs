@@ -27,7 +27,7 @@ main = shaken test $ \args obj -> do
 test build obj = do
     writeFile (obj "A.txt") "AAA"
     writeFile (obj "B.txt") "BBB"
-    build ["AB.txt"]
+    build ["AB.txt","--sleep"]
     assertContents (obj "AB.txt") "AAABBB"
     appendFile (obj "A.txt") "aaa"
     build ["AB.txt"]
