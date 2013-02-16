@@ -160,6 +160,7 @@ shakeOptsEx =
     ,no  $ Option "o" ["old-file","assume-old"] (ReqArg (\x -> Right ([AssumeOld x],id)) "FILE") "Consider FILE to be very old and don't remake it."
     ,yes $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
     ,yes $ Option "r" ["report"] (OptArg (\x -> Right ([], \s -> s{shakeReport=Just $ fromMaybe "report.html" x})) "FILE") "Write out profiling information [to report.html]."
+    ,yes $ Option ""  ["no-report"] (noArg $ \s -> s{shakeReport=Nothing}) "Turn off --report."
     ,yes $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
     ,yes $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
