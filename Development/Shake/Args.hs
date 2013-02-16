@@ -17,7 +17,7 @@ import Data.Char
 import Data.Either
 import Data.List
 import Data.Maybe
-import Data.Time.Clock
+import Data.Time
 import System.Console.GetOpt
 import System.Directory
 import System.Environment

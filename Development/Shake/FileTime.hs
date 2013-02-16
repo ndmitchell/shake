@@ -16,7 +16,7 @@ import Control.Exception
 import System.Directory
 
 #if __GLASGOW_HASKELL__ >= 706
-import Data.Time.Clock
+import Data.Time
 #else
 import System.Time
 #endif

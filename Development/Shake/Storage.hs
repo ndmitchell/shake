@@ -19,7 +19,7 @@ import Control.Monad
 import Control.Concurrent
 import Data.Binary.Get
 import Data.Binary.Put
-import Data.Time.Clock
+import Data.Time
 import Data.Char
 import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map

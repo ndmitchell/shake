@@ -29,7 +29,7 @@ import Data.IORef
 import Data.Maybe
 import Data.List
 import Data.Monoid
-import Data.Time.Clock
+import Data.Time
 
 type Map = Map.HashMap
 
