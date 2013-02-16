@@ -187,7 +187,9 @@ getDirectoryDirs x = getDirAction $ GetDirDirs x
 getDirAction x = do GetDirectoryA y <- apply1 x; return y
 
 contents :: FilePath -> IO [FilePath]
-contents = fmap (filter $ not . all (== '.')) . IO.getDirectoryContents
+-- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
+-- but raises an error on Linux. We smooth out the difference.
+contents x = fmap (filter $ not . all (== '.')) $ IO.getDirectoryContents $ if x == "" then "." else x
 
 
 answer :: [FilePath] -> GetDirectoryA
