@@ -69,7 +69,7 @@ class (
     Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key,
     Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
 #endif
-    ) => Rule key value | key -> value where
+    ) => Rule key value where
 
     -- | Retrieve the @value@ associated with a @key@, if available.
     --
