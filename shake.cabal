@@ -57,8 +57,8 @@ data-files:
     html/report.html
 
 source-repository head
-    type:     darcs
-    location: http://community.haskell.org/~ndm/darcs/shake/
+    type:     git
+    location: git://github.com/ndmitchell/shake.git
 
 flag testprog
     default: False
