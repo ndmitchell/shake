@@ -187,8 +187,23 @@ newCacheIO act = do
 -- | Given a way of loading information from a file, produce a cached version that will load each file at most once.
 --   Using the cached function will still result in a dependency on the original file.
 --   The argument function should not access any files other than the one passed as its argument.
+--   Each call to 'newCache' creates a separate cache that is independent of all other calls to 'newCache'.
 --
 --   This function is useful when creating files that store intermediate values,
 --   to avoid the overhead of repeatedly reading from disk, particularly if the file requires expensive parsing.
+--   As an example:
+--
+-- @
+-- digits \<- 'newCache' $ \\file -> do
+--     src \<- readFile file
+--     return $ length $ filter isDigit src
+-- \"*.digits\" '*>' \\x ->
+--     v1 \<- digits ('dropExtension' x)
+--     v2 \<- digits ('dropExtension' x)
+--     'Development.Shake.writeFile'' x $ show (v1,v2)
+-- @
+--
+--   To create the result @MyFile.txt.digits@ the file @MyFile.txt@ will be read and counted, but only at most
+--   once per execution.
 newCache :: (FilePath -> IO a) -> Rules (FilePath -> Action a)
 newCache = rulesIO . newCacheIO
