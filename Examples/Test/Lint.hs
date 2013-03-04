@@ -15,8 +15,8 @@ main = shaken test $ \args obj -> do
     want $ map obj args
 
     addOracle $ \() -> do
-        liftIO $ createDirectoryIfMissing True "dir"
-        liftIO $ setCurrentDirectory "dir"
+        liftIO $ createDirectoryIfMissing True $ obj "dir"
+        liftIO $ setCurrentDirectory $ obj "dir"
         return ()
 
     obj "changedir" *> \out -> do
@@ -25,7 +25,7 @@ main = shaken test $ \args obj -> do
 
     obj "cdir.*" *> \out -> do
         pwd <- liftIO getCurrentDirectory
-        let dir2 = "dir" ++ takeExtension out
+        let dir2 = obj $ "dir" ++ takeExtension out
         liftIO $ createDirectoryIfMissing True dir2
         liftIO $ setCurrentDirectory dir2
         liftIO $ sleep 0.1
