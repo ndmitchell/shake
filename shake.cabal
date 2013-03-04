@@ -99,7 +99,6 @@ library
     other-modules:
         Development.Shake.Args
         Development.Shake.Binary
-        Development.Shake.Cache
         Development.Shake.Core
         Development.Shake.Database
         Development.Shake.Derived
@@ -157,6 +156,7 @@ executable shake
         Examples.Test.Assume
         Examples.Test.Basic
         Examples.Test.Benchmark
+        Examples.Test.Cache
         Examples.Test.Directory
         Examples.Test.Errors
         Examples.Test.FilePath
