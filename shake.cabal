@@ -99,6 +99,7 @@ library
     other-modules:
         Development.Shake.Args
         Development.Shake.Binary
+        Development.Shake.Cache
         Development.Shake.Core
         Development.Shake.Database
         Development.Shake.Derived
