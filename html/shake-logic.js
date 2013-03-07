@@ -50,6 +50,14 @@ function plural(n,not1,is1) // :: Int -> Maybe String -> Maybe String -> String
         : (not1 === undefined ? "s" : not1);
 }
 
+function sum(xs) // :: Num a => [a] -> a
+{
+    var res = 0;
+    for (var i = 0; i < xs.length; i++)
+        res += xs[i];
+    return res;
+}
+
 function listEq(xs, ys) // :: Eq a => [a] -> [a] -> Bool
 {
     if (xs.length !== ys.length) return false;
@@ -126,7 +134,7 @@ function /* export */ showSummary(sum) // Summary -> [String]
     return ["This database has tracked " + (sum.highestRun+1) + " run" + plural(sum.highestRun+1) + "."
            ,"There are " + sum.count + " rules (" + sum.countLast + " rebuilt in the last run)."
            ,"Building required " + sum.countTrace + " traced commands (" + sum.countTraceLast + " in the last run)."
-           ,"The total (unparallelised) build time is " + showTime(sum.sumExecution) + " of which " + showTime(sum.sumTrace) + " is traced commandsum."
+           ,"The total (unparallelised) build time is " + showTime(sum.sumExecution) + " of which " + showTime(sum.sumTrace) + " is traced commands."
            ,"The longest rule takes " + showTime(sum.maxExecution) + ", and the longest traced command takes " + showTime(sum.maxTrace) + "."
            ,"Last run gave an average parallelism of " + (sum.maxTraceStopLast === 0 ? 0 : sum.sumTraceLast / sum.maxTraceStopLast).toFixed(2) + " times over " + showTime(sum.maxTraceStopLast) + "."
            ];
@@ -259,10 +267,10 @@ function ruleFilter(dat, query) // DataEx -> Query -> Dict String DataIndex
     for (var queryKey = 0; queryKey < dat.original.length; queryKey++)
     {
         queryVal = dat.original[queryKey];
-        queryGroup = "";
+        queryGroup = null;
         if (f())
         {
-            if (queryGroup === "") queryGroup = queryVal.name;
+            if (queryGroup === null) queryGroup = queryVal.name;
             if (!(queryGroup in res))
                 res[queryGroup] = [queryKey];
             else
@@ -296,16 +304,11 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
     return ans;
 }
 
-function ruleGraph(dat, query) // DataEx -> Query -> [Record]
-{
-    return [];
-}
-
 
 /////////////////////////////////////////////////////////////////////
 // COMMANDS
 
-function commandFilter(dat, query) // DataEx -> Query -> Dict String [Trace]
+function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trace]
 {
     queryData = dat;
     var f = new Function("return " + (query === "" ? "true" : query));
@@ -314,7 +317,8 @@ function commandFilter(dat, query) // DataEx -> Query -> Dict String [Trace]
     for (var queryKey = 0; queryKey < dat.original.length; queryKey++)
     {
         queryVal = dat.original[queryKey];
-        queryGroup = "";
+        if (last && queryVal.built !== 0) continue;
+
         var val = {};
         for (var s in queryVal)
             val[s] = queryVal[s];
@@ -323,10 +327,10 @@ function commandFilter(dat, query) // DataEx -> Query -> Dict String [Trace]
         for (var i = 0; i < ts.length; i++)
         {
             queryVal.traces = [ts[i]];
-            queryGroup = "";
+            queryGroup = null;
             if (f())
             {
-                if (queryGroup === "") queryGroup = ts[i].command;
+                if (queryGroup === null) queryGroup = ts[i].command;
                 if (!(queryGroup in res))
                     res[queryGroup] = [ts[i]];
                 else
@@ -339,7 +343,7 @@ function commandFilter(dat, query) // DataEx -> Query -> Dict String [Trace]
 
 function commandTable(dat, query) // DataEx -> Query -> [Record]
 {
-    var res = commandFilter(dat, query);
+    var res = commandFilter(false, dat, query);
     var ans = [];
     for (var s in res)
     {
@@ -352,16 +356,14 @@ function commandTable(dat, query) // DataEx -> Query -> [Record]
     return ans;
 }
 
-function commandGraph(dat, query, buckets) // DataEx -> Query -> Int -> Dict String [Double]
+function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict String [Double]
 {
     var end = dat.summary.maxTraceStopLast;
-    var res = commandFilter(dat, query);
+    var res = commandFilter(true, dat, query);
     var ans = {};
     for (var s in res)
     {
         var ts = res[s];
-        console.log("ts");
-        console.log(ts);
         var xs = [];
         for (var i = 0; i <= buckets; i++)
             xs.push(0); // fill with 1 more element, but the last bucket will always be 0
@@ -381,7 +383,6 @@ function commandGraph(dat, query, buckets) // DataEx -> Query -> Int -> Dict Str
                 xs[Math.floor(stop)] += stop - Math.floor(stop);
             }
         }
-        console.log(xs);
         ans[s] = xs.slice(0,buckets);
     }
     return ans;
@@ -395,7 +396,7 @@ function commandGraph(dat, query, buckets) // DataEx -> Query -> Int -> Dict Str
 var queryData = {};
 var queryKey = 0;
 var queryVal = {};
-var queryGroup = "";
+var queryGroup = null;
 
 function dependsOnThis(r){queryData.dependsOnThis(queryKey, r);}
 function thisDependsOn(r){queryData.thisDependsOn(queryKey, r);}
@@ -404,6 +405,7 @@ function thisDependsOnTransitive(r){queryData.thisDependsOnTransitive(queryKey, 
 
 function /* export */ group(x)
 {
+    if (queryGroup === null) queryGroup = "";
     queryGroup += (queryGroup === "" ? "" : " ") + x;
     return true;
 }
@@ -423,13 +425,30 @@ function /* export */ unchanged()
     return queryVal.changed !== queryVal.built;
 }
 
-function /* export */ name(r)
+function applyRegExp(r, s)
+{
+    if (typeof r === "string")
+        return s.indexOf(r) === -1 ? null : [];
+    else
+        return r.exec(s);
+}
+
+function /* export */ name(r, groupName)
 {
     if (r === undefined)
         return queryVal.name;
-    var res = r.exec(queryVal.name);
+
+    var res = applyRegExp(r, queryVal.name);
     if (res === null)
-        return false;
+    {
+        if (groupName === undefined)
+            return false;
+        else
+        {
+            group(groupName);
+            return true;
+        }
+    }
     if (res.length !== 1)
     {
         for (var i = 1; i < res.length; i++)
@@ -438,7 +457,7 @@ function /* export */ name(r)
     return true;
 }
 
-function /* export */ command(r)
+function /* export */ command(r, groupName)
 {
     var n = queryVal.traces.length;
     if (r === undefined)
@@ -446,7 +465,7 @@ function /* export */ command(r)
 
     for (var i = 0; i < n; i++)
     {
-        var res = r.exec(queryVal.traces[i].command);
+        var res = applyRegExp(r, queryVal.traces[i].command);
         if (res === null)
             continue;
         if (res.length !== 1)
@@ -456,5 +475,11 @@ function /* export */ command(r)
         }
         return true;
     }
-    return false;
+    if (groupName === undefined)
+        return false;
+    else
+    {
+        group(groupName);
+        return true;
+    }
 }

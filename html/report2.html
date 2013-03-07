@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+<title>Shake report</title>
+
+<!-- Libraries -->
+<script language="javascript" type="text/javascript" src="jquery.js"></script>
+<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+<script language="javascript" type="text/javascript" src="jquery.flot.stack.js"></script>
+<!-- Profiling output -->
+<script src="data.js"></script>
+<!-- Functions for creating info from Shake builds -->
+<script src="shake-logic.js"></script>
+<script src="shake-ui.js"></script>
+
+<style type="text/css">
+body {font-family: sans-serif;}
+body {font-size: 10pt;}
+.data {font-size: 9pt; border-spacing: 0px; border-collapse: collapse;}
+.data td {padding-left: 7px; padding-right: 7px;}
+.header {font-weight: bold; background-color: #eee !important;}
+.header td:hover {background-color: #ccc !important;}
+.header td {border: 1px solid #ccc; cursor: pointer;}
+.data tr:hover {background-color: #ddd;}
+input, select {border: 1px solid #ccc;}
+* {box-sizing: border-box;}
+html, body {height: 100%;}
+#run {font-weight: bold;}
+.sort {color: #aaa;}
+.shake {font-family: monospace;}
+#link:visited {color: rgb(0,0,238);}
+
+.shake {
+	text-decoration: none;
+	font-family: monospace;
+	color: black;
+}
+</style>
+
+</head>
+<body style="margin:0px;padding:0px;">
+
+<table style="width:100%;height:100%;padding:8px;">
+	<tr><td>
+		<table width="100%"><tr>
+			<td>
+				<button id="run">Run</button>
+			</td>
+			<td>
+				<select id="mode">
+					<option value="summary">Summary</option>
+					<option value="help">Help</option>
+					<option value="cmd-plot">Command plot</option>
+					<option value="cmd-table">Command table</option>
+					<option value="rule-table">Rule table</option>
+				</select>
+			</td>
+			<td width="100%">
+				<input id="query" style="width:100%;" />
+			</td>
+			<td style="padding-left:10px;">
+				<a title="A link to the currently typed query" id="link" target="_blank" href="">Link</a>
+			</td>
+		</tr></table>
+	</td></tr>
+	<tr><td>
+		<hr style="border-top:1px solid #ccc;" />
+	</td></tr>
+	<tr style="height:100%;"><td>
+		<div style="height:100%;min-height:200px;overflow:auto;" id="output">Loading...</div>
+	</td></tr>
+</table>
+
+<div id="welcome" style="display:none;">
+	<p>
+		<b>New to Shake reports?</b> Select 'Help' from the drop-down box (currently displaying 'Summary') then press 'Run'.
+	</p>
+</div>
+
+<div id="help" style="display:none;">
+	<p>
+		Shake reports provide a way of filtering, grouping and viewing the result of running a Shake build system. A query is entered at the top using the text box, run using the 'Run' button, and produces a report whose type is selected from the drop-down box. The 'Link' hyperlink provides a link to the currently entered query, which is useful for copying/sharing.
+	</p>
+	<h3>Report types</h3>
+	<p>
+		The drop-down box, currently displaying 'Help', let's you pick the type of report. The best way to learn about the report types is to try them out (all work with the empty query). The types are:
+	</p>
+	<ul>
+		<li><b>Summary:</b> Display summary statistics about the Shake database. The term 'rule' refers to any Shake rule, and there will be one rule for everything that gets built or tracked, including source files. The term 'traced command' refers to any call to <a class="shake">traced</a>, which is automatically inserted by the <a class="shake">system'</a> function. The reported parallelism refers to the average number of traced commands executing during the last build - for example, a parallelism of 4.0 when using <a class="shake">shakeThreads</a>=4 would be a perfect speedup. The time spent not executing traced commands includes time when Shake was checking dependencies and any Haskell operations performed by the rules.</li>
+		<li><b>Help:</b> This help document.</li>
+		<li><b>Command plot:</b> This plot shows which traced commands were executing at any time. The Y axis is the number of simultaneous traced commands and the X axis is the progress through the last run of the build system that executed any rules. Some useful queries are:
+			<ul>
+				<li><a class="example" mode="cmd-plot">group("commands")</a> - display a the total parallelism, not grouped by command.</li>
+				<li><a class="example" mode="cmd-plot">name(/(\.[a-zA-Z0-9_]+)$/, "???")</a> - display parallelism grouped by result extension.</li>
+			</ul>
+		</li>
+		<li><b>Command table:</b> This table shows all traced commands. 'command' is the group name, by default the string passed to <a class="shake">trace</a>. 'count' is the number of commands that were grouped together. 'time' is the amount of time spent executing the commands, both in absolute terms and as a percentage of the time required to build everything (including rules which are not traced). Some useful queries are:
+			<ul>
+				<li><a class="example" mode="cmd-table">name(/(\.[a-zA-Z0-9_]+)$/, "???")</a> - display parallelism grouped by result extension.</li>
+				<li><a class="example" mode="cmd-table">group(command() + " - " + name())</a> - the complete list of all commands by rule.</li>
+				<li><a class="example" mode="cmd-table">name(/^(.*)\/[^\/]*/,"root") && group(command())</a> - commands grouped per directory.</li>
+			</ul>
+		</li>
+		<li><b>Rule table:</b> This table shows all rules. Some useful queries are:
+			<ul>
+				<li><a class="example" mode="rule-table">!name(/\.[a-zA-Z0-9_]+$/)</a> - which rules have no extension.</li>
+			</ul>
+		</li>
+	</ul>
+	<h3>Query language</h3>
+	<p>
+		The query language takes is a Javascript expression which produces a boolean indicating filtering, and may call group to indicate grouping.
+	</p>
+</div>
+
+</body>
+</html>
