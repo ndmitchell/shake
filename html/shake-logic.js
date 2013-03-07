@@ -17,69 +17,6 @@
 //     }
 
 
-//////////////////////////////////////////////////////////////////////
-// UTILITIES
-
-function /* export */ showTime(x) // :: Double -> String
-{
-    function digits(x){var s = String(x); return s.length === 1 ? "0" + s : s;}
-
-    if (x >= 3600)
-    {
-        var x = Math.round(x / 60);
-        return Math.floor(x / 60) + "h" + digits(x % 60) + "m";
-    }
-    else if (x >= 60)
-    {
-        var x = Math.round(x);
-        return Math.floor(x / 60) + "m" + digits(x % 60) + "s";
-    }
-    else
-        return x.toFixed(2) + "s";
-}
-
-function /* export */ showPerc(x) // :: Double -> String
-{
-    return (x*100).toFixed(2) + "%";
-}
-
-function plural(n,not1,is1) // :: Int -> Maybe String -> Maybe String -> String
-{
-    return n === 1
-        ? (is1 === undefined ? "" : is1)
-        : (not1 === undefined ? "s" : not1);
-}
-
-function sum(xs) // :: Num a => [a] -> a
-{
-    var res = 0;
-    for (var i = 0; i < xs.length; i++)
-        res += xs[i];
-    return res;
-}
-
-function listEq(xs, ys) // :: Eq a => [a] -> [a] -> Bool
-{
-    if (xs.length !== ys.length) return false;
-    for (var i = 0; i < xs.length; i++)
-    {
-        if (xs[i] !== ys[i])
-            return false;
-    }
-    return true;
-}
-
-function cache(str, f) // :: (k -> String) -> (k -> v) -> (k -> v)
-{
-    var cache = {};
-    return function(k){
-        var s = str(k);
-        if (!(s in cache))
-            cache[s] = f(k);
-        return cache[s];
-    }
-}
-
 function bools(x,y)
 {
     return x === "" ? y : x === y ? x : "both";

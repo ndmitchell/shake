@@ -1,48 +1,115 @@
 /*jsl:option explicit*/
 "use strict";
 
-jQuery.fn.enable = function (x)
+// Report
+//     {mode :: String
+//     ,query :: String
+//     ,sort :: String
+//     ,sortRev :: Bool
+//     }
+//
+
+var defaultMode = "summary";
+var defaultQuery = "";
+var defaultSort = "time";
+
+
+/////////////////////////////////////////////////////////////////////
+// GLOBAL DATA
+
+var shakeSummary = summary(shake);
+var shakeEx = prepare(shakeSummary, shake);
+
+var report = {}; // :: Report
+
+function reportURL(report) // :: Report -> URL
 {
-    // Set the values to enabled/disabled
-    return this.each(function () {
-        if (x)
-            $(this).removeAttr('disabled');
+    return "?mode=" + report.mode +
+           (report.query === defaultQuery ? "" : "&query=" + escape(report.query).replace("+","%2B")) +
+           (!report.sortRev && report.sort === defaultSort ? "" : "&sort=" + (report.sortRev ? "!" : "") + report.sort);
+}
+
+function urlReport() // :: IO Report
+{
+    var params = $.getParameters();
+    var sort = params.sort || defaultSort;
+    var sortRev = false;
+    if (sort.substr(0,1) == "!")
+    {
+        sort = sort.substr(1);
+        sortRev = true;
+    }
+    return {mode: params.mode || defaultMode
+           ,query: params.query || defaultQuery
+           ,sort: sort
+           ,sortRev: sortRev
+           };
+}
+
+function enteredReport()
+{
+    return {mode: $("#mode").val()
+           ,query: $("#query").val()
+           ,sort: report.sort
+           ,sortRev: report.sortRev
+           };
+}
+
+function setReport(r, replace, run)
+{
+    var changed = false;
+    var report2 = recordUnion(r, report);
+    $("#mode").val(report2.mode);
+    $("#query").val(report2.query);
+    $("#run").enable(false).attr("title", "The current query is displayed");
+    if (recordEq(report,report2)) return;
+    report = report2;
+
+    if (window.history)
+    {
+        var title = report.mode + (report.query === "" ? "" : ": " + report.query);
+        var url = reportURL(report);
+        if (replace)
+            window.history.replaceState(report, title, url);
         else
-            $(this).attr('disabled','disabled');
-    });
-};
+            window.history.pushState(report, title, url);
+    }
+    $("#link").attr("href", reportURL(report));
+
+    if (run)
+        runReport();
+}
 
 
-var shakeSummary;
-var shakeEx;
+/////////////////////////////////////////////////////////////////////
+// TABLE SHOWING
 
 var rightAlign = {count:null, time:null, cost:null, runs:null, leaf:null, unchanged:null};
 var twoColumns = {cost:null, time:null};
 
-var lastTable;
-var lastSort;
-var lastOrder;
+var currentTable; // Currently displayed table
 
 function tableSort(x)
 {
-    if (x === lastSort)
-        showTable(lastTable, x, lastOrder * -1);
+    if (report.sort === x)
+        setReport({sortRev: !report.sortRev}, true, false);
     else
-        showTable(lastTable, x, 1);
+        setReport({sort: x, sortRev: false}, true, false);
+    showTable(currentTable);
 }
 
-function showTable(xs, key, order)
+function showTable(xs)
 {
-    lastTable = xs;
-    lastSort = key === undefined ? "time" : key;
-    lastOrder = order === undefined ? 1 : order;
-
+    currentTable = xs;
     if (xs.length === 0)
     {
         $("#output").html("No data found");
         return;
     }
-    xs.sort(function(a,b){return lastOrder * (b[lastSort] > a[lastSort] ? 1 : -1);});
+    if (!(report.sort in xs[0]))
+        setReport({sort:defaultSort, sortRev:false}, true, false);
+
+    xs.sort(function(a,b){return (report.sortRev ? 1 : -1) * (b[report.sort] > a[report.sort] ? 1 : -1);});
 
     var res = "<table class='data'><tr class='header'>";
     for (var s in xs[0])
@@ -51,8 +118,8 @@ function showTable(xs, key, order)
                s in rightAlign ? "<td style='text-align:right;'" :
                "<td";
         res += " onclick=\"tableSort('" + s + "')\">" + s;
-        if (s === lastSort)
-            res += " <span class='sort'>" + (lastOrder > 0 ? "&#9660;" : "&#9650") + "</span>";
+        if (s === report.sort)
+            res += " <span class='sort'>" + (report.sortRev ? "&#9660;" : "&#9650") + "</span>";
         res += "</td>";
     }
     res += "</tr>";
@@ -79,9 +146,13 @@ function showTable(xs, key, order)
     $("#output").html(res);
 }
 
-function run(mode, query)
+
+/////////////////////////////////////////////////////////////////////
+// RUNNING
+
+function runReport()
 {
-    switch(mode)
+    switch(report.mode)
     {
     case "summary":
         var res = showSummary(shakeSummary);
@@ -94,7 +165,7 @@ function run(mode, query)
         break;
 
     case "cmd-plot":
-        var xs = commandPlot(shakeEx, query, 100);
+        var xs = commandPlot(shakeEx, report.query, 100);
         var ys = [];
         for (var s in xs)
         {
@@ -118,54 +189,58 @@ function run(mode, query)
         break;
 
     case "cmd-table":
-        showTable(commandTable(shakeEx, query));
+        showTable(commandTable(shakeEx, report.query));
         break;
 
     case "rule-table":
-        showTable(ruleTable(shakeEx, query));
+        showTable(ruleTable(shakeEx, report.query));
         break;
 
-    case "examples": case "help":
-        $("#output").html($("#" + mode).html());
+    case "help":
+        $("#output").html($("#help").html());
         break;
     }
 }
 
+
+/////////////////////////////////////////////////////////////////////
+// STATE NAVIGATION
+
+function example(mode,query)
+{
+    setReport({mode:mode, query:query, sortRev:false, sort:defaultSort}, false, true);
+    return false;
+}
+
 $(function(){
-    shakeSummary = summary(shake);
-    shakeEx = prepare(shakeSummary, shake);
-
-    var lastMode = $("#mode").val();
-    var lastQuery = $("#query").val();
-
-    var q = parseQuery();
-    if (q.mode) $("#mode").val(q.mode);
-    if (q.query) $("#query").val(q.query);
-
-    function upd()
-    {
+    setReport(urlReport(), true, true);
+    
+    $("#mode,#query").bind("input change",function(){
         var mode = $("#mode").val();
         var query = $("#query").val();
-        var enable = mode !== lastMode || query !== lastQuery;
+        var enable = mode !== report.mode || query !== report.query;
         $("#run").enable(enable).attr("title", enable ? "" : "The current query is displayed");
-        $("#link").attr("href", "?mode=" + escape_(mode) + "&query=" + escape_(query));
-    }
-
-    $("#run").click(function(){
-        lastMode = $("#mode").val();
-        lastQuery = $("#query").val();
-        upd();
-        run(lastMode, lastQuery);
+        $("#link").attr("href", reportURL(enteredReport()));
     });
 
-    $("#mode,#query").bind("input change",upd);
-    $("#run").click();
+    $("#run").click(function(){
+        setReport(enteredReport(), false, true);
+    });
 
+    window.onpopstate = function (e){
+        setReport(urlReport(), true, true);
+    };
+});
+
+/////////////////////////////////////////////////////////////////////
+// TEMPLATES
+
+$(function(){
     $("a.example").each(function(){
         var mode = $(this).attr("mode");
         var query = $(this).text();
-        var href = "?mode=" + escape_(mode) + "&query=" + escape_(query);
-        var onclick = "return example(unescape('" + escape_(mode) + "'),unescape('" + escape_(query) + "'));";
+        var href = reportURL({mode:mode, query:query});
+        var onclick = "return example(unescape('" + escape(mode) + "'),unescape('" + escape(query) + "'));";
         $(this).attr("href", href).attr("target","_blank")[0].setAttribute("onclick",onclick);
     });
 
@@ -175,32 +250,3 @@ $(function(){
         $(this).attr("href", href).attr("target","_blank");
     });
 });
-
-function escape_(x)
-{
-    return escape(x).replace("+","%2B");
-}
-
-function example(mode,query)
-{
-    $("#mode").val(mode);
-    $("#query").val(query);
-    $("#run").click();
-    return false;
-}
-
-function parseQuery() // :: IO (Dict String String)
-{
-    // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
-    var params = {},
-        e,
-        a = /\+/g,  // Regex for replacing addition symbol with a space
-        r = /([^&=]+)=?([^&]*)/g,
-        d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
-        q = window.location.search.substring(1);
-
-    while (e = r.exec(q))
-        params[d(e[1])] = d(e[2]);
-
-    return params;
-}
