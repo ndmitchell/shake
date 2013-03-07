@@ -109,7 +109,7 @@ function showTable(xs)
     if (!(report.sort in xs[0]))
         setReport({sort:defaultSort, sortRev:false}, true, false);
 
-    xs.sort(function(a,b){return (report.sortRev ? 1 : -1) * (b[report.sort] > a[report.sort] ? 1 : -1);});
+    xs.sort(function(a,b){return (report.sortRev ? -1 : 1) * (b[report.sort] > a[report.sort] ? 1 : -1);});
 
     var res = "<table class='data'><tr class='header'>";
     for (var s in xs[0])
@@ -119,7 +119,7 @@ function showTable(xs)
                "<td";
         res += " onclick=\"tableSort('" + s + "')\">" + s;
         if (s === report.sort)
-            res += " <span class='sort'>" + (report.sortRev ? "&#9660;" : "&#9650") + "</span>";
+            res += " <span class='sort'>" + (report.sortRev ? "&#9650;" : "&#9660;") + "</span>";
         res += "</td>";
     }
     res += "</tr>";
