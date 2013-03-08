@@ -76,6 +76,22 @@ function sum(xs) // :: Num a => [a] -> a
     return res;
 }
 
+function testRegExp(r, s)
+{
+    if (typeof r === "string")
+        return s.indexOf(r) !== -1;
+    else
+        return r.test(s);
+}
+
+function execRegExp(r, s)
+{
+    if (typeof r === "string")
+        return s.indexOf(r) === -1 ? null : [];
+    else
+        return r.exec(s);
+}
+
 function listEq(xs, ys) // :: Eq a => [a] -> [a] -> Bool
 {
     if (xs.length !== ys.length) return false;

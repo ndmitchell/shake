@@ -29,7 +29,8 @@ function reportURL(report) // :: Report -> URL
 {
     return "?mode=" + report.mode +
            (report.query === defaultQuery ? "" : "&query=" + escape(report.query).replace("+","%2B")) +
-           (!report.sortRev && report.sort === defaultSort ? "" : "&sort=" + (report.sortRev ? "!" : "") + report.sort);
+           (report.sort === undefined || (!report.sortRev && report.sort === defaultSort) ? "" :
+               "&sort=" + (report.sortRev ? "!" : "") + report.sort);
 }
 
 function urlReport() // :: IO Report
@@ -87,15 +88,16 @@ function setReport(r, replace, run)
 /////////////////////////////////////////////////////////////////////
 // TABLE SHOWING
 
-var rightAlign = {count:null, time:null, cost:null, runs:null, leaf:null, unchanged:null};
+var rightAlign = {count:null, time:null, cost:null, run:null, leaf:null, unchanged:null};
 var twoColumns = {cost:null, time:null};
+var defaultRevSort = {run:null, name:null};
 
 function tableSort(x)
 {
     if (report.sort === x)
         setReport({sortRev: !report.sortRev}, true, false);
     else
-        setReport({sort: x, sortRev: false}, true, false);
+        setReport({sort: x, sortRev: x in defaultRevSort}, true, false);
     showTable(currentTable);
 }
 

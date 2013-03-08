@@ -35,6 +35,7 @@ function /* export */ summary(dat) // :: Data -> Summary
         ,highestRun : 0 // :: Int, highest run you have seen (add 1 to get the count of runs)
         ,sumExecution : 0 // :: Seconds, build time in total
         ,maxExecution : 0 // :: Seconds, longest build rule
+        ,maxExecutionName : "" // :: String, longest build rule
         ,countTrace : 0, countTraceLast : 0 // :: Int, traced commands run
         ,sumTrace : 0, sumTraceLast : 0 // :: Seconds, time running traced commands
         ,maxTrace : 0 // :: Seconds, longest traced command
@@ -49,6 +50,7 @@ function /* export */ summary(dat) // :: Data -> Summary
         res.countLast += isLast ? 1 : 0;
         res.sumExecution += dat[i].execution;
         res.maxExecution = Math.max(res.maxExecution, dat[i].execution);
+        if (res.maxExecution === dat[i].execution) res.maxExecutionName = dat[i].name;
         res.highestRun = Math.max(res.highestRun, dat[i].changed); // changed is always greater or equal to built
         var traces = dat[i].traces;
         if (!traces) continue;
@@ -142,15 +144,15 @@ function prepare(sum, dat) // Data -> DataEx
     addRdeps(dat);
     addCost(dat);
 
-    function regexSource(r){return r.source;}
+    function toHash(r){return typeof r === "string" ? "$" + r : "/" + r.source;}
 
     function findDirect(key)
     {
-        var c = cache(regexSource, function(r){
+        var c = cache(toHash, function(r){
             var want = {};
             for (var i = 0; i < dat.length; i++)
             {
-                if (r.test(dat[i].name))
+                if (testRegExp(r, dat[i].name))
                 {
                     var deps = dat[i][key];
                     for (var j = 0; j < deps.length; j++)
@@ -159,17 +161,23 @@ function prepare(sum, dat) // Data -> DataEx
             }
             return want;
         });
-        return function(i,r){return i in cache[r];}
+        return function(i,r)
+        {
+            if (i in c(r))
+                return true;
+            else
+                return false;
+        }
     }
 
     function findTransitive(key, dirFwd)
     {
-        return cache(regexSource, function(r){
+        var c = cache(toHash, function(r){
             var want = {};
             for (var i = 0; i < dat.length; i++)
             {
                 var j = dirFwd ? i : dat.length - 1 - i;
-                if ((j in want) || r.test(dat[j].name))
+                if ((j in want) || testRegExp(r,dat[j].name))
                 {
                     want[j] = true;
                     var deps = dat[j][key];
@@ -179,7 +187,7 @@ function prepare(sum, dat) // Data -> DataEx
             }
             return want;
         });
-        return function(i,r){return i in cache[r];}
+        return function(i,r){return i in c(r);}
     }
 
     return {original: dat
@@ -201,7 +209,7 @@ function ruleFilter(dat, query) // DataEx -> Query -> Dict String DataIndex
     var f = readQuery(query);
     var res = {};
 
-    for (var queryKey = 0; queryKey < dat.original.length; queryKey++)
+    for (queryKey = 0; queryKey < dat.original.length; queryKey++)
     {
         queryVal = dat.original[queryKey];
         queryGroup = null;
@@ -227,16 +235,16 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
         var time = 0;
         var leaf = "";
         var unchanged = "";
-        var runs = 100000;
+        var run = 100000;
         for (var i = 0; i < xs.length; i++)
         {
             var x = dat.original[xs[i]];
             time += x.execution;
             leaf = bools(leaf, x.depends == 0);
             unchanged = bools(unchanged, x.changed !== x.built);
-            runs = Math.min(runs,x.built);
+            run = Math.min(run,x.built);
         }
-        ans.push({name:s, count:xs.length, time:time, cost:calcRebuildCosts(dat.original,xs), leaf:leaf, runs:runs, unchanged:unchanged});
+        ans.push({name:s, count:xs.length, time:time, cost:calcRebuildCosts(dat.original,xs), leaf:leaf, run:run, unchanged:unchanged});
     }
     return ans;
 }
@@ -251,7 +259,7 @@ function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trac
     var f = readQuery(query);
     var res = {};
 
-    for (var queryKey = 0; queryKey < dat.original.length; queryKey++)
+    for (queryKey = 0; queryKey < dat.original.length; queryKey++)
     {
         queryVal = dat.original[queryKey];
         if (last && queryVal.built !== 0) continue;
@@ -288,7 +296,7 @@ function commandTable(dat, query) // DataEx -> Query -> [Record]
         var time = 0;
         for (var i = 0; i < xs.length; i++)
             time += xs[i].stop - xs[i].start;
-        ans.push({command:s, count:xs.length, time:time});
+        ans.push({name:s, count:xs.length, time:time});
     }
     return ans;
 }
@@ -353,16 +361,22 @@ var queryKey = 0;
 var queryVal = {};
 var queryGroup = null;
 
-function dependsOnThis(r){queryData.dependsOnThis(queryKey, r);}
-function thisDependsOn(r){queryData.thisDependsOn(queryKey, r);}
-function dependsOnThisTransitive(r){queryData.dependsOnThisTransitive(queryKey, r);}
-function thisDependsOnTransitive(r){queryData.thisDependsOnTransitive(queryKey, r);}
+function childOf(r){return queryData.dependsOnThis(queryKey, r);}
+function parentOf(r){return queryData.thisDependsOn(queryKey, r);}
+function ancestorOf(r){return queryData.dependsOnThisTransitive(queryKey, r);}
+function descendantOf(r){return queryData.thisDependsOnTransitive(queryKey, r);}
+function descendentOf(r){return descendantOf(r);}
 
 function /* export */ group(x)
 {
     if (queryGroup === null) queryGroup = "";
     queryGroup += (queryGroup === "" ? "" : " ") + x;
     return true;
+}
+
+function slowestRule()
+{
+    return queryData.summary.maxExecutionName;
 }
 
 function /* export */ leaf()
@@ -380,20 +394,12 @@ function /* export */ unchanged()
     return queryVal.changed !== queryVal.built;
 }
 
-function applyRegExp(r, s)
-{
-    if (typeof r === "string")
-        return s.indexOf(r) === -1 ? null : [];
-    else
-        return r.exec(s);
-}
-
 function /* export */ name(r, groupName)
 {
     if (r === undefined)
         return queryVal.name;
 
-    var res = applyRegExp(r, queryVal.name);
+    var res = execRegExp(r, queryVal.name);
     if (res === null)
     {
         if (groupName === undefined)
@@ -414,13 +420,13 @@ function /* export */ name(r, groupName)
 
 function /* export */ command(r, groupName)
 {
-    var n = queryVal.traces.length;
+    var n = (queryVal.traces || []).length;
     if (r === undefined)
         return n === 0 ? "" : queryVal.traces[0].command;
 
     for (var i = 0; i < n; i++)
     {
-        var res = applyRegExp(r, queryVal.traces[i].command);
+        var res = execRegExp(r, queryVal.traces[i].command);
         if (res === null)
             continue;
         if (res.length !== 1)

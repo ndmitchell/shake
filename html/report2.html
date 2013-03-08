@@ -32,6 +32,8 @@ html, body {height: 100%;}
 .sort {color: #aaa;}
 .shake {font-family: monospace;}
 #link:visited {color: rgb(0,0,238);}
+ul.space > li {padding-top: 8px; padding-bottom: 8px;}
+ul.space {padding-left: 20px;}
 
 .shake {
 	text-decoration: none;
@@ -99,32 +101,56 @@ html, body {height: 100%;}
 	<p>
 		The drop-down box, currently displaying 'Help', let's you pick the type of report. The best way to learn about the report types is to try them out (all work with the empty query). The types are:
 	</p>
-	<ul>
+	<ul class="space">
 		<li><b>Summary:</b> Display summary statistics about the Shake database. The term 'rule' refers to any Shake rule, and there will be one rule for everything that gets built or tracked, including source files. The term 'traced command' refers to any call to <a class="shake">traced</a>, which is automatically inserted by the <a class="shake">system'</a> function. The reported parallelism refers to the average number of traced commands executing during the last build - for example, a parallelism of 4.0 when using <a class="shake">shakeThreads</a>=4 would be a perfect speedup. The time spent not executing traced commands includes time when Shake was checking dependencies and any Haskell operations performed by the rules.</li>
 		<li><b>Help:</b> This help document.</li>
 		<li><b>Command plot:</b> This plot shows which traced commands were executing at any time. The Y axis is the number of simultaneous traced commands and the X axis is the progress through the last run of the build system that executed any rules. Some useful queries are:
 			<ul>
+				<li><a class="example" mode="cmd-plot" query="">by default</a> - display when each traced command was executing.</li>
 				<li><a class="example" mode="cmd-plot">group("commands")</a> - display a the total parallelism, not grouped by command.</li>
 				<li><a class="example" mode="cmd-plot">name(/(\.[a-zA-Z0-9_]+)$/, "???")</a> - display parallelism grouped by result extension.</li>
 			</ul>
 		</li>
-		<li><b>Command table:</b> This table shows all traced commands. 'command' is the group name, by default the string passed to <a class="shake">trace</a>. 'count' is the number of commands that were grouped together. 'time' is the amount of time spent executing the commands, both in absolute terms and as a percentage of the time required to build everything (including rules which are not traced). Some useful queries are:
+		<li><b>Command table:</b> This table shows all traced commands. 'name' is the group name, by default the string passed to <a class="shake">trace</a>. 'count' is the number of commands that were grouped together. 'time' is the amount of time spent executing the commands, both in absolute terms and as a percentage of the time required to build everything (including rules which are not traced). Some useful queries are:
 			<ul>
+				<li><a class="example" mode="cmd-table" query="">by default</a> - display all traced commands.</li>
 				<li><a class="example" mode="cmd-table">name(/(\.[a-zA-Z0-9_]+)$/, "???")</a> - display parallelism grouped by result extension.</li>
 				<li><a class="example" mode="cmd-table">group(command() + " - " + name())</a> - the complete list of all commands by rule.</li>
-				<li><a class="example" mode="cmd-table">name(/^(.*)\/[^\/]*/,"root") && group(command())</a> - commands grouped per directory.</li>
+				<li><a class="example" mode="cmd-table">name(/^(.*)\/[^\/]*/,"root") &amp;&amp; group(command())</a> - commands grouped per directory.</li>
+				<li><a class="example" mode="cmd-table">name(slowestRule())</a> - what commands did the slowest rule run.</li>
 			</ul>
 		</li>
-		<li><b>Rule table:</b> This table shows all rules. Some useful queries are:
+		<li><b>Rule table:</b> This table shows all rules. 'name', 'count' and 'time' are the same as for the command table, with the default name being the rule result. 'cost' is the time to rebuild if all the files changed, where a higher cost is worse. 'leaf' is true if the rule has no dependencies, typically source files. 'runs' is the number of executions since the file was built, where 0 means it was built in the last run. 'unchanged' is true if the last time the rule built it did not change value, and thus rules depending on it did not rebuild. Some useful queries are:
 			<ul>
+				<li><a class="example" mode="rule-table" query="">by default</a> - display all rules.</li>
+				<li><a class="example" mode="rule-table">name(/(\.[a-zA-Z0-9_]+)$/, "???")</a> - display rules grouped by result extension.</li>
+				<li><a class="example" mode="rule-table">ancestorOf(slowestRule()) && leaf() && run() == 0</a> - while leaf nodes changed in the last run to cause a rebuild of a particular rule (replace <tt>slowestRule()</tt> with <tt>"rule name"</tt> to use a different rule.</li>
+				<li><a class="example" mode="rule-table">parentOf(slowestRule()) && !unchanged()</a> - what immediate dependency caused a particular rule to rebuild most recently (sort by 'run' to see the answer first).</li>
 				<li><a class="example" mode="rule-table">!name(/\.[a-zA-Z0-9_]+$/)</a> - which rules have no extension.</li>
 			</ul>
 		</li>
 	</ul>
 	<h3>Query language</h3>
 	<p>
-		The query language takes is a Javascript expression which produces a boolean indicating filtering, and may call group to indicate grouping.
+		The query language takes is a Javascript expression which produces <tt>true</tt> to include the row, and may call <tt>group</tt> to indicate grouping. The standard Javascript operators (e.g. <tt>==</tt> and <tt>&amp;&amp;</tt>). Anything which takes a <tt>RegExp</tt> can also accept a <tt>string</tt>, which is then treated as a literal unanchored regular expression. The following functions are available:
 	</p>
+	<ul class="space">
+		<li><tt>group(x : string) : true</tt> - assign this item the given group. Multiple calls to <tt>group</tt> result in a space-separated name. The group name can also be set using <tt>name</tt> or <tt>command</tt> with captured regular expressions.</li>
+		<li><tt>leaf() : bool</tt></li> - does the rule a leaf, with no dependencies.</li>
+		<li><tt>run() : int</tt> - when was the rule last run, with 0 for run in the last tracked build, and higher numbers for run longer ago.</li>
+		<li><tt>unchanged() : bool</tt> - last time the rule was build, was the value detected as unchanged.</li>
+		<li><tt>slowestRule() : string</tt> - the name of the rule which took longest to build.</li>
+		<li><tt>name() : string</tt> - the name of the current rule.</li>
+		<li><tt>name(x : RegExp) : bool</tt> - a regular expression to match against the name of the current rule. If the regular expression contains captured patterns, these will be used as the <tt>group</tt></li>
+		<li><tt>name(x : RegExp, def : string) : true</tt> - a regular expression to match against the name of the current rule, including captured patterns for the <tt>group</tt>. If the regular expression does not match, the function will still return true but <tt>def</tt> will be used as the group.</li>
+		<li><tt>command() : string</tt> - when matching rules this is the name of the first command the rule executed, or <tt>""</tt> if the rule ran no commands. When matching commands this is the name of each command in turn.</li>
+		<li><tt>command(x : RegExp) : bool</tt> - a regular expression to match against any of the commands, including grouping as per <tt>name</tt>.</li>
+		<li><tt>command(x : RegExp, def : string) : true</tt> - works the same as the <tt>name</tt> function which takes two arguments.</li>
+		<li><tt>childOf(x : RegExp) : bool</tt> - is this rule a direct child of <tt>x</tt>, the rule for this item calls <a class="shake">need</a>/<a class="shake">apply</a> on <tt>x</tt>.</li>
+		<li><tt>descendantOf(x : RegExp) : bool</tt> - is this rule a descendant of <tt>x</tt>, a change in <tt>x</tt> will cause this rule to rebuild (ignoring unchanging rules).</li>
+		<li><tt>parentOf(x : RegExp) : bool</tt> - is this rule a direct parent of <tt>x</tt>, the rule for <tt>x</tt> calls <a class="shake">need</a>/<a class="shake">apply</a> on this item.</li>
+		<li><tt>ancestorOf(x : RegExp) : bool</tt> - is this rule an ancestor of <tt>x</tt>, a change in this rule will cause <tt>x</tt> to rebuild (ignoring unchanging rules).</li>
+	</ul>
 </div>
 
 </body>

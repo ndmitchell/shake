@@ -68,6 +68,7 @@ function test() // :: String
     chk(ruleTable,"name(/^(.)/)",5);
     chk(commandTable,"",4);
     chk(commandTable,"command(/g(.*)/)",3);
+    chk(ruleTable,"childOf('Imperative')",2);
 
     return "passed";
 }
