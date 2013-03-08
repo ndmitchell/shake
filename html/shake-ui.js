@@ -13,6 +13,9 @@ var defaultMode = "summary";
 var defaultQuery = "";
 var defaultSort = "time";
 
+var currentTable = null;
+var currentPlot = null;
+
 
 /////////////////////////////////////////////////////////////////////
 // GLOBAL DATA
@@ -87,8 +90,6 @@ function setReport(r, replace, run)
 var rightAlign = {count:null, time:null, cost:null, runs:null, leaf:null, unchanged:null};
 var twoColumns = {cost:null, time:null};
 
-var currentTable; // Currently displayed table
-
 function tableSort(x)
 {
     if (report.sort === x)
@@ -148,10 +149,42 @@ function showTable(xs)
 
 
 /////////////////////////////////////////////////////////////////////
+// SHOW A PLOT
+
+function showPlot(series, options)
+{
+    var $output = $("#output");
+    var width = $output.width();
+    var height = $output.height();
+
+    if (series === null && options === null)
+    {
+        if (width === currentPlot.width && height === currentPlot.height)
+            return;
+        series = currentPlot.series;
+        options = currentPlot.options;
+    }
+    currentPlot = {series:series, options:options, width:width, height:height};
+
+    // Fudge factors to get it displaying nicely, seems Flot goes outside its bounds
+    var div = $("<div>").width(width - 20).height(height - 10);
+    $("#output").html("").append(div);
+    $.plot(div, series, options);
+}
+
+window.onresize = function(){
+    if (currentPlot !== null)
+        showPlot(null, null);
+};
+
+/////////////////////////////////////////////////////////////////////
 // RUNNING
 
 function runReport()
 {
+    currentTable = null;
+    currentPlot = null;
+
     switch(report.mode)
     {
     case "summary":
@@ -176,11 +209,7 @@ function runReport()
             ys.push({label:s, values:x, data:data, avg:sum(x) / x.length});
         }
         ys.sort(function(a,b){return a.avg - b.avg;});
-        var $output = $("#output");
-        // Fudge factors to get it displaying nicely, seems Flot goes outside its bounds
-        var div = $("<div>").width($output.width() - 20).height($output.height() - 3);
-        $("#output").html("").append(div);
-        $.plot(div, ys, {
+        showPlot(ys, {
             legend: {show:true, position:"nw"},
             series: {stack:true, lines:{lineWidth:0,fill:1}},
             yaxis: {min:0},
@@ -214,7 +243,7 @@ function example(mode,query)
 
 $(function(){
     setReport(urlReport(), true, true);
-    
+
     $("#mode,#query").bind("input change",function(){
         var mode = $("#mode").val();
         var query = $("#query").val();
