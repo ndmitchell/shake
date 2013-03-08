@@ -56,21 +56,18 @@ function test() // :: String
     var pars1 = par1.map(function(i){return Math.round(i*10)/10;});
     assert(listEq(pars1, [1.5,2,2,2,1.5,1,1,1,1,1]));
 
-    var ans1 = ruleTable(tab1,"");
-    console_table(ans1);
-    assertEq(ans1.length, 7);
-    var ans2 = ruleTable(tab1,"leaf()");
-    console_table(ans2);
-    assertEq(ans2.length, 3);
-    var ans3 = ruleTable(tab1,"name(/^(.)/)");
-    console_table(ans3);
-    assertEq(ans3.length, 5);
-    var ans4 = commandTable(tab1,"");
-    console_table(ans4);
-    assertEq(ans4.length, 4);
-    var ans5 = commandTable(tab1,"command(/g(.*)/)");
-    console_table(ans5);
-    assertEq(ans5.length, 3);
+    function chk(f,query,n)
+    {
+        var ans = f(tab1,query);
+        console_table(ans);
+        assertEq(ans.length,n);
+    }
+
+    chk(ruleTable,"",7);
+    chk(ruleTable,"leaf()",3);
+    chk(ruleTable,"name(/^(.)/)",5);
+    chk(commandTable,"",4);
+    chk(commandTable,"command(/g(.*)/)",3);
 
     return "passed";
 }
