@@ -198,7 +198,7 @@ function prepare(sum, dat) // Data -> DataEx
 function ruleFilter(dat, query) // DataEx -> Query -> Dict String DataIndex
 {
     queryData = dat;
-    var f = new Function("return " + (query === "" ? "true" : query));
+    var f = readQuery(query);
     var res = {};
 
     for (var queryKey = 0; queryKey < dat.original.length; queryKey++)
@@ -248,7 +248,7 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
 function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trace]
 {
     queryData = dat;
-    var f = new Function("return " + (query === "" ? "true" : query));
+    var f = readQuery(query);
     var res = {};
 
     for (var queryKey = 0; queryKey < dat.original.length; queryKey++)
@@ -328,6 +328,24 @@ function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict Stri
 
 /////////////////////////////////////////////////////////////////////
 // ENVIRONMENT
+
+function readQuery(query)
+{
+    var f;
+    try {
+        f = new Function("return " + (query === "" ? "true" : query));
+    } catch (e) {
+        throw {user:true, name:"parse", query:query, message:e.toString()};
+    }
+    return function(){
+        try {
+            return f();
+        } catch (e) {
+            throw {user:true, name:"execution", query:query, message:e.toString()};
+        }
+    };
+}
+
 
 // These are global variables mutated/queried by query execution
 var queryData = {};

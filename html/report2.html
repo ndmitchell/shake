@@ -80,6 +80,17 @@ html, body {height: 100%;}
 	</p>
 </div>
 
+<div id="error" style="display:none;">
+	<h3 style="color:#d00;">Query <span class="name">parse</span> error</h3>
+	<table>
+		<tr><td><li>Error message:</li></td><td><tt><span class="message">message</span></tt></td></tr>
+		<tr><td><li>User query:</li></td><td><tt><span class="query">the query</span></tt></td></tr>
+	</table>
+	<p>
+		For information about the query language, see <a class="example" mode="help" query="">Help</a>.
+	</p>
+</div>
+
 <div id="help" style="display:none;">
 	<p>
 		Shake reports provide a way of filtering, grouping and viewing the result of running a Shake build system. A query is entered at the top using the text box, run using the 'Run' button, and produces a report whose type is selected from the drop-down box. The 'Link' hyperlink provides a link to the currently entered query, which is useful for copying/sharing.

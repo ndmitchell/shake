@@ -185,49 +185,60 @@ function runReport()
     currentTable = null;
     currentPlot = null;
 
-    switch(report.mode)
+    try
     {
-    case "summary":
-        var res = showSummary(shakeSummary);
-        var s = $("#welcome").html();
-        s += "<ul>";
-        for (var i = 0; i < res.length; i++)
-            s += "<li>" + res[i] + "</li>";
-        s += "</ul>";
-        $("#output").html(s);
-        break;
-
-    case "cmd-plot":
-        var xs = commandPlot(shakeEx, report.query, 100);
-        var ys = [];
-        for (var s in xs)
+        switch(report.mode)
         {
-            var x = xs[s];
-            var data = [];
-            for (var j = 0; j < x.length; j++)
-                data.push([j, x[j]]);
-            ys.push({label:s, values:x, data:data, avg:sum(x) / x.length});
+        case "summary":
+            var res = showSummary(shakeSummary);
+            var s = $("#welcome").html();
+            s += "<ul>";
+            for (var i = 0; i < res.length; i++)
+                s += "<li>" + res[i] + "</li>";
+            s += "</ul>";
+            $("#output").html(s);
+            break;
+
+        case "cmd-plot":
+            var xs = commandPlot(shakeEx, report.query, 100);
+            var ys = [];
+            for (var s in xs)
+            {
+                var x = xs[s];
+                var data = [];
+                for (var j = 0; j < x.length; j++)
+                    data.push([j, x[j]]);
+                ys.push({label:s, values:x, data:data, avg:sum(x) / x.length});
+            }
+            ys.sort(function(a,b){return a.avg - b.avg;});
+            showPlot(ys, {
+                legend: {show:true, position:"nw"},
+                series: {stack:true, lines:{lineWidth:0,fill:1}},
+                yaxis: {min:0},
+                xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100)}}
+            });
+            break;
+
+        case "cmd-table":
+            showTable(commandTable(shakeEx, report.query));
+            break;
+
+        case "rule-table":
+            showTable(ruleTable(shakeEx, report.query));
+            break;
+
+        case "help":
+            $("#output").html($("#help").html());
+            break;
         }
-        ys.sort(function(a,b){return a.avg - b.avg;});
-        showPlot(ys, {
-            legend: {show:true, position:"nw"},
-            series: {stack:true, lines:{lineWidth:0,fill:1}},
-            yaxis: {min:0},
-            xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100)}}
-        });
-        break;
-
-    case "cmd-table":
-        showTable(commandTable(shakeEx, report.query));
-        break;
-
-    case "rule-table":
-        showTable(ruleTable(shakeEx, report.query));
-        break;
-
-    case "help":
-        $("#output").html($("#help").html());
-        break;
+    }
+    catch (e)
+    {
+        if (!(e && e.user))
+            throw e;
+        $("#output").html($("#error").html());
+        for (var s in e)
+            $("#output ." + s).text(e[s]);
     }
 }
 
@@ -267,7 +278,8 @@ $(function(){
 $(function(){
     $("a.example").each(function(){
         var mode = $(this).attr("mode");
-        var query = $(this).text();
+        var query = $(this).attr("query");
+        if (query === undefined) query = $(this).text();
         var href = reportURL({mode:mode, query:query});
         var onclick = "return example(unescape('" + escape(mode) + "'),unescape('" + escape(query) + "'));";
         $(this).attr("href", href).attr("target","_blank")[0].setAttribute("onclick",onclick);
