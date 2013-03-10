@@ -229,6 +229,28 @@ function runReport()
             showTable(ruleTable(shakeEx, report.query));
             break;
 
+        case "rule-graph":
+            var xs = ruleGraph(shakeEx, report.query);
+            if (xs.length > 250)
+                $("#output").html("Cannot view graph with > 250 nodes, try grouping more aggressively");
+            else
+            {
+                var res = "digraph \"\"{"
+                res += "graph[nodesep=0.15,ranksep=0.3];";
+                res += "node[fontname=\"sans-serif\",fontsize=9,penwidth=0.5,height=0,width=0];";
+                res += "edge[penwidth=0.5,arrowsize=0.5];";
+                for (var i = 0; i < xs.length; i++)
+                {
+                    res += "a" + i + "[label=\"" + xs[i].name + "\"];"
+                    var ps = xs[i].depends;
+                    for (var j = 0; j < ps.length; j++)
+                        res += "a" + ps[j] + "->a" + i + ";";
+                }
+                res += "}";
+                $("#output").html(Viz(res,"svg"));
+            }
+            break;
+
         case "help":
             $("#output").html($("#help").html());
             break;

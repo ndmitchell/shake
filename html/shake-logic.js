@@ -249,6 +249,64 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
     return ans;
 }
 
+function ruleGraph(dat, query) // DataEx -> Query -> [Record]
+{
+    var res = ruleFilter(dat, query);
+
+    var map = {}; // :: Dict Int [Int] -- which nodes a node lives at
+
+    // loop through each value in res, putting it into map (these are parents)
+    // for any not present, descend through the dat.original list, if you aren't included, add, if you are included, skip
+
+    function getMap(i)
+    {
+        // Figure out where each node goes
+        if (i in map)
+            return map[i];
+        var j = -1;
+        var ans = [];
+        for (var s in res)
+        {
+            j++;
+            for (var k = 0; k < res[s].length; k++)
+            {
+                if (res[s][k] === i)
+                {
+                    ans.push(j);
+                    break;
+                }
+            }
+        }
+        map[i] = ans;
+        return ans;
+    }
+
+    // first thing to do is figure out a mapping, where each node ended up
+    // if it's in
+
+    var ans = [];
+    for (var s in res)
+    {
+        var xs = res[s];
+        var ps = {};
+        for (var i = 0; i < xs.length; i++)
+        {
+            var depends = dat.original[xs[i]].depends;
+            for (var j = 0; j < depends.length; j++)
+            {
+                var ys = getMap(depends[j]);
+                for (var k = 0; k < ys.length; k++)
+                    ps[ys[k]] = null;
+            }
+        }
+        var deps = [];
+        for (var t in ps)
+            deps.push(1 * t);
+        ans.push({name:s, depends:deps});
+    }
+    return ans;
+}
+
 
 /////////////////////////////////////////////////////////////////////
 // COMMANDS
