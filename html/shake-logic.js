@@ -22,6 +22,10 @@ function bools(x,y)
     return x === "" ? y : x === y ? x : "both";
 }
 
+function colorAnd(c1, c2)
+{
+    return c1 === null ? c2 : c1 === c2 ? c1 : undefined;
+}
 
 //////////////////////////////////////////////////////////////////////
 // SUMMARY
@@ -203,7 +207,7 @@ function prepare(sum, dat) // Data -> DataEx
 /////////////////////////////////////////////////////////////////////
 // RULES
 
-function ruleFilter(dat, query) // DataEx -> Query -> Dict String DataIndex
+function ruleFilter(dat, query) // DataEx -> Query -> Dict String {items: [DataIndex], color: color}
 {
     queryData = dat;
     var f = readQuery(query);
@@ -212,14 +216,22 @@ function ruleFilter(dat, query) // DataEx -> Query -> Dict String DataIndex
     for (queryKey = 0; queryKey < dat.original.length; queryKey++)
     {
         queryVal = dat.original[queryKey];
+        queryName = queryVal.name;
         queryGroup = null;
+        queryBackColor = null;
+        queryTextColor = null;
         if (f())
         {
-            if (queryGroup === null) queryGroup = queryVal.name;
+            if (queryGroup === null) queryGroup = queryName;
             if (!(queryGroup in res))
-                res[queryGroup] = [queryKey];
+                res[queryGroup] = {items: [queryKey], text: queryTextColor, back: queryBackColor};
             else
-                res[queryGroup].push(queryKey);
+            {
+                var c = res[queryGroup];
+                c.items.push(queryKey);
+                c.text = colorAnd(c.text, queryTextColor);
+                c.back = colorAnd(c.back, queryBackColor);
+            }
         }
     }
     return res;
@@ -231,7 +243,7 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
     var ans = [];
     for (var s in res)
     {
-        var xs = res[s];
+        var xs = res[s].items;
         var time = 0;
         var leaf = "";
         var unchanged = "";
@@ -244,7 +256,7 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
             unchanged = bools(unchanged, x.changed !== x.built);
             run = Math.min(run,x.built);
         }
-        ans.push({name:s, count:xs.length, time:time, cost:calcRebuildCosts(dat.original,xs), leaf:leaf, run:run, unchanged:unchanged});
+        ans.push({name:s, count:xs.length, time:time, back:res[s].back, text:res[s].text, cost:calcRebuildCosts(dat.original,xs), leaf:leaf, run:run, unchanged:unchanged});
     }
     return ans;
 }
@@ -257,52 +269,55 @@ function ruleGraph(dat, query) // DataEx -> Query -> [Record]
 
     // loop through each value in res, putting it into map (these are parents)
     // for any not present, descend through the dat.original list, if you aren't included, add, if you are included, skip
-
-    function getMap(i)
+    var direct = {};
+    var ind = -1;
+    for (var s in res)
     {
-        // Figure out where each node goes
-        if (i in map)
-            return map[i];
-        var j = -1;
-        var ans = [];
-        for (var s in res)
-        {
-            j++;
-            for (var k = 0; k < res[s].length; k++)
-            {
-                if (res[s][k] === i)
-                {
-                    ans.push(j);
-                    break;
-                }
-            }
-        }
-        map[i] = ans;
-        return ans;
+        ind++;
+        var xs = res[s].items;
+        for (var i = 0; i < xs.length; i++)
+            direct[xs[i]] = ind;
+    }
+    function getDirect(key)
+    {
+        return key in direct ? [direct[key]] : [];
     }
 
-    // first thing to do is figure out a mapping, where each node ended up
-    // if it's in
+    var indirect = {};
+    function getIndirect(key)
+    {
+        if (key in indirect) return indirect[key];
+        if (key in direct) return [];
+        var ds = dat.original[key].depends;
+        var res = [];
+        for (var j = 0; j < ds.length; j++)
+        {
+            res.push(getIndirect(ds[j]));
+            res.push(getDirect(ds[j]));
+        }
+        res = concatNub(res);
+        indirect[key] = res;
+        return res;
+    }
 
     var ans = [];
     for (var s in res)
     {
-        var xs = res[s];
-        var ps = {};
+        var xs = res[s].items;
+        var ds = [];
+        var is = [];
         for (var i = 0; i < xs.length; i++)
         {
             var depends = dat.original[xs[i]].depends;
             for (var j = 0; j < depends.length; j++)
             {
-                var ys = getMap(depends[j]);
-                for (var k = 0; k < ys.length; k++)
-                    ps[ys[k]] = null;
+                ds.push(getDirect(depends[j]));
+                is.push(getIndirect(depends[j]));
             }
         }
-        var deps = [];
-        for (var t in ps)
-            deps.push(1 * t);
-        ans.push({name:s, depends:deps});
+        ds = concatNub(ds);
+        is = concatNub(is);
+        ans.push({name:s, text:res[s].text, back:res[s].back, parents:ds, ancestors:is});
     }
     return ans;
 }
@@ -327,6 +342,9 @@ function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trac
             val[s] = queryVal[s];
         var ts = queryVal.traces || [];
         queryVal = val;
+        queryName = queryVal.name;
+        queryBackColor = null;
+        queryTextColor = null;
         for (var i = 0; i < ts.length; i++)
         {
             queryVal.traces = [ts[i]];
@@ -335,9 +353,14 @@ function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trac
             {
                 if (queryGroup === null) queryGroup = ts[i].command;
                 if (!(queryGroup in res))
-                    res[queryGroup] = [ts[i]];
+                    res[queryGroup] = {items: [ts[i]], text:queryTextColor, back:queryBackColor};
                 else
-                    res[queryGroup].push(ts[i]);
+                {
+                    var c = res[queryGroup];
+                    c.items.push(ts[i]);
+                    c.text = colorAnd(c.text, queryTextColor);
+                    c.back = colorAnd(c.back, queryBackColor);
+                }
             }
         }
     }
@@ -350,11 +373,11 @@ function commandTable(dat, query) // DataEx -> Query -> [Record]
     var ans = [];
     for (var s in res)
     {
-        var xs = res[s];
+        var xs = res[s].items;
         var time = 0;
         for (var i = 0; i < xs.length; i++)
             time += xs[i].stop - xs[i].start;
-        ans.push({name:s, count:xs.length, time:time});
+        ans.push({name:s, count:xs.length, text:res[s].text, back:res[s].back, time:time});
     }
     return ans;
 }
@@ -366,7 +389,7 @@ function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict Stri
     var ans = {};
     for (var s in res)
     {
-        var ts = res[s];
+        var ts = res[s].items;
         var xs = [];
         for (var i = 0; i <= buckets; i++)
             xs.push(0); // fill with 1 more element, but the last bucket will always be 0
@@ -386,7 +409,7 @@ function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict Stri
                 xs[Math.floor(stop)] += stop - Math.floor(stop);
             }
         }
-        ans[s] = xs.slice(0,buckets);
+        ans[s] = {items: xs.slice(0,buckets), color: res[s].color || null};
     }
     return ans;
 }
@@ -417,7 +440,10 @@ function readQuery(query)
 var queryData = {};
 var queryKey = 0;
 var queryVal = {};
+var queryName = "";
 var queryGroup = null;
+var queryBackColor = null;
+var queryTextColor = null;
 
 function childOf(r){return queryData.dependsOnThis(queryKey, r);}
 function parentOf(r){return queryData.thisDependsOn(queryKey, r);}
@@ -429,6 +455,26 @@ function /* export */ group(x)
 {
     if (queryGroup === null) queryGroup = "";
     queryGroup += (queryGroup === "" ? "" : " ") + x;
+    return true;
+}
+
+function backColor(c, b)
+{
+    if (b === undefined || b)
+        queryBackColor = c;
+    return true;
+}
+
+function textColor(c, b)
+{
+    if (b === undefined || b)
+        queryTextColor = c;
+    return true;
+}
+
+function rename(from, to)
+{
+    queryName = queryName.replace(from, to || "");
     return true;
 }
 
@@ -455,9 +501,9 @@ function /* export */ unchanged()
 function /* export */ name(r, groupName)
 {
     if (r === undefined)
-        return queryVal.name;
+        return queryName;
 
-    var res = execRegExp(r, queryVal.name);
+    var res = execRegExp(r, queryName);
     if (res === null)
     {
         if (groupName === undefined)

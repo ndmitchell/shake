@@ -142,3 +142,23 @@ function recordUnion(xs,ys) // :: Record -> Record -> Record -- left biased
         res[s] = xs[s];
     return res;
 }
+
+function concatNub(xs) // :: Eq a => [[a]] -> [a]
+{
+    var res = [];
+    var seen = {};
+    for (var i = 0; i < xs.length; i++)
+    {
+        var x = xs[i];
+        for (var j = 0; j < x.length; j++)
+        {
+            var e = x[j];
+            if (!(e in seen))
+            {
+                seen[e] = null;
+                res.push(e);
+            }
+        }
+    }
+    return res;
+}

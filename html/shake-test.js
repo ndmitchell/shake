@@ -53,7 +53,7 @@ function test() // :: String
     var tab1 = prepare(sum1, dat1);
     var par1 = commandPlot(tab1,"group('x')",10)['x'];
     console.log(par1);
-    var pars1 = par1.map(function(i){return Math.round(i*10)/10;});
+    var pars1 = par1.items.map(function(i){return Math.round(i*10)/10;});
     assert(listEq(pars1, [1.5,2,2,2,1.5,1,1,1,1,1]));
 
     function chk(f,query,n)

@@ -117,6 +117,7 @@ function showTable(xs)
     var res = "<table class='data'><tr class='header'>";
     for (var s in xs[0])
     {
+        if (s === "back" || s === "text") continue;
         res += s in twoColumns ? "<td colspan='2' style='text-align:center;'" :
                s in rightAlign ? "<td style='text-align:right;'" :
                "<td";
@@ -130,9 +131,13 @@ function showTable(xs)
     for (var i = 0; i < xs.length; i++)
     {
         var x = xs[i];
-        res += "<tr>";
+        res += "<tr";
+        if (x.back) res += " style='background-color:" + x.back + ";'";
+        if (x.text) res += " style='color:" + x.text + ";'";
+        res += ">";
         for (var s in xs[0])
         {
+            if (s === "text" || s === "back") continue;
             res += "<td" + (s in rightAlign ? " style='text-align:right;'" : "") + ">";
             if (s === "count")
                 res += x[s] + " &times;"
@@ -206,11 +211,11 @@ function runReport()
             var ys = [];
             for (var s in xs)
             {
-                var x = xs[s];
+                var x = xs[s].items;
                 var data = [];
                 for (var j = 0; j < x.length; j++)
                     data.push([j, x[j]]);
-                ys.push({label:s, values:x, data:data, avg:sum(x) / x.length});
+                ys.push({label:s, values:x, data:data, color:xs[s].back, avg:sum(x) / x.length});
             }
             ys.sort(function(a,b){return a.avg - b.avg;});
             showPlot(ys, {
@@ -241,10 +246,16 @@ function runReport()
                 res += "edge[penwidth=0.5,arrowsize=0.5];";
                 for (var i = 0; i < xs.length; i++)
                 {
-                    res += "a" + i + "[label=\"" + xs[i].name + "\"];"
-                    var ps = xs[i].depends;
-                    for (var j = 0; j < ps.length; j++)
-                        res += "a" + ps[j] + "->a" + i + ";";
+                    res += "a" + i + "[label=\"" + xs[i].name + "\"";
+                    if (xs[i].back) res += ",style=filled,color=\"" + xs[i].back + "\"";
+                    if (xs[i].text) res += ",fontcolor=\"" + xs[i].text + "\"";
+                    res += "];";
+                    var parents = xs[i].parents;
+                    for (var j = 0; j < parents.length; j++)
+                        res += "a" + i + "->a" + parents[j] + ";";
+                    var ancestors = xs[i].ancestors;
+                    for (var j = 0; j < ancestors.length; j++)
+                        res += "a" + i + "->a" + ancestors[j] + "[style=dashed];";
                 }
                 res += "}";
                 $("#output").html(Viz(res,"svg"));
