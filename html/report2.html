@@ -131,6 +131,11 @@ ul.space {padding-left: 20px;}
 				<li><a class="example" mode="rule-table">!name(/\.[a-zA-Z0-9_]+$/)</a> - which rules have no extension.</li>
 			</ul>
 		</li>
+		<li><b>Rule graph:</b> This table shows the rules and their dependencies. An arrow from a child node to a parent node indicates that the child depends on the parent. A solid line is a direct dependency, a dashed line is an indirect dependency, through some hidden intermediate node. Some useful queries are:
+			<ul>
+				<li><a class="example" mode="rule-graph">name(/(\.[a-zA-Z0-9_]+)$/, "???")</a> - display rules grouped by result extension.</li>
+			</ul>
+		</li>
 	</ul>
 	<h3>Query language</h3>
 	<p>
@@ -145,6 +150,8 @@ ul.space {padding-left: 20px;}
 		<li><tt>name() : string</tt> - the name of the current rule.</li>
 		<li><tt>name(x : RegExp) : bool</tt> - a regular expression to match against the name of the current rule. If the regular expression contains captured patterns, these will be used as the <tt>group</tt></li>
 		<li><tt>name(x : RegExp, def : string) : true</tt> - a regular expression to match against the name of the current rule, including captured patterns for the <tt>group</tt>. If the regular expression does not match, the function will still return true but <tt>def</tt> will be used as the group.</li>
+		<li><tt>rename(from : string, to : string) : true</tt> - change <tt>name</tt> so any string <tt>from</tt> is replaced with <tt>to</tt>, useful for replacing an object directory (which is uninteresting) with something like $OBJ.</li>
+		<li><tt>rename(from : string) : true</tt> - rename using <tt>""</tt> as the replacement string.</li>
 		<li><tt>command() : string</tt> - when matching rules this is the name of the first command the rule executed, or <tt>""</tt> if the rule ran no commands. When matching commands this is the name of each command in turn.</li>
 		<li><tt>command(x : RegExp) : bool</tt> - a regular expression to match against any of the commands, including grouping as per <tt>name</tt>.</li>
 		<li><tt>command(x : RegExp, def : string) : true</tt> - works the same as the <tt>name</tt> function which takes two arguments.</li>
@@ -152,6 +159,10 @@ ul.space {padding-left: 20px;}
 		<li><tt>descendantOf(x : RegExp) : bool</tt> - is this rule a descendant of <tt>x</tt>, a change in <tt>x</tt> will cause this rule to rebuild (ignoring unchanging rules).</li>
 		<li><tt>parentOf(x : RegExp) : bool</tt> - is this rule a direct parent of <tt>x</tt>, the rule for <tt>x</tt> calls <a class="shake">need</a>/<a class="shake">apply</a> on this item.</li>
 		<li><tt>ancestorOf(x : RegExp) : bool</tt> - is this rule an ancestor of <tt>x</tt>, a change in this rule will cause <tt>x</tt> to rebuild (ignoring unchanging rules).</li>
+		<li><tt>textColor(c : color) : true</tt> - set the color of this group to the given color, represented as a string - either the name of a color (<tt>"red"</tt>) or a hex value (<tt>"#ff0000</tt>). If multiple <tt>textColor</tt> calls are given in one query, the last one will be used. If multiple different <tt>textColor</tt> values are given to one group, the group will not be colored.</li>
+		<li><tt>textColor(c : color, b : bool) : true</tt> - set the <tt>textColor</tt> of this group if the second argument is <tt>true</tt>.</li>
+		<li><tt>backColor(c : color) : true</tt> - like <tt>textColor</tt> but to set the background color.</li>
+		<li><tt>backColor(c : color, b : bool) : true</tt> -  like <tt>textColor</tt> but to set the background color.</li>
 	</ul>
 </div>
 
