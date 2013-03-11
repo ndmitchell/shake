@@ -409,7 +409,7 @@ function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict Stri
                 xs[Math.floor(stop)] += stop - Math.floor(stop);
             }
         }
-        ans[s] = {items: xs.slice(0,buckets), color: res[s].color || null};
+        ans[s] = {items: xs.slice(0,buckets), back: res[s].back || null};
     }
     return ans;
 }
