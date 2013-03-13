@@ -2,7 +2,6 @@
 module Development.Make.Parse(parse) where
 
 import Development.Make.Type
-import Data.List
 import Data.Char
 
 
