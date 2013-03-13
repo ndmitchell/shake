@@ -3,6 +3,7 @@
 module Development.Make.Run(findMakefile, runMakefile) where
 
 import Development.Shake
+import Development.Shake.FilePath
 import Development.Make.Parse
 import Development.Make.Type
 import System.Directory as IO
@@ -32,7 +33,7 @@ runMakefile file = do
 
 eval :: Makefile -> Makefile
 eval (Makefile xs) = Makefile [Rule (f a) (f b) [Expr $ f c | Expr c <- cs] | Rule a b cs <- xs]
-    where f = substitute [(a,b) | Assign _ a b <- xs]
+    where f = substitute $ ("EXE",Lit $ if null exe then "" else "." ++ exe) : [(a,b) | Assign _ a b <- xs]
 
 
 convert :: [Stmt] -> Rules ()
