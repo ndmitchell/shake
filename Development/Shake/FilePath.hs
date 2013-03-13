@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 -- | A module for 'FilePath' operations, to be used instead of "System.FilePath"
 --   when writing build systems. In build systems, when using the file name
@@ -11,6 +12,7 @@ module Development.Shake.FilePath(
     module System.FilePath.Posix,
     dropDirectory1, takeDirectory1, normalise,
     toNative, (</>), combine,
+    exe
     ) where
 
 import System.FilePath.Posix hiding (normalise, (</>), combine)
@@ -76,3 +78,12 @@ combine "." y = y
 combine x ('.':'.':'/':y) = combine (takeDirectory x) y
 combine x ('.':'/':y) = combine x y
 combine x y = normalise $ Native.combine (toNative x) (toNative y)
+
+
+-- | The extension of executables, @\"exe\"@ on Windows and @\"\"@ otherwise.
+exe :: String
+#ifdef mingw32_HOST_OS
+exe = "exe"
+#else
+exe = ""
+#endif
