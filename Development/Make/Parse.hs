@@ -19,7 +19,7 @@ parseMakefile :: String -> Makefile
 parseMakefile xs = Makefile $ rejoin $ concatMap parse $ lines xs
     where
         parse x | all isSpace x = []
-                | all isSpace $ take 1 x = [Right $ parseExpr $ trim x]
+                | all isSpace $ take 1 x = [Right $ parseCommand $ trim x]
                 | otherwise = [Left $ parseStmt x]
 
         rejoin (Left r@Rule{}:Right e:xs) = rejoin $ Left r{commands = commands r ++ [e]} : xs
@@ -30,7 +30,7 @@ parseMakefile xs = Makefile $ rejoin $ concatMap parse $ lines xs
 
 parseStmt :: String -> Stmt
 parseStmt x
-    | (a,'=':b) <- break (== '=') x, ':' `notElem` a = Variable (trim a) (parseExpr $ trim b)
+    | (a,'=':b) <- break (== '=') x, ':' `notElem` a = Assign Equals (trim a) (parseExpr $ trim b)
     | (a,':':b) <- break (== ':') x = Rule (parseExpr $ trim a) (parseExpr $ trim b) []
     | otherwise = error $ "Invalid statement: " ++ x
 
@@ -49,3 +49,7 @@ parseExpr x = simplifyExpr $ Concat $ f x
 
 parseVar :: String -> Expr
 parseVar x = Var x
+
+
+parseCommand :: String -> Command
+parseCommand = Expr . parseExpr

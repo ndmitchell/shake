@@ -8,13 +8,16 @@ data Stmt
     = Rule
         {targets :: Expr
         ,prerequisites :: Expr
-        ,commands :: [Expr]
+        ,commands :: [Command]
         }
-    | Variable
-        {name :: String
+    | Assign
+        {assign :: Assign
+        ,name :: String
         ,expr :: Expr
         }
       deriving Show
+
+data Assign = Equals | ColonEquals | QuestionEquals deriving Show
 
 data Expr = Apply String [Expr]
           | Concat [Expr]
@@ -22,6 +25,7 @@ data Expr = Apply String [Expr]
           | Lit String
             deriving Show
 
+data Command = Expr Expr | String := Expr deriving Show
 
 descendExpr :: (Expr -> Expr) -> Expr -> Expr
 descendExpr f (Apply a b) = Apply a $ map f b

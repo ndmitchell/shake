@@ -31,8 +31,8 @@ runMakefile file = do
 
 
 eval :: Makefile -> Makefile
-eval (Makefile xs) = Makefile [Rule (f a) (f b) (map f c) | Rule a b c <- xs]
-    where f = substitute [(a,b) | Variable a b <- xs]
+eval (Makefile xs) = Makefile [Rule (f a) (f b) [Expr $ f c | Expr c <- cs] | Rule a b cs <- xs]
+    where f = substitute [(a,b) | Assign _ a b <- xs]
 
 
 convert :: [Stmt] -> Rules ()
@@ -44,7 +44,7 @@ convert rs = match ?> run
             where
                 flat = flatten . substitute ([("@",Lit s),("^",Lit $ unwords $ concat deps)] ++ [("<",Lit d) | d:_ <- [concat deps]])
                 subs v xs = concat [if x == '%' then v else [x] | x <- xs]
-                (deps,cmds) = unzip [ (words $ subs v $ flat prerequisites, map (subs v . flat) commands)
+                (deps,cmds) = unzip [ (words $ subs v $ flat prerequisites, map (subs v . flat) [c | Expr c <- commands])
                                     | r@Rule{..} <- rs, Just v <- [check s r]]
         match s = any (isJust . check s) rs
 
