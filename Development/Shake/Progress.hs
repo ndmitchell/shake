@@ -101,7 +101,7 @@ progressDisplay sample disp prog = loop 0
                              (mins,secs) = divMod (ceiling comp) (60 :: Int)
                              time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
                              perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
-                         in time ++ "m (" ++ perc ++ "%)" ++ "\a"
+                         in time ++ "m (" ++ perc ++ "%)"
                 threadDelay $ ceiling $ sample * 1000000
                 loop $! steps+1
 

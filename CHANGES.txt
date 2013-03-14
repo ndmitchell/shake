@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Do not write a beep in progressDisplay, avoids a beep
     Add exe function to FilePath
 0.9.1
     GHC head (7.7) compatibility by removing the Rules fundep
