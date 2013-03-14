@@ -99,9 +99,9 @@ progressDisplay sample disp prog = loop 0
                              todo = progressTodo p
                              comp = if done == 0 then todo else sample * todo / (done / fromIntegral steps)
                              (mins,secs) = divMod (ceiling comp) (60 :: Int)
-                             time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
+                             time = (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs
                              perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
-                         in time ++ "m (" ++ perc ++ "%)"
+                         in time ++ "s (" ++ perc ++ "%)"
                 threadDelay $ ceiling $ sample * 1000000
                 loop $! steps+1
 
