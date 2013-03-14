@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface, ScopedTypeVariables #-}
 
 -- | Progress tracking
 module Development.Shake.Progress(
@@ -7,9 +7,12 @@ module Development.Shake.Progress(
     ) where
 
 import Control.Concurrent
+import Control.Exception
+import System.Environment
 import Data.Data
 import Data.Monoid
 import qualified Data.ByteString.Char8 as BS
+import System.IO.Unsafe
 
 #ifdef mingw32_HOST_OS
 
@@ -106,15 +109,24 @@ progressDisplay sample disp prog = loop 0
                 loop $! steps+1
 
 
+{-# NOINLINE xterm #-}
+xterm :: Bool
+xterm = System.IO.Unsafe.unsafePerformIO $
+    Control.Exception.catch (fmap (== "xterm") $ getEnv "TERM") $
+    \(e :: SomeException) -> return False
+
+
+
 -- | Set the title of the current console window to the given text. On Windows
 --   this function uses the @SetConsoleTitle@ API, elsewhere it uses an xterm
 --   escape sequence. This function may not work for all terminals.
 progressTitlebar :: String -> IO ()
-progressTitlebar x =
+progressTitlebar x
+    | xterm = BS.putStr $ BS.pack $ "\ESC]0;" ++ x ++ "\BEL"
 #ifdef mingw32_HOST_OS
-    BS.useAsCString (BS.pack x) $ \x -> c_setConsoleTitle x >> return ()
+    | otherwise = BS.useAsCString (BS.pack x) $ \x -> c_setConsoleTitle x >> return ()
 #else
-    BS.putStr $ BS.pack $ "\ESC]0;" ++ x ++ "\BEL"
+    | otherwise = return ()
 #endif
 
 
