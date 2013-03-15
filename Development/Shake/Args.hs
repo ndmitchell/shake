@@ -31,6 +31,8 @@ import System.Exit
 --
 --   The available command line options are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
+--
+--   Users seeking more powerful command line handling should look at 'shakeArguments'.
 shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
 shakeWithClean clean opts rules = shakeArguments opts [cleanOpt] f
     where
@@ -44,6 +46,16 @@ shakeWithClean clean opts rules = shakeArguments opts [cleanOpt] f
                 return $ Just $ if null files then rules else want files >> withoutActions rules
 
 
+-- | Run a build system using command line arguments for configuration.
+--   Requires a base set of 'ShakeOptions' that may be overriden by command line flags,
+--   additional user flags (can be @[]@), and a way of generating the rules from the command line arguments.
+--   The rules generator takes a list of user flags, the non-flag arguments (typically files)
+--   and should return 'Nothing' to indicate nothing should be built, or the rules to build with.
+--
+--   The available command line options are those from 'shakeOptDescrs', along with a few additional
+--   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
+--
+--   Users seeking simpler command line handling should look at 'shakeWithClean'.
 shakeArguments :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
 shakeArguments baseOpts userOptions rules = do
     args <- getArgs
