@@ -1,6 +1,8 @@
 
 module Development.Make.Type where
 
+import Control.Monad
+
 
 data Makefile = Makefile [Stmt] deriving Show
 
@@ -31,6 +33,11 @@ descendExpr :: (Expr -> Expr) -> Expr -> Expr
 descendExpr f (Apply a b) = Apply a $ map f b
 descendExpr f (Concat xs) = Concat $ map f xs
 descendExpr f x = x
+
+descendExprM :: Monad m => (Expr -> m Expr) -> Expr -> m Expr
+descendExprM f (Apply a b) = Apply a `liftM` mapM f b
+descendExprM f (Concat xs) = Concat `liftM` mapM f xs
+descendExprM f x = return x
 
 transformExpr :: (Expr -> Expr) -> Expr -> Expr
 transformExpr f = f . descendExpr (transformExpr f)
