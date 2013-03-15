@@ -43,11 +43,12 @@ shakeWithArgs clean opts rules = shakeWithArgsHack [] opts f
 
 
 shakeWithArgsHack :: [OptDescr (Either String a)] -> ShakeOptions -> (Bool -> [a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
-shakeWithArgsHack extra baseOpts rules = do
+shakeWithArgsHack userOptions baseOpts rules = do
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
         (flagsError,flag1) = partitionEithers flags
-        (flagsExtra,flagsShake) = first concat $ unzip flag1
+        (self,user) = partitionEithers flag1
+        (flagsExtra,flagsShake) = first concat $ unzip self
         assumeNew = [x | AssumeNew x <- flagsExtra]
         assumeOld = [x | AssumeOld x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
@@ -76,7 +77,7 @@ shakeWithArgsHack extra baseOpts rules = do
                 Just d -> bracket_ (setCurrentDirectory d) (setCurrentDirectory curdir)
         (ran,res) <- redir $ do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
-            rules <- rules (Clean `elem` flagsExtra) [] files
+            rules <- rules (Clean `elem` flagsExtra) user files
             case rules of
                 Nothing -> return (False,Right ())
                 Just rules -> do
@@ -98,8 +99,11 @@ shakeWithArgsHack extra baseOpts rules = do
                         time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
                     putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
-        opts = map snd shakeOptsEx
+        opts = map (wrap Left . snd) shakeOptsEx ++ map (wrap Right) userOptions
         showHelp = putStr $ unlines $ "Usage: shake [options] [target] ..." : "Options:" : showOptDescr opts
+
+        wrap :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
+        wrap f = fmapOptDescr (either Left (Right . f))
 
 
 showOptDescr :: [OptDescr a] -> [String]
