@@ -3,6 +3,7 @@ module Development.Make.Parse(parse) where
 
 import Development.Make.Type
 import Data.Char
+import Data.List
 
 
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
@@ -10,16 +11,22 @@ trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 
 parse :: FilePath -> IO Makefile
 parse file = do
-    src <- readFile file
+    src <- if file == "-" then getContents else readFile file
     return $ parseMakefile src
 
 
 parseMakefile :: String -> Makefile
-parseMakefile xs = Makefile $ rejoin $ concatMap parse $ lines xs
+parseMakefile xs = Makefile $ rejoin $ concatMap parse $ map comments $ continuations $ lines xs
     where
+        continuations (x:y:xs) | "\\" `isSuffixOf` x = continuations $ (init x ++ dropWhile isSpace y):xs
+        continuations (x:xs) = x : continuations xs
+        continuations [] = []
+
+        comments = takeWhile (/= '#')
+
         parse x | all isSpace x = []
                 | all isSpace $ take 1 x = [Right $ parseCommand $ trim x]
-                | otherwise = [Left $ parseStmt x]
+                | (a,b) <- break (== ';') x = Left (parseStmt a) : [Right $ parseCommand $ trim $ drop 1 b | b /= ""]
 
         rejoin (Left r@Rule{}:Right e:xs) = rejoin $ Left r{commands = commands r ++ [e]} : xs
         rejoin (Right e:xs) = error $ "Command must be under a rule: " ++ show e
