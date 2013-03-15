@@ -33,7 +33,7 @@ runMakefile file = do
 
 eval :: Makefile -> Makefile
 eval (Makefile xs) = Makefile [Rule (f a) (f b) [Expr $ f c | Expr c <- cs] | Rule a b cs <- xs]
-    where f = substitute $ ("EXE",Lit $ if null exe then "" else "." ++ exe) : [(a,b) | Assign _ a b <- xs]
+    where f = substitute $ ("EXE",Lit $ if null exe then "" else "." ++ exe) : [(a,b) | Assign a _ b <- xs]
 
 
 convert :: [Stmt] -> Rules ()

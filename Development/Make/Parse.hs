@@ -29,7 +29,7 @@ parseMakefile xs = Makefile $ rejoin $ concatMap parse $ lines xs
 
 parseStmt :: String -> Stmt
 parseStmt x
-    | (a,'=':b) <- break (== '=') x, ':' `notElem` a = Assign Equals (trim a) (parseExpr $ trim b)
+    | (a,'=':b) <- break (== '=') x, ':' `notElem` a = Assign (trim a) Equals (parseExpr $ trim b)
     | (a,':':b) <- break (== ':') x = Rule (parseExpr $ trim a) (parseExpr $ trim b) []
     | otherwise = error $ "Invalid statement: " ++ x
 

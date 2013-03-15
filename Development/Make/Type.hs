@@ -11,8 +11,8 @@ data Stmt
         ,commands :: [Command]
         }
     | Assign
-        {assign :: Assign
-        ,name :: String
+        {name :: String
+        ,assign :: Assign
         ,expr :: Expr
         }
       deriving Show
