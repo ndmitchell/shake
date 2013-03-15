@@ -26,9 +26,9 @@ progEx mxDone todo = do
                      x:xs -> do writeIORef pile xs; return x
 
     out <- newIORef []
-    let put x = do let (mins,secs) = break (== ':') $ takeWhile (/= '(') x
+    let put x = do let (mins,secs) = break (== 'm') $ takeWhile (/= '(') x
                    let f x = let y = filter isDigit x in if null y then 0/0 else read y
-                   modifyIORef out (++ [(f mins * 60 + f secs) / resolution])
+                   modifyIORef out (++ [(if null secs then f mins else f mins * 60 + f secs) / resolution])
     progressDisplay (1/scale) put get
     fmap (take $ length todo) $ readIORef out
 
