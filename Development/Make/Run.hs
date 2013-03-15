@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Development.Make.Run(findMakefile, runMakefile) where
+module Development.Make.Run(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
@@ -12,6 +12,14 @@ import Data.Maybe
 import Control.Monad
 import System.Cmd
 import System.Exit
+
+
+main :: IO ()
+main = do
+    file <- findMakefile
+    rules <- runMakefile file
+    shakeWithArgs (return ()) shakeOptions rules
+
 
 
 findMakefile :: IO FilePath
