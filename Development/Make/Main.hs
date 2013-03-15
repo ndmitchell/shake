@@ -26,8 +26,8 @@ main = do
         "-f-":rest -> return (rest, "-")
         "-f":file:rest -> return (rest, file)
         _ -> fmap ((,) args) findMakefile
-    rules <- runMakefile file
-    withArgs args $ shakeWithArgs (return ()) shakeOptions{shakeVerbosity=Quiet} rules
+    rules <- runMakefile file ["clean" | "clean" `elem` args]
+    withArgs (delete "clean" args) $ shakeWithArgs (return ()) shakeOptions{shakeVerbosity=Quiet} rules
 
 
 findMakefile :: IO FilePath
@@ -39,16 +39,17 @@ findMakefile = do
             error "Could not find either `makefile' or `Makefile'"
 
 
-runMakefile :: FilePath -> IO (Rules ())
-runMakefile file = do
+runMakefile :: FilePath -> [String] -> IO (Rules ())
+runMakefile file args = do
     env <- defaultEnv
     mk <- parse file
     rs <- eval env mk
     return $ do
         defaultRuleFile_
         case rs of
-            Ruler (x:_) _ _ : _ | '%' `notElem` x -> want_ [x]
+            Ruler (x:_) _ _ : _ | null args, '%' `notElem` x -> want_ [x]
             _ -> return ()
+        mapM_ (want_ . return) args
         convert rs
 
 
@@ -106,7 +107,8 @@ convert rs = match ??> run
 
 runCommand :: String -> Action ()
 runCommand x = traced (unwords $ take 1 $ words x) $ do
-    res <- system x
+    res <- if "@" `isPrefixOf` x then system $ drop 1 x
+           else putStrLn x >> system x
     when (res /= ExitSuccess) $
         error $ "System command failed: " ++ x
 
