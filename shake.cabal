@@ -121,7 +121,7 @@ library
         Development.Shake.Value
         Paths_shake
 
-executable shake
+executable shake-test
     main-is: Main.hs
     if flag(testprog)
         buildable: True
