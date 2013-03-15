@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a shake executable which runs Makefiles
     Rename shake to shake-test
     Change how progress messages are written
     Do not write a beep in progressDisplay, avoids a beep
