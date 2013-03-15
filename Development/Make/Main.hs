@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Development.Make.Run(main) where
+module Development.Make.Main(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
