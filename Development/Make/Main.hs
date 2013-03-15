@@ -17,17 +17,20 @@ import Control.Monad
 import System.Cmd
 import System.Exit
 import Control.Monad.Trans.State.Strict
+import System.Console.GetOpt
 
 
 main :: IO ()
-main = do
-    args <- getArgs
-    (args,file) <- case args of
-        "-f-":rest -> return (rest, "-")
-        "-f":file:rest -> return (rest, file)
-        _ -> fmap ((,) args) findMakefile
-    rules <- runMakefile file ["clean" | "clean" `elem` args]
-    withArgs (delete "clean" args) $ shakeWithClean (return ()) shakeOptions{shakeVerbosity=Quiet} rules
+main = shakeArguments shakeOptions{shakeVerbosity=Quiet} args $ \opts targets -> do
+    makefile <- case reverse [x | UseMakefile x <- opts] of
+        x:_ -> return x
+        _ -> findMakefile
+    fmap Just $ runMakefile makefile targets
+
+
+data Args = UseMakefile FilePath
+
+args = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "Read FILE as a makefile."]
 
 
 findMakefile :: IO FilePath
