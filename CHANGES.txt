@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Remove the -f alias for --flush
     Add a shake executable which runs Makefiles
     Rename shake to shake-test
     Change how progress messages are written
