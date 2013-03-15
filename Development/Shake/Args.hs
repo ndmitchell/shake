@@ -1,6 +1,6 @@
 
 -- | Command line parsing flags.
-module Development.Shake.Args(shakeOptDescrs, shakeWithArgs, shakeWithArgsHack) where
+module Development.Shake.Args(shakeOptDescrs, shakeWithClean, shakeWithArgsHack) where
 
 import Paths_shake
 import Development.Shake.Types
@@ -25,14 +25,14 @@ import System.Exit
 
 
 -- | Run a build system using command line arguments for configuration.
---   Requires a way of cleaning the build objects (triggered by @clean@ as a target),
+--   Requires a way of cleaning the build objects (triggered by @clean@ as a target or @--clean@),
 --   a base set of options that may be overriden by command line flags, and the set of build rules.
 --   The function 'removeFiles' is often useful for producing a cleaning action.
 --
 --   The available command line options are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
-shakeWithArgs :: IO () -> ShakeOptions -> Rules () -> IO ()
-shakeWithArgs clean opts rules = shakeWithArgsHack [cleanOpt] opts f
+shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
+shakeWithClean clean opts rules = shakeWithArgsHack [cleanOpt] opts f
     where
         cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
 

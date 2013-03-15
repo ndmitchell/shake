@@ -54,7 +54,7 @@ shaken test rules sleeper = do
         args -> do
             let (_,files,_) = getOpt Permute [] args
             withArgs (args \\ files) $
-                shakeWithArgs
+                shakeWithClean
                     (removeDirectoryRecursive out) 
                     (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html", shakeLint=True})
                     (rules files (out++))

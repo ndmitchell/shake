@@ -27,7 +27,7 @@ main = do
         "-f":file:rest -> return (rest, file)
         _ -> fmap ((,) args) findMakefile
     rules <- runMakefile file ["clean" | "clean" `elem` args]
-    withArgs (delete "clean" args) $ shakeWithArgs (return ()) shakeOptions{shakeVerbosity=Quiet} rules
+    withArgs (delete "clean" args) $ shakeWithClean (return ()) shakeOptions{shakeVerbosity=Quiet} rules
 
 
 findMakefile :: IO FilePath
