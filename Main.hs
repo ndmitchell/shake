@@ -1,4 +1,4 @@
-module Main where
+module Main(main) where
 
 import Control.Concurrent
 import Control.Exception
@@ -28,8 +28,10 @@ import qualified Examples.Test.Progress as Progress
 import qualified Examples.Test.Random as Random
 import qualified Examples.Test.Resources as Resources
 
+import qualified Development.Make.Main as Makefile
 
-fakes = ["clean" * clean, "test" * test]
+
+fakes = ["clean" * clean, "test" * test, "makefile" * makefile]
     where (*) = (,)
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
@@ -57,6 +59,12 @@ main = do
             ,""
             ,"Which will build Shake, using Shake, on 2 threads."]
         Just main -> main sleepFileTime
+
+
+makefile :: IO () -> IO ()
+makefile _ = do
+    args <- getArgs
+    withArgs (drop 1 args) Makefile.main
 
 
 clean :: IO () -> IO ()

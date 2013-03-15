@@ -149,6 +149,9 @@ executable shake
             build-depends: unix >= 2.5.1
 
     other-modules:
+        Development.Make.Parse
+        Development.Make.Main
+        Development.Make.Type
         Examples.Util
         Examples.C.Main
         Examples.Self.Main
