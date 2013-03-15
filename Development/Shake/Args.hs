@@ -1,6 +1,6 @@
 
 -- | Command line parsing flags.
-module Development.Shake.Args(shakeOptDescrs, shakeWithArgs) where
+module Development.Shake.Args(shakeOptDescrs, shakeWithArgs, shakeWithArgsHack) where
 
 import Paths_shake
 import Development.Shake.Types
@@ -32,7 +32,18 @@ import System.Exit
 --   The available command line options are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
 shakeWithArgs :: IO () -> ShakeOptions -> Rules () -> IO ()
-shakeWithArgs clean baseOpts rules = do
+shakeWithArgs clean opts rules = shakeWithArgsHack [] opts f
+    where
+        f cleanFirst _ files = do
+            when cleanFirst clean
+            if "clean" `elem` files then
+                clean >> return Nothing
+             else
+                return $ Just $ if null files then rules else want files >> withoutActions rules
+
+
+shakeWithArgsHack :: [OptDescr (Either String a)] -> ShakeOptions -> (Bool -> [a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
+shakeWithArgsHack extra baseOpts rules = do
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
         (flagsError,flag1) = partitionEithers flags
@@ -56,21 +67,23 @@ shakeWithArgs clean baseOpts rules = do
         showHelp
      else if Version `elem` flagsExtra then
         putStrLn $ "Shake build system, version " ++ show version
-     else if "clean" `elem` files then
-        clean
      else do
-        when (Clean `elem` flagsExtra) clean
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         start <- getCurrentTime
         curdir <- getCurrentDirectory
         let redir = case changeDirectory of
                 Nothing -> id
                 Just d -> bracket_ (setCurrentDirectory d) (setCurrentDirectory curdir)
-        res <- redir $ do
+        (ran,res) <- redir $ do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
-            try $ shake shakeOpts $ if null files then rules else want files >> withoutActions rules
+            rules <- rules (Clean `elem` flagsExtra) [] files
+            case rules of
+                Nothing -> return (False,Right ())
+                Just rules -> do
+                    res <- try $ shake shakeOpts rules
+                    return (True, res)
 
-        if shakeVerbosity shakeOpts < Normal then
+        if not ran || shakeVerbosity shakeOpts < Normal then
             either throwIO return res
          else
             let esc code = if Color `elem` flagsExtra then escape code else id
