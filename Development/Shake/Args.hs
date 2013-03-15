@@ -1,6 +1,6 @@
 
 -- | Command line parsing flags.
-module Development.Shake.Args(shakeOptDescrs, shakeWithClean, shakeWithArgsHack) where
+module Development.Shake.Args(shakeOptDescrs, shakeWithClean, shakeArguments) where
 
 import Paths_shake
 import Development.Shake.Types
@@ -32,7 +32,7 @@ import System.Exit
 --   The available command line options are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
 shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
-shakeWithClean clean opts rules = shakeWithArgsHack [cleanOpt] opts f
+shakeWithClean clean opts rules = shakeArguments opts [cleanOpt] f
     where
         cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
 
@@ -44,8 +44,8 @@ shakeWithClean clean opts rules = shakeWithArgsHack [cleanOpt] opts f
                 return $ Just $ if null files then rules else want files >> withoutActions rules
 
 
-shakeWithArgsHack :: [OptDescr (Either String a)] -> ShakeOptions -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
-shakeWithArgsHack userOptions baseOpts rules = do
+shakeArguments :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
+shakeArguments baseOpts userOptions rules = do
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
         (flagsError,flag1) = partitionEithers flags
