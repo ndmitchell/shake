@@ -32,17 +32,19 @@ import System.Exit
 --   The available command line options are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
 shakeWithArgs :: IO () -> ShakeOptions -> Rules () -> IO ()
-shakeWithArgs clean opts rules = shakeWithArgsHack [] opts f
+shakeWithArgs clean opts rules = shakeWithArgsHack [cleanOpt] opts f
     where
-        f cleanFirst _ files = do
-            when cleanFirst clean
+        cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
+
+        f extra files = do
+            when (extra /= []) clean
             if "clean" `elem` files then
                 clean >> return Nothing
              else
                 return $ Just $ if null files then rules else want files >> withoutActions rules
 
 
-shakeWithArgsHack :: [OptDescr (Either String a)] -> ShakeOptions -> (Bool -> [a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
+shakeWithArgsHack :: [OptDescr (Either String a)] -> ShakeOptions -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
 shakeWithArgsHack userOptions baseOpts rules = do
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
@@ -77,7 +79,7 @@ shakeWithArgsHack userOptions baseOpts rules = do
                 Just d -> bracket_ (setCurrentDirectory d) (setCurrentDirectory curdir)
         (ran,res) <- redir $ do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
-            rules <- rules (Clean `elem` flagsExtra) user files
+            rules <- rules user files
             case rules of
                 Nothing -> return (False,Right ())
                 Just rules -> do
@@ -142,7 +144,6 @@ data Extra = ChangeDirectory FilePath
            | PrintDirectory Bool
            | Color
            | Help
-           | Clean
            | Sleep
              deriving Eq
 
@@ -161,7 +162,6 @@ shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOp
 shakeOptsEx =
     [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,yes $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
-    ,no  $ Option "c" ["clean"] (NoArg $ Right ([Clean],id)) "Clean before building."
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
     ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
