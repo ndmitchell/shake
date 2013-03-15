@@ -36,8 +36,14 @@ parseMakefile xs = Makefile $ rejoin $ concatMap parse $ map comments $ continua
 
 parseStmt :: String -> Stmt
 parseStmt x
-    | (a,'=':b) <- break (== '=') x, ':' `notElem` a = Assign (trim a) Equals (parseExpr $ trim b)
-    | (a,':':b) <- break (== ':') x = Rule (parseExpr $ trim a) (parseExpr $ trim b) []
+    | (a,'=':b) <- break (== '=') x, ':' `notElem` a =
+        if "+" `isSuffixOf` a then Assign (trim $ init a) PlusEquals (parseExpr $ trim b)
+        else if "?" `isSuffixOf` a then Assign (trim $ init a) QuestionEquals (parseExpr $ trim b)
+        else Assign (trim a) Equals (parseExpr $ trim b)
+    | (a,':':b) <- break (== ':') x = case b of
+        '=':b -> Assign (trim a) ColonEquals (parseExpr $ trim b)
+        ':':'=':b -> Assign (trim a) ColonEquals (parseExpr $ trim b)
+        _ -> Rule (parseExpr $ trim a) (parseExpr $ trim b) []
     | otherwise = error $ "Invalid statement: " ++ x
 
 
@@ -48,6 +54,9 @@ parseExpr x = simplifyExpr $ Concat $ f x
         f ('$':'(':xs) = case break (== ')') xs of
             (var,')':rest) -> parseVar var : f rest
             _ -> error $ "Couldn't find trailing `)' after " ++ xs
+        f ('$':'{':xs) = case break (== '}') xs of
+            (var,'}':rest) -> parseVar var : f rest
+            _ -> error $ "Couldn't find trailing `}' after " ++ xs
         f ('$':x:xs) = Var [x] : f xs
         f (x:xs) = Lit [x] : f xs
         f [] = []

@@ -20,7 +20,7 @@ data Stmt
         }
       deriving Show
 
-data Assign = Equals | ColonEquals | QuestionEquals deriving Show
+data Assign = Equals | ColonEquals | PlusEquals | QuestionEquals deriving Show
 
 data Expr = Apply String [Expr]
           | Concat [Expr]

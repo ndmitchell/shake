@@ -146,6 +146,7 @@ executable shake
             build-depends: unix >= 2.5.1
 
     other-modules:
+        Development.Make.Env
         Development.Make.Parse
         Development.Make.Type
 
@@ -178,6 +179,7 @@ executable shake-test
             build-depends: unix >= 2.5.1
 
     other-modules:
+        Development.Make.Env
         Development.Make.Parse
         Development.Make.Main
         Development.Make.Type

@@ -6,14 +6,17 @@ import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
 import Development.Make.Parse
+import Development.Make.Env
 import Development.Make.Rules
 import Development.Make.Type
-import System.Directory as IO
+import qualified System.Directory as IO
 import Data.List
 import Data.Maybe
+import Control.Arrow
 import Control.Monad
 import System.Cmd
 import System.Exit
+import Control.Monad.Trans.State.Strict
 
 
 main :: IO ()
@@ -27,7 +30,6 @@ main = do
     withArgs args $ shakeWithArgs (return ()) shakeOptions{shakeVerbosity=Quiet} rules
 
 
-
 findMakefile :: IO FilePath
 findMakefile = do
     b <- IO.doesFileExist "makefile"
@@ -39,38 +41,67 @@ findMakefile = do
 
 runMakefile :: FilePath -> IO (Rules ())
 runMakefile file = do
-    make <- parse file
-    Makefile rs <- return $ eval make
+    env <- defaultEnv
+    mk <- parse file
+    rs <- eval env mk
     return $ do
+        defaultRuleFile_
         case rs of
-            Rule (Lit x) _ _ : _ | ' ' `notElem` x && '%' `notElem` x -> want_ [x]
+            Ruler (x:_) _ _ : _ | '%' `notElem` x -> want_ [x]
             _ -> return ()
         convert rs
 
 
-eval :: Makefile -> Makefile
-eval (Makefile xs) = Makefile [Rule (f a) (f b) [Expr $ f c | Expr c <- cs] | Rule a b cs <- xs]
-    where f = substitute $ ("EXE",Lit $ if null exe then "" else "." ++ exe) : ("MAKE",Lit "c:/spacework/shake/.hpc/shake/shake.exe") : [(a,b) | Assign a _ b <- xs]
+data Ruler = Ruler
+    {target :: [String]
+    ,prereq :: (Env, Expr) -- Env is the Env at this point
+    ,cmds :: (Env, [Command]) -- Env is the Env at the end
+    }
 
 
-convert :: [Stmt] -> Rules ()
+eval :: Env -> Makefile -> IO [Ruler]
+eval env (Makefile xs) = do
+    (rs, env) <- runStateT (fmap catMaybes $ mapM f xs) env
+    return [r{cmds=(env,snd $ cmds r)} | r <- rs]
+    where
+        f :: Stmt -> StateT Env IO (Maybe Ruler)
+        f Assign{..} = do
+            e <- get
+            e <- liftIO $ addEnv name assign expr e
+            put e
+            return Nothing
+
+        f Rule{..} = do
+            e <- get
+            target <- liftIO $ fmap words $ askEnv e targets
+            return $ Just $ Ruler target (e, prerequisites) (undefined, commands)
+
+
+convert :: [Ruler] -> Rules ()
 convert rs = match ??> run
     where
-        check s r = msum $ map (flip makePattern s) $ words $ flatten $ targets r
-
-        run s = need_ (concat deps) >> mapM_ runCommand (concat cmds)
-            where
-                flat = flatten . substitute ([("@",Lit s),("^",Lit $ unwords $ concat deps)] ++ [("<",Lit d) | d:_ <- [concat deps]])
-                subs v xs = concat [if x == '%' then v else [x] | x <- xs]
-                (deps,cmds) = unzip [ (words $ flatten $ substitute [("@",Lit s)] $ prerequisites
-                                      ,map (subs v . flat) [c | Expr c <- commands])
-                                    | r@Rule{..} <- rs, Just v <- [check s r]]
         match s = any (isJust . check s) rs
+        check s r = msum $ map (flip makePattern s) $ target r
 
-
-flatten :: Expr -> String
-flatten (Lit x) = x
-flatten x = error $ "Could not flatten: " ++ show x
+        run target = do
+            (deps, cmds) <- fmap (first concat . second concat . unzip) $ forM rs $ \r ->
+                case check target r of
+                    Nothing -> return ([], [])
+                    Just op -> do
+                        let (preEnv,preExp) = prereq r
+                        env <- liftIO $ addEnv "@" Equals (Lit target) preEnv
+                        pre <- liftIO $ askEnv env preExp
+                        vp <- liftIO $ fmap splitSearchPath $ askEnv env $ Var "VPATH"
+                        pre <- mapM (vpath vp) $ words pre
+                        return (pre, [cmds r])
+            mapM_ (need_ . return) deps
+            forM_ cmds $ \(env,cmd) -> do
+                env <- liftIO $ addEnv "@" Equals (Lit target) env
+                env <- liftIO $ addEnv "^" Equals (Lit $ unwords deps) env
+                env <- liftIO $ addEnv "<" Equals (Lit $ head $ deps ++ [""]) env
+                forM_ cmd $ \c ->
+                    case c of
+                        Expr c -> runCommand =<< liftIO (askEnv env c)
 
 
 runCommand :: String -> Action ()
@@ -80,9 +111,30 @@ runCommand x = traced (unwords $ take 1 $ words x) $ do
         error $ "System command failed: " ++ x
 
 
-makePattern :: String -> FilePath -> Maybe FilePath
+makePattern :: String -> FilePath -> Maybe (String -> String)
 makePattern pat v = case break (== '%') pat of
-    (pre,'%':post) -> let rest = length v - (length pre + length post) in
-                      if pre `isPrefixOf` v && post `isSuffixOf` v && rest >= 0
-                      then Just $ take rest $ drop (length pre) v else Nothing
-    otherwise -> if pat == v then Just "" else Nothing
+    (pre,'%':post) -> if pre `isPrefixOf` v && post `isSuffixOf` v && rest >= 0
+                      then Just $ concatMap (\x -> if x == '%' then subs else [x])
+                      else Nothing
+        where rest = length v - (length pre + length post)
+              subs = take rest $ drop (length pre) v
+    otherwise -> if pat == v then Just id else Nothing
+
+
+vpath :: [FilePath] -> FilePath -> Action FilePath
+vpath [] y = return y
+vpath (x:xs) y = do
+    b <- doesFileExist $ x </> y
+    if b then return $ x </> y else vpath xs y
+
+
+defaultEnv :: IO Env
+defaultEnv = do
+    exePath <- return "c:/spacework/shake/.hpc/shake/shake.exe" --  getExecutablePath
+    env <- getEnvironment
+    cur <- IO.getCurrentDirectory
+    return $ newEnv $
+        ("EXE",if null exe then "" else "." ++ exe) :
+        ("MAKE",exePath) :
+        ("CURDIR",cur) :
+        env
