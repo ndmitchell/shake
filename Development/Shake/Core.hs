@@ -12,7 +12,7 @@ module Development.Shake.Core(
     ShakeValue,
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
-    Action, apply, apply1, traced,
+    Action, actionOnException, actionFinally, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
     Resource, newResource, newResourceIO, withResource,
     -- Internal stuff
@@ -217,6 +217,23 @@ data SAction = SAction
 --   Action values are used by 'rule' and 'action'.
 newtype Action a = Action (StateT SAction IO a)
     deriving (Monad, MonadIO, Functor, Applicative)
+
+
+-- | If an exception is raised by the 'Action', perform some 'IO'.
+actionOnException :: Action a -> IO b -> Action a
+actionOnException (Action act) clean = Action $ do
+    s <- State.get
+    (res,s) <- liftIO $ onException (runStateT act s) clean
+    State.put s
+    return res
+
+
+-- | After an 'Action', perform some 'IO', even if there is an exception.
+actionFinally :: Action a -> IO b -> Action a
+actionFinally act clean = do
+    res <- actionOnException act clean
+    liftIO clean
+    return res
 
 
 -- | Internal main function (not exported publicly)

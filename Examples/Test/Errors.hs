@@ -37,6 +37,14 @@ main = shaken test $ \args obj -> do
         writeFile' out "test"
     obj "staunch2" *> \_ -> error "crash"
 
+    let catcher out op die = obj out *> \out -> do
+            writeFile' out "0"
+            op (when die $ error "die") (writeFile out "1")
+    catcher "finally1" actionFinally True
+    catcher "finally2" actionFinally False
+    catcher "exception1" actionOnException True
+    catcher "exception2" actionOnException False
+
 
 test build obj = do
     let crash args parts = do
@@ -61,3 +69,12 @@ test build obj = do
     crash ["staunch1","staunch2","-j2","--keep-going","--silent"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
     assert b "File should exist, staunch should have let it be created"
+
+    crash ["finally1"] ["die"]
+    assertContents (obj "finally1") "1"
+    build ["finally2"]
+    assertContents (obj "finally2") "1"
+    crash ["exception1"] ["die"]
+    assertContents (obj "exception1") "1"
+    build ["exception2"]
+    assertContents (obj "exception2") "0"

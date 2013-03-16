@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add actionOnException and actionFinally
     Add shakeArguments
     Rename shakeWithArgs to shakeWithClean
     Remove the -f alias for --flush

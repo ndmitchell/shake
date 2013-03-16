@@ -72,7 +72,7 @@ module Development.Shake(
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
-    liftIO,
+    liftIO, actionOnException, actionFinally,
     -- * Configuration
     ShakeOptions(..), Assume(..),
     -- ** Command line
