@@ -1,4 +1,5 @@
 /*jsl:option explicit*/
+/*jsl:import shake-util.js*/
 "use strict";
 
 // Data
@@ -44,7 +45,7 @@ function /* export */ summary(dat) // :: Data -> Summary
         ,sumTrace : 0, sumTraceLast : 0 // :: Seconds, time running traced commands
         ,maxTrace : 0 // :: Seconds, longest traced command
         ,maxTraceStopLast : 0 // :: Seconds, time the last traced command stopped
-        }
+        };
 
     // Fold over dat to produce the summary
     res.count = dat.length;
@@ -171,7 +172,7 @@ function prepare(sum, dat) // Data -> DataEx
                 return true;
             else
                 return false;
-        }
+        };
     }
 
     function findTransitive(key, dirFwd)
@@ -191,7 +192,7 @@ function prepare(sum, dat) // Data -> DataEx
             }
             return want;
         });
-        return function(i,r){return i in c(r);}
+        return function(i,r){return i in c(r);};
     }
 
     return {original: dat
@@ -200,7 +201,7 @@ function prepare(sum, dat) // Data -> DataEx
            ,thisDependsOn: findDirect("depends")
            ,dependsOnThisTransitive: findTransitive("depends", false)
            ,thisDependsOnTransitive: findTransitive("rdeps", true)
-           }
+           };
 }
 
 
@@ -252,7 +253,7 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
         {
             var x = dat.original[xs[i]];
             time += x.execution;
-            leaf = bools(leaf, x.depends == 0);
+            leaf = bools(leaf, x.depends === 0);
             unchanged = bools(unchanged, x.changed !== x.built);
             run = Math.min(run,x.built);
         }

@@ -1,4 +1,5 @@
 /*jsl:option explicit*/
+/*jsl:import shake-logic.js*/
 "use strict";
 
 // Report
@@ -140,7 +141,7 @@ function showTable(xs)
             if (s === "text" || s === "back") continue;
             res += "<td" + (s in rightAlign ? " style='text-align:right;'" : "") + ">";
             if (s === "count")
-                res += x[s] + " &times;"
+                res += x[s] + " &times;";
             else if (s === "time" || s === "cost")
                 res += showTime(x[s]) + "</td><td style='text-align:right;'>" + showPerc(x[s] / shakeSummary.sumExecution);
             else
@@ -222,7 +223,7 @@ function runReport()
                 legend: {show:true, position:"nw"},
                 series: {stack:true, lines:{lineWidth:0,fill:1}},
                 yaxis: {min:0},
-                xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100)}}
+                xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100);}}
             });
             break;
 
@@ -240,7 +241,7 @@ function runReport()
                 $("#output").html("Cannot view graph with > 250 nodes, try grouping more aggressively");
             else
             {
-                var res = "digraph \"\"{"
+                var res = "digraph \"\"{";
                 res += "graph[nodesep=0.15,ranksep=0.3];";
                 res += "node[fontname=\"sans-serif\",fontsize=9,penwidth=0.5,height=0,width=0];";
                 res += "edge[penwidth=0.5,arrowsize=0.5];";
@@ -264,6 +265,10 @@ function runReport()
 
         case "help":
             $("#output").html($("#help").html());
+            break;
+
+        default:
+            throw "Unknown report type: " + report.mode;
             break;
         }
     }

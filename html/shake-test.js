@@ -1,4 +1,5 @@
 /*jsl:option explicit*/
+/*jsl:import shake-logic.js*/
 "use strict";
 
 function t(a,b,c){return {start:a,stop:b,command:c};}
@@ -13,7 +14,7 @@ var dat1 =
     ,{name:"C",          built:0, changed:0, depends:[1], execution:15, traces:[t(2,16.9,"gcc")]}
     ,{name:"Cpp",       built:0, changed:0, depends:[1], execution:10, traces:[t(2,10,"gcc")]}
     ,{name:"Exe",        built:0, changed:0, depends:[3,4,5], execution:5, traces:[t(17,22,"link")]}
-    ]
+    ];
 
 
 function test() // :: String

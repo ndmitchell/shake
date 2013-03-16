@@ -18,15 +18,18 @@ jQuery.fn.enable = function (x)
 jQuery.getParameters = function()
 {
     // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
-    var params = {},
-        e,
-        a = /\+/g,  // Regex for replacing addition symbol with a space
-        r = /([^&=]+)=?([^&]*)/g,
-        d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
-        q = window.location.search.substring(1);
+    var params = {};
+    var a = /\+/g;  // Regex for replacing addition symbol with a space
+    var r = /([^&=]+)=?([^&]*)/g;
+    var d = function (s) { return decodeURIComponent(s.replace(a, " ")); };
+    var q = window.location.search.substring(1);
 
-    while (e = r.exec(q))
+    while (true)
+    {
+        var e = r.exec(q);
+        if (!e) break;
         params[d(e[1])] = d(e[2]);
+    }
     return params;
 };
 
@@ -40,12 +43,12 @@ function /* export */ showTime(x) // :: Double -> String
 
     if (x >= 3600)
     {
-        var x = Math.round(x / 60);
+        x = Math.round(x / 60);
         return Math.floor(x / 60) + "h" + digits(x % 60) + "m";
     }
     else if (x >= 60)
     {
-        var x = Math.round(x);
+        x = Math.round(x);
         return Math.floor(x / 60) + "m" + digits(x % 60) + "s";
     }
     else
@@ -57,7 +60,7 @@ function /* export */ showPerc(x) // :: Double -> String
     return (x*100).toFixed(2) + "%";
 }
 
-function plural(n,not1,is1) // :: Int -> Maybe String -> Maybe String -> String
+function /* export */ plural(n,not1,is1) // :: Int -> Maybe String -> Maybe String -> String
 {
     return n === 1
         ? (is1 === undefined ? "" : is1)
@@ -111,7 +114,7 @@ function cache(str, f) // :: (k -> String) -> (k -> v) -> (k -> v)
         if (!(s in cache))
             cache[s] = f(k);
         return cache[s];
-    }
+    };
 }
 
 function recordEq(xs, ys) // :: Record -> Record -> Bool
