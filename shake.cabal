@@ -47,14 +47,14 @@ extra-source-files:
     Paths.hs
 
 data-files:
-    html/bootstrap.js
-    html/bootstrap.css
-    html/bootstrap-responsive.css
-    html/bootstrap-tab.js
+    html/jquery.flot.js
+    html/jquery.flot.stack.js
     html/jquery.js
-    html/jquery-flot.js
-    html/shake.js
+    html/viz.js
     html/report.html
+    html/shake-logic.js
+    html/shake-ui.js
+    html/shake-util.js
 
 source-repository head
     type:     git
