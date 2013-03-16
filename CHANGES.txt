@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Switch to the new profiling code
     Add actionOnException and actionFinally
     Add shakeArguments
     Rename shakeWithArgs to shakeWithClean
