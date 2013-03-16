@@ -317,8 +317,8 @@ $(function(){
 
 $(function(){
     $("a.example").each(function(){
-        var mode = $(this).attr("mode");
-        var query = $(this).attr("query");
+        var mode = $(this).attr("data-mode");
+        var query = $(this).attr("data-query");
         if (query === undefined) query = $(this).text();
         var href = reportURL({mode:mode, query:query});
         var onclick = "return example(unescape('" + escape(mode) + "'),unescape('" + escape(query) + "'));";
