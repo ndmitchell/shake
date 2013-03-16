@@ -7,7 +7,6 @@ module Development.Make.Rules(
     (??>)
     ) where
 
-import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
 
