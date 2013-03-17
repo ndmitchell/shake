@@ -16,7 +16,7 @@ module Development.Shake.Core(
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
     Resource, newResource, newResourceIO, withResource,
     -- Internal stuff
-    rulesIO
+    rulesIO, runAfter
     ) where
 
 import Control.Exception as E
@@ -205,6 +205,7 @@ data SAction = SAction
     ,verbosity :: Verbosity
     ,diagnostic :: String -> IO ()
     ,lint :: String -> IO ()
+    ,after :: IORef [IO ()]
     -- stack variables
     ,stack :: Stack
     -- local variables
@@ -273,11 +274,12 @@ run opts@ShakeOptions{..} rs = do
 
     let ruleinfo = createRuleinfo shakeAssume rs
     running <- newIORef True
+    after <- newIORef []
     flip finally (writeIORef running False) $ do
         withDatabase opts diagnostic $ \database -> do
             forkIO $ shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
             runPool shakeDeterministic shakeThreads $ \pool -> do
-                let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint emptyStack [] 0 []
+                let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database (runStored ruleinfo)
@@ -289,6 +291,7 @@ run opts@ShakeOptions{..} rs = do
                     output Normal $ "Writing HTML report to " ++ file
                 buildReport json file
         maybe (return ()) throwIO =<< readVar except
+        sequence_ . reverse =<< readIORef after
 
 
 abbreviate :: [(String,String)] -> String -> String
@@ -346,6 +349,12 @@ runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
 
 runAction :: SAction -> Action a -> IO (a, SAction)
 runAction s (Action x) = runStateT x s
+
+
+runAfter :: IO () -> Action ()
+runAfter op = do
+    s <- Action State.get
+    liftIO $ atomicModifyIORef (after s) $ \ops -> (op:ops, ())
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
