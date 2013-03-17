@@ -3,11 +3,14 @@ module Examples.Test.Basic(main) where
 
 import Development.Shake
 import Examples.Util
-import System.Directory
+import System.Directory as IO
+import Data.List
+import Data.Maybe
 
 
 main = shaken test $ \args obj -> do
-    want $ map obj args
+    want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
+
     obj "AB.txt" *> \out -> do
         need [obj "A.txt", obj "B.txt"]
         text1 <- readFile' $ obj "A.txt"
@@ -22,6 +25,16 @@ main = shaken test $ \args obj -> do
     obj "once.txt" *> \out -> do
         src <- readFile' $ obj "zero.txt"
         writeFile' out src
+
+    phony "cleaner" $ do
+        removeFilesAfter (obj "") ["//*"]
+
+    phony (obj "configure") $ do
+        liftIO $ appendFile (obj "configure") "1"
+
+    phony "install" $ do
+        need [obj "configure",obj "once.txt"]
+        liftIO $ appendFile (obj "install") "1"
 
 
 test build obj = do
@@ -50,3 +63,15 @@ test build obj = do
     assertContents (obj "twice.txt") "zzz"
 
     show shakeOptions === show shakeOptions
+
+    build ["!cleaner"]
+    b <- IO.doesDirectoryExist (obj "")
+    assert (not b) "Directory should exist, cleaner should have removed it"
+
+    IO.createDirectory $ obj ""
+    writeFile (obj "zero.txt") ""
+    build ["configure"]
+    build ["!install"]
+    build ["!install"]
+    assertContents (obj "configure") "111"
+    assertContents (obj "install") "11"
