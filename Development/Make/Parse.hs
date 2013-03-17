@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 
 module Development.Make.Parse(parse) where
 

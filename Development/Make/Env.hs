@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 
 -- | The IO in this module is only to evaluate an envrionment variable,
 --   the 'Env' itself it passed around purely.
