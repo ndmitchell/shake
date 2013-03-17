@@ -221,10 +221,10 @@ newtype Action a = Action (StateT SAction IO a)
 
 -- | If an exception is raised by the 'Action', perform some 'IO'.
 actionOnException :: Action a -> IO b -> Action a
-actionOnException (Action act) clean = Action $ do
-    s <- State.get
-    (res,s) <- liftIO $ onException (runStateT act s) clean
-    State.put s
+actionOnException act clean = do
+    s <- Action State.get
+    (res,s) <- liftIO $ onException (runAction s act) clean
+    Action $ State.put s
     return res
 
 
