@@ -415,7 +415,7 @@ checkValid Database{..} stored = do
         (key, Ready Result{..}) -> do
             good <- fmap (== Just result) $ stored key
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return [show key ++ " is no longer " ++ show result | not good && not (special key)]
+            return [show key ++ " is no longer " ++ show result | not good && not (special key result)]
         _ -> return []
     if null bad
         then diagnostic "Validity/lint check passed"
@@ -423,8 +423,9 @@ checkValid Database{..} stored = do
 
     where
         -- special case for these things, since the purpose is to break the invariant
-        special k = s == "AlwaysRerunQ" || "OracleQ " `isPrefixOf` s
-            where s = show k
+        -- FIXME: this is getting more and more hacky
+        special k r = sk == "AlwaysRerunQ" || "OracleQ " `isPrefixOf` sk || sr == "FileA (FileTime 2147483647)"
+            where sk = show k; sr = show r
 
 
 ---------------------------------------------------------------------
