@@ -76,13 +76,14 @@ module Development.Shake(
     -- * Configuration
     ShakeOptions(..), Assume(..),
     -- ** Command line
-    shakeWithClean, shakeArguments, shakeOptDescrs, removeFiles,
+    shakeWithClean, shakeArguments, shakeOptDescrs,
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar,
     -- ** Verbosity
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
     -- * Utility functions
     module Development.Shake.Derived,
+    removeFiles, removeFilesAfter,
     -- * File rules
     need, want, (*>), (**>), (?>),
     module Development.Shake.Files,

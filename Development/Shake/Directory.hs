@@ -5,7 +5,7 @@ module Development.Shake.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv,
-    removeFiles,
+    removeFiles, removeFilesAfter,
     defaultRuleDirectory
     ) where
 
@@ -253,3 +253,9 @@ removeFiles dir pat = f "" >> return ()
             let die = noDirs && null keep
             when die $ IO.removeDirectory $ dir </> dir2
             return die
+
+
+-- | Remove files, like 'removeFiles', but executed after the build completes successfully.
+--   Useful for implementing @clean@ actions that delete files Shake may have open for building.
+removeFilesAfter :: FilePath -> [FilePattern] -> Action ()
+removeFilesAfter a b = runAfter $ removeFiles a b
