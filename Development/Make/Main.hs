@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, PatternGuards, CPP #-}
 
 module Development.Make.Main(main) where
 
@@ -135,7 +135,11 @@ vpath (x:xs) y = do
 
 defaultEnv :: IO Env
 defaultEnv = do
-    exePath <- return "c:/spacework/shake/.hpc/shake/shake.exe" --  getExecutablePath
+#if __GLASGOW_HASKELL__ >= 706
+    exePath <- getExecutablePath
+#else
+    exePath <- getProgName
+#endif
     env <- getEnvironment
     cur <- IO.getCurrentDirectory
     return $ newEnv $
