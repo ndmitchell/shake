@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileTime(
-    FileTime,
+    FileTime, fileTimeNone,
     getModTimeError, getModTimeMaybe
     ) where
 
@@ -44,8 +44,18 @@ import System.Posix.Files.ByteString
 #endif
 
 
+-- FileTime is an optimised type, which stores some portion of the file time,
+-- or maxBound to indicate there is no valid time. The moral type is @Maybe Datetime@
+-- but it needs to be more efficient.
 newtype FileTime = FileTime Int32
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
+
+
+fileTime :: Int32 -> FileTime
+fileTime x = FileTime $ if x == maxBound then maxBound - 1 else x
+
+fileTimeNone :: FileTime
+fileTimeNone = FileTime maxBound
 
 
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
@@ -56,10 +66,10 @@ getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     time <- getModificationTime $ BS.unpack x
 #if __GLASGOW_HASKELL__ >= 706
-    return $ Just $ FileTime $ floor $ utctDayTime time
+    return $ Just $ fileTime $ floor $ utctDayTime time
 #else
     let TOD t _ = time
-    return $ Just $ FileTime $ fromIntegral t
+    return $ Just $ fileTime $ fromIntegral t
 #endif
 
 #elif defined mingw32_HOST_OS
@@ -71,14 +81,14 @@ getModTimeMaybe x = BS.useAsCString x $ \file ->
         if not res then return Nothing else do
             -- Technically a Word32, but we can treak it as an Int32 for peek
             dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
-            return $ Just $ FileTime dword
+            return $ Just $ fileTime dword
 
 #else
 
 -- Directly against the unix library
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     t <- fmap modificationTime $ getFileStatus x
-    return $ Just $ FileTime $ fromIntegral $ fromEnum t
+    return $ Just $ fileTime $ fromIntegral $ fromEnum t
 
 #endif
 
