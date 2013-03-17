@@ -1,6 +1,6 @@
 
 -- | Command line parsing flags.
-module Development.Shake.Args(shakeOptDescrs, shakeWithClean, shakeArguments) where
+module Development.Shake.Args(shakeOptDescrs, shakeArgs, shakeArgsWith) where
 
 import Paths_shake
 import Development.Shake.Types
@@ -25,39 +25,78 @@ import System.Exit
 
 
 -- | Run a build system using command line arguments for configuration.
---   Requires a way of cleaning the build objects (triggered by @clean@ as a target or @--clean@),
---   a base set of options that may be overriden by command line flags, and the set of build rules.
---   The function 'removeFiles' is often useful for producing a cleaning action.
---
---   The available command line options are those from 'shakeOptDescrs', along with a few additional
+--   The available flags are those from 'shakeOptDescrs', along with a few additional
 --   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
+--   If there are no file arguments then the 'Rules' are used directly, otherwise the file arguments
+--   are 'want'ed (after calling 'withoutActions'). As an example:
 --
---   Users seeking more powerful command line handling should look at 'shakeArguments'.
-shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
-shakeWithClean clean opts rules = shakeArguments opts [cleanOpt] f
-    where
-        cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
-
-        f extra files = do
-            when (extra /= []) clean
-            if "clean" `elem` files then
-                clean >> return Nothing
-             else
-                return $ Just $ if null files then rules else want files >> withoutActions rules
-
-
--- | Run a build system using command line arguments for configuration.
---   Requires a base set of 'ShakeOptions' that may be overriden by command line flags,
---   additional user flags (can be @[]@), and a way of generating the rules from the command line arguments.
---   The rules generator takes a list of user flags, the non-flag arguments (typically files)
---   and should return 'Nothing' to indicate nothing should be built, or the rules to build with.
+-- @
+-- main = 'shakeArgs' 'shakeOptions'{'shakeFiles' = \"_make/\", 'shakeProgress' = 'progressSimple'} $ do
+--     'phony' \"clean\" $ 'Development.Shake.removeFilesAfter' \"_make\" \"\/\/*\"
+--     'want' [\"_make\/neil.txt\",\"_make\/emily.txt\"]
+--     \"_make\/*.txt\" '*>' \\out ->
+--         ... build action here ...
+-- @
 --
---   The available command line options are those from 'shakeOptDescrs', along with a few additional
---   @make@ compatible flags that are not represented in 'ShakeOptions', such as @--print-directory@.
+--   This build system will default to building @neil.txt@ and @emily.txt@, while showing progress messages,
+--   and putting the Shake files in locations such as @_make\/.database@. Some example command line flags:
 --
---   Users seeking simpler command line handling should look at 'shakeWithClean'.
-shakeArguments :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
-shakeArguments baseOpts userOptions rules = do
+-- * @main --no-progress@ will turn off progress messages.
+--
+-- * @main -j6@ will build on 6 threads.
+--
+-- * @main --help@ will display a list of supported flags.
+--
+-- * @main clean@ will not build anything, but will remove the @_make@ directory, including the
+--   any 'shakeFiles'.
+--
+-- * @main _make/henry.txt@ will not build @neil.txt@ or @emily.txt@, but will instead build @henry.txt@.
+shakeArgs :: ShakeOptions -> Rules () -> IO ()
+shakeArgs opts rules = shakeArgsWith opts [] f
+    where f _ files = return $ Just $ if null files then rules else want files >> withoutActions rules
+
+
+-- | A version of 'shakeArgs' with more flexible handling of command line arguments.
+--   The caller of 'shakeArgsWith' can add additional flags (the second argument) and chose how to convert
+--   the flags/arguments into rules (the third argument). Given:
+--
+-- @
+-- 'shakeArgsWith' opts flags (\\flagValues argValues -> result)
+-- @
+--
+-- * @opts@ is the initial 'ShakeOptions' value, which may have some fields overriden by command line flags.
+--   This argument is usually 'shakeOptions', perhaps with a few fields overriden.
+--
+-- * @flags@ is a list of flag descriptions, which either produce a 'String' containing an error
+--   message (typically for flags with invalid arguments, .e.g. @'Left' \"could not parse as int\"@), or a value
+--   that is passed as @flagValues@. If you have no custom flags, pass @[]@.
+--
+-- * @flagValues@ is a list of custom flags that the user supplied. If @flags == []@ then this list will
+--   be @[]@.
+--
+-- * @argValues@ is a list of non-flag arguments, which are often treated as files and passed to 'want'.
+--
+-- * @result@ should produce a 'Nothing' to indicate that no building needs to take place, or a 'Just'
+--   providing the rules that should be used.
+--
+--   As an example of a build system that can use either @gcc@ or @distcc@ for compiling:
+--
+-- @
+--data Flags = DiscCC deriving Eq
+--flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
+--
+--main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
+--     if null targets then 'want' [\"result.exe\"] else 'want' targets
+--     let compiler = if DistCC \`elem\` flags then \"distcc\" else \"gcc\"
+--     \"*.o\" '*>' \\out -> do
+--         'need' ...
+--         'Development.Shake.system'' compiler ...
+--     ...
+-- @
+--
+--   Now you can pass @--distcc@ to use the @distcc@ compiler.
+shakeArgsWith :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
+shakeArgsWith baseOpts userOptions rules = do
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
         (flagsError,flag1) = partitionEithers flags

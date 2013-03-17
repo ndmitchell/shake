@@ -117,9 +117,9 @@ xterm = System.IO.Unsafe.unsafePerformIO $
 
 
 
--- | Set the title of the current console window to the given text. On Windows
---   this function uses the @SetConsoleTitle@ API, elsewhere it uses an xterm
---   escape sequence. This function may not work for all terminals.
+-- | Set the title of the current console window to the given text. If the
+--   environment variable @$TERM@ is set to @xterm@ this uses xterm escape sequences.
+--   On Windows, if not detected as an xterm, this function uses the @SetConsoleTitle@ API.
 progressTitlebar :: String -> IO ()
 progressTitlebar x
     | xterm = BS.putStr $ BS.pack $ "\ESC]0;" ++ x ++ "\BEL"

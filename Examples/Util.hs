@@ -60,6 +60,19 @@ shaken test rules sleeper = do
                     (rules files (out++))
 
 
+shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
+shakeWithClean clean opts rules = shakeArgsWith opts [cleanOpt] f
+    where
+        cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
+
+        f extra files = do
+            when (extra /= []) clean
+            if "clean" `elem` files then
+                clean >> return Nothing
+             else
+                return $ Just $ if null files then rules else want files >> withoutActions rules
+
+
 unobj :: FilePath -> FilePath
 unobj = dropDirectory1 . dropDirectory1
 

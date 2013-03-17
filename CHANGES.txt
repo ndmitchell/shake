@@ -4,8 +4,8 @@ Changelog for Shake
     Add removeFilesAfter
     Switch to the new profiling code
     Add actionOnException and actionFinally
-    Add shakeArguments
-    Rename shakeWithArgs to shakeWithClean
+    Add shakeArgsWith
+    Rename shakeWithArgs to shakeArgs
     Remove the -f alias for --flush
     Add a shake executable which runs Makefiles
     Rename shake to shake-test

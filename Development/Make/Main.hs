@@ -21,7 +21,7 @@ import System.Console.GetOpt
 
 
 main :: IO ()
-main = shakeArguments shakeOptions{shakeVerbosity=Quiet} args $ \opts targets -> do
+main = shakeArgsWith shakeOptions{shakeVerbosity=Quiet} args $ \opts targets -> do
     makefile <- case reverse [x | UseMakefile x <- opts] of
         x:_ -> return x
         _ -> findMakefile
