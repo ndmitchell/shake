@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.10
     Add phony, for writing phony actions
     Add removeFilesAfter
     Switch to the new profiling code
