@@ -148,6 +148,7 @@ executable shake
     other-modules:
         Development.Make.Env
         Development.Make.Parse
+        Development.Make.Rules
         Development.Make.Type
 
 
@@ -180,8 +181,9 @@ executable shake-test
 
     other-modules:
         Development.Make.Env
-        Development.Make.Parse
         Development.Make.Main
+        Development.Make.Parse
+        Development.Make.Rules
         Development.Make.Type
         Examples.Util
         Examples.C.Main
