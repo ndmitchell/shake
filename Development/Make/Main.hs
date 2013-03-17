@@ -140,10 +140,11 @@ defaultEnv = do
 #else
     exePath <- getProgName
 #endif
+
     env <- getEnvironment
     cur <- IO.getCurrentDirectory
     return $ newEnv $
         ("EXE",if null exe then "" else "." ++ exe) :
-        ("MAKE",exePath) :
-        ("CURDIR",cur) :
+        ("MAKE",normalise exePath) :
+        ("CURDIR",normalise cur) :
         env
