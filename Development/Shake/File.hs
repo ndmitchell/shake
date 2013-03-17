@@ -3,7 +3,7 @@
 module Development.Shake.File(
     need, want,
     defaultRuleFile,
-    (*>), (**>), (?>),
+    (*>), (**>), (?>), phony,
     newCache, newCacheIO
     ) where
 
@@ -128,6 +128,14 @@ root help test act = rule $ \(FileQ x_) -> let x = unpack x_ in
         act x
         liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") $ unpack_ x_
 
+
+-- | Declare a phony action, this is an action that does not produce a file, and will be rerun
+--   in every execution that requires it. You can demand 'phony' rules using 'want'/'need'.
+phony :: String -> Action () -> Rules ()
+phony name act = rule $ \(FileQ x_) -> let x = unpack x_ in
+    if name /= x then Nothing else Just $ do
+        act
+        return $ FileA fileTimeNone
 
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,

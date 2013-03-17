@@ -1,5 +1,7 @@
 Changelog for Shake
 
+    Add phony, for writing phony actions
+    Add removeFilesAfter
     Switch to the new profiling code
     Add actionOnException and actionFinally
     Add shakeArguments

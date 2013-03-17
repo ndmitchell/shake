@@ -85,7 +85,7 @@ module Development.Shake(
     module Development.Shake.Derived,
     removeFiles, removeFilesAfter,
     -- * File rules
-    need, want, (*>), (**>), (?>),
+    need, want, (*>), (**>), (?>), phony,
     module Development.Shake.Files,
     FilePattern, (?==),
     -- * Directory rules
