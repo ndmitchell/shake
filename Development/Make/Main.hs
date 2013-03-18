@@ -21,16 +21,19 @@ import System.Console.GetOpt
 
 
 main :: IO ()
-main = shakeArgsWith shakeOptions{shakeVerbosity=Quiet} args $ \opts targets -> do
-    makefile <- case reverse [x | UseMakefile x <- opts] of
-        x:_ -> return x
-        _ -> findMakefile
-    fmap Just $ runMakefile makefile targets
+main = do
+    args <- getArgs
+    withArgs ("--no-time":args) $
+        shakeArgsWith shakeOptions flags $ \opts targets -> do
+            makefile <- case reverse [x | UseMakefile x <- opts] of
+                x:_ -> return x
+                _ -> findMakefile
+            fmap Just $ runMakefile makefile targets
 
 
-data Args = UseMakefile FilePath
+data Flag = UseMakefile FilePath
 
-args = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "Read FILE as a makefile."]
+flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "Read FILE as a makefile."]
 
 
 findMakefile :: IO FilePath
@@ -84,11 +87,12 @@ eval env (Makefile xs) = do
 convert :: [Ruler] -> Rules ()
 convert rs = match ??> run
     where
-        phony = concat [words e | Ruler target (_,Lit e) _ <- rs, ".PHONY" `elem` target]
         match s = any (isJust . check s) rs
         check s r = msum $ map (flip makePattern s) $ target r
 
-        run target = do
+        run target =  do
+            let phony = has False ".PHONY" target
+            let silent = has True ".SILENT" target
             (deps, cmds) <- fmap (first concat . second concat . unzip) $ forM rs $ \r ->
                 case check target r of
                     Nothing -> return ([], [])
@@ -106,16 +110,21 @@ convert rs = match ??> run
                 env <- liftIO $ addEnv "<" Equals (Lit $ head $ deps ++ [""]) env
                 forM_ cmd $ \c ->
                     case c of
-                        Expr c -> runCommand =<< liftIO (askEnv env c)
-            return $ if target `elem` phony then Phony else NotPhony
+                        Expr c -> (if silent then quietly else id) $
+                            runCommand =<< liftIO (askEnv env c)
+            return $ if phony then Phony else NotPhony
+
+        has auto name target =
+            or [(null ws && auto) || target `elem` ws | Ruler t (_,Lit s) _ <- rs, name `elem` t, let ws = words s]
 
 
 runCommand :: String -> Action ()
-runCommand x = traced (unwords $ take 1 $ words x) $ do
-    res <- if "@" `isPrefixOf` x then system $ drop 1 x
-           else putStrLn x >> system x
+runCommand x = do
+    res <- if "@" `isPrefixOf` x then sys $ drop 1 x
+           else putNormal x >> sys x
     when (res /= ExitSuccess) $
         error $ "System command failed: " ++ x
+    where sys = quietly . traced (unwords $ take 1 $ words x) . system
 
 
 makePattern :: String -> FilePath -> Maybe (String -> String)
