@@ -32,7 +32,7 @@ import System.Exit
 --
 -- @
 -- main = 'shakeArgs' 'shakeOptions'{'shakeFiles' = \"_make/\", 'shakeProgress' = 'progressSimple'} $ do
---     'phony' \"clean\" $ 'Development.Shake.removeFilesAfter' \"_make\" \"\/\/*\"
+--     'phony' \"clean\" $ 'Development.Shake.removeFilesAfter' \"_make\" [\"\/\/*\"]
 --     'want' [\"_make\/neil.txt\",\"_make\/emily.txt\"]
 --     \"_make\/*.txt\" '*>' \\out ->
 --         ... build action here ...
