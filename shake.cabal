@@ -123,8 +123,7 @@ library
 
 
 executable shake
-    main-is: Development/Make/Main.hs
-    ghc-options: -main-is Development.Make.Main
+    main-is: Main.hs
     build-depends:
         base == 4.*,
         old-time,
@@ -148,6 +147,7 @@ executable shake
 
     other-modules:
         Development.Make.Env
+        Development.Make.Main
         Development.Make.Parse
         Development.Make.Rules
         Development.Make.Type
