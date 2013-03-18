@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, CPP #-}
 
-module Development.Make.Main(main) where
+module Main(main) where
 
 import System.Environment
 import Development.Shake
