@@ -154,7 +154,7 @@ executable shake
 
 
 executable shake-test
-    main-is: Main.hs
+    main-is: Test.hs
     if flag(testprog)
         buildable: True
     else
