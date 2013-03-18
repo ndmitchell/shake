@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.10.1
     Allow the shake executable to build
 0.10
     Add phony, for writing phony actions
