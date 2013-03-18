@@ -383,10 +383,12 @@ resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
 resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = map (filter (isJust . flip Map.lookup keep)) $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
+removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
+removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 showJSON :: Database -> IO String
 showJSON Database{..} = do
-    status <- fmap resultsOnly $ readIORef status
+    status <- fmap (removeStep . resultsOnly) $ readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]

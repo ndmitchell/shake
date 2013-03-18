@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Eliminate StepKey from the profiling output
     Add a --no-time flag
     Makefile improvements
     Avoid use of ghc-options in .cabal file
