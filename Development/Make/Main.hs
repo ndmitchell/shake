@@ -52,7 +52,7 @@ runMakefile file args = do
     rs <- eval env mk
     return $ do
         defaultRuleFile_
-        case rs of
+        case filter (not . isPrefixOf "." . target) rs of
             Ruler x _ _ : _ | null args, '%' `notElem` x -> want_ [x]
             _ -> return ()
         mapM_ (want_ . return) args
