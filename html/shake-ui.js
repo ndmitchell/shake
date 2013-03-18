@@ -220,7 +220,7 @@ function runReport()
             }
             ys.sort(function(a,b){return a.avg - b.avg;});
             showPlot(ys, {
-                legend: {show:true, position:"nw"},
+                legend: {show:true, position:"nw", sorted:"reverse"},
                 series: {stack:true, lines:{lineWidth:0,fill:1}},
                 yaxis: {min:0},
                 xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100);}}
