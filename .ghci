@@ -1,6 +1,6 @@
 :set -package transformers -hide-package hashmap
 :set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
-:load Main Paths
+:load Test Paths
 
 :def test \x -> return $ ":main test " ++ x
 :def test_random \x -> return $ ":main random test " ++ x
@@ -16,7 +16,7 @@ let _ghci_make name flags =
         ":!" ++
         "(if not exist .hpc mkdir .hpc) && " ++
         "(if not exist .hpc\\" ++ name ++ " mkdir .hpc\\" ++ name ++ ") && " ++
-        "ghc " ++ flags ++ " -hide-package hashmap -package transformers --make Main.hs Paths.hs -w -odir .hpc/" ++ name ++ " -hidir .hpc/" ++ name ++ " -o .hpc/" ++ name ++ "/shake.exe"
+        "ghc " ++ flags ++ " -hide-package hashmap -package transformers --make Test.hs Paths.hs -w -odir .hpc/" ++ name ++ " -hidir .hpc/" ++ name ++ " -o .hpc/" ++ name ++ "/shake.exe"
 :}
 
 :{
