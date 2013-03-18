@@ -3,7 +3,9 @@ DEFAULT_TESTS=" \
     misc/general1 \
     misc/general2 \
     targets/clean \
+    targets/FORCE \
     targets/PHONY \
+    targets/SILENT \
     variables/flavors \
     "
 
