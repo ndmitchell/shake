@@ -4,7 +4,7 @@
 module Development.Make.Rules(
     need_, want_,
     defaultRuleFile_,
-    (??>)
+    (??>), Phony(..)
     ) where
 
 import Control.Monad.IO.Class
@@ -47,10 +47,13 @@ need_ xs = (apply $ map (File_Q . pack) xs :: Action [File_A]) >> return ()
 want_ :: [FilePath] -> Rules ()
 want_ = action . need_
 
+data Phony = Phony | NotPhony deriving Eq
 
-(??>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
+(??>) :: (FilePath -> Bool) -> (FilePath -> Action Phony) -> Rules ()
 (??>) test act = rule $ \(File_Q x_) -> let x = unpack x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        act x
-        liftIO $ fmap File_A $ getModTimeMaybe $ unpack_ x_
+        res <- act x
+        liftIO $ fmap File_A $ if res == Phony
+            then return Nothing
+            else getModTimeMaybe $ unpack_ x_

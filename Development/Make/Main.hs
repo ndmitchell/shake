@@ -84,6 +84,7 @@ eval env (Makefile xs) = do
 convert :: [Ruler] -> Rules ()
 convert rs = match ??> run
     where
+        phony = concat [words e | Ruler target (_,Lit e) _ <- rs, ".PHONY" `elem` target]
         match s = any (isJust . check s) rs
         check s r = msum $ map (flip makePattern s) $ target r
 
@@ -106,6 +107,7 @@ convert rs = match ??> run
                 forM_ cmd $ \c ->
                     case c of
                         Expr c -> runCommand =<< liftIO (askEnv env c)
+            return $ if target `elem` phony then Phony else NotPhony
 
 
 runCommand :: String -> Action ()

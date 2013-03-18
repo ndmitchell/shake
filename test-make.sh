@@ -6,6 +6,7 @@ cd ../gnumake/tests; ./run_make_tests.pl -make_path $SHAKE \
     misc/general1 \
     misc/general2 \
     targets/clean \
+    targets/PHONY \
     variables/flavors \
 
 echo Total: 83 Tests in 39 Categories

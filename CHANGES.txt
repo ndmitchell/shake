@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Makefile improvements
     Avoid use of ghc-options in .cabal file
 0.10.1
     Allow the shake executable to build
