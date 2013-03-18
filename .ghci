@@ -12,14 +12,6 @@
 :def hlint const $ return $ unlines [":hlint_",":!start report.html"]
 
 :{
-:def build const $ return $
-        ":!" ++
-        "(if not exist .hpc mkdir .hpc) && " ++
-        "(if not exist .hpc\\shake mkdir .hpc\\shake) && " ++
-        "ghc -hide-package hashmap -main-is Development.Make.Main -package transformers --make Development/Make/Main.hs Paths.hs -w -odir .hpc/shake -hidir .hpc/shake -o .hpc/shake/shake.exe"
-:}
-
-:{
 let _ghci_make name flags =
         ":!" ++
         "(if not exist .hpc mkdir .hpc) && " ++
