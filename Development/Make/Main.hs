@@ -53,14 +53,14 @@ runMakefile file args = do
     return $ do
         defaultRuleFile_
         case rs of
-            Ruler (x:_) _ _ : _ | null args, '%' `notElem` x -> want_ [x]
+            Ruler x _ _ : _ | null args, '%' `notElem` x -> want_ [x]
             _ -> return ()
         mapM_ (want_ . return) args
         convert rs
 
 
 data Ruler = Ruler
-    {target :: [String]
+    {target :: String
     ,prereq :: (Env, Expr) -- Env is the Env at this point
     ,cmds :: (Env, [Command]) -- Env is the Env at the end
     }
@@ -68,27 +68,27 @@ data Ruler = Ruler
 
 eval :: Env -> Makefile -> IO [Ruler]
 eval env (Makefile xs) = do
-    (rs, env) <- runStateT (fmap catMaybes $ mapM f xs) env
+    (rs, env) <- runStateT (fmap concat $ mapM f xs) env
     return [r{cmds=(env,snd $ cmds r)} | r <- rs]
     where
-        f :: Stmt -> StateT Env IO (Maybe Ruler)
+        f :: Stmt -> StateT Env IO [Ruler]
         f Assign{..} = do
             e <- get
             e <- liftIO $ addEnv name assign expr e
             put e
-            return Nothing
+            return []
 
         f Rule{..} = do
             e <- get
             target <- liftIO $ fmap words $ askEnv e targets
-            return $ Just $ Ruler target (e, prerequisites) (undefined, commands)
+            return $ map (\t -> Ruler t (e, prerequisites) (undefined, commands)) target
 
 
 convert :: [Ruler] -> Rules ()
 convert rs = match ??> run
     where
         match s = any (isJust . check s) rs
-        check s r = msum $ map (flip makePattern s) $ target r
+        check s r = makePattern (target r) s
 
         run target =  do
             let phony = has False ".PHONY" target
@@ -115,7 +115,7 @@ convert rs = match ??> run
             return $ if phony then Phony else NotPhony
 
         has auto name target =
-            or [(null ws && auto) || target `elem` ws | Ruler t (_,Lit s) _ <- rs, name `elem` t, let ws = words s]
+            or [(null ws && auto) || target `elem` ws | Ruler t (_,Lit s) _ <- rs, t == name, let ws = words s]
 
 
 runCommand :: String -> Action ()
