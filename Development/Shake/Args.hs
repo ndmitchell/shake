@@ -137,7 +137,7 @@ shakeArgsWith baseOpts userOptions rules = do
                     res <- try $ shake shakeOpts rules
                     return (True, res)
 
-        if not ran || shakeVerbosity shakeOpts < Normal then
+        if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
             either throwIO return res
          else
             let esc code = if Color `elem` flagsExtra then escape code else id
@@ -196,6 +196,7 @@ data Extra = ChangeDirectory FilePath
            | Color
            | Help
            | Sleep
+           | NoTime
              deriving Eq
 
 
@@ -237,6 +238,7 @@ shakeOptsEx =
     ,yes $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
     ,yes $ Option " " ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=Quiet}) "Don't print much."
+    ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
     ,yes $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
     ,yes $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=Loud}) "Print tracing information."
     ,no  $ Option "v" ["version"] (NoArg $ Right ([Version],id)) "Print the version number and exit."
