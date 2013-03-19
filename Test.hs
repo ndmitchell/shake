@@ -17,6 +17,7 @@ import qualified Examples.Test.Basic as Basic
 import qualified Examples.Test.Benchmark as Benchmark
 import qualified Examples.Test.Cache as Cache
 import qualified Examples.Test.Directory as Directory
+import qualified Examples.Test.Docs as Docs
 import qualified Examples.Test.Errors as Errors
 import qualified Examples.Test.Files as Files
 import qualified Examples.Test.FilePath as FilePath
@@ -36,7 +37,7 @@ fakes = ["clean" * clean, "test" * test, "makefile" * makefile]
     where (*) = (,)
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
-        ,"basic" * Basic.main, "cache" * Cache.main, "directory" * Directory.main, "errors" * Errors.main
+        ,"basic" * Basic.main, "cache" * Cache.main, "directory" * Directory.main, "docs" * Docs.main, "errors" * Errors.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
         ,"journal" * Journal.main, "lint" * Lint.main, "pool" * Pool.main, "random" * Random.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
