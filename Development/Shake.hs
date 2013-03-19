@@ -39,7 +39,7 @@
 --   command line parsing for build systems, often using flags to set fields in 'shakeOptions'.
 --
 -- * Put all result files in a distinguished directory, for example @_make@. You can implement a @clean@
---   command by removing that directory, using 'removeDirectoryRecursive'.
+--   command by removing that directory, using @'removeFilesAfter' \"_make\" [\"\/\/\*\"]@.
 --
 -- * To obtain parallel builds set 'shakeThreads' to a number greater than 1. You may also need to
 --   compile with @-threaded@.

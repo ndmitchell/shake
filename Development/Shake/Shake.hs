@@ -14,7 +14,7 @@ import Development.Shake.Rerun
 --   Use 'ShakeOptions' to specify how the system runs, and 'Rules' to specify what to build. The function will throw
 --   an exception if the build fails.
 --
---   To use command line flags to modify 'ShakeOptions' see 'Development.Shake.shakeWithArgs'.
+--   To use command line flags to modify 'ShakeOptions' see 'Development.Shake.shakeArgs'.
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts r = do
     run opts $ do

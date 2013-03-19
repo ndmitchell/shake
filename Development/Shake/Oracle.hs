@@ -38,7 +38,9 @@ instance (
 --
 -- @
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
--- 'addOracle' $ \\(GhcVersion _) -> fmap (last . words . fst) $ 'Development.Shake.systemOutput' \"ghc\" [\"--version\"]
+-- rules = do
+--     'addOracle' $ \\(GhcVersion _) -> fmap (last . words . fst) $ 'Development.Shake.systemOutput' \"ghc\" [\"--version\"]
+--     ... rules ...
 -- @
 --
 --   If a rule calls @'askOracle' (GhcVersion ())@, that rule will be rerun whenever the GHC version changes.
@@ -62,18 +64,22 @@ instance (
 --newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 --newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 --
---do
+--rules = do
 --    getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
 --        (out,_) <- 'Development.Shake.systemOutput' \"ghc-pkg\" [\"list\",\"--simple-output\"]
 --        return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
 --    --
 --    getPkgVersion \<- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
---        pkgs <- getPkgList
+--        pkgs <- getPkgList $ GhcPkgList ()
 --        return $ lookup pkg pkgs
+--    --
+--    \"myrule\" *> \\_ -> do
+--        getPkgVersion $ GhcPkgVersion \"shake\"
+--        ... rule using the shake version ...
 -- @
 --
 --   Using these definitions, any rule depending on the version of @shake@
---   should call @getPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
+--   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue q, ShakeValue a

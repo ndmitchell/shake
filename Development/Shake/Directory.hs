@@ -234,8 +234,8 @@ partitionM f (x:xs) = do
 --   'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"]
 -- @
 --
---   This function is often useful when writing a \'clean\' function for your build system,
---   often as the first argument to 'shakeWithArgs'.
+--   This function is often useful when writing a @clean@ action for your build system,
+--   often as a 'phony' rule.
 removeFiles :: FilePath -> [FilePattern] -> IO ()
 removeFiles dir ["//*"] = IO.removeDirectoryRecursive dir -- optimisation
 removeFiles dir pat = f "" >> return ()

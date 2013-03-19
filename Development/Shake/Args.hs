@@ -82,7 +82,9 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --   As an example of a build system that can use either @gcc@ or @distcc@ for compiling:
 --
 -- @
---data Flags = DiscCC deriving Eq
+--import System.Console.GetOpt
+--
+--data Flags = DistCC deriving Eq
 --flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
 --
 --main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do

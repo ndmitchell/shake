@@ -67,9 +67,7 @@ ps *>> act
 --   return the list of files that will be produced. This list /must/ include the file passed as an argument and should
 --   obey the invariant:
 --
--- @
---test x == Just ys ==> x \`elem\` ys && all ((== Just ys) . test) ys
--- @
+-- > forAll $ \x ys -> test x == Just ys ==> x `elem` ys && all ((== Just ys) . test) ys
 --
 --   As an example of a function satisfying the invariaint:
 --

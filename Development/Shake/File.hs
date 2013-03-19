@@ -103,7 +103,7 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 -- \"//*.rot13\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
---     'Development.Shake.system'' [\"rot13\",src,\"-o\",out]
+--     'Development.Shake.system'' \"rot13\" [src,\"-o\",out]
 -- @
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . pack) xs :: Action [FileA]) >> return ()
@@ -145,7 +145,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpack x_ in
 -- @
 -- (all isUpper . 'Development.Shake.FilePath.takeBaseName') '?>' \\out -> do
 --     let src = 'Development.Shake.FilePath.replaceBaseName' out $ map toLower $ takeBaseName out
---     'Development.Shake.writeFile'' . map toUpper =<< 'Development.Shake.readFile'' src
+--     'Development.Shake.writeFile'' out . map toUpper =<< 'Development.Shake.readFile'' src
 -- @
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 (?>) = root "with ?>"
@@ -162,7 +162,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpack x_ in
 -- \"*.asm.o\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
---     'Development.Shake.system'' [\"as\",src,\"-o\",out]
+--     'Development.Shake.system'' \"as\" [src,\"-o\",out]
 -- @
 --
 --   To define a build system for multiple compiled languages, we recommend using @.asm.o@,
@@ -205,7 +205,7 @@ newCacheIO act = do
 -- digits \<- 'newCache' $ \\file -> do
 --     src \<- readFile file
 --     return $ length $ filter isDigit src
--- \"*.digits\" '*>' \\x ->
+-- \"*.digits\" '*>' \\x -> do
 --     v1 \<- digits ('dropExtension' x)
 --     v2 \<- digits ('dropExtension' x)
 --     'Development.Shake.writeFile'' x $ show (v1,v2)

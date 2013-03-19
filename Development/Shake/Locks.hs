@@ -97,11 +97,11 @@ waitBarrier (Barrier x) = readMVar x
 -- @
 -- disk <- 'Development.Shake.newResource' \"Disk\" 4
 -- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
---    \"*.exe\" 'Development.Shake.*>' \\out ->
---        'Development.Shake.withResource' disk 1 $
---            'Development.Shake.system'' \"ld\" [\"-o\",out,...]
---    \"*.o\" 'Development.Shake.*>' \\out ->
---        'Development.Shake.system'' \"cl\" [\"-o\",out,...]
+-- \"*.exe\" 'Development.Shake.*>' \\out ->
+--     'Development.Shake.withResource' disk 1 $
+--         'Development.Shake.system'' \"ld\" [\"-o\",out,...]
+-- \"*.o\" 'Development.Shake.*>' \\out ->
+--     'Development.Shake.system'' \"cl\" [\"-o\",out,...]
 -- @
 data Resource = Resource String Int (Var (Int,[(Int,IO ())]))
 instance Show Resource where show (Resource name _ _) = "Resource " ++ name

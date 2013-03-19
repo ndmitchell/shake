@@ -64,7 +64,7 @@ systemOutput path args = do
     return (stdout, stderr)
 
 
--- | @copyFile old new@ copies the existing file from @old@ to @new@. The @old@ file is has 'need' called on it
+-- | @copyFile' old new@ copies the existing file from @old@ to @new@. The @old@ file is has 'need' called on it
 --   before copying the file.
 copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = need [old] >> liftIO (copyFile old new)
