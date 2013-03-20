@@ -43,10 +43,9 @@ main = shaken noTest $ \args obj -> do
             ,"import Data.Monoid"
             ,"import Development.Shake"
             ,"import Development.Shake.Classes"
-            ,"import Development.Shake.FilePath"
-            ,"import Development.Shake.Sys"
             ,"import System.Console.GetOpt"
             ,"import System.IO"
+            ,"import " ++ reps '_' '.' (drop 5 $ takeBaseName out)
             ] ++
             imports ++
             ["(==>) :: Bool -> Bool -> Bool"
