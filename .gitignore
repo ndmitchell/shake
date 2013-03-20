@@ -1,4 +1,4 @@
 /dist/
 /output/
 /.hpc/
-/html/data.js
+/html/data*.js
