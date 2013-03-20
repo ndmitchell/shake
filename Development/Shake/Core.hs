@@ -34,6 +34,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.IORef
 import System.Directory
+import System.IO
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -239,7 +240,7 @@ actionFinally act clean = do
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts@ShakeOptions{..} rs = do
+run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
     start <- startTime
     rs <- getRules rs
     registerWitnesses rs
@@ -292,6 +293,15 @@ run opts@ShakeOptions{..} rs = do
                 buildReport json file
         maybe (return ()) throwIO =<< readVar except
         sequence_ . reverse =<< readIORef after
+
+
+lineBuffering :: IO a -> IO a
+lineBuffering = f stdout . f stderr
+    where
+        f h act = do
+            bracket (hGetBuffering h) (hSetBuffering h) $ const $ do
+                hSetBuffering h LineBuffering
+                act
 
 
 abbreviate :: [(String,String)] -> String -> String
