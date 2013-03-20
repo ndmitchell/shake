@@ -93,6 +93,7 @@ library
     exposed-modules:
         Development.Shake
         Development.Shake.Classes
+        Development.Shake.Command
         Development.Shake.FilePath
         Development.Shake.Sys
 
