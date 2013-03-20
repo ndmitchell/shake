@@ -1,12 +1,12 @@
 
 module Main(main) where
 
-import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
 import System.Environment
+import Development.Shake.Pool
 
 import Examples.Util(sleepFileTime)
 import qualified Examples.Tar.Main as Tar
@@ -76,20 +76,15 @@ clean extra = sequence_ [withArgs [name,"clean"] $ main extra | (name,main) <- m
 test :: IO () -> IO ()
 test _ = do
     args <- getArgs
-    one <- newMVar () -- Only one may execute at a time
-    let pause = do putMVar one (); sleepFileTime; takeMVar one
     let tests = filter ((/= "random") . fst) mains
-    -- priority tests have more pauses in, so doing them sooner gets the whole tests done faster
-    self <- myThreadId
     let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
-    (dones,threads) <- fmap unzip $ forM (priority ++ normal) $ \(name,main) -> do
-        done <- newEmptyMVar
-        thread <- forkIO $ handleJust (guard . (/=) ThreadKilled) (const $ killThread self) $ do
-            takeMVar one
-            withArgs (name:"test":drop 1 args) $ main pause
-            putMVar one ()
-            putMVar done ()
-        return (done, thread)
-    onException (mapM_ takeMVar dones) $ do
-        mapM_ killThread threads
-        putStrLn "TESTS FAILED"
+    flip onException (putStrLn "TESTS FAILED") $
+        execute sleepFileTime [\pause -> withArgs (name:"test":drop 1 args) $ test pause | (name,test) <- priority ++ normal]
+
+
+-- | Execute each item in the list. They may yield (call the first parameter) in which case
+--   you must execute yield for each one of them.
+execute :: IO () -> [IO () -> IO ()] -> IO ()
+execute yield acts = runPool True 1 $ \pool -> do
+    let pause = blockPool pool $ yield >> return (False,())
+    forM_ acts $ \act -> addPool pool $ act pause
