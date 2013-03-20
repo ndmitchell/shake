@@ -2,7 +2,7 @@
 
 module Development.Shake.Command(
     cmd, command, command_,
-    Stdout(..), Stderr(..), ExitCode(..),
+    Stdout(..), Stderr(..), Exit(..),
     CmdOption(..),
     ) where
 
