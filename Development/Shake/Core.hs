@@ -279,7 +279,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     flip finally (writeIORef running False) $ do
         withDatabase opts diagnostic $ \database -> do
             forkIO $ shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
-            runPool shakeDeterministic shakeThreads $ \pool -> do
+            runPool (shakeDeterministic || shakeThreads == 1) shakeThreads $ \pool -> do
                 let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
             when shakeLint $ do

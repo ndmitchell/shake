@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    If shakeThreads==1 then always use a deterministic pool
     Add shakeLineBuffering, defaulting to True
     Improve the performance of profiling
     Documentation and corrections improvements
