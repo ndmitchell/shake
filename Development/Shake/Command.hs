@@ -53,7 +53,7 @@ data Result
 
 
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName opts results exe args = tracer $
+commandExplicit funcName opts results exe args = verboser $ tracer $
 -- BEGIN COPIED
 -- Originally from readProcessWithExitCode with as few changes as possible
     mask $ \restore -> do
@@ -135,6 +135,10 @@ commandExplicit funcName opts results exe args = tracer $
             ResultCode   _ -> ResultCode ex
     where
         input = last $ "" : [x | Stdin x <- opts]
+        verboser act = do
+            v <- getVerbosity
+            putLoud $ saneCommandForUser exe args
+            (if verbosity >= Loud then quietly else id) act
         tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
