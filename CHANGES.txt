@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make repeated --verbose keep increasing the verbosity
     If shakeThreads==1 then always use a deterministic pool
     Add shakeLineBuffering, defaulting to True
     Improve the performance of profiling

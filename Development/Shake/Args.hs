@@ -239,10 +239,10 @@ shakeOptsEx =
     ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
     ,yes $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
     ,yes $ Option " " ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
-    ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=Quiet}) "Don't print much."
+    ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
     ,yes $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
-    ,yes $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=Loud}) "Print tracing information."
+    ,yes $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) succ}) "Print tracing information."
     ,no  $ Option "v" ["version"] (NoArg $ Right ([Version],id)) "Print the version number and exit."
     ,no  $ Option "w" ["print-directory"] (NoArg $ Right ([PrintDirectory True],id)) "Print the current directory."
     ,no  $ Option ""  ["no-print-directory"] (NoArg $ Right ([PrintDirectory False],id)) "Turn off -w, even if it was turned on implicitly."
@@ -251,6 +251,10 @@ shakeOptsEx =
     where
         yes = (,) True
         no  = (,) False
+
+        move :: Verbosity -> (Int -> Int) -> Verbosity
+        move x by = toEnum $ min (fromEnum mx) $ max (fromEnum mn) $ by $ fromEnum x
+            where (mn,mx) = (asTypeOf minBound x, asTypeOf maxBound x)
 
         noArg f = NoArg $ Right ([], f)
         reqArg a f = ReqArg (\x -> Right ([], f x)) a
