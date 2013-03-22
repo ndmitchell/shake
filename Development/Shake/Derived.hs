@@ -16,6 +16,7 @@ import qualified Data.ByteString.Char8 as BS
 import Development.Shake.Core
 import Development.Shake.File
 import Development.Shake.FilePath
+import Development.Shake.Types
 
 
 checkExitCode :: String -> ExitCode -> Action ()
@@ -28,8 +29,9 @@ system' :: FilePath -> [String] -> Action ()
 system' path args = do
     let path2 = toNative path
     let cmd = unwords $ path2 : args
+    v <- getVerbosity
     putLoud cmd
-    res <- traced (takeBaseName path) $ rawSystem path2 args
+    res <- (if v >= Loud then quietly else id) $ traced (takeBaseName path) $ rawSystem path2 args
     checkExitCode cmd res
 
 
