@@ -1,5 +1,9 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
+-- | /Future plans: I intend to merge this module into "Development.Shake" itself./
+--
+--   This module provides more powerful and flexible versions of 'Development.Shake.system''.
+--   The best documentation is found at 'command'.
 module Development.Shake.Command(
     cmd, command, command_,
     Stdout(..), Stderr(..), Exit(..),
@@ -28,16 +32,17 @@ import GHC.IO.Exception (IOErrorType(..), IOException(..))
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
 
+-- | Options passed to 'command' to control how processes are executed.
 data CmdOption
-    = Cwd FilePath
-    | Env [(String,String)]
-    | Stdin String
-    | ErrorsWithoutStderr
-    | EchoStdout
-    | EchoStderr
-    | Shell
-    | BinaryPipes
-    | Traced String -- "" for no tracing
+    = Cwd FilePath -- ^ Change the current directory in the spawned process.
+    | Env [(String,String)] -- ^ Change the environment variables in the spawned process.
+    | Stdin String -- ^ Given as the @stdin@ of the spawned process.
+    | ErrorsWithoutStderr -- ^ By default, the @stderr@ is captured and included if the command fails. This option disables that behavior.
+    | EchoStdout -- ^ If a 'Stdout' result is requested, the @stdout@ is not normally echoed, this option causes it to echo again.
+    | EchoStderr -- ^ If a 'Stderr' result is requested, the @stderr@ is not normally echoed, this option causes it to echo again.
+    | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces.
+    | BinaryPipes -- ^ Treat the @stdin@/@stdout@/@stderr@ messages as binary.
+    | Traced String -- ^ Name to use with 'traced', defaulting to the name of the executable. Use @\"\"@ for no tracing.
       deriving (Eq,Ord,Show)
 
 data Result
@@ -174,10 +179,20 @@ saneCommandForUser cmd args = unwords $ map f $ cmd:args
 ---------------------------------------------------------------------
 -- FIXED ARGUMENT WRAPPER
 
+-- | Collect the @stdout@ of the process.
+--   If you are collecting the @stdout@, it will not be echoed to the terminal, unless you include 'StdoutEcho'.
 newtype Stdout = Stdout String
+
+-- | Collect the @stderr@ of the process.
+--   If you are collecting the @stderr@, it will not be echoed to the terminal, unless you include 'StderrEcho'.
 newtype Stderr = Stderr String
+
+-- | Collect the 'ExitCode' of the process.
+--   If you do not collect the exit code, any 'ExitFailure' will cause an exception.
 newtype Exit = Exit ExitCode
 
+-- | A class for specifying what results you want to collect from a process.
+--   Values are formed of 'Stdout', 'Stderr', 'Exit' and tuples of those.
 class CmdResult a where
     -- Return a list of results (with the right type but dummy data)
     -- and a function to transform a populated set of results into a value
@@ -210,6 +225,7 @@ command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
 command opts x xs = fmap b $ commandExplicit "command" opts a x xs
     where (a,b) = cmdResult
 
+-- | Like 'command', but where you do not require any result.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
 command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
 
