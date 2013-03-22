@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add Chatty verbosity, for what was Loud
     Make repeated --verbose keep increasing the verbosity
     If shakeThreads==1 then always use a deterministic pool
     Add shakeLineBuffering, defaulting to True

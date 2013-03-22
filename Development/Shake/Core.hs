@@ -392,7 +392,7 @@ applyKeyValue ks = do
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
             lint s "before building"
             (dur,(res,s2)) <- duration $ runAction s2 $ do
-                putLoud $ "# " ++ show k
+                putWhen Chatty $ "# " ++ show k
                 runExecute (ruleinfo s) k
             lint s "after building"
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)

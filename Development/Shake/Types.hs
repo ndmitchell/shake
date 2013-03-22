@@ -153,10 +153,11 @@ tyFunction = mkDataType "Development.Shake.Types.Function" []
 -- | The verbosity data type, used by 'shakeVerbosity'.
 data Verbosity
     = Silent -- ^ Don't print any messages.
-    | Quiet  -- ^ Only print essential messages (typically errors).
-    | Normal -- ^ Print normal messages (typically errors and warnings).
-    | Loud   -- ^ Print lots of messages (typically errors, warnings and status updates).
-    | Diagnostic -- ^ Print messages for virtually everything (for debugging a build system).
+    | Quiet  -- ^ Only print essential messages, typically errors.
+    | Normal -- ^ Print errors and @# /file-name/ /command-name/@ when running a 'traced' command.
+    | Loud   -- ^ Print errors and full command lines when running a 'system'' command.
+    | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
+    | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
 
 
