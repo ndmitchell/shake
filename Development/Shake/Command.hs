@@ -24,6 +24,7 @@ import System.Process
 
 import Development.Shake.Core
 import Development.Shake.FilePath
+import Development.Shake.Types
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 
@@ -138,7 +139,7 @@ commandExplicit funcName opts results exe args = verboser $ tracer $
         verboser act = do
             v <- getVerbosity
             putLoud $ saneCommandForUser exe args
-            (if verbosity >= Loud then quietly else id) act
+            (if v >= Loud then quietly else id) act
         tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
@@ -184,11 +185,11 @@ saneCommandForUser cmd args = unwords $ map f $ cmd:args
 -- FIXED ARGUMENT WRAPPER
 
 -- | Collect the @stdout@ of the process.
---   If you are collecting the @stdout@, it will not be echoed to the terminal, unless you include 'StdoutEcho'.
+--   If you are collecting the @stdout@, it will not be echoed to the terminal, unless you include 'EchoStdout'.
 newtype Stdout = Stdout String
 
 -- | Collect the @stderr@ of the process.
---   If you are collecting the @stderr@, it will not be echoed to the terminal, unless you include 'StderrEcho'.
+--   If you are collecting the @stderr@, it will not be echoed to the terminal, unless you include 'EchoStderr'.
 newtype Stderr = Stderr String
 
 -- | Collect the 'ExitCode' of the process.
