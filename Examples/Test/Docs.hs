@@ -142,7 +142,7 @@ whitelist x = x `elem`
     ,"main clean"
     ,"1:25m (15%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
-    ,"# file-name command-name"
+    ,"# command-name file-name"
     ]
 
 types = words "Resource MVar Action IO Monad Monoid Assume String FilePath FilePattern Data Verbosity Rules Rule [String] Eq Typeable Char ExitCode"

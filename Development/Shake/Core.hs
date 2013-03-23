@@ -419,7 +419,7 @@ traced :: String -> IO a -> Action a
 traced msg act = do
     s <- Action State.get
     start <- liftIO $ timestamp s
-    putNormal $ "# " ++ topStack (stack s) ++ " " ++ msg
+    putNormal $ "# " ++ msg ++ " " ++ topStack (stack s)
     res <- liftIO act
     stop <- liftIO $ timestamp s
     Action $ State.modify $ \s -> s{traces = (pack msg,start,stop):traces s}
