@@ -44,6 +44,7 @@ main = shaken noTest $ \args obj -> do
             ,"import Development.Shake"
             ,"import Development.Shake.Classes"
             ,"import System.Console.GetOpt"
+            ,"import System.Exit"
             ,"import System.IO"
             ,"import " ++ reps '_' '.' (drop 5 $ takeBaseName out)
             ] ++
@@ -141,8 +142,9 @@ whitelist x = x `elem`
     ,"main clean"
     ,"1:25m (15%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
+    ,"# file-name command-name"
     ]
 
-types = words "Resource MVar Action IO Monad Monoid Assume String FilePath FilePattern Data Verbosity Rules Rule [String] Eq Typeable Char"
+types = words "Resource MVar Action IO Monad Monoid Assume String FilePath FilePattern Data Verbosity Rules Rule [String] Eq Typeable Char ExitCode"
 
 dupes = words "main progressSimple rules"
