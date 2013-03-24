@@ -3,11 +3,11 @@
 -- | /Future plans: I intend to merge this module into "Development.Shake" itself./
 --
 --   This module provides more powerful and flexible versions of 'Development.Shake.system''.
---   The best documentation is found at 'command'.
+--   I recommend looking at 'command', followed by 'cmd'.
 module Development.Shake.Command(
-    cmd, command, command_,
+    command, command_, cmd,
     Stdout(..), Stderr(..), Exit(..),
-    CmdOption(..),
+    CmdResult, CmdOption(..),
     ) where
 
 import Control.Arrow
@@ -29,7 +29,6 @@ import Development.Shake.Types
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 
 
-
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
 
@@ -42,7 +41,7 @@ data CmdOption
     | EchoStdout -- ^ If a 'Stdout' result is requested, the @stdout@ is not normally echoed, this option causes it to echo again.
     | EchoStderr -- ^ If a 'Stderr' result is requested, the @stderr@ is not normally echoed, this option causes it to echo again.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces.
-    | BinaryPipes -- ^ Treat the @stdin@/@stdout@/@stderr@ messages as binary.
+    | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary.
     | Traced String -- ^ Name to use with 'traced', defaulting to the name of the executable. Use @\"\"@ for no tracing.
       deriving (Eq,Ord,Show)
 
@@ -226,11 +225,34 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) wher
     cmdResult = cmdResultWith $ \(a,(b,c)) -> (a,b,c)
 
 
+-- | Execute a system command. Before running 'command' make sure you 'need' any files
+--   that are required by the command.
+--
+--   This function takes a list of options (often just @[]@, see 'CmdOption' for the available
+--   options), the name of the executable (either a full name, or a program on the @$PATH@) and
+--   a list of arguments. The result is often @()@, but can be a tuple containg any of 'Stdout',
+--   'Stderr' and 'Exit'. Some examples:
+--
+-- @
+-- 'command_' [] \"gcc\" [\"-c\",\"myfile.c\"]                           -- compile a file, throwing an exception on failure
+-- 'Exit' c <- 'command' [] \"gcc\" [\"-c\",myfile]                 -- run a command, recording the exit code
+-- ('Exit' c, 'Stderr' err) <- 'command' [] \"gcc\" [\"-c\",\"myfile.c\"]   -- run a command, recording the exit code and error output
+-- 'Stdout' out <- 'command' [] \"gcc\" [\"-MM\",\"myfile.c\"]            -- run a command, recording the output
+-- 'command_' ['Cwd' \"generated\"] \"gcc\" [\"-c\",myfile]              -- run a command in a directory
+-- @
+--
+--   Unless you retrieve the 'ExitCode' using 'Exit', any 'ExitFailure' will throw an error, including
+--   the 'Stderr' in the exception message. If you capture the result of 'Stdout' or 'Stderr' it will not be echoed to the console
+--   unless you also pass the option 'EchoStdout' or 'EchoStderr'.
+--
+--   If using 'command' inside a @do@ block, and are not using the result, you may get an error about being
+--   unable to deduce 'CmdResult'. In such situations, use 'command_'.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
 command opts x xs = fmap b $ commandExplicit "command" opts a x xs
     where (a,b) = cmdResult
 
--- | Like 'command', but where you do not require any result.
+-- | A version of 'command' where you do not require any result, used to avoid errors about being unable
+--   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
 command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
 
@@ -242,8 +264,28 @@ type a :-> t = a
 
 
 -- | A variable arity version of 'command'.
-cmd :: CmdArguments args => String -> args :-> Action r
-cmd x = cmdArguments $ map Right $ words x
+--
+-- * @String@ arguments are treated as whitespace separated arguments.
+--
+-- * @[String]@ arguments are treated as literal arguments.
+--
+-- * 'CmdOption' arguments are used as options.
+--
+--   To take the examples from 'command':
+--
+-- @
+-- () <- 'cmd' \"gcc -c myfile.c\"                               -- compile a file, throwing an exception on failure
+-- 'Exit' c <- 'cmd' \"gcc -c\" [myfile]                 -- run a command, recording the exit code
+-- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"    -- run a command, recording the exit code and error output
+-- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"          -- run a command, recording the output
+-- 'cmd' ('Cwd' \"generated\") \"gcc -c\" [myfile] :: 'Action' ()             -- run a command in a directory
+-- @
+--
+--   If using 'cmd' inside a @do@ block, and are not using the result, you may get an error about being
+--   unable to deduce 'CmdResult'. In such situations, bind explicitly to @()@, or include a type signature. Note that when passing in files
+--   we use @[myfile]@ so that if the @myfile@ variable contains spaces they are appropriately escaped.
+cmd :: CmdArguments args => args :-> Action r
+cmd = cmdArguments []
 
 class CmdArguments t where cmdArguments :: [Either CmdOption String] -> t
 instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
@@ -251,7 +293,7 @@ instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments x = case partitionEithers x of
         (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicit "cmd" opts a x xs
-        _ -> error "Internal error, no executable or arguments given to Development.Shake.cmd"
+        _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 
 class Arg a where arg :: a -> [Either CmdOption String]
 instance Arg String where arg = map Right . words
