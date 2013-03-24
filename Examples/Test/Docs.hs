@@ -34,7 +34,7 @@ main = shaken noTest $ \args obj -> do
             code = concat $ zipWith f [1..] (nub $ findCode src)
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
-            ["{-# LANGUAGE ConstraintKinds, DeriveDataTypeable, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
+            ["{-# LANGUAGE ConstraintKinds, DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Concurrent"
             ,"import Data.Char"
@@ -58,6 +58,7 @@ main = shaken noTest $ \args obj -> do
             ,"time_elapsed = 1.1"
             ,"old = \"\""
             ,"new = \"\""
+            ,"myfile = \"\""
             ,"opts = shakeOptions"
             ,"result = undefined :: IO (Maybe (Rules ()))"
             ,"instance Eq (OptDescr a)"
@@ -134,7 +135,7 @@ whitelist x | elem x $ words $
     ".. /./ /.. ./ // \\ ../ " ++
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. " ++
-    "-threaded Function extension $OUT xterm $TERM main opts result flagValues argValues "
+    "-threaded Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
@@ -145,6 +146,8 @@ whitelist x = x `elem`
     ,"# command-name file-name"
     ]
 
-types = words "Resource MVar Action IO Monad Monoid Assume String FilePath FilePattern Data Verbosity Rules Rule [String] Eq Typeable Char ExitCode"
+types = words $
+    "MVar IO Monad Monoid String FilePath Data [String] Eq Typeable Char ExitCode " ++
+    "Action Resource Assume FilePattern Verbosity Rules Rule CmdOption CmdResult"
 
 dupes = words "main progressSimple rules"
