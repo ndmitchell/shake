@@ -149,7 +149,8 @@ commandExplicit funcName opts results exe args = verboser $ tracer $
         stdoutEcho = ResultStdout "" `notElem` results || EchoStdout `elem` opts
         stdoutCapture = ResultStdout "" `elem` results
         stderrEcho = ResultStderr "" `notElem` results || EchoStderr `elem` opts
-        stderrCapture = ResultStderr "" `elem` results || ErrorsWithoutStderr `notElem` opts
+        stderrCapture = ResultStderr "" `elem` results ||
+            not (ErrorsWithoutStderr `elem` opts || ResultCode ExitSuccess `elem` results)
 
         cp0 = (if Shell `elem` opts then shell $ unwords $ exe:args else proc exe args)
             {std_out = if binary || stdoutCapture || not stdoutEcho then CreatePipe else Inherit
