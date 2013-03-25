@@ -1,5 +1,30 @@
+NOTES
+    "Erdi, Gergo showing the estimated build time remaining in the terminal window's title is genius. you can quote me on that :)"
+    file:///C:/spacework/shake/html/report2.html?mode=rule-graph&query=rename%28%22output/self/Development/Shake/%22%2C%22%22%29%20%26%26%20rename%28%22output/self/%22%29%20%26%26%20ancestorOf%28%22Shake/Shake.hi%22%29%20%26%26%20name%28%22.hi%22%29%20%26%26%20backColor%28%22orange%22%29%20%26%26%20textColor%28%22black%22%29%20%26%26%20backColor%28%22yellow%22%2CancestorOf%28%22Shake/Core.hi%22%29%29%20%26%26%20%21name%28%22Classes%22%29
+PROFILING
+    Profiling, Only show a cutoff number of rows in a table
+    If > 250 nodes say how many there are, and perhaps a "try anyway"
+    If throws a memory error, should catch and report nicely
+    If no results in the command graph say "no results" rather than just a blank page
+MAKEFILE
+    Add to Makefile support, lots of automatic change detection
+    | need support
+    Tests for Makefile
+    Add the Tutorial test
+    Add a document describing Makefile
+CORE
+    Add clean :: ShakeOptions -> IO (), delete everything you generated
+    Document the Command module and switch to it
+    Add tests for Command
+    Progress rate should be a weighted average towards more recently, over a moderate timespan
+    If between step N and N+1 you make no progress, assume you are making partial progress in one file, and do not recalc the work rate
+BUGS
+    #593, doesFileExist /= not doesDirectoryExist, since Unix has weird none-of-the-above things
+    Roman reports two compiles running if both have compile errors and -j1, respawning during shutdown - can't reproduce
+
 Changelog for Shake
 
+    #593, don't assume doesDirectoryExist = not . doesFileExist
     Swap how traced messages are printed out
     Add Chatty verbosity, for what was Loud
     Make repeated --verbose keep increasing the verbosity

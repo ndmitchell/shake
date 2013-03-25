@@ -208,11 +208,11 @@ getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
 
         f (dir2,False) = do
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
-            flip filterM xs $ \x -> if not $ test x then return False else IO.doesFileExist $ dir </> x
+            flip filterM xs $ \x -> if not $ test x then return False else fmap not $ IO.doesDirectoryExist $ dir </> x
 
         f (dir2,True) = do
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
-            (files,dirs) <- partitionM (\x -> IO.doesFileExist $ dir </> x) xs
+            (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
             rest <- concatMapM (\d -> f (d, True)) dirs
             return $ filter test files ++ rest
 
@@ -246,7 +246,7 @@ removeFiles dir pat = f "" >> return ()
         f :: FilePath -> IO Bool
         f dir2 = do
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
-            (files,dirs) <- partitionM (\x -> IO.doesFileExist $ dir </> x) xs
+            (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
             noDirs <- fmap and $ mapM f dirs
             let (del,keep) = partition test files
             mapM_ IO.removeFile del
