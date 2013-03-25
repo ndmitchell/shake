@@ -37,12 +37,12 @@ data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process.
-    | ErrorsWithoutStderr -- ^ By default, the @stderr@ is captured and included if the command fails. This option disables that behavior.
-    | EchoStdout -- ^ If a 'Stdout' result is requested, the @stdout@ is not normally echoed, this option causes it to echo again.
-    | EchoStderr -- ^ If a 'Stderr' result is requested, the @stderr@ is not normally echoed, this option causes it to echo again.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces.
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary.
     | Traced String -- ^ Name to use with 'traced', defaulting to the name of the executable. Use @\"\"@ for no tracing.
+    | WithStderr Bool -- ^ Should I include the @stderr@ in the exception if the command fails? Defaults to 'True'.
+    | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required.
+    | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required.
       deriving (Eq,Ord,Show)
 
 data Result
@@ -124,7 +124,7 @@ commandExplicit funcName opts results exe args = verboser $ tracer $
             let msg = "Development.Shake." ++ funcName ++ ", system command failed\n" ++
                       "Command: " ++ saneCommandForUser exe args ++ "\n" ++
                       "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-                      (if ErrorsWithoutStderr `elem` opts then "Stderr not captured because ErrorsWithoutStderr was used"
+                      (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
                        else if null err then "Stderr was empty"
                        else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
             error msg
@@ -146,11 +146,11 @@ commandExplicit funcName opts results exe args = verboser $ tracer $
 
         -- what should I do with these handles
         binary = BinaryPipes `elem` opts
-        stdoutEcho = ResultStdout "" `notElem` results || EchoStdout `elem` opts
+        stdoutEcho = last $ (ResultStdout "" `notElem` results) : [b | EchoStdout b <- opts]
         stdoutCapture = ResultStdout "" `elem` results
-        stderrEcho = ResultStderr "" `notElem` results || EchoStderr `elem` opts
-        stderrCapture = ResultStderr "" `elem` results ||
-            not (ErrorsWithoutStderr `elem` opts || ResultCode ExitSuccess `elem` results)
+        stderrEcho = last $ (ResultStderr "" `notElem` results) : [b | EchoStderr b <- opts]
+        stderrThrow = last $ True : [b | WithStderr b <- opts]
+        stderrCapture = ResultStderr "" `elem` results || (stderrThrow && ResultCode ExitSuccess `notElem` results)
 
         cp0 = (if Shell `elem` opts then shell $ unwords $ exe:args else proc exe args)
             {std_out = if binary || stdoutCapture || not stdoutEcho then CreatePipe else Inherit
