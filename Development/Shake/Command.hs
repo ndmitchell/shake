@@ -32,7 +32,7 @@ import GHC.IO.Exception (IOErrorType(..), IOException(..))
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
 
--- | Options passed to 'command'\/'cmd' to control how processes are executed.
+-- | Options passed to 'command' or 'cmd' to control how processes are executed.
 data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
