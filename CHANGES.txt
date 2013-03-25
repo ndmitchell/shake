@@ -24,6 +24,7 @@ BUGS
 
 Changelog for Shake
 
+    Add a Command module, with alternatives to system' etc.
     #593, don't assume doesDirectoryExist = not . doesFileExist
     Swap how traced messages are printed out
     Add Chatty verbosity, for what was Loud
