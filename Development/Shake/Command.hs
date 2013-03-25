@@ -32,14 +32,14 @@ import GHC.IO.Exception (IOErrorType(..), IOException(..))
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
 
--- | Options passed to 'command' to control how processes are executed.
+-- | Options passed to 'command'\/'cmd' to control how processes are executed.
 data CmdOption
-    = Cwd FilePath -- ^ Change the current directory in the spawned process.
-    | Env [(String,String)] -- ^ Change the environment variables in the spawned process.
-    | Stdin String -- ^ Given as the @stdin@ of the spawned process.
-    | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces.
-    | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary.
-    | Traced String -- ^ Name to use with 'traced', defaulting to the name of the executable. Use @\"\"@ for no tracing.
+    = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
+    | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
+    | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default no @stdin@ is given.
+    | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
+    | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default streams use text encoding.
+    | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
     | WithStderr Bool -- ^ Should I include the @stderr@ in the exception if the command fails? Defaults to 'True'.
     | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required.
     | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required.
@@ -226,7 +226,7 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) wher
     cmdResult = cmdResultWith $ \(a,(b,c)) -> (a,b,c)
 
 
--- | Execute a system command. Before running 'command' make sure you 'need' any files
+-- | Execute a system command. Before running 'command' make sure you 'Development.Shake.need' any files
 --   that are required by the command.
 --
 --   This function takes a list of options (often just @[]@, see 'CmdOption' for the available
@@ -235,24 +235,24 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) wher
 --   'Stderr' and 'Exit'. Some examples:
 --
 -- @
--- 'command_' [] \"gcc\" [\"-c\",\"myfile.c\"]                           -- compile a file, throwing an exception on failure
--- 'Exit' c <- 'command' [] \"gcc\" [\"-c\",myfile]                 -- run a command, recording the exit code
+-- 'command_' [] \"gcc\" [\"-c\",\"myfile.c\"]                          -- compile a file, throwing an exception on failure
+-- 'Exit' c <- 'command' [] \"gcc\" [\"-c\",myfile]                     -- run a command, recording the exit code
 -- ('Exit' c, 'Stderr' err) <- 'command' [] \"gcc\" [\"-c\",\"myfile.c\"]   -- run a command, recording the exit code and error output
 -- 'Stdout' out <- 'command' [] \"gcc\" [\"-MM\",\"myfile.c\"]            -- run a command, recording the output
--- 'command_' ['Cwd' \"generated\"] \"gcc\" [\"-c\",myfile]              -- run a command in a directory
+-- 'command_' ['Cwd' \"generated\"] \"gcc\" [\"-c\",myfile]               -- run a command in a directory
 -- @
 --
 --   Unless you retrieve the 'ExitCode' using 'Exit', any 'ExitFailure' will throw an error, including
---   the 'Stderr' in the exception message. If you capture the result of 'Stdout' or 'Stderr' it will not be echoed to the console
---   unless you also pass the option 'EchoStdout' or 'EchoStderr'.
+--   the 'Stderr' in the exception message. If you capture the 'Stdout' or 'Stderr', that stream will not be echoed to the console,
+--   unless you use the option 'EchoStdout' or 'EchoStderr'.
 --
---   If using 'command' inside a @do@ block, and are not using the result, you may get an error about being
---   unable to deduce 'CmdResult'. In such situations, use 'command_'.
+--   If you use 'command' inside a @do@ block and do not use the result, you may get a compile-time error about being
+--   unable to deduce 'CmdResult'. To avoid this error, use 'command_'.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
 command opts x xs = fmap b $ commandExplicit "command" opts a x xs
     where (a,b) = cmdResult
 
--- | A version of 'command' where you do not require any result, used to avoid errors about being unable
+-- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
 command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
@@ -275,16 +275,17 @@ type a :-> t = a
 --   To take the examples from 'command':
 --
 -- @
--- () <- 'cmd' \"gcc -c myfile.c\"                               -- compile a file, throwing an exception on failure
--- 'Exit' c <- 'cmd' \"gcc -c\" [myfile]                 -- run a command, recording the exit code
--- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"    -- run a command, recording the exit code and error output
--- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"          -- run a command, recording the output
--- 'cmd' ('Cwd' \"generated\") \"gcc -c\" [myfile] :: 'Action' ()             -- run a command in a directory
+-- () <- 'cmd' \"gcc -c myfile.c\"                                  -- compile a file, throwing an exception on failure
+-- 'Exit' c <- 'cmd' \"gcc -c\" [myfile]                              -- run a command, recording the exit code
+-- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"                -- run a command, recording the exit code and error output
+-- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"                         -- run a command, recording the output
+-- 'cmd' ('Cwd' \"generated\") \"gcc -c\" [myfile] :: 'Action' ()         -- run a command in a directory
 -- @
 --
---   If using 'cmd' inside a @do@ block, and are not using the result, you may get an error about being
---   unable to deduce 'CmdResult'. In such situations, bind explicitly to @()@, or include a type signature. Note that when passing in files
---   we use @[myfile]@ so that if the @myfile@ variable contains spaces they are appropriately escaped.
+--   When passing file arguments we use @[myfile]@ so that if the @myfile@ variable contains spaces they are properly escaped.
+--
+--   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
+--   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature.
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
 
