@@ -195,6 +195,7 @@ executable shake-test
         Examples.Test.Basic
         Examples.Test.Benchmark
         Examples.Test.Cache
+        Examples.Test.Command
         Examples.Test.Directory
         Examples.Test.Docs
         Examples.Test.Errors

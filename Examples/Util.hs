@@ -90,6 +90,11 @@ assertContents file want = do
     got <- readFile file
     assert (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
 
+assertContentsInfix :: FilePath -> String -> IO ()
+assertContentsInfix file want = do
+    got <- readFile file
+    assert (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
+
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
