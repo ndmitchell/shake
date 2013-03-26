@@ -238,7 +238,7 @@ function runReport()
         case "rule-graph":
             var xs = ruleGraph(shakeEx, report.query);
             if (xs.length > 250)
-                $("#output").html("Cannot view graph with > 250 nodes, try grouping more aggressively");
+                $("#output").html("Viewing a graph with > 250 nodes is not supported, and you have " + xs.length + " nodes. Try grouping more aggressively");
             else
             {
                 var res = "digraph \"\"{";
