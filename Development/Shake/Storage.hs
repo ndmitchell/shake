@@ -169,6 +169,7 @@ flushThread outputErr flush h act = do
     alive <- newVar True
     kick <- newEmptyMVar
 
+    lock <- newLock
     case flush of
         Nothing -> return ()
         Just flush -> do
@@ -179,7 +180,7 @@ flushThread outputErr flush h act = do
                     b <- withVar alive $ \b -> do
                         when b $ do
                             tryTakeMVar kick
-                            hFlush h
+                            withLock lock $ hFlush h
                         return b
                     when b loop
             forkIO $ do
@@ -187,7 +188,6 @@ flushThread outputErr flush h act = do
                 (loop >> return ()) `E.catch` \(e :: SomeException) -> outputErr $ msg ++ show e ++ "\n"
             return ()
 
-    lock <- newLock
     (act $ \s -> do
             withLock lock $ LBS.hPut h s
             tryPutMVar kick ()
