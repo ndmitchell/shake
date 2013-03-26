@@ -193,8 +193,8 @@ flushThread outputErr flush h act = do
             tryPutMVar kick ()
             return ())
         `finally` do
-            tryPutMVar kick ()
             modifyVar_ alive $ const $ return False
+            tryPutMVar kick ()
 
 
 -- Return the amount of junk at the end, along with all the chunk
