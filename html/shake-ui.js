@@ -218,13 +218,23 @@ function runReport()
                     data.push([j, x[j]]);
                 ys.push({label:s, values:x, data:data, color:xs[s].back, avg:sum(x) / x.length});
             }
-            ys.sort(function(a,b){return a.avg - b.avg;});
-            showPlot(ys, {
-                legend: {show:true, position:"nw", sorted:"reverse"},
-                series: {stack:true, lines:{lineWidth:0,fill:1}},
-                yaxis: {min:0},
-                xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100);}}
-            });
+            if (ys.length === 0)
+            {
+                $("#output").html("No data found, " +
+                    (shakeEx.summary.countTraceLast === 0
+                        ? "there were no traced commands in the last run."
+                        : "perhaps your filter is too restrictive?"));
+            }
+            else
+            {
+                ys.sort(function(a,b){return a.avg - b.avg;});
+                showPlot(ys, {
+                    legend: {show:true, position:"nw", sorted:"reverse"},
+                    series: {stack:true, lines:{lineWidth:0,fill:1}},
+                    yaxis: {min:0},
+                    xaxis: {tickFormatter: function (i){return showTime(shakeSummary.maxTraceStopLast * i / 100);}}
+                });
+            }
             break;
 
         case "cmd-table":
