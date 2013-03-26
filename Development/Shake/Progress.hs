@@ -87,11 +87,12 @@ progressTodo Progress{..} =
 --   The current implementation is to predict the time remaining (based on 'timeTodo') and the
 --   work already done ('timeBuilt'). The percentage is then calculated as @remaining / (done + remaining)@,
 --   while time left is calculated by scaling @remaining@ by the observed work rate in this build,
---   namely @done / time_elapsed@.
+--   roughly @done / time_elapsed@.
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplay sample disp prog = loop 0
+progressDisplay sample disp prog = loop $ Prog 0
     where
-        loop steps = do
+        loop :: Prog -> IO ()
+        loop Prog{..} = do
             p <- prog
             if not $ isRunning p then
                 disp "Finished"
@@ -106,7 +107,12 @@ progressDisplay sample disp prog = loop 0
                              perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
                          in time ++ "s (" ++ perc ++ "%)"
                 threadDelay $ ceiling $ sample * 1000000
-                loop $! steps+1
+                loop $! Prog (steps+1)
+
+
+data Prog = Prog
+    {steps :: {-# UNPACK #-} !Int
+    }
 
 
 {-# NOINLINE xterm #-}
