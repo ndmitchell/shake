@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve progress guesses (use exponential decay of work rate)
     Improve profiling report error messages
     Add a Command module, with alternatives to system' etc.
     #593, don't assume doesDirectoryExist = not . doesFileExist

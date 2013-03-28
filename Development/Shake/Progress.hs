@@ -4,10 +4,12 @@
 module Development.Shake.Progress(
     Progress(..),
     progressSimple, progressDisplay, progressTitlebar,
+    progressDisplayTester -- INTERNAL FOR TESTING ONLY
     ) where
 
 import Control.Concurrent
 import Control.Exception
+import Control.Monad
 import System.Environment
 import Data.Data
 import Data.Monoid
@@ -89,30 +91,66 @@ progressTodo Progress{..} =
 --   while time left is calculated by scaling @remaining@ by the observed work rate in this build,
 --   roughly @done / time_elapsed@.
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplay sample disp prog = loop $ Prog 0
+progressDisplay = progressDisplayer True
+
+
+-- | Version of 'progressDisplay' that omits the sleep
+progressDisplayTester :: Double -> (String -> IO ()) -> IO Progress -> IO ()
+progressDisplayTester = progressDisplayer False
+
+
+progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
+progressDisplayer sleep sample disp prog = do
+    disp "Starting..." -- no useful info at this stage
+    loop $ tick0 sample
     where
-        loop :: Prog -> IO ()
-        loop Prog{..} = do
+        loop :: Tick -> IO ()
+        loop t = do
+            when sleep $ threadDelay $ ceiling $ sample * 1000000
             p <- prog
             if not $ isRunning p then
                 disp "Finished"
              else do
-                disp $ if steps == 0
-                    then "Starting..."
-                    else let done = progressDone p
-                             todo = progressTodo p
-                             comp = if done == 0 then todo else sample * todo / (done / fromIntegral steps)
-                             (mins,secs) = divMod (ceiling comp) (60 :: Int)
-                             time = (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs
-                             perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
-                         in time ++ "s (" ++ perc ++ "%)"
-                threadDelay $ ceiling $ sample * 1000000
-                loop $! Prog (steps+1)
+                (t, msg) <- return $ tick p t
+                disp msg
+                loop $! t
 
 
-data Prog = Prog
-    {steps :: {-# UNPACK #-} !Int
-    }
+-- work_ and done_ are both as recorded at step_
+data Tick = Tick
+    {sample :: {-# UNPACK #-} !Double
+    ,step :: {-# UNPACK #-} !Double
+    ,work_ :: {-# UNPACK #-} !Double
+    ,done_ :: {-# UNPACK #-} !Double
+    ,step_ :: {-# UNPACK #-} !Double
+    } deriving Show
+
+tick0 :: Double -> Tick
+tick0 sample = Tick sample 0 0 0 0
+
+-- How much additional weight to give to the latest work values
+factor :: Double
+factor = 1.2
+
+tick :: Progress -> Tick -> (Tick, String)
+tick p tickOld@Tick{..}
+        | done == 0 = (tick, display 1) -- no scaling, or we'd divide by zero
+        | done == done_ = (tick, display work_) -- use the last work rate
+        | otherwise = (tick{work_=newWork, done_=done, step_=step'}, display newWork)
+    where
+        step' = step+sample
+        tick = tickOld{step=step'}
+        done = progressDone p
+        todo = progressTodo p
+
+        newWork = ((step_ * work_) + ((done - done_) * factor)) /
+                  ((step_ + ((step' - step_) * factor)))
+
+        display work = time ++ "s (" ++ perc ++ "%)"
+            where guess = todo / work
+                  (mins,secs) = divMod (ceiling guess) (60 :: Int)
+                  time = (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs
+                  perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
 
 
 {-# NOINLINE xterm #-}
@@ -120,7 +158,6 @@ xterm :: Bool
 xterm = System.IO.Unsafe.unsafePerformIO $
     Control.Exception.catch (fmap (== "xterm") $ getEnv "TERM") $
     \(e :: SomeException) -> return False
-
 
 
 -- | Set the title of the current console window to the given text. If the
