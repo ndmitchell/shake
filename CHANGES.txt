@@ -1,6 +1,6 @@
 Changelog for Shake
 
-    Improve profiling error messages
+    Improve profiling report error messages
     Add a Command module, with alternatives to system' etc.
     #593, don't assume doesDirectoryExist = not . doesFileExist
     #594, swap how traced messages are printed out
