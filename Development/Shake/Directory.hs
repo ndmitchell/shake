@@ -230,8 +230,8 @@ partitionM f (x:xs) = do
 --   Some examples:
 --
 -- @
---   'removeFiles' \"output\" [\"\/\/*\"]
---   'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"]
+-- 'removeFiles' \"output\" [\"\/\/*\"]
+-- 'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"]
 -- @
 --
 --   This function is often useful when writing a @clean@ action for your build system,

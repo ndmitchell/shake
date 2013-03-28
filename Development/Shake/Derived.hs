@@ -39,7 +39,9 @@ system' path args = do
 --   This function will raise an error if the exit code is non-zero.
 --   Before running 'systemCwd' make sure you 'need' any required files.
 --
--- > systemCwd "/usr/MyDirectory" "pwd" []
+-- @
+-- 'systemCwd' \"\/usr\/MyDirectory\" \"pwd\" []
+-- @
 systemCwd :: FilePath -> FilePath -> [String] -> Action ()
 systemCwd cwd path args = do
     let path2 = toNative path

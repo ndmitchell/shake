@@ -7,7 +7,7 @@
 --import "Development.Shake"
 --import "Development.Shake.FilePath"
 --
---main = 'shake' 'shakeOptions' $ do
+--main = 'shakeArgs' 'shakeOptions' $ do
 --    'want' [\"result.tar\"]
 --    \"*.tar\" '*>' \\out -> do
 --        contents <- 'readFileLines' $ 'Development.Shake.FilePath.replaceExtension' out \"txt\"
@@ -35,17 +35,13 @@
 -- * If @ghc --make@ or @cabal@ is capable of building your project, use that instead. Custom build systems are
 --   necessary for many complex projects, but many projects are not complex.
 --
--- * The CmdArgs package (<http://hackage.haskell.org/package/cmdargs/>) is well suited to providing
---   command line parsing for build systems, often using flags to set fields in 'shakeOptions'.
+-- * The 'shakeArgs' function automatically handles command line arguments. To define non-file targets use 'phony'.
 --
 -- * Put all result files in a distinguished directory, for example @_make@. You can implement a @clean@
 --   command by removing that directory, using @'removeFilesAfter' \"_make\" [\"\/\/\*\"]@.
 --
 -- * To obtain parallel builds set 'shakeThreads' to a number greater than 1. You may also need to
 --   compile with @-threaded@.
---
--- * Often the 'want' commands will be determined by command line arguments, to mirror the behaviour of @make@
---   targets. For a default set of 'want' commands that you later override, 'withoutActions' can be useful.
 --
 -- * Lots of compilers produce @.o@ files. To avoid overlapping rules, use @.c.o@ for C compilers,
 --   @.hs.o@ for Haskell compilers etc.

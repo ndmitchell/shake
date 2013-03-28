@@ -130,7 +130,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpack x_ in
 
 
 -- | Declare a phony action, this is an action that does not produce a file, and will be rerun
---   in every execution that requires it. You can demand 'phony' rules using 'want'/'need'.
+--   in every execution that requires it. You can demand 'phony' rules using 'want' \/ 'need'.
 phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpack x_ in
     if name /= x then Nothing else Just $ do

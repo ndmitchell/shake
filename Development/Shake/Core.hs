@@ -215,7 +215,7 @@ data SAction = SAction
     ,traces :: [Trace] -- in reverse
     }
 
--- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'need' to execute files.
+-- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
 --   Action values are used by 'rule' and 'action'.
 newtype Action a = Action (StateT SAction IO a)
     deriving (Monad, MonadIO, Functor, Applicative)
