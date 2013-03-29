@@ -43,7 +43,7 @@ extra-source-files:
     Examples/C/constants.c
     Examples/C/constants.h
     Examples/C/main.c
-    Examples/MakeTutor/Makefile.txt
+    Examples/MakeTutor/Makefile
     Examples/MakeTutor/hellofunc.c
     Examples/MakeTutor/hellomake.c
     Examples/MakeTutor/hellomake.h
