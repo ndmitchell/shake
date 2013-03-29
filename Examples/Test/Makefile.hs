@@ -27,4 +27,5 @@ test build obj = do
 
     copyTo "Examples/MakeTutor" "MakeTutor"
     build ["--directory=" ++ obj "MakeTutor","--no-report"]
+    build ["--directory=" ++ obj "MakeTutor","--no-report"]
     build ["--directory=" ++ obj "MakeTutor","@clean","--no-report"]
