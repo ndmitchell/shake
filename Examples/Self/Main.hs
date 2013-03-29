@@ -4,6 +4,7 @@ module Examples.Self.Main(main) where
 
 import Development.Shake
 import Development.Shake.Classes
+import Development.Shake.Command
 import Development.Shake.FilePath
 import Examples.Util
 
@@ -25,7 +26,7 @@ main = shaken noTest $ \args obj -> do
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
 
     ghcPkg <- addOracle $ \GhcPkg{} -> do
-        (out,_) <- quietly $ systemOutput "ghc-pkg" ["list","--simple-output"]
+        Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
         return $ words out
 
     ghcFlags <- addOracle $ \GhcFlags{} -> do
@@ -36,7 +37,7 @@ main = shaken noTest $ \args obj -> do
             -- since ghc-pkg includes the ghc package, it changes if the version does
             ghcPkg $ GhcPkg ()
             flags <- ghcFlags $ GhcFlags ()
-            system' "ghc" $ args ++ flags
+            cmd "ghc" flags args
 
     obj "/*.exe" *> \out -> do
         src <- readFileLines $ replaceExtension out "deps"
