@@ -141,7 +141,7 @@ whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
     ,"main -j6"
     ,"main clean"
-    ,"1:25m (15%)"
+    ,"1m25s (15%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
     ,"# command-name file-name"
     ]

@@ -80,8 +80,8 @@ progressTodo Progress{..} =
 --   This function polls the progress information every /n/ seconds, produces a status
 --   message and displays it using the display function.
 --
---   Typical status messages will take the form of @1:25m (15%)@, indicating that the build
---   is predicted to complete in 1min 25sec, and 15% of the necessary build time has elapsed.
+--   Typical status messages will take the form of @1m25s (15%)@, indicating that the build
+--   is predicted to complete in 1 minute 25 seconds (85 seconds total), and 15% of the necessary build time has elapsed.
 --   This function uses past observations to predict future behaviour, and as such, is only
 --   guessing. The time is likely to go up as well as down, and will be less accurate from a
 --   clean build (as the system has fewer past observations).
