@@ -56,12 +56,3 @@ simplifyExpr = transformExpr f
         g (Lit x:Lit y:xs) = g $ Lit (x ++ y) : xs
         g (x:xs) = x : g xs
         g [] = []
-
-
-substitute :: [(String, Expr)] -> Expr -> Expr
-substitute vars = simplifyExpr . transformExpr (f [])
-    where
-        f seen (Var x) | x `elem` seen = error $ "Recursion in variables, " ++ show seen
-                       | Just y <- lookup x vars = f (x:seen) y
-        f seen x = descendExpr (f seen) x
-
