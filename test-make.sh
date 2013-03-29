@@ -10,7 +10,7 @@ DEFAULT_TESTS=" \
     "
 
 mkdir --parents .hpc/shake
-ghc -hide-package=hashmap -main-is Development.Make.Main -package transformers --make Development/Make/Main.hs Paths.hs -w -odir .hpc/shake -hidir .hpc/shake -o .hpc/shake/shake
+ghc -hide-package=hashmap -package transformers --make Main.hs Paths.hs -w -odir .hpc/shake -hidir .hpc/shake -o .hpc/shake/shake
 SHAKE=`pwd`/.hpc/shake/shake
 TESTS=$*
 if [ "$TESTS" == "" ]
