@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 
 module Examples.Test.Docs(main) where
 
