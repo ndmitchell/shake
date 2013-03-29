@@ -208,6 +208,7 @@ executable shake-test
         Examples.Test.Files
         Examples.Test.Journal
         Examples.Test.Lint
+        Examples.Test.Makefile
         Examples.Test.Oracle
         Examples.Test.Pool
         Examples.Test.Progress

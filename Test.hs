@@ -25,23 +25,25 @@ import qualified Examples.Test.FilePath as FilePath
 import qualified Examples.Test.FilePattern as FilePattern
 import qualified Examples.Test.Journal as Journal
 import qualified Examples.Test.Lint as Lint
+import qualified Examples.Test.Makefile as Makefile
 import qualified Examples.Test.Oracle as Oracle
 import qualified Examples.Test.Pool as Pool
 import qualified Examples.Test.Progress as Progress
 import qualified Examples.Test.Random as Random
 import qualified Examples.Test.Resources as Resources
 
-import qualified Development.Make.Main as Makefile
+import qualified Development.Make.Main as Make
 
 
-fakes = ["clean" * clean, "test" * test, "makefile" * makefile]
+fakes = ["clean" * clean, "test" * test, "make" * makefile]
     where (*) = (,)
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
-        ,"journal" * Journal.main, "lint" * Lint.main, "pool" * Pool.main, "random" * Random.main
+        ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main
+        ,"pool" * Pool.main, "random" * Random.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main]
     where (*) = (,)
@@ -68,7 +70,7 @@ main = do
 makefile :: IO () -> IO ()
 makefile _ = do
     args <- getArgs
-    withArgs (drop 1 args) Makefile.main
+    withArgs (drop 1 args) Make.main
 
 
 clean :: IO () -> IO ()
