@@ -101,7 +101,7 @@ convert rs = match ??> run
                         env <- liftIO $ addEnv "@" Equals (Lit target) preEnv
                         pre <- liftIO $ askEnv env preExp
                         vp <- liftIO $ fmap splitSearchPath $ askEnv env $ Var "VPATH"
-                        pre <- mapM (vpath vp) $ words pre
+                        pre <- mapM (vpath vp) $ words $ op pre
                         return (pre, [cmds r])
             mapM_ (need_ . return) deps
             forM_ cmds $ \(env,cmd) -> do
