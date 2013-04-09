@@ -206,6 +206,9 @@ class CmdResult a where
 instance CmdResult Exit where
     cmdResult = ([ResultCode $ ExitSuccess], \[ResultCode x] -> Exit x)
 
+instance CmdResult ExitCode where
+    cmdResult = ([ResultCode $ ExitSuccess], \[ResultCode x] -> x)
+
 instance CmdResult Stdout where
     cmdResult = ([ResultStdout ""], \[ResultStdout x] -> Stdout x)
 

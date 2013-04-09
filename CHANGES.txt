@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add CmdResult instance for ExitCode
 0.10.2
     Require process-1.1 or above
     Improve progress guesses (use exponential decay of work rate)
