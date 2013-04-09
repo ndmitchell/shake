@@ -186,15 +186,15 @@ saneCommandForUser cmd args = unwords $ map f $ cmd:args
 
 -- | Collect the @stdout@ of the process.
 --   If you are collecting the @stdout@, it will not be echoed to the terminal, unless you include 'EchoStdout'.
-newtype Stdout = Stdout String
+newtype Stdout = Stdout {fromStdout :: String}
 
 -- | Collect the @stderr@ of the process.
 --   If you are collecting the @stderr@, it will not be echoed to the terminal, unless you include 'EchoStderr'.
-newtype Stderr = Stderr String
+newtype Stderr = Stderr {fromStderr :: String}
 
 -- | Collect the 'ExitCode' of the process.
 --   If you do not collect the exit code, any 'ExitFailure' will cause an exception.
-newtype Exit = Exit ExitCode
+newtype Exit = Exit {fromExit :: ExitCode}
 
 -- | A class for specifying what results you want to collect from a process.
 --   Values are formed of 'Stdout', 'Stderr', 'Exit' and tuples of those.
