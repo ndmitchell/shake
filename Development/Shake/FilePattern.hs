@@ -78,9 +78,9 @@ match _ _ = []
 --   Some examples that match:
 --
 -- @
--- \"//*.c\" '?==' \"foo\/bar\/baz.c\"
+-- \"\/\/*.c\" '?==' \"foo\/bar\/baz.c\"
 -- \"*.c\" '?==' \"baz.c\"
--- \"//*.c\" '?==' \"baz.c\"
+-- \"\/\/*.c\" '?==' \"baz.c\"
 -- \"test.c\" '?==' \"test.c\"
 -- @
 --
@@ -94,7 +94,7 @@ match _ _ = []
 --   An example that only matches on Windows:
 --
 -- @
--- \"foo/bar\" '?==' \"foo\\\\bar\"
+-- \"foo\/bar\" '?==' \"foo\\\\bar\"
 -- @
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) p x = not $ null $ match (pattern $ lexer p) (True, x)
