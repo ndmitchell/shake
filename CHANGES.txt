@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Upgrade to Flot-0.8
     Small documentation markup fixes
 0.10.2
     Require process-1.1 or above
