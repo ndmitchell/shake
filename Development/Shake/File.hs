@@ -100,7 +100,7 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 --   necessary when calling 'Development.Shake.system''. As an example:
 --
 -- @
--- \"//*.rot13\" '*>' \\out -> do
+-- \"\/\/*.rot13\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
 --     'Development.Shake.system'' \"rot13\" [src,\"-o\",out]
