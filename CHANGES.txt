@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.10.3
     Upgrade to Flot-0.8
     Small documentation markup fixes
 0.10.2
