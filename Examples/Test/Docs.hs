@@ -117,6 +117,11 @@ undefDots ('.':'.':'.':xs) = "undefined" ++ (if "..." `isSuffixOf` xs then "" el
 undefDots xs = onTail undefDots xs
 
 strip :: String -> String
+strip x
+    | Just x <- stripPrefix "<em>" x
+    , (a,b) <- break (== '<') x
+    , not $ ("</em>" `isPrefixOf` b) && a `elem` italics
+    = error $ "Unexpected italics in code block: " ++ a ++ take 5 b ++ "..."
 strip ('<':xs) = strip $ drop 1 $ dropWhile (/= '>') xs
 strip ('&':xs)
     | Just xs <- stripPrefix "quot;" xs = '\"' : strip xs
@@ -128,6 +133,9 @@ strip xs = onTail strip xs
 onTail f (x:xs) = x : f xs
 onTail f [] = []
 
+
+italics :: [String]
+italics = words "extension command-name file-name"
 
 whitelist :: String -> Bool
 whitelist x | takeExtension x `elem` words ".txt .hi .o .exe .tar .cpp" = True
