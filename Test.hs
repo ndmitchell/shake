@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 module Main(main) where
 
@@ -52,6 +53,11 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
 main :: IO ()
 main = do
     xs <- getArgs
+#if __GLASGOW_HASKELL__ >= 706
+    exePath <- getExecutablePath
+#else
+    exePath <- getProgName
+#endif
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
         Nothing -> putStrLn $ unlines
             ["Welcome to the Shake demo"
@@ -61,7 +67,7 @@ main = do
             ,""
             ,"As an example, try:"
             ,""
-            ,"  main self --threads2 --loud"
+            ,unwords ["  ", exePath, "self",  "--jobs=2", "--trace"]
             ,""
             ,"Which will build Shake, using Shake, on 2 threads."]
         Just main -> main sleepFileTime
