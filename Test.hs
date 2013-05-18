@@ -1,11 +1,14 @@
 
 module Main(main) where
 
+import Control.Applicative
 import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
+import System.Directory
 import System.Environment
+import System.FilePath
 import Development.Shake.Pool
 
 import Examples.Util(sleepFileTime)
@@ -48,10 +51,13 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"oracle" * Oracle.main, "progress" * Progress.main]
     where (*) = (,)
 
+getMainPath :: IO FilePath
+getMainPath = combine <$> getCurrentDirectory <*> getProgName
 
 main :: IO ()
 main = do
     xs <- getArgs
+    mainPath <- getMainPath
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
         Nothing -> putStrLn $ unlines
             ["Welcome to the Shake demo"
@@ -61,7 +67,7 @@ main = do
             ,""
             ,"As an example, try:"
             ,""
-            ,"  main self --threads2 --loud"
+            ,"  " ++ mainPath ++ " --jobs=2 --trace"
             ,""
             ,"Which will build Shake, using Shake, on 2 threads."]
         Just main -> main sleepFileTime
