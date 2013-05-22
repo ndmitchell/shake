@@ -77,6 +77,8 @@ module Development.Shake(
     Progress(..), progressSimple, progressDisplay, progressTitlebar,
     -- ** Verbosity
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
+    -- * Error Handling
+    ShakeException, innerException,
     -- * Utility functions
     module Development.Shake.Derived,
     removeFiles, removeFilesAfter,
@@ -108,6 +110,7 @@ import Development.Shake.Derived
 import Development.Shake.Progress
 import Development.Shake.Args
 import Development.Shake.Shake
+import Development.Shake.Errors
 
 import Development.Shake.Directory
 import Development.Shake.File

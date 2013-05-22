@@ -2,7 +2,7 @@
 
 -- | Errors seen by the user
 module Development.Shake.Errors(
-    ShakeException(..),
+    ShakeException(..), innerException,
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
     errorMultipleRulesMatch, errorRuleRecursion,
     err
@@ -111,6 +111,10 @@ data ShakeException = ShakeException
         SomeException -- Inner exception that was raised.
         -- If I make these Haddock comments, then Haddock dies
     deriving Typeable
+
+-- | Inner exception that was raised.
+innerException :: ShakeException -> SomeException
+innerException (ShakeException _ inner) = inner
 
 instance Exception ShakeException
 
