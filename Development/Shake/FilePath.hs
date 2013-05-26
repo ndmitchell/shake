@@ -19,6 +19,8 @@ import System.FilePath.Posix hiding (normalise, (</>), combine)
 import qualified System.FilePath as Native
 import Data.List
 
+infixr 5  </>
+
 
 -- | Drop the first directory from a 'FilePath'. Should only be used on
 --   relative paths.
