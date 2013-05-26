@@ -18,8 +18,7 @@ main = shaken test $ \args obj -> do
     want $ map obj ["a.out","b.out","c.out"]
     obj "*.out" *> \out -> do
         liftIO $ atomicModifyIORef rebuilt $ \a -> (a+1,())
-        let src = replaceExtension out "in"
-        copyFile' src out
+        copyFile' (out -<.> "in") out
 
 
 test build obj = do

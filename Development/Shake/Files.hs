@@ -36,7 +36,7 @@ instance Rule FilesQ FilesA where
 --
 -- @
 -- [\"*.o\",\"*.hi\"] '*>>' \\[o,hi] -> do
---     let hs = 'Development.Shake.FilePath.replaceExtension' o \"hs\"
+--     let hs = o 'Development.Shake.FilePath.-<.>' \"hs\"
 --     'Development.Shake.need' ... -- all files the .hs import
 --     'Development.Shake.system'' \"ghc\" [\"-c\",hs]
 -- @

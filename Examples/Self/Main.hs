@@ -40,30 +40,30 @@ main = shaken noTest $ \args obj -> do
             cmd "ghc" flags args
 
     obj "/*.exe" *> \out -> do
-        src <- readFileLines $ replaceExtension out "deps"
+        src <- readFileLines $ out -<.> "deps"
         let os = map (obj . moduleToFile "o") $ "Main":src
         need os
         ghc $ ["-o",out] ++ os
 
     obj "/*.deps" *> \out -> do
-        dep <- readFileLines $ replaceExtension out "dep"
+        dep <- readFileLines $ out -<.> "dep"
         let xs = map (obj . moduleToFile "deps") dep
         need xs
         ds <- fmap (nub . sort . (++) dep . concat) $ mapM readFileLines xs
         writeFileLines out ds
 
     obj "/*.dep" *> \out -> do
-        src <- readFile' $ fixPaths $ unobj $ replaceExtension out "hs"
+        src <- readFile' $ fixPaths $ unobj $ out -<.> "hs"
         let xs = hsImports src
         xs <- filterM (doesFileExist . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
     obj "/*.hi" *> \out -> do
-        need [replaceExtension out "o"]
+        need [out -<.> "o"]
 
     obj "/*.o" *> \out -> do
-        dep <- readFileLines $ replaceExtension out "dep"
-        let hs = fixPaths $ unobj $ replaceExtension out "hs"
+        dep <- readFileLines $ out -<.> "dep"
+        let hs = fixPaths $ unobj $ out -<.> "hs"
         need $ hs : map (obj . moduleToFile "hi") dep
         ghc ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"]
 

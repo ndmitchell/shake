@@ -10,7 +10,7 @@
 --main = 'shakeArgs' 'shakeOptions' $ do
 --    'want' [\"result.tar\"]
 --    \"*.tar\" '*>' \\out -> do
---        contents <- 'readFileLines' $ 'Development.Shake.FilePath.replaceExtension' out \"txt\"
+--        contents \<- 'readFileLines' $ out 'Development.Shake.FilePath.-<.>' \"txt\"
 --        'need' contents
 --        'system'' \"tar\" $ [\"-cf\",out] ++ contents
 -- @

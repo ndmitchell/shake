@@ -11,6 +11,7 @@
 module Development.Shake.FilePath(
     module System.FilePath.Posix,
     dropDirectory1, takeDirectory1, normalise,
+    (-<.>),
     toNative, (</>), combine,
     exe
     ) where
@@ -20,6 +21,7 @@ import qualified System.FilePath as Native
 import Data.List
 
 infixr 5  </>
+infixr 7  -<.>
 
 
 -- | Drop the first directory from a 'FilePath'. Should only be used on
@@ -68,6 +70,9 @@ toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = combine
 
+-- | Remove the current extension and add another, an alias for 'replaceExtension'.
+(-<.>) :: FilePath -> String -> FilePath
+(-<.>) = replaceExtension
 
 -- | Combine two file paths. Any leading @.\/@ or @..\/@ components in the right file
 --   are eliminated.
