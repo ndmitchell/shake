@@ -2,7 +2,7 @@
 
 -- | Errors seen by the user
 module Development.Shake.Errors(
-    ShakeException(..), innerException,
+    ShakeException(..),
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
     errorMultipleRulesMatch, errorRuleRecursion,
     err
@@ -107,14 +107,11 @@ isOracle t = con `elem` ["OracleQ","OracleA"]
 -- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
 --   rules, will be raised using this exception type.
 data ShakeException = ShakeException
-        [String] -- Entries on the stack, starting at the top of the stack.
-        SomeException -- Inner exception that was raised.
-        -- If I make these Haddock comments, then Haddock dies
-    deriving Typeable
-
--- | Inner exception that was raised.
-innerException :: ShakeException -> SomeException
-innerException (ShakeException _ inner) = inner
+  { backtrace :: [String]
+    -- ^ Entries on the stack, starting at the top of the stack.
+  , innerException :: SomeException
+    -- ^ Inner exception that was raised.
+  } deriving Typeable
 
 instance Exception ShakeException
 

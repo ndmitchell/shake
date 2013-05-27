@@ -78,7 +78,7 @@ module Development.Shake(
     -- ** Verbosity
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
     -- * Error Handling
-    ShakeException, innerException,
+    ShakeException(..),
     -- * Utility functions
     module Development.Shake.Derived,
     removeFiles, removeFilesAfter,
