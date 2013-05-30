@@ -158,6 +158,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
         continue h mp = do
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
+                           -- also lets us recover in the case of corruption
             flushThread outputErr shakeFlush h $ \out ->
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
