@@ -151,11 +151,12 @@ executable shake
             build-depends: unix >= 2.5.1
 
     other-modules:
+        Development.Make.All
         Development.Make.Env
-        Development.Make.Main
         Development.Make.Parse
         Development.Make.Rules
         Development.Make.Type
+        Start
 
 
 executable shake-test
@@ -186,8 +187,8 @@ executable shake-test
             build-depends: unix >= 2.5.1
 
     other-modules:
+        Development.Make.All
         Development.Make.Env
-        Development.Make.Main
         Development.Make.Parse
         Development.Make.Rules
         Development.Make.Type
@@ -214,3 +215,4 @@ executable shake-test
         Examples.Test.Progress
         Examples.Test.Random
         Examples.Test.Resources
+        Start

@@ -3,7 +3,7 @@ module Examples.Test.Makefile(main) where
 
 import Development.Shake(action, liftIO)
 import Development.Shake.FilePath
-import qualified Development.Make.Main as Makefile
+import qualified Start as Makefile
 import System.Environment
 import System.Directory
 import Examples.Util

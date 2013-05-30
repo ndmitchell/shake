@@ -33,7 +33,7 @@ import qualified Examples.Test.Progress as Progress
 import qualified Examples.Test.Random as Random
 import qualified Examples.Test.Resources as Resources
 
-import qualified Development.Make.Main as Make
+import qualified Start as Start
 
 
 fakes = ["clean" * clean, "test" * test, "make" * makefile]
@@ -76,7 +76,7 @@ main = do
 makefile :: IO () -> IO ()
 makefile _ = do
     args <- getArgs
-    withArgs (drop 1 args) Make.main
+    withArgs (drop 1 args) Start.main
 
 
 clean :: IO () -> IO ()
