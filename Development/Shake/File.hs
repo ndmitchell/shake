@@ -16,10 +16,12 @@ import System.Directory
 import Development.Shake.Core
 import Development.Shake.Types
 import Development.Shake.Classes
-import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
 import Development.Shake.Locks
+
+import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
+
 
 infix 1 *>, ?>, **>
 
