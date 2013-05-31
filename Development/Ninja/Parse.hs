@@ -3,8 +3,10 @@
 module Development.Ninja.Parse(parse) where
 
 import Development.Ninja.Type
+import Control.Arrow
 import Data.Char
 import Data.List
+import Data.Maybe
 
 
 parse :: FilePath -> IO [Stmt]
@@ -22,28 +24,70 @@ parseNinja xs = map (uncurry parseStmt) $ split $ filter (not . all isSpace) $ m
 
         comments = takeWhile (/= '#')
 
-        split (x:xs) = (x,a) : split b
+        split (x:xs) = (x,map (dropWhile isSpace) a) : split b
             where (a,b) = span (all isSpace . take 1) xs
         split [] = []
 
 
 parseStmt :: String -> [String] -> Stmt
-parseStmt stmt extra = case words stmt of
-    var:"=":value -> Define var $ parseExpr value
-    "rule":name:[] -> Rule name $ parseBinds extra
-    "build":file:"phony":arg:[] -> Phony (init file) arg
-    "build":file:name:arg -> Build (init file) name arg $ parseBinds extra
-    "default":file -> Default file
-    _ -> error $ "Unknown Ninja statement: " ++ stmt
+parseStmt stmt extra
+    | Just (var,val) <- parseBind stmt = Define var val
+    | ("rule",name) <- splitWhite stmt = Rule name $ parseBinds extra
+    | ("default",files) <- splitWhite stmt = Default $ parseExprs files
+    | ("build",rest) <- splitWhite stmt,
+           (out,rest) <- splitColon rest,
+           (rule,rest) <- splitWhite $ dropWhile isSpace rest
+           = Build (parseExprs out) rule (parseExprs rest) (parseBinds extra)
+    | otherwise = error $ "Unknown Ninja statement: " ++ stmt
+
+
+splitWhite :: String -> (String, String)
+splitWhite x = (a, dropWhile isSpace b)
+    where (a,b) = break isSpace x
+
+splitColon :: String -> (String, String)
+splitColon (':':xs) = ("", xs)
+splitColon ('$':':':xs) = first ("$:"++) $ splitColon xs
+splitColon (x:xs) = first (x:) $ splitColon xs
+splitColon [] = ("","")
+
+
+parseBind :: String -> Maybe (String, Expr)
+parseBind x
+    | (var,rest) <- splitWhite x, ("=",value) <- splitWhite rest = Just (var, parseExpr value)
+    | otherwise = Nothing
 
 
 parseBinds :: [String] -> [(String, Expr)]
-parseBinds = map f
+parseBinds = map $ \x -> fromMaybe (error $ "Unknown Ninja binding: " ++ x) $ parseBind x
+
+
+parseExpr :: String -> Expr
+parseExpr = split
     where
-        f x = case words x of
-                  var:"=":value -> (var, parseExpr value)
-                  _ -> error $ "Unknown Ninja binding: " ++ x
+        lit s (Lit x:xs) = Lit (s:x) : xs
+        lit s xs = Lit [s] : xs
+
+        split ('$':'$':xs) = lit '$' $ split xs
+        split ('$':' ':xs) = lit ' ' $ split xs
+        split ('$':':':xs) = lit ':' $ split xs
+        split ('$':'{':xs) = Var a : split (drop 1 b)
+            where (a,b) = break (== '}') xs
+        split ('$':xs) = Var a : split b
+            where (a,b) = span (\x -> isAlphaNum x || x == '_') xs
+        split (x:xs) = lit x $ split xs
+        split [] = []
 
 
-parseExpr :: [String] -> Expr
-parseExpr = map Lit
+parseExprs :: String -> [Expr]
+parseExprs = map parseExpr . split
+    where
+        split [] = []
+        split (x:xs) | isSpace x = [] : split (dropWhile isSpace xs)
+        split ('$':' ':xs) = add "$ " xs
+        split ('$':'$':xs) = add "$$" xs
+        split (x:xs) = add [x] xs
+
+        add x xs = case split xs of
+            [] -> [x]
+            a:b -> (x++a):b

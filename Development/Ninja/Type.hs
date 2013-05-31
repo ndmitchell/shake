@@ -13,17 +13,17 @@ data Stmt
         ,value :: Expr
         }
     | Build
-        {output :: FilePath
+        {output :: [Expr]
         ,rule :: String
-        ,inputs :: [FilePath]
+        ,inputs :: [Expr]
         ,bind :: [(String, Expr)]
         }
     | Phony
         {name :: String
-        ,alias :: FilePath
+        ,alias :: Expr
         }
     | Default
-        {target :: [FilePath]}
+        {target :: [Expr]}
     | Pool
         {name :: String
         ,depth :: Int}
