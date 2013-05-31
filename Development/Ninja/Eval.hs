@@ -44,7 +44,9 @@ ninja0 = Ninja Map.empty (Env Map.empty) Map.empty Map.empty [] [] Map.empty
 
 data Builder = Builder
     {ruleName :: String
-    ,dependencies :: [FilePath]
+    ,deps:: [FilePath]
+    ,impDeps :: [FilePath]
+    ,ordDeps :: [FilePath]
     ,bindings :: [(String,Expr)]
     } deriving Show
 
@@ -57,12 +59,21 @@ eval = foldl f ninja0
         f env Rule{..} = env{rules = Map.insert name bind $ rules env}
         f env Define{..} = env{defines = addEnv name (g env value) $ defines env}
         f env Default{..} = env{defaults = map (g env) target ++ defaults env}
-        f env Pool{..} = env{pools = Map.insert name depth $ pools env}
+        f env Pool{..} = env{pools = Map.insert name (maybe 1 (read . g env) depth) $ pools env}
+        f env Scope{..} = foldl f env nested
         f env Build{..}
-            | rule == "phony" = env{phonys = [(o,dependencies builder) | o <- os] ++ phonys env}
+            | rule == "phony" = env{phonys = [(o,a) | o <- os] ++ phonys env}
             | [o] <- os = env{singles = Map.insert o builder $ singles env}
             | otherwise = env{multiples = foldl (\mp o -> Map.insert o (os,builder) mp) (multiples env) os}
             where
-                builder = Builder rule (map (g env) inputs) bind
+                (a,b,c) = splitDeps $ map (g env) inputs
+                builder = Builder rule a b c bind
                 os = map (g env) output
 
+
+splitDeps :: [String] -> ([String], [String], [String])
+splitDeps (x:xs) | x == "|" = ([],a++b,c)
+                 | x == "||" = ([],b,a++c)
+                 | otherwise = (x:a,b,c)
+    where (a,b,c) = splitDeps xs
+splitDeps [] = ([], [], [])

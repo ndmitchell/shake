@@ -22,7 +22,9 @@ data Stmt
         {target :: [Expr]}
     | Pool
         {name :: String
-        ,depth :: Int}
+        ,depth :: Maybe Expr}
+    | Scope
+        {nested :: [Stmt]}
       deriving Show
 
 type Expr = [Lexeme]

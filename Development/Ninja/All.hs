@@ -13,50 +13,55 @@ import System.Directory
 import qualified Data.HashMap.Strict as Map
 import Control.Monad
 import Data.List
-import Control.Arrow
 import Data.Char
 
 
 runNinja :: FilePath -> [String] -> IO (Rules ())
 runNinja file args = do
-    Ninja{..} <- fmap eval $ parse file
+    ninja@Ninja{..} <- fmap eval $ parse file
     return $ do
         pools <- fmap Map.fromList $ forM (Map.toList pools) $ \(name,depth) ->
             fmap ((,) name) $ newResource name depth
         want $ if null args then defaults else args
         forM_ phonys $ \(name,files) -> phony name $ need files
 
-        flip Map.member singles ?> \file -> do
-            let Builder{..} = singles Map.! file
-            let (deps, impdeps) = second (drop 1) $ break (== "|") dependencies
-            need $ deps ++ impdeps
-            case Map.lookup ruleName rules of
-                Nothing -> error $ "Ninja rule named " ++ ruleName ++ " is missing, required to build " ++ show file
-                Just bind2 -> do
-                    let env = addEnv "in_newline" (unlines deps) $
-                              addEnv "in" (unwords deps) $
-                              addEnv "out" file defines
-                    let f env (name,val) = addEnv name (askEnv env val) env
-                    let fs xs env = foldl f env xs
-                    env <- return $ fs bind2 $ fs bindings env
+        (\x -> fmap fst $ Map.lookup x multiples) ?>> \out ->
+            build ninja out $ snd $ multiples Map.! head out
 
-                    let rspfile_content = askEnv env $ var "rspfile_content"
-                    applyRspfile env rspfile_content $ \env -> do
-                        let commandline = askEnv env $ var "command"
-                        let depfile = askEnv env $ var "depfile"
-                        let deps = askEnv env $ var "deps"
-                        let description = askEnv env $ var "description"
+        flip Map.member singles ?> \out ->
+            build ninja [out] $ singles Map.! out
 
-                        when (description /= "") $ putNormal description
-                        liftIO $ print commandline
-                        if deps == "" then do
-                            command_ [Shell] commandline []
-                         else do
-                            Stdout out <- command [Shell] commandline []
-                            need $ applyDeps deps out
-                        when (depfile /= "") $ do
-                            depfile <- liftIO $ readFile depfile
-                            need $ applyDepfile depfile
+
+build :: Ninja -> [FilePath] -> Builder -> Action ()
+build Ninja{..} out Builder{..} = do
+    need $ deps ++ impDeps ++ ordDeps
+    case Map.lookup ruleName rules of
+        Nothing -> error $ "Ninja rule named " ++ ruleName ++ " is missing, required to build " ++ show out
+        Just bind2 -> do
+            let env = addEnv "in_newline" (unlines deps) $
+                      addEnv "in" (unwords deps) $
+                      addEnv "out" (unwords out) defines
+            let f env (name,val) = addEnv name (askEnv env val) env
+            let fs xs env = foldl f env xs
+            env <- return $ fs bind2 $ fs bindings env
+
+            let rspfile_content = askEnv env $ var "rspfile_content"
+            applyRspfile env rspfile_content $ \env -> do
+                let commandline = askEnv env $ var "command"
+                let depfile = askEnv env $ var "depfile"
+                let deps = askEnv env $ var "deps"
+                let description = askEnv env $ var "description"
+
+                when (description /= "") $ putNormal description
+                liftIO $ print commandline
+                if deps == "" then do
+                    command_ [Shell] commandline []
+                 else do
+                    Stdout stdout <- command [Shell] commandline []
+                    need $ applyDeps deps stdout
+                when (depfile /= "") $ do
+                    depfile <- liftIO $ readFile depfile
+                    need $ applyDepfile depfile
 
 
 

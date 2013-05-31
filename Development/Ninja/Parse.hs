@@ -12,11 +12,11 @@ import Data.Maybe
 parse :: FilePath -> IO [Stmt]
 parse file = do
     src <- if file == "-" then getContents else readFile file
-    return $ parseNinja src
+    parseStmts src
 
 
-parseNinja :: String -> [Stmt]
-parseNinja xs = map (uncurry parseStmt) $ split $ filter (not . all isSpace) $ map comments $ continuations $ lines xs
+parseStmts :: String -> IO [Stmt]
+parseStmts xs = mapM (uncurry parseStmt) $ split $ filter (not . all isSpace) $ map comments $ continuations $ lines xs
     where
         continuations (x:y:xs) | "$" `isSuffixOf` x = continuations $ (init x ++ dropWhile isSpace y):xs
         continuations (x:xs) = x : continuations xs
@@ -29,15 +29,17 @@ parseNinja xs = map (uncurry parseStmt) $ split $ filter (not . all isSpace) $ m
         split [] = []
 
 
-parseStmt :: String -> [String] -> Stmt
+parseStmt :: String -> [String] -> IO Stmt
 parseStmt stmt extra
-    | Just (var,val) <- parseBind stmt = Define var val
-    | ("rule",name) <- splitWhite stmt = Rule name $ parseBinds extra
-    | ("default",files) <- splitWhite stmt = Default $ parseExprs files
+    | Just (var,val) <- parseBind stmt = return $ Define var val
+    | ("rule",name) <- splitWhite stmt = return $ Rule name $ parseBinds extra
+    | ("default",files) <- splitWhite stmt = return $ Default $ parseExprs files
+    | ("pool",name) <- splitWhite stmt = return $ Pool name $ lookup "depth" $ parseBinds extra
     | ("build",rest) <- splitWhite stmt,
            (out,rest) <- splitColon rest,
            (rule,rest) <- splitWhite $ dropWhile isSpace rest
-           = Build (parseExprs out) rule (parseExprs rest) (parseBinds extra)
+           = return $ Build (parseExprs out) rule (parseExprs rest) (parseBinds extra)
+    | ("subninja",file) <- splitWhite stmt = fmap Scope $ parse file
     | otherwise = error $ "Unknown Ninja statement: " ++ stmt
 
 
