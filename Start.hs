@@ -2,8 +2,10 @@
 module Start(main) where
 
 import Development.Make.All
+import Development.Ninja.All
 import System.Environment
 import Development.Shake
+import Development.Shake.FilePath
 import qualified System.Directory as IO
 import System.Console.GetOpt
 
@@ -16,7 +18,10 @@ main = do
             makefile <- case reverse [x | UseMakefile x <- opts] of
                 x:_ -> return x
                 _ -> findMakefile
-            fmap Just $ runMakefile makefile targets
+            if takeExtension makefile == ".ninja" then
+                fmap Just $ runNinja makefile targets
+             else
+                fmap Just $ runMakefile makefile targets
 
 
 data Flag = UseMakefile FilePath
@@ -29,5 +34,7 @@ findMakefile = do
     b <- IO.doesFileExist "makefile"
     if b then return "makefile" else do
         b <- IO.doesFileExist "Makefile"
-        if b then return "Makefile" else
-            error "Could not find either `makefile' or `Makefile'"
+        if b then return "Makefile" else do
+            b <- IO.doesFileExist "build.ninja"
+            if b then return "build.ninja" else
+                error "Could not find `makefile', `Makefile' or `build.ninja'"

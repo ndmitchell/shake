@@ -156,6 +156,10 @@ executable shake
         Development.Make.Parse
         Development.Make.Rules
         Development.Make.Type
+        Development.Ninja.All
+        Development.Ninja.Eval
+        Development.Ninja.Parse
+        Development.Ninja.Type
         Start
 
 
@@ -192,6 +196,10 @@ executable shake-test
         Development.Make.Parse
         Development.Make.Rules
         Development.Make.Type
+        Development.Ninja.All
+        Development.Ninja.Eval
+        Development.Ninja.Parse
+        Development.Ninja.Type
         Examples.Util
         Examples.C.Main
         Examples.Self.Main
