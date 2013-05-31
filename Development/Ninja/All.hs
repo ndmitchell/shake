@@ -23,7 +23,7 @@ runNinja file args = do
     return $ do
         pools <- fmap Map.fromList $ forM (Map.toList pools) $ \(name,depth) ->
             fmap ((,) name) $ newResource name depth
-        want defaults
+        want $ if null args then defaults else args
         forM_ phonys $ \(name,file) -> phony name $ need [file]
 
         flip Map.member singles ?> \file -> do
