@@ -18,10 +18,6 @@ data Stmt
         ,inputs :: [Expr]
         ,bind :: [(String, Expr)]
         }
-    | Phony
-        {name :: String
-        ,alias :: Expr
-        }
     | Default
         {target :: [Expr]}
     | Pool

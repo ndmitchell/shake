@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, PatternGuards #-}
 
 -- | The IO in this module is only to evaluate an envrionment variable,
 --   the 'Env' itself it passed around purely.
@@ -34,7 +34,7 @@ data Ninja = Ninja
     ,defines :: Env
     ,singles :: Map.HashMap FilePath Builder
     ,multiples :: Map.HashMap FilePath ([FilePath], Builder)
-    ,phonys :: [(String, FilePath)]
+    ,phonys :: [(String, [FilePath])]
     ,defaults :: [FilePath]
     ,pools :: Map.HashMap String Int
     }
@@ -56,10 +56,10 @@ eval = foldl f ninja0
 
         f env Rule{..} = env{rules = Map.insert name bind $ rules env}
         f env Define{..} = env{defines = addEnv name (g env value) $ defines env}
-        f env Phony{..} = env{phonys = (name,g env alias) : phonys env}
         f env Default{..} = env{defaults = map (g env) target ++ defaults env}
         f env Pool{..} = env{pools = Map.insert name depth $ pools env}
         f env Build{..}
+            | rule == "phony" = env{phonys = [(o,dependencies builder) | o <- os] ++ phonys env}
             | [o] <- os = env{singles = Map.insert o builder $ singles env}
             | otherwise = env{multiples = foldl (\mp o -> Map.insert o (os,builder) mp) (multiples env) os}
             where
