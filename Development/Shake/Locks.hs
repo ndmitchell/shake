@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 
 module Development.Shake.Locks(
     Lock, newLock, withLock,
@@ -103,7 +104,7 @@ waitBarrier (Barrier x) = readMVar x
 -- \"*.o\" 'Development.Shake.*>' \\out ->
 --     'Development.Shake.system'' \"cl\" [\"-o\",out,...]
 -- @
-data Resource = Resource String Int (Var (Int,[(Int,IO ())]))
+data Resource = Resource {resourceName :: String, resourceMax :: Int, resourceVar :: Var (Int,[(Int,IO ())])}
 instance Show Resource where show (Resource name _ _) = "Resource " ++ name
 
 
@@ -120,10 +121,10 @@ newResourceIO name mx = do
 -- | Try to acquire a resource. Returns Nothing to indicate you have acquired with no blocking, or Just act to
 --   say after act completes (which will block) then you will have the resource.
 acquireResource :: Resource -> Int -> IO (Maybe (IO ()))
-acquireResource r@(Resource name mx var) want
+acquireResource r@Resource{..} want
     | want < 0 = error $ "You cannot acquire a negative quantity of " ++ show r ++ ", requested " ++ show want
-    | want > mx = error $ "You cannot acquire more than " ++ show mx ++ " of " ++ show r ++ ", requested " ++ show want
-    | otherwise = modifyVar var $ \(available,waiting) ->
+    | want > resourceMax = error $ "You cannot acquire more than " ++ show resourceMax ++ " of " ++ show r ++ ", requested " ++ show want
+    | otherwise = modifyVar resourceVar $ \(available,waiting) ->
         if want <= available then
             return ((available - want, waiting), Nothing)
         else do
@@ -133,7 +134,7 @@ acquireResource r@(Resource name mx var) want
 
 -- | You should only ever releaseResource that you obtained with acquireResource.
 releaseResource :: Resource -> Int -> IO ()
-releaseResource (Resource name mx var) i = modifyVar_ var $ \(available,waiting) -> f (available+i) waiting
+releaseResource Resource{..} i = modifyVar_ resourceVar $ \(available,waiting) -> f (available+i) waiting
     where
         f i ((wi,wa):ws) | wi <= i = wa >> f (i-wi) ws
                          | otherwise = do (i,ws) <- f i ws; return (i,(wi,wa):ws)
