@@ -33,6 +33,7 @@ foreign import stdcall "Windows.h SetConsoleTitleA" c_setConsoleTitle :: LPCSTR 
 --   status messages, which is implemented using this data type.
 data Progress = Progress
     {isRunning :: !Bool -- ^ Starts out 'True', becomes 'False' once the build has completed.
+    ,isFailure :: !(Maybe String) -- ^ Starts out 'Nothing', becomes 'Just' if a rule fails.
     ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
     ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run.
     ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required.
@@ -45,9 +46,10 @@ data Progress = Progress
     deriving (Eq,Ord,Show,Data,Typeable)
 
 instance Monoid Progress where
-    mempty = Progress True 0 0 0 0 0 0 0 (0,0)
+    mempty = Progress True Nothing 0 0 0 0 0 0 0 (0,0)
     mappend a b = Progress
         {isRunning = isRunning a && isRunning b
+        ,isFailure = isFailure a `mappend` isFailure b
         ,countSkipped = countSkipped a + countSkipped b
         ,countBuilt = countBuilt a + countBuilt b
         ,countUnknown = countUnknown a + countUnknown b
@@ -112,7 +114,7 @@ progressDisplayer sleep sample disp prog = do
                 disp "Finished"
              else do
                 (t, msg) <- return $ tick p t
-                disp msg
+                disp $ msg ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
                 loop $! t
 
 

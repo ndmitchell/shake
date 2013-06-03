@@ -252,13 +252,14 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let diagnostic = if shakeVerbosity >= Diagnostic then outputLocked Diagnostic . ("% "++) else const $ return ()
     let output v = outputLocked v . abbreviate shakeAbbreviations
 
-    except <- newVar (Nothing :: Maybe SomeException)
+    except <- newIORef (Nothing :: Maybe (String, SomeException))
     let staunch act | not shakeStaunch = act >> return ()
                     | otherwise = do
             res <- try act
             case res of
                 Left err -> do
-                    modifyVar_ except $ \v -> return $ Just $ fromMaybe err v
+                    let named = maybe "unknown rule" (\(ShakeException stack _) -> head stack) . cast
+                    atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                     let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
                     when (shakeVerbosity >= Quiet) $ output Quiet msg
                 Right _ -> return ()
@@ -278,7 +279,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     after <- newIORef []
     flip finally (writeIORef running False) $ do
         withDatabase opts diagnostic $ \database -> do
-            forkIO $ shakeProgress $ do running <- readIORef running; stats <- progress database; return stats{isRunning=running}
+            forkIO $ shakeProgress $ do
+                running <- readIORef running
+                failure <- fmap (fmap fst) $ readIORef except
+                stats <- progress database
+                return stats{isRunning=running, isFailure=failure}
             runPool (shakeDeterministic || shakeThreads == 1) shakeThreads $ \pool -> do
                 let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
                 mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
@@ -291,7 +296,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 when (shakeVerbosity >= Normal) $
                     output Normal $ "Writing HTML report to " ++ file
                 buildReport json file
-        maybe (return ()) throwIO =<< readVar except
+        maybe (return ()) (throwIO . snd) =<< readIORef except
         sequence_ . reverse =<< readIORef after
 
 

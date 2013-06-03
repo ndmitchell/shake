@@ -15,6 +15,7 @@ CORE
 
 Changelog for Shake
 
+    Add isFailure to ShakeProgress, and display in progressDisplay
     Add withResources
     Add -<.> alias for replaceExtension
     Add selectors on Stdout/Stdin/Exit
