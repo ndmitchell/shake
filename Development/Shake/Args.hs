@@ -129,7 +129,9 @@ shakeArgsWith baseOpts userOptions rules = do
         curdir <- getCurrentDirectory
         let redir = case changeDirectory of
                 Nothing -> id
-                Just d -> bracket_ (setCurrentDirectory d) (setCurrentDirectory curdir)
+                -- get the "html" directory so it caches with the current directory
+                -- required only for debug code
+                Just d -> bracket_ (getDataFileName "html" >> setCurrentDirectory d) (setCurrentDirectory curdir)
         (ran,res) <- redir $ do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
             rules <- rules user files
