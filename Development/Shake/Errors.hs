@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
+{-# LANGUAGE DeriveDataTypeable, PatternGuards, RecordWildCards #-}
 
 -- | Errors seen by the user
 module Development.Shake.Errors(
@@ -103,19 +103,19 @@ isOracle t = con `elem` ["OracleQ","OracleA"]
     where con = show $ fst $ splitTyConApp t
 
 
--- NOTE: Not currently public, to avoid pinning down the API yet
--- | All foreseen exception conditions thrown by Shake, such problems with the rules or errors when executing
---   rules, will be raised using this exception type.
+-- | Error representing all expected exceptions thrown by Shake.
+--   Problems when executing rules will be raising using this exception type.
 data ShakeException = ShakeException
-        [String] -- Entries on the stack, starting at the top of the stack.
-        SomeException -- Inner exception that was raised.
-        -- If I make these Haddock comments, then Haddock dies
+        {shakeExceptionTarget :: String -- ^ The target that was being built when the exception occured.
+        ,shakeExceptionStack :: [String]  -- ^ The stack of targets, where the 'shakeExceptionTarget' is last.
+        ,shakeExceptionInner :: SomeException -- ^ The underlying exception that was raised.
+        }
     deriving Typeable
 
 instance Exception ShakeException
 
 instance Show ShakeException where
-    show (ShakeException stack inner) = unlines $
+    show ShakeException{..} = unlines $
         "Error when running Shake build system:" :
-        map ("* " ++) stack ++
-        [show inner]
+        map ("* " ++) shakeExceptionStack ++
+        [show shakeExceptionInner]

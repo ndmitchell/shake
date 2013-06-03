@@ -1,6 +1,7 @@
 
 Changelog for Shake
 
+    Expose ShakeException
     Add isFailure to ShakeProgress, and display in progressDisplay
     Add withResources
     Add -<.> alias for replaceExtension

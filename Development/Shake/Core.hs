@@ -258,7 +258,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             res <- try act
             case res of
                 Left err -> do
-                    let named = maybe "unknown rule" (\(ShakeException stack _) -> head stack) . cast
+                    let named = maybe "unknown rule" shakeExceptionTarget . cast
                     atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                     let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
                     when (shakeVerbosity >= Quiet) $ output Quiet msg
@@ -286,7 +286,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 return stats{isRunning=running, isFailure=failure}
             runPool (shakeDeterministic || shakeThreads == 1) shakeThreads $ \pool -> do
                 let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
-                mapM_ (addPool pool . staunch . wrapStack (return []) . runAction s0) (actions rs)
+                mapM_ (addPool pool . staunch . runAction s0) (actions rs)
             when shakeLint $ do
                 checkValid database (runStored ruleinfo)
                 when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
@@ -323,10 +323,11 @@ abbreviate abbrev = f
 
 wrapStack :: IO [String] -> IO a -> IO a
 wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
-    Just s@ShakeException{} -> throw s
+    Just s@ShakeException{} -> throwIO s
     Nothing -> do
         stk <- stk
-        throw $ ShakeException stk $ SomeException e
+        if null stk then throwIO e
+         else throwIO $ ShakeException (last stk) stk $ SomeException e
 
 
 registerWitnesses :: SRules -> IO ()

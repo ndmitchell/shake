@@ -69,6 +69,7 @@ module Development.Shake(
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, apply, apply1, traced,
     liftIO, actionOnException, actionFinally,
+    ShakeException(..),
     -- * Configuration
     ShakeOptions(..), Assume(..),
     -- ** Command line
@@ -105,6 +106,7 @@ import Control.Monad.IO.Class
 import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Derived
+import Development.Shake.Errors
 import Development.Shake.Progress
 import Development.Shake.Args
 import Development.Shake.Shake
