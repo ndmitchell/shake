@@ -8,12 +8,13 @@ import Development.Shake
 import Development.Shake.Command
 
 import System.IO
-import Control.Exception
+import Control.Exception as E
 import System.Directory
 import qualified Data.HashMap.Strict as Map
 import Control.Monad
 import Data.List
 import Data.Char
+import qualified System.FilePath as FP(normalise)
 
 
 runNinja :: FilePath -> [String] -> IO (Rules ())
@@ -26,17 +27,17 @@ runNinja file args = do
         forM_ phonys $ \(name,files) -> phony name $ need files
 
         (\x -> fmap fst $ Map.lookup x multiples) ?>> \out ->
-            build ninja out $ snd $ multiples Map.! head out
+            build ninja pools out $ snd $ multiples Map.! head out
 
         flip Map.member singles ?> \out ->
-            build ninja [out] $ singles Map.! out
+            build ninja pools [out] $ singles Map.! out
 
 
-build :: Ninja -> [FilePath] -> Builder -> Action ()
-build Ninja{..} out Builder{..} = do
+build :: Ninja -> Map.HashMap String Resource -> [FilePath] -> Builder -> Action ()
+build Ninja{..} resources out Builder{..} = do
     need $ deps ++ impDeps ++ ordDeps
     case Map.lookup ruleName rules of
-        Nothing -> error $ "Ninja rule named " ++ ruleName ++ " is missing, required to build " ++ show out
+        Nothing -> error $ "Ninja rule named " ++ ruleName ++ " is missing, required to build " ++ unwords out
         Just bind2 -> do
             let env = addEnv "in_newline" (unlines deps) $
                       addEnv "in" (unwords deps) $
@@ -51,17 +52,24 @@ build Ninja{..} out Builder{..} = do
                 let depfile = askEnv env $ var "depfile"
                 let deps = askEnv env $ var "deps"
                 let description = askEnv env $ var "description"
+                let pool = askEnv env $ var "pool"
+
+                let withPool act = case Map.lookup pool resources of
+                        _ | pool == "" -> act
+                        Nothing -> error $ "Ninja pool named " ++ pool ++ " not found, required to build " ++ unwords out
+                        Just r -> withResource r 1 act
 
                 when (description /= "") $ putNormal description
-                liftIO $ print commandline
-                if deps == "" then do
-                    command_ [Shell] commandline []
-                 else do
-                    Stdout stdout <- command [Shell] commandline []
-                    need $ applyDeps deps stdout
+                if deps == "msvc" then do
+                    Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
+                    need $ parseShowIncludes stdout
+                else
+                    withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
-                    depfile <- liftIO $ readFile depfile
-                    need $ applyDepfile depfile
+                    when (deps /= "gcc") $ need [depfile]
+                    depsrc <- liftIO $ readFile depfile
+                    need $ concatMap snd $ parseMakefile depsrc
+                    when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
 
@@ -70,24 +78,29 @@ applyRspfile env "" act = act env
 applyRspfile env contents act = do
     tmp <- liftIO getTemporaryDirectory
     (path, handle) <- liftIO $ openTempFile tmp "shake.tmp"
-    let cleanup = catch (removeFile path) (\(_ :: SomeException) -> return ())
+    let cleanup = E.catch (removeFile path) (\(_ :: SomeException) -> return ())
     flip actionFinally cleanup $ do
         liftIO $ hPutStr handle contents `finally` hClose handle
         act $ addEnv "rspfile" path env
 
 
-applyDeps :: String -> String -> [FilePath]
-applyDeps "gcc" out = error $ "applyDeps gcc: " ++ show out
-applyDeps "msvc" out = [y | x <- lines out, Just x <- [stripPrefix "Note: including file:" x]
-                          , let y = dropWhile isSpace x, not $ isSystemInclude y]
-applyDeps name _ = error $ "Don't understand deps = " ++ name
-
-
-applyDepfile :: String -> [FilePath]
-applyDepfile src = error $ "applyDepfile: " ++ show src
+parseShowIncludes :: String -> [FilePath]
+parseShowIncludes out = [y | x <- lines out, Just x <- [stripPrefix "Note: including file:" x]
+                           , let y = dropWhile isSpace x, not $ isSystemInclude y]
 
 
 -- Dodgy, but ported over from the original Ninja
 isSystemInclude :: String -> Bool
 isSystemInclude x = "program files" `isInfixOf` lx || "microsoft visual studio" `isInfixOf` lx
     where lx = map toLower x
+
+
+parseMakefile :: String -> [(FilePath, [FilePath])]
+parseMakefile = concatMap f . join . lines
+    where
+        join (x1:x2:xs) | "\\" `isSuffixOf` x1 = join $ (init x1 ++ x2) : xs
+        join (x:xs) = x : join xs
+        join [] = []
+
+        f x = [(FP.normalise a, map FP.normalise $ words $ drop 1 b) | a <- words a]
+            where (a,b) = break (== ':') $ takeWhile (/= '#') x
