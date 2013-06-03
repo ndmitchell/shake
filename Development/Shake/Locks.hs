@@ -9,6 +9,8 @@ module Development.Shake.Locks(
 
 import Control.Concurrent
 import Control.Monad
+import Data.Function
+import System.IO.Unsafe
 
 
 ---------------------------------------------------------------------
@@ -68,6 +70,14 @@ waitBarrier (Barrier x) = readMVar x
 ---------------------------------------------------------------------
 -- RESOURCE
 
+{-# NOINLINE resourceIds #-}
+resourceIds :: Var Int
+resourceIds = unsafePerformIO $ newVar 0
+
+resourceId :: IO Int
+resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j)
+
+
 -- | A type representing a finite resource, which multiple build actions should respect.
 --   Created with 'Development.Shake.newResource' and used with 'Development.Shake.withResource'
 --   when defining rules.
@@ -88,8 +98,9 @@ waitBarrier (Barrier x) = readMVar x
 --   is better than 'MVar' as it will not block any other threads from executing. Be careful that the
 --   actions run within 'Development.Shake.withResource' do not themselves require further quantities of this resource, or
 --   you may get a \"thread blocked indefinitely in an MVar operation\" exception. Typically only
---   system commands (such as 'Development.Shake.system'') will be run inside 'Development.Shake.withResource',
---   not commands such as 'Development.Shake.need'.
+--   system commands (such as 'Development.Shake.system'') should be run inside 'Development.Shake.withResource',
+--   not commands such as 'Development.Shake.need'. If an action requires multiple resources, use
+--   'Development.Shake.withResources' to avoid deadlock.
 --
 --   As another example, calls to compilers are usually CPU bound but calls to linkers are usually
 --   disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit
@@ -104,8 +115,11 @@ waitBarrier (Barrier x) = readMVar x
 -- \"*.o\" 'Development.Shake.*>' \\out ->
 --     'Development.Shake.system'' \"cl\" [\"-o\",out,...]
 -- @
-data Resource = Resource {resourceName :: String, resourceMax :: Int, resourceVar :: Var (Int,[(Int,IO ())])}
-instance Show Resource where show (Resource name _ _) = "Resource " ++ name
+data Resource = Resource {resourceKey :: Int, resourceName :: String, resourceMax :: Int, resourceVar :: Var (Int,[(Int,IO ())])}
+instance Show Resource where show Resource{..} = "Resource " ++ resourceName
+
+instance Eq Resource where (==) = (==) `on` resourceKey
+instance Ord Resource where compare = compare `on` resourceKey
 
 
 -- | A version of 'newResource' that runs in IO, and can be called before calling 'Development.Shake.shake'.
@@ -114,8 +128,9 @@ newResourceIO :: String -> Int -> IO Resource
 newResourceIO name mx = do
     when (mx < 0) $
         error $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
+    key <- resourceId
     var <- newVar (mx, [])
-    return $ Resource name mx var
+    return $ Resource key name mx var
 
 
 -- | Try to acquire a resource. Returns Nothing to indicate you have acquired with no blocking, or Just act to

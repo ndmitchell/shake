@@ -93,7 +93,7 @@ module Development.Shake(
     -- * Special rules
     alwaysRerun,
     -- * Finite resources
-    Resource, newResource, newResourceIO, withResource,
+    Resource, newResource, newResourceIO, withResource, withResources,
     -- * Cached file contents
     newCache, newCacheIO
     ) where

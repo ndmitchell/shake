@@ -14,7 +14,7 @@ module Development.Shake.Core(
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, actionOnException, actionFinally, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
-    Resource, newResource, newResourceIO, withResource,
+    Resource, newResource, newResourceIO, withResource, withResources,
     -- Internal stuff
     rulesIO, runAfter
     ) where
@@ -488,3 +488,15 @@ withResource r i act = do
         (runAction s act)
     Action $ State.put s
     return res
+
+
+-- | Run an action which uses part of several finite resources. Acquires the resources in a stable
+--   order, to prevent deadlock. If all rules requiring more than one resource acquire those
+--   resources with a single call to 'withResources', resources will not deadlock.
+withResources :: [(Resource, Int)] -> Action a -> Action a
+withResources res act
+    | (r,i):_ <- filter ((< 0) . snd) res = error $ "You cannot acquire a negative quantity of " ++ show r ++ ", requested " ++ show i
+    | otherwise = f $ groupBy ((==) `on` fst) $ sortBy (compare `on` fst) res
+    where
+        f [] = act
+        f (r:rs) = withResource (fst $ head r) (sum $ map snd r) $ f rs

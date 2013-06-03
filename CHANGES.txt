@@ -1,5 +1,21 @@
+NOTES
+    "Erdi, Gergo showing the estimated build time remaining in the terminal window's title is genius. you can quote me on that :)"
+    file:///C:/spacework/shake/html/report2.html?mode=rule-graph&query=rename%28%22output/self/Development/Shake/%22%2C%22%22%29%20%26%26%20rename%28%22output/self/%22%29%20%26%26%20ancestorOf%28%22Shake/Shake.hi%22%29%20%26%26%20name%28%22.hi%22%29%20%26%26%20backColor%28%22orange%22%29%20%26%26%20textColor%28%22black%22%29%20%26%26%20backColor%28%22yellow%22%2CancestorOf%28%22Shake/Core.hi%22%29%29%20%26%26%20%21name%28%22Classes%22%29
+PROFILING
+    Profiling, Only show a cutoff number of rows in a table
+    If throws a memory error, should catch and report nicely
+MAKEFILE
+    Add to Makefile support, lots of automatic change detection
+    | need support
+    Tests for Makefile
+    Add the Tutorial test
+    Add a document describing Makefile
+CORE
+    Add clean :: ShakeOptions -> IO (), delete everything you generated
+
 Changelog for Shake
 
+    Add withResources
     Add -<.> alias for replaceExtension
     Add selectors on Stdout/Stdin/Exit
     Add CmdResult instance for ExitCode
