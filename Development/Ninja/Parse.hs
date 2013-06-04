@@ -39,6 +39,7 @@ parseStmt stmt extra
            (out,rest) <- splitColon rest,
            (rule,rest) <- splitWhite $ dropWhile isSpace rest
            = return $ Build (parseExprs out) rule (parseExprs rest) (parseBinds extra)
+    | ("include",file) <- splitWhite stmt = fmap Scope $ parse file
     | ("subninja",file) <- splitWhite stmt = fmap Scope $ parse file
     | otherwise = error $ "Unknown Ninja statement: " ++ stmt
 
