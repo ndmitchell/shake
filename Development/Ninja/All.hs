@@ -46,8 +46,7 @@ build Ninja{..} resources out Builder{..} = do
             let fs xs env = foldl f env xs
             env <- return $ fs bind2 $ fs bindings env
 
-            let rspfile_content = askEnv env $ var "rspfile_content"
-            applyRspfile env rspfile_content $ \env -> do
+            applyRspfile env $ do
                 let commandline = askEnv env $ var "command"
                 let depfile = askEnv env $ var "depfile"
                 let deps = askEnv env $ var "deps"
@@ -72,16 +71,17 @@ build Ninja{..} resources out Builder{..} = do
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
-
-applyRspfile :: Env -> String -> (Env -> Action a) -> Action a
-applyRspfile env "" act = act env
-applyRspfile env contents act = do
-    tmp <- liftIO getTemporaryDirectory
-    (path, handle) <- liftIO $ openTempFile tmp "shake.tmp"
-    let cleanup = E.catch (removeFile path) (\(_ :: SomeException) -> return ())
-    flip actionFinally cleanup $ do
-        liftIO $ hPutStr handle contents `finally` hClose handle
-        act $ addEnv "rspfile" path env
+applyRspfile :: Env -> Action a -> Action a
+applyRspfile env act
+    | rspfile == "" = act
+    | otherwise = do
+        liftIO $ writeFile rspfile rspfile_content
+        res <- act
+        liftIO $ removeFile rspfile
+        return res
+    where
+        rspfile = askEnv env $ var "rspfile"
+        rspfile_content = askEnv env $ var "rspfile_content"
 
 
 parseShowIncludes :: String -> [FilePath]
