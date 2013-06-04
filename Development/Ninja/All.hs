@@ -63,7 +63,7 @@ build Ninja{..} resources out Builder{..} = do
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
                     need $ parseShowIncludes stdout
-                else
+                 else
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
