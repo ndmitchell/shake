@@ -2,13 +2,12 @@
 
 module Development.Ninja.All(runNinja) where
 
+import Development.Ninja.Type
 import Development.Ninja.Parse
-import Development.Ninja.Eval
-import Development.Shake
+import Development.Shake hiding (Rule)
 import Development.Shake.Command
+import qualified Data.ByteString.Char8 as BS
 
-import System.IO
-import Control.Exception as E
 import System.Directory
 import qualified Data.HashMap.Strict as Map
 import Control.Monad
@@ -19,43 +18,46 @@ import qualified System.FilePath as FP(normalise)
 
 runNinja :: FilePath -> [String] -> IO (Rules ())
 runNinja file args = do
-    ninja@Ninja{..} <- fmap eval $ parse file
+    ninja@Ninja{..} <- parse file
     return $ do
-        pools <- fmap Map.fromList $ forM (Map.toList pools) $ \(name,depth) ->
-            fmap ((,) name) $ newResource name depth
-        want $ if null args then defaults else args
-        forM_ phonys $ \(name,files) -> phony name $ need files
+        want $ if null args then map BS.unpack defaults else args
+        forM_ phonys $ \(name,files) -> phony (BS.unpack name) $ need $ map BS.unpack files
 
-        (\x -> fmap fst $ Map.lookup x multiples) ?>> \out ->
-            build ninja pools out $ snd $ multiples Map.! head out
+        singles <- return $ Map.fromList singles
+        multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- multiples, x <- xs]
+        rules <- return $ Map.fromList rules
+        pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
+            fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        flip Map.member singles ?> \out ->
-            build ninja pools [out] $ singles Map.! out
+        (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
+            build defines rules pools out2 $ snd $ multiples Map.! head out2
+
+        (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
+            build defines rules pools [out2] $ singles Map.! out2
 
 
-build :: Ninja -> Map.HashMap String Resource -> [FilePath] -> Builder -> Action ()
-build Ninja{..} resources out Builder{..} = do
-    need $ deps ++ impDeps ++ ordDeps
+build :: Env -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
+build env rules pools out Build{..} = do
+    need $ map BS.unpack $ depsNormal ++ depsImplicit ++ depsOrderOnly
     case Map.lookup ruleName rules of
-        Nothing -> error $ "Ninja rule named " ++ ruleName ++ " is missing, required to build " ++ unwords out
-        Just bind2 -> do
-            let env = addEnv "in_newline" (unlines deps) $
-                      addEnv "in" (unwords deps) $
-                      addEnv "out" (unwords out) defines
-            let f env (name,val) = addEnv name (askEnv env val) env
-            let fs xs env = foldl f env xs
-            env <- return $ fs bind2 $ fs bindings env
+        Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
+        Just Rule{..} -> do
+            env <- return $
+                addBinds ruleBind $ addBinds buildBind $
+                addEnv (BS.pack "in_newline") (BS.unlines depsNormal) $
+                addEnv (BS.pack "in") (BS.unwords depsNormal) $
+                addEnv (BS.pack "out") (BS.unwords out) env
 
             applyRspfile env $ do
-                let commandline = askEnv env $ var "command"
-                let depfile = askEnv env $ var "depfile"
-                let deps = askEnv env $ var "deps"
-                let description = askEnv env $ var "description"
-                let pool = askEnv env $ var "pool"
+                let commandline = BS.unpack $ askVar env $ BS.pack "command"
+                let depfile = BS.unpack $ askVar env $ BS.pack "depfile"
+                let deps = BS.unpack $ askVar env $ BS.pack "deps"
+                let description = BS.unpack $ askVar env $ BS.pack "description"
+                let pool = askVar env $ BS.pack "pool"
 
-                let withPool act = case Map.lookup pool resources of
-                        _ | pool == "" -> act
-                        Nothing -> error $ "Ninja pool named " ++ pool ++ " not found, required to build " ++ unwords out
+                let withPool act = case Map.lookup pool pools of
+                        _ | BS.null pool -> act
+                        Nothing -> error $ "Ninja pool named " ++ BS.unpack pool ++ " not found, required to build " ++ BS.unpack (BS.unwords out)
                         Just r -> withResource r 1 act
 
                 when (description /= "") $ putNormal description
@@ -75,13 +77,13 @@ applyRspfile :: Env -> Action a -> Action a
 applyRspfile env act
     | rspfile == "" = act
     | otherwise = do
-        liftIO $ writeFile rspfile rspfile_content
+        liftIO $ BS.writeFile rspfile rspfile_content
         res <- act
         liftIO $ removeFile rspfile
         return res
     where
-        rspfile = askEnv env $ var "rspfile"
-        rspfile_content = askEnv env $ var "rspfile_content"
+        rspfile = BS.unpack $ askVar env $ BS.pack "rspfile"
+        rspfile_content = askVar env $ BS.pack "rspfile_content"
 
 
 parseShowIncludes :: String -> [FilePath]
