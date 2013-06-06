@@ -6,6 +6,7 @@ import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule)
 import Development.Shake.Command
+import Development.Shake.FilePath
 import qualified Data.ByteString.Char8 as BS
 
 import System.Directory
@@ -13,7 +14,6 @@ import qualified Data.HashMap.Strict as Map
 import Control.Monad
 import Data.List
 import Data.Char
-import qualified System.FilePath as FP(normalise)
 
 
 runNinja :: FilePath -> [String] -> IO (Rules ())
@@ -27,7 +27,7 @@ runNinja file args = do
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        want $ map BS.unpack $ concatMap (resolvePhony phonys) $ if null args then defaults else map BS.pack args
+        want $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $ if null args then defaults else map BS.pack args
 
         (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
             build defines phonys rules pools out2 $ snd $ multiples Map.! head out2
@@ -48,7 +48,7 @@ resolvePhony mp = f $ Left 100
 
 build :: Env -> Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
 build env phonys rules pools out Build{..} = do
-    need $ map BS.unpack $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
+    need $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
@@ -73,13 +73,13 @@ build env phonys rules pools out Build{..} = do
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
-                    need $ parseShowIncludes stdout
+                    need $ map normalise $ parseShowIncludes stdout
                  else
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ readFile depfile
-                    need $ concatMap snd $ parseMakefile depsrc
+                    need $ map normalise $ concatMap snd $ parseMakefile depsrc
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
@@ -114,5 +114,5 @@ parseMakefile = concatMap f . join . lines
         join (x:xs) = x : join xs
         join [] = []
 
-        f x = [(FP.normalise a, map FP.normalise $ words $ drop 1 b) | a <- words a]
+        f x = [(a, words $ drop 1 b) | a <- words a]
             where (a,b) = break (== ':') $ takeWhile (/= '#') x
