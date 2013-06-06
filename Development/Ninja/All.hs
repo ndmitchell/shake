@@ -20,25 +20,35 @@ runNinja :: FilePath -> [String] -> IO (Rules ())
 runNinja file args = do
     ninja@Ninja{..} <- parse file
     return $ do
-        want $ if null args then map BS.unpack defaults else args
-        forM_ phonys $ \(name,files) -> phony (BS.unpack name) $ need $ map BS.unpack files
-
+        phonys <- return $ Map.fromList phonys
         singles <- return $ Map.fromList singles
         multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- multiples, x <- xs]
         rules <- return $ Map.fromList rules
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
+        want $ map BS.unpack $ concatMap (resolvePhony phonys) $ if null args then defaults else map BS.pack args
+
         (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
-            build defines rules pools out2 $ snd $ multiples Map.! head out2
+            build defines phonys rules pools out2 $ snd $ multiples Map.! head out2
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
-            build defines rules pools [out2] $ singles Map.! out2
+            build defines phonys rules pools [out2] $ singles Map.! out2
 
 
-build :: Env -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
-build env rules pools out Build{..} = do
-    need $ map BS.unpack $ depsNormal ++ depsImplicit ++ depsOrderOnly
+resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
+resolvePhony mp = f $ Left 100
+    where
+        f (Left 0) x = f (Right []) x
+        f (Right xs) x | x `elem` xs = error $ "Recursive phony involving " ++ BS.unpack x
+        f a x = case Map.lookup x mp of
+            Nothing -> [x]
+            Just xs -> concatMap (f $ either (Left . subtract 1) (Right . (x:)) a) xs
+
+
+build :: Env -> Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
+build env phonys rules pools out Build{..} = do
+    need $ map BS.unpack $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
