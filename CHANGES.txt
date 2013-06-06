@@ -1,6 +1,6 @@
-
 Changelog for Shake
 
+    Normalise file arguments before calling want
     Expose ShakeException
     Add isFailure to ShakeProgress, and display in progressDisplay
     Add withResources
