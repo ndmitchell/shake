@@ -14,7 +14,9 @@ import Data.Maybe
 
 main = shaken test $ \args obj ->
     action $ liftIO $ do
-        withArgs [fromMaybe x $ stripPrefix "@" x | x <- args] Makefile.main
+        unless (["@@"] `isPrefixOf` args) $
+            error "The 'makefile' example should only be used in test mode, to test using a makefile use the 'make' example."
+        withArgs [fromMaybe x $ stripPrefix "@" x | x <- drop 1 args] Makefile.main
 
 
 test build obj = do
@@ -26,6 +28,6 @@ test build obj = do
                     copyFile (from </> x) (obj to </> x)
 
     copyTo "Examples/MakeTutor" "MakeTutor"
-    build ["--directory=" ++ obj "MakeTutor","--no-report"]
-    build ["--directory=" ++ obj "MakeTutor","--no-report"]
-    build ["--directory=" ++ obj "MakeTutor","@clean","--no-report"]
+    build ["@@","--directory=" ++ obj "MakeTutor","--no-report"]
+    build ["@@","--directory=" ++ obj "MakeTutor","--no-report"]
+    build ["@@","--directory=" ++ obj "MakeTutor","@clean","--no-report"]
