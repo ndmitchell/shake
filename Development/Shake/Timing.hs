@@ -37,8 +37,9 @@ showTimings :: UTCTime -> [(UTCTime, String)] -> [String]
 showTimings _ [] = []
 showTimings stop times = showGap [(a ++ "  ", showDP 3 b ++ "s  " ++ showPerc b ++ "  " ++ progress b) | (a,b) <- xs]
     where
-        showPerc x = let s = show $ floor $ x * 100 / sm in replicate (3 - length s) ' ' ++ s ++ "%"
-        progress x = let i = floor $ x * 25 / mx in replicate i '=' ++ replicate (25-i) ' '
+        a // b = if b == 0 then 0 else a / b
+        showPerc x = let s = show $ floor $ x * 100 // sm in replicate (3 - length s) ' ' ++ s ++ "%"
+        progress x = let i = floor $ x * 25 // mx in replicate i '=' ++ replicate (25-i) ' '
         mx = maximum $ map snd xs
         sm = sum $ map snd xs
         xs = [ (name, fromRational $ toRational $ stop `diffUTCTime` start)
