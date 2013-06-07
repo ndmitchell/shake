@@ -233,6 +233,7 @@ shakeOptsEx =
     ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,no  $ Option "o" ["old-file","assume-old"] (ReqArg (\x -> Right ([AssumeOld x],id)) "FILE") "Consider FILE to be very old and don't remake it."
     ,yes $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
+    ,yes $ Option ""  ["assume-skip"] (noArg $ \s -> s{shakeAssume=Just AssumeSkip}) "Don't remake any files this run."
     ,yes $ Option "r" ["report"] (OptArg (\x -> Right ([], \s -> s{shakeReport=Just $ fromMaybe "report.html" x})) "FILE") "Write out profiling information [to report.html]."
     ,yes $ Option ""  ["no-report"] (noArg $ \s -> s{shakeReport=Nothing}) "Turn off --report."
     ,yes $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."

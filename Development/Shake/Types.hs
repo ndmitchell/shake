@@ -27,10 +27,14 @@ data Assume
         --   for rebuilding if untracked dependencies have changed. This assumption is safe, but may cause
         --   more rebuilding than necessary.
     | AssumeClean
-        -- ^ /This assumption is unsafe, and may lead to incorrect build results/.
-        --   Assume that all rules reached are clean and do not require rebuilding, provided the rule
+        -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run, and in future runs/.
+        --   Assume and record that all rules reached are clean and do not require rebuilding, provided the rule
         --   has a 'Development.Shake.storedValue' and has been built before. Useful if you have modified a file in some
         --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
+    | AssumeSkip
+        -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run/.
+        --   Assume that all rules reached are clean in this run. Only useful for benchmarking, to remove any overhead
+        --   from running 'Development.Shake.storedValue' operations.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 

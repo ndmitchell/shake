@@ -251,7 +251,10 @@ build pool Database{..} Ops{..} stack ks = do
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
-                    b <- if assume == Just AssumeDirty then return False else fmap (== Just (result r)) $ stored k
+                    b <- case assume of
+                        Just AssumeDirty -> return False
+                        Just AssumeSkip -> return True
+                        _ -> fmap (== Just (result r)) $ stored k
                     diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     if not b then run stack i k $ Just r else check stack i k r (depends r)
                 Just (k, res) -> return res
