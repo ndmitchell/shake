@@ -7,6 +7,7 @@ import Development.Ninja.Parse
 import Development.Shake hiding (Rule)
 import Development.Shake.Command
 import Development.Shake.FilePath
+import Development.Shake.Timing
 import qualified Data.ByteString.Char8 as BS
 
 import System.Directory
@@ -18,7 +19,9 @@ import Data.Char
 
 runNinja :: FilePath -> [String] -> IO (Rules ())
 runNinja file args = do
+    addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file
+    addTiming "Ninja eval"
     return $ do
         phonys <- return $ Map.fromList phonys
         singles <- return $ Map.fromList singles

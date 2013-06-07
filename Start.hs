@@ -6,12 +6,14 @@ import Development.Ninja.All
 import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
+import Development.Shake.Timing
 import qualified System.Directory as IO
 import System.Console.GetOpt
 
 
 main :: IO ()
 main = do
+    resetTimings
     args <- getArgs
     withArgs ("--no-time":args) $
         shakeArgsWith shakeOptions flags $ \opts targets -> do
