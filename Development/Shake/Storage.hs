@@ -12,6 +12,7 @@ module Development.Shake.Storage(
 import Development.Shake.Binary
 import Development.Shake.Locks
 import Development.Shake.Types
+import Development.Shake.Timing
 
 import Control.Arrow
 import Control.Exception as E
@@ -61,6 +62,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
         E.catch (removeFile dbfile) (\(e :: SomeException) -> return ())
         renameFile bupfile dbfile
 
+    addTiming "Database read"
     withBinaryFile dbfile ReadWriteMode $ \h -> do
         n <- hFileSize h
         diagnostic $ "Reading file of size " ++ show n
@@ -120,6 +122,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                                 diagnostic $ "Drop complete"
                             return $ continue h mp
                          else do
+                            addTiming "Database compression"
                             unexpected "Compressing database\n"
                             diagnostic "Compressing database"
                             hClose h -- two hClose are fine
@@ -159,7 +162,8 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
                            -- also lets us recover in the case of corruption
-            flushThread outputErr shakeFlush h $ \out ->
+            flushThread outputErr shakeFlush h $ \out -> do
+                addTiming "With database"
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
 

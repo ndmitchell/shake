@@ -3,6 +3,7 @@
 module Development.Shake.Shake(shake) where
 
 import Development.Shake.Types
+import Development.Shake.Timing
 import Development.Shake.Core
 
 import Development.Shake.Directory
@@ -17,6 +18,7 @@ import Development.Shake.Rerun
 --   To use command line flags to modify 'ShakeOptions' see 'Development.Shake.shakeArgs'.
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts r = do
+    addTiming "Function shake"
     run opts $ do
         r
         defaultRuleFile

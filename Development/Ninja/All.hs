@@ -21,7 +21,6 @@ runNinja :: FilePath -> [String] -> IO (Rules ())
 runNinja file args = do
     addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file
-    addTiming "Ninja eval"
     return $ do
         phonys <- return $ Map.fromList phonys
         singles <- return $ Map.fromList singles
