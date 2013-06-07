@@ -20,8 +20,13 @@ dropSpace = BS.dropWhile isSpace
 startsSpace :: Str -> Bool
 startsSpace = BS.isPrefixOf (BS.pack " ")
 
-dropEndCR :: Str -> Str
-dropEndCR x = if BS.isSuffixOf (BS.pack "\r") x then BS.init x else x
+linesCR :: Str -> [Str]
+linesCR x | BS.null x = []
+          | otherwise = case BS.elemIndex '\n' x of
+                Nothing -> [x]
+                Just i | i >= 1 && BS.index x (i-1) == '\r' -> BS.take (i-1) x : linesCR (BS.drop (i+1) x)
+                       | otherwise -> BS.take i x : linesCR (BS.drop (i+1) x)
+
 
 word1 :: Str -> (Str, Str)
 word1 x = (a, dropSpace b)
@@ -44,7 +49,7 @@ data Stmt = Stmt Str [Str] deriving Show
 
 
 splitStmts :: Str -> [Stmt]
-splitStmts = stmt . continuation . map dropEndCR . BS.lines
+splitStmts = stmt . continuation . linesCR
     where
         continuation (x:xs) | endsDollar x = BS.concat (BS.init x : map (dropSpace . BS.init) a ++ map dropSpace (take 1 b)) : continuation (drop 1 b)
             where (a,b) = span endsDollar xs
