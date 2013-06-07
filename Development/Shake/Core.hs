@@ -278,7 +278,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let ruleinfo = createRuleinfo rs
     running <- newIORef True
     after <- newIORef []
-    flip finally (writeIORef running False) $ do
+    flip finally (writeIORef running False >> if shakeTimings then printTimings else resetTimings) $ do
         withDatabase opts diagnostic $ \database -> do
             forkIO $ shakeProgress $ do
                 running <- readIORef running
@@ -302,7 +302,6 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 buildReport json file
         maybe (return ()) (throwIO . snd) =<< readIORef except
         sequence_ . reverse =<< readIORef after
-        if shakeTimings then printTimings else resetTimings
 
 
 lineBuffering :: IO a -> IO a
