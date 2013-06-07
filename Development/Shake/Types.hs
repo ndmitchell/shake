@@ -43,7 +43,7 @@ data Assume
 --
 --   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just \"report.html\"} @
 --
---   The 'Data' instance for this type reports the 'shakeProgress' field as having the abstract type 'Function',
+--   The 'Data' instance for this type reports the 'shakeProgress' and 'shakeOutput' fields as having the abstract type 'Function',
 --   because 'Data' cannot be defined for functions.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
