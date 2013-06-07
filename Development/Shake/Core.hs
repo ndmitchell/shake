@@ -274,7 +274,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 "Wanted: " ++ dir ++ "\n" ++
                 "Got:    " ++ now
 
-    let ruleinfo = createRuleinfo shakeAssume rs
+    let ruleinfo = createRuleinfo rs
     running <- newIORef True
     after <- newIORef []
     flip finally (writeIORef running False) $ do
@@ -337,8 +337,8 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 
-createRuleinfo :: Maybe Assume -> SRules -> Map.HashMap TypeRep RuleInfo
-createRuleinfo assume SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
+createRuleinfo :: SRules -> Map.HashMap TypeRep RuleInfo
+createRuleinfo SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
