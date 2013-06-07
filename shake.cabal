@@ -122,6 +122,7 @@ library
         Development.Shake.Rerun
         Development.Shake.Shake
         Development.Shake.Storage
+        Development.Shake.Timing
         Development.Shake.Types
         Development.Shake.Value
         Paths_shake

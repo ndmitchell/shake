@@ -245,6 +245,7 @@ shakeOptsEx =
     ,yes $ Option " " ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
+    ,yes $ Option ""  ["timings"] (noArg $ \s -> s{shakeTimings=True}) "Print phase timings."
     ,yes $ Option "t" ["touch"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Assume targets are clean."
     ,yes $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) succ}) "Print tracing information."
     ,no  $ Option "v" ["version"] (NoArg $ Right ([Version],id)) "Print the version number and exit."

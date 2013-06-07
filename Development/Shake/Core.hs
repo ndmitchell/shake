@@ -44,6 +44,7 @@ import Development.Shake.Value
 import Development.Shake.Report
 import Development.Shake.Types
 import Development.Shake.Errors
+import Development.Shake.Timing
 
 
 ---------------------------------------------------------------------
@@ -298,6 +299,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 buildReport json file
         maybe (return ()) (throwIO . snd) =<< readIORef except
         sequence_ . reverse =<< readIORef after
+        if shakeTimings then printTimings else resetTimings
 
 
 lineBuffering :: IO a -> IO a
