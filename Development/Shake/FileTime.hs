@@ -80,7 +80,7 @@ getModTimeMaybe x = BS.useAsCString x $ \file ->
         res <- c_getFileAttributesEx file 0 info
         if not res then return Nothing else do
             -- Technically a Word32, but we can treak it as an Int32 for peek
-            dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
+            dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32
             return $ Just $ fileTime dword
 
 #else
