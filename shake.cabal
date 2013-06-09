@@ -130,6 +130,7 @@ library
 
 executable shake
     main-is: Main.hs
+    ghc-options: -threaded
     build-depends:
         base == 4.*,
         old-time,
@@ -169,6 +170,7 @@ executable shake-test
         buildable: True
     else
         buildable: False
+    ghc-options: -threaded
     build-depends:
         base == 4.*,
         old-time,
