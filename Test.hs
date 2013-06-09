@@ -8,8 +8,12 @@ import Data.List
 import Data.Maybe
 import System.Environment
 import Development.Shake.Pool
-
+import Development.Shake.Timing
+import Development.Shake.FileTime
+import qualified Data.ByteString.Char8 as BS
 import Examples.Util(sleepFileTime)
+import Control.Concurrent
+
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.C.Main as C
@@ -36,7 +40,7 @@ import qualified Examples.Test.Resources as Resources
 import qualified Start as Start
 
 
-fakes = ["clean" * clean, "test" * test, "make" * makefile]
+fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetime]
     where (*) = (,)
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
@@ -77,6 +81,28 @@ makefile :: IO () -> IO ()
 makefile _ = do
     args <- getArgs
     withArgs (drop 1 args) Start.main
+
+
+filetime :: IO () -> IO ()
+filetime _ = do
+    args <- getArgs
+    addTiming "Reading files"
+    files <- fmap concat $ forM (drop 1 args) $ \file ->
+        fmap (BS.lines . BS.filter (/= '\r')) $ BS.readFile file
+    let n = length files
+    evaluate n
+    addTiming "Modtime"
+    let (a,bcd) = splitAt (n `div` 4) files
+    let (b,cd) = splitAt (n `div` 4) bcd
+    let (c,d) = splitAt (n `div` 4) cd
+    vars <- forM [a,b,c,d] $ \xs -> do
+        mvar <- newEmptyMVar
+        forkIO $ do
+            mapM_ getModTimeMaybe xs
+            putMVar mvar ()
+        return $ takeMVar mvar
+    sequence_ vars
+    printTimings
 
 
 clean :: IO () -> IO ()
