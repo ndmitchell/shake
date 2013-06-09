@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Set the number of capabilities based on -j flags
     Add shakeTimings, to time the separate stages
     Add AssumeSkip, mostly for benchmarking
     Normalise file arguments before calling want

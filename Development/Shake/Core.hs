@@ -278,31 +278,42 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let ruleinfo = createRuleinfo rs
     running <- newIORef True
     after <- newIORef []
-    flip finally (writeIORef running False >> if shakeTimings then printTimings else resetTimings) $ do
-        withDatabase opts diagnostic $ \database -> do
-            forkIO $ shakeProgress $ do
-                running <- readIORef running
-                failure <- fmap (fmap fst) $ readIORef except
-                stats <- progress database
-                return stats{isRunning=running, isFailure=failure}
-            addTiming "Running rules"
-            runPool (shakeDeterministic || shakeThreads == 1) shakeThreads $ \pool -> do
-                let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
-                mapM_ (addPool pool . staunch . runAction s0) (actions rs)
-            when shakeLint $ do
-                addTiming "Lint checking"
-                checkValid database (runStored ruleinfo)
-                when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
-            when (isJust shakeReport) $ do
-                addTiming "Profile report"
-                let file = fromJust shakeReport
-                json <- showJSON database
-                when (shakeVerbosity >= Normal) $
-                    output Normal $ "Writing HTML report to " ++ file
-                buildReport json file
-        maybe (return ()) (throwIO . snd) =<< readIORef except
-        sequence_ . reverse =<< readIORef after
+    flip finally (writeIORef running False >> if shakeTimings then printTimings else resetTimings) $
+        withCapabilities shakeThreads $ do
+            withDatabase opts diagnostic $ \database -> do
+                forkIO $ shakeProgress $ do
+                    running <- readIORef running
+                    failure <- fmap (fmap fst) $ readIORef except
+                    stats <- progress database
+                    return stats{isRunning=running, isFailure=failure}
+                addTiming "Running rules"
+                runPool (shakeDeterministic || shakeThreads == 1) shakeThreads $ \pool -> do
+                    let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
+                    mapM_ (addPool pool . staunch . runAction s0) (actions rs)
+                when shakeLint $ do
+                    addTiming "Lint checking"
+                    checkValid database (runStored ruleinfo)
+                    when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
+                when (isJust shakeReport) $ do
+                    addTiming "Profile report"
+                    let file = fromJust shakeReport
+                    json <- showJSON database
+                    when (shakeVerbosity >= Normal) $
+                        output Normal $ "Writing HTML report to " ++ file
+                    buildReport json file
+            maybe (return ()) (throwIO . snd) =<< readIORef except
+            sequence_ . reverse =<< readIORef after
 
+
+withCapabilities :: Int -> IO a -> IO a
+#if __GLASGOW_HASKELL__ >= 706
+withCapabilities new act = do
+    old <- getNumCapabilities
+    if old == new then act else
+        bracket_ (setNumCapabilities new) (setNumCapabilities old) act
+#else
+withCapabilities new act = act
+#endif
 
 lineBuffering :: IO a -> IO a
 lineBuffering = f stdout . f stderr
