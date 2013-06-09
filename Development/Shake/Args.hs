@@ -9,6 +9,7 @@ import Development.Shake.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
+import Development.Shake.Timing
 
 import Control.Arrow
 import Control.Concurrent
@@ -100,6 +101,7 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --   Now you can pass @--distcc@ to use the @distcc@ compiler.
 shakeArgsWith :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
 shakeArgsWith baseOpts userOptions rules = do
+    addTiming "shakeArgsWith"
     args <- getArgs
     let (flags,files,errs) = getOpt Permute opts args
         (flagsError,flag1) = partitionEithers flags
