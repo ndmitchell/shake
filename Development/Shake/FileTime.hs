@@ -29,7 +29,7 @@ import Foreign.C.Types
 type WIN32_FILE_ATTRIBUTE_DATA = Ptr ()
 type LPCSTR = Ptr CChar
 
-foreign import stdcall "Windows.h GetFileAttributesExA" c_getFileAttributesEx :: LPCSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesEx :: LPCSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
 
 size_WIN32_FILE_ATTRIBUTE_DATA = 36
 
