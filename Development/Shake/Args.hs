@@ -243,7 +243,7 @@ shakeOptsEx =
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
     ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (noArg $ \s -> s{shakeProgress=progressSimple}) "Show progress messages."
+    ,yes $ Option "p" ["progress"] (optIntArg "progress" "N" (\i s -> s{shakeProgress=progressDisplay (fromMaybe 5 i) progressTitlebar})) "Show progress messages [every N seconds, default 5]."
     ,yes $ Option " " ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
@@ -268,6 +268,9 @@ shakeOptsEx =
         intArg flag a f = flip ReqArg a $ \x -> case reads x of
             [(i,"")] | i >= 1 -> Right ([],f i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a positive integral argument"
+        optIntArg flag a f = flip OptArg a $ maybe (Right ([], f Nothing)) $ \x -> case reads x of
+            [(i,"")] | i >= 1 -> Right ([],f $ Just i)
+            _ -> Left $ "the `--" ++ flag ++ "' option only allows a positive integral argument"
         pairArg flag a f = flip ReqArg a $ \x -> case break (== '=') x of
             (a,'=':b) -> Right ([],f (a,b))
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
