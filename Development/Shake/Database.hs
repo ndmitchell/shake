@@ -19,6 +19,7 @@ import Development.Shake.Errors
 import Development.Shake.Locks
 import Development.Shake.Storage
 import Development.Shake.Types
+import Development.Shake.Special
 import Development.Shake.Intern as Intern
 
 import Control.Exception
@@ -420,17 +421,11 @@ checkValid Database{..} stored = do
         (key, Ready Result{..}) -> do
             good <- fmap (== Just result) $ stored key
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return [show key ++ " is no longer " ++ show result | not good && not (special key result)]
+            return [show key ++ " is no longer " ++ show result | not good && not (specialAlwaysRebuilds key result)]
         _ -> return []
     if null bad
         then diagnostic "Validity/lint check passed"
         else error $ unlines $ "Error: Dependencies have changed since being built:" : bad
-
-    where
-        -- special case for these things, since the purpose is to break the invariant
-        -- FIXME: this is getting more and more hacky
-        special k r = sk == "AlwaysRerunQ" || "OracleQ " `isPrefixOf` sk || sr == "FileA (FileTime 2147483647)"
-            where sk = show k; sr = show r
 
 
 ---------------------------------------------------------------------

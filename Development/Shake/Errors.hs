@@ -47,7 +47,7 @@ structured_ msg args hint = error $
 
 
 errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> a
-errorNoRuleToBuildType tk k tv = structured (isOracle tk)
+errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     "Build system error - no _rule_ matches the _key_ type"
     [("_Key_ type", Just $ show tk)
     ,("_Key_ value", k)
@@ -55,7 +55,7 @@ errorNoRuleToBuildType tk k tv = structured (isOracle tk)
     "Either you are missing a call to _rule/defaultRule_, or your call to _apply_ has the wrong _key_ type"
 
 errorRuleTypeMismatch :: TypeRep -> Maybe String -> TypeRep -> TypeRep -> a
-errorRuleTypeMismatch tk k tvReal tvWant = structured (isOracle tk)
+errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     "Build system error - _rule_ used at the wrong _result_ type"
     [("_Key_ type", Just $ show tk)
     ,("_Key_ value", k)
@@ -64,7 +64,7 @@ errorRuleTypeMismatch tk k tvReal tvWant = structured (isOracle tk)
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
 
 errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> a
-errorIncompatibleRules tk tv1 tv2 = if isOracle tk then errorDuplicateOracle tk Nothing [tv1,tv2] else structured_
+errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else structured_
     "Build system error - rule has multiple result types"
     [("Key type", Just $ show tk)
     ,("First result type", Just $ show tv1)
@@ -73,7 +73,7 @@ errorIncompatibleRules tk tv1 tv2 = if isOracle tk then errorDuplicateOracle tk 
 
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> a
 errorMultipleRulesMatch tk k count
-    | isOracle tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk (Just k) []
+    | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk (Just k) []
     | otherwise = structured_
     ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
     [("Key type",Just $ show tk)
@@ -98,8 +98,9 @@ errorDuplicateOracle tk k tvs = structured_
     "Only one call to addOracle is allowed per question type"
 
 
-isOracle :: TypeRep -> Bool
-isOracle t = con `elem` ["OracleQ","OracleA"]
+-- Should be in Special, but then we get an import cycle
+specialIsOracleKey :: TypeRep -> Bool
+specialIsOracleKey t = con == "OracleQ"
     where con = show $ fst $ splitTyConApp t
 
 

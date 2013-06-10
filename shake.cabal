@@ -121,6 +121,7 @@ library
         Development.Shake.Report
         Development.Shake.Rerun
         Development.Shake.Shake
+        Development.Shake.Special
         Development.Shake.Storage
         Development.Shake.Timing
         Development.Shake.Types
