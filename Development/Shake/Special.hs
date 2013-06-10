@@ -11,9 +11,9 @@ import Data.List
 import Data.Typeable
 
 
-specialAlwaysRebuilds :: Key -> Value -> Bool
-specialAlwaysRebuilds k v = sk == "AlwaysRerunQ" || "OracleQ " `isPrefixOf` sk || sv == "FileA (FileTime 2147483647)"
-    where sk = show k; sv = show v
+specialAlwaysRebuilds :: Value -> Bool
+specialAlwaysRebuilds v = sv == "AlwaysRerunA" || "OracleA " `isPrefixOf` sv || sv == "FileA (FileTime 2147483647)"
+    where sv = show v
 
 
 specialIsFileKey :: TypeRep -> Bool

@@ -421,7 +421,7 @@ checkValid Database{..} stored = do
         (key, Ready Result{..}) -> do
             good <- fmap (== Just result) $ stored key
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return [show key ++ " is no longer " ++ show result | not good && not (specialAlwaysRebuilds key result)]
+            return [show key ++ " is no longer " ++ show result | not good && not (specialAlwaysRebuilds result)]
         _ -> return []
     if null bad
         then diagnostic "Validity/lint check passed"
