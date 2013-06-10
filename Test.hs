@@ -56,6 +56,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
 
 main :: IO ()
 main = do
+    resetTimings
     xs <- getArgs
 #if __GLASGOW_HASKELL__ >= 706
     exePath <- getExecutablePath
