@@ -23,12 +23,17 @@ main = shaken test $ \args obj -> do
         () <- askOracle ()
         writeFile' out ""
 
+    obj "pause.*" *> \out -> do
+        liftIO $ sleep 0.1
+        need [obj "cdir" <.> takeExtension out]
+        writeFile' out ""
+
     obj "cdir.*" *> \out -> do
         pwd <- liftIO getCurrentDirectory
         let dir2 = obj $ "dir" ++ takeExtension out
         liftIO $ createDirectoryIfMissing True dir2
         liftIO $ setCurrentDirectory dir2
-        liftIO $ sleep 0.1
+        liftIO $ sleep 0.2
         liftIO $ setCurrentDirectory pwd
         writeFile' out ""
 
@@ -58,6 +63,7 @@ test build obj = do
 
     crash ["changedir"] ["current directory has changed"]
     build ["cdir.1","cdir.2","-j1"]
-    crash ["--clean","cdir.1","cdir.2","-j2"] ["current directory has changed"]
+    build ["--clean","cdir.1","pause.2","-j1"]
+    crash ["--clean","cdir.1","pause.2","-j2"] ["current directory has changed"]
     crash ["existance"] ["changed since being built"]
     crash ["createtwice"] ["changed since being built"]
