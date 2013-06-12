@@ -32,6 +32,8 @@ test build obj = do
     assertContents (obj "vowels.out1") "3"
 
     writeFile (obj "vowels.txt") "12xyz34"
+    putStrLn "Written, now sleeping!"
+    sleep 60
     build ["vowels.out2","-j3","--sleep"]
     assertContents (obj "trace.txt") "11"
     assertContents (obj "vowels.out2") "4"
