@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix writeFileChanged for line endings on Windows
     Support arguments to --progress
     Set the number of capabilities based on -j flags
     Add shakeTimings, to time the separate stages

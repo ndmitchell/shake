@@ -11,7 +11,7 @@ import Control.Monad.IO.Class
 import System.Process
 import System.Directory
 import System.Exit
-import qualified Data.ByteString.Char8 as BS
+import System.IO
 
 import Development.Shake.Core
 import Development.Shake.File
@@ -97,6 +97,9 @@ writeFileChanged :: FilePath -> String -> Action ()
 writeFileChanged name x = liftIO $ do
     b <- doesFileExist name
     if not b then writeFile name x else do
-        orig <- BS.readFile name
-        let new = BS.pack x
-        when (orig /= new) $ BS.writeFile name new
+        -- Cannot use ByteString here, since it has different line handling
+        -- semantics on Windows
+        b <- withFile name ReadMode $ \h -> do
+            src <- hGetContents h
+            return $! src /= x
+        when b $ writeFile name x
