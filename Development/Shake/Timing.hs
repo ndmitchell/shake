@@ -55,4 +55,4 @@ showGap xs = [a ++ replicate (n - length a - length b) ' ' ++ b | (a,b) <- xs]
 
 showDP :: Int -> Double -> String
 showDP n x = a ++ "." ++ b ++ replicate (n - length b) '0'
-    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just 2) x ""
+    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
