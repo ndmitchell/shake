@@ -1,3 +1,3 @@
 language: haskell
 script:
-  - cabal configure --flag=testprog && cabal build && dist/build/shake/shake-test
+  - cabal configure --flag=testprog --ghc-options=-Werror && cabal build && dist/build/shake-test/shake-test
