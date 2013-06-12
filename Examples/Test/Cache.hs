@@ -28,6 +28,9 @@ test build obj = do
     assertContents (obj "vowels.out1") "3"
     assertContents (obj "vowels.out2") "3"
 
+
+{-
+
     build ["vowels.out2","-j3"]
     assertContents (obj "trace.txt") "1"
     assertContents (obj "vowels.out1") "3"
@@ -42,3 +45,4 @@ test build obj = do
     build ["vowels.out1","-j3","--sleep"]
     assertContents (obj "trace.txt") "111"
     assertContents (obj "vowels.out1") "4"
+-}
