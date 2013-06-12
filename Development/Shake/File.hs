@@ -186,7 +186,6 @@ newCacheIO act = do
     var <- newVar Map.empty -- Var (Map FilePath (Barrier (Either SomeException a)))
     let run = either (\e -> throwIO (e :: SomeException)) return
     return $ \file -> do
-        liftIO $ print ("need",file)
         need [file]
         liftIO $ join $ modifyVar var $ \mp -> case Map.lookup file mp of
             Just v -> return (mp, run =<< waitBarrier v)
