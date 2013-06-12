@@ -7,16 +7,19 @@ import Development.Shake.FileTime
 import qualified Data.ByteString.Char8 as BS
 import Data.Char
 import Examples.Util
+import System.IO
 
 
 main = shaken test $ \args obj -> do
     want $ map obj args
     vowels <- newCache $ \file -> do
         liftIO $ putStrLn $ "@ PRINT: " ++ file
-        src <- readFile file
+        res <- withFile file ReadMode $ \h -> do
+            src <- hGetContents h
+            return $! length $ filter isDigit src
         liftIO $ putStrLn $ "@ APPENDING TO TRACE"
         appendFile (obj "trace.txt") "1"
-        return $ length $ filter isDigit src
+        return res
     obj "*.out*" *> \x -> do
         liftIO $ putStrLn $ "@ REBUILDING " ++ x
         writeFile' x . show =<< vowels (dropExtension x <.> "txt")
@@ -27,13 +30,6 @@ test build obj = do
     writeFile (obj "vowels.txt") "abc123a"
     print =<< readFile (obj "vowels.txt")
     print =<< getModTimeMaybe (BS.pack $ obj "vowels.txt")
-
-    sleep 10
-    writeFile (obj "vowels.txt") "JKDI_"
-    sleep 10
-    print =<< readFile (obj "vowels.txt")
-    print =<< getModTimeMaybe (BS.pack $ obj "vowels.txt")
-
 
     build ["vowels.out1","vowels.out2","-j3"]
     assertContents (obj "trace.txt") "1"
