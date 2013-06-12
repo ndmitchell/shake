@@ -1,1 +1,3 @@
 language: haskell
+script:
+  - cabal configure --flag=testprog && cabal build && dist/build/shake/shake-test
