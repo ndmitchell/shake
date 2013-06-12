@@ -10,6 +10,7 @@ import Examples.Util
 main = shaken test $ \args obj -> do
     want $ map obj args
     vowels <- newCache $ \file -> do
+        liftIO $ putStrLn $ "@ PRINT: " ++ file
         src <- readFile file
         liftIO $ putStrLn $ "@ APPENDING TO TRACE"
         appendFile (obj "trace.txt") "1"
@@ -33,7 +34,7 @@ test build obj = do
 
     writeFile (obj "vowels.txt") "12xyz34"
     putStrLn "Written, now sleeping!"
-    sleep 60
+    sleep 10
     build ["vowels.out2","-j3","--sleep"]
     assertContents (obj "trace.txt") "11"
     assertContents (obj "vowels.out2") "4"
