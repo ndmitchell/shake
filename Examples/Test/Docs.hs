@@ -78,7 +78,7 @@ main = shaken noTest $ \args obj -> do
 
     obj "Success.txt" *> \out -> do
         need [obj "Main.hs"]
-        system' "runhaskell" ["-hide-package=hashmap","-i" ++ obj "",obj "Main.hs"]
+        system' "runhaskell" ["-ignore-package=hashmap","-i" ++ obj "",obj "Main.hs"]
         writeFile' out ""
 
 
