@@ -27,6 +27,14 @@ test build obj = do
     writeFile (obj "vowels.txt") "abc123a"
     print =<< readFile (obj "vowels.txt")
     print =<< getModTimeMaybe (BS.pack $ obj "vowels.txt")
+
+    sleep 10
+    writeFile (obj "vowels.txt") "JKDI_"
+    sleep 10
+    print =<< readFile (obj "vowels.txt")
+    print =<< getModTimeMaybe (BS.pack $ obj "vowels.txt")
+
+
     build ["vowels.out1","vowels.out2","-j3"]
     assertContents (obj "trace.txt") "1"
     assertContents (obj "vowels.out1") "3"
