@@ -1,6 +1,9 @@
 Shake
 =====
 
+[![Build Status](https://travis-ci.org/ndmitchell/shake.png)](https://travis-ci.org/ndmitchell/shake)
+
+
 Shake is a Haskell library for writing build systems - designed as a replacement for make. Some useful links:
 
 * [Download the Haskell package](http://hackage.haskell.org/package/shake) from Hackage and install it using Cabal.
