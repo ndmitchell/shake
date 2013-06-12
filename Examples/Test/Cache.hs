@@ -11,9 +11,11 @@ main = shaken test $ \args obj -> do
     want $ map obj args
     vowels <- newCache $ \file -> do
         src <- readFile file
+        liftIO $ putStrLn $ "@ APPENDING TO TRACE"
         appendFile (obj "trace.txt") "1"
         return $ length $ filter isDigit src
-    obj "*.out*" *> \x ->
+    obj "*.out*" *> \x -> do
+        liftIO $ putStrLn $ "@ REBUILDING " ++ x
         writeFile' x . show =<< vowels (dropExtension x <.> "txt")
 
 
