@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.10.4
     Fix writeFileChanged for line endings on Windows
     Support arguments to --progress
     Set the number of capabilities based on -j flags
