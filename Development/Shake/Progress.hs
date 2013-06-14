@@ -147,7 +147,7 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
 
         -- Number of seconds we have been going
         step = fmap ((*) sample . fromInt) posStream
-        work = decay factor done step
+        work = decay 1.2 done step
 
         -- Work value to use, don't divide by 0 and don't update work if done doesn't change
         realWork = iff ((==) 0 <$> done) (pure 1) $
@@ -159,11 +159,6 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
             in (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs ++ "s"
         perc = iff ((==) 0 <$> done) (pure "0") $
             (\done todo -> show (floor (100 * done / (done + todo)) :: Int)) <$> done <*> todo
-
-
--- How much additional weight to give to the latest work values
-factor :: Double
-factor = 1.2
 
 
 ---------------------------------------------------------------------
