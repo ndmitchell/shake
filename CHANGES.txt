@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve progress prediction for the first build
     Fix removeFiles when there is a directory argument and a pattern
     Delete shakeDeterministic, shakeThreads=1 has the same effect
 0.10.4

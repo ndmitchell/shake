@@ -139,11 +139,17 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
         -- which isn't what users want
         done = fmap timeBuilt progress
 
+        -- Predicted build time for a rule that has never been built before
+        -- The high decay means if a build goes in "phases" - lots of source files, then lots of compiling
+        -- we reach a reasonable number fairly quickly, without bouncing too much
+        guess = iff ((==) 0 <$> samples) (pure 0) $ decay 10 time $ fmap fromInt samples
+            where
+                time = flip fmap progress $ \Progress{..} -> timeBuilt + fst timeTodo
+                samples = flip fmap progress $ \Progress{..} -> countBuilt + countTodo - snd timeTodo
+
         -- Number of seconds work remaining, ignoring multiple threads
-        todo = flip fmap progress $ \Progress{..} ->
-            let avgTime = (timeBuilt + fst timeTodo) / fromIntegral avgSamples
-                avgSamples = countBuilt + countTodo - snd timeTodo
-            in fst timeTodo + (if avgSamples == 0 || snd timeTodo == 0 then 0 else fromIntegral (snd timeTodo) * avgTime)
+        todo = f <$> progress <*> guess
+            where f Progress{..} guess = fst timeTodo + (fromIntegral (snd timeTodo) * guess)
 
         -- Number of seconds we have been going
         step = fmap ((*) sample . fromInt) posStream
