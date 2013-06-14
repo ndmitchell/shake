@@ -7,11 +7,14 @@ module Development.Shake.Progress(
     progressDisplayTester -- INTERNAL FOR TESTING ONLY
     ) where
 
+import Control.Arrow
+import Control.Applicative
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import System.Environment
 import Data.Data
+import Data.Maybe
 import Data.Monoid
 import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
@@ -27,6 +30,9 @@ foreign import stdcall "Windows.h SetConsoleTitleA" c_setConsoleTitle :: LPCSTR 
 
 #endif
 
+
+---------------------------------------------------------------------
+-- PROGRESS TYPES - exposed to the user
 
 -- | Information about the current state of the build, obtained by passing a callback function
 --   to 'Development.Shake.shakeProgress'. Typically a program will use 'progressDisplay' to poll this value and produce
@@ -62,20 +68,106 @@ instance Monoid Progress where
                     in x1 `seq` x2 `seq` (x1,x2)
         }
 
--- Including timeSkipped gives a more truthful percent, but it drops more sharply
--- which isn't what users probably want
-progressDone :: Progress -> Double
-progressDone Progress{..} = timeBuilt
+
+---------------------------------------------------------------------
+-- STREAM TYPES - for writing the progress functions
+
+-- | A stream of values
+newtype Stream a b = Stream {runStream :: a -> (b, Stream a b)}
+
+instance Functor (Stream a) where
+    fmap f (Stream op) = Stream $ (f *** fmap f) . op
+
+instance Applicative (Stream a) where
+    pure x = Stream $ const (x, pure x)
+    Stream ff <*> Stream xx = Stream $ \a ->
+        let (f1,f2) = ff a
+            (x1,x2) = xx a
+        in (f1 x1, f2 <*> x2)
+
+idStream :: Stream a a
+idStream = Stream $ \a -> (a, idStream)
+
+oldStream :: b -> Stream a b -> Stream a (b,b)
+oldStream old (Stream f) = Stream $ \a ->
+    let (new, f2) = f a
+    in ((old,new), oldStream new f2)
 
 
--- | Make a guess at the number of seconds to go, ignoring multiple threads
-progressTodo :: Progress -> Double
-progressTodo Progress{..} =
-        fst timeTodo + (if avgSamples == 0 || snd timeTodo == 0 then 0 else fromIntegral (snd timeTodo) * avgTime)
+iff :: Stream a Bool -> Stream a b -> Stream a b -> Stream a b
+iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
+
+foldStream :: (a -> b -> a) -> a -> Stream i b -> Stream i a
+foldStream f z (Stream op) = Stream $ \a ->
+    let (o1,o2) = op a
+        z2 = f z o1
+    in (z2, foldStream f z2 o2)
+
+posStream :: Stream a Int
+posStream = foldStream (+) 0 $ pure 1
+
+fromInt :: Int -> Double
+fromInt = fromInteger . toInteger
+
+-- decay'd division, compute a/b, with a decay of f
+-- r' is the new result, r is the last result
+-- r ~= a / b
+-- r' = r*b + f*(a'-a)
+--      -------------
+--      b + f*(b'-b)
+-- when f == 1, r == r'
+decay :: Double -> Stream i Double -> Stream i Double -> Stream i Double
+decay f a b = foldStream step 0 $ (,) <$> oldStream 0 a <*> oldStream 0 b
+    where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
+
+
+latch :: Stream i (Bool, a) -> Stream i a
+latch = f Nothing
+    where f old (Stream op) = Stream $ \x -> let ((b,v),s) = op x
+                                                 v2 = if b then fromMaybe v old else v
+                                             in (v2, f (Just v2) s)
+
+
+---------------------------------------------------------------------
+-- MESSAGE GENERATOR
+
+message :: Double -> Stream Progress Progress -> Stream Progress String
+message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time <*> perc
     where
-        avgTime = (timeBuilt + fst timeTodo) / fromIntegral avgSamples
-        avgSamples = countBuilt + countTodo - snd timeTodo
+        -- Number of seconds work completed
+        -- Ignores timeSkipped which would be more truthful, but it makes the % drop sharply
+        -- which isn't what users want
+        done = fmap timeBuilt progress
 
+        -- Number of seconds work remaining, ignoring multiple threads
+        todo = flip fmap progress $ \Progress{..} ->
+            let avgTime = (timeBuilt + fst timeTodo) / fromIntegral avgSamples
+                avgSamples = countBuilt + countTodo - snd timeTodo
+            in fst timeTodo + (if avgSamples == 0 || snd timeTodo == 0 then 0 else fromIntegral (snd timeTodo) * avgTime)
+
+        -- Number of seconds we have been going
+        step = fmap ((*) sample . fromInt) posStream
+        work = decay factor done step
+
+        -- Work value to use, don't divide by 0 and don't update work if done doesn't change
+        realWork = iff ((==) 0 <$> done) (pure 1) $
+            latch $ (,) <$> (uncurry (==) <$> oldStream 0 done) <*> work
+
+        -- Display information
+        time = flip fmap ((/) <$> todo <*> realWork) $ \guess ->
+            let (mins,secs) = divMod (ceiling guess) (60 :: Int)
+            in (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs ++ "s"
+        perc = iff ((==) 0 <$> done) (pure "0") $
+            (\done todo -> show (floor (100 * done / (done + todo)) :: Int)) <$> done <*> todo
+
+
+-- How much additional weight to give to the latest work values
+factor :: Double
+factor = 1.2
+
+
+---------------------------------------------------------------------
+-- EXPOSED FUNCTIONS
 
 -- | Given a sampling interval (in seconds) and a way to display the status message,
 --   produce a function suitable for using as 'Development.Shake.shakeProgress'.
@@ -104,55 +196,18 @@ progressDisplayTester = progressDisplayer False
 progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplayer sleep sample disp prog = do
     disp "Starting..." -- no useful info at this stage
-    loop $ tick0 sample
+    loop $ message sample idStream
     where
-        loop :: Tick -> IO ()
-        loop t = do
+        loop :: Stream Progress String -> IO ()
+        loop stream = do
             when sleep $ threadDelay $ ceiling $ sample * 1000000
             p <- prog
             if not $ isRunning p then
                 disp "Finished"
              else do
-                (t, msg) <- return $ tick p t
+                (msg, stream) <- return $ runStream stream p
                 disp $ msg ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
-                loop $! t
-
-
--- work_ and done_ are both as recorded at step_
-data Tick = Tick
-    {sample :: {-# UNPACK #-} !Double
-    ,step :: {-# UNPACK #-} !Double
-    ,work_ :: {-# UNPACK #-} !Double
-    ,done_ :: {-# UNPACK #-} !Double
-    ,step_ :: {-# UNPACK #-} !Double
-    } deriving Show
-
-tick0 :: Double -> Tick
-tick0 sample = Tick sample 0 0 0 0
-
--- How much additional weight to give to the latest work values
-factor :: Double
-factor = 1.2
-
-tick :: Progress -> Tick -> (Tick, String)
-tick p tickOld@Tick{..}
-        | done == 0 = (tick, display 1) -- no scaling, or we'd divide by zero
-        | done == done_ = (tick, display work_) -- use the last work rate
-        | otherwise = (tick{work_=newWork, done_=done, step_=step'}, display newWork)
-    where
-        step' = step+sample
-        tick = tickOld{step=step'}
-        done = progressDone p
-        todo = progressTodo p
-
-        newWork = ((step_ * work_) + ((done - done_) * factor)) /
-                  ((step_ + ((step' - step_) * factor)))
-
-        display work = time ++ "s (" ++ perc ++ "%)"
-            where guess = todo / work
-                  (mins,secs) = divMod (ceiling guess) (60 :: Int)
-                  time = (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs
-                  perc = show (floor (if done == 0 then 0 else 100 * done / (done + todo)) :: Int)
+                loop stream
 
 
 {-# NOINLINE xterm #-}
