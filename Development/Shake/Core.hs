@@ -287,7 +287,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     stats <- progress database
                     return stats{isRunning=running, isFailure=failure}
                 addTiming "Running rules"
-                runPool (shakeDeterministic || shakeThreads == 1) shakeThreads $ \pool -> do
+                runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
                 when shakeLint $ do
