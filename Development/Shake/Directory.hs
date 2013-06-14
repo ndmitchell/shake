@@ -249,7 +249,7 @@ removeFiles dir pat = f "" >> return ()
             (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
             noDirs <- fmap and $ mapM f dirs
             let (del,keep) = partition test files
-            mapM_ IO.removeFile del
+            mapM_ IO.removeFile $ map (dir </>) del
             let die = noDirs && null keep
             when die $ IO.removeDirectory $ dir </> dir2
             return die

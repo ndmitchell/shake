@@ -26,6 +26,9 @@ main = shaken test $ \args obj -> do
         src <- readFile' $ obj "zero.txt"
         writeFile' out src
 
+    phony "halfclean" $ do
+        removeFilesAfter (obj "") ["//*e.txt"]
+
     phony "cleaner" $ do
         removeFilesAfter (obj "") ["//*"]
 
@@ -64,9 +67,13 @@ test build obj = do
 
     show shakeOptions === show shakeOptions
 
+    build ["!halfclean"]
+    b <- IO.doesDirectoryExist (obj "")
+    assert b "Directory should exist, cleaner should not have removed it"
+
     build ["!cleaner"]
     b <- IO.doesDirectoryExist (obj "")
-    assert (not b) "Directory should exist, cleaner should have removed it"
+    assert (not b) "Directory should not exist, cleaner should have removed it"
 
     IO.createDirectory $ obj ""
     writeFile (obj "zero.txt") ""
