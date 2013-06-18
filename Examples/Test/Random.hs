@@ -6,6 +6,10 @@ import Examples.Util
 import Control.Exception
 import Control.Monad
 import Data.List
+import Data.Maybe
+import Data.Time
+import System.Environment
+import System.Exit
 import System.Random
 import qualified Data.ByteString.Char8 as BS
 
@@ -32,7 +36,7 @@ main = shaken test $ \args obj -> do
             i <- randomRIO (0, 25)
             sleep $ fromInteger i / 100
 
-    forM_ (map read args) $ \x -> case x of
+    forM_ (map read $ filter (isNothing . asDuration) args) $ \x -> case x of
         Want xs -> want $ map (toFile . Output) xs
         Logic out srcs -> toFile (Output out) *> \out -> do
             res <- fmap (show . Multiple) $ forM srcs $ \src -> do
@@ -43,9 +47,24 @@ main = shaken test $ \args obj -> do
             writeFileChanged out res
 
 
-test build obj = do
-    forM_ [1..] $ \count -> do
+asDuration :: String -> Maybe Double
+asDuration x
+    | "s" `isSuffixOf` x, [(i,"")] <- reads $ init x = Just i
+    | "m" `isSuffixOf` x, [(i,"")] <- reads $ init x = Just $ i * 60
+    | otherwise = Nothing
 
+
+test build obj = do
+    limit <- do
+        args <- getArgs
+        let bound = listToMaybe $ reverse $ mapMaybe asDuration args
+        start <- getCurrentTime
+        return $ when (isJust bound) $ do
+            now <- getCurrentTime
+            when (fromRational (toRational $ now `diffUTCTime` start) > fromJust bound) exitSuccess
+
+    forM_ [1..] $ \count -> do
+        limit
         putStrLn $ "* PERFORMING RANDOM TEST " ++ show count
         build ["clean"]
         build [] -- to create the directory
