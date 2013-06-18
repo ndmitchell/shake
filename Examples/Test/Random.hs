@@ -43,51 +43,53 @@ main = shaken test $ \args obj -> do
             writeFileChanged out res
 
 
-test build obj = forM_ [1..] $ \count -> do
-    putStrLn $ "* PERFORMING RANDOM TEST " ++ show count
-    build ["clean"]
-    build [] -- to create the directory
-    forM_ inputRange $ \i ->
-        writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
-    logic <- randomLogic
-    runLogic [] logic
-    chng <- filterM (const randomIO) inputRange   
-    forM_ chng $ \i ->
-        writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single $ negate i
-    runLogic chng logic
-    forM_ inputRange $ \i ->
-        writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
-    logicBang <- addBang =<< addBang logic
-    j <- randomRIO (1::Int,8)
-    res <- try $ build $ ("-j" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
-    case res of
-        Left err
-            | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
-            | "ExitFailure" `isInfixOf` show (err :: SomeException) -> return () -- caught and passed on by the Args handling
-            | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
-        _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
-    runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
-    where
-        runLogic :: [Int] -> [Logic] -> IO ()
-        runLogic negated xs = do
-            let poss = [i | Logic i _ <- xs]
-            i <- randomRIO (0, 7)
-            wants <- replicateM i $ do
-                i <- randomRIO (0, 5)
-                replicateM i $ randomElem poss
-            sleepFileTime
-            j <- randomRIO (1::Int,8)
-            build $ ("-j" ++ show j) : map show (xs ++ map Want wants)
+test build obj = do
+    forM_ [1..] $ \count -> do
 
-            let value i = case [ys | Logic j ys <- xs, j == i] of
-                    [ys] -> Multiple $ flip map ys $ map $ \i -> case i of
-                        Input i -> Single $ if i `elem` negated then negate i else i
-                        Output i -> value i
-            forM_ (concat wants) $ \i -> do
-                let wanted = value i
-                got <- fmap read $ readFileStrict $ obj $ "output-" ++ show i ++ ".txt"
-                when (wanted /= got) $
-                    error $ "INCORRECT VALUE for " ++ show i
+        putStrLn $ "* PERFORMING RANDOM TEST " ++ show count
+        build ["clean"]
+        build [] -- to create the directory
+        forM_ inputRange $ \i ->
+            writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
+        logic <- randomLogic
+        runLogic [] logic
+        chng <- filterM (const randomIO) inputRange   
+        forM_ chng $ \i ->
+            writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single $ negate i
+        runLogic chng logic
+        forM_ inputRange $ \i ->
+            writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
+        logicBang <- addBang =<< addBang logic
+        j <- randomRIO (1::Int,8)
+        res <- try $ build $ ("-j" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
+        case res of
+            Left err
+                | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
+                | "ExitFailure" `isInfixOf` show (err :: SomeException) -> return () -- caught and passed on by the Args handling
+                | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
+            _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
+        runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
+        where
+            runLogic :: [Int] -> [Logic] -> IO ()
+            runLogic negated xs = do
+                let poss = [i | Logic i _ <- xs]
+                i <- randomRIO (0, 7)
+                wants <- replicateM i $ do
+                    i <- randomRIO (0, 5)
+                    replicateM i $ randomElem poss
+                sleepFileTime
+                j <- randomRIO (1::Int,8)
+                build $ ("-j" ++ show j) : map show (xs ++ map Want wants)
+
+                let value i = case [ys | Logic j ys <- xs, j == i] of
+                        [ys] -> Multiple $ flip map ys $ map $ \i -> case i of
+                            Input i -> Single $ if i `elem` negated then negate i else i
+                            Output i -> value i
+                forM_ (concat wants) $ \i -> do
+                    let wanted = value i
+                    got <- fmap read $ readFileStrict $ obj $ "output-" ++ show i ++ ".txt"
+                    when (wanted /= got) $
+                        error $ "INCORRECT VALUE for " ++ show i
 
 
 addBang :: [Logic] -> IO [Logic]
