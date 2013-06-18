@@ -149,9 +149,12 @@ shakeArgsWith baseOpts userOptions rules = do
          else
             let esc code = if Color `elem` flagsExtra then escape code else id
             in case res of
-                Left err -> do
-                    putStrLn $ esc "31" $ show (err :: SomeException)
-                    exitFailure
+                Left err ->
+                    if Exception `elem` flagsExtra then
+                        throw err
+                    else do
+                        putStrLn $ esc "31" $ show (err :: SomeException)
+                        exitFailure
                 Right () -> do
                     stop <- getCurrentTime
                     let tot = diffUTCTime stop start
@@ -204,6 +207,7 @@ data Extra = ChangeDirectory FilePath
            | Help
            | Sleep
            | NoTime
+           | Exception
              deriving Eq
 
 
@@ -224,6 +228,7 @@ shakeOptsEx =
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
     ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
+    ,no  $ Option ""  ["exception"] (NoArg $ Right ([Exception], id)) "Throw exceptions directly."
     ,yes $ Option ""  ["flush"] (intArg "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
     ,yes $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
     ,no  $ Option "h" ["help"] (NoArg $ Right ([Help],id)) "Print this message and exit."
