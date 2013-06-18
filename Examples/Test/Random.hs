@@ -63,6 +63,7 @@ test build obj = forM_ [1..] $ \count -> do
     case res of
         Left err
             | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
+            | "ExitFailure" `isInfixOf` show (err :: SomeException) -> return () -- caught and passed on by the Args handling
             | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
         _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
     runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
