@@ -1,5 +1,4 @@
-Shake
-=====
+# Shake
 
 [![Build Status](https://travis-ci.org/ndmitchell/shake.png)](https://travis-ci.org/ndmitchell/shake)
 
