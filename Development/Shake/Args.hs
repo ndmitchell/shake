@@ -20,6 +20,7 @@ import Data.Either
 import Data.List
 import Data.Maybe
 import Data.Time
+import Data.Version(showVersion)
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
@@ -125,7 +126,7 @@ shakeArgsWith baseOpts userOptions rules = do
     if Help `elem` flagsExtra then do
         showHelp
      else if Version `elem` flagsExtra then
-        putStrLn $ "Shake build system, version " ++ show version
+        putStrLn $ "Shake build system, version " ++ showVersion version
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         start <- getCurrentTime

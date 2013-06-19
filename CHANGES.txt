@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix up --version output
 0.10.5
     Improve progress prediction for the first build
     Fix removeFiles when there is a directory argument and a pattern
