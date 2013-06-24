@@ -31,8 +31,8 @@ The following Ninja options are available in Shake:
 
 For people who are set up to run an existing .ninja build file, there are two features of Shake that may appeal:
 
-* If you build with `--report` the file `report.html` will be generated. Open that report file and you can see numerous details about the build - how good the parallel utilisation was, what changed to cause what to change, summary statistics, a dependency graph and more. See the Help page in any generated report for more details.
-* If you build with `--progress` the console titlebar will display a predicted completion time, how many minutes until your build completes. The predicted time will be fairly inaccurate the first time round, but future runs are influenced by recorded timings, and can produce useful guesses.
+* If you build with `--report` the file `report.html` will be generated. Open that report file and you can see numerous details about the build - how good the parallel utilisation was, what changed to cause what to rebuild, summary statistics, a dependency graph and more. See the Help page in any generated report for more details.
+* If you build with `--progress` the console titlebar will display a predicted completion time, how many seconds until your build completes. The predicted time will be fairly inaccurate the first time round, but future runs are influenced by recorded timings, and can produce useful guesses.
 
 #### FAQ
 
