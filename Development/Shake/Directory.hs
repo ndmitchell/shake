@@ -173,6 +173,12 @@ getDirectoryContents x = getDirAction $ GetDir x
 -- > getDirectoryFiles "Modules" ["*.hs","*.lhs"]
 -- >     -- All .hs or .lhs in the Modules directory
 -- >     -- If Modules/foo.hs and Modules/foo.lhs exist, it will return ["foo.hs","foo.lhs"]
+--
+--   If you require a qualified file name it is often easier to use @\"\"@ as 'FilePath' argument,
+--   for example the following two expressions are equivalent:
+--
+-- > fmap (map ("Config" </>)) (getDirectoryFiles "Config" ["//*.xml"])
+-- > getDirectoryFiles "" ["Config//*.xml"]
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
