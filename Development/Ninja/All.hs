@@ -29,7 +29,10 @@ runNinja file args = do
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        want $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $ if null args then defaults else map BS.pack args
+        want $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $
+            if not $ null args then map BS.pack args
+            else if not $ null defaults then defaults
+            else Map.keys singles ++ Map.keys multiples
 
         (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
             build defines phonys rules pools out2 $ snd $ multiples Map.! head out2

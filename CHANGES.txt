@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #15, fix up the Ninja default targets
     Fix up --version output
 0.10.5
     Improve progress prediction for the first build
