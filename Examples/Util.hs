@@ -85,6 +85,16 @@ infix 4 ===
 a === b = assert (a == b) $ "failed in ===\nLHS: " ++ show a ++ "\nRHS: " ++ show b
 
 
+assertExists :: FilePath -> IO ()
+assertExists file = do
+    b <- IO.doesFileExist file
+    assert b $ "File was expected to exist, but is missing: " ++ file
+
+assertMissing :: FilePath -> IO ()
+assertMissing file = do
+    b <- IO.doesFileExist file
+    assert (not b) $ "File was expected to be missing, but exists: " ++ file
+
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- readFile file
