@@ -17,6 +17,7 @@ import Control.Concurrent
 import qualified Examples.Tar.Main as Tar
 import qualified Examples.Self.Main as Self
 import qualified Examples.C.Main as C
+import qualified Examples.Ninja.Main as Ninja
 import qualified Examples.Test.Assume as Assume
 import qualified Examples.Test.Basic as Basic
 import qualified Examples.Test.Benchmark as Benchmark
@@ -48,7 +49,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"docs" * Docs.main, "errors" * Errors.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
         ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main
-        ,"pool" * Pool.main, "random" * Random.main
+        ,"pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main]
     where (*) = (,)

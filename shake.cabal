@@ -48,6 +48,7 @@ extra-source-files:
     Examples/MakeTutor/hellomake.c
     Examples/MakeTutor/hellomake.h
     Examples/Tar/list.txt
+    Examples/Ninja/*.ninja
     Paths.hs
 
 data-files:
@@ -204,6 +205,7 @@ executable shake-test
         Development.Ninja.Type
         Examples.Util
         Examples.C.Main
+        Examples.Ninja.Main
         Examples.Self.Main
         Examples.Tar.Main
         Examples.Test.Assume

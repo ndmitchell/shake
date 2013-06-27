@@ -1,0 +1,5 @@
+
+build out1.txt: run
+
+rule run
+    command = echo out > $out
