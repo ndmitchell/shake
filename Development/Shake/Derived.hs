@@ -35,7 +35,10 @@ system' path args = do
     checkExitCode cmd res
 
 
--- | Execute a system command with a specified current working directory (first argument).
+-- | /Deprecated:/ Please use 'command' or 'cmd' instead, with 'Cwd'.
+--   This function will be removed in a future version.
+--
+--   Execute a system command with a specified current working directory (first argument).
 --   This function will raise an error if the exit code is non-zero.
 --   Before running 'systemCwd' make sure you 'need' any required files.
 --
@@ -55,7 +58,10 @@ systemCwd cwd path args = do
     checkExitCode cmd res
 
 
--- | Execute a system command, returning @(stdout,stderr)@.
+-- | /Deprecated:/ Please use 'command' or 'cmd' instead, with 'Stdout' or 'Stderr'.
+--   This function will be removed in a future version.
+--
+--   Execute a system command, returning @(stdout,stderr)@.
 --   This function will raise an error if the exit code is non-zero.
 --   Before running 'systemOutput' make sure you 'need' any required files.
 systemOutput :: FilePath -> [String] -> Action (String, String)
