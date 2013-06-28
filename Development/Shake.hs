@@ -78,6 +78,10 @@ module Development.Shake(
     Progress(..), progressSimple, progressDisplay, progressTitlebar,
     -- ** Verbosity
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
+    -- * Running commands
+    command, command_, cmd,
+    Stdout(..), Stderr(..), Exit(..),
+    CmdResult, CmdOption(..),
     -- * Utility functions
     module Development.Shake.Derived,
     removeFiles, removeFilesAfter,
@@ -111,6 +115,7 @@ import Development.Shake.Progress
 import Development.Shake.Args
 import Development.Shake.Shake
 
+import Development.Shake.Command
 import Development.Shake.Directory
 import Development.Shake.File
 import Development.Shake.FilePattern

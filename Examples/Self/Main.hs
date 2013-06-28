@@ -4,7 +4,6 @@ module Examples.Self.Main(main) where
 
 import Development.Shake
 import Development.Shake.Classes
-import Development.Shake.Command
 import Development.Shake.FilePath
 import Examples.Util
 

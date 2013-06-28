@@ -3,7 +3,6 @@ module Examples.C.Main(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
-import Development.Shake.Command
 import Examples.Util
 
 main = shaken noTest $ \args obj -> do

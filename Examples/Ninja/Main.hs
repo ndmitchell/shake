@@ -2,7 +2,6 @@
 module Examples.Ninja.Main(main) where
 
 import Development.Shake
-import Development.Shake.Command
 import Development.Shake.FilePath
 import System.Directory(copyFile)
 import Examples.Util

@@ -1,9 +1,7 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
--- | /Future plans: I intend to merge this module into "Development.Shake" itself./
---
---   This module provides more powerful and flexible versions of 'Development.Shake.system''.
---   I recommend looking at 'command', followed by 'cmd'.
+-- | /Deprecated:/ This module should no longer be imported as all the functions are available directly
+--   from "Development.Shake". In future versions this module will be removed.
 module Development.Shake.Command(
     command, command_, cmd,
     Stdout(..), Stderr(..), Exit(..),

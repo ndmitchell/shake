@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
--- | /Warning: I intend to remove this module. Please use "Development.Shake.Command" instead./
+-- | /Warning: I intend to remove this module. Please use 'command' or 'cmd' instead./
 --
 --   This module provides versions of the 'Development.Shake.Derived.system'' family of functions
 --   which take a variable number of arguments.

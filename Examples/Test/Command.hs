@@ -6,7 +6,6 @@ import Control.Exception hiding (assert)
 import Control.Monad
 import Data.List
 import Development.Shake
-import Development.Shake.Command
 import Examples.Util
 
 
