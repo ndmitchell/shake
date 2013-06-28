@@ -4,8 +4,8 @@
 module Development.Ninja.Parse(parse) where
 
 import qualified Data.ByteString.Char8 as BS
+import Development.Ninja.Env
 import Development.Ninja.Type
-import Control.Arrow
 import Control.Monad
 import Data.Char
 import Data.Maybe
@@ -36,13 +36,13 @@ isVar :: Char -> Bool
 isVar x = isAlphaNum x || x == '_'
 
 parse :: FilePath -> IO Ninja
-parse file = parseFile file newNinja
+parse file = do env <- newEnv; parseFile file env newNinja
 
 
-parseFile :: FilePath -> Ninja -> IO Ninja
-parseFile file ninja = do
+parseFile :: FilePath -> Env Str Str -> Ninja -> IO Ninja
+parseFile file env ninja = do
     src <- if file == "-" then BS.getContents else BS.readFile file
-    foldM applyStmt ninja $ splitStmts src
+    foldM (applyStmt env) ninja $ splitStmts src
 
 
 data Stmt = Stmt Str [Str] deriving Show
@@ -61,41 +61,47 @@ splitStmts = stmt . continuation . linesCR
             where (a,b) = span startsSpace xs
 
 
-applyStmt :: Ninja -> Stmt -> IO Ninja
-applyStmt ninja@Ninja{..} (Stmt x xs)
+applyStmt :: Env Str Str -> Ninja -> Stmt -> IO Ninja
+applyStmt env ninja@Ninja{..} (Stmt x xs)
     | key == BS.pack "rule" =
         return ninja{rules = (BS.takeWhile isVar rest, Rule $ parseBinds xs) : rules}
-    | key == BS.pack "default" =
-        return ninja{defaults = parseStrs defines rest ++ defaults}
-    | key == BS.pack "pool" =
-        return ninja{pools = (BS.takeWhile isVar rest, getDepth $ map (second $ askExpr defines) $ parseBinds xs) : pools}
-    | key == BS.pack "build",
-        (out,rest) <- splitColon rest,
-        outputs <- parseStrs defines out,
-        (rule,deps) <- word1 $ dropSpace rest,
-        (normal,implicit,orderOnly) <- splitDeps $ parseStrs defines deps,
-        let build = Build rule normal implicit orderOnly $ parseBinds xs
-        = return $
+    | key == BS.pack "default" = do
+        xs <- parseStrs env rest
+        return ninja{defaults = xs ++ defaults}
+    | key == BS.pack "pool" = do
+        depth <- getDepth env $ parseBinds xs
+        return ninja{pools = (BS.takeWhile isVar rest, depth) : pools}
+    | key == BS.pack "build" = do
+        (out,rest) <- return $ splitColon rest
+        outputs <- parseStrs env out
+        (rule,deps) <- return $ word1 $ dropSpace rest
+        (normal,implicit,orderOnly) <- fmap splitDeps $ parseStrs env deps
+        let build = Build rule env normal implicit orderOnly $ parseBinds xs
+        return $
             if rule == BS.pack "phony" then ninja{phonys = [(x, normal) | x <- outputs] ++ phonys}
             else if length outputs == 1 then ninja{singles = (head outputs, build) : singles}
             else ninja{multiples = (outputs, build) : multiples}
-    | key == BS.pack "include" = parseFile (BS.unpack rest) ninja
+    | key == BS.pack "include" = parseFile (BS.unpack rest) env ninja
     | key == BS.pack "subninja" = do
-        ninja <- parseFile (BS.unpack rest) ninja
-        -- restore to the original environment after, which is what Ninja actually does
-        return ninja{defines = defines}
-    | Just (a,b) <- parseBind x = return ninja{defines = addBind a b defines}
+        e <- scopeEnv env
+        parseFile (BS.unpack rest) e ninja
+    | Just (a,b) <- parseBind x = do
+        addBind env a b
+        return ninja
     | BS.null $ dropSpace x = return ninja
     | BS.pack "#" `BS.isPrefixOf` dropSpace x = return ninja -- comments can only occur on their own line
     | otherwise = error $ "Cannot parse line: " ++ BS.unpack x
     where (key,rest) = word1 x
 
 
-getDepth :: [(Str, Str)] -> Int
-getDepth xs = case lookup (BS.pack "depth") xs of
-    Nothing -> 1
-    Just x | Just (i, n) <- BS.readInt x, BS.null n -> i
-           | otherwise -> error $ "Could not parse depth field in pool, got: " ++ BS.unpack x
+getDepth :: Env Str Str -> [(Str, Expr)] -> IO Int
+getDepth env xs = case lookup (BS.pack "depth") xs of
+    Nothing -> return 1
+    Just x -> do
+        x <- askExpr env x
+        case BS.readInt x of
+            Just (i, n) | BS.null n -> return i
+            _ -> error $ "Could not parse depth field in pool, got: " ++ BS.unpack x
 
 
 parseBind :: Str -> Maybe (Str, Expr)
@@ -129,8 +135,8 @@ parseExpr = exprs . f
                 | otherwise -> let (a,b) = BS.span isVar x in Var a : f b
 
 
-parseStrs :: Env -> Str -> [Str]
-parseStrs env = map (askExpr env) . parseExprs
+parseStrs :: Env Str Str -> Str -> IO [Str]
+parseStrs env = mapM (askExpr env) . parseExprs
 
 
 

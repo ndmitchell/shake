@@ -8,8 +8,8 @@ module Development.Ninja.Type(
     Ninja(..), newNinja, Build(..), Rule(..),
     ) where
 
+import Development.Ninja.Env
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 
 
@@ -18,40 +18,31 @@ type FileStr = Str
 
 
 ---------------------------------------------------------------------
--- ENVIRONMENT
-
-newtype Env = Env (Map.HashMap Str Str) deriving Show
+-- EXPRESSIONS AND BINDINGS
 
 data Expr = Exprs [Expr] | Lit Str | Var Str deriving Show
 
-newEnv :: Env
-newEnv = Env Map.empty
-
-askExpr :: Env -> Expr -> Str
+askExpr :: Env Str Str -> Expr -> IO Str
 askExpr e = f
-    where f (Exprs xs) = BS.concat $ map f xs
-          f (Lit x) = x
+    where f (Exprs xs) = fmap BS.concat $ mapM f xs
+          f (Lit x) = return x
           f (Var x) = askVar e x
 
-askVar :: Env -> Str -> Str
-askVar (Env e) x = fromMaybe BS.empty $ Map.lookup x e
+askVar :: Env Str Str -> Str -> IO Str
+askVar e x = fmap (fromMaybe BS.empty) $ askEnv e x
 
-addEnv :: Str -> Str -> Env -> Env
-addEnv k v (Env e) = Env $ Map.insert k v e
+addBind :: Env Str Str -> Str -> Expr -> IO ()
+addBind e k v = addEnv e k =<< askExpr e v
 
-addBind :: Str -> Expr -> Env -> Env
-addBind k v env = addEnv k (askExpr env v) env
-
-addBinds :: [(Str, Expr)] -> Env -> Env
-addBinds kvs e = foldl (\e (k,v) -> addBind k v e) e kvs
+addBinds :: Env Str Str -> [(Str, Expr)] -> IO ()
+addBinds e = mapM_ (uncurry $ addBind e)
 
 
 ---------------------------------------------------------------------
 -- STRUCTURE
 
 data Ninja = Ninja
-    {defines :: !Env
-    ,rules :: [(Str,Rule)]
+    {rules :: [(Str,Rule)]
     ,singles :: [(FileStr,Build)]
     ,multiples :: [([FileStr], Build)]
     ,phonys :: ([(Str, [FileStr])])
@@ -61,10 +52,11 @@ data Ninja = Ninja
     deriving Show
 
 newNinja :: Ninja
-newNinja = Ninja newEnv [] [] [] [] [] []
+newNinja = Ninja [] [] [] [] [] []
 
 data Build = Build
     {ruleName :: Str
+    ,env :: Env Str Str
     ,depsNormal :: [FileStr]
     ,depsImplicit :: [FileStr]
     ,depsOrderOnly :: [FileStr]

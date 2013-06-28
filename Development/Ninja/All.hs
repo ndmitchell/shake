@@ -2,6 +2,7 @@
 
 module Development.Ninja.All(runNinja) where
 
+import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule)
@@ -35,10 +36,10 @@ runNinja file args = do
             else Map.keys singles ++ Map.keys multiples
 
         (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
-            build defines phonys rules pools out2 $ snd $ multiples Map.! head out2
+            build phonys rules pools out2 $ snd $ multiples Map.! head out2
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
-            build defines phonys rules pools [out2] $ singles Map.! out2
+            build phonys rules pools [out2] $ singles Map.! out2
 
 
 resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
@@ -51,24 +52,27 @@ resolvePhony mp = f $ Left 100
             Just xs -> concatMap (f $ either (Left . subtract 1) (Right . (x:)) a) xs
 
 
-build :: Env -> Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
-build env phonys rules pools out Build{..} = do
+build :: Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
+build phonys rules pools out Build{..} = do
     need $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
-            env <- return $
-                addBinds ruleBind $ addBinds buildBind $
-                addEnv (BS.pack "in_newline") (BS.unlines depsNormal) $
-                addEnv (BS.pack "in") (BS.unwords depsNormal) $
-                addEnv (BS.pack "out") (BS.unwords out) env
+            env <- liftIO $ scopeEnv env
+            liftIO $ do
+                -- the order of adding new environment variables matters
+                addEnv env (BS.pack "out") (BS.unwords out)
+                addEnv env (BS.pack "in") (BS.unwords depsNormal)
+                addEnv env (BS.pack "in_newline") (BS.unlines depsNormal)
+                addBinds env buildBind
+                addBinds env ruleBind
 
             applyRspfile env $ do
-                let commandline = BS.unpack $ askVar env $ BS.pack "command"
-                let depfile = BS.unpack $ askVar env $ BS.pack "depfile"
-                let deps = BS.unpack $ askVar env $ BS.pack "deps"
-                let description = BS.unpack $ askVar env $ BS.pack "description"
-                let pool = askVar env $ BS.pack "pool"
+                commandline <- liftIO $ fmap BS.unpack $ askVar env $ BS.pack "command"
+                depfile <- liftIO $ fmap BS.unpack $ askVar env $ BS.pack "depfile"
+                deps <- liftIO $ fmap BS.unpack $ askVar env $ BS.pack "deps"
+                description <- liftIO $ fmap BS.unpack $ askVar env $ BS.pack "description"
+                pool <- liftIO $ askVar env $ BS.pack "pool"
 
                 let withPool act = case Map.lookup pool pools of
                         _ | BS.null pool -> act
@@ -88,17 +92,17 @@ build env phonys rules pools out Build{..} = do
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
-applyRspfile :: Env -> Action a -> Action a
-applyRspfile env act
-    | rspfile == "" = act
-    | otherwise = do
+applyRspfile :: Env Str Str -> Action a -> Action a
+applyRspfile env act = do
+    rspfile <- liftIO $ fmap BS.unpack $ askVar env $ BS.pack "rspfile"
+    rspfile_content <- liftIO $ askVar env $ BS.pack "rspfile_content"
+    if rspfile == "" then
+        act
+     else do
         liftIO $ BS.writeFile rspfile rspfile_content
         res <- act
         liftIO $ removeFile rspfile
         return res
-    where
-        rspfile = BS.unpack $ askVar env $ BS.pack "rspfile"
-        rspfile_content = askVar env $ BS.pack "rspfile_content"
 
 
 parseShowIncludes :: String -> [FilePath]
