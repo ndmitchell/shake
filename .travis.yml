@@ -1,2 +1,2 @@
 language: haskell
-script: ./travis.sh
+script: /bin/bash -e travis.sh
