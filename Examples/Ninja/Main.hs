@@ -39,3 +39,6 @@ test build obj = do
     assertNonSpace (obj "out3.2") "g4++++i1"
     assertNonSpace (obj "out3.3") "g4++++i1"
     assertNonSpace (obj "out3.4") "g4+++s1+s2"
+
+    run "-f../../Examples/Ninja/test4.ninja out"
+    assertExists $ obj "out.txt"

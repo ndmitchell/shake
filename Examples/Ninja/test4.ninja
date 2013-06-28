@@ -1,0 +1,7 @@
+
+rule run
+    command = touch $out
+
+build ./out.txt: run
+
+build out: phony ./out.txt
