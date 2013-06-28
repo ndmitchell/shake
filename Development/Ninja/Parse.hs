@@ -122,8 +122,9 @@ parseExpr = exprs . f
         exprs [x] = x
         exprs xs = Exprs xs
 
-        f x = Lit a : g (BS.drop 1 b)
-            where (a,b) = BS.break (== '$') x
+        f x = case BS.elemIndex '$' x of
+            Nothing -> [Lit x]
+            Just i -> Lit (BS.take i x) : g (BS.drop (i+1) x)
 
         g x = case BS.uncons x of
             Nothing -> []
