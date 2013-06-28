@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.10.6
     Include command/cmd in the default module
     #16, change the scoping in subninja
     #15, fix up the Ninja default targets
