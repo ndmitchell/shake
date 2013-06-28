@@ -2,12 +2,18 @@
 module Examples.Ninja.Main(main) where
 
 import Development.Shake
+import Development.Shake.Command
 import Examples.Util
+import Data.List
 import qualified Start
 import System.Environment
 
-main = shaken test $ \args obj ->
-    action $ liftIO $ withArgs (("-C" ++ obj "") : map (drop 1) args) Start.main
+
+main = shaken test $ \args obj -> do
+    let args2 = ("-C" ++ obj "") : map tail (filter ("@" `isPrefixOf`) args)
+    let real = "real" `elem` args
+    action $
+        if real then cmd "ninja" args2 else liftIO $ withArgs args2 Start.main
 
 
 test build obj = do
