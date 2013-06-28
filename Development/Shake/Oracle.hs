@@ -39,7 +39,7 @@ instance (
 -- @
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 -- rules = do
---     'addOracle' $ \\(GhcVersion _) -> fmap (last . words . fst) $ 'Development.Shake.systemOutput' \"ghc\" [\"--version\"]
+--     'addOracle' $ \\(GhcVersion _) -> fmap (last . words . 'Development.Shake.fromStdout') $ 'Development.Shake.cmd' \"ghc --version\"
 --     ... rules ...
 -- @
 --
@@ -66,7 +66,7 @@ instance (
 --
 --rules = do
 --    getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
---        (out,_) <- 'Development.Shake.systemOutput' \"ghc-pkg\" [\"list\",\"--simple-output\"]
+--        Stdout out <- 'Development.Shake.cmd' \"ghc-pkg list --simple-output\"
 --        return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
 --    --
 --    getPkgVersion \<- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
