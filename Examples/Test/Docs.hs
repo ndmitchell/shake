@@ -113,8 +113,13 @@ shift xs | all null xs = xs
 dropComment ('-':'-':_) = []
 dropComment xs = onTail dropComment xs
 
-undefDots ('.':'.':'.':xs) = "undefined" ++ (if "..." `isSuffixOf` xs then "" else undefDots xs)
-undefDots xs = onTail undefDots xs
+
+undefDots o = f o
+    where
+        f ('.':'.':'.':xs) =
+            (if "cmd" `elem` words o then "[\"\"]" else "undefined") ++
+            (if "..." `isSuffixOf` xs then "" else undefDots xs)
+        f xs = onTail f xs
 
 strip :: String -> String
 strip x
