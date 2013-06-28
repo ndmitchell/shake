@@ -14,6 +14,7 @@ import Control.Exception
 import Control.Monad
 import System.Environment
 import Data.Data
+import Data.List
 import Data.Maybe
 import Data.Monoid
 import qualified Data.ByteString.Char8 as BS
