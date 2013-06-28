@@ -6,6 +6,7 @@ import Development.Shake.FilePath
 
 import Control.Concurrent
 import Control.Monad
+import Data.Char
 import Data.List
 import System.Directory as IO
 import System.Environment
@@ -99,6 +100,12 @@ assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- readFile file
     assert (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
+
+assertNonSpace :: FilePath -> String -> IO ()
+assertNonSpace file want = do
+    got <- readFile file
+    let f = filter (not . isSpace)
+    assert (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
 
 assertContentsInfix :: FilePath -> String -> IO ()
 assertContentsInfix file want = do
