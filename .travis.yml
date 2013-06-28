@@ -1,3 +1,2 @@
 language: haskell
-script:
-  - cabal configure --flag=testprog --ghc-options=-Werror && cabal build && shake_datadir=. dist/build/shake-test/shake-test test && shake_datadir=. dist/build/shake-test/shake-test random test 3m
+script: ./travis.sh
