@@ -10,4 +10,4 @@ main = shaken noTest $ \args obj -> do
     obj "result.tar" *> \out -> do
         contents <- readFileLines "Examples/Tar/list.txt"
         need contents
-        system' "tar" $ ["-cf",out] ++ contents
+        cmd "tar -cf" [out] contents

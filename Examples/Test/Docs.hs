@@ -21,7 +21,7 @@ main = shaken noTest $ \args obj -> do
     index *> \_ -> do
         xs <- getDirectoryFiles "Development" ["//*.hs"]
         need $ map ("Development" </>) xs
-        system' "cabal" ["haddock"]
+        cmd "cabal haddock"
 
     obj "Paths_shake.hs" *> \out -> do
         copyFile' "Paths.hs" out
@@ -78,7 +78,7 @@ main = shaken noTest $ \args obj -> do
 
     obj "Success.txt" *> \out -> do
         need [obj "Main.hs"]
-        system' "runhaskell" ["-ignore-package=hashmap","-i" ++ obj "",obj "Main.hs"]
+        () <- cmd "runhaskell -ignore-package=hashmap" ["-i" ++ obj "", obj "Main.hs"]
         writeFile' out ""
 
 

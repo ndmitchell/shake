@@ -26,7 +26,7 @@ main = shaken test $ \args obj -> do
         need [out]
 
     obj "systemcmd" *> \_ ->
-        system' "random_missing_command" []
+        cmd "random_missing_command"
 
     obj "stack1" *> \_ -> need [obj "stack2"]
     obj "stack2" *> \_ -> need [obj "stack3"]
