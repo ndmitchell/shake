@@ -17,10 +17,11 @@ main = shaken test $ \args obj -> do
 
 
 test build obj = do
-    build ["clean"]
     let run xs = build $ map ('@':) $ words xs
+    build ["clean"]
     run "-f../../Examples/Ninja/test1.ninja"
     assertExists $ obj "out1.txt"
+
     run "-f../../Examples/Ninja/test2.ninja"
     assertExists $ obj "out2.2"
     assertMissing $ obj "out2.1"
