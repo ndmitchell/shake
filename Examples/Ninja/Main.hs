@@ -3,6 +3,8 @@ module Examples.Ninja.Main(main) where
 
 import Development.Shake
 import Development.Shake.Command
+import Development.Shake.FilePath
+import System.Directory(copyFile)
 import Examples.Util
 import Data.List
 import qualified Start
@@ -30,3 +32,11 @@ test build obj = do
     assertExists $ obj "out2.1"
     assertMissing $ obj "out2.2"
 
+    copyFile "Examples/Ninja/test3-sub.ninja" $ obj "test3-sub.ninja"
+    copyFile "Examples/Ninja/test3-inc.ninja" $ obj "test3-inc.ninja"
+    copyFile ("Examples/Ninja/" ++ if null exe then "test3-unix.ninja" else "test3-win.ninja") $ obj "test3-platform.ninja"
+    run "-f../../Examples/Ninja/test3.ninja"
+    assertNonSpace (obj "out3.1") "g4+b1+++i1"
+    assertNonSpace (obj "out3.2") "g4++++i1"
+    assertNonSpace (obj "out3.3") "g4++++i1"
+    assertNonSpace (obj "out3.4") "g4+++s1+s2"

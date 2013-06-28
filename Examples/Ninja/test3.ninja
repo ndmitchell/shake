@@ -1,0 +1,21 @@
+
+
+v1 = g1
+v5 = g1
+
+include test3-platform.ninja
+
+v1 = g2
+
+build out3.1: dump
+    v2 = b1
+
+v1 = g3
+
+subninja test3-sub.ninja
+
+include test3-inc.ninja
+
+build out3.2: dump
+
+v1 = g4
