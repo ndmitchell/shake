@@ -214,7 +214,8 @@ progressDisplayer sleep sample disp prog = do
 {-# NOINLINE xterm #-}
 xterm :: Bool
 xterm = System.IO.Unsafe.unsafePerformIO $
-    Control.Exception.catch (fmap (== "xterm") $ getEnv "TERM") $
+    -- Terminal.app uses "xterm-256color" as its env variable
+    Control.Exception.catch (fmap ("xterm" `isPrefixOf`) $ getEnv "TERM") $
     \(e :: SomeException) -> return False
 
 
