@@ -12,7 +12,7 @@
 --    \"*.tar\" '*>' \\out -> do
 --        contents \<- 'readFileLines' $ out 'Development.Shake.FilePath.-<.>' \"txt\"
 --        'need' contents
---        'system'' \"tar\" $ [\"-cf\",out] ++ contents
+--        'cmd' \"tar -cf\" [out] contents
 -- @
 --
 --   We start by importing the modules defining both Shake and routines for manipulating 'FilePath' values.
@@ -29,7 +29,7 @@
 --   change, then @result.tar@ will be rebuilt.
 --
 --   When writing a Shake build system, start by defining what you 'want', then write rules
---   with '*>' to produce the results. Before calling 'system'' you should ensure that any files the command
+--   with '*>' to produce the results. Before calling 'cmd' you should ensure that any files the command
 --   requires are demanded with calls to 'need'. We offer the following advice to Shake users:
 --
 -- * If @ghc --make@ or @cabal@ is capable of building your project, use that instead. Custom build systems are

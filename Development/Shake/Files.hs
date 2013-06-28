@@ -38,7 +38,7 @@ instance Rule FilesQ FilesA where
 -- [\"*.o\",\"*.hi\"] '*>>' \\[o,hi] -> do
 --     let hs = o 'Development.Shake.FilePath.-<.>' \"hs\"
 --     'Development.Shake.need' ... -- all files the .hs import
---     'Development.Shake.system'' \"ghc\" [\"-c\",hs]
+--     'Development.Shake.cmd' \"ghc -c\" [hs]
 -- @
 --
 --   However, in practice, it's usually easier to define rules with '*>' and make the @.hi@ depend

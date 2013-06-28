@@ -91,14 +91,14 @@ resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j
 --    excel <- 'Development.Shake.newResource' \"Excel\" 1
 --    \"*.xls\" 'Development.Shake.*>' \\out ->
 --        'Development.Shake.withResource' excel 1 $
---            'Development.Shake.system'' \"excel\" [out,...]
+--            'Development.Shake.cmd' \"excel\" out ...
 -- @
 --
 --   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
 --   is better than 'MVar' as it will not block any other threads from executing. Be careful that the
 --   actions run within 'Development.Shake.withResource' do not themselves require further quantities of this resource, or
 --   you may get a \"thread blocked indefinitely in an MVar operation\" exception. Typically only
---   system commands (such as 'Development.Shake.system'') should be run inside 'Development.Shake.withResource',
+--   system commands (such as 'Development.Shake.cmd') should be run inside 'Development.Shake.withResource',
 --   not commands such as 'Development.Shake.need'. If an action requires multiple resources, use
 --   'Development.Shake.withResources' to avoid deadlock.
 --
@@ -111,9 +111,9 @@ resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j
 -- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
 -- \"*.exe\" 'Development.Shake.*>' \\out ->
 --     'Development.Shake.withResource' disk 1 $
---         'Development.Shake.system'' \"ld\" [\"-o\",out,...]
+--         'Development.Shake.cmd' \"ld -o\" [out] ...
 -- \"*.o\" 'Development.Shake.*>' \\out ->
---     'Development.Shake.system'' \"cl\" [\"-o\",out,...]
+--     'Development.Shake.cmd' \"cl -o\" [out] ...
 -- @
 data Resource = Resource {resourceKey :: Int, resourceName :: String, resourceMax :: Int, resourceVar :: Var (Int,[(Int,IO ())])}
 instance Show Resource where show Resource{..} = "Resource " ++ resourceName

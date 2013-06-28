@@ -99,13 +99,13 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 
 
 -- | Require that the following files are built before continuing. Particularly
---   necessary when calling 'Development.Shake.system''. As an example:
+--   necessary when calling 'Development.Shake.cmd' or 'Development.Shake.command'. As an example:
 --
 -- @
 -- \"\/\/*.rot13\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
---     'Development.Shake.system'' \"rot13\" [src,\"-o\",out]
+--     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . pack) xs :: Action [FileA]) >> return ()
@@ -167,7 +167,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpack x_ in
 -- \"*.asm.o\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
---     'Development.Shake.system'' \"as\" [src,\"-o\",out]
+--     'Development.Shake.cmd' \"as\" [src] \"-o\" [out]
 -- @
 --
 --   To define a build system for multiple compiled languages, we recommend using @.asm.o@,

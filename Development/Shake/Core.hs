@@ -434,8 +434,8 @@ apply1 = fmap head . apply . return
 
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
---   The 'Develoment.Shake.system'' command automatically calls 'traced'. The trace list is used for profile reports
---   (see 'shakeReport').
+--   The 'Develoment.Shake.cmd' and 'Develoment.Shake.command' functions automatically call 'traced'.
+--   The trace list is used for profile reports (see 'shakeReport').
 traced :: String -> IO a -> Action a
 traced msg act = do
     s <- Action State.get
@@ -481,7 +481,7 @@ withVerbosity new act = do
 
 
 -- | Run an action with 'Quiet' verbosity, in particular messages produced by 'traced'
---   (including from 'Development.Shake.system'') will not be printed to the screen.
+--   (including from 'Development.Shake.cmd' or 'Development.Shake.command') will not be printed to the screen.
 quietly :: Action a -> Action a
 quietly = withVerbosity Quiet
 
