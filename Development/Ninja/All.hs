@@ -58,6 +58,11 @@ resolvePhony mp = f $ Left 100
             Just xs -> concatMap (f $ either (Left . subtract 1) (Right . (x:)) a) xs
 
 
+quote :: Str -> Str
+quote x | BS.any isSpace x = let q = BS.singleton '\"' in BS.concat [q,x,q]
+        | otherwise = x
+
+
 build :: Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
 build phonys rules pools out Build{..} = do
     need $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
@@ -67,8 +72,8 @@ build phonys rules pools out Build{..} = do
             env <- liftIO $ scopeEnv env
             liftIO $ do
                 -- the order of adding new environment variables matters
-                addEnv env (BS.pack "out") (BS.unwords out)
-                addEnv env (BS.pack "in") (BS.unwords depsNormal)
+                addEnv env (BS.pack "out") (BS.unwords $ map quote out)
+                addEnv env (BS.pack "in") (BS.unwords $ map quote depsNormal)
                 addEnv env (BS.pack "in_newline") (BS.unlines depsNormal)
                 addBinds env buildBind
                 addBinds env ruleBind

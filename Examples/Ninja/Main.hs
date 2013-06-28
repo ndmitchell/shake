@@ -42,3 +42,6 @@ test build obj = do
 
     run "-f../../Examples/Ninja/test4.ninja out"
     assertExists $ obj "out.txt"
+
+    run "-f../../Examples/Ninja/test5.ninja"
+    assertExists $ obj "output file"
