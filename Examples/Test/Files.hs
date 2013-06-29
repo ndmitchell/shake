@@ -12,6 +12,7 @@ main = shaken test $ \args obj -> do
     let rest = delete "@" args
     want $ map obj $ if null rest then ["even.txt","odd.txt"] else rest
 
+    -- Since ?>> and *>> are implemented separately we test everything in both modes
     let deps ?*>> act | fun = (\x -> if x `elem` deps then Just deps else Nothing) ?>> act
                       | otherwise = deps *>> act
 
