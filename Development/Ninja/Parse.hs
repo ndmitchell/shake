@@ -20,12 +20,16 @@ dropSpace = BS.dropWhile isSpace
 startsSpace :: Str -> Bool
 startsSpace = BS.isPrefixOf (BS.pack " ")
 
+-- | This is a hot-spot, so optimised
 linesCR :: Str -> [Str]
-linesCR x | BS.null x = []
-          | otherwise = case BS.elemIndex '\n' x of
-                Nothing -> [x]
-                Just i | i >= 1 && BS.index x (i-1) == '\r' -> BS.take (i-1) x : linesCR (BS.drop (i+1) x)
-                       | otherwise -> BS.take i x : linesCR (BS.drop (i+1) x)
+linesCR x = case BS.split '\n' x of
+    x:xs | Just ('\r',x) <- unsnoc x -> x : map (\x -> case unsnoc x of Just ('\r',x) -> x; _ -> x) xs
+    xs -> xs
+    where
+        -- the ByteString unsnoc was introduced in a newer version
+        unsnoc x | BS.null x = Nothing
+                 | otherwise = Just (BS.last x, BS.init x)
+
 
 
 word1 :: Str -> (Str, Str)
