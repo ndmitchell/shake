@@ -6,7 +6,9 @@ module Development.Shake.Files(
 
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.List
 import Data.Maybe
+import System.Directory
 
 import Development.Shake.Core
 import Development.Shake.Types
@@ -14,6 +16,9 @@ import Development.Shake.Classes
 import Development.Shake.File
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
+
+import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
+
 
 infix 1 ?>>, *>>
 
@@ -56,6 +61,7 @@ ps *>> act
                 return ()
         rule $ \(FilesQ xs_) -> let xs = map unpack xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
+                liftIO $ mapM_ (createDirectoryIfMissing True) $ nub $ map takeDirectory xs
                 act xs
                 liftIO $ getFileTimes "*>>" xs_
 
@@ -92,6 +98,7 @@ ps *>> act
     rule $ \(FilesQ xs_) -> let xs@(x:_) = map unpack xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
+                liftIO $ mapM_ (createDirectoryIfMissing True) $ nub $ map takeDirectory xs
                 act xs
                 liftIO $ getFileTimes "?>>" xs_
             Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
