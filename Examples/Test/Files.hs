@@ -12,17 +12,16 @@ main = shaken test $ \args obj -> do
     let rest = delete "@" args
     want $ map obj $ if null rest then ["even.txt","odd.txt"] else rest
 
-    let deps = map obj ["even.txt","odd.txt"]
-    let def | fun = (?>>) (\x -> if x `elem` deps then Just deps else Nothing)
-            | otherwise = (*>>) deps
+    let deps ?*>> act | fun = (\x -> if x `elem` deps then Just deps else Nothing) ?>> act
+                      | otherwise = deps *>> act
 
-    def $ \[evens,odds] -> do
+    map obj ["even.txt","odd.txt"] ?*>> \[evens,odds] -> do
         src <- readFileLines $ obj "numbers.txt"
         let (es,os) = partition even $ map read src
         writeFileLines evens $ map show es
         writeFileLines odds  $ map show os
 
-    map obj ["dir1/out.txt","dir2/out.txt"] *>> \[a,b] -> do
+    map obj ["dir1/out.txt","dir2/out.txt"] ?*>> \[a,b] -> do
         writeFile' a "a"
         writeFile' b "b"
 
@@ -34,5 +33,5 @@ test build obj = do
         build ("--sleep":args)
         assertContents (obj "even.txt") $ nums [2,4,2]
         assertContents (obj "odd.txt" ) $ nums [1,5,3,1]
-    build ["clean"]
-    build ["dir1/out.txt"]
+        build ["clean"]
+        build ["dir1/out.txt"]
