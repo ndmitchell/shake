@@ -44,8 +44,7 @@ runNinja file args = do
 
 -- Normalise the LHS of build rules, so that normalised RHS still match
 norm :: Str -> Str
-norm x | BS.pack "./" `BS.isPrefixOf` x = BS.drop 2 x
-       | otherwise = x
+norm = BS.pack . normalise . BS.unpack
 
 
 resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
