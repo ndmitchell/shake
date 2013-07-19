@@ -417,12 +417,13 @@ checkValid :: Database -> (Key -> IO (Maybe Value)) -> IO ()
 checkValid Database{..} stored = do
     status <- readIORef status
     diagnostic "Starting validity/lint checking"
-    bad <- fmap concat $ forM (Map.toList status) $ \(i,v) -> case v of
+    -- Do not use a forM here as you use too much stack space
+    bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             good <- fmap (== Just result) $ stored key
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return [show key ++ " is no longer " ++ show result | not good && not (specialAlwaysRebuilds result)]
-        _ -> return []
+            return $ [show key ++ " is no longer " ++ show result | not good && not (specialAlwaysRebuilds result)] ++ seen
+        _ -> return seen
     if null bad
         then diagnostic "Validity/lint check passed"
         else error $ unlines $ "Error: Dependencies have changed since being built:" : bad

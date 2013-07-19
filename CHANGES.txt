@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Reduce stack usage when lint checking
     #24, create the output directories for the multiple file rule
     Improvements to match Ninja behaviour
 0.10.6
