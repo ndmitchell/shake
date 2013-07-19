@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Require unordered-containers-0.2.1 or above
     Reduce stack usage when lint checking
     #24, create the output directories for the multiple file rule
     Improvements to match Ninja behaviour
