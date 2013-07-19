@@ -5,6 +5,7 @@ module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where
 import Control.Concurrent
 import Control.Exception hiding (blocked)
 import Development.Shake.Locks
+import Development.Shake.Timing
 import qualified Data.HashSet as Set
 import System.IO.Unsafe
 import System.Random
@@ -72,10 +73,12 @@ Must spawn a fresh thread to do blockPool
 If any worker throws an exception, must signal to all the other workers
 -}
 
-data Pool = Pool {-# UNPACK #-} !Int !(Var (Maybe S)) !(Barrier (Maybe SomeException))
+data Pool = Pool {-# UNPACK #-} !Int !(Var (Maybe S)) !(Barrier (Either SomeException S))
 
 data S = S
     {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stackssss
+    ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads
+    ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
     ,working :: {-# UNPACK #-} !Int -- threads which are actively working
     ,blocked :: {-# UNPACK #-} !Int -- threads which are blocked
     ,todo :: !(Queue (IO ()))
@@ -83,7 +86,7 @@ data S = S
 
 
 emptyS :: Bool -> S
-emptyS deterministic = S Set.empty 0 0 $ newQueue deterministic
+emptyS deterministic = S Set.empty 0 0 0 0 $ newQueue deterministic
 
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
@@ -103,12 +106,14 @@ step pool@(Pool n var done) op = do
                     case res of
                         Left e -> onVar $ \s -> do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
-                            signalBarrier done $ Just e
+                            signalBarrier done $ Left e
                             return Nothing
                         Right _ -> step pool $ \s -> return s{working = working s - 1, threads = Set.delete t $ threads s}
-                return $ Just s{working = working s + 1, todo = todo2, threads = Set.insert t $ threads s}
+                let threads2 = Set.insert t $ threads s
+                return $ Just s{working = working s + 1, todo = todo2, threads = threads2
+                               ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` Set.size threads2}
             Nothing | working s == 0 && blocked s == 0 -> do
-                signalBarrier done Nothing
+                signalBarrier done $ Right s
                 return Nothing
             _ -> return $ Just s
 
@@ -160,5 +165,5 @@ runPool deterministic n act = do
         addPool pool $ act pool
         res <- waitBarrier res
         case res of
-            Nothing -> return ()
-            Just e -> throw e
+            Left e -> throw e
+            Right s -> addTiming $ "Pool finished (" ++ show (threadsSum s) ++ " threads, " ++ show (threadsMax s) ++ " max)"
