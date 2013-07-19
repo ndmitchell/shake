@@ -44,4 +44,4 @@ toList (Intern a b) = Map.toList b
 
 
 fromList :: (Eq a, Hashable a) => [(a, Id)] -> Intern a
-fromList xs = Intern (maximum $ 0 : [i | (_, Id i) <- xs]) (Map.fromList xs)
+fromList xs = Intern (foldl' max 0 [i | (_, Id i) <- xs]) (Map.fromList xs)
