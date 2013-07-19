@@ -174,7 +174,7 @@ executable shake-test
         buildable: True
     else
         buildable: False
-    ghc-options: -threaded
+    ghc-options: -threaded -rtsopts
     build-depends:
         base == 4.*,
         old-time,
