@@ -9,6 +9,7 @@ import Development.Shake.Binary
 import Development.Shake.Classes
 import Prelude hiding (lookup)
 import qualified Data.HashMap.Strict as Map
+import Data.List(foldl')
 
 
 -- Invariant: The first field is the highest value in the Map
