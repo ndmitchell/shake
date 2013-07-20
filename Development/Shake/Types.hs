@@ -4,7 +4,7 @@
 module Development.Shake.Types(
     Progress(..), Verbosity(..), Assume(..),
     ShakeOptions(..), shakeOptions,
-    BS, pack, unpack, pack_, unpack_
+    BS, pack, unpack, pack_, unpack_, packU, unpackU
     ) where
 
 import Data.Data
@@ -12,6 +12,7 @@ import Data.List
 import Development.Shake.Progress
 import Development.Shake.Classes
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.UTF8 as UTF8
 
 
 -- | The current assumptions made by the build system, used by 'shakeAssume'. These options
@@ -187,3 +188,10 @@ pack_ = BS
 
 unpack_ :: BS -> BS.ByteString
 unpack_ (BS x) = x
+
+packU :: String -> BS
+packU = pack_ . UTF8.fromString
+
+unpackU :: BS -> String
+unpackU = UTF8.toString . unpack_
+
