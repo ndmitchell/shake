@@ -29,7 +29,7 @@ newtype FilesQ = FilesQ [BS]
 newtype FilesA = FilesA [FileTime]
     deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
 
-instance Show FilesQ where show (FilesQ xs) = unwords $ map unpack xs
+instance Show FilesQ where show (FilesQ xs) = unwords $ map unpackU xs
 
 
 instance Rule FilesQ FilesA where
@@ -57,9 +57,9 @@ ps *>> act
     | otherwise = do
         forM_ ps $ \p ->
             p *> \file -> do
-                _ :: FilesA <- apply1 $ FilesQ $ map (pack . substitute (extract p file)) ps
+                _ :: FilesA <- apply1 $ FilesQ $ map (packU . substitute (extract p file)) ps
                 return ()
-        rule $ \(FilesQ xs_) -> let xs = map unpack xs_ in
+        rule $ \(FilesQ xs_) -> let xs = map unpackU xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ nub $ map takeDirectory xs
                 act xs
@@ -92,10 +92,10 @@ ps *>> act
                     | otherwise -> error $ "Invariant broken in ?>> when trying on " ++ x
 
     isJust . checkedTest ?> \x -> do
-        _ :: FilesA <- apply1 $ FilesQ $ map pack $ fromJust $ test x
+        _ :: FilesA <- apply1 $ FilesQ $ map packU $ fromJust $ test x
         return ()
 
-    rule $ \(FilesQ xs_) -> let xs@(x:_) = map unpack xs_ in
+    rule $ \(FilesQ xs_) -> let xs@(x:_) = map unpackU xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ nub $ map takeDirectory xs
@@ -114,4 +114,4 @@ getFileTimes name xs = do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ unpack x ++ if isNothing y then " - MISSING" else "" | (x,y) <- zip xs ys]
+                    concat ["\n  " ++ unpackU x ++ if isNothing y then " - MISSING" else "" | (x,y) <- zip xs ys]

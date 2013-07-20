@@ -29,7 +29,7 @@ infix 1 *>, ?>, **>
 newtype FileQ = FileQ BS
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show FileQ where show (FileQ x) = unpack x
+instance Show FileQ where show (FileQ x) = unpackU x
 
 newtype FileA = FileA FileTime
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
@@ -108,7 +108,7 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
 need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . pack) xs :: Action [FileA]) >> return ()
+need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --
@@ -124,7 +124,7 @@ want = action . need
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = rule $ \(FileQ x_) -> let x = unpack x_ in
+root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
@@ -137,7 +137,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpack x_ in
 --   Phony actions are intended to define command-line abbreviations. You should not 'need' phony actions
 --   as dependencies of rules, as that will cause excessive rebuilding.
 phony :: String -> Action () -> Rules ()
-phony name act = rule $ \(FileQ x_) -> let x = unpack x_ in
+phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
         return $ FileA fileTimeNone

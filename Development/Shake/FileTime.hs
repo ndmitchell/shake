@@ -8,8 +8,7 @@ module Development.Shake.FileTime(
 import Development.Shake.Classes
 import Data.Int
 import qualified Data.ByteString.Char8 as BS
-
-#ifdef PORTABLE
+import qualified Data.ByteString.UTF8 as UTF8
 
 import System.IO.Error
 import Control.Exception
@@ -21,7 +20,7 @@ import Data.Time
 import System.Time
 #endif
 
-#elif defined mingw32_HOST_OS
+#if defined mingw32_HOST_OS
 
 import Foreign
 import Foreign.C.Types
@@ -58,6 +57,19 @@ fileTimeNone :: FileTime
 fileTimeNone = FileTime maxBound
 
 
+-- Portable fallback
+getModTimeMaybePort x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+    time <- getModificationTime x
+#if __GLASGOW_HASKELL__ >= 706
+    return $ Just $ fileTime $ floor $ utctDayTime time
+#else
+    let TOD t _ = time
+    return $ Just $ fileTime $ fromIntegral t
+#endif
+
+
+
+
 getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
 
 #ifdef PORTABLE
@@ -78,11 +90,14 @@ getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else
 getModTimeMaybe x = BS.useAsCString x $ \file ->
     allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA $ \info -> do
         res <- c_getFileAttributesEx file 0 info
-        if not res then return Nothing else do
+        if res then do
             -- Technically a Word32, but we can treak it as an Int32 for peek
             dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32
             return $ Just $ fileTime dword
-
+         else if BS.unpack x /= UTF8.toString x then
+            getModTimeMaybePort $ UTF8.toString x
+         else
+            return Nothing
 #else
 
 -- Directly against the unix library
