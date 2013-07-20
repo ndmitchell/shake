@@ -84,7 +84,7 @@ library
         process >= 1.1,
         unordered-containers >= 0.2.1 && < 0.3,
         bytestring,
-        utf-string >= 0.3,
+        utf8-string >= 0.3,
         time,
         random,
         transformers >= 0.2 && < 0.4,
@@ -145,7 +145,7 @@ executable shake
         process,
         unordered-containers (>= 0.1.4.3 && < 0.2) || (>= 0.2.1 && < 0.3),
         bytestring,
-        utf-string >= 0.3,
+        utf8-string >= 0.3,
         time,
         random,
         transformers >= 0.2 && < 0.4,
@@ -187,7 +187,7 @@ executable shake-test
         process,
         unordered-containers (>= 0.1.4.3 && < 0.2) || (>= 0.2.1 && < 0.3),
         bytestring,
-        utf-string >= 0.3,
+        utf8-string >= 0.3,
         time,
         random,
         transformers >= 0.2 && < 0.4,
@@ -232,4 +232,5 @@ executable shake-test
         Examples.Test.Progress
         Examples.Test.Random
         Examples.Test.Resources
+        Examples.Test.Unicode
         Start
