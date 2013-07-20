@@ -7,9 +7,6 @@ import Development.Shake.FilePath
 import Examples.Util
 import Control.Monad
 import System.Directory(createDirectoryIfMissing)
-import Control.Exception
-import qualified System.IO as IO
-
 
 
 -- | Decode a dull ASCII string to certain unicode points, necessary because
