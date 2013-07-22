@@ -506,6 +506,7 @@ blockApply msg act = do
 
 
 -- | Run an action which uses part of a finite resource. For an example see 'Resource'.
+--   You may not call 'apply'/'Development.Shake.need' while the resource is acquired.
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     s <- Action State.get
