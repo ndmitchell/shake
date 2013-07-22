@@ -4,7 +4,7 @@ module Development.Shake.Util(
     modifyIORef'', writeIORef'',
     whenJust,
     BS, pack, unpack, pack_, unpack_,
-    BSU, packU, unpackU, packU_, unpackU_
+    BSU, packU, unpackU, packU_, unpackU_, requireU
     ) where
 
 import Data.IORef
@@ -80,3 +80,6 @@ unpackU_ (BSU x) = x
 
 packU_ :: BS.ByteString -> BSU
 packU_ = BSU
+
+requireU :: BSU -> Bool
+requireU x = BS.unpack (unpackU_ x) /= unpackU x

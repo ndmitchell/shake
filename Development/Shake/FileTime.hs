@@ -94,7 +94,7 @@ getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
             -- Technically a Word32, but we can treak it as an Int32 for peek
             dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32
             return $ Just $ fileTime dword
-         else if BS.unpack (unpackU_ x) /= unpackU x then
+         else if requireU x then
             getModTimeMaybePort $ unpackU x
          else
             return Nothing
