@@ -8,7 +8,8 @@ module Development.Shake.Util(
     ) where
 
 import Data.IORef
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString as BS (any)
+import qualified Data.ByteString.Char8 as BS hiding (any)
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Classes
 
@@ -82,4 +83,4 @@ packU_ :: BS.ByteString -> BSU
 packU_ = BSU
 
 requireU :: BSU -> Bool
-requireU x = BS.unpack (unpackU_ x) /= unpackU x
+requireU = BS.any (>= 0x80) . unpackU_
