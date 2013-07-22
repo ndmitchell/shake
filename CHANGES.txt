@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #32, add a check that withResources does not call need
     #614, support unicode filenames
     Require unordered-containers-0.2.1 or above
     Reduce stack usage when lint checking

@@ -4,7 +4,7 @@
 module Development.Shake.Errors(
     ShakeException(..),
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
-    errorMultipleRulesMatch, errorRuleRecursion,
+    errorMultipleRulesMatch, errorRuleRecursion, errorNoApply,
     err
     ) where
 
@@ -96,6 +96,14 @@ errorDuplicateOracle tk k tvs = structured_
      ,("Question value",k)] ++
      [("Answer type " ++ show i, Just $ show tv) | (i,tv) <- zip [1..] tvs])
     "Only one call to addOracle is allowed per question type"
+
+errorNoApply :: TypeRep -> Maybe String -> String -> a
+errorNoApply tk k msg = structured (specialIsOracleKey tk)
+    ("Build system error - cannot currently call _apply_")
+    [("Reason", Just msg)
+    ,("_Key_ type", Just $ show tk)
+    ,("_Key_ value", k)]
+    "Move the _apply_ call earlier/later"
 
 
 -- Should be in Special, but then we get an import cycle

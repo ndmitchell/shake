@@ -45,6 +45,11 @@ main = shaken test $ \args obj -> do
     catcher "exception1" actionOnException True
     catcher "exception2" actionOnException False
 
+    res <- newResource "resource_name" 1
+    obj "resource" *> \out -> do
+        withResource res 1 $
+            need ["resource-dep"]
+
 
 test build obj = do
     let crash args parts = do
@@ -78,3 +83,5 @@ test build obj = do
     assertContents (obj "exception1") "1"
     build ["exception2"]
     assertContents (obj "exception2") "0"
+
+    crash ["resource"] ["cannot currently call apply","withResource","resource_name"]

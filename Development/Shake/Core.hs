@@ -215,6 +215,7 @@ data SAction = SAction
     ,depends :: [Depends] -- built up in reverse
     ,discount :: !Duration
     ,traces :: [Trace] -- in reverse
+    ,blockapply ::  Maybe String -- reason to block apply, or Nothing to allow
     }
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
@@ -289,7 +290,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     return stats{isRunning=running, isFailure=failure}
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 []
+                    let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 [] Nothing
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
                 when shakeLint $ do
                     addTiming "Lint checking"
@@ -397,9 +398,11 @@ apply = f
         -- We don't want the forall in the Haddock docs
         f :: forall key value . Rule key value => [key] -> Action [value]
         f ks = do
-            ruleinfo <- Action $ State.gets ruleinfo
             let tk = typeOf (err "apply key" :: key)
                 tv = typeOf (err "apply type" :: value)
+            ruleinfo <- Action $ State.gets ruleinfo
+            block <- Action $ State.gets blockapply
+            whenJust block $ errorNoApply tk (fmap show $ listToMaybe ks)
             case Map.lookup tk ruleinfo of
                 Nothing -> errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
                 Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
@@ -493,6 +496,15 @@ newResource :: String -> Int -> Rules Resource
 newResource name mx = rulesIO $ newResourceIO name mx
 
 
+blockApply :: String -> Action a -> Action a
+blockApply msg act = do
+    s0 <- Action State.get
+    Action $ State.put s0{blockapply=Just msg}
+    res <- act
+    Action $ State.modify $ \s -> s{blockapply=blockapply s0}
+    return res
+
+
 -- | Run an action which uses part of a finite resource. For an example see 'Resource'.
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
@@ -507,7 +519,7 @@ withResource r i act = do
                     diagnostic s $ show r ++ " acquired " ++ show i ++ " after waiting")
         (do releaseResource r i
             diagnostic s $ show r ++ " released " ++ show i)
-        (runAction s act)
+        (runAction s $ blockApply ("Within withResource using " ++ show r) act)
     Action $ State.put s
     return res
 
