@@ -11,7 +11,7 @@ import Data.Maybe
 import System.Directory
 
 import Development.Shake.Core
-import Development.Shake.Types
+import Development.Shake.Util
 import Development.Shake.Classes
 import Development.Shake.File
 import Development.Shake.FilePattern

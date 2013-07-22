@@ -3,8 +3,7 @@
 -- | Types exposed to the user
 module Development.Shake.Types(
     Progress(..), Verbosity(..), Assume(..),
-    ShakeOptions(..), shakeOptions,
-    BS, pack, unpack, pack_, unpack_, packU, unpackU
+    ShakeOptions(..), shakeOptions
     ) where
 
 import Data.Data
@@ -12,7 +11,6 @@ import Data.List
 import Development.Shake.Progress
 import Development.Shake.Classes
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.UTF8 as UTF8
 
 
 -- | The current assumptions made by the build system, used by 'shakeAssume'. These options
@@ -163,35 +161,3 @@ data Verbosity
     | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
-
-
----------------------------------------------------------------------
--- BYTESTRING WRAPPER
--- Only purpose is because ByteString does not have an NFData instance in older GHC
-
-newtype BS = BS BS.ByteString
-    deriving (Hashable, Binary, Eq)
-
-instance NFData BS where
-    -- some versions of ByteString do not have NFData instances, but seq is equivalent
-    -- for a strict bytestring. Therefore, we write our own instance.
-    rnf (BS x) = x `seq` ()
-
-pack :: String -> BS
-pack = pack_ . BS.pack
-
-unpack :: BS -> String
-unpack = BS.unpack . unpack_
-
-pack_ :: BS.ByteString -> BS
-pack_ = BS
-
-unpack_ :: BS -> BS.ByteString
-unpack_ (BS x) = x
-
-packU :: String -> BS
-packU = pack_ . UTF8.fromString
-
-unpackU :: BS -> String
-unpackU = UTF8.toString . unpack_
-
