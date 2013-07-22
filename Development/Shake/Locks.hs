@@ -122,7 +122,7 @@ instance Eq Resource where (==) = (==) `on` resourceKey
 instance Ord Resource where compare = compare `on` resourceKey
 
 
--- | A version of 'newResource' that runs in IO, and can be called before calling 'Development.Shake.shake'.
+-- | A version of 'Development.Shake.newResource' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newResource' instead.
 newResourceIO :: String -> Int -> IO Resource
 newResourceIO name mx = do
