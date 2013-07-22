@@ -64,10 +64,6 @@ startTime = do
         end <- getCurrentTime
         return $ fromRational $ toRational $ end `diffUTCTime` start
 
-whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
-whenJust (Just a) f = f a
-whenJust Nothing f = return ()
-
 
 ---------------------------------------------------------------------
 -- CALL STACK

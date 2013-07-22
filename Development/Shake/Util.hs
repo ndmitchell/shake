@@ -14,3 +14,8 @@ modifyIORef'' ref f = do
 
 writeIORef'' :: IORef a -> a -> IO ()
 writeIORef'' ref !x = writeIORef ref x
+
+
+whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
+whenJust (Just a) f = f a
+whenJust Nothing f = return ()
