@@ -10,6 +10,7 @@ import System.Environment
 import Development.Shake.Pool
 import Development.Shake.Timing
 import Development.Shake.FileTime
+import Development.Shake.Util
 import qualified Data.ByteString.Char8 as BS
 import Examples.Util(sleepFileTime)
 import Control.Concurrent
@@ -101,7 +102,7 @@ filetime _ = do
     vars <- forM [a,b,c,d] $ \xs -> do
         mvar <- newEmptyMVar
         forkIO $ do
-            mapM_ getModTimeMaybe xs
+            mapM_ (getModTimeMaybe . packU_) xs
             putMVar mvar ()
         return $ takeMVar mvar
     sequence_ vars

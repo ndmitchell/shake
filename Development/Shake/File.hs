@@ -26,7 +26,7 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 infix 1 *>, ?>, **>
 
 
-newtype FileQ = FileQ BS
+newtype FileQ = FileQ BSU
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show FileQ where show (FileQ x) = unpackU x
@@ -35,7 +35,7 @@ newtype FileA = FileA FileTime
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule FileQ FileA where
-    storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe $ unpack_ x
+    storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
 
 {-
     observed act = do
@@ -95,7 +95,7 @@ compareItems = f ""
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
-    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" $ unpack_ x
+    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
 
 
 -- | Require that the following files are built before continuing. Particularly
@@ -128,7 +128,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") $ unpack_ x_
+        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
 
 
 -- | Declare a phony action, this is an action that does not produce a file, and will be rerun

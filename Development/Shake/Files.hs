@@ -23,7 +23,7 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 infix 1 ?>>, *>>
 
 
-newtype FilesQ = FilesQ [BS]
+newtype FilesQ = FilesQ [BSU]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 newtype FilesA = FilesA [FileTime]
@@ -33,7 +33,7 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map unpackU xs
 
 
 instance Rule FilesQ FilesA where
-    storedValue (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe $ map unpack_ xs
+    storedValue (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe xs
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -105,9 +105,9 @@ ps *>> act
             Nothing -> Nothing
 
 
-getFileTimes :: String -> [BS] -> IO FilesA
+getFileTimes :: String -> [BSU] -> IO FilesA
 getFileTimes name xs = do
-    ys <- mapM (getModTimeMaybe . unpack_) xs
+    ys <- mapM getModTimeMaybe xs
     case sequence ys of
         Just ys -> return $ FilesA ys
         Nothing -> do

@@ -6,9 +6,9 @@ module Development.Shake.FileTime(
     ) where
 
 import Development.Shake.Classes
+import Development.Shake.Util
 import Data.Int
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.UTF8 as UTF8
 
 import System.IO.Error
 import Control.Exception
@@ -70,13 +70,13 @@ getModTimeMaybePort x = handleJust (\e -> if isDoesNotExistError e then Just () 
 
 
 
-getModTimeMaybe :: BS.ByteString -> IO (Maybe FileTime)
+getModTimeMaybe :: BSU -> IO (Maybe FileTime)
 
 #ifdef PORTABLE
 
 -- Portable fallback
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    time <- getModificationTime $ BS.unpack x
+    time <- getModificationTime $ unpackU x
 #if __GLASGOW_HASKELL__ >= 706
     return $ Just $ fileTime $ floor $ utctDayTime time
 #else
@@ -87,31 +87,31 @@ getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else
 #elif defined mingw32_HOST_OS
 
 -- Directly against the Win32 API, twice as fast as the portable version
-getModTimeMaybe x = BS.useAsCString x $ \file ->
+getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
     allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA $ \info -> do
         res <- c_getFileAttributesEx file 0 info
         if res then do
             -- Technically a Word32, but we can treak it as an Int32 for peek
             dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32
             return $ Just $ fileTime dword
-         else if BS.unpack x /= UTF8.toString x then
-            getModTimeMaybePort $ UTF8.toString x
+         else if BS.unpack (unpackU_ x) /= unpackU x then
+            getModTimeMaybePort $ unpackU x
          else
             return Nothing
 #else
 
 -- Directly against the unix library
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    t <- fmap modificationTime $ getFileStatus x
+    t <- fmap modificationTime $ getFileStatus $ unpackU_ x
     return $ Just $ fileTime $ fromIntegral $ fromEnum t
 
 #endif
 
 
-getModTimeError :: String -> BS.ByteString -> IO FileTime
+getModTimeError :: String -> BSU -> IO FileTime
 getModTimeError msg x = do
     res <- getModTimeMaybe x
     case res of
         -- Make sure you raise an error in IO, not return a value which will error later
-        Nothing -> error $ msg ++ "\n  " ++ BS.unpack x
+        Nothing -> error $ msg ++ "\n  " ++ unpackU x
         Just x -> return x
