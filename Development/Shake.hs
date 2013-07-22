@@ -99,6 +99,7 @@ module Development.Shake(
     alwaysRerun,
     -- * Finite resources
     Resource, newResource, newResourceIO, withResource, withResources,
+    unsafeExtraThread,
     -- * Cached file contents
     newCache, newCacheIO
     ) where

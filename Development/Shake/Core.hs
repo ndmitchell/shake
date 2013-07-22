@@ -15,6 +15,7 @@ module Development.Shake.Core(
     Action, actionOnException, actionFinally, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
     Resource, newResource, newResourceIO, withResource, withResources,
+    unsafeExtraThread,
     -- Internal stuff
     rulesIO, runAfter
     ) where
@@ -535,3 +536,14 @@ withResources res act
     where
         f [] = act
         f (r:rs) = withResource (fst $ head r) (sum $ map snd r) $ f rs
+
+
+-- | Run an action without counting to the thread limit, typically used for actions that execute
+--   on remote machines using barely any local CPU resources. Unsafe as it allows the 'shakeThreads' limit to be exceeded.
+--   You may not call 'apply' / 'Development.Shake.need' while the extra thread is executing.
+unsafeExtraThread :: Action a -> Action a
+unsafeExtraThread act = do
+    s <- Action State.get
+    (res,s) <- liftIO $ blockPool (pool s) $ fmap ((,) False) $ runAction s act
+    Action $ State.put s
+    return res
