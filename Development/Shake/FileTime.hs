@@ -9,37 +9,31 @@ import Development.Shake.Classes
 import Development.Shake.Util
 import Data.Int
 import qualified Data.ByteString.Char8 as BS
-
 import System.IO.Error
 import Control.Exception
-import System.Directory
 
+-- Required for Portable
+import System.Directory
 #if __GLASGOW_HASKELL__ >= 706
 import Data.Time
 #else
 import System.Time
 #endif
 
-#if defined mingw32_HOST_OS
-
+-- Required for non-portable Windows
+#if defined(mingw32_HOST_OS)
 import Foreign
 import Foreign.C.Types
-
 type WIN32_FILE_ATTRIBUTE_DATA = Ptr ()
 type LPCSTR = Ptr CChar
-
 foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesEx :: LPCSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
-
 size_WIN32_FILE_ATTRIBUTE_DATA = 36
-
 index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
+#endif
 
-#else
-
-import System.IO.Error
-import Control.Exception
+-- Required for non-portable Unix (since it requires a non-standard library, only require if not portable)
+#if !defined(PORTABLE) && !defined(mingw32_HOST_OS)
 import System.Posix.Files.ByteString
-
 #endif
 
 
@@ -57,25 +51,29 @@ fileTimeNone :: FileTime
 fileTimeNone = FileTime maxBound
 
 
--- Portable fallback
-getModTimeMaybePort x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    time <- getModificationTime x
-#if __GLASGOW_HASKELL__ >= 706
-    return $ Just $ fileTime $ floor $ utctDayTime time
+getModTimeError :: String -> BSU -> IO FileTime
+getModTimeError msg x = do
+    res <- getModTimeMaybe x
+    case res of
+        -- Make sure you raise an error in IO, not return a value which will error later
+        Nothing -> error $ msg ++ "\n  " ++ unpackU x
+        Just x -> return x
+
+
+getModTimeMaybe :: BSU -> IO (Maybe FileTime)
+#if defined(PORTABLE)
+getModTimeMaybe x = getModTimeMaybePortable x
+#elif defined(mingw32_HOST_OS)
+getModTimeMaybe x = getModTimeMaybeWindows x
 #else
-    let TOD t _ = time
-    return $ Just $ fileTime $ fromIntegral t
+getModTimeMaybe x = getModTimeMaybeUnix x
 #endif
 
 
 
-
-getModTimeMaybe :: BSU -> IO (Maybe FileTime)
-
-#ifdef PORTABLE
-
 -- Portable fallback
-getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getModTimeMaybePortable :: BSU -> IO (Maybe FileTime)
+getModTimeMaybePortable x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     time <- getModificationTime $ unpackU x
 #if __GLASGOW_HASKELL__ >= 706
     return $ Just $ fileTime $ floor $ utctDayTime time
@@ -84,10 +82,11 @@ getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else
     return $ Just $ fileTime $ fromIntegral t
 #endif
 
-#elif defined mingw32_HOST_OS
 
 -- Directly against the Win32 API, twice as fast as the portable version
-getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
+#if defined(mingw32_HOST_OS)
+getModTimeMaybeWindows :: BSU -> IO (Maybe FileTime)
+getModTimeMaybeWindows x = BS.useAsCString (unpackU_ x) $ \file ->
     allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA $ \info -> do
         res <- c_getFileAttributesEx file 0 info
         if res then do
@@ -95,23 +94,16 @@ getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
             dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32
             return $ Just $ fileTime dword
          else if requireU x then
-            getModTimeMaybePort $ unpackU x
+            getModTimeMaybePortable x
          else
             return Nothing
-#else
-
--- Directly against the unix library
-getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    t <- fmap modificationTime $ getFileStatus $ unpackU_ x
-    return $ Just $ fileTime $ fromIntegral $ fromEnum t
-
 #endif
 
 
-getModTimeError :: String -> BSU -> IO FileTime
-getModTimeError msg x = do
-    res <- getModTimeMaybe x
-    case res of
-        -- Make sure you raise an error in IO, not return a value which will error later
-        Nothing -> error $ msg ++ "\n  " ++ unpackU x
-        Just x -> return x
+-- Unix version
+#if !defined(PORTABLE) && !defined(mingw32_HOST_OS)
+getModTimeMaybeUnix :: BSU -> IO (Maybe FileTime)
+getModTimeMaybeUnix x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+    t <- fmap modificationTime $ getFileStatus $ unpackU_ x
+    return $ Just $ fileTime $ fromIntegral $ fromEnum t
+#endif
