@@ -1,7 +1,9 @@
 {-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Util(
-    module Development.Shake.Util
+    modifyIORef'', writeIORef'',
+    whenJust,
+    BS, pack, unpack, pack_, unpack_, packU, unpackU
     ) where
 
 import Data.IORef
