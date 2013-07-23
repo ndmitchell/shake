@@ -9,7 +9,6 @@ module Development.Shake.Types(
 import Data.Data
 import Data.List
 import Development.Shake.Progress
-import Development.Shake.Classes
 import qualified Data.ByteString.Char8 as BS
 
 
