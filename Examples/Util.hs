@@ -1,10 +1,10 @@
 
-module Examples.Util(module Examples.Util) where
+module Examples.Util(sleep, module Examples.Util) where
 
 import Development.Shake
+import Development.Shake.Util
 import Development.Shake.FilePath
 
-import Control.Concurrent
 import Control.Monad
 import Data.Char
 import Data.List
@@ -117,10 +117,6 @@ noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
     build ["--abbrev=output=$OUT"]
     build []
-
-
-sleep :: Double -> IO ()
-sleep x = threadDelay $ ceiling $ x * 1000000
 
 
 -- | Sleep long enough for the modification time resolution to catch up

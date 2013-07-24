@@ -4,7 +4,7 @@ module Development.Shake.Util(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
-    Duration, duration, Time, startTime,
+    Duration, duration, Time, startTime, sleep,
     modifyIORef'', writeIORef'',
     whenJust,
     BS, pack, unpack, pack_, unpack_,
@@ -105,6 +105,10 @@ startTime = do
     return $ do
         end <- getCurrentTime
         return $ fromRational $ toRational $ end `diffUTCTime` start
+
+
+sleep :: Double -> IO ()
+sleep x = threadDelay $ ceiling $ x * 1000000
 
 
 ---------------------------------------------------------------------
