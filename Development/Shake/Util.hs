@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Util(
-    Lock, newLock, withLock,
+    Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, startTime,
@@ -12,6 +12,7 @@ module Development.Shake.Util(
     ) where
 
 import Control.Concurrent
+import Control.Exception
 import Data.IORef
 import Data.Time
 import qualified Data.ByteString as BS (any)
@@ -32,6 +33,14 @@ newLock = fmap Lock $ newMVar ()
 
 withLock :: Lock -> IO a -> IO a
 withLock (Lock x) = withMVar x . const
+
+withLockTry :: Lock -> IO a -> IO (Maybe a)
+withLockTry (Lock m) act =
+    mask $ \restore -> do
+        a <- tryTakeMVar m
+        case a of
+            Nothing -> return Nothing
+            Just _ -> restore (fmap Just act) `finally` putMVar m ()
 
 
 ---------------------------------------------------------------------
