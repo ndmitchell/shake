@@ -4,6 +4,7 @@ module Development.Shake.Util(
     Lock, newLock, withLock,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
+    Duration, duration, Time, startTime,
     modifyIORef'', writeIORef'',
     whenJust,
     BS, pack, unpack, pack_, unpack_,
@@ -12,6 +13,7 @@ module Development.Shake.Util(
 
 import Control.Concurrent
 import Data.IORef
+import Data.Time
 import qualified Data.ByteString as BS (any)
 import qualified Data.ByteString.Char8 as BS hiding (any)
 import qualified Data.ByteString.UTF8 as UTF8
@@ -70,6 +72,30 @@ signalBarrier (Barrier x) = putMVar x
 
 waitBarrier :: Barrier a -> IO a
 waitBarrier (Barrier x) = readMVar x
+
+
+---------------------------------------------------------------------
+-- Data.Time
+
+type Duration = Double -- duration in seconds
+
+duration :: IO a -> IO (Duration, a)
+duration act = do
+    start <- getCurrentTime
+    res <- act
+    end <- getCurrentTime
+    return (fromRational $ toRational $ end `diffUTCTime` start, res)
+
+
+type Time = Double -- how far you are through this run, in seconds
+
+-- | Call once at the start, then call repeatedly to get Time values out
+startTime :: IO (IO Time)
+startTime = do
+    start <- getCurrentTime
+    return $ do
+        end <- getCurrentTime
+        return $ fromRational $ toRational $ end `diffUTCTime` start
 
 
 ---------------------------------------------------------------------

@@ -30,7 +30,6 @@ import Data.IORef
 import Data.Maybe
 import Data.List
 import Data.Monoid
-import Data.Time
 
 type Map = Map.HashMap
 
@@ -41,27 +40,6 @@ type Map = Map.HashMap
 newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
-
-
-type Duration = Double -- duration in seconds
-
-duration :: IO a -> IO (Duration, a)
-duration act = do
-    start <- getCurrentTime
-    res <- act
-    end <- getCurrentTime
-    return (fromRational $ toRational $ end `diffUTCTime` start, res)
-
-
-type Time = Double -- how far you are through this run, in seconds
-
--- | Call once at the start, then call repeatedly to get Time values out
-startTime :: IO (IO Time)
-startTime = do
-    start <- getCurrentTime
-    return $ do
-        end <- getCurrentTime
-        return $ fromRational $ toRational $ end `diffUTCTime` start
 
 
 ---------------------------------------------------------------------
