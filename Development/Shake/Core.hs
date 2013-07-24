@@ -40,7 +40,7 @@ import System.IO
 import Development.Shake.Classes
 import Development.Shake.Pool
 import Development.Shake.Database
-import Development.Shake.Locks
+import Development.Shake.Resource
 import Development.Shake.Value
 import Development.Shake.Report
 import Development.Shake.Types

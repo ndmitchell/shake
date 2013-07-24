@@ -16,7 +16,6 @@ import Development.Shake.Binary
 import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Errors
-import Development.Shake.Locks
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special

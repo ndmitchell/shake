@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Development.Shake.Locks(
+module Development.Shake.Resource(
     Resource, newResourceIO, acquireResource, releaseResource
     ) where
 

@@ -116,12 +116,12 @@ library
         Development.Shake.Files
         Development.Shake.FileTime
         Development.Shake.Intern
-        Development.Shake.Locks
         Development.Shake.Oracle
         Development.Shake.Pool
         Development.Shake.Progress
         Development.Shake.Report
         Development.Shake.Rerun
+        Development.Shake.Resource
         Development.Shake.Shake
         Development.Shake.Special
         Development.Shake.Storage
