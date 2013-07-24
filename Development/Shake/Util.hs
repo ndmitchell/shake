@@ -107,7 +107,7 @@ startTime = do
         return $ fromRational $ toRational $ end `diffUTCTime` start
 
 
-sleep :: Double -> IO ()
+sleep :: Duration -> IO ()
 sleep x = threadDelay $ ceiling $ x * 1000000
 
 
