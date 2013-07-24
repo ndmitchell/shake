@@ -55,15 +55,28 @@ resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j
 -- \"*.o\" 'Development.Shake.*>' \\out ->
 --     'Development.Shake.cmd' \"cl -o\" [out] ...
 -- @
-data Resource
-    = Finite   {resourceKey :: Int, resourceName :: String, finiteMax :: Int, finiteVar :: Var (Int,[(Int,Barrier ())])}
-    -- ^ Var is (number available, queue of people with how much they want and a barrier to signal when it is allocated to them)
-instance Show Resource where show Finite{..} = "Resource " ++ resourceName
+data Resource = Resource
+    {resourceOrd :: Int
+        -- ^ Key used for Eq/Ord operations. To make withResources work, we require newResourceIO < newThrottleIO
+    ,resourceShow :: String
+        -- ^ String used for Show
+    ,acquireResource :: Int -> IO (Maybe (IO ()))
+        -- ^ Try to acquire a resource. Returns Nothing to indicate you have acquired with no blocking, or Just act to
+        --   say after act completes (which will block) then you will have the resource.
+    ,releaseResource :: Int -> IO ()
+        -- ^ You should only ever releaseResource that you obtained with acquireResource.
+    }
 
--- The Finite keys are always less, since they are negated. Important for withResources
-instance Eq Resource where (==) = (==) `on` resourceKey
-instance Ord Resource where compare = compare `on` resourceKey
+instance Show Resource where show = resourceShow
+instance Eq Resource where (==) = (==) `on` resourceOrd
+instance Ord Resource where compare = compare `on` resourceOrd
 
+
+---------------------------------------------------------------------
+-- FINITE RESOURCES
+
+-- | (number available, queue of people with how much they want and a barrier to signal when it is allocated to them)
+type Finite = Var (Int, [(Int,Barrier ())])
 
 -- | A version of 'Development.Shake.newResource' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newResource' instead.
@@ -73,27 +86,24 @@ newResourceIO name mx = do
         error $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     key <- resourceId
     var <- newVar (mx, [])
-    return $ Finite (negate key) name mx var
-
-
--- | Try to acquire a resource. Returns Nothing to indicate you have acquired with no blocking, or Just act to
---   say after act completes (which will block) then you will have the resource.
-acquireResource :: Resource -> Int -> IO (Maybe (IO ()))
-acquireResource r@Finite{..} want
-    | want < 0 = error $ "You cannot acquire a negative quantity of " ++ show r ++ ", requested " ++ show want
-    | want > finiteMax = error $ "You cannot acquire more than " ++ show finiteMax ++ " of " ++ show r ++ ", requested " ++ show want
-    | otherwise = modifyVar finiteVar $ \(available,waiting) ->
-        if want <= available then
-            return ((available - want, waiting), Nothing)
-        else do
-            bar <- newBarrier
-            return ((available, waiting ++ [(want,bar)]), Just $ waitBarrier bar)
-
-
--- | You should only ever releaseResource that you obtained with acquireResource.
-releaseResource :: Resource -> Int -> IO ()
-releaseResource Finite{..} i = modifyVar_ finiteVar $ \(available,waiting) -> f (available+i) waiting
+    return $ Resource (negate key) shw (acquire var) (release var)
     where
-        f i ((wi,wa):ws) | wi <= i = signalBarrier wa () >> f (i-wi) ws
-                         | otherwise = do (i,ws) <- f i ws; return (i,(wi,wa):ws)
-        f i [] = return (i, [])
+        shw = "Resource " ++ name
+
+        acquire :: Finite -> Int -> IO (Maybe (IO ()))
+        acquire var want
+            | want < 0 = error $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
+            | want > mx = error $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
+            | otherwise = modifyVar var $ \(available,waiting) ->
+                if want <= available then
+                    return ((available - want, waiting), Nothing)
+                else do
+                    bar <- newBarrier
+                    return ((available, waiting ++ [(want,bar)]), Just $ waitBarrier bar)
+
+        release :: Finite -> Int -> IO ()
+        release var i = modifyVar_ var $ \(available,waiting) -> f (available+i) waiting
+            where
+                f i ((wi,wa):ws) | wi <= i = signalBarrier wa () >> f (i-wi) ws
+                                 | otherwise = do (i,ws) <- f i ws; return (i,(wi,wa):ws)
+                f i [] = return (i, [])
