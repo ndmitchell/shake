@@ -10,7 +10,7 @@ module Development.Shake.Storage(
     ) where
 
 import Development.Shake.Binary
-import Development.Shake.Locks
+import Development.Shake.Util
 import Development.Shake.Types
 import Development.Shake.Timing
 

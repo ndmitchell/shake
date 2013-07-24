@@ -18,7 +18,6 @@ import Development.Shake.Util
 import Development.Shake.Classes
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
-import Development.Shake.Locks
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
