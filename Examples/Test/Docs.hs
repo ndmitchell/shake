@@ -162,6 +162,6 @@ whitelist x = x `elem`
 
 types = words $
     "MVar IO Monad Monoid String FilePath Data [String] Eq Typeable Char ExitCode " ++
-    "Action Resource Assume FilePattern Verbosity Rules Rule CmdOption CmdResult"
+    "Action Resource Assume FilePattern Verbosity Rules Rule CmdOption CmdResult Int Double"
 
 dupes = words "main progressSimple rules"
