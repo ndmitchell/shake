@@ -491,14 +491,68 @@ quietly :: Action a -> Action a
 quietly = withVerbosity Quiet
 
 
--- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
---   For an example see 'Resource'.
+-- | Create a finite resource, given a name (for error messages) and a quantity of the resource that exists.
+--   Shake will ensure that actions using the same finite resource do not execute in parallel.
+--   As an example, only one set of calls to the Excel API can occur at one time, therefore
+--   Excel is a finite resource of quantity 1. You can write:
+--
+-- @
+-- 'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
+--    'Development.Shake.want' [\"a.xls\",\"b.xls\"]
+--    excel <- 'Development.Shake.newResource' \"Excel\" 1
+--    \"*.xls\" 'Development.Shake.*>' \\out ->
+--        'Development.Shake.withResource' excel 1 $
+--            'Development.Shake.cmd' \"excel\" out ...
+-- @
+--
+--   Now the two calls to @excel@ will not happen in parallel.
+--
+--   As another example, calls to compilers are usually CPU bound but calls to linkers are usually
+--   disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit
+--   ourselves to 4 linkers with:
+--
+-- @
+-- disk <- 'Development.Shake.newResource' \"Disk\" 4
+-- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
+-- \"*.exe\" 'Development.Shake.*>' \\out ->
+--     'Development.Shake.withResource' disk 1 $
+--         'Development.Shake.cmd' \"ld -o\" [out] ...
+-- \"*.o\" 'Development.Shake.*>' \\out ->
+--     'Development.Shake.cmd' \"cl -o\" [out] ...
+-- @
 newResource :: String -> Int -> Rules Resource
 newResource name mx = rulesIO $ newResourceIO name mx
 
 
--- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
---   For an example see 'Resource'.
+-- | Create a throttled resource, given a name (for error messages) and a number of resources (the 'Int') that can be
+--   used per time period (the 'Double' in seconds). Shake will ensure that actions using the same throttled resource
+--   do not exceed the limits. As an example, let us assume that making more than 1 request every 5 seconds to
+--   Google results in our client being blacklisted, we can write:
+--
+-- @
+-- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
+-- \"*.url\" 'Development.Shake.*>' \\out -> do
+--     'Development.Shake.withResource' google 1 $
+--         'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
+-- @
+--
+--   Now we will wait at least 5 seconds after querying Google before performing another query. If Google change the rules to
+--   allow 12 requests per minute we can instead use @'Development.Shake.newThrottle' \"Google\" 12 60@, which would allow
+--   greater parallelisation, and avoid throttling entirely if only a small number of requests are necessary.
+--
+--   In the original example we never make a fresh request until 5 seconds after the previous request has /completed/. If we instead
+--   want to throttle requests since the previous request /started/ we can write:
+--
+-- @
+-- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
+-- \"*.url\" 'Development.Shake.*>' \\out -> do
+--     'Development.Shake.withResource' google 1 $ return ()
+--     'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
+-- @
+--
+--   However, the rule may not continue running immediately after 'Development.Shake.withResource' completes, so while
+--   we will never exceed an average of 1 request every 5 seconds, we may end up running an unbounded number of
+--   requests simultaneously. If this limitation causes a problem in practice it can be fixed.
 newThrottle :: String -> Int -> Double -> Rules Resource
 newThrottle name count period = rulesIO $ newThrottleIO name count period
 
@@ -512,8 +566,8 @@ blockApply msg act = do
     return res
 
 
--- | Run an action which uses part of a finite resource. For an example see 'Resource'.
---   You may not call 'apply' / 'Development.Shake.need' while the resource is acquired.
+-- | Run an action which uses part of a finite resource. For more details see 'Resource'.
+--   You cannot call 'apply' / 'need' while the resource is acquired.
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     s <- Action State.get
@@ -546,7 +600,7 @@ withResources res act
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
 --   on remote machines using barely any local CPU resources. Unsafe as it allows the 'shakeThreads' limit to be exceeded.
---   You may not call 'apply' / 'Development.Shake.need' while the extra thread is executing.
+--   You cannot call 'apply' / 'Development.Shake.need' while the extra thread is executing.
 unsafeExtraThread :: Action a -> Action a
 unsafeExtraThread act = do
     s <- Action State.get

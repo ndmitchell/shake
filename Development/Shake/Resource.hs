@@ -20,43 +20,22 @@ resourceId :: IO Int
 resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j)
 
 
--- | A type representing a finite resource, which multiple build actions should respect.
---   Created with 'Development.Shake.newResource' and used with 'Development.Shake.withResource'
---   when defining rules.
+-- | A type representing an external resource which the build system should respect. There
+--   are two ways to create 'Resource's in Shake:
 --
---   As an example, only one set of calls to the Excel API can occur at one time, therefore
---   Excel is a finite resource of quantity 1. You can write:
+-- * 'Development.Shake.newResource' creates a finite resource, stopping too many actions running
+--   simultaneously.
 --
--- @
--- 'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
---    'Development.Shake.want' [\"a.xls\",\"b.xls\"]
---    excel <- 'Development.Shake.newResource' \"Excel\" 1
---    \"*.xls\" 'Development.Shake.*>' \\out ->
---        'Development.Shake.withResource' excel 1 $
---            'Development.Shake.cmd' \"excel\" out ...
--- @
+-- * 'Development.Shake.newThrottle' creates a throttled resource, stopping too many actions running
+--   over a short time period.
 --
---   Now the two calls to @excel@ will not happen in parallel. Using 'Resource'
---   is better than 'MVar' as it will not block any other threads from executing. Be careful that the
---   actions run within 'Development.Shake.withResource' do not themselves require further quantities of this resource, or
---   you may get a \"thread blocked indefinitely in an MVar operation\" exception. Typically only
+--   These resources are used with 'Development.Shake.withResource' when defining rules. Typically only
 --   system commands (such as 'Development.Shake.cmd') should be run inside 'Development.Shake.withResource',
---   not commands such as 'Development.Shake.need'. If an action requires multiple resources, use
---   'Development.Shake.withResources' to avoid deadlock.
+--   not commands such as 'Development.Shake.need'.
 --
---   As another example, calls to compilers are usually CPU bound but calls to linkers are usually
---   disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit
---   ourselves to 4 linkers with:
---
--- @
--- disk <- 'Development.Shake.newResource' \"Disk\" 4
--- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
--- \"*.exe\" 'Development.Shake.*>' \\out ->
---     'Development.Shake.withResource' disk 1 $
---         'Development.Shake.cmd' \"ld -o\" [out] ...
--- \"*.o\" 'Development.Shake.*>' \\out ->
---     'Development.Shake.cmd' \"cl -o\" [out] ...
--- @
+--   Be careful that the actions run within 'Development.Shake.withResource' do not themselves require further
+--   resources, or you may get a \"thread blocked indefinitely in an MVar operation\" exception.
+--   If an action requires multiple resources, use 'Development.Shake.withResources' to avoid deadlock.
 data Resource = Resource
     {resourceOrd :: Int
         -- ^ Key used for Eq/Ord operations. To make withResources work, we require newResourceIO < newThrottleIO
@@ -123,8 +102,8 @@ data Throttle = Throttle
     ,throttleTime :: IO Time
     }
 
--- | Count is how many resources there are to be checked out simultaneously
---   Period is how long a resource takes to replenish after being used
+-- | A version of 'Development.Shake.newThrottle' that runs in IO, and can be called before calling 'Development.Shake.shake'.
+--   Most people should use 'Development.Shake.newResource' instead.
 newThrottleIO :: String -> Int -> Double -> IO Resource
 newThrottleIO name count period = do
     when (count < 0) $

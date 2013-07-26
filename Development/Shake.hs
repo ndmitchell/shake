@@ -97,7 +97,7 @@ module Development.Shake(
     addOracle, askOracle, askOracleWith,
     -- * Special rules
     alwaysRerun,
-    -- * Finite resources
+    -- * Resources
     Resource, newResource, newResourceIO, withResource, withResources,
     newThrottle, newThrottleIO,
     unsafeExtraThread,
