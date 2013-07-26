@@ -14,7 +14,7 @@ module Development.Shake.Core(
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, actionOnException, actionFinally, apply, apply1, traced,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
-    Resource, newResource, newResourceIO, withResource, withResources,
+    Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     unsafeExtraThread,
     -- Internal stuff
     rulesIO, runAfter
@@ -495,6 +495,12 @@ quietly = withVerbosity Quiet
 --   For an example see 'Resource'.
 newResource :: String -> Int -> Rules Resource
 newResource name mx = rulesIO $ newResourceIO name mx
+
+
+-- | Create a new finite resource, given a name (for error messages) and a quantity of the resource that exists.
+--   For an example see 'Resource'.
+newThrottle :: String -> Int -> Double -> Rules Resource
+newThrottle name count period = rulesIO $ newThrottleIO name count period
 
 
 blockApply :: String -> Action a -> Action a

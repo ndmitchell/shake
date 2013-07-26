@@ -1,12 +1,14 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Development.Shake.Resource(
-    Resource, newResourceIO, acquireResource, releaseResource
+    Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
     ) where
 
+import Development.Shake.Errors
 import Development.Shake.Util
 import Data.Function
 import System.IO.Unsafe
+import Control.Arrow
 import Control.Monad
 
 
@@ -107,3 +109,82 @@ newResourceIO name mx = do
                 f i ((wi,wa):ws) | wi <= i = signalBarrier wa () >> f (i-wi) ws
                                  | otherwise = do (i,ws) <- f i ws; return (i,(wi,wa):ws)
                 f i [] = return (i, [])
+
+
+---------------------------------------------------------------------
+-- THROTTLE RESOURCES
+
+data Throttle = Throttle
+    {throttleLock :: Lock
+        -- people queue up to grab from replenish, full means no one is queued
+    ,throttleVal :: Var (Either (Barrier ()) [(Time, Int)])
+        -- either someone waiting for resources, or the time to wait until before N resources become available
+        -- anyone who puts a Barrier in the Left must be holding the Lock
+    ,throttleTime :: IO Time
+    }
+
+-- | Count is how many resources there are to be checked out simultaneously
+--   Period is how long a resource takes to replenish after being used
+newThrottleIO :: String -> Int -> Double -> IO Resource
+newThrottleIO name count period = do
+    when (count < 0) $
+        error $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
+    key <- resourceId
+    lock <- newLock
+    time <- startTime
+    rep <- newVar $ Right [(0, count)]
+    let s = Throttle lock rep time
+    return $ Resource key shw (acquire s) (release s)
+    where
+        shw = "Throttle " ++ name
+
+        release :: Throttle -> Int -> IO ()
+        release Throttle{..} n = do
+            t <- throttleTime
+            modifyVar_ throttleVal $ \v -> case v of
+                Left b -> signalBarrier b () >> return (Right [(t+period, n)])
+                Right ts -> return $ Right $ ts ++ [(t+period, n)]
+
+        acquire :: Throttle -> Int -> IO (Maybe (IO ()))
+        acquire Throttle{..} want
+            | want < 0 = error $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
+            | want > count = error $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
+            | otherwise = do
+                let grab t vs = do
+                        let (a,b) = span ((<= t) . fst) vs
+                        -- renormalise for clock skew, nothing can ever be > t+period away
+                        return (sum $ map snd a, map (first $ min $ t+period) b)
+                let push i vs = [(0,i) | i > 0] ++ vs
+
+                -- attempt to grab without locking
+                res <- withLockTry throttleLock $ do
+                    modifyVar throttleVal $ \v -> case v of
+                        Right vs -> do
+                            t <- throttleTime
+                            (got,vs) <- grab t vs
+                            if got >= want then
+                                return (Right $ push (got - want) vs, True)
+                             else
+                                return (Right $ push got vs, False)
+                        _ -> return (v, False)
+                if res == Just True then
+                    return Nothing
+                 else
+                    return $ Just $ withLock throttleLock $ do
+                        -- keep trying to acquire more resources until you have everything you need
+                        let f want = join $ modifyVar throttleVal $ \v -> case v of
+                                Left _ -> err "newThrottle, invariant failed, Left while holding throttleLock"
+                                Right vs -> do
+                                    t <- throttleTime
+                                    (got,vs) <- grab t vs
+                                    case vs of
+                                        _ | got >= want -> return (Right $ push (got - want) vs, return ())
+                                        [] -> do
+                                            b <- newBarrier
+                                            return (Left b, waitBarrier b >> f (want - got))
+                                        (t2,n):vs -> do
+                                            -- be robust to clock skew - only ever sleep for 'period' at most and always mark the next as good.
+                                            return $ (,) (Right $ (0,n):vs) $ do
+                                                sleep $ min period (t2-t)
+                                                f $ want - got
+                        f want
