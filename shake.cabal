@@ -232,5 +232,6 @@ executable shake-test
         Examples.Test.Progress
         Examples.Test.Random
         Examples.Test.Resources
+        Examples.Test.Throttle
         Examples.Test.Unicode
         Start
