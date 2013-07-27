@@ -245,7 +245,7 @@ actionFinally act clean = do
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
-    start <- startTime
+    start <- offsetTime
     rs <- getRules rs
     registerWitnesses rs
 

@@ -110,7 +110,7 @@ newThrottleIO name count period = do
         error $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
     key <- resourceId
     lock <- newLock
-    time <- startTime
+    time <- offsetTime
     rep <- newVar $ Right [(0, count)]
     let s = Throttle lock rep time
     return $ Resource key shw (acquire s) (release s)

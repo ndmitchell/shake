@@ -4,7 +4,7 @@ module Development.Shake.Util(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
-    Duration, duration, Time, startTime, sleep,
+    Duration, duration, Time, offsetTime, sleep,
     modifyIORef'', writeIORef'',
     whenJust,
     BS, pack, unpack, pack_, unpack_,
@@ -99,8 +99,8 @@ duration act = do
 type Time = Double -- how far you are through this run, in seconds
 
 -- | Call once at the start, then call repeatedly to get Time values out
-startTime :: IO (IO Time)
-startTime = do
+offsetTime :: IO (IO Time)
+offsetTime = do
     start <- getCurrentTime
     return $ do
         end <- getCurrentTime
