@@ -3,7 +3,7 @@
 module Development.Shake.File(
     need, want,
     defaultRuleFile,
-    (*>), (**>), (?>), phony,
+    (*>), (**>), (?>), phony, (~>),
     newCache, newCacheIO
     ) where
 
@@ -22,7 +22,7 @@ import Development.Shake.FileTime
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
 
-infix 1 *>, ?>, **>
+infix 1 *>, ?>, **>, ~>
 
 
 newtype FileQ = FileQ BSU
@@ -140,6 +140,11 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
         return $ FileA fileTimeNone
+
+-- | Infix operator alias for 'phony', for sake of consistency with normal
+--   rules.
+(~>) :: String -> Action () -> Rules ()
+(~>) = phony 
 
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
