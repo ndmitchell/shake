@@ -86,16 +86,6 @@ waitBarrier (Barrier x) = readMVar x
 ---------------------------------------------------------------------
 -- Data.Time
 
-type Duration = Double -- duration in seconds
-
-duration :: IO a -> IO (Duration, a)
-duration act = do
-    start <- getCurrentTime
-    res <- act
-    end <- getCurrentTime
-    return (fromRational $ toRational $ end `diffUTCTime` start, res)
-
-
 type Time = Double -- how far you are through this run, in seconds
 
 -- | Call once at the start, then call repeatedly to get Time values out
@@ -105,6 +95,16 @@ offsetTime = do
     return $ do
         end <- getCurrentTime
         return $ fromRational $ toRational $ end `diffUTCTime` start
+
+
+type Duration = Double -- duration in seconds
+
+duration :: IO a -> IO (Duration, a)
+duration act = do
+    time <- offsetTime
+    res <- act
+    time <- time
+    return (time, res)
 
 
 sleep :: Duration -> IO ()
