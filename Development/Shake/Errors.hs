@@ -3,9 +3,9 @@
 -- | Errors seen by the user
 module Development.Shake.Errors(
     ShakeException(..),
+    errorStructured, err,
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
     errorMultipleRulesMatch, errorRuleRecursion, errorNoApply,
-    err
     ) where
 
 import Control.Arrow
@@ -27,6 +27,18 @@ alternatives = let (*) = (,) in
     ,"_rule/defaultRule_" * "addOracle"
     ,"_apply_" * "askOracle"]
 
+
+errorStructured :: String -> [(String, Maybe String)] -> String -> a
+errorStructured msg args hint = error $ unlines $
+        [msg ++ ":"] ++
+        ["  " ++ a ++ ":" ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
+        [hint | hint /= ""]
+    where
+        as = maximum $ 0 : map (length . fst) args2
+        args2 = [(a,b) | (a,Just b) <- args]
+
+
+
 structured :: Bool -> String -> [(String, Maybe String)] -> String -> a
 structured alt msg args hint = structured_ (f msg) (map (first f) args) (f hint)
     where
@@ -35,15 +47,13 @@ structured alt msg args hint = structured_ (f msg) (map (first f) args) (f hint)
         g (x:xs) = x : g xs
         g [] = []
 
+
 structured_ :: String -> [(String, Maybe String)] -> String -> a
-structured_ msg args hint = error $
-        msg ++ ":\n" ++ unlines ["  " ++ a ++ ":" ++ replicate (as - length a + 2) ' ' ++ drp b | (a,b) <- args2] ++ hint
+structured_ msg args hint = errorStructured msg (map (second $ fmap drp) args) hint
     where
         drp x | "OracleA " `isPrefixOf` x = drop 8 x
               | "OracleQ " `isPrefixOf` x = drop 8 x
               | otherwise = x
-        as = maximum $ 0 : map (length . fst) args2
-        args2 = [(a,b) | (a,Just b) <- args]
 
 
 errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> a
