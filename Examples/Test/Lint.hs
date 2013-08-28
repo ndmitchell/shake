@@ -74,3 +74,4 @@ test build obj = do
     crash ["existance"] ["changed since being built"]
     crash ["createtwice"] ["changed since being built"]
     crash ["listing"] ["changed since being built"]
+    crash ["--clean","listing","existance"] ["changed since being built"]
