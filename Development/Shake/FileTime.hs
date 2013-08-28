@@ -9,6 +9,7 @@ import Development.Shake.Classes
 import Development.Shake.Util
 import Data.Char
 import Data.Int
+import Data.Word
 import qualified Data.ByteString.Char8 as BS
 import System.IO.Error
 import Control.Exception
