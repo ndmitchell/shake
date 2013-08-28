@@ -6,7 +6,7 @@ module Development.Shake.Util(
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
     modifyIORef'', writeIORef'',
-    whenJust,
+    whenJust, loop,
     fastNub,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
@@ -143,6 +143,13 @@ fastNub = f Set.empty
 whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust (Just a) f = f a
 whenJust Nothing f = return ()
+
+loop :: Monad m => (a -> m (Either a b)) -> a -> m b
+loop act x = do
+    res <- act x
+    case res of
+        Left x -> loop act x
+        Right v -> return v
 
 
 ---------------------------------------------------------------------
