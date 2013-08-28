@@ -45,26 +45,26 @@ incStep (Step i) = Step $ i + 1
 ---------------------------------------------------------------------
 -- CALL STACK
 
-data Stack = Stack (Maybe Key) [Id]
+data Stack = Stack (Maybe Key) [Id] !(Set.HashSet Id)
 
 showStack :: Database -> Stack -> IO [String]
-showStack Database{..} (Stack _ xs) = do
+showStack Database{..} (Stack _ xs _) = do
     status <- withLock lock $ readIORef status
     return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) xs
 
 addStack :: Id -> Key -> Stack -> Stack
-addStack x key (Stack _ xs) = Stack (Just key) $ x : xs
+addStack x key (Stack _ xs set) = Stack (Just key) (x:xs) (Set.insert x set)
 
 topStack :: Stack -> String
-topStack (Stack key _) = maybe "<unknown>" show key
+topStack (Stack key _ _) = maybe "<unknown>" show key
 
 checkStack :: [Id] -> Stack -> Maybe Id
-checkStack new (Stack _ old)
-    | bad:_ <- old `intersect` new = Just bad
+checkStack new (Stack _ old set)
+    | bad:_ <- filter (`Set.member` set) new = Just bad
     | otherwise = Nothing
 
 emptyStack :: Stack
-emptyStack = Stack Nothing []
+emptyStack = Stack Nothing [] Set.empty
 
 
 ---------------------------------------------------------------------

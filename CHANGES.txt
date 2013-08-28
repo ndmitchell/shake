@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #45, avoid use of intersect which is O(n^2)
     #26, add newThrottle to create throttling resources
     #26, add unsafeExtraThread to run more than shakeThreads
     #32, add a check that withResources does not call need
