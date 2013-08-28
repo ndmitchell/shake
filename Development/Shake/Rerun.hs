@@ -10,11 +10,11 @@ import Development.Shake.Classes
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,NFData)
-instance Show AlwaysRerunQ where show _ = "AlwaysRerunQ"
+instance Show AlwaysRerunQ where show _ = "alwaysRerun"
 
 newtype AlwaysRerunA = AlwaysRerunA ()
     deriving (Typeable,Hashable,Binary,NFData)
-instance Show AlwaysRerunA where show _ = "AlwaysRerunA"
+instance Show AlwaysRerunA where show _ = "<none>"
 instance Eq AlwaysRerunA where a == b = False
 
 instance Rule AlwaysRerunQ AlwaysRerunA where
