@@ -31,7 +31,9 @@ newtype FileQ = FileQ BSU
 instance Show FileQ where show (FileQ x) = unpackU x
 
 newtype FileA = FileA FileTime
-    deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show FileA where show (FileA x) = "FileTime " ++ show x
 
 instance Rule FileQ FileA where
     storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x

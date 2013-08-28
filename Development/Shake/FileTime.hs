@@ -7,10 +7,12 @@ module Development.Shake.FileTime(
 
 import Development.Shake.Classes
 import Development.Shake.Util
+import Data.Char
 import Data.Int
 import qualified Data.ByteString.Char8 as BS
 import System.IO.Error
 import Control.Exception
+import Numeric
 
 -- Required for Portable
 import System.Directory
@@ -41,8 +43,11 @@ import System.Posix.Files.ByteString
 -- or maxBound to indicate there is no valid time. The moral type is @Maybe Datetime@
 -- but it needs to be more efficient.
 newtype FileTime = FileTime Int32
-    deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
+instance Show FileTime where
+    show (FileTime x) = "0x" ++ replicate (length s - 8) '0' ++ map toUpper s
+        where s = showHex (fromIntegral x :: Word32) ""
 
 fileTime :: Int32 -> FileTime
 fileTime x = FileTime $ if x == maxBound then maxBound - 1 else x
