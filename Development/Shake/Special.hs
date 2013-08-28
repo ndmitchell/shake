@@ -7,13 +7,12 @@ module Development.Shake.Special(
     ) where
 
 import Development.Shake.Value
-import Data.List
 import Data.Typeable
 
 
 specialAlwaysRebuilds :: Value -> Bool
-specialAlwaysRebuilds v = sv == "AlwaysRerunA" || "OracleA " `isPrefixOf` sv || sv == "FileA (FileTime 2147483647)"
-    where sv = show v
+specialAlwaysRebuilds v = con `elem` ["AlwaysRerunA","OracleA"] || show v == "FileA (FileTime 2147483647)"
+    where con = show $ fst $ splitTyConApp $ typeValue v
 
 
 specialIsFileKey :: TypeRep -> Bool
