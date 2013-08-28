@@ -31,7 +31,7 @@ alternatives = let (*) = (,) in
 errorStructured :: String -> [(String, Maybe String)] -> String -> a
 errorStructured msg args hint = error $ unlines $
         [msg ++ ":"] ++
-        ["  " ++ a ++ ":" ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
+        ["  " ++ a ++ [':' | a /= ""] ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
         [hint | hint /= ""]
     where
         as = maximum $ 0 : map (length . fst) args2
