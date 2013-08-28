@@ -12,7 +12,7 @@ import Development.Shake.Timing
 import Development.Shake.FileTime
 import Development.Shake.Util
 import qualified Data.ByteString.Char8 as BS
-import Examples.Util(sleepFileTime)
+import Examples.Util(sleepFileTime, sleepFileTimeCalibrate)
 import Control.Concurrent
 
 import qualified Examples.Tar.Main as Tar
@@ -120,8 +120,9 @@ test _ = do
     args <- getArgs
     let tests = filter ((/= "random") . fst) mains
     let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
+    yield <- sleepFileTimeCalibrate
     flip onException (putStrLn "TESTS FAILED") $
-        execute sleepFileTime [\pause -> withArgs (name:"test":drop 1 args) $ test pause | (name,test) <- priority ++ normal]
+        execute yield [\pause -> withArgs (name:"test":drop 1 args) $ test pause | (name,test) <- priority ++ normal]
 
 
 -- | Execute each item in the list. They may yield (call the first parameter) in which case

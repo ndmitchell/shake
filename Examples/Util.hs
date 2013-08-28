@@ -124,6 +124,21 @@ sleepFileTime :: IO ()
 sleepFileTime = sleep 1
 
 
+sleepFileTimeCalibrate :: IO (IO ())
+sleepFileTimeCalibrate = do
+    let file = "output/calibrate"
+    createDirectoryIfMissing True $ takeDirectory file
+    mtime <- fmap maximum $ forM [1..3] $ \i -> fmap fst $ duration $ do
+        writeFile file $ show i
+        t1 <- getModificationTime file
+        flip loop 0 $ \j -> do
+            writeFile file $ show (i,j)
+            t2 <- getModificationTime file
+            return $ if t1 == t2 then Left $ j+1 else Right ()
+    putStrLn $ "Longest file modification time lag was " ++ show mtime ++ "s"
+    return $ sleep $ min 1 $ mtime * 2
+
+
 removeFilesRandom :: FilePath -> IO Int
 removeFilesRandom x = do
     files <- getDirectoryContentsRecursive x
