@@ -38,8 +38,10 @@ type Map = Map.HashMap
 -- Increment every time the on-disk format/semantics change,
 -- @x@ is for the users version number
 databaseVersion :: String -> String
+-- THINGS I WANT TO DO ON THE NEXT CHANGE
+-- * Change FileTime to be a Word32, not an Int32, with maxBound for fileNone
+-- * Change filepaths to store a 1 byte prefix saying 8bit ASCII or UTF8
 databaseVersion x = "SHAKE-DATABASE-8-" ++ tail (init $ show x) ++ "\r\n"
-
 
 withStorage
     :: (Eq w, Eq k, Hashable k
