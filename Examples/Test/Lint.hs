@@ -73,5 +73,5 @@ test build obj = do
     crash ["--clean","cdir.1","pause.2","-j2"] ["before building output/lint/","current directory has changed"]
     crash ["existance"] ["changed since being depended upon"]
     crash ["createtwice"] ["changed since being depended upon"]
-    crash ["listing"] ["changed since being depended upon"]
+    crash ["listing"] ["changed since being depended upon","output/lint"]
     crash ["--clean","listing","existance"] ["changed since being depended upon"]

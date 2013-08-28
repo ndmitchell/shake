@@ -15,7 +15,6 @@ import Control.Monad.IO.Class
 import System.IO.Error
 import Data.Binary
 import Data.List
-import Data.Maybe
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 
@@ -23,13 +22,14 @@ import Development.Shake.Core
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
+import Development.Shake.Util
 
 
 newtype DoesFileExistQ = DoesFileExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show DoesFileExistQ where
-    show (DoesFileExistQ a) = "Exists? " ++ a
+    show (DoesFileExistQ a) = "doesFileExist " ++ showQuote a
 
 newtype DoesFileExistA = DoesFileExistA Bool
     deriving (Typeable,Eq,Hashable,Binary,NFData)
@@ -42,7 +42,7 @@ newtype DoesDirectoryExistQ = DoesDirectoryExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show DoesDirectoryExistQ where
-    show (DoesDirectoryExistQ a) = "Exists dir? " ++ a
+    show (DoesDirectoryExistQ a) = "doesDirectoryExist " ++ showQuote a
 
 newtype DoesDirectoryExistA = DoesDirectoryExistA Bool
     deriving (Typeable,Eq,Hashable,Binary,NFData)
@@ -55,13 +55,13 @@ newtype GetEnvQ = GetEnvQ String
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetEnvQ where
-    show (GetEnvQ a) = "getEnv " ++ a
+    show (GetEnvQ a) = "getEnv " ++ showQuote a
 
 newtype GetEnvA = GetEnvA (Maybe String)
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetEnvA where
-    show (GetEnvA a) = fromMaybe "<unset>" a
+    show (GetEnvA a) = maybe "<unset>" showQuote a
 
 
 data GetDirectoryQ
@@ -69,14 +69,17 @@ data GetDirectoryQ
     | GetDirFiles {dir :: FilePath, pat :: [FilePattern]}
     | GetDirDirs {dir :: FilePath}
     deriving (Typeable,Eq)
+
 newtype GetDirectoryA = GetDirectoryA [FilePath]
-    deriving (Typeable,Show,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetDirectoryQ where
-    show (GetDir x) = "Listing " ++ x
-    show (GetDirFiles a b) = "Files " ++ a </> ['{'|m] ++ unwords b ++ ['}'|m]
-        where m = length b > 1
-    show (GetDirDirs x) = "Dirs " ++ x
+    show (GetDir x) = "getDirectoryContents " ++ showQuote x
+    show (GetDirFiles a b) = "getDirectoryFiles " ++ showQuote a ++ " [" ++ unwords (map showQuote b) ++ "]"
+    show (GetDirDirs x) = "getDirectoryDirs " ++ showQuote x
+
+instance Show GetDirectoryA where
+    show (GetDirectoryA xs) = unwords $ map showQuote xs
 
 instance NFData GetDirectoryQ where
     rnf (GetDir a) = rnf a
