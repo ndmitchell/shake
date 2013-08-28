@@ -46,6 +46,12 @@ main = shaken test $ \args obj -> do
         writeFile' (obj "createonce") "Y"
         writeFile' out ""
 
+    obj "listing" *> \out -> do
+        writeFile' (out <.> "ls1") ""
+        getDirectoryFiles (obj "") ["//*.ls*"]
+        writeFile' (out <.> "ls2") ""
+        writeFile' out ""
+
     obj "existance" *> \out -> do
         Development.Shake.doesFileExist $ obj "exists"
         writeFile' (obj "exists") ""
@@ -67,3 +73,4 @@ test build obj = do
     crash ["--clean","cdir.1","pause.2","-j2"] ["before building output/lint/","current directory has changed"]
     crash ["existance"] ["changed since being built"]
     crash ["createtwice"] ["changed since being built"]
+    crash ["listing"] ["changed since being built"]
