@@ -38,6 +38,7 @@ main = shaken noTest $ \args obj -> do
             ["{-# LANGUAGE ConstraintKinds, DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Concurrent"
+            ,"import Control.Monad"
             ,"import Data.Char"
             ,"import Data.Data"
             ,"import Data.List"
@@ -148,7 +149,7 @@ whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q value key gcc make contents tar ghc cabal clean _make distcc ghc " ++
     ".. /./ /.. ./ // \\ ../ " ++
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
-    ".make/i586-linux-gcc/output _make/.database foo/.. " ++
+    ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out " ++
     "-threaded Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
     = True
 whitelist x = x `elem`

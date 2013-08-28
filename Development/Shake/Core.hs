@@ -180,6 +180,20 @@ rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])
 
 
 -- | Run an action, usually used for specifying top-level requirements.
+--
+-- @
+-- main = 'Development.Shake.shake' 'shakeOptions' $ do
+--    'action' $ do
+--        b <- 'Development.Shake.doesFileExist' \"file.src\"
+--        when b $ 'Development.Shake.need' [\"file.out\"]
+-- @
+--
+--   This 'action' builds @file.out@, but only if @file.src@ exists. The 'action'
+--   will be run in every build execution (unless 'withoutActions' is used), so only cheap
+--   operations should be performed.
+--
+--   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
+--   see 'Development.Shake.want'.
 action :: Action a -> Rules ()
 action a = newRules mempty{actions=[a >> return ()]}
 

@@ -118,6 +118,9 @@ need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 -- @
 --
 --   This program will build @Main.exe@, given sufficient rules.
+--
+--   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
+--   targets than 'want' allows.
 want :: [FilePath] -> Rules ()
 want = action . need
 
