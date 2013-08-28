@@ -394,14 +394,18 @@ checkValid Database{..} stored = do
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
-            good <- fmap (== Just result) $ stored key
+            now <- stored key
+            let good = now == Just result
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return $ [show key ++ " is no longer " ++ show result | not good && not (specialAlwaysRebuilds result)] ++ seen
+            return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
-    if null bad
-        then diagnostic "Validity/lint check passed"
-        else error $ unlines $ "Error: Dependencies have changed since being built:" : bad
-
+    if null bad then diagnostic "Validity/lint check passed" else do
+        let n = length bad
+        errorStructured
+            ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ maybe "<missing>" show now)]
+                                        | (key, result, now) <- bad])
+            ""
 
 ---------------------------------------------------------------------
 -- STORAGE
