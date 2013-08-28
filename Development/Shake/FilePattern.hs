@@ -131,7 +131,7 @@ directories1 = first (intercalate "/") . f . lexer
 directories :: [FilePattern] -> [(FilePath,Bool)]
 directories ps = foldl f xs xs
     where
-        xs = set $ map directories1 ps
+        xs = fastNub $ map directories1 ps
 
         -- Eliminate anything which is a strict subset
         f xs (x,True) = filter (\y -> not $ (x,False) == y || (x ++ "/") `isPrefixOf` fst y) xs

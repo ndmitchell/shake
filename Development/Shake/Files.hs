@@ -60,7 +60,7 @@ ps *>> act
                 return ()
         rule $ \(FilesQ xs_) -> let xs = map unpackU xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
-                liftIO $ mapM_ (createDirectoryIfMissing True) $ set $ map takeDirectory xs
+                liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
                 act xs
                 liftIO $ getFileTimes "*>>" xs_
 
@@ -97,7 +97,7 @@ ps *>> act
     rule $ \(FilesQ xs_) -> let xs@(x:_) = map unpackU xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
-                liftIO $ mapM_ (createDirectoryIfMissing True) $ set $ map takeDirectory xs
+                liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
                 act xs
                 liftIO $ getFileTimes "?>>" xs_
             Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
