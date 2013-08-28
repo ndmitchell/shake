@@ -9,6 +9,7 @@ module Development.Shake.FilePattern(
 import System.FilePath(pathSeparators)
 import Data.List
 import Control.Arrow
+import Development.Shake.Util
 
 
 ---------------------------------------------------------------------
@@ -130,7 +131,7 @@ directories1 = first (intercalate "/") . f . lexer
 directories :: [FilePattern] -> [(FilePath,Bool)]
 directories ps = foldl f xs xs
     where
-        xs = nub $ map directories1 ps 
+        xs = set $ map directories1 ps
 
         -- Eliminate anything which is a strict subset
         f xs (x,True) = filter (\y -> not $ (x,False) == y || (x ++ "/") `isPrefixOf` fst y) xs

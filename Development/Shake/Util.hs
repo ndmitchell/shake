@@ -7,6 +7,7 @@ module Development.Shake.Util(
     Duration, duration, Time, offsetTime, sleep,
     modifyIORef'', writeIORef'',
     whenJust,
+    set,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
     ) where
@@ -18,6 +19,7 @@ import Data.Time
 import qualified Data.ByteString as BS (any)
 import qualified Data.ByteString.Char8 as BS hiding (any)
 import qualified Data.ByteString.UTF8 as UTF8
+import qualified Data.HashSet as Set
 import Development.Shake.Classes
 
 
@@ -122,6 +124,14 @@ modifyIORef'' ref f = do
 
 writeIORef'' :: IORef a -> a -> IO ()
 writeIORef'' ref !x = writeIORef ref x
+
+
+---------------------------------------------------------------------
+-- Data.List
+
+-- | Like 'nub', but the results may be in any order.
+set :: (Eq a, Hashable a) => [a] -> [a]
+set = Set.toList . Set.fromList
 
 
 ---------------------------------------------------------------------
