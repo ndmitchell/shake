@@ -286,11 +286,12 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
         dir <- getCurrentDirectory
         return $ \msg -> do
             now <- getCurrentDirectory
-            when (dir /= now) $ error $
-                "Lint checking failed, current directory has changed\n" ++
-                "When:   " ++ msg ++ "\n" ++
-                "Wanted: " ++ dir ++ "\n" ++
-                "Got:    " ++ now
+            when (dir /= now) $ errorStructured
+                "Lint checking error - current directory has changed"
+                [("When", Just msg)
+                ,("Wanted",Just dir)
+                ,("Got",Just now)]
+                ""
 
     let ruleinfo = createRuleinfo rs
     running <- newIORef True
