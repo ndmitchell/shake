@@ -40,20 +40,12 @@ errorStructured msg args hint = error $ unlines $
 
 
 structured :: Bool -> String -> [(String, Maybe String)] -> String -> a
-structured alt msg args hint = structured_ (f msg) (map (first f) args) (f hint)
+structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f hint)
     where
         f = filter (/= '_') . (if alt then g else id)
         g xs | (a,b):_ <- filter (\(a,b) -> a `isPrefixOf` xs) alternatives = b ++ g (drop (length a) xs)
         g (x:xs) = x : g xs
         g [] = []
-
-
-structured_ :: String -> [(String, Maybe String)] -> String -> a
-structured_ msg args hint = errorStructured msg (map (second $ fmap drp) args) hint
-    where
-        drp x | "OracleA " `isPrefixOf` x = drop 8 x
-              | "OracleQ " `isPrefixOf` x = drop 8 x
-              | otherwise = x
 
 
 errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> a
@@ -74,7 +66,7 @@ errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
 
 errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> a
-errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else structured_
+errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else errorStructured
     "Build system error - rule has multiple result types"
     [("Key type", Just $ show tk)
     ,("First result type", Just $ show tv1)
@@ -84,7 +76,7 @@ errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicate
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> a
 errorMultipleRulesMatch tk k count
     | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk (Just k) []
-    | otherwise = structured_
+    | otherwise = errorStructured
     ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
     [("Key type",Just $ show tk)
     ,("Key value",Just k)
@@ -93,14 +85,14 @@ errorMultipleRulesMatch tk k count
      else "Modify your rules/defaultRules so only one can produce the above key")
 
 errorRuleRecursion :: Maybe TypeRep -> Maybe String -> a
-errorRuleRecursion tk k = structured_ -- may involve both rules and oracle, so report as a rule
+errorRuleRecursion tk k = errorStructured -- may involve both rules and oracle, so report as a rule
     "Build system error - recursion detected"
     [("Key type",fmap show tk)
     ,("Key value",k)]
     "Rules may not be recursive"
 
 errorDuplicateOracle :: TypeRep -> Maybe String -> [TypeRep] -> a
-errorDuplicateOracle tk k tvs = structured_
+errorDuplicateOracle tk k tvs = errorStructured
     "Build system error - duplicate oracles for the same question type"
     ([("Question type",Just $ show tk)
      ,("Question value",k)] ++
