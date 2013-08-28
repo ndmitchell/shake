@@ -36,7 +36,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 type Map = Map.HashMap
 
 -- Increment every time the on-disk format/semantics change,
--- @i@ is for the users version number
+-- @x@ is for the users version number
 databaseVersion :: String -> String
 databaseVersion x = "SHAKE-DATABASE-8-" ++ tail (init $ show x) ++ "\r\n"
 
