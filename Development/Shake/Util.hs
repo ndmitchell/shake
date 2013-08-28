@@ -7,13 +7,14 @@ module Development.Shake.Util(
     Duration, duration, Time, offsetTime, sleep,
     modifyIORef'', writeIORef'',
     whenJust, loop,
-    fastNub,
+    fastNub, showQuote,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
     ) where
 
 import Control.Concurrent
 import Control.Exception
+import Data.Char
 import Data.IORef
 import Data.Time
 import qualified Data.ByteString as BS (any)
@@ -135,6 +136,11 @@ fastNub = f Set.empty
     where f seen [] = []
           f seen (x:xs) | x `Set.member` seen = f seen xs
                         | otherwise = x : f (Set.insert x seen) xs
+
+
+showQuote :: String -> String
+showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
+             | otherwise = xs
 
 
 ---------------------------------------------------------------------
