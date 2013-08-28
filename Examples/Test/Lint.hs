@@ -64,6 +64,6 @@ test build obj = do
     crash ["changedir"] ["current directory has changed"]
     build ["cdir.1","cdir.2","-j1"]
     build ["--clean","cdir.1","pause.2","-j1"]
-    crash ["--clean","cdir.1","pause.2","-j2"] ["current directory has changed"]
+    crash ["--clean","cdir.1","pause.2","-j2"] ["before building output/lint/cdir.2","current directory has changed"]
     crash ["existance"] ["changed since being built"]
     crash ["createtwice"] ["changed since being built"]

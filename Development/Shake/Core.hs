@@ -416,11 +416,12 @@ applyKeyValue ks = do
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
             let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
-            lint s "before building"
+            let top = topStack stack
+            lint s $ "before building " ++ top
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putWhen Chatty $ "# " ++ show k
                 runExecute (ruleinfo s) k
-            lint s "after building"
+            lint s $ "after building " ++ top
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans
             return ans
