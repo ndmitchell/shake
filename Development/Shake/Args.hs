@@ -112,7 +112,7 @@ shakeArgsWith baseOpts userOptions rules = do
         assumeOld = [x | AssumeOld x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
         printDirectory = last $ False : [x | PrintDirectory x <- flagsExtra]
-        shakeOpts = foldl (flip ($)) baseOpts flagsShake
+        shakeOpts = foldl' (flip ($)) baseOpts flagsShake
 
     -- error if you pass some clean and some dirty with specific flags
     errs <- return $ errs ++ flagsError ++ ["cannot mix " ++ a ++ " and " ++ b | a:b:_ <-
