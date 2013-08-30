@@ -94,7 +94,7 @@ library
         cpp-options: -DPORTABLE
     else
         if !os(windows)
-            build-depends: unix >= 2.5.1
+            build-depends: unix >= 2.6
 
     exposed-modules:
         Development.Shake
@@ -155,7 +155,7 @@ executable shake
         cpp-options: -DPORTABLE
     else
         if !os(windows)
-            build-depends: unix >= 2.5.1
+            build-depends: unix >= 2.6
 
     other-modules:
         Development.Make.All
@@ -197,7 +197,7 @@ executable shake-test
         cpp-options: -DPORTABLE
     else
         if !os(windows)
-            build-depends: unix >= 2.5.1
+            build-depends: unix >= 2.6
 
     other-modules:
         Development.Make.All
