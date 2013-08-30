@@ -72,13 +72,13 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
 
         if not $ ver `LBS.isPrefixOf` src then do
             unless (LBS.null src) $ do
-                let good x = isAlphaNum x || x `elem` "-_ "
-                let bad = LBS.takeWhile good $ LBS.take 50 src
+                let limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
+                let disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
                 outputErr $ unlines
-                    ["Error when reading Shake database " ++ dbfile
-                    ,"  Invalid version stamp detected"
-                    ,"  Expected: " ++ takeWhile good (LBS.unpack ver)
-                    ,"  Found   : " ++ LBS.unpack bad
+                    ["Error when reading Shake database - invalid version stamp detected:"
+                    ,"  File:      " ++ dbfile
+                    ,"  Expected:  " ++ disp (LBS.unpack ver)
+                    ,"  Found:     " ++ disp (limit $ LBS.unpack src)
                     ,"All rules will be rebuilt"]
             continue h Map.empty
          else
