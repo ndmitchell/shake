@@ -134,7 +134,7 @@ library
 
 executable shake
     main-is: Main.hs
-    ghc-options: -threaded -rtsopts
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -qg -qb"
     build-depends:
         base == 4.*,
         old-time,
