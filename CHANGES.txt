@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #55, ensure if you need phony targets you rebuild every time
     #52, ensure all command output is printed
     #20, document preferred compilation flags
     #20, speed up the Shake executable with GHC RTS flags

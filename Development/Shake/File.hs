@@ -31,7 +31,9 @@ newtype FileQ = FileQ BSU
 instance Show FileQ where show (FileQ x) = unpackU x
 
 newtype FileA = FileA FileTime
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Hashable,Binary,NFData)
+
+instance Eq FileA where FileA x == FileA y = x /= fileTimeNone && x == y
 
 instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
 

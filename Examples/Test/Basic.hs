@@ -39,6 +39,13 @@ main = shaken test $ \args obj -> do
         need [obj "configure",obj "once.txt"]
         liftIO $ appendFile (obj "install") "1"
 
+    phony "dummy" $ do
+        liftIO $ appendFile (obj "dummy") "1"
+
+    obj "dummer.txt" *> \out -> do
+        need ["dummy","dummy"]
+        need ["dummy"]
+        liftIO $ appendFile out "1"
 
 test build obj = do
     writeFile (obj "A.txt") "AAA"
@@ -82,3 +89,17 @@ test build obj = do
     build ["!install"]
     assertContents (obj "configure") "111"
     assertContents (obj "install") "11"
+
+    writeFile (obj "dummy.txt") ""
+    build ["!dummy"]
+    assertContents (obj "dummy") "1"
+    build ["!dummy"]
+    assertContents (obj "dummy") "11"
+    build ["!dummy","!dummy"]
+    assertContents (obj "dummy") "111"
+
+    writeFile (obj "dummer.txt") ""
+    build ["dummer.txt"]
+    assertContents (obj "dummer.txt") "1"
+    build ["dummer.txt"]
+    assertContents (obj "dummer.txt") "11"
