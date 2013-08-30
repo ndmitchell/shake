@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #48, make it clear filetimes are hashes
     #43, improve the error messages on lint failures
     #45, avoid use of nub
     #45, avoid use of intersect which is O(n^2)

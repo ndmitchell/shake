@@ -11,7 +11,7 @@ import Data.Typeable
 
 
 specialAlwaysRebuilds :: Value -> Bool
-specialAlwaysRebuilds v = con `elem` ["AlwaysRerunA","OracleA"] || (con == "FileA" && show v == "FileTime 0x7FFFFFFF")
+specialAlwaysRebuilds v = con `elem` ["AlwaysRerunA","OracleA"] || (con == "FileA" && show v == "FileTimeHash 0x7FFFFFFF")
     where con = show $ fst $ splitTyConApp $ typeValue v
 
 

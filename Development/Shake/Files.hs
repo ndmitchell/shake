@@ -28,7 +28,7 @@ newtype FilesQ = FilesQ [BSU]
 newtype FilesA = FilesA [FileTime]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show FilesA where show (FilesA xs) = unwords $ "FileTimes" : map show xs
+instance Show FilesA where show (FilesA xs) = unwords $ "FileTimeHashes" : map show xs
 
 instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . unpackU) xs
 
