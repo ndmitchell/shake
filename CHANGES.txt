@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #52, ensure all command output is printed
     #20, document preferred compilation flags
     #20, speed up the Shake executable with GHC RTS flags
     #39, print out more of the version string on database change
