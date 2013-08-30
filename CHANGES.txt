@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #41, require unix-2.6 or above
     #48, make it clear filetimes are hashes
     #43, improve the error messages on lint failures
     #45, avoid use of nub
