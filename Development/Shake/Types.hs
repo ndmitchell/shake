@@ -49,7 +49,6 @@ data ShakeOptions = ShakeOptions
         --   All metadata files will be named @'shakeFiles'./extension/@, for some @/extension/@.
     ,shakeThreads :: Int
         -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.
-        --   To enable parallelism you may need to compile with @-threaded@.
         --   For many build systems, a number equal to or slightly less than the number of physical processors
         --   works well.
     ,shakeVersion :: String

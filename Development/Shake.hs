@@ -28,6 +28,12 @@
 --   Finally we call the @tar@ program. If either @result.txt@ changes, or any of the files listed by @result.txt@
 --   change, then @result.tar@ will be rebuilt.
 --
+--   The theory behind Shake is described in an ICFP 2012 paper, Shake Before Building -- Replacing Make with Haskell
+--   <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf>. The associated talk
+--   forms a short overview of Shake <http://www.youtube.com/watch?v=xYCPpXVlqFM>.
+--
+--   /== WRITING A BUILD SYSTEM ==============================/
+--
 --   When writing a Shake build system, start by defining what you 'want', then write rules
 --   with '*>' to produce the results. Before calling 'cmd' you should ensure that any files the command
 --   requires are demanded with calls to 'need'. We offer the following advice to Shake users:
@@ -40,8 +46,7 @@
 -- * Put all result files in a distinguished directory, for example @_make@. You can implement a @clean@
 --   command by removing that directory, using @'removeFilesAfter' \"_make\" [\"\/\/\*\"]@.
 --
--- * To obtain parallel builds set 'shakeThreads' to a number greater than 1. You may also need to
---   compile with @-threaded@.
+-- * To obtain parallel builds set 'shakeThreads' to a number greater than 1.
 --
 -- * Lots of compilers produce @.o@ files. To avoid overlapping rules, use @.c.o@ for C compilers,
 --   @.hs.o@ for Haskell compilers etc.
@@ -54,9 +59,25 @@
 --   that you suspect will change regularly (perhaps @ghc@ version number), either write the information to
 --   a file with 'alwaysRerun' and 'writeFileChanged', or use 'addOracle'.
 --
---   The theory behind Shake is described in an ICFP 2012 paper, Shake Before Building -- Replacing Make with Haskell
---   <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf>. The associated talk
---   forms a short overview of Shake <http://www.youtube.com/watch?v=xYCPpXVlqFM>.
+--   /== GHC BUILD FLAGS ==============================/
+--
+--   For large build systems the choice of GHC flags can have a significant impact. We recommend:
+--
+-- > ghc --make MyBuildSystem -rtsopts "-with-rtsopts=-I0 -qg -qb"
+--
+--   * Compile without @-threaded@: In GHC 7.6 and earlier bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
+--     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
+--     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
+--
+--   * Compile with @-rtsopts@: Allow the setting of further GHC options at runtime.
+--
+--   * Run with @-I0@: Disable idle garbage collection. In a build system regularly running many system
+--     commands the program appears \"idle\" very often, triggering regular unnecessary garbage collection, stealing
+--     resources from the program doing actual work.
+--
+--   * Run with @-qg -qb@: Disable parallel garbage collection. Parallel garbage collection in Shake
+--     programs typically goes slower than sequential garbage collection, while occupying many cores that
+--     can be used for running system commands.
 --
 --   /Acknowledgements/: Thanks to Austin Seipp for properly integrating the profiling code.
 module Development.Shake(
