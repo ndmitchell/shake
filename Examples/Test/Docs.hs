@@ -29,7 +29,8 @@ main = shaken noTest $ \args obj -> do
     obj "Part_*.hs" *> \out -> do
         need ["Examples/Test/Docs.hs"] -- so much of the generator is in this module
         src <- readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
-        let f i (Stmt x) = restmt i $ map undefDots x
+        let f i (Stmt x) | all whitelist x = []
+                         | otherwise = restmt i $ map undefDots x
             f i (Expr x) | x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                          | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
             code = concat $ zipWith f [1..] (nub $ findCode src)
