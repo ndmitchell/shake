@@ -151,7 +151,7 @@ whitelist x | elem x $ words $
     ".. /./ /.. ./ // \\ ../ " ++
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out " ++
-    "-threaded Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
+    "-threaded -rtsopts -I0 Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
@@ -160,6 +160,8 @@ whitelist x = x `elem`
     ,"1m25s (15%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
     ,"# command-name file-name"
+    ,"ghc --make MyBuildSystem -rtsopts \"-with-rtsopts=-I0 -qg -qb\""
+    ,"-qg -qb"
     ]
 
 types = words $
