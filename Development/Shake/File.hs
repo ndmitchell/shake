@@ -137,11 +137,13 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
         liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
 
 
--- | Declare a phony action, this is an action that does not produce a file, and will be rerun
+-- | Declare a phony action -- an action that does not produce a file, and will be rerun
 --   in every execution that requires it. You can demand 'phony' rules using 'want' \/ 'need'.
+--   Phony actions are never executed more than once in a single build run.
 --
---   Phony actions are intended to define command-line abbreviations. You should not 'need' phony actions
---   as dependencies of rules, as that will cause excessive rebuilding.
+--   Phony actions are intended to define command-line abbreviations. If you 'need' a phony action
+--   in a rule then every execution where that rule is required will rerun both the rule and the phony
+--   action.
 phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
