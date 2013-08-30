@@ -75,22 +75,26 @@ commandExplicit funcName opts results exe args = verboser $ tracer $
             bin inh; bin outh; bin errh
 
         -- fork off a thread to start consuming stdout
-        (out,waitOut) <- case outh of
-            Nothing -> return ("", return ())
+        (out,waitOut,waitOutEcho) <- case outh of
+            Nothing -> return ("", return (), return ())
             Just outh -> do
                 out <- hGetContents outh
                 waitOut <- forkWait $ C.evaluate $ rnf out
-                when stdoutEcho $ forkIO (hPutStr stdout out) >> return ()
-                return (out,waitOut)
+                waitOutEcho <- if stdoutEcho
+                                 then forkWait (hPutStr stdout out)
+                                 else return (return ())
+                return (out,waitOut,waitOutEcho)
 
         -- fork off a thread to start consuming stderr
-        (err,waitErr) <- case errh of
-            Nothing -> return ("", return ())
+        (err,waitErr,waitErrEcho) <- case errh of
+            Nothing -> return ("", return (), return ())
             Just errh -> do
                 err <- hGetContents errh
                 waitErr <- forkWait $ C.evaluate $ rnf err
-                when stderrEcho $ forkIO (hPutStr stderr err) >> return ()
-                return (err,waitErr)
+                waitErrEcho <- if stderrEcho
+                                 then forkWait (hPutStr stderr err)
+                                 else return (return ())
+                return (err,waitErr,waitErrEcho)
 
         -- now write and flush any input
         let writeInput = do
@@ -110,6 +114,9 @@ commandExplicit funcName opts results exe args = verboser $ tracer $
         -- wait on the output
         waitOut
         waitErr
+
+        waitOutEcho
+        waitErrEcho
 
         close outh
         close errh
