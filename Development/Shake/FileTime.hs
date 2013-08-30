@@ -17,11 +17,8 @@ import Numeric
 
 -- Required for Portable
 import System.Directory
-#if __GLASGOW_HASKELL__ >= 706
 import Data.Time
-#else
 import System.Time
-#endif
 
 -- Required for non-portable Windows
 #if defined(mingw32_HOST_OS)
@@ -81,12 +78,12 @@ getModTimeMaybe x = getModTimeMaybeUnix x
 getModTimeMaybePortable :: BSU -> IO (Maybe FileTime)
 getModTimeMaybePortable x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     time <- getModificationTime $ unpackU x
-#if __GLASGOW_HASKELL__ >= 706
-    return $ Just $ fileTime $ floor $ utctDayTime time
-#else
-    let TOD t _ = time
-    return $ Just $ fileTime $ fromIntegral t
-#endif
+    return $ Just $ extractFileTime time
+
+-- deal with difference in return type of getModificationTime between directory versions
+class ExtractFileTime a where extractFileTime :: a -> FileTime
+instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fileTime $ fromIntegral t
+instance ExtractFileTime UTCTime where extractFileTime = fileTime . floor . utctDayTime
 
 
 -- Directly against the Win32 API, twice as fast as the portable version
