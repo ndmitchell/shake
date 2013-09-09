@@ -98,8 +98,9 @@ match _ _ = []
 -- \"foo\/bar\" '?==' \"foo\\\\bar\"
 -- @
 (?==) :: FilePattern -> FilePath -> Bool
-(?==) p x = not $ null $ match (pattern $ lexer p) (True, x)
-
+(?==) "//*" = const True
+(?==) p = \x -> not $ null $ match pat (True, x)
+    where pat = pattern $ lexer p
 
 ---------------------------------------------------------------------
 -- DIRECTORY PATTERNS
