@@ -27,7 +27,7 @@ instance Rule AlwaysRerunQ AlwaysRerunA where
 -- @
 -- \"ghcVersion.txt\" 'Development.Shake.*>' \\out -> do
 --     'alwaysRerun'
---     'Development.Shake.Stdout' stdout <- 'Development.Shake.cmd' \"ghc --version\"
+--     'Development.Shake.Stdout' stdout <- 'Development.Shake.cmd' \"ghc --numeric-version\"
 --     'Development.Shake.writeFileChanged' out stdout
 -- @
 alwaysRerun :: Action ()
