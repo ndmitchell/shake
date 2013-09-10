@@ -19,7 +19,7 @@ newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData
 
 main = shaken noTest $ \args obj -> do
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
-    want $ if null args then [obj "Main.exe"] else args
+    want $ if null args then [obj "Main" <.> exe] else args
 
     -- fixup to cope with Cabal's generated files
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
@@ -38,7 +38,7 @@ main = shaken noTest $ \args obj -> do
             flags <- ghcFlags $ GhcFlags ()
             cmd "ghc" flags args
 
-    obj "/*.exe" *> \out -> do
+    obj ("Main" <.> exe) *> \out -> do
         src <- readFileLines $ out -<.> "deps"
         let os = map (obj . moduleToFile "o") $ "Main":src
         need os
