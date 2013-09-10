@@ -38,7 +38,7 @@ main = shaken noTest $ \args obj -> do
             flags <- ghcFlags $ GhcFlags ()
             cmd "ghc" flags args
 
-    obj ("Main" <.> exe) *> \out -> do
+    obj "Main" <.> exe *> \out -> do
         src <- readFileLines $ out -<.> "deps"
         let os = map (obj . moduleToFile "o") $ "Main":src
         need os
