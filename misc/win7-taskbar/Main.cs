@@ -31,7 +31,7 @@ namespace Taskbar
         public Args(string[] xs)
         {
             var bad = new List<string>();
-            var help = false;
+            var help = xs.Length == 0;
             foreach (var x in xs)
             {
                 var pos = x.IndexOf('=');
