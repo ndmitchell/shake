@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.WindowsAPICodePack.Taskbar;
+using Neil.Taskbar;
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
@@ -26,7 +26,7 @@ namespace TaskbarProgress
     class Args
     {
         public readonly string Title = "";
-        public readonly TaskbarProgressBarState? State;
+        public readonly TaskbarProgressBarStatus? State;
         public readonly int? Value;
 
         public Args(string[] xs)
@@ -74,11 +74,11 @@ namespace TaskbarProgress
             }
         }
 
-        private static TaskbarProgressBarState? ToState(string s)
+        private static TaskbarProgressBarStatus? ToState(string s)
         {
             try
             {
-                return (TaskbarProgressBarState)Enum.Parse(typeof(TaskbarProgressBarState), s);
+                return (TaskbarProgressBarStatus)Enum.Parse(typeof(TaskbarProgressBarStatus), s);
             }
             catch (Exception)
             {
@@ -140,13 +140,15 @@ namespace TaskbarProgress
             var wnds = FindWindow(opts.Title);
             if (wnds.Length == 0) Environment.Exit(2);
 
-            var inst = TaskbarManager.Instance;
+            var inst = (Neil.Taskbar.ITaskbarList4)new Neil.Taskbar.CTaskbarList();
+            inst.HrInit();
+
             foreach (var wnd in wnds)
             {
                 if (opts.Value.HasValue)
-                    inst.SetProgressValue(opts.Value.Value, 100, wnd);
+                    inst.SetProgressValue(wnd, (ulong) opts.Value.Value, 100);
                 if (opts.State.HasValue)
-                    inst.SetProgressState(opts.State.Value, wnd);
+                    inst.SetProgressState(wnd, opts.State.Value);
             }
         }
     }
