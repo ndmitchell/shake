@@ -96,7 +96,7 @@ module Development.Shake(
     -- ** Command line
     shakeArgs, shakeArgsWith, shakeOptDescrs,
     -- ** Progress reporting
-    Progress(..), progressSimple, progressDisplay, progressTitlebar,
+    Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram,
     -- ** Verbosity
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, quietly,
     -- * Running commands

@@ -3,7 +3,7 @@
 -- | Progress tracking
 module Development.Shake.Progress(
     Progress(..),
-    progressSimple, progressDisplay, progressTitlebar,
+    progressSimple, progressDisplay, progressTitlebar, progressProgram,
     progressDisplayTester -- INTERNAL FOR TESTING ONLY
     ) where
 
@@ -13,7 +13,11 @@ import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import System.Environment
+import System.Directory
+import System.Process
+import Data.Char
 import Data.Data
+import Data.IORef
 import Data.List
 import Data.Maybe
 import Data.Monoid
@@ -228,12 +232,42 @@ progressTitlebar x
 #endif
 
 
--- | A simple method for displaying progress messages, suitable for using as
---   'Development.Shake.shakeProgress'. This function writes the current progress to
---   the titlebar every five seconds. The function is defined as:
+-- | Call the program @shake-progress@ if it is on the @$PATH@. The program is called with
+--   the following arguments:
 --
--- @
---progressSimple = 'progressDisplay' 5 'progressTitlebar'
--- @
+-- * @--title=/str/@ - the string passed to @progressProgram@.
+--
+-- * @--state=/val/@, where @/val/@ is one of @NoProgress@, @Normal@, or @Error@ to indicate
+--   what state the progress bar should be in.
+--
+-- * @--value=/perecent/@ - the percent of the build that has completed, if not in @NoProgress@ state.
+--
+--   The program will not be called consecutively with the same @--state@ and @--value@ options.
+--
+--   Windows 7 or higher users can get taskbar progress notifications by placing the following
+--   program in their @$PATH@: <https://github.com/ndmitchell/shake/releases>.
+progressProgram :: IO (String -> IO ())
+progressProgram = do
+    exe <- findExecutable "shake-progress"
+    case exe of
+        Nothing -> return $ const $ return ()
+        Just exe -> do
+            ref <- newIORef Nothing
+            return $ \msg -> do
+                let failure = " Failure! " `isInfixOf` msg
+                let perc = let (a,b) = break (== '%') msg
+                           in if null b then "" else reverse $ takeWhile isDigit $ reverse a
+                let key = (failure, perc)
+                same <- atomicModifyIORef ref $ \old -> (Just key, old == Just key)
+                let state = if perc == "" then "NoProgress" else if failure then "Error" else "Normal"
+                rawSystem exe $ ["--title=" ++ msg, "--state=" ++ state] ++ ["--value=" ++ perc | perc /= ""]
+                return ()
+
+
+-- | A simple method for displaying progress messages, suitable for using as 'Development.Shake.shakeProgress'.
+--   This function writes the current progress to the titlebar every five seconds using 'progressTitlebar',
+--   and calls any @shake-progress@ program on the @$PATH@ using 'progressProgram'.
 progressSimple :: IO Progress -> IO ()
-progressSimple = progressDisplay 5 progressTitlebar
+progressSimple p = do
+    program <- progressProgram
+    progressDisplay 5 (\s -> progressTitlebar s >> program s) p

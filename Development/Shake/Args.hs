@@ -248,7 +248,7 @@ shakeOptsEx =
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
     ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (optIntArg "progress" "N" (\i s -> s{shakeProgress=progressDisplay (fromMaybe 5 i) progressTitlebar})) "Show progress messages [every N seconds, default 5]."
+    ,yes $ Option "p" ["progress"] (optIntArg "progress" "N" (\i s -> s{shakeProgress=prog $ fromMaybe 5 i})) "Show progress messages [every N seconds, default 5]."
     ,yes $ Option " " ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
@@ -286,3 +286,7 @@ shakeOptsEx =
             appendFile file $ unescape msg
 
         outputColor output v msg = output v $ escape "34" msg
+
+        prog i p = do
+            program <- progressProgram
+            progressDisplay i (\s -> progressTitlebar s >> program s) p

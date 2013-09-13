@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #64, add progressProgram and use it in progressSimple
     Remove isRunning, kill the progress thread on completion
     #47, improve the perform on ?==, especially on "//*"
     #68, improve the docs for addOracle
