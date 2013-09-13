@@ -56,7 +56,7 @@ instance Monoid Progress where
     mempty = Progress True Nothing 0 0 0 0 0 0 0 (0,0)
     mappend a b = Progress
         {isRunning = isRunning a && isRunning b
-        ,isFailure = isFailure a `mappend` isFailure b
+        ,isFailure = isFailure a `mplus` isFailure b
         ,countSkipped = countSkipped a + countSkipped b
         ,countBuilt = countBuilt a + countBuilt b
         ,countUnknown = countUnknown a + countUnknown b
