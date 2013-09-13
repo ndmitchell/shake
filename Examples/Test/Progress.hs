@@ -5,7 +5,7 @@ module Examples.Test.Progress(main) where
 import Development.Shake.Progress
 import Development.Shake.Classes
 import Examples.Util
-import Control.Exception hiding (assert)
+import qualified Control.Exception as E
 import Data.IORef
 import Data.Monoid
 import Data.Char
@@ -18,7 +18,7 @@ main = shaken test $ \args obj -> return ()
 prog = progEx 10000000000000000
 
 data MyException = MyException deriving (Show, Typeable)
-instance Exception MyException
+instance E.Exception MyException
 
 
 progEx :: Double -> [Double] -> IO [Double]
@@ -28,7 +28,7 @@ progEx mxDone todo = do
     pile <- newIORef $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
     let get = do a <- readIORef pile
                  case a of
-                     [] -> throw MyException
+                     [] -> E.throw MyException
                      x:xs -> do writeIORef pile xs; return x
 
     out <- newIORef []
@@ -36,7 +36,7 @@ progEx mxDone todo = do
                    let f x = let y = filter isDigit x in if null y then 0/0 else read y
                    modifyIORef out (++ [(if null secs then f mins else f mins * 60 + f secs) / resolution])
     -- we abort by killing the thread, but then catch the abort and resume normally
-    catch (progressDisplayTester resolution put get) $ \MyException -> return ()
+    E.catch (progressDisplayTester resolution put get) $ \MyException -> return ()
     fmap (take $ length todo) $ readIORef out
 
 
