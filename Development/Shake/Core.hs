@@ -293,7 +293,6 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Got",Just now)]
                 ""
 
-    let ruleinfo = createRuleinfo rs
     running <- newIORef True
     after <- newIORef []
     flip finally (writeIORef running False >> if shakeTimings then printTimings else resetTimings) $
@@ -304,6 +303,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     failure <- fmap (fmap fst) $ readIORef except
                     stats <- progress database
                     return stats{isRunning=running, isFailure=failure}
+                let ruleinfo = createRuleinfo rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 [] Nothing
