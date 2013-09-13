@@ -150,11 +150,13 @@ whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q value key gcc make contents tar ghc cabal clean _make distcc ghc " ++
     ".. /./ /.. ./ // \\ ../ " ++
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
+    "NoProgress Error " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out " ++
     "-threaded -rtsopts -I0 Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
+    ,"shake-progress"
     ,"main -j6"
     ,"main clean"
     ,"1m25s (15%)"
