@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using Neil.Taskbar;
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
@@ -21,7 +20,7 @@ using Neil.Taskbar;
 [assembly: ComVisible(false)]
 
 
-namespace TaskbarProgress
+namespace Taskbar
 {
     class Args
     {
@@ -140,7 +139,7 @@ namespace TaskbarProgress
             var wnds = FindWindow(opts.Title);
             if (wnds.Length == 0) Environment.Exit(2);
 
-            var inst = (Neil.Taskbar.ITaskbarList4)new Neil.Taskbar.CTaskbarList();
+            var inst = (ITaskbarList4) new CTaskbarList();
             inst.HrInit();
 
             foreach (var wnd in wnds)

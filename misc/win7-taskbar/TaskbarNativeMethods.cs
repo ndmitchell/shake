@@ -4,7 +4,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Neil.Taskbar
+namespace Taskbar
 {
     #region Enums
     internal enum KnownDestinationCategory
