@@ -40,7 +40,7 @@ foreign import stdcall "Windows.h SetConsoleTitleA" c_setConsoleTitle :: LPCSTR 
 --   status messages, which is implemented using this data type.
 data Progress = Progress
     {isRunning :: !Bool -- ^ Starts out 'True', becomes 'False' once the build has completed.
-    ,isFailure :: !(Maybe String) -- ^ Starts out 'Nothing', becomes 'Just' if a rule fails.
+    ,isFailure :: !(Maybe String) -- ^ Starts out 'Nothing', becomes 'Just' a target name if a rule fails.
     ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
     ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run.
     ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required.
