@@ -139,8 +139,19 @@ namespace Taskbar
             var wnds = FindWindow(opts.Title);
             if (wnds.Length == 0) Environment.Exit(2);
 
-            var inst = (ITaskbarList4) new CTaskbarList();
-            inst.HrInit();
+            ITaskbarList4 inst = null;
+            try
+            {
+                inst = (ITaskbarList4)new CTaskbarList();
+                inst.HrInit();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to create ITaskbarList4 interface, usually because you are not on Windows 7.");
+                Console.WriteLine("");
+                Console.WriteLine(e.Message);
+                Environment.Exit(3);
+            }
 
             foreach (var wnd in wnds)
             {
