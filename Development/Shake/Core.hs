@@ -293,21 +293,26 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Got",Just now)]
                 ""
 
-    running <- newIORef True
+    progressThread <- newIORef Nothing
     after <- newIORef []
-    flip finally (writeIORef running False >> if shakeTimings then printTimings else resetTimings) $
+    let cleanup = do
+            flip whenJust killThread =<< readIORef progressThread
+            when shakeTimings printTimings
+            resetTimings -- so we don't leak memory
+    flip finally cleanup $
         withCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
-                forkIO $ shakeProgress $ do
-                    running <- readIORef running
+                tid <- forkIO $ shakeProgress $ do
                     failure <- fmap (fmap fst) $ readIORef except
                     stats <- progress database
-                    return stats{isRunning=running, isFailure=failure}
+                    return stats{isFailure=failure}
+                writeIORef progressThread $ Just tid
                 let ruleinfo = createRuleinfo rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 [] Nothing
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
+
                 when shakeLint $ do
                     addTiming "Lint checking"
                     checkValid database (runStored ruleinfo)

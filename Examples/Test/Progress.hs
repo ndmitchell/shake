@@ -1,8 +1,11 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 
 module Examples.Test.Progress(main) where
 
 import Development.Shake.Progress
+import Development.Shake.Classes
 import Examples.Util
+import Control.Exception hiding (assert)
 import Data.IORef
 import Data.Monoid
 import Data.Char
@@ -14,6 +17,10 @@ main = shaken test $ \args obj -> return ()
 -- | Given a list of todo times, get out a list of how long is predicted
 prog = progEx 10000000000000000
 
+data MyException = MyException deriving (Show, Typeable)
+instance Exception MyException
+
+
 progEx :: Double -> [Double] -> IO [Double]
 progEx mxDone todo = do
     let resolution = 10000 -- Use resolution to get extra detail on the numbers
@@ -21,14 +28,15 @@ progEx mxDone todo = do
     pile <- newIORef $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
     let get = do a <- readIORef pile
                  case a of
-                     [] -> return mempty{isRunning=False}
+                     [] -> throw MyException
                      x:xs -> do writeIORef pile xs; return x
 
     out <- newIORef []
     let put x = do let (mins,secs) = break (== 'm') $ takeWhile (/= '(') x
                    let f x = let y = filter isDigit x in if null y then 0/0 else read y
                    modifyIORef out (++ [(if null secs then f mins else f mins * 60 + f secs) / resolution])
-    progressDisplayTester resolution put get
+    -- we abort by killing the thread, but then catch the abort and resume normally
+    catch (progressDisplayTester resolution put get) $ \MyException -> return ()
     fmap (take $ length todo) $ readIORef out
 
 

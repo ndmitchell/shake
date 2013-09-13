@@ -86,7 +86,8 @@ data ShakeOptions = ShakeOptions
     ,shakeTimings :: Bool
         -- ^ Default to 'False'. Print timing information for each stage at the end.
     ,shakeProgress :: IO Progress -> IO ()
-        -- ^ Defaults to no action. A function called on a separate thread when the build starts, allowing progress to be reported.
+        -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
+        --   The function is called on a separate thread, and that thread is killed when the build completes.
         --   For applications that want to display progress messages, 'progressSimple' is often sufficient, but more advanced
         --   users should look at the 'Progress' data type.
     ,shakeOutput :: Verbosity -> String -> IO ()
