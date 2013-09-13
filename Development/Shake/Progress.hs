@@ -235,12 +235,12 @@ progressTitlebar x
 -- | Call the program @shake-progress@ if it is on the @$PATH@. The program is called with
 --   the following arguments:
 --
--- * @--title=/str/@ - the string passed to @progressProgram@.
+-- * @--title=string@ - the string passed to @progressProgram@.
 --
--- * @--state=/val/@, where @/val/@ is one of @NoProgress@, @Normal@, or @Error@ to indicate
+-- * @--state=Normal@, or one of @NoProgress@, @Normal@, or @Error@ to indicate
 --   what state the progress bar should be in.
 --
--- * @--value=/perecent/@ - the percent of the build that has completed, if not in @NoProgress@ state.
+-- * @--value=25@ - the percent of the build that has completed, if not in @NoProgress@ state.
 --
 --   The program will not be called consecutively with the same @--state@ and @--value@ options.
 --
