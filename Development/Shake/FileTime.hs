@@ -83,7 +83,7 @@ getModTimeMaybePortable x = handleJust (\e -> if isDoesNotExistError e then Just
 -- deal with difference in return type of getModificationTime between directory versions
 class ExtractFileTime a where extractFileTime :: a -> FileTime
 instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fileTime $ fromIntegral t
-instance ExtractFileTime UTCTime where extractFileTime = fileTime . floor . utctDayTime
+instance ExtractFileTime UTCTime where extractFileTime = fileTime . floor . fromRational . toRational . utctDayTime
 
 
 -- Directly against the Win32 API, twice as fast as the portable version
