@@ -26,6 +26,10 @@ main = shaken test $ \args obj -> do
         () <- cmd (EchoStderr False) "ghc --random"
         return ""
 
+    "triple" !> do
+        (Exit exit, Stdout stdout, Stderr stderr) <- cmd "ghc --random"
+        return $ show (exit, stdout, stderr) -- must force all three parts
+
     "pwd" !> do
         writeFileLines (obj "pwd space.hs") ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
         Stdout out <- cmd (Cwd $ obj "") "runhaskell" ["pwd space.hs"]
@@ -58,3 +62,5 @@ test build obj = do
 
     build ["env"]
     assertContentsInfix (obj "env") "HELLO SHAKE"
+
+    build ["triple"]
