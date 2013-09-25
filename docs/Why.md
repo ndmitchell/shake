@@ -27,7 +27,7 @@ Developers are likely to spend a long time waiting for their build system, and c
 
 A build system is responsible for producing the files that developers are working with, so it is crucial that developers trust the result so they can properly investigate issues without considering build system involvement.
 
-* The powerful dependency system ensures that all dependencies can be expressed, ensuring the build never leaves stale file.
+* The powerful dependency system ensures that all dependencies can be expressed, ensuring the build never leaves stale files.
 * The Shake implementation itself has an extensive test suite, combining several examples projects and over 100 small unit tests (140 at the last count). In addition, a random build system generator allows extensive testing of key properties, including sufficient rebuilding and correctness in the presence of errors.
 * Shake builds can be run in a special "lint" mode to check global invariants, detecting and reporting problems such as dependency violations before they cause problems.
 
@@ -35,7 +35,7 @@ A build system is responsible for producing the files that developers are workin
 
 Most build systems occasionally require manual intervention, typically wiping the existing build and starting again, when the build system developers change something fundamental. Shake eliminates the need for any manual intervention, reducing time wasted by users of the build system.
 
-* The powerful dependencies ensure things that would normally require manual intervention can be tracked. For example, if the C compiler version is tracked as an explicit dependency, then upgrading the C compiler will rebuild all appropriate C files automatically.
+* The powerful dependencies ensure things that would normally require manual intervention can be tracked. For example, if the C compiler version is tracked as an explicit dependency, then upgrading the C compiler will rebuild all necessary C files automatically.
 * Shake includes a version with each script, which can be changed to automatically force a complete rebuild.
 
 #### Reports estimated completion time
@@ -48,30 +48,25 @@ Shake can report estimated completion time, allowing developers to plan their ti
 
 #### Powerful language
 
-Shake is implemented as a Haskell library, and Shake build systems are structured as Haskell programs which make heavy use of the Shake library functions. Shake is a delicate balance, providing access to the full power of Haskell (so build systems are not limited), yet also not requiring any Haskell knowledge (not just for Haskell programmers).
+Shake is implemented as a Haskell library, and Shake build systems are structured as Haskell programs which make heavy use of the Shake library functions. Shake is a delicate balance, providing access to the full power of Haskell (so build systems are not limited), yet also not requiring Haskell knowledge (suitable for any programmer).
 
-* By building on top of Haskell, Shake build systems benefit from a powerful standardised language. Having a full language available ensures that anything that would be unsuitable to express in a build system can be implemented in normal Haskell and used seamlessly.
-* While Shake build systems can use the full power of Haskell, at the other extreme, they can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
+* By building on top of Haskell, Shake build systems benefit from a powerful standardised language. Having a full language available ensures that anything that would be unsuitable to express in a build system can be implemented in Haskell and used seamlessly.
+* While Shake build systems are Haskell programs, they can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
 
 #### Supports large robust systems
 
 Shake build systems can scale to tens of thousands of lines without becoming unweildy.
 
-* Allows structuring of modules and functions for reuse.
-* Types ensure you don't rely on dependencies in the wrong place.
-
-
-
-Shake does not provide any support for large build systems, relying on a robust and huge language of Haskell.
-
-* Lint checking to do many sanity checks of the build system, catching errors sooner.
+* Shake defers to Haskell to provide facilities for properly structuring large projects. In particular, Shake build systems can use functions to reuse common functionality, modules to group functions into separate files and packages to allow reusing and sharing modules.
+* The types and utility functions provided by Shake eliminate certain classes of common error, making it harder express invalid build systems.
+* The lint mode performs sanity checks of the build system, allowing errors to be caught sooner.
 
 #### Provides profiling information
 
-Provides information about the dependencies, dependency graph, what takes most time etc. Allows developers to understand the build system as run, debug anomolies, and figure out how to make things go faster.
+Shake can generate profiling information allowing developers to both understand the current system, and identify opportunities for improvement.
 
-* Can see the dependencies, usually grouped by file type.
-* Identify the most expensive rule, and the most expensive file to change.
-* Analyse the previous build including what built and why.
-* Plot information.
-* Query language to determine further information.
+* The Shake profiling reports are standalone web pages containing plots, tables and graphs of useful information.
+* The report can be used to speed up by the build by identifying which commands are most expensive, which files cause most rebuilding and any bottlenecks in parallelism.
+* The report can diagnose the last run (even if you didn't chose to generate profiling information in advance), providing information about what built and why.
+* Graphs can be generating showing dependencies, usually grouped by either file type or location, making it easy to see the overall structure of the build.
+* The report has a query language.
