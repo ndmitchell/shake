@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #71, fix a bug when requesting all three outputs from command
     #64, add progressProgram and use it in progressSimple
     Remove isRunning, kill the progress thread on completion
     #47, improve the performance of ?==, especially on "//*"

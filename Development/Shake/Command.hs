@@ -224,7 +224,7 @@ instance CmdResult () where
     cmdResult = ([], \[] -> ())
 
 instance (CmdResult x1, CmdResult x2) => CmdResult (x1,x2) where
-    cmdResult = (a1++a2, \rs -> let (r1,r2) = splitAt (length a2) rs in (b1 r1, b2 r2))
+    cmdResult = (a1++a2, \rs -> let (r1,r2) = splitAt (length a1) rs in (b1 r1, b2 r2))
         where (a1,b1) = cmdResult
               (a2,b2) = cmdResult
 
