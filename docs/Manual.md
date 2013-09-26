@@ -41,5 +41,7 @@ This build system is complete and follows best practices. It builds an executabl
 #### Using command line flags
 
 
-#### 
+#### Prediction and Progress
+
+Use `--assume-dirty`
 
