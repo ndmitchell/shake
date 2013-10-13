@@ -1,6 +1,6 @@
 # Why choose Shake?
 
-Shake is a library for writing build systems. Most large projects have a custom-written build system, and developers working on the project are likely to run the build system many times a day, spending a noticable amount of time [waiting for the build system](http://xkcd.com/303/). This document explains why you might pick Shake over alternative tools for writing build systems (e.g. make, Ant, Scons). Shake primarily benefits two groups of people:
+Shake is a library for writing build systems. Most large projects have a custom-written build system, and developers working on the project are likely to run the build system many times a day, spending a noticeable amount of time [waiting for the build system](http://xkcd.com/303/). This document explains why you might pick Shake over alternative tools for writing build systems (e.g. make, Ant, Scons). Shake primarily benefits two groups of people:
 
 * **Developers running the build system** - Shake based build systems run quickly, require little manual intervention and report estimated completion time as they go.
 * **Developers writing the build system** - Shake provides a powerful language for writing build systems, has excellent support for writing large robust build systems, can express many types of build rules and provides profiling information to help speed up builds.
@@ -12,7 +12,7 @@ In the rest of this document we explain and justify the above claims, with links
 Build systems run user supplied commands in an order satisfying dependencies. Many of the advantages of Shake are due to being able to express more powerful dependencies than any other build system. These dependency features ensure you can express the build system you want directly, without having to shoehorn your ideas into whatever dependencies your build system provides. In particular, Shake can express both more dependencies (so things rebuild when they should) and more fine-grained dependencies (so things don't rebuild because something nearby changed).
 
 * Shake based build systems can discover additional dependencies after running previous rules, allowing the build system to generate files and then examine them to determine their dependencies, rather than predict the dependencies in advance. Such capabilities are essential when working with generated source files, but often allow build systems to be structured more logically.
-* Most build systems only allow dependencies between files, but Shake provides user definable dependencies. By default Shake includes support for dependencies on files, the existance of files, environment variables, directory contents and several others, and adding more to your project is easy. In particular you can include dependencies on things like compiler versions or information stored on a remote machine.
+* Most build systems only allow dependencies between files, but Shake provides user definable dependencies. By default Shake includes support for dependencies on files, the existence of files, environment variables, directory contents and several others, and adding more to your project is easy. In particular you can include dependencies on things like compiler versions or information stored on a remote machine.
 
 #### Build systems run quickly
 
@@ -55,7 +55,7 @@ Shake is implemented as a Haskell library, and Shake build systems are structure
 
 #### Supports large robust systems
 
-Shake build systems can scale to tens of thousands of lines without becoming unweildy.
+Shake build systems can scale to tens of thousands of lines without becoming unwieldy.
 
 * Shake defers to Haskell to provide facilities for properly structuring large projects. In particular, Shake build systems can use functions to reuse common functionality, modules to group functions into separate files and packages to allow reusing and sharing modules.
 * The types and utility functions provided by Shake eliminate certain classes of common error, making it harder express invalid build systems.
