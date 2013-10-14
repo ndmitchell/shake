@@ -1,6 +1,6 @@
 # Shake Manual
 
-This document describes how to get started with Shake, and does not assume any prior Haskell knowledge. Let's take a look at a Shake build system.
+Shake is a Haskell library for writing build systems - designed as a replacement to `make`. This document describes how to get started with Shake, and does not assume any prior Haskell knowledge. Let's take a look at a Shake build system.
 
     module Main(main) where
     
@@ -27,6 +27,12 @@ This document describes how to get started with Shake, and does not assume any p
             need $ parseMakeFile m
 
 This build system is complete and follows best practices. It builds an executable `_make/run` from all `.c` files in the current directory. It tracks both the list of `.c` files, the contents of the `.c` files and any header files they import. If any of the above change then it will rebuild. All generated files are placed in `_make`, and a `clean` target is provided that will wipe all the generated files. In the result of this manual we'll explain how the above code works, then extend the example with more features. 
+
+#### Running this example
+
+1. Install the [Haskell Platform](http://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
+2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
+3. Type `cabal install shake --global --profile`, to build and install Shake and all its dependencies.
 
 #### The basic syntax
 

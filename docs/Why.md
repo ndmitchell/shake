@@ -70,3 +70,12 @@ Shake can generate profiling information allowing developers to both understand 
 * The report can diagnose the last run (even if you didn't chose to generate profiling information in advance), providing information about what built and why.
 * Graphs can be generating showing dependencies, usually grouped by either file type or location, making it easy to see the overall structure of the build.
 * The report has a query language.
+
+#### Why not?
+
+It would be remiss not to provide a list of disadvantages:
+
+* Haskell, while being a strength, could be seen as a disadvantage. In practice, the subset of builds used by most people can pretend the Haskell does not exist
+* Shake is not likely to be installed by default, while something like make is.
+* There are no built in rules, you have to do it all yourself.
+* There is no backtracking, like in make.
