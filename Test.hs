@@ -69,6 +69,12 @@ main = do
     exePath <- getProgName
 #endif
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
+        _ | null xs -> do
+            putStrLn "******************************************************************"
+            putStrLn "** Running shake test suite, run with '--help' to see arguments **"
+            putStrLn "******************************************************************"
+            withArgs ["test"] main
+            withArgs ["random","test","3m"] main
         Nothing -> putStrLn $ unlines
             ["Welcome to the Shake demo"
             ,""

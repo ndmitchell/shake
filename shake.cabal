@@ -1,4 +1,4 @@
-cabal-version:      >= 1.8
+cabal-version:      >= 1.10
 build-type:         Simple
 name:               shake
 version:            0.10.7
@@ -64,10 +64,6 @@ data-files:
 source-repository head
     type:     git
     location: git://github.com/ndmitchell/shake.git
-
-flag testprog
-    default: False
-    description: Build the test program
 
 flag portable
     default: False
@@ -170,13 +166,10 @@ executable shake
         Start
 
 
-executable shake-test
+test-suite shake-test
+    type: exitcode-stdio-1.0
     main-is: Test.hs
-    if flag(testprog)
-        buildable: True
-    else
-        buildable: False
-    ghc-options: -threaded -rtsopts
+    ghc-options: -rtsopts
     build-depends:
         base == 4.*,
         old-time,
