@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow unix-1.5.1 again
     Convert to the cabal test compatible test suite
 0.10.7
     Support time-1.2
