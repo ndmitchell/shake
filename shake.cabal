@@ -63,7 +63,7 @@ data-files:
 
 source-repository head
     type:     git
-    location: git://github.com/ndmitchell/shake.git
+    location: https://github.com/ndmitchell/shake.git
 
 flag portable
     default: False
