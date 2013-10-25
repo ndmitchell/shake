@@ -19,7 +19,7 @@ import Development.Shake.Errors
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
-import Development.Shake.Util
+import Development.Shake.Prelude
 import Development.Shake.Intern as Intern
 
 import Control.Exception

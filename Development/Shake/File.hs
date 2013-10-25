@@ -14,7 +14,7 @@ import qualified Data.HashMap.Strict as Map
 import System.Directory
 
 import Development.Shake.Core
-import Development.Shake.Util
+import Development.Shake.Prelude
 import Development.Shake.Classes
 import Development.Shake.FilePattern
 import Development.Shake.FileTime

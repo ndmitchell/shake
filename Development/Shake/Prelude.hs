@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving #-}
 
-module Development.Shake.Util(
+module Development.Shake.Prelude(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,

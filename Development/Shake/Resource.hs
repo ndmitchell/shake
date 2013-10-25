@@ -5,7 +5,7 @@ module Development.Shake.Resource(
     ) where
 
 import Development.Shake.Errors
-import Development.Shake.Util
+import Development.Shake.Prelude
 import Data.Function
 import System.IO.Unsafe
 import Control.Arrow
