@@ -99,6 +99,7 @@ library
         Development.Shake.Command
         Development.Shake.FilePath
         Development.Shake.Sys
+        Development.Shake.Util
 
     other-modules:
         Development.Shake.Args
