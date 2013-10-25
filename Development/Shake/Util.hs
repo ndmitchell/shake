@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Util(
     parseMakefile, needMakefileDependencies
