@@ -6,6 +6,7 @@ import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule)
+import Development.Shake.Util
 import Development.Shake.FilePath
 import Development.Shake.Timing
 import qualified Data.ByteString.Char8 as BS
@@ -124,14 +125,3 @@ parseShowIncludes out = [y | x <- lines out, Just x <- [stripPrefix "Note: inclu
 isSystemInclude :: String -> Bool
 isSystemInclude x = "program files" `isInfixOf` lx || "microsoft visual studio" `isInfixOf` lx
     where lx = map toLower x
-
-
-parseMakefile :: String -> [(FilePath, [FilePath])]
-parseMakefile = concatMap f . join . lines
-    where
-        join (x1:x2:xs) | "\\" `isSuffixOf` x1 = join $ (init x1 ++ x2) : xs
-        join (x:xs) = x : join xs
-        join [] = []
-
-        f x = [(a, words $ drop 1 b) | a <- words a]
-            where (a,b) = break (== ':') $ takeWhile (/= '#') x
