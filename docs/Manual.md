@@ -80,6 +80,10 @@ Where all your code goes under `...`.
 
 #### Compiling the build system
 
+Create a file named `build.sh` with:
+
+    ghc --make -special-link-flags -o _make/maker && _make/maker 
+
 #### Command line flags
 
 
