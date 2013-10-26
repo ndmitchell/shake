@@ -40,10 +40,6 @@ To run the example above:
 
 ## Basic syntax
 
-<style type="text/css">
-.x {color: purple; font-style: italic;}
-</style>
-
 This section explains enough syntax to write a basic Shake build script.
 
 #### Boilerplate
@@ -58,10 +54,10 @@ import Development.Shake.Util
 
 main :: IO ()
 main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
-    <i class=x>build rules</i>
+    <i>build rules</i>
 </pre>
 
-All the interesting build-specific code is placed under <tt class=x>build rules</tt>. Many build systems will be able to reuse that boilerplate unmodified.
+All the interesting build-specific code is placed under <tt><i>build rules</i></tt>. Many build systems will be able to reuse that boilerplate unmodified.
 
 #### Defining targets
 
@@ -82,11 +78,11 @@ The `<.>` function adds an extension to a file path, and the built-in `exe` vari
 A rule describes the steps required to build a file. A rule has two components, a <tt style="font-style:italic;color:purple;">pattern</tt> and some <tt style="font-style:italic;color:purple;">actions</tt>:
 
 <pre>
-<i class=x>pattern</i> *&gt; \out -> do
-    <i class=x>actions</i>
+<i>pattern</i> *&gt; \out -> do
+    <i>actions</i>
 </pre>
 
-The <tt class=x>pattern</tt> is a string saying which files this rule can build. It may be a specific file (e.g.  `"manual/examples.txt" *> ...`) or may use wildcards:
+The <tt><i>pattern</i></tt> is a string saying which files this rule can build. It may be a specific file (e.g.  `"manual/examples.txt" *> ...`) or may use wildcards:
 
 * The `*` wildcard matches anything apart from a directory separator. For example `"manual/*.txt"` would define a rule for any `.txt` file in the `manual` directory, including `manual/examples.txt`, but would not match `manual/examples.zip`, `examples.txt` or `manual/docs/examples.txt`.
 * The `//` wildcard matches any number of complete path components. For example `//*.txt` would define a rule for any `.txt` file, including `manual/examples.txt`. As another example, `manual//examples.txt` would match any file named `examples.txt` inside `manual`, including both `manual/examples.txt` and `manual/docs/examples.txt`.
@@ -98,7 +94,7 @@ It is an error for multiple patterns to match a file being built, so you should 
 
 The first matches only the `run` executable, using `<.> exe` to ensure the executable is correctly named on all platforms. The second matches any `.o` file anywhere under `_build`. As examples, `_build/main.o` and `_build/foo/bar.o` both match while `main.o` and `_build/main.txt` do not.
 
-The <tt class=x>actions</tt> are a list of steps to perform and are listed one per line, indented beneath the rule. Actions both express dependencies (say what this rule uses) and run commands (actually generate the file). During the action the `out` variable is bound to the file that is being produced.
+The <tt><i>actions</i></tt> are a list of steps to perform and are listed one per line, indented beneath the rule. Actions both express dependencies (say what this rule uses) and run commands (actually generate the file). During the action the `out` variable is bound to the file that is being produced.
 
 #### A simple rule
 
@@ -122,14 +118,14 @@ Many rules follow this pattern - calculate some local variables, `need` some dep
 Local variables can be defined as:
 
 <pre>
-let <i class=x>variable</i> = <i class=x>expression</i>
+let <i>variable</i> = <i>expression</i>
 </pre>
 
-Where <tt class=x>variable</tt> is a name consisting of letters, numbers and underscores (a-z, A-Z, 0-9 and \_). All variables _must_ start with a lower-case letter.
+Where <tt><i>variable</i></tt> is a name consisting of letters, numbers and underscores (a-z, A-Z, 0-9 and \_). All variables _must_ start with a lower-case letter.
 
-An <tt class=x>expression</tt> is any combination of variables and function calls, for example `out -<.> "txt"`. A list of some common functions is discussed later.
+An <tt><i>expression</i></tt> is any combination of variables and function calls, for example `out -<.> "txt"`. A list of some common functions is discussed later.
 
-Variables are evaluated by substituting the <tt class=x>expression</tt> everywhere the <tt class=x>variable</tt> is used. In the simple example we could have equivalently written: 
+Variables are evaluated by substituting the <tt><i>expression</i></tt> everywhere the <tt><i>variable</i></tt> is used. In the simple example we could have equivalently written: 
 
     "*.rot13" *> \out ->
         need [out -<.> "txt"]
