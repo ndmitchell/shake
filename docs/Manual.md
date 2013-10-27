@@ -243,6 +243,8 @@ Use `--assume-dirty`.
 
 You can get progress messages.
 
+![](shake-progress.png)
+
 
 #### Profiling
 
