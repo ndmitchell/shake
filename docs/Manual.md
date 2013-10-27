@@ -219,16 +219,43 @@ Now you can run `build` directly to start your build system.
 
 Run `build --help` to see which flags are available. Most of the features from make are available, along with a few additional. As an example we can set where the `.database` file goes. Note we already customise this with `shakeOptions` - in general most flags you can set could also be specified as `shakeOption`.
 
-## Prediction and Progress
+## Extensions
+
+#### Dependencies on extra information
+
+Oracles, get the gcc version number and use that.
+
+#### Dependencies on environment variables
+
+Allow picking a different gcc from the environment variable
+
+#### Adding command line flags
+
+Let's add a flag to make it use a different version of GCC.
+
+#### Resources
+
+Generalise to building multiple things, then ensure we only ever link one at a time using resources to limit.
+
+#### Prediction and progress
 
 Use `--assume-dirty`.
 
 You can get progress messages.
 
 
-## Profiling
+#### Profiling
 
+#### Lint
 
-## Extending with Haskell
+#### Generated header files
+
+Need to generate them first, so need to write something that guesses, or a specific rule knowing what does it.
+
+#### Recursive imports
+
+The standard .hs/.hi and recursive tricks.
+
+#### Additional Haskell
 
 Define a C compile flag that works with both GCC and MSVC.
