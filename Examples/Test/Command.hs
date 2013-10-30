@@ -37,7 +37,7 @@ main = shaken test $ \args obj -> do
 
     "env" !> do
         (Exit _, Stdout out1) <- cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo %FOO%"
-        (Exit _, Stdout out2) <- cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo $FOO"
+        (Exit _, Stdout out2) <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo $FOO"
         return $ unlines [out1, out2]
 
 
