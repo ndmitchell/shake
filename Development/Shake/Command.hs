@@ -299,6 +299,8 @@ type a :-> t = a
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
 --   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature.
+--
+--   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and no output will be written.
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
 
@@ -308,6 +310,10 @@ instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments x = case partitionEithers x of
         (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicit "cmd" opts a x xs
+        _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
+instance CmdResult r => CmdArguments (IO r) where
+    cmdArguments x = case partitionEithers x of
+        (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicitIO "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 
 class Arg a where arg :: a -> [Either CmdOption String]
