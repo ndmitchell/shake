@@ -231,4 +231,5 @@ test-suite shake-test
         Examples.Test.Resources
         Examples.Test.Throttle
         Examples.Test.Unicode
+        Examples.Test.Util
         Start
