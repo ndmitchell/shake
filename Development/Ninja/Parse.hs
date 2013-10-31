@@ -4,6 +4,7 @@
 module Development.Ninja.Parse(parse) where
 
 import qualified Data.ByteString.Char8 as BS
+import Development.Shake.ByteString
 import Development.Ninja.Env
 import Development.Ninja.Type
 import Control.Monad
@@ -19,16 +20,6 @@ dropSpace = BS.dropWhile isSpace
 
 startsSpace :: Str -> Bool
 startsSpace = BS.isPrefixOf (BS.pack " ")
-
--- | This is a hot-spot, so optimised
-linesCR :: Str -> [Str]
-linesCR x = case BS.split '\n' x of
-    x:xs | Just ('\r',x) <- unsnoc x -> x : map (\x -> case unsnoc x of Just ('\r',x) -> x; _ -> x) xs
-    xs -> xs
-    where
-        -- the ByteString unsnoc was introduced in a newer version
-        unsnoc x | BS.null x = Nothing
-                 | otherwise = Just (BS.last x, BS.init x)
 
 
 
