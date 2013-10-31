@@ -142,7 +142,8 @@ shakeArgsWith baseOpts userOptions rules = do
             case rules of
                 Nothing -> return (False,Right ())
                 Just rules -> do
-                    res <- try $ shake shakeOpts rules
+                    res <- try $ shake shakeOpts $
+                        if NoBuild `elem` flagsExtra then withoutActions rules else rules
                     return (True, res)
 
         if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
@@ -209,6 +210,7 @@ data Extra = ChangeDirectory FilePath
            | Sleep
            | NoTime
            | Exception
+           | NoBuild
              deriving Eq
 
 
@@ -226,6 +228,7 @@ shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOp
 shakeOptsEx =
     [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,yes $ Option "B" ["always-make"] (noArg $ \s -> s{shakeAssume=Just AssumeDirty}) "Unconditionally make all targets."
+    ,no  $ Option ""  ["no-build"] (NoArg $ Right ([NoBuild], id)) "Don't build anything."
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
     ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
