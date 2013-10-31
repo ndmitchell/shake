@@ -6,7 +6,7 @@ import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule)
-import Development.Shake.Util
+import Development.Shake.ByteString
 import Development.Shake.FilePath
 import Development.Shake.Timing
 import qualified Data.ByteString.Char8 as BS
@@ -98,8 +98,8 @@ build phonys rules pools out Build{..} = do
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
-                    depsrc <- liftIO $ readFile depfile
-                    need $ map normalise $ concatMap snd $ parseMakefile depsrc
+                    depsrc <- liftIO $ BS.readFile depfile
+                    need $ map (normalise . BS.unpack) $ concatMap snd $ parseMakefile depsrc
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
