@@ -10,7 +10,7 @@ import Data.List
 parseMakefile :: String -> [(FilePath, [FilePath])]
 parseMakefile = concatMap f . join . lines
     where
-        join (x1:x2:xs) | "\\" `isSuffixOf` x1 = join $ (init x1 ++ x2) : xs
+        join (x1:x2:xs) | "\\" `isSuffixOf` x1 = join $ (init x1 ++ " " ++ x2) : xs
         join (x:xs) = x : join xs
         join [] = []
 

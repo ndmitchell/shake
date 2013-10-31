@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Change how the makefile parser treats \ characters
     Add a --no-build flag
     #74, allow cmd to be used with result IO
     Add a Util module, with Makefile parsing
