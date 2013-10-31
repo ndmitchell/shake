@@ -11,7 +11,8 @@ Shake is a Haskell library for writing build systems - designed as a replacement
     main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
         want ["_build/run" <.> exe]
     
-        phony "clean" $ removeFilesAfter "_build" ["//*"]
+        phony "clean" $ do
+            removeFilesAfter "_build" ["//*"]
     
         "_build/run" <.> exe *> \out -> do
             cs <- getDirectoryFiles "" ["//*.c"]
@@ -238,51 +239,110 @@ We first compute the source file `c` (e.g. `"main.c"`) that is associated with t
 
 #### Global variables
 
-Include how to define functions.
+Variables local to a rule are defined using `let`, but you can also define global variables. Global variables are defined before the `main` call, for example:
 
+    buildDir = "_build"
+ 
+You can now use `buildDir` in place of `"_build"` throughout. You can also define parametrised variables (functions) by adding argument names:
+
+    buildDir x = "_build" </> x
+
+We can now write:
+
+    buildDir ("run" <.> exe) $ \out -> do
+        ...
+
+All global variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
 
 #### A clean command
 
-`phony` and `removeFilesAfter`
+A standard clean command is defined as:
+
+    phony "clean" $ do
+        removeFilesAfter "_build" ["//*"]
+
+Running the build system with the `clean` argument, e.g. `runhaskell _build/run clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
+
+<pre>
+phony "<i>name</i>" $ do
+    <i>actions</i>
+</pre>
+
+Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are simply run afresh each time they are requested.
+
+The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell _build/run clean`) then deletes all files matching `//*` in the `_build` directory.
 
 ## Running
 
+This section covers how to run the build system you have written.
+
 #### Compiling the build system
 
-Create a file named `build.sh` or `build.bat` with:
+As shown before, we can use `runhaskell _build/run` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
 
-    ghc --make -special-link-flags -o _make/maker && _make/maker 
+    #!/bin/sh
+    mkdir -p _shake
+    ghc --make Build.hs -rtsopts "-with-rtsopts=-I0 -qg -qb" -outputdir=_shake -o _shake/build && _shake/build $*
 
-This ensures your build runs faster and you don't have to recompile each time.
+This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given.
 
-Now you can run `build` directly to start your build system.
+Now you can run a build by simply typing `./build.sh` on Linux, or `build` on Windows. On Linux you may want to alias `build` to `./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
 #### Command line flags
 
-Run `build --help` to see which flags are available. Most of the features from make are available, along with a few additional. As an example we can set where the `.database` file goes. Note we already customise this with `shakeOptions` - in general most flags you can set could also be specified as `shakeOption`.
+The initial example build system supports a number of command line flags, including:
 
-#### Prediction and progress
+* `build` will compile all files required by `want`.
+* `build _build/main.o` will compile enough to create `_build/main.o`, ignoring all `want` requirements.
+* `build clean` will delete the contents of `_build`, because of our `phony` command.
+* `build --help` will list out all flags supported by the build system, currently 36 flags. Most flags supported by `make` are also supported by Shake based build systems.
+* `build -j8` will compile up to 8 rules simultaneously, by default Shake uses 1 processor.
 
-Use `--assume-dirty`.
+Most flags can also be set within the program by modifying the `shakeOptions` value. As an example, `build --metadata=_metadata/` causes all Shake metadata files to be stored with names such as `_metadata/.database`. Alternatively we can write `shakeOptions{shakeFiles="_metadata/"}` instead of our existing `shakeFiles="_build/"`. Values passed on the command line take preference over those given by `shakeOptions`. Multiple overrides can be given to `shakeOptions` by separating them with a comma, for example `shakeOptions{shakeFiles="_build/",shakeThreads=8}`.
 
-You can get progress messages.
+#### Progress prediction
+
+One useful feature of Shake is that it can predict the remaining build time, based on how long previous builds have taken. The number is only a prediction, but it does take account of which files require rebuilding, how fast your machine is currently running, parallelism settings etc. You can display progress messages in the titlebar of a Window by either:
+
+* Running `build --progress`
+* Setting `shakeOptions{shakeProgress=progressSimple}`
+
+The progress message will be displayed in the titlebar of the Window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](http://github.org/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
 
 ![](shake-progress.png)
 
-
-#### Profiling
+Progress prediction is likely to be relatively poor during the first build and after running `build clean`, as then Shake has no information about the predicted execution time for each rule. To rebuild from scratch without running clean (because you really want to see the progress bar!) you can use the argument `--always-make`, which assumes all rules need rerunning. 
 
 #### Lint
 
+Shake features a built in "lint" features to check the build system is well formed. To run `build --lint`. You are likely to catch more lint violations if you first `build clean`. Sadly, lint does _not_ catch missing dependencies. However, it does catch:
+
+* The current directory does not change. You should never change the current directory within the build system as multiple rules running at the same time will share the current directory. You can still run `cmd` calls in different directories using the `Cwd` argument.
+* Dependencies are not modified after they are depended upon. The common reason for violating this check is that you one rule writing to a file which has a different rule associated with it.
+
+There is a small performance penalty for building with `--lint`, but it is typically small.
+
+#### Profiling
+
+Shake features an advanced profiling mode. To build with profiling run `build --report` which will generate an interactive HTML profile at `report.html`. This report lets you examine what happened in that run, what takes more time to run, what rules depend on what etc. There is a help page as part of the profiling output.
+
+To view profiling information for the _previous_ program run, you can run `build --no-build --report`. This feature is useful if you have a build execution where a file unexpectedly rebuilds, you can generate a profiling report afterwards.
+
+#### Tracing and debugging
+
+Verbosity, plus adding error or print statements, putLoud.
+
 ## Extensions
 
-#### Results from `cmd`
+#### Advanced `cmd` usage
 
 The `cmd` function can also obtain the stdout and stderr streams, along with the  exit code. As an example:
 
     (ExitCode code, Stdout out, Stderr err) <- cmd "gcc --version"
 
 Now the variable `code` is bound to the exit code, while `out` and `err` are bound to the stdout and stderr streams. If `ExitCode` is not requested then any non-zero return value will raise an error.
+
+You can also use `Shell` and `Cwd`.
 
 #### Dependencies on extra information
 
