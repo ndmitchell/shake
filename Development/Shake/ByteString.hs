@@ -1,7 +1,18 @@
 
-module Development.Shake.ByteString(linesCR) where
+module Development.Shake.ByteString(parseMakefile, linesCR) where
 
 import qualified Data.ByteString.Char8 as BS
+
+
+parseMakefile :: BS.ByteString -> [(BS.ByteString, [BS.ByteString])]
+parseMakefile = concatMap f . join . linesCR
+    where
+        join (x1:x2:xs) | BS.pack "\\" `BS.isSuffixOf` x1 = join $ (BS.init x1 `BS.append` BS.pack " " `BS.append` x2) : xs
+        join (x:xs) = x : join xs
+        join [] = []
+
+        f x = [(a, BS.words $ BS.drop 1 b) | a <- BS.words a]
+            where (a,b) = BS.break (== ':') $ BS.takeWhile (/= '#') x
 
 
 -- | This is a hot-spot, so optimised

@@ -4,20 +4,15 @@ module Development.Shake.Util(
     ) where
 
 import Development.Shake
-import Data.List
+import qualified Data.ByteString.Char8 as BS
+import qualified Development.Shake.ByteString as BS
+import Control.Arrow
 
 
 parseMakefile :: String -> [(FilePath, [FilePath])]
-parseMakefile = concatMap f . join . lines
-    where
-        join (x1:x2:xs) | "\\" `isSuffixOf` x1 = join $ (init x1 ++ " " ++ x2) : xs
-        join (x:xs) = x : join xs
-        join [] = []
-
-        f x = [(a, words $ drop 1 b) | a <- words a]
-            where (a,b) = break (== ':') $ takeWhile (/= '#') x
+parseMakefile = map (BS.unpack *** map BS.unpack) . BS.parseMakefile . BS.pack
 
 
 needMakefileDependencies :: FilePath -> Action ()
-needMakefileDependencies file = need . concatMap snd . parseMakefile =<< liftIO (readFile file)
+needMakefileDependencies file = need . map BS.unpack . concatMap snd . BS.parseMakefile =<< liftIO (BS.readFile file)
 
