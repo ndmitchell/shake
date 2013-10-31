@@ -15,3 +15,4 @@ test build obj = do
     parseMakefile "a \\\n\t:b" === [("a",["b"])]
     parseMakefile "#comment\\    a : b" === []
     parseMakefile "a: b c \\\n    d e\n\nf:g" === [("a",["b","c","d","e"]),("f",["g"])]
+    parseMakefile "foo/bar: \\\r\n c:/a1 \\\r\n x\r\n" === [("foo/bar",["c:/a1","x"])]
