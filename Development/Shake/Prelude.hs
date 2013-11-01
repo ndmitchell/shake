@@ -1,10 +1,11 @@
-{-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving, CPP #-}
 
 module Development.Shake.Prelude(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
+    isWindows,
     modifyIORef'', writeIORef'',
     whenJust, loop,
     fastNub, showQuote,
@@ -156,6 +157,17 @@ loop act x = do
     case res of
         Left x -> loop act x
         Right v -> return v
+
+
+---------------------------------------------------------------------
+-- System.Info
+
+isWindows :: Bool
+#if defined(mingw32_HOST_OS)
+isWindows = True
+#else
+isWindows = False
+#endif
 
 
 ---------------------------------------------------------------------
