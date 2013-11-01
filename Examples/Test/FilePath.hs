@@ -2,6 +2,7 @@
 module Examples.Test.FilePath(main) where
 
 import Development.Shake.FilePath
+import Development.Shake.Prelude
 import Examples.Util
 
 
@@ -15,6 +16,8 @@ test build obj = do
     normalise "../../foo" === "../../foo"
     normalise "foo/bar/../../neil" === "neil"
     normalise "foo/../bar/../neil" === "neil"
+    normalise "//foo/./bar" === (if isWindows then "//foo/bar" else "/foo/bar")
+    normalise "c:\\foo\\bar" === (if isWindows then "C:/foo/bar" else "c:\\foo\\bar")
 
     dropDirectory1 "aaa/bbb" === "bbb"
     dropDirectory1 "aaa/" === ""
