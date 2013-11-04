@@ -17,6 +17,7 @@ module Development.Shake.FilePath(
     ) where
 
 import System.FilePath.Posix hiding (normalise, (</>), combine)
+import Development.Shake.Prelude
 import qualified System.FilePath as Native
 import Data.List
 
@@ -45,21 +46,42 @@ takeDirectory1 :: FilePath -> FilePath
 takeDirectory1 = takeWhile (not . Native.isPathSeparator)
 
 
--- | Normalise a 'FilePath', applying the standard 'FilePath' normalisation, plus
---   translating any path separators to @\/@ and removing @foo\/..@ components where possible.
+-- | Normalise a 'FilePath', trying to do:
+--
+-- * All 'pathSeparators' become @/@
+-- * @a/foo/../b@ becomes @a/b@
+-- * @a/./b@ becomes @a/b@
+-- * @a//b@ becomes @a/b@
+--
+--   This function is not based on the normalise function from the filepath library, as that function
+--   is quite broken.
 normalise :: FilePath -> FilePath
-normalise = intercalate "/" . dropDots . split . Native.normalise
+normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- account for UNC paths being double //
+             | otherwise = f xs
     where
+        sep = Native.isPathSeparator
+        f = redot . dropDot . intercalate "/" . dropDots . split
+
+        dropDot ('/':'.':'/':c) = dropDot $ '/' : c
+        dropDot (x:xs) = x : dropDot xs
+        dropDot [] = []
+
+        redot x | x == "" = "."
+                | Just x@(_:_) <- stripPrefix "./" x = redot x
+                | Just x@(_:_) <- stripPrefix "./" $ reverse x = redot $ reverse x
+                | otherwise = x
+
         dropDots = reverse . f 0 . reverse
             where
                 f i ("..":xs) = f (i+1) xs
+                f i (".":xs) = "." : f i xs
                 f 0 (x:xs) = x : f 0 xs
-                f i (x:xs) = f (i-1) xs
+                f i [""] = replicate i ".." ++ [""]
+                f i (x:xs) = "." : f (i-1) xs
                 f i [] = replicate i ".."
 
-        split xs = a : if null b then [] else split $ tail b
-            where (a,b) = break Native.isPathSeparator xs
-
+        split xs = a : if null b then [] else split $ dropWhile sep $ tail b
+            where (a,b) = break sep xs
 
 -- | Convert to native path separators, namely @\\@ on Windows. 
 toNative :: FilePath -> FilePath

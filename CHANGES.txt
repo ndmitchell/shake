@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix many bugs in FilePath.normalise
     Require QuickCheck-2.0 or higher
     Change how the makefile parser treats \ characters
     Add a --no-build flag
