@@ -5,7 +5,7 @@ import qualified Data.ByteString.Char8 as BS
 
 
 endsSlash :: BS.ByteString -> Bool
-endsSlash = BS.isSuffixOf (BS.pack "\\")
+endsSlash = BS.isSuffixOf (BS.singleton '\\')
 
 
 parseMakefile :: BS.ByteString -> [(BS.ByteString, [BS.ByteString])]
