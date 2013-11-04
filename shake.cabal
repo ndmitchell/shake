@@ -149,8 +149,7 @@ executable shake
         time,
         random,
         transformers >= 0.2 && < 0.4,
-        deepseq >= 1.1 && < 1.4,
-        QuickCheck >= 2.0
+        deepseq >= 1.1 && < 1.4
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -190,7 +189,8 @@ test-suite shake-test
         time,
         random,
         transformers >= 0.2 && < 0.4,
-        deepseq >= 1.1 && < 1.4
+        deepseq >= 1.1 && < 1.4,
+        QuickCheck >= 2.0
 
     if flag(portable)
         cpp-options: -DPORTABLE
