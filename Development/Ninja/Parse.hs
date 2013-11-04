@@ -13,13 +13,13 @@ import Data.Maybe
 
 
 endsDollar :: Str -> Bool
-endsDollar = BS.isSuffixOf (BS.pack "$")
+endsDollar = BS.isSuffixOf (BS.singleton '$')
 
 dropSpace :: Str -> Str
 dropSpace = BS.dropWhile isSpace
 
 startsSpace :: Str -> Bool
-startsSpace = BS.isPrefixOf (BS.pack " ")
+startsSpace = BS.isPrefixOf (BS.singleton ' ')
 
 
 
