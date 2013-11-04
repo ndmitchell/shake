@@ -6,6 +6,7 @@ import qualified System.FilePath as Native
 import Development.Shake.Prelude
 import Examples.Util
 import Test.QuickCheck
+import Control.Monad
 import Data.List
 
 
