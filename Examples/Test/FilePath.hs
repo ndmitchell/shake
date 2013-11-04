@@ -49,7 +49,7 @@ test build obj = do
     norm "/foo/bar" === "/foo/bar"
     norm "//./" === (if isWindows then "//" else "/")
     norm "//foo/./bar" === (if isWindows then "//foo/bar" else "/foo/bar")
-    norm "c:\\foo\\bar" === "c:/foo/bar"
+    when isWindows $ norm "c:\\foo\\bar" === "c:/foo/bar"
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(File x) ->
         let y = norm x
             sep = Native.isPathSeparator
