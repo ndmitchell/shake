@@ -1,7 +1,10 @@
 
-module Development.Shake.ByteString(parseMakefile, linesCR) where
+module Development.Shake.ByteString(parseMakefile, normalise, linesCR) where
 
 import qualified Data.ByteString.Char8 as BS
+import qualified System.FilePath as Native
+import Development.Shake.Prelude
+import Data.List
 
 
 endsSlash :: BS.ByteString -> Bool
@@ -31,3 +34,36 @@ linesCR x = case BS.split '\n' x of
         unsnoc x | BS.null x = Nothing
                  | otherwise = Just (BS.last x, BS.init x)
 
+
+normalise :: BS.ByteString -> BS.ByteString
+normalise xs | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.uncons xs, sep b = '/' `BS.cons` f xs
+             | otherwise = f xs
+    where
+        sep = Native.isPathSeparator
+        f = BS.pack . reverse . redot . dropDot . intercalate "/" . dropDots . resep . reverse . BS.unpack
+
+        dropDot ('/':'.':'/':c) = dropDot $ '/' : c
+        dropDot (x:xs) = x : dropDot xs
+        dropDot [] = []
+
+        redot x | x == "" = "."
+                | Just x@(_:_) <- stripPrefix "./" x = redot x
+                | Just x@(_:_) <- stripPrefix "./" $ reverse x = redot $ reverse x
+                | otherwise = x
+
+        dropDots x = h x
+            where
+                h xs = f 0 $ break (== '/') xs
+            
+                g i "" = replicate i ".."
+                g i ('/':xs) = f i $ break (== '/') xs
+            
+                f i ("..",xs) = g (i+1) xs
+                f i (".",xs) = "." : g i xs
+                f 0 (x,xs) = x : g 0 xs
+                f i ("",[]) = replicate i ".." ++ [""]
+                f i (x,xs) = "." : g (i-1) xs
+
+        resep (x:xs) | sep x = '/' : resep (dropWhile sep xs)
+        resep (x:xs) = x : resep xs
+        resep [] = []
