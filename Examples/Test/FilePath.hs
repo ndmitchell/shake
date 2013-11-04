@@ -51,7 +51,7 @@ test build obj = do
     norm "//./" === (if isWindows then "//" else "/")
     norm "//foo/./bar" === (if isWindows then "//foo/bar" else "/foo/bar")
     when isWindows $ norm "c:\\foo\\bar" === "c:/foo/bar"
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(File x) ->
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(File x) ->
         let y = norm x
             sep = Native.isPathSeparator
             noDrive = if isWindows then drop 1 else id
