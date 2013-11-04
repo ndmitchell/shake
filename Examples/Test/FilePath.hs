@@ -8,6 +8,8 @@ import Examples.Util
 import Test.QuickCheck
 import Control.Monad
 import Data.List
+import qualified Data.ByteString.Char8 as BS
+import qualified Development.Shake.ByteString as BS
 
 
 main = shaken test $ \args obj -> return ()
@@ -20,7 +22,10 @@ instance Arbitrary File where
 
 
 test build obj = do
-    let norm a = normalise a
+    let norm x =
+            let s = normalise x
+                b = BS.unpack (BS.normalise $ BS.pack x)
+            in if s == b then s else error $ show ("Normalise functions differ",x,s,b)
     -- basic examples
     norm "" === "."
     norm "." === "."
