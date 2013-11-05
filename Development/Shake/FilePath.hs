@@ -48,10 +48,10 @@ takeDirectory1 = takeWhile (not . Native.isPathSeparator)
 
 -- | Normalise a 'FilePath', trying to do:
 --
--- * All 'pathSeparators' become @/@
--- * @a/foo/../b@ becomes @a/b@
--- * @a/./b@ becomes @a/b@
--- * @a//b@ becomes @a/b@
+-- * All 'pathSeparators' become @\/@
+-- * @foo\/bar\/..\/baz@ becomes @foo\/baz@
+-- * @foo\/.\/bar@ becomes @foo\/bar@
+-- * @foo\/\/bar@ becomes @foo\/bar@
 --
 --   This function is not based on the normalise function from the filepath library, as that function
 --   is quite broken.
