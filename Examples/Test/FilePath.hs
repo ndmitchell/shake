@@ -63,7 +63,7 @@ test build obj = do
             ps = [length y >= 1
                  ,null x || (sep (head x) == sep (head y) && sep (last x) == sep (last y))
                  ,not $ "/./" `isInfixOf` y
-                 ,'\\' `notElem` y
+                 ,not isWindows || '\\' `notElem` y
                  ,not $ "//" `isInfixOf` noDrive y
                  ,".." `notElem` dropWhile (== "..") (splitDirectories $ dropWhile sep y)
                  ,norm y == y]
