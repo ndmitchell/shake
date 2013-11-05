@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.File(
-    need, want,
+    need, needBS, want,
     defaultRuleFile,
     (*>), (**>), (?>), phony, (~>),
     newCache, newCacheIO
@@ -12,6 +12,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.HashMap.Strict as Map
 import System.Directory
+import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
 import Development.Shake.Prelude
@@ -112,6 +113,9 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 -- @
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
+
+needBS :: [BS.ByteString] -> Action ()
+needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 
 -- | Require that the following are built by the rules, used to specify the target.
 --
