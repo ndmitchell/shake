@@ -59,7 +59,7 @@ normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- a
              | otherwise = f xs
     where
         sep = Native.isPathSeparator
-        f o = deslash o $ g 0 $ reverse $ split o
+        f o = deslash o $ (++"/") $ concatMap ('/':) $ reverse $ g 0 $ reverse $ split o
 
         deslash o x
             | x == "/" = case (pre,pos) of
@@ -71,10 +71,10 @@ normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- a
             where pre = sep $ head $ o ++ " "
                   pos = sep $ last $ " " ++ o
 
-        g i [] = '/' : concat (replicate i "../")
+        g i [] = replicate i ".."
         g i ("..":xs) = g (i+1) xs
         g i (".":xs) = g i xs
-        g 0 (x:xs) = g 0 xs ++ x ++ "/"
+        g 0 (x:xs) = x : g 0 xs
         g i (x:xs) = g (i-1) xs
 
         split xs = if null ys then [] else a : split b
