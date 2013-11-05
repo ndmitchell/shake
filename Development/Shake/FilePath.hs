@@ -19,7 +19,6 @@ module Development.Shake.FilePath(
 import System.FilePath.Posix hiding (normalise, (</>), combine)
 import Development.Shake.Prelude
 import qualified System.FilePath as Native
-import Data.List
 
 infixr 5  </>
 infixr 7  -<.>
@@ -60,28 +59,28 @@ normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- a
              | otherwise = f xs
     where
         sep = Native.isPathSeparator
-        f = redot . dropDot . intercalate "/" . dropDots . split
+        f o = deslash o $ g 0 $ reverse $ split o
 
-        dropDot ('/':'.':'/':c) = dropDot $ '/' : c
-        dropDot (x:xs) = x : dropDot xs
-        dropDot [] = []
+        deslash o x
+            | x == "/" = case (pre,pos) of
+                (True,True) -> "/"
+                (True,False) -> "/."
+                (False,True) -> "./"
+                (False,False) -> "."
+            | otherwise = (if pre then id else tail) $ (if pos then id else init) x
+            where pre = sep $ head $ o ++ " "
+                  pos = sep $ last $ " " ++ o
 
-        redot x | x == "" = "."
-                | Just x@(_:_) <- stripPrefix "./" x = redot x
-                | Just x@(_:_) <- stripPrefix "./" $ reverse x = redot $ reverse x
-                | otherwise = x
+        g i [] = '/' : concat (replicate i "../")
+        g i ("..":xs) = g (i+1) xs
+        g i (".":xs) = g i xs
+        g 0 (x:xs) = g 0 xs ++ x ++ "/"
+        g i (x:xs) = g (i-1) xs
 
-        dropDots = reverse . f 0 . reverse
-            where
-                f i ("..":xs) = f (i+1) xs
-                f i (".":xs) = "." : f i xs
-                f 0 (x:xs) = x : f 0 xs
-                f i [""] = replicate i ".." ++ [""]
-                f i (x:xs) = "." : f (i-1) xs
-                f i [] = replicate i ".."
+        split xs = if null ys then [] else a : split b
+            where (a,b) = break sep $ ys
+                  ys = dropWhile sep xs
 
-        split xs = a : if null b then [] else split $ dropWhile sep $ tail b
-            where (a,b) = break sep xs
 
 -- | Convert to native path separators, namely @\\@ on Windows. 
 toNative :: FilePath -> FilePath
