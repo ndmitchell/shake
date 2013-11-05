@@ -60,8 +60,8 @@ normalise xs | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.u
             
                 f i ("..",xs) = g (i+1) xs
                 f i (".",xs) = "." : g i xs
-                f 0 (x,xs) = x : g 0 xs
                 f i ("",[]) = replicate i ".." ++ [""]
+                f 0 (x,xs) = x : g 0 xs
                 f i (x,xs) = "." : g (i-1) xs
 
         resep (x:xs) | sep x = '/' : resep (dropWhile sep xs)
