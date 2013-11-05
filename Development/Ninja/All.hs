@@ -6,8 +6,9 @@ import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule)
-import Development.Shake.ByteString hiding (normalise)
-import Development.Shake.FilePath
+import Development.Shake.ByteString
+import Development.Shake.File
+import Development.Shake.FilePath hiding (normalise)
 import Development.Shake.Timing
 import qualified Data.ByteString.Char8 as BS
 
@@ -31,7 +32,7 @@ runNinja file args = do
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        want $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $
+        want $ map (BS.unpack . normalise) $ concatMap (resolvePhony phonys) $
             if not $ null args then map BS.pack args
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
@@ -45,7 +46,7 @@ runNinja file args = do
 
 -- Normalise the LHS of build rules, so that normalised RHS still match
 norm :: Str -> Str
-norm = BS.pack . normalise . BS.unpack
+norm = normalise
 
 
 resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
@@ -65,7 +66,7 @@ quote x | BS.any isSpace x = let q = BS.singleton '\"' in BS.concat [q,x,q]
 
 build :: Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
 build phonys rules pools out Build{..} = do
-    need $ map (normalise . BS.unpack) $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
+    needBS $ map normalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
@@ -93,13 +94,13 @@ build phonys rules pools out Build{..} = do
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
-                    need $ map normalise $ parseShowIncludes stdout
+                    needBS $ map (normalise . BS.pack) $ parseShowIncludes stdout
                  else
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile
-                    need $ map (normalise . BS.unpack) $ concatMap snd $ parseMakefile depsrc
+                    needBS $ map normalise $ concatMap snd $ parseMakefile depsrc
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
