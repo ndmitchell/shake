@@ -50,6 +50,7 @@ test build obj = do
     norm "bar/foo" === "bar/foo"
     norm "bar/foo/" === "bar/foo/"
     norm "../../foo" === "../../foo"
+    norm "foo/../..///" === "../"
     norm "foo/bar/../../neil" === "neil"
     norm "foo/../bar/../neil" === "neil"
     norm "/foo/bar" === "/foo/bar"
