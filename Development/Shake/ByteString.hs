@@ -4,7 +4,6 @@ module Development.Shake.ByteString(parseMakefile, normalise, linesCR) where
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native
 import Development.Shake.Prelude
-import Data.List
 
 
 endsSlash :: BS.ByteString -> Bool
@@ -40,30 +39,24 @@ normalise xs | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.u
              | otherwise = f xs
     where
         sep = Native.isPathSeparator
-        f = BS.pack . reverse . redot . dropDot . intercalate "/" . dropDots . resep . reverse . BS.unpack
+        f o = BS.pack $ deslash o $ (++"/") $ concatMap ('/':) $ reverse $ g 0 $ reverse $ split $ BS.unpack o
 
-        dropDot ('/':'.':'/':c) = dropDot $ '/' : c
-        dropDot (x:xs) = x : dropDot xs
-        dropDot [] = []
+        deslash o x
+            | x == "/" = case (pre,pos) of
+                (True,True) -> "/"
+                (True,False) -> "/."
+                (False,True) -> "./"
+                (False,False) -> "."
+            | otherwise = (if pre then id else tail) $ (if pos then id else init) x
+            where pre = sep $ head $ BS.unpack o ++ " "
+                  pos = sep $ last $ " " ++ BS.unpack o
 
-        redot x | x == "" = "."
-                | Just x@(_:_) <- stripPrefix "./" x = redot x
-                | Just x@(_:_) <- stripPrefix "./" $ reverse x = redot $ reverse x
-                | otherwise = x
+        g i [] = replicate i ".."
+        g i ("..":xs) = g (i+1) xs
+        g i (".":xs) = g i xs
+        g 0 (x:xs) = x : g 0 xs
+        g i (x:xs) = g (i-1) xs
 
-        dropDots x = h x
-            where
-                h xs = f 0 $ break (== '/') xs
-            
-                g i "" = replicate i ".."
-                g i ('/':xs) = f i $ break (== '/') xs
-            
-                f i ("..",xs) = g (i+1) xs
-                f i (".",xs) = "." : g i xs
-                f i ("",[]) = replicate i ".." ++ [""]
-                f 0 (x,xs) = x : g 0 xs
-                f i (x,xs) = "." : g (i-1) xs
-
-        resep (x:xs) | sep x = '/' : resep (dropWhile sep xs)
-        resep (x:xs) = x : resep xs
-        resep [] = []
+        split xs = if null ys then [] else a : split b
+            where (a,b) = break sep $ ys
+                  ys = dropWhile sep xs
