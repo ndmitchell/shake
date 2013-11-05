@@ -67,6 +67,8 @@ main = shaken noTest $ \args obj -> do
             ,"instance Eq (OptDescr a)"
             ,"inputs = [\"\"]"
             ,"output = \"\""
+            ,"(foo,bar,baz) = undefined"
+            ,"((/./),(/../),(//)) = undefined"
             ] ++
             rest
 
