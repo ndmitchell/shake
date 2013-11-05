@@ -4,6 +4,7 @@ module Development.Shake.ByteString(parseMakefile, normalise, linesCR) where
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native
 import Development.Shake.Prelude
+import Data.List
 
 
 endsSlash :: BS.ByteString -> Bool
@@ -39,24 +40,27 @@ normalise xs | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.u
              | otherwise = f xs
     where
         sep = Native.isPathSeparator
-        f o = BS.pack $ deslash o $ (++"/") $ concatMap ('/':) $ reverse $ g 0 $ reverse $ split $ BS.unpack o
+        f o = deslash o $ BS.concat $ (slash:) $ intersperse slash $ reverse $ (BS.empty:) $ g 0 $ reverse $ split $ o
 
         deslash o x
-            | x == "/" = case (pre,pos) of
-                (True,True) -> "/"
-                (True,False) -> "/."
-                (False,True) -> "./"
-                (False,False) -> "."
-            | otherwise = (if pre then id else tail) $ (if pos then id else init) x
-            where pre = sep $ head $ BS.unpack o ++ " "
-                  pos = sep $ last $ " " ++ BS.unpack o
+            | x == slash = case (pre,pos) of
+                (True,True) -> slash
+                (True,False) -> BS.pack "/."
+                (False,True) -> BS.pack "./"
+                (False,False) -> dot
+            | otherwise = (if pre then id else BS.tail) $ (if pos then id else BS.init) x
+            where pre = not (BS.null o) && sep (BS.head o)
+                  pos = not (BS.null o) && sep (BS.last o)
 
-        g i [] = replicate i ".."
-        g i ("..":xs) = g (i+1) xs
-        g i (".":xs) = g i xs
+        g i [] = replicate i dotDot
+        g i (x:xs) | BS.null x = g i xs
+        g i (x:xs) | x == dotDot = g (i+1) xs
+        g i (x:xs) | x == dot = g i xs
         g 0 (x:xs) = x : g 0 xs
         g i (x:xs) = g (i-1) xs
 
-        split xs = if null ys then [] else a : split b
-            where (a,b) = break sep $ ys
-                  ys = dropWhile sep xs
+        split xs = BS.splitWith sep xs
+
+dotDot = BS.pack ".."
+dot = BS.singleton '.'
+slash = BS.singleton '/'
