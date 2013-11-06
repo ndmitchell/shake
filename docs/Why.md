@@ -1,6 +1,6 @@
 # Why choose Shake?
 
-_See also: [Shake links](https://github.com/ndmitchell/shake/blob/master/README.md); [Shake manual](https://github.com/ndmitchell/shake/blob/master/docs/Manual.md)_
+_See also: [Shake links](https://github.com/ndmitchell/shake#shake); [Shake manual](https://github.com/ndmitchell/shake/blob/master/docs/Manual.md)_
 
 Shake is a library for writing build systems. Most large projects have a custom-written build system, and developers working on the project are likely to run the build system many times a day, spending a noticeable amount of time [waiting for the build system](http://xkcd.com/303/). This document explains why you might pick Shake over alternative tools for writing build systems (e.g. make, Ant, Scons). Shake primarily benefits two groups of people:
 

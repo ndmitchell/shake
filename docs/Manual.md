@@ -1,6 +1,6 @@
 # Shake Manual
 
-_See also: [Shake links](https://github.com/ndmitchell/shake/blob/master/README.md); [Why choose Shake](https://github.com/ndmitchell/shake/blob/master/docs/Why.md)_
+_See also: [Shake links](https://github.com/ndmitchell/shake#shake); [Why choose Shake](https://github.com/ndmitchell/shake/blob/master/docs/Why.md)_
 
 Shake is a Haskell library for writing build systems - designed as a replacement for `make`. This document describes how to get started with Shake, assuming no prior Haskell knowledge. First, let's take a look at a Shake build system:
 
