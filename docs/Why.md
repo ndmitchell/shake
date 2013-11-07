@@ -1,5 +1,7 @@
 # Why choose Shake?
 
+_See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Shake manual](https://github.com/ndmitchell/shake/blob/master/docs/Manual.md#readme)_
+
 Shake is a library for writing build systems. Most large projects have a custom-written build system, and developers working on the project are likely to run the build system many times a day, spending a noticeable amount of time [waiting for the build system](http://xkcd.com/303/). This document explains why you might pick Shake over alternative tools for writing build systems (e.g. make, Ant, Scons). Shake primarily benefits two groups of people:
 
 * **Developers running the build system** - Shake based build systems run quickly, require little manual intervention and report estimated completion time as they go.
@@ -76,7 +78,7 @@ Shake can generate profiling information allowing developers to both understand 
 
 This document sets out the reasons you _should_ use Shake, but naturally there are some disadvantages:
 
-* Shake build systems are written in Haskell. While that provides many benefits, it does mean the Shake syntax follows that of Haskell, and some Shake errors are reported by the compiler as Haskell type errors. Despite being written in Haskell, the [user manual](Manual.md) introduces Shake assuming no Haskell knowledge, so Haskell knowledge is not a requirement and hopefully should not be a barrier to using Shake.
+* Shake build systems are written in Haskell. While that provides many benefits, it does mean the Shake syntax follows that of Haskell, and some Shake errors are reported by the compiler as Haskell type errors. Despite being written in Haskell, the [user manual](https://github.com/ndmitchell/shake/blob/master/docs/Manual.md#readme) introduces Shake assuming no Haskell knowledge, so Haskell knowledge is not a requirement and hopefully should not be a barrier to using Shake.
 * Shake is not likely to be installed by default, while make almost always is.
 * Shake does not provide default build rules, requiring everything to be expressed in your build system. In practice it seems that the default rules included with make are unsuitable for most large scale projects, but smaller projects may find themselves writing a few additional rules. It is hoped that additional experience with Shake will lead to a library of build rules being developed.
 

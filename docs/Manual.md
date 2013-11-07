@@ -1,5 +1,7 @@
 # Shake Manual
 
+_See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Why choose Shake](https://github.com/ndmitchell/shake/blob/master/docs/Why.md#readme); [Function documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html)_
+
 Shake is a Haskell library for writing build systems - designed as a replacement for `make`. This document describes how to get started with Shake, assuming no prior Haskell knowledge. First, let's take a look at a Shake build system:
 
     import Development.Shake
@@ -35,7 +37,7 @@ To run the example above:
 1. Install the [Haskell Platform](http://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
 2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
 3. Type `cabal install shake --global --profile`, to build and install Shake and all its dependencies.
-4. Grab a tarball of the example, which includes the code at the beginning as `Build.hs`, along with some small sample C files.
+4. Grab a [tarball of the repo](https://github.com/ndmitchell/shake/archive/master.tar.gz) and move to the `docs/manual` directory, which includes the code at the beginning as `Build.hs`, along with some small sample C files.
 5. In the directory of the example, type `runhaskell Build.hs`, which should produce an executable `_build/run`.
 6. Run `_build/run` to confirm everything worked.
 
@@ -94,6 +96,8 @@ It is an error for multiple patterns to match a file being built, so you should 
     "_build//*.o" *> ...
 
 The first matches only the `run` executable, using `<.> exe` to ensure the executable is correctly named on all platforms. The second matches any `.o` file anywhere under `_build`. As examples, `_build/main.o` and `_build/foo/bar.o` both match while `main.o` and `_build/main.txt` do not.
+
+Lots of compilers produce `.o` files, so if you are combining two different languages, say C and Haskell, use the extension `.c.o` and `.hs.o` to avoid overlapping rules.
 
 The <tt><i>actions</i></tt> are a list of steps to perform and are listed one per line, indented beneath the rule. Actions both express dependencies (say what this rule uses) and run commands (actually generate the file). During the action the `out` variable is bound to the file that is being produced.
 
@@ -237,9 +241,9 @@ Now, if either `main.c` or any headers transitively imported by `main.c` change,
 
 We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `needMakefileDependencies`.
 
-#### Global variables
+#### Top-level variables
 
-Variables local to a rule are defined using `let`, but you can also define global variables. Global variables are defined before the `main` call, for example:
+Variables local to a rule are defined using `let`, but you can also define top-level variables. Top-level variables are defined before the `main` call, for example:
 
     buildDir = "_build"
  
@@ -252,7 +256,7 @@ We can now write:
     buildDir ("run" <.> exe) $ \out -> do
         ...
 
-All global variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
+All top-level variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
 
 #### A clean command
 
@@ -320,7 +324,7 @@ Shake features a built in "lint" features to check the build system is well form
 * The current directory does not change. You should never change the current directory within the build system as multiple rules running at the same time will share the current directory. You can still run `cmd` calls in different directories using the `Cwd` argument.
 * Dependencies are not modified after they are depended upon. The common reason for violating this check is that you one rule writing to a file which has a different rule associated with it.
 
-There is a small performance penalty for building with `--lint`, but it is typically small.
+There is a performance penalty for building with `--lint`, but it is typically small.
 
 #### Profiling
 
@@ -330,9 +334,18 @@ To view profiling information for the _previous_ program run, you can run `build
 
 #### Tracing and debugging
 
-Verbosity, plus adding error or print statements, putLoud.
+To debug a build system there are a variety of techniques that can be used:
+
+* Run with lint checking enabled (`--lint`), which may spot and describe the problem for you.
+* Run in single-threaded mode (`-j1`) to make any output clearer by not interleaving commands.
+* By default a Shake build system prints out a message every time it runs a command. Use verbose mode (`--verbose`) to print more information to the screen, such as which rule is being run. Additional `--verbose` flags increase the verbosity. Three verbosity flags produce output intended for someone debugging the Shake library itself, rather than a build system based on it.
+* To raise a build error call `error "error message"`. Shake will abort, showing the error message.
+* To output additional information use `putNormal "output message"`. This message will be printed to the console when it is reached.
+* To show additional information with either `error` or `putNormal`, use `error $ show ("message", p1)`. This allows you to show any local variables.
 
 ## Extensions
+
+This section details a number of build system features that are useful in some build systems, but not the initial example, and not most average build systems.
 
 #### Advanced `cmd` usage
 
@@ -342,43 +355,141 @@ The `cmd` function can also obtain the stdout and stderr streams, along with the
 
 Now the variable `code` is bound to the exit code, while `out` and `err` are bound to the stdout and stderr streams. If `ExitCode` is not requested then any non-zero return value will raise an error.
 
-You can also use `Shell` and `Cwd`.
+The `cmd` function also takes additional parameters to control how the command is run. As an example:
 
-#### Dependencies on extra information
+    cmd Shell (Cwd "temp") "pwd"
 
-Oracles, get the gcc version number and use that. Show how to depend on the `Stdout` of `gcc --version`.
+This runs the `pwd` command through the system shell, after first changing to the `temp` directory.
 
 #### Dependencies on environment variables
 
-Allow picking a different gcc from the environment variable
+You can use tracked dependencies on environment variables using the `getEnv` function. As an example:
+
+    link <- getEnv "C_LINK_FLAGS"
+    let linkFlags = fromMaybe "" link    
+    cmd "gcc -o" [out] os linkFlags
+
+This example gets the `$C_LINK_FLAGS` environment variable (which is `Maybe String`, namely a `String` that might be missing), then using `fromMaybe` defines a local variable `linkFlags` that is the empty string when `$C_LINK_FLAGS` is not set. It then passes these flags to `gcc`.
+
+If the `$C_LINK_FLAGS` environment variable changes then this rule will rebuild.
+
+#### Dependencies on extra information
+
+Using Shake we can depened on arbitrary extra information, such as the version of `gcc`, allowing us to automatically rebuild all C files when a different compiler is placed on the path. To track the version, we can define a rule for the file `gcc.version` which changes only when `gcc --version` changes:
+
+    "gcc.version" *> \out -> do
+        alwaysRerun
+        Stdout stdout <- "gcc --version"
+        writeFileChanged out stdout
+
+This rule has the action `alwaysRerun` meaning it will be run in every execution that requires it, so the `gcc --version` is always checked. This rule defines no dependencies (no `need` actions), so if it lacked `alwaysRerun`, this rule would only be run when `gcc.version` was missing. The function then runs `gcc --version` storing the output in `stdout`. Finally, it calls `writeFileChanged` which writes `stdout` to `out`, but only if the contents have changed. The use of `writeFileChanged` is important otherwise `gcc.version` would change in every run. To use this rule, we `need ["gcc.version"]` in every rule that calls `gcc`.
+
+Shake also contains a feature called "oracles", which lets you do the same thing without the use of a file, which is sometimes more convenient. Interested reads should look at the function documentation list for `addOracle`.
 
 #### Resources
 
-Generalise to building multiple things, then ensure we only ever link one at a time using resources to limit.
+Resources allow us to limit the number of simultaneous operations more precisely than just the number of simultaneous jobs (the `-j` flag). For example, calls to compilers are usually CPU bound but calls to linkers are usually disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit ourselves to 4 linkers with:
+
+    disk <- newResource "Disk" 4
+    want [show i <.> "exe" | i <- [1..100]]
+    "*.exe" *> \out -> do
+        withResource disk 1 $ do
+            cmd "ld -o" [out] ...
+    "*.o" *> \out -> do
+        "cl -o" [out] ...
+
+Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
+
+#### Multiple outputs
+
+Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `*>>` operator to define rules:
+
+    ["//*.bison.h","//*.bison.c"] *>> $ \[outh, outc] -> do
+        let src = outc -<.> "y"
+        cmd "bison -d -o" [outc] [src]
+
+Now we define a list of patterns that are matched, and get a list of output files. If any output file is required, then all output files will be built, with proper dependencies.
+
+#### Changing build rules
+
+Shake build systems are set up to rebuild files when the dependencies change, but mostly assume that the build rules themselves do not change. To minimise the impact of build rule changes there are three approaches:
+
+_Use configuration files:_ Most build information, such as which files a C file includes, can be computed from source files. Where such information is not available, such as which C files should be linked together to form an executable, use configuration files to provide the information. The rule for linking can use these configuration files, which can be properly tracked. Moving any regularly changing configuration into separate files will significantly reduce the number of build system changes.
+
+_Depend on the build source:_ One approach is to depend on the build system source in each of the rules, then if _any_ rules change, _everything_ will rebuild. While this option is safe, it may cause a significant number of redundant rebuilds. As a restricted version of this technique, for a generated file you can include a dependency on the generator source and use `writeFileChanged`. If the generator changes it will rerun, but typically only a few generated files will change, so little is rebuilt.
+
+_Use a version stamp:_ There is a field named `shakeVersion` in the `ShakeOptions` record. If the build system changes in a significant and incompatible way, you can change this field to force a full rebuild. If you want all rules to depend on all rules, you can put a hash of the build system source in the version field.
 
 ## The Haskell Zone
 
-Most of the rest doesn't require very much Haskell, however, as you start getting deeper, you do require more Haskell. Most of the things in this area are either impossible to do with other build systems or can be faked by shell script. None of the Haskell is advanced.
-
-#### Generated header files
-
-Need to generate them first, so need to write something that guesses, or a specific rule knowing what does it.
-
-#### Recursive imports
-
-The standard .hs/.hi and recursive tricks.
+From now on, this manual assumes some moderate knowledge of Haskell. Most of the things in this section are either impossible to do with other build systems or can be faked by shell script. None of the Haskell is particularly advanced.
 
 #### Haskell Expressions
 
-Use pure functions by importing them and just using them however you want. Example of importing Data.Char and making all output file names which don't have numbers.
+You can use any Haskell function at any point. For example, to only link files without numbers in them, we can `import Data.Char` and then write:
+
+    let os = ["_build" </> c -<.> "o" | c <- cs, not $ any isDigit c]
+
+For defining non-overlapping rules it is sometimes useful to use a more advanced predicate. For example, to define a rule that only builds results which have a numeric extension, we can use the `?>` rule definition function:
+
+    (\x -> all isDigit $ drop 1 $ takeExtension x) ?> \out -> do
+        ...
+
+We first get the extension with `takeExtension`, then use `drop 1` to remove the leading `.` that `takeExtension` includes, then test that all the characters are numeric.
+
+The standard `*>` operator is actuall defined as:
+
+    pattern *> actions = (test ?==) ?> actions
+
+Where `?==` is a function for matching file patterns. 
 
 #### Haskell Actions
 
-`liftIO` to run any IO stuff.
+You can run any Haskell `IO` action by using `liftIO`. As an example:
+
+    liftIO $ launchMissiles True
+
+Most common IO operations to run as actions are already wrapped and available in the Shake library, including `readFile'`, `writeFile'` and `copyFile'`. Other useful functions can be found in `System.Directory`.
+
+#### Include files with Visual Studio
+
+While `gcc` has the `-MMD` flag to generate a Makefile, the Visual Studio compiler `cl` does not. However, it does have a flag `-showincludes` which writes the include files on stdout as they are used. The initial example could be written using `cl` as:
+
+    Stdout stdout <- cmd "cl -showincludes -c" [c] ["-Fo" ++ out]
+    need [ dropWhile isSpace y
+         | x <- lines out
+         , Just x <- [stripPrefix "Note: including file:" x]]
+
+The `stripPrefix` function is available in the `Data.List` module. One warning: the "including file" message is localised, so if your developers are using non-English versions of Visual Studio the prefix string will be different
+
+#### Generated imports
+
+The initial example compiles the C file, then calls `need` on all its source and header files. This works fine if the header files are all source code. However, if any of the header files are _generated_ by the build system then when the compilation occurs they will not yet have been built. In general it is important to `need` any generated files _before_ they are used.
+
+To detect the included headers without using the compiler we can define `usedHeaders` as a top-level function:
+
+    usedHeaders src = [init x | x <- lines src, Just x <- [stripPrefix "#include \"" x]]
+
+This function takes the source code of a C file (`src`) and finds all lines that begin `#include "`, then takes the filename afterwards. This function does not work for all C files, but for most projects it is usually easy to write such a function that covers everything allowed by your coding standards.
+
+Assuming all interesting headers are only included directly by the C file (a restriction we remove in the next section), we can write the build rule as:
+
+    "_build//*.o" *> \out -> do
+        let c = dropDirectory1 $ out -<.> "c"
+        src <- readFile' c
+        need $ usedHeaders src
+        cmd "gcc -c" [c] "-o" [out]
+
+
+This code calls `readFile'` (which automatically calls `need` on the source file), then uses calls `need` on all headers used by the source file, then calls `gcc`. All files have `need` called on them before they are used, so if the C file or any of the header files have build system rules they will be run. 
+
+#### Generated transitive imports
+
+The standard .hs/.hi and recursive tricks.
 
 #### Adding command line flags
 
 Requires real Haskell code.
 
 Define a C compile flag that works with both GCC and MSVC.
-Let's add a flag to make it use a different version of GCC.
+
