@@ -6,15 +6,15 @@ Shake is a library for writing build systems - designed as a replacement for mak
 
 #### Documentation
 
-* [Why choose Shake](https://github.com/ndmitchell/shake/blob/master/docs/Why.md) over alternatives such as make, Ant, Scons etc.
-* [Shake manual](https://github.com/ndmitchell/shake/blob/master/docs/Manual.md), a walk through of a small but realistic example.
-* [Running Ninja builds](https://github.com/ndmitchell/shake/blob/master/docs/Ninja.md) using Shake.
+* [Why choose Shake](https://github.com/ndmitchell/shake/blob/master/docs/Why.md#readme) over alternatives such as make, Ant, Scons etc.
+* [Shake manual](https://github.com/ndmitchell/shake/blob/master/docs/Manual.md#readme), a walk through of a small but realistic example.
+* [Running Ninja builds](https://github.com/ndmitchell/shake/blob/master/docs/Ninja.md#readme) using Shake.
 * [Generated documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) for all functions, including examples.
 * [Blog posts](http://neilmitchell.blogspot.co.uk/search/label/shake) detailing ongoing development work.
 * [Academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf) on the underlying principles behind Shake.
 * [Video](http://www.youtube.com/watch?v=xYCPpXVlqFM) of a talk introducing Shake.
 
-#### Download and mailing lists
+#### Other linkns
 
 * [Download the Haskell package](http://hackage.haskell.org/package/shake) from Hackage and install it using Cabal.
 * [Mailing list](https://groups.google.com/forum/?fromgroups#!forum/shake-build-system) for any questions/bugs/thoughts on Shake. If you need more information and aren't sure where to start, use the mailing list.
