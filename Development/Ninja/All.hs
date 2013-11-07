@@ -100,7 +100,7 @@ build phonys rules pools out Build{..} = do
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile
-                    needBS $ map normalise $ concatMap snd $ parseMakefile depsrc
+                    needBS $ concatMap snd $ parseMakefile depsrc
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
