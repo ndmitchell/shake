@@ -241,9 +241,9 @@ Now, if either `main.c` or any headers transitively imported by `main.c` change,
 
 We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `needMakefileDependencies`.
 
-#### Global variables
+#### Top-level variables
 
-Variables local to a rule are defined using `let`, but you can also define global variables. Global variables are defined before the `main` call, for example:
+Variables local to a rule are defined using `let`, but you can also define top-level variables. Top-level variables are defined before the `main` call, for example:
 
     buildDir = "_build"
  
@@ -256,7 +256,7 @@ We can now write:
     buildDir ("run" <.> exe) $ \out -> do
         ...
 
-All global variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
+All top-level variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
 
 #### A clean command
 
@@ -466,15 +466,22 @@ The `stripPrefix` function is available in the `Data.List` module. One warning: 
 
 The initial example compiles the C file, then calls `need` on all its source and header files. This works fine if the header files are all source code. However, if any of the header files are _generated_ by the build system then when the compilation occurs they will not yet have been built. In general it is important to `need` any generated files _before_ they are used.
 
-Assuming all interesting headers are only included from the C file (a restriction we remove in the next section), we can write:
+To detect the included headers without using the compiler we can define `usedHeaders` as a top-level function:
+
+    usedHeaders src = [init x | x <- lines src, Just x <- [stripPrefix "#include \"" x]]
+
+This function takes the source code of a C file (`src`) and finds all lines that begin `#include "`, then takes the filename afterwards. This function does not work for all C files, but for most projects it is usually easy to write such a function that covers everything allowed by your coding standards.
+
+Assuming all interesting headers are only included directly by the C file (a restriction we remove in the next section), we can write the build rule as:
 
     "_build//*.o" *> \out -> do
         let c = dropDirectory1 $ out -<.> "c"
         src <- readFile' c
-        need [init x | x <- lines src, Just x <- [stripPrefix "#include \"" x]]
+        need $ usedHeaders src
         cmd "gcc -c" [c] "-o" [out]
 
-This code first calls `readFile'` (which automatically calls `need` on the source file), then calls `need` on all headers which start `#include "`, then calls `gcc`. All files have `need` called on them before they are used, so if the C file or any of the header files have build system rules they will be automatically generated.
+
+This code calls `readFile'` (which automatically calls `need` on the source file), then uses calls `need` on all headers used by the source file, then calls `gcc`. All files have `need` called on them before they are used, so if the C file or any of the header files have build system rules they will be run. 
 
 #### Generated transitive imports
 
