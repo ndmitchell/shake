@@ -288,7 +288,7 @@ As shown before, we can use `runhaskell _build/run` to execute our build system,
     mkdir -p _shake
     ghc --make Build.hs -rtsopts "-with-rtsopts=-I0 -qg -qb" -outputdir=_shake -o _shake/build && _shake/build $*
 
-This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given.
+This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag can be treated as magic - it instructs the Haskell compiler to turn off features that would otherwise steal CPU from the commands you are running.
 
 Now you can run a build by simply typing `./build.sh` on Linux, or `build` on Windows. On Linux you may want to alias `build` to `./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
@@ -311,7 +311,7 @@ One useful feature of Shake is that it can predict the remaining build time, bas
 * Running `build --progress`
 * Setting `shakeOptions{shakeProgress=progressSimple}`
 
-The progress message will be displayed in the titlebar of the Window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](http://github.org/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
+The progress message will be displayed in the titlebar of the window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](http://github.org/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
 
 ![](shake-progress.png)
 
@@ -437,7 +437,7 @@ For defining non-overlapping rules it is sometimes useful to use a more advanced
 
 We first get the extension with `takeExtension`, then use `drop 1` to remove the leading `.` that `takeExtension` includes, then test that all the characters are numeric.
 
-The standard `*>` operator is actuall defined as:
+The standard `*>` operator is actually defined as:
 
     pattern *> actions = (test ?==) ?> actions
 
@@ -485,11 +485,26 @@ This code calls `readFile'` (which automatically calls `need` on the source file
 
 #### Generated transitive imports
 
-The standard .hs/.hi and recursive tricks.
+The previous section described how to deal with generated include files, but only coped with headers included directly by the C file. This section describes how to extend that to work with generated headers used either in C or header files, even when used by headers that were themselves generated. We can write:
 
-#### Adding command line flags
+    ["*.c.dep","*.h.dep"] **> \out -> do
+        src <- readFile' $ dropExtension out
+        writeFileLines out $ usedHeaders src
 
-Requires real Haskell code.
+    "*.deps" *> \out -> do
+        dep <- readFileLines $ out -<.> "dep"
+        deps <- mapM (readFileLines . (<.> "deps")) dep
+        writeFileLines out $ nub $ dropExtension out : concat deps
 
-Define a C compile flag that works with both GCC and MSVC.
+    "*.o" *> \out -> do
+        deps <- readFileLines $ out -<.> "c.deps"
+        need deps
+        cmd "gcc -c" [dropExtension out] "-o" out
 
+For simplicity, this code assumes all files are in a single directory and all objects are generated files are placed in the same directory. We define three rules:
+
+* The `*.c.dep` and `*.h.dep` rule uses `**>`, which defines a single action that matches multiple patterns. The file `foo.h.dep` contains a list of headers directly included by `foo.h`, using `usedHeaders` from the previous section.
+* The `*.deps` rule takes the transitive closure of dependencies, so `foo.h.deps` contains `foo.h` and all headers that `foo.h` pulls in. The rule takes the target file, and all the `.deps` for anything in the `.dep` file, and combines them. More abstractly, the rule calculates the transitive closure of _a_, namely _a*_, by taking the dependencies of _a_ (say _b_ and _c_) and computing _a\* = union(a, b\*, c\*)_.
+* The `*.o` rule reads the associated `.deps` file (ensuring it is up to date) and then depends on its contents.
+
+The pattern of `*.deps` files occurs frequently, for example when linking Haskell files.
