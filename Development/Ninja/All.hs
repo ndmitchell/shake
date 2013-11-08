@@ -25,8 +25,8 @@ runNinja file args = do
     ninja@Ninja{..} <- parse file
     return $ do
         phonys <- return $ Map.fromList phonys
-        singles <- return $ Map.fromList $ map (first norm) singles
-        multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map norm) multiples, x <- xs]
+        singles <- return $ Map.fromList $ map (first normalise) singles
+        multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map normalise) multiples, x <- xs]
         rules <- return $ Map.fromList rules
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
@@ -41,11 +41,6 @@ runNinja file args = do
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
             build phonys rules pools [out2] $ singles Map.! out2
-
-
--- Normalise the LHS of build rules, so that normalised RHS still match
-norm :: Str -> Str
-norm = normalise
 
 
 resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
