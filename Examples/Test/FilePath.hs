@@ -3,7 +3,7 @@ module Examples.Test.FilePath(main) where
 
 import Development.Shake.FilePath
 import qualified System.FilePath as Native
-import Development.Shake.Prelude
+import Development.Shake.General
 import Examples.Util
 import Test.QuickCheck
 import Control.Monad

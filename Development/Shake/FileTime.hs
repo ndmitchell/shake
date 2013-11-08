@@ -6,7 +6,7 @@ module Development.Shake.FileTime(
     ) where
 
 import Development.Shake.Classes
-import Development.Shake.Prelude
+import Development.Shake.General
 import Data.Char
 import Data.Int
 import Data.Word

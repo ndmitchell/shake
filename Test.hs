@@ -10,7 +10,7 @@ import System.Environment
 import Development.Shake.Pool
 import Development.Shake.Timing
 import Development.Shake.FileTime
-import Development.Shake.Prelude
+import Development.Shake.General
 import qualified Data.ByteString.Char8 as BS
 import Examples.Util(sleepFileTime, sleepFileTimeCalibrate)
 import Control.Concurrent

@@ -2,7 +2,7 @@
 module Examples.Util(sleep, module Examples.Util) where
 
 import Development.Shake
-import Development.Shake.Prelude
+import Development.Shake.General
 import Development.Shake.FilePath
 
 import Control.Monad

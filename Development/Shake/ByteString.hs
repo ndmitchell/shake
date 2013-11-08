@@ -3,7 +3,7 @@ module Development.Shake.ByteString(parseMakefile, normalise, linesCR) where
 
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native
-import Development.Shake.Prelude
+import Development.Shake.General
 import Data.List
 
 

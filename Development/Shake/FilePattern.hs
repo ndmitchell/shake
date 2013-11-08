@@ -9,7 +9,7 @@ module Development.Shake.FilePattern(
 import System.FilePath(pathSeparators)
 import Data.List
 import Control.Arrow
-import Development.Shake.Prelude
+import Development.Shake.General
 
 
 ---------------------------------------------------------------------
