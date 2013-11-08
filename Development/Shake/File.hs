@@ -175,6 +175,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+-- Should probably have been called |*>, since it's an or (||) of *>
 (**>) test = root "with **>" (\x -> any (?== x) test)
 
 -- | Define a rule that matches a 'FilePattern'. No file required by the system must be

@@ -51,6 +51,7 @@ instance Rule FilesQ FilesA where
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 (*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+-- Should probably have been called &*>, since it's an and (&&) of *>
 ps *>> act
     | not $ compatible ps = error $
         "All patterns to *>> must have the same number and position of // and * wildcards\n" ++
@@ -86,6 +87,7 @@ ps *>> act
 --
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
+-- Should probably have been called &?>, since it's an and (&&) of ?>
 (?>>) test act = do
     let checkedTest x = case test x of
             Nothing -> Nothing
