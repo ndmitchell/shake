@@ -17,7 +17,7 @@ module Development.Shake.FilePath(
     ) where
 
 import System.FilePath.Posix hiding (normalise, (</>), combine)
-import Development.Shake.Prelude
+import Development.Shake.General
 import qualified System.FilePath as Native
 
 infixr 5  </>

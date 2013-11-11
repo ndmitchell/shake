@@ -10,7 +10,7 @@ module Development.Shake.Storage(
     ) where
 
 import Development.Shake.Binary
-import Development.Shake.Prelude
+import Development.Shake.General
 import Development.Shake.Types
 import Development.Shake.Timing
 
@@ -189,39 +189,42 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
 
+data Message = Write LBS.ByteString | Flush | Die
+
 -- We avoid calling flush too often on SSD drives, as that can be slow
--- Do not move writes to a separate thread, as then we'd have to marshal exceptions back which is tricky
+-- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
+-- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
 flushThread :: (String -> IO ()) -> Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
 flushThread outputErr flush h act = do
-    alive <- newVar True
-    kick <- newEmptyMVar
+    chan <- newChan -- operations to perform on the file
+    kick <- newEmptyMVar -- kicked whenever something is written
+    died <- newBarrier -- has the writing thread finished
 
-    lock <- newLock
-    case flush of
-        Nothing -> return ()
-        Just flush -> do
-            let delay = ceiling $ flush * 1000000
-            let loop = do
-                    takeMVar kick
-                    threadDelay delay
-                    b <- withVar alive $ \b -> do
-                        when b $ do
-                            tryTakeMVar kick
-                            withLock lock $ hFlush h
-                        return b
-                    when b loop
-            forkIO $ do
-                let msg = "Warning: Flushing Shake journal failed, on abnormal termination you may lose some data, "
-                (loop >> return ()) `E.catch` \(e :: SomeException) -> outputErr $ msg ++ show e ++ "\n"
-            return ()
+    flusher <- case flush of
+        Nothing -> return Nothing
+        Just flush -> fmap Just $ forkIO $ forever $ do
+            takeMVar kick
+            threadDelay $ ceiling $ flush * 1000000
+            tryTakeMVar kick
+            writeChan chan Flush
+
+    root <- myThreadId
+    writer <- forkIO $ handle (\(e :: SomeException) -> signalBarrier died () >> throwTo root e) $ whileM $ do
+        -- only one thread ever writes, ensuring only the final write can be torn
+        s <- readChan chan
+        case s of
+            Write x -> LBS.hPut h x >> tryPutMVar kick () >> return True
+            Flush -> hFlush h >> return True
+            Die -> signalBarrier died () >> return False
 
     (act $ \s -> do
-            withLock lock $ LBS.hPut h s
-            tryPutMVar kick ()
-            return ())
+            evaluate $ LBS.length s -- ensure exceptions occur on this thread
+            writeChan chan $ Write s)
+            -- abort thread cleanly here, and wait for it to rondevous
         `finally` do
-            modifyVar_ alive $ const $ return False
-            tryPutMVar kick ()
+            maybe (return ()) killThread flusher
+            writeChan chan Die
+            waitBarrier died
 
 
 -- Return the amount of junk at the end, along with all the chunk

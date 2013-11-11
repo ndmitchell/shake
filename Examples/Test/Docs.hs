@@ -166,6 +166,7 @@ whitelist x = x `elem`
     ,"# command-name file-name"
     ,"ghc --make MyBuildSystem -rtsopts \"-with-rtsopts=-I0 -qg -qb\""
     ,"-qg -qb"
+    ,"gcc -MM"
     ]
 
 types = words $

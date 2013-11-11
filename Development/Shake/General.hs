@@ -1,13 +1,13 @@
 {-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving, CPP #-}
 
-module Development.Shake.Prelude(
+module Development.Shake.General(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
     isWindows,
     modifyIORef'', writeIORef'',
-    whenJust, loop,
+    whenJust, loop, whileM,
     fastNub, showQuote,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
@@ -15,6 +15,7 @@ module Development.Shake.Prelude(
 
 import Control.Concurrent
 import Control.Exception
+import Control.Monad
 import Data.Char
 import Data.IORef
 import Data.Time
@@ -157,6 +158,11 @@ loop act x = do
     case res of
         Left x -> loop act x
         Right v -> return v
+
+whileM :: Monad m => m Bool -> m ()
+whileM act = do
+    b <- act
+    when b $ whileM act
 
 
 ---------------------------------------------------------------------

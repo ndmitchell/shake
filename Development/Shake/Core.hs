@@ -46,7 +46,7 @@ import Development.Shake.Report
 import Development.Shake.Types
 import Development.Shake.Errors
 import Development.Shake.Timing
-import Development.Shake.Prelude
+import Development.Shake.General
 
 
 ---------------------------------------------------------------------
@@ -460,7 +460,7 @@ apply1 = fmap head . apply . return
 
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
---   The 'Develoment.Shake.cmd' and 'Develoment.Shake.command' functions automatically call 'traced'.
+--   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.
 --   The trace list is used for profile reports (see 'shakeReport').
 traced :: String -> IO a -> Action a
 traced msg act = do

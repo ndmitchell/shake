@@ -15,7 +15,7 @@ import System.Directory
 import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core
-import Development.Shake.Prelude
+import Development.Shake.General
 import Development.Shake.Classes
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
