@@ -89,6 +89,7 @@ data Status
     | Loaded Result -- Loaded from the database
     | Waiting Pending (Maybe Result) -- Currently checking if I am valid or building
     | Missing -- I am only here because I got into the Intern table
+      deriving Show
 
 data Result = Result
     {result :: Value -- the result associated with the Key
@@ -97,7 +98,7 @@ data Result = Result
     ,depends :: [[Id]] -- dependencies
     ,execution :: {-# UNPACK #-} !Duration -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
-    }
+    } deriving Show
 
 
 newtype Pending = Pending (IORef (IO ()))

@@ -90,7 +90,7 @@ data Witness = Witness
     {typeNames :: [String] -- the canonical data, the names of the types
     ,witnessIn :: Map.HashMap Word16 Value -- for reading in, the find the values (some may be missing)
     ,witnessOut :: Map.HashMap TypeRep Word16 -- for writing out, find the value
-    }
+    } deriving Show
 
 instance Eq Witness where
     -- Type names are produced by toStableList so should to remain consistent

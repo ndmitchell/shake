@@ -178,6 +178,9 @@ isWindows = False
 newtype BS = BS BS.ByteString
     deriving (Hashable, Binary, Eq)
 
+instance Show BS where
+    show (BS x) = show x
+
 instance NFData BS where
     -- some versions of ByteString do not have NFData instances, but seq is equivalent
     -- for a strict bytestring. Therefore, we write our own instance.
