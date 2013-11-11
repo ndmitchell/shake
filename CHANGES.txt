@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Rewrite database writes, old code could break metadata on error
     #25, optimise building with Ninja
     Fix many bugs in FilePath.normalise
     Require QuickCheck-2.0 or higher
