@@ -214,7 +214,6 @@ flushThread flush h act = do
     (act $ \s -> do
             evaluate $ LBS.length s -- ensure exceptions occur on this thread
             writeChan chan $ LBS.hPut h s >> tryPutMVar kick () >> return True)
-            -- abort thread cleanly here, and wait for it to rondevous
         `finally` do
             maybe (return ()) killThread flusher
             writeChan chan $ signalBarrier died () >> return False
