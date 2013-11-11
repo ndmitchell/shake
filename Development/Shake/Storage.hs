@@ -25,12 +25,14 @@ import Data.Char
 import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map
 import Data.List
+import Numeric
 import System.Directory
 import System.Exit
 import System.FilePath
 import System.IO
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.Lazy as LBS8
 
 
 type Map = Map.HashMap
@@ -47,7 +49,7 @@ databaseVersion x = "SHAKE-DATABASE-8-" ++ s ++ "\r\n"
 
 
 withStorage
-    :: (Eq w, Eq k, Hashable k
+    :: (Show w, Show k, Show v, Eq w, Eq k, Hashable k
        ,Binary w, BinaryWith w k, BinaryWith w v)
     => ShakeOptions             -- ^ Storage options
     -> (String -> IO ())        -- ^ Logging function
@@ -112,10 +114,24 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                         let slop = fromIntegral $ LBS.length slopRaw
                         when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         diagnostic $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
-                        diagnostic $ "Chunk sizes " ++ show (map LBS.length (w:xs))
                         let ws = decode w
                             f mp (k, v) = Map.insert k v mp
-                            mp = foldl' f Map.empty $ map (runGet $ getWith ws) xs
+                            ents = map (runGet $ getWith ws) xs
+                            mp = foldl' f Map.empty ents
+
+                        when (shakeVerbosity == Diagnostic) $ do
+                            let raw x = "[len " ++ show (LBS.length x) ++ "] " ++ concat
+                                        [['0' | length c == 1] ++ c | x <- LBS8.unpack x, let c = showHex x ""]
+                            let pretty (Left x) = "FAILURE: " ++ show (x :: SomeException)
+                                pretty (Right x) = x
+                            diagnostic $ "Witnesses " ++ raw w
+                            forM_ (zip3 [1..] xs ents) $ \(i,x,ent) -> do
+                                x2 <- try $ evaluate $ let s = show ent in rnf s `seq` s
+                                diagnostic $ "Chunk " ++ show i ++ " " ++ raw x ++ " " ++ pretty x2
+                            diagnostic $ "Slop " ++ raw slopRaw
+
+                        diagnostic $ "Found " ++ show (Map.size mp) ++ " real entries"
+
                         -- if mp is null, continue will reset it, so no need to clean up
                         if Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2) then do
                             -- make sure we reset to before the slop

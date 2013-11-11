@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Print out the entire database in diagnostics mode
     #25, optimise building with Ninja
     Fix many bugs in FilePath.normalise
     Require QuickCheck-2.0 or higher
