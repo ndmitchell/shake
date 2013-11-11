@@ -184,7 +184,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
             when (Map.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
                            -- also lets us recover in the case of corruption
-            flushThread outputErr shakeFlush h $ \out -> do
+            flushThread shakeFlush h $ \out -> do
                 addTiming "With database"
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
@@ -194,8 +194,8 @@ data Message = Write LBS.ByteString | Flush | Die
 -- We avoid calling flush too often on SSD drives, as that can be slow
 -- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
 -- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
-flushThread :: (String -> IO ()) -> Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
-flushThread outputErr flush h act = do
+flushThread :: Maybe Double -> Handle -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
+flushThread flush h act = do
     chan <- newChan -- operations to perform on the file
     kick <- newEmptyMVar -- kicked whenever something is written
     died <- newBarrier -- has the writing thread finished
