@@ -189,8 +189,6 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
 
 
-data Message = Write LBS.ByteString | Flush | Die
-
 -- We avoid calling flush too often on SSD drives, as that can be slow
 -- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
 -- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
@@ -206,24 +204,20 @@ flushThread flush h act = do
             takeMVar kick
             threadDelay $ ceiling $ flush * 1000000
             tryTakeMVar kick
-            writeChan chan Flush
+            writeChan chan $ hFlush h >> return True
 
     root <- myThreadId
-    writer <- forkIO $ handle (\(e :: SomeException) -> signalBarrier died () >> throwTo root e) $ whileM $ do
+    writer <- forkIO $ handle (\(e :: SomeException) -> signalBarrier died () >> throwTo root e) $
         -- only one thread ever writes, ensuring only the final write can be torn
-        s <- readChan chan
-        case s of
-            Write x -> LBS.hPut h x >> tryPutMVar kick () >> return True
-            Flush -> hFlush h >> return True
-            Die -> signalBarrier died () >> return False
+        whileM $ join $ readChan chan
 
     (act $ \s -> do
             evaluate $ LBS.length s -- ensure exceptions occur on this thread
-            writeChan chan $ Write s)
+            writeChan chan $ LBS.hPut h s >> tryPutMVar kick () >> return True)
             -- abort thread cleanly here, and wait for it to rondevous
         `finally` do
             maybe (return ()) killThread flusher
-            writeChan chan Die
+            writeChan chan $ signalBarrier died () >> return False
             waitBarrier died
 
 
