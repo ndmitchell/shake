@@ -104,11 +104,12 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                                -- add back to check during random testing
                 return $ continue h Map.empty) $
                 case readChunks $ LBS.drop (LBS.length ver) src of
-                    (slop, []) -> do
-                        when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
+                    ([], slop) -> do
+                        when (LBS.length slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         diagnostic $ "Read 0 chunks, plus " ++ show slop ++ " slop"
                         return $ continue h Map.empty
-                    (slop, w:xs) -> do
+                    (w:xs, slopRaw) -> do
+                        let slop = fromIntegral $ LBS.length slopRaw
                         when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         diagnostic $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
                         diagnostic $ "Chunk sizes " ++ show (map LBS.length (w:xs))
@@ -208,12 +209,12 @@ flushThread outputErr flush h act = do
 
 
 -- Return the amount of junk at the end, along with all the chunk
-readChunks :: LBS.ByteString -> (Integer, [LBS.ByteString])
+readChunks :: LBS.ByteString -> ([LBS.ByteString], LBS.ByteString)
 readChunks x
     | Just (n, x) <- grab 4 x
     , Just (y, x) <- grab (fromIntegral (decode n :: Word32)) x
-    = second (y :) $ readChunks x
-    | otherwise = (toInteger $ LBS.length x, [])
+    = first (y :) $ readChunks x
+    | otherwise = ([], x)
     where
         grab i x | LBS.length a == i = Just (a, b)
                  | otherwise = Nothing
