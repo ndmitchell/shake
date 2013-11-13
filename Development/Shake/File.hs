@@ -113,8 +113,8 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
 --
---   Usually @need [x,y]@ is preferable to @need [x] >> need [y]@ as the former allows greater
---   parallelism, while the latter requires @x@ to finish building before starting to build @y@.
+--   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
+--   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
