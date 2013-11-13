@@ -226,15 +226,6 @@ getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
             return $ filter test files ++ rest
 
 
-concatMapM f xs = fmap concat $ mapM f xs
-
-partitionM f [] = return ([], [])
-partitionM f (x:xs) = do
-    t <- f x
-    (a,b) <- partitionM f xs
-    return $ if t then (x:a,b) else (a,x:b)
-
-
 -- | Remove all empty directories and files that match any of the patterns beneath a directory.
 --   Some examples:
 --

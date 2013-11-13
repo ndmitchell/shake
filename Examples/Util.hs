@@ -156,14 +156,3 @@ getDirectoryContentsRecursive dir = do
     return $ files++rest
     where
         isBadDir x = "." `isPrefixOf` x || "_" `isPrefixOf` x
-
-partitionM :: Monad m => (a -> m Bool) -> [a] -> m ([a], [a])
-partitionM f [] = return ([], [])
-partitionM f (x:xs) = do
-    res <- f x
-    (as,bs) <- partitionM f xs
-    return $ if res then (x:as,bs) else (as,x:bs)
-
-concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
-concatMapM f = liftM concat . mapM f
-
