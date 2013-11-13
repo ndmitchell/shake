@@ -37,8 +37,9 @@ main = shaken test $ \xs obj -> do
         writeFile' m2 $ show b
 
 
-test build obj = {- handle (\e -> print (e :: SomeException) >> error "dead") $ -} do
+test build obj = do
     build ["clean"]
+    -- Useful, if the error message starts crashing...
     -- IO.hSetEncoding IO.stdout IO.char8
     -- IO.hSetEncoding IO.stderr IO.char8
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
