@@ -156,7 +156,7 @@ data Verbosity
     = Silent -- ^ Don't print any messages.
     | Quiet  -- ^ Only print essential messages, typically errors.
     | Normal -- ^ Print errors and @# /command-name/ /file-name/@ when running a 'Development.Shake.traced' command.
-    | Loud   -- ^ Print errors and full command lines when running a 'Development.Shake.system'' command.
+    | Loud   -- ^ Print errors and full command lines when running a 'Development.Shake.command' or 'Development.Shake.cmd' command.
     | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
