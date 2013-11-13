@@ -50,6 +50,7 @@ instance Rule FilesQ FilesA where
 --   However, in practice, it's usually easier to define rules with '*>' and make the @.hi@ depend
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
+--   This function will create directories for the result files, if necessary.
 (*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 -- Should probably have been called &*>, since it's an and (&&) of *>
 ps *>> act

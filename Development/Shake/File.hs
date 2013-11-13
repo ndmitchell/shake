@@ -168,6 +168,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
 --   the second argument will be used to build it. Usually '*>' is sufficient, but '?>' gives
 --   additional power. For any file used by the build system, only one rule should return 'True'.
+--   This function will create the directory for the result file, if necessary.
 --
 -- @
 -- (all isUpper . 'Development.Shake.FilePath.takeBaseName') '?>' \\out -> do
@@ -185,6 +186,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 
 -- | Define a rule that matches a 'FilePattern'. No file required by the system must be
 --   matched by more than one pattern. For the pattern rules, see '?=='.
+--   This function will create the directory for the result file, if necessary.
 --
 -- @
 -- \"*.asm.o\" '*>' \\out -> do
