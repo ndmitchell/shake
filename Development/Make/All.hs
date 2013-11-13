@@ -3,7 +3,7 @@
 module Development.Make.All(runMakefile) where
 
 import System.Environment
-import Development.Shake
+import Development.Shake hiding (addEnv)
 import Development.Shake.FilePath
 import Development.Make.Parse
 import Development.Make.Env

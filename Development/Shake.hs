@@ -103,6 +103,7 @@ module Development.Shake(
     command, command_, cmd,
     Stdout(..), Stderr(..), Exit(..),
     CmdResult, CmdOption(..),
+    addPath, addEnv,
     -- * Utility functions
     module Development.Shake.Derived,
     removeFiles, removeFilesAfter,
