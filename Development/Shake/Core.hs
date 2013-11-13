@@ -190,7 +190,7 @@ rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])
 --
 --   This 'action' builds @file.out@, but only if @file.src@ exists. The 'action'
 --   will be run in every build execution (unless 'withoutActions' is used), so only cheap
---   operations should be performed.
+--   operations should be performed. All arguments to 'action' may be run in parallel, in any order.
 --
 --   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
 --   see 'Development.Shake.want'.

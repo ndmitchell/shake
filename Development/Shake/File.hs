@@ -102,7 +102,8 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
     liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
 
 
--- | Require that the following files are built before continuing. Particularly
+-- | Add a dependency on the file arguments, ensuring they are built before continuing.
+--   The file arguments may be built in parallel, in any order. This function is particularly
 --   necessary when calling 'Development.Shake.cmd' or 'Development.Shake.command'. As an example:
 --
 -- @
@@ -111,13 +112,16 @@ defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
 --     'need' [src]
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
+--
+--   Usually @need [x,y]@ is preferable to @need [x]; need [y]@ as the former allows greater
+--   parallelism, while the latter requires @x@ to finish building before starting to build @y@.
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 
--- | Require that the following are built by the rules, used to specify the target.
+-- | Require that the argument files are built by the rules, used to specify the target.
 --
 -- @
 -- main = 'Development.Shake.shake' 'shakeOptions' $ do
@@ -125,7 +129,8 @@ needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 --    ...
 -- @
 --
---   This program will build @Main.exe@, given sufficient rules.
+--   This program will build @Main.exe@, given sufficient rules. All arguments to all 'want' calls
+--   may be built in parallel, in any order.
 --
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
