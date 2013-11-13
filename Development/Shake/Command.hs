@@ -282,7 +282,7 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) wher
 
 
 -- | Execute a system command. Before running 'command' make sure you 'Development.Shake.need' any files
---   that are required by the command.
+--   that are used by the command.
 --
 --   This function takes a list of options (often just @[]@, see 'CmdOption' for the available
 --   options), the name of the executable (either a full name, or a program on the @$PATH@) and
@@ -319,7 +319,8 @@ command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
 type a :-> t = a
 
 
--- | A variable arity version of 'command'.
+-- | Execute a system command. Before running 'cmd' make sure you 'Development.Shake.need' any files
+--   that are used by the command.
 --
 -- * @String@ arguments are treated as whitespace separated arguments.
 --
@@ -342,7 +343,7 @@ type a :-> t = a
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
 --   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature.
 --
---   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and no output will be written.
+--   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
 
