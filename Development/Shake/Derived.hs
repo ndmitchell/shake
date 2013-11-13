@@ -23,7 +23,10 @@ checkExitCode :: String -> ExitCode -> Action ()
 checkExitCode cmd ExitSuccess = return ()
 checkExitCode cmd (ExitFailure i) = error $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
 
--- | Execute a system command. This function will raise an error if the exit code is non-zero.
+-- | /Deprecated:/ Please use 'command' or 'cmd' instead.
+--   This function will be removed in a future version.
+--
+--   Execute a system command. This function will raise an error if the exit code is non-zero.
 --   Before running 'system'' make sure you 'need' any required files.
 system' :: FilePath -> [String] -> Action ()
 system' path args = do

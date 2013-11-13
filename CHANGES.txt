@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Deprecate system', use cmd or command instead
     #53, add addPath and addEnv to modify environment variables
     Make all search path things return the native separators
     #73, if Haskell can't write a unicode filename, skip the test
