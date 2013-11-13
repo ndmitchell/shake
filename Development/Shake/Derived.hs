@@ -77,13 +77,13 @@ systemOutput path args = do
     return (stdout, stderr)
 
 
--- | @copyFile' old new@ copies the existing file from @old@ to @new@. The @old@ file is has 'need' called on it
---   before copying the file.
+-- | @copyFile' old new@ copies the existing file from @old@ to @new@.
+--   The @old@ file will be tracked as a dependency.
 copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = need [old] >> liftIO (copyFile old new)
 
 
--- | Read a file, after calling 'need'.
+-- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.
 readFile' :: FilePath -> Action String
 readFile' x = need [x] >> liftIO (readFile x)
 
@@ -93,6 +93,7 @@ writeFile' name x = liftIO $ writeFile name x
 
 
 -- | A version of 'readFile'' which also splits the result into lines.
+--   The argument file will be tracked as a dependency.
 readFileLines :: FilePath -> Action [String]
 readFileLines = fmap lines . readFile'
 

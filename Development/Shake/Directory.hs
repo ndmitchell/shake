@@ -135,20 +135,27 @@ defaultRuleDirectory = do
         liftIO $ fmap GetEnvA $ getEnvIO x
 
 
--- | Returns 'True' if the file exists.
+-- | Returns 'True' if the file exists. The existence of the file is tracked as a
+--   dependency, and if the file is created or deleted the rule will rerun in subsequent builds.
+--
+--   You should not call 'doesFileExist' on files which can be created by the build system.
 doesFileExist :: FilePath -> Action Bool
 doesFileExist file = do
     DoesFileExistA res <- apply1 $ DoesFileExistQ file
     return res
 
--- | Returns 'True' if the directory exists.
+-- | Returns 'True' if the directory exists. The existence of the directory is tracked as a
+--   dependency, and if the directory is created or delete the rule will rerun in subsequent builds.
+--
+--   You should not call 'doesDirectoryExist' on directories which can be created by the build system.
 doesDirectoryExist :: FilePath -> Action Bool
 doesDirectoryExist file = do
     DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ file
     return res
 
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
---   if the variable is not set.
+--   if the variable is not set. The environment variable is tracked as a
+--   dependency, and if it changes the rule will rerun in subsequent builds.
 getEnv :: String -> Action (Maybe String)
 getEnv var = do
     GetEnvA res <- apply1 $ GetEnvQ var
@@ -160,7 +167,8 @@ getEnvIO x = Control.Exception.catch (fmap Just $ IO.getEnv x) $
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative
---   to the first argument.
+--   to the first argument. The result is tracked as a
+--   dependency, and if it changes the rule will rerun in subsequent builds.
 --
 --   It is usually simpler to call either 'getDirectoryFiles' or 'getDirectoryDirs'.
 getDirectoryContents :: FilePath -> Action [FilePath]
@@ -168,7 +176,9 @@ getDirectoryContents x = getDirAction $ GetDir x
 
 -- | Get the files anywhere under a directory that match any of a set of patterns.
 --   For the interpretation of the patterns see '?=='. All results will be
---   relative to the 'FilePath' argument. Some examples:
+--   relative to the 'FilePath' argument. The result is tracked as a
+--   dependency, and if it changes the rule will rerun in subsequent builds.
+--   Some examples:
 --
 -- > getDirectoryFiles "Config" ["//*.xml"]
 -- >     -- All .xml files anywhere under the Config directory
@@ -186,7 +196,9 @@ getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
 -- | Get the directories in a directory, not including @.@ or @..@.
---   All directories are relative to the argument directory.
+--   All directories are relative to the argument directory. The result is tracked as a
+--   dependency, and if it changes the rule will rerun in subsequent builds.
+--
 --
 -- > getDirectoryDirs "/Users"
 -- >    -- Return all directories in the /Users directory

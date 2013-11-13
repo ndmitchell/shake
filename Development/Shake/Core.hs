@@ -234,7 +234,7 @@ data SAction = SAction
     }
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
---   Action values are used by 'rule' and 'action'.
+--   Action values are used by 'rule' and 'action'. The 'Action' monad tracks the dependencies of a 'Rule'.
 newtype Action a = Action (StateT SAction IO a)
     deriving (Monad, MonadIO, Functor, Applicative)
 
@@ -413,6 +413,7 @@ runAfter op = do
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
+--   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: Rule key value => [key] -> Action [value]
 apply = f
     where
