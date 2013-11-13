@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Lots of Haddock improvements
     Deprecate system', use cmd or command instead
     #53, add addPath and addEnv to modify environment variables
     Make all search path things return the native separators
