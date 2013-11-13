@@ -154,6 +154,7 @@ whitelist x | elem x $ words $
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "NoProgress Error " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out " ++
+    "/usr/special /usr/special/userbinary $CFLAGS -O2 " ++
     "-threaded -rtsopts -I0 Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
     = True
 whitelist x = x `elem`
