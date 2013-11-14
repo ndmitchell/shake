@@ -1,7 +1,7 @@
 
 -- | A module for useful utility functions for Shake build systems.
 module Development.Shake.Util(
-    parseMakefile, needMakefileDependencies
+    parseMakefile, needMakefileDependencies, neededMakefileDependencies
     ) where
 
 import Development.Shake
@@ -24,3 +24,11 @@ parseMakefile = map (BS.unpack *** map BS.unpack) . BS.parseMakefile . BS.pack
 -- > needMakefileDependencies file = need . concatMap snd . parseMakefile =<< liftIO (readFile file)
 needMakefileDependencies :: FilePath -> Action ()
 needMakefileDependencies file = needBS . concatMap snd . BS.parseMakefile =<< liftIO (BS.readFile file)
+
+
+-- | Depend on the dependencies listed in a Makefile. Does not depend on the Makefile itself.
+--   Use this function to indicate that you have /already/ used the files in question.
+--
+-- > neededMakefileDependencies file = needed . concatMap snd . parseMakefile =<< liftIO (readFile file)
+neededMakefileDependencies :: FilePath -> Action ()
+neededMakefileDependencies file = neededBS . concatMap snd . BS.parseMakefile =<< liftIO (BS.readFile file)
