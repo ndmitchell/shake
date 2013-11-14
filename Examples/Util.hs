@@ -5,6 +5,7 @@ import Development.Shake
 import General.Base
 import Development.Shake.FilePath
 
+import Control.Exception hiding (assert)
 import Control.Monad
 import Data.Char
 import Data.List
@@ -111,6 +112,14 @@ assertContentsInfix :: FilePath -> String -> IO ()
 assertContentsInfix file want = do
     got <- readFile file
     assert (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
+
+assertException :: [String] -> IO () -> IO ()
+assertException parts act = do
+    res <- try act
+    case res of
+        Left err -> let s = show (err :: SomeException) in forM_ parts $ \p ->
+            assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
+        Right _ -> error "Expected an exception but succeeded"
 
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
