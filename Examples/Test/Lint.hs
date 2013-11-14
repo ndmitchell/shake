@@ -57,6 +57,18 @@ main = shaken test $ \args obj -> do
         writeFile' (obj "exists") ""
         writeFile' out ""
 
+    obj "gen*" *> \out -> do
+        writeFile' out out
+
+    obj "needed1" *> \out -> do
+        needed [obj "gen1"]
+        writeFile' out ""
+
+    obj "needed2" *> \out -> do
+        orderOnly [obj "gen2"]
+        needed [obj "gen2"]
+        writeFile' out ""
+
 test build obj = do
     dir <- getCurrentDirectory
     let crash args parts = do
@@ -75,3 +87,5 @@ test build obj = do
     crash ["createtwice"] ["changed since being depended upon"]
     crash ["listing"] ["changed since being depended upon","output/lint"]
     crash ["--clean","listing","existance"] ["changed since being depended upon"]
+    crash ["needed1"] ["'needed' file required rebuilding"]
+    build ["needed2"]
