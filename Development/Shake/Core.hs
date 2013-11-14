@@ -502,6 +502,7 @@ putQuiet = putWhen Quiet
 getVerbosity :: Action Verbosity
 getVerbosity = Action $ gets verbosity
 
+
 -- | Run an action with a particular verbosity level.
 withVerbosity :: Verbosity -> Action a -> Action a
 withVerbosity new act = do
