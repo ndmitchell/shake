@@ -110,7 +110,7 @@ module Development.Shake(
     -- * File rules
     need, want, (*>), (**>), (?>), phony, (~>),
     module Development.Shake.Rules.Files,
-    needed,
+    orderOnly, needed,
     FilePattern, (?==),
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
@@ -146,4 +146,5 @@ import Development.Shake.Rules.File
 import Development.Shake.FilePattern
 import Development.Shake.Rules.Files
 import Development.Shake.Rules.Oracle
+import Development.Shake.Rules.OrderOnly
 import Development.Shake.Rules.Rerun

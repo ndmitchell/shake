@@ -1,0 +1,55 @@
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+
+module Development.Shake.Rules.OrderOnly(
+     defaultRuleOrderOnly, orderOnly, orderOnlyBS
+    ) where
+
+import Development.Shake.Core
+import General.Base
+import Development.Shake.Classes
+import Development.Shake.Rules.File
+import qualified Data.ByteString.Char8 as BS
+
+
+newtype OrderOnlyQ = OrderOnlyQ BSU
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show OrderOnlyQ where show (OrderOnlyQ x) = unpackU x
+
+newtype OrderOnlyA = OrderOnlyA ()
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show OrderOnlyA where show (OrderOnlyA ()) = "OrderOnly"
+
+
+instance Rule OrderOnlyQ OrderOnlyA where
+    storedValue (OrderOnlyQ _) = return $ Just $ OrderOnlyA ()
+
+
+defaultRuleOrderOnly :: Rules ()
+defaultRuleOrderOnly = defaultRule $ \(OrderOnlyQ x) -> Just $ do
+    needBS [unpackU_ x]
+    return $ OrderOnlyA ()
+
+
+-- | Define order-only dependencies, these are dependencies that will always
+--   be built before continuing, but which aren't dependencies of this action.
+--   Mostly useful for defining generated dependencies you think might be real dependencies.
+--   If they turn out to be real dependencies, you should add an explicit dependency afterwards.
+--
+-- @
+-- \"file.o\" *> \\out -> do
+--     'orderOnly' [\"foo.h\"]
+--     () <- 'cmd' \"gcc -c file.c -o file.o -MMD -MF file.m\"
+--     'neededMakefileDependencies' m
+-- @
+--
+--   If @foo.h@ is included by @file.c@ then the call to 'needMakefileDependencies' will cause
+--   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
+--   and you will have lost some opportunity for parallelism.
+orderOnly :: [FilePath] -> Action ()
+orderOnly xs = (apply $ map (OrderOnlyQ . packU) xs :: Action [OrderOnlyA]) >> return ()
+
+
+orderOnlyBS :: [BS.ByteString] -> Action ()
+orderOnlyBS xs = (apply $ map (OrderOnlyQ . packU_) xs :: Action [OrderOnlyA]) >> return ()

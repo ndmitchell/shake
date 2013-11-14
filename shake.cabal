@@ -118,6 +118,7 @@ library
         Development.Shake.Rules.File
         Development.Shake.Rules.Files
         Development.Shake.Rules.Oracle
+        Development.Shake.Rules.OrderOnly
         Development.Shake.Rules.Rerun
         Development.Shake.Shake
         Development.Shake.Special
