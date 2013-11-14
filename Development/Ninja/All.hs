@@ -88,13 +88,13 @@ build phonys rules pools out Build{..} = do
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
-                    needBS $ map (normalise . BS.pack) $ parseShowIncludes stdout
+                    neededBS $ map (normalise . BS.pack) $ parseShowIncludes stdout
                  else
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile
-                    needBS $ concatMap snd $ parseMakefile depsrc
+                    neededBS $ concatMap snd $ parseMakefile depsrc
                     when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
