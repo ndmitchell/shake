@@ -34,6 +34,7 @@ import qualified Examples.Test.Journal as Journal
 import qualified Examples.Test.Lint as Lint
 import qualified Examples.Test.Makefile as Makefile
 import qualified Examples.Test.Oracle as Oracle
+import qualified Examples.Test.OrderOnly as OrderOnly
 import qualified Examples.Test.Pool as Pool
 import qualified Examples.Test.Progress as Progress
 import qualified Examples.Test.Random as Random
@@ -51,7 +52,7 @@ fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetim
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main, "directory" * Directory.main
-        ,"docs" * Docs.main, "errors" * Errors.main
+        ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
         ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main
         ,"pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
