@@ -9,6 +9,7 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Maybe
+import System.Directory
 import System.Exit
 
 
@@ -23,10 +24,12 @@ main = shaken noTest $ \args obj -> do
     index *> \_ -> do
         xs <- getDirectoryFiles "Development" ["//*.hs"]
         need $ map ("Development" </>) xs
-        Exit exit <- cmd "runhaskell Setup.hs haddock"
-        when (exit /= ExitSuccess) $ do
-            () <- cmd "runhaskell Setup.hs configure"
-            cmd "runhaskell Setup.hs haddock"
+        res <- liftIO $ findExecutable "cabal"
+        if isJust res then cmd "cabal haddock" else do
+            Exit exit <- cmd "runhaskell Setup.hs haddock"
+            when (exit /= ExitSuccess) $ do
+                () <- cmd "runhaskell Setup.hs configure"
+                cmd "runhaskell Setup.hs haddock"
 
     obj "Paths_shake.hs" *> \out -> do
         copyFile' "Paths.hs" out
