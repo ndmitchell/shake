@@ -13,7 +13,7 @@ module Development.Shake.Core(
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
-    getVerbosity, putLoud, putNormal, putQuiet, quietly,
+    getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     unsafeExtraThread,
     -- Internal stuff

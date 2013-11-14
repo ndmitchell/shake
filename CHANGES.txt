@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #67, add withVerbosity
     #51, add getShakeOptions
     Print out the entire database in diagnostics mode
     Rewrite database writes, old code could break metadata on error
