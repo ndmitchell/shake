@@ -4,9 +4,7 @@ module Examples.Test.Oracle(main) where
 
 import Development.Shake
 import Examples.Util
-import Control.Exception
 import Control.Monad
-import Data.List
 
 
 main = shaken test $ \args obj -> do
@@ -51,13 +49,7 @@ test build obj = do
     assertContents (obj "rerun") "bar"
 
     -- check error messages are good
-    let errors args err = do
-            r <- try $ build $ "--quiet" : args
-            case r of
-                Right _ -> error $ "Expected to fail but succeeded, wanted: " ++ err
-                Left (msg :: SomeException)
-                    | err `isInfixOf` show msg -> return ()
-                    | otherwise -> error $ "Bad error message, wanted: " ++ err ++ ", got: " ++ show msg
+    let errors args err = assertException [err] $ build $ "--quiet" : args
 
     build ["+str-int","*str-int"]
     errors ["*str-int"] -- Building with an an Oracle that has been removed

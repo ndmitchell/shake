@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Examples.Test.Lint(main) where
 
@@ -6,8 +5,6 @@ import Development.Shake
 import Development.Shake.FilePath
 import Examples.Util
 import Control.Exception hiding (assert)
-import Control.Monad
-import Data.List
 import System.Directory as IO
 
 
@@ -72,12 +69,8 @@ main = shaken test $ \args obj -> do
 test build obj = do
     dir <- getCurrentDirectory
     let crash args parts = do
-            res <- try $ build $ "--quiet" : args
-            setCurrentDirectory dir
-            case res of
-                Left (err :: SomeException) -> let s = show err in forM_ parts $ \p ->
-                    assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
-                Right _ -> error "Expected an exception but succeeded"
+            assertException parts (build $ "--quiet" : args)
+                `finally` setCurrentDirectory dir
 
     crash ["changedir"] ["current directory has changed"]
     build ["cdir.1","cdir.2","-j1"]

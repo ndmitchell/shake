@@ -2,9 +2,6 @@
 
 module Examples.Test.Command(main) where
 
-import Control.Exception hiding (assert)
-import Control.Monad
-import Data.List
 import Development.Shake
 import Examples.Util
 
@@ -42,12 +39,7 @@ main = shaken test $ \args obj -> do
 
 
 test build obj = do
-    let crash args parts = do
-            res <- try $ build $ "--quiet" : args
-            case res of
-                Left (err :: SomeException) -> let s = show err in forM_ parts $ \p ->
-                    assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
-                Right _ -> error "Expected an exception but succeeded"
+    let crash args parts = assertException parts (build $ "--quiet" : args)
 
     build ["ghc-version"]
     assertContentsInfix (obj "ghc-version") "The Glorious Glasgow Haskell Compilation System"
