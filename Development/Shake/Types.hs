@@ -85,7 +85,7 @@ data ShakeOptions = ShakeOptions
     ,shakeLineBuffering :: Bool
         -- ^ Defaults to 'True'. Change 'stdout' and 'stderr' to line buffering while running Shake.
     ,shakeTimings :: Bool
-        -- ^ Default to 'False'. Print timing information for each stage at the end.
+        -- ^ Defaults to 'False'. Print timing information for each stage at the end.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
