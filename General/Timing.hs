@@ -1,5 +1,5 @@
 
-module Development.Shake.Timing(resetTimings, addTiming, printTimings) where
+module General.Timing(resetTimings, addTiming, printTimings) where
 
 import Control.Arrow
 import Data.IORef

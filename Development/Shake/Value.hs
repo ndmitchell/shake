@@ -9,7 +9,7 @@ module Development.Shake.Value(
     Witness, currentWitness, registerWitness
     ) where
 
-import Development.Shake.Binary
+import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Errors
 import Data.Typeable

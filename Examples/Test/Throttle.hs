@@ -2,7 +2,7 @@
 module Examples.Test.Throttle(main) where
 
 import Development.Shake
-import Development.Shake.General
+import General.Base
 import Development.Shake.FilePath
 import Examples.Util
 import Control.Monad

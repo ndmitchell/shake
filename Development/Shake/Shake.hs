@@ -3,7 +3,7 @@
 module Development.Shake.Shake(shake) where
 
 import Development.Shake.Types
-import Development.Shake.Timing
+import General.Timing
 import Development.Shake.Core
 
 import Development.Shake.Directory

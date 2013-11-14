@@ -45,8 +45,8 @@ import Development.Shake.Value
 import Development.Shake.Report
 import Development.Shake.Types
 import Development.Shake.Errors
-import Development.Shake.Timing
-import Development.Shake.General
+import General.Timing
+import General.Base
 
 
 ---------------------------------------------------------------------

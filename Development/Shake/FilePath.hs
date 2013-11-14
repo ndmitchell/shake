@@ -21,7 +21,7 @@ import System.FilePath.Posix hiding
     (normalise, (</>), combine
     ,searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
 import System.FilePath(searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
-import Development.Shake.General
+import General.Base
 import qualified System.FilePath as Native
 
 infixr 5  </>

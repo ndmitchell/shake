@@ -9,7 +9,7 @@ import Development.Shake.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
-import Development.Shake.Timing
+import General.Timing
 
 import Control.Arrow
 import Control.Concurrent

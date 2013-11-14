@@ -5,7 +5,7 @@ module Development.Shake.Task(
 
 import Control.Monad.IO.Class
 import Control.Concurrent
-import Development.Shake.General
+import General.Base
 import Data.Maybe
 import Data.List
 

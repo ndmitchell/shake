@@ -10,7 +10,7 @@ import Data.Maybe
 import System.Directory
 
 import Development.Shake.Core
-import Development.Shake.General
+import General.Base
 import Development.Shake.Classes
 import Development.Shake.File
 import Development.Shake.FilePattern

@@ -8,9 +8,9 @@ import Data.List
 import Data.Maybe
 import System.Environment
 import Development.Shake.Pool
-import Development.Shake.Timing
+import General.Timing
 import Development.Shake.FileTime
-import Development.Shake.General
+import General.Base
 import qualified Data.ByteString.Char8 as BS
 import Examples.Util(sleepFileTime, sleepFileTimeCalibrate)
 import Control.Concurrent

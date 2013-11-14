@@ -11,7 +11,7 @@ import Control.Monad.IO.Class
 import System.Directory
 
 import Development.Shake.Core
-import Development.Shake.General
+import General.Base
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FileTime

@@ -103,7 +103,6 @@ library
 
     other-modules:
         Development.Shake.Args
-        Development.Shake.Binary
         Development.Shake.ByteString
         Development.Shake.Core
         Development.Shake.Database
@@ -114,8 +113,6 @@ library
         Development.Shake.FilePattern
         Development.Shake.Files
         Development.Shake.FileTime
-        Development.Shake.General
-        Development.Shake.Intern
         Development.Shake.Oracle
         Development.Shake.Pool
         Development.Shake.Progress
@@ -125,9 +122,12 @@ library
         Development.Shake.Shake
         Development.Shake.Special
         Development.Shake.Storage
-        Development.Shake.Timing
         Development.Shake.Types
         Development.Shake.Value
+        General.Base
+        General.Binary
+        General.Intern
+        General.Timing
         Paths_shake
 
 

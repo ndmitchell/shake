@@ -27,7 +27,7 @@ import System.Process
 import Development.Shake.Core
 import Development.Shake.FilePath
 import Development.Shake.Types
-import Development.Shake.General
+import General.Base
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 

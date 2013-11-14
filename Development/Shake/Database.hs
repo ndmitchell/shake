@@ -12,15 +12,15 @@ module Development.Shake.Database(
     ) where
 
 import Development.Shake.Classes
-import Development.Shake.Binary
+import General.Binary
 import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Errors
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
-import Development.Shake.General
-import Development.Shake.Intern as Intern
+import General.Base
+import General.Intern as Intern
 
 import Control.Exception
 import Control.Monad

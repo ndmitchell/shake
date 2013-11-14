@@ -9,10 +9,10 @@ module Development.Shake.Storage(
     withStorage
     ) where
 
-import Development.Shake.Binary
-import Development.Shake.General
+import General.Binary
+import General.Base
 import Development.Shake.Types
-import Development.Shake.Timing
+import General.Timing
 
 import Control.Arrow
 import Control.Exception as E

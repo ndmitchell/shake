@@ -4,7 +4,7 @@ module Examples.Test.FilePath(main) where
 import Development.Shake.FilePath
 import qualified System.FilePath as Native
 import qualified System.FilePath.Posix as Posix
-import Development.Shake.General
+import General.Base
 import Examples.Util
 import Test.QuickCheck
 import Control.Monad

@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
-module Development.Shake.Binary(
+module General.Binary(
     BinaryWith(..), module Data.Binary
     ) where
 

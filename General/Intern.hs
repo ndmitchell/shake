@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses #-}
 
-module Development.Shake.Intern(
+module General.Intern(
     Intern, Id,
     empty, insert, add, lookup, toList, fromList
     ) where
 
-import Development.Shake.Binary
+import General.Binary
 import Development.Shake.Classes
 import Prelude hiding (lookup)
 import qualified Data.HashMap.Strict as Map

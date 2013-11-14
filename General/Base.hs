@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving, CPP #-}
 
-module Development.Shake.General(
+module General.Base(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
