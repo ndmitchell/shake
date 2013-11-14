@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #77, add shakeRunCommands and --skip-commands
     #67, add withVerbosity
     #51, add getShakeOptions
     Lots of Haddock improvements
