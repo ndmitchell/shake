@@ -5,9 +5,11 @@ module Examples.Test.Docs(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Examples.Util
+import Control.Monad
 import Data.Char
 import Data.List
 import Data.Maybe
+import System.Exit
 
 
 reps from to = map (\x -> if x == from then to else x)
@@ -21,7 +23,10 @@ main = shaken noTest $ \args obj -> do
     index *> \_ -> do
         xs <- getDirectoryFiles "Development" ["//*.hs"]
         need $ map ("Development" </>) xs
-        cmd "cabal haddock"
+        Exit exit <- cmd "runhaskell Setup.hs haddock"
+        when (exit /= ExitSuccess) $ do
+            () <- cmd "runhaskell Setup.hs configure"
+            cmd "runhaskell Setup.hs haddock"
 
     obj "Paths_shake.hs" *> \out -> do
         copyFile' "Paths.hs" out

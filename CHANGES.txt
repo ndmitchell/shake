@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #78, don't use cabal in the test suite
     #77, add shakeRunCommands and --skip-commands
     #67, add withVerbosity
     #51, add getShakeOptions
