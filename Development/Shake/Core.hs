@@ -496,10 +496,10 @@ putNormal = putWhen Normal
 putQuiet = putWhen Quiet
 
 
--- | Get the current verbosity level, as set by 'shakeVerbosity'. If you
+-- | Get the current verbosity level, originally set by 'shakeVerbosity'. If you
 --   want to output information to the console, you are recommended to use
 --   'putLoud' \/ 'putNormal' \/ 'putQuiet', which ensures multiple messages are
---   not interleaved.
+--   not interleaved. The verbosity can be modified locally by 'withVerbosity'.
 getVerbosity :: Action Verbosity
 getVerbosity = Action $ gets verbosity
 
