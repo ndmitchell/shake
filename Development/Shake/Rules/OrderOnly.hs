@@ -38,13 +38,13 @@ defaultRuleOrderOnly = defaultRule $ \(OrderOnlyQ x) -> Just $ do
 --   If they turn out to be real dependencies, you should add an explicit dependency afterwards.
 --
 -- @
--- \"file.o\" *> \\out -> do
---     'orderOnly' [\"foo.h\"]
---     () <- 'cmd' \"gcc -c file.c -o file.o -MMD -MF file.m\"
---     'neededMakefileDependencies' m
+-- \"source.o\" *> \\out -> do
+--     'orderOnly' [\"header.h\"]
+--     () <- 'cmd' \"gcc -c source.c -o source.o -MMD -MF source.m\"
+--     'neededMakefileDependencies' \"source.m\"
 -- @
 --
---   If @foo.h@ is included by @file.c@ then the call to 'needMakefileDependencies' will cause
+--   If @header.h@ is included by @source.c@ then the call to 'needMakefileDependencies' will cause
 --   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
 --   and you will have lost some opportunity for parallelism.
 orderOnly :: [FilePath] -> Action ()

@@ -51,6 +51,7 @@ main = shaken noTest $ \args obj -> do
             ,"import Data.Monoid"
             ,"import Development.Shake"
             ,"import Development.Shake.Classes"
+            ,"import Development.Shake.Util"
             ,"import System.Console.GetOpt"
             ,"import System.Exit"
             ,"import System.IO"
@@ -159,7 +160,7 @@ whitelist x | elem x $ words $
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "NoProgress Error " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out " ++
-    "/usr/special /usr/special/userbinary $CFLAGS -O2 " ++
+    "/usr/special /usr/special/userbinary $CFLAGS -O2 header.h source.c " ++
     "-threaded -rtsopts -I0 Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
     = True
 whitelist x = x `elem`
