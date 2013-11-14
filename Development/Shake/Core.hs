@@ -12,7 +12,7 @@ module Development.Shake.Core(
     ShakeValue,
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
-    Action, actionOnException, actionFinally, apply, apply1, traced,
+    Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
     getVerbosity, putLoud, putNormal, putQuiet, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     unsafeExtraThread,
@@ -221,6 +221,7 @@ data SAction = SAction
     ,ruleinfo :: Map.HashMap TypeRep RuleInfo
     ,output :: Verbosity -> String -> IO ()
     ,verbosity :: Verbosity
+    ,opts :: ShakeOptions
     ,diagnostic :: String -> IO ()
     ,lint :: String -> IO ()
     ,after :: IORef [IO ()]
@@ -310,7 +311,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = SAction database pool start ruleinfo output shakeVerbosity diagnostic lint after emptyStack [] 0 [] Nothing
+                    let s0 = SAction database pool start ruleinfo output shakeVerbosity opts diagnostic lint after emptyStack [] 0 [] Nothing
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
 
                 when shakeLint $ do
@@ -457,6 +458,11 @@ applyKeyValue ks = do
 --   use 'apply' to allow parallelism.
 apply1 :: Rule key value => key -> Action value
 apply1 = fmap head . apply . return
+
+
+-- | Get the initial 'ShakeOptions'.
+getShakeOptions :: Action ShakeOptions
+getShakeOptions = Action $ gets opts
 
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
