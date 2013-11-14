@@ -29,7 +29,7 @@ test build obj = do
     build ["foo.txt","--sleep"]
     assertContents (obj "foo.txt") "in"
     writeFile (obj "bar.in") "out"
-    build ["foo.txt"]
+    build ["foo.txt","--sleep"]
     assertContents (obj "foo.txt") "out"
 
     writeFile (obj "baz.txt") ""
