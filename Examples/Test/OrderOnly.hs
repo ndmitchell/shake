@@ -26,7 +26,7 @@ main = shaken test $ \args obj -> do
 
 test build obj = do
     writeFile (obj "bar.in") "in"
-    build ["foo.txt"]
+    build ["foo.txt","--sleep"]
     assertContents (obj "foo.txt") "in"
     writeFile (obj "bar.in") "out"
     build ["foo.txt"]
@@ -34,7 +34,7 @@ test build obj = do
 
     writeFile (obj "baz.txt") ""
     writeFile (obj "bar.in") "in"
-    build ["baz.txt"]
+    build ["baz.txt","--sleep"]
     assertContents (obj "baz.txt") "x"
     writeFile (obj "bar.in") "out"
     build ["baz.txt"]
