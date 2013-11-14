@@ -93,8 +93,11 @@ data Result
 
 
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName opts results exe args = verboser $ tracer $ commandExplicitIO funcName opts results exe args
+commandExplicit funcName opts results exe args = skipper $ verboser $ tracer $ commandExplicitIO funcName opts results exe args
     where
+        skipper act = do
+            o <- getShakeOptions
+            if null results && not (shakeRunCommands o) then return [] else act
         verboser act = do
             v <- getVerbosity
             putLoud $ saneCommandForUser exe args
