@@ -48,7 +48,8 @@ test build obj = do
         let ext x = obj $ decode pre <.> x
         res <- try $ writeFile (ext "source") "x"
         case res of
-            Left (err :: SomeException) -> putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
+            Left (err :: SomeException) ->
+                putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
             Right _ -> do
                 build [pre,pre <.> "out","--sleep"]
                 assertContents (ext "out") $ "x" ++ "False"
