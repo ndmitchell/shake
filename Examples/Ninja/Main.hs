@@ -18,7 +18,9 @@ main = shaken test $ \args obj -> do
 
 
 test build obj = do
-    let run xs = build $ map ('@':) $ words xs
+    let run xs = build $ "--exception" : map ('@':) (words xs)
+    let runFail xs bad = assertException [bad] $ run $ xs ++ " --quiet"
+
     build ["clean"]
     run "-f../../Examples/Ninja/test1.ninja"
     assertExists $ obj "out1.txt"
@@ -46,3 +48,7 @@ test build obj = do
 
     run "-f../../Examples/Ninja/test5.ninja"
     assertExists $ obj "output file"
+
+    runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "'needed' file required rebuilding"
+    run "-f../../Examples/Ninja/lint.ninja good --lint"
+    runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "not a pre-dependency"
