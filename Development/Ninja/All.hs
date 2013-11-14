@@ -8,6 +8,7 @@ import Development.Ninja.Parse
 import Development.Shake hiding (Rule, addEnv)
 import Development.Shake.ByteString
 import Development.Shake.Rules.File
+import Development.Shake.Rules.OrderOnly
 import General.Timing
 import qualified Data.ByteString.Char8 as BS
 
@@ -60,7 +61,8 @@ quote x | BS.any isSpace x = let q = BS.singleton '\"' in BS.concat [q,x,q]
 
 build :: Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
 build phonys rules pools out Build{..} = do
-    needBS $ map normalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit ++ depsOrderOnly
+    needBS $ map normalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
+    orderOnlyBS $ map normalise $ concatMap (resolvePhony phonys) depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
