@@ -5,6 +5,7 @@ module Examples.Test.Unicode(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Examples.Util
+import Control.Exception
 import Control.Monad
 import System.Directory(createDirectoryIfMissing)
 
@@ -37,19 +38,23 @@ main = shaken test $ \xs obj -> do
         writeFile' m2 $ show b
 
 
-test build obj = {- handle (\e -> print (e :: SomeException) >> error "dead") $ -} do
+test build obj = do
     build ["clean"]
+    -- Useful, if the error message starts crashing...
     -- IO.hSetEncoding IO.stdout IO.char8
     -- IO.hSetEncoding IO.stderr IO.char8
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
         createDirectoryIfMissing True $ obj ""
         let ext x = obj $ decode pre <.> x
-        writeFile (ext "source") "x"
-        build [pre,pre <.> "out","--sleep"]
-        assertContents (ext "out") $ "x" ++ "False"
-        writeFile (ext "source") "y"
-        build [pre,pre <.> "out","--sleep"]
-        assertContents (ext "out") $ "y" ++ "False"
-        writeFile (ext "exist") ""
-        build [pre,pre <.> "out"]
-        assertContents (ext "out") $ "y" ++ "True"
+        res <- try $ writeFile (ext "source") "x"
+        case res of
+            Left (err :: SomeException) -> putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
+            Right _ -> do
+                build [pre,pre <.> "out","--sleep"]
+                assertContents (ext "out") $ "x" ++ "False"
+                writeFile (ext "source") "y"
+                build [pre,pre <.> "out","--sleep"]
+                assertContents (ext "out") $ "y" ++ "False"
+                writeFile (ext "exist") ""
+                build [pre,pre <.> "out"]
+                assertContents (ext "out") $ "y" ++ "True"

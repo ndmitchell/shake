@@ -3,6 +3,7 @@ module Examples.Test.FilePath(main) where
 
 import Development.Shake.FilePath
 import qualified System.FilePath as Native
+import qualified System.FilePath.Posix as Posix
 import Development.Shake.General
 import Examples.Util
 import Test.QuickCheck
@@ -82,3 +83,6 @@ test build obj = do
     combine "aaa/bbb" "ccc" === "aaa/bbb/ccc"
     combine "aaa/bbb" "./ccc" === "aaa/bbb/ccc"
     combine "aaa/bbb" "../ccc" === "aaa/ccc"
+
+    searchPathSeparator === Native.searchPathSeparator
+    pathSeparators === Posix.pathSeparators

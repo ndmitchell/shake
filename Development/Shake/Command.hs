@@ -6,6 +6,7 @@ module Development.Shake.Command(
     command, command_, cmd,
     Stdout(..), Stderr(..), Exit(..),
     CmdResult, CmdOption(..),
+    addPath, addEnv,
     ) where
 
 import Control.Arrow
@@ -14,8 +15,11 @@ import Control.DeepSeq
 import Control.Exception as C
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.Char
 import Data.Either
+import Data.List
 import Foreign.C.Error
+import System.Environment
 import System.Exit
 import System.IO
 import System.Process
@@ -23,6 +27,7 @@ import System.Process
 import Development.Shake.Core
 import Development.Shake.FilePath
 import Development.Shake.Types
+import Development.Shake.General
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 
@@ -34,6 +39,7 @@ import GHC.IO.Exception (IOErrorType(..), IOException(..))
 data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
+                            --   Use 'addPath' to modify the @$PATH@ variable, or 'addEnv' to modify other variables.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default no @stdin@ is given.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default streams use text encoding.
@@ -42,6 +48,42 @@ data CmdOption
     | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required.
     | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required.
       deriving (Eq,Ord,Show)
+
+
+-- | Produce a 'CmdOption' of value 'Env' that is the current environment, plus a
+--   prefix and suffix to the @$PATH@ environment variable. For example:
+--
+-- @
+-- opt <- 'addPath' [\"\/usr\/special\"] []
+-- 'cmd' opt \"userbinary --version\"
+-- @
+--
+--   Would prepend @\/usr\/special@ to the current @$PATH@, and the command would pick
+--   @\/usr\/special\/userbinary@, if it exists. To add other variables see 'addEnv'.
+addPath :: MonadIO m => [String] -> [String] -> m CmdOption
+addPath pre post = do
+    args <- liftIO getEnvironment
+    let (path,other) = partition ((== "PATH") . (if isWindows then map toUpper else id) . fst) args
+    return $ Env $
+        [("PATH",intercalate [searchPathSeparator] $ pre ++ post) | null post] ++
+        [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
+        other
+
+-- | Produce a 'CmdOption' of value 'Env' that is the current environment, plus the argument
+--   environment variables. For example:
+--
+-- @
+-- opt <- 'addEnv' [(\"CFLAGS\",\"-O2\")]
+-- 'cmd' opt \"gcc -c main.c\"
+-- @
+--
+--   Would add the environment variable @$CFLAGS@ with value @-O2@. If the variable @$CFLAGS@
+--   was already defined it would be overwritten. If you wish to modify @$PATH@ see 'addPath'.
+addEnv :: MonadIO m => [(String, String)] -> m CmdOption
+addEnv extra = do
+    args <- liftIO getEnvironment
+    return $ Env $ extra ++ filter (\(a,b) -> a `notElem` map fst extra) args
+
 
 data Result
     = ResultStdout String
@@ -240,7 +282,7 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) wher
 
 
 -- | Execute a system command. Before running 'command' make sure you 'Development.Shake.need' any files
---   that are required by the command.
+--   that are used by the command.
 --
 --   This function takes a list of options (often just @[]@, see 'CmdOption' for the available
 --   options), the name of the executable (either a full name, or a program on the @$PATH@) and
@@ -277,7 +319,8 @@ command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
 type a :-> t = a
 
 
--- | A variable arity version of 'command'.
+-- | Execute a system command. Before running 'cmd' make sure you 'Development.Shake.need' any files
+--   that are used by the command.
 --
 -- * @String@ arguments are treated as whitespace separated arguments.
 --
@@ -300,7 +343,7 @@ type a :-> t = a
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
 --   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature.
 --
---   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and no output will be written.
+--   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
 

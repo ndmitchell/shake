@@ -9,14 +9,18 @@
 --
 -- * When combining 'FilePath' values with '</>' we squash any @\/.\/@ components.
 module Development.Shake.FilePath(
-    module System.FilePath.Posix,
+    module System.FilePath.Posix, -- apart from what I override and search path stuff
+    module System.FilePath, -- only search-path stuff
     dropDirectory1, takeDirectory1, normalise,
     (-<.>),
     toNative, (</>), combine,
     exe
     ) where
 
-import System.FilePath.Posix hiding (normalise, (</>), combine)
+import System.FilePath.Posix hiding
+    (normalise, (</>), combine
+    ,searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
+import System.FilePath(searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
 import Development.Shake.General
 import qualified System.FilePath as Native
 

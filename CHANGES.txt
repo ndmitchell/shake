@@ -2,6 +2,11 @@ Changelog for Shake
 
     #67, add withVerbosity
     #51, add getShakeOptions
+    Lots of Haddock improvements
+    Deprecate system', use cmd or command instead
+    #53, add addPath and addEnv to modify environment variables
+    Make all search path things return the native separators
+    #73, if Haskell can't write a unicode filename, skip the test
     Print out the entire database in diagnostics mode
     Rewrite database writes, old code could break metadata on error
     #25, optimise building with Ninja

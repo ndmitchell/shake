@@ -47,6 +47,7 @@ data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
         -- ^ Defaults to @.shake@. The prefix of the filename used for storing Shake metadata files.
         --   All metadata files will be named @'shakeFiles'./extension/@, for some @/extension/@.
+        --   If the 'shakeFiles' directory does not exist it will be created.
     ,shakeThreads :: Int
         -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.
         --   For many build systems, a number equal to or slightly less than the number of physical processors
@@ -156,7 +157,7 @@ data Verbosity
     = Silent -- ^ Don't print any messages.
     | Quiet  -- ^ Only print essential messages, typically errors.
     | Normal -- ^ Print errors and @# /command-name/ /file-name/@ when running a 'Development.Shake.traced' command.
-    | Loud   -- ^ Print errors and full command lines when running a 'Development.Shake.system'' command.
+    | Loud   -- ^ Print errors and full command lines when running a 'Development.Shake.command' or 'Development.Shake.cmd' command.
     | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)

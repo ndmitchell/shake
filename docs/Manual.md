@@ -384,7 +384,7 @@ Using Shake we can depened on arbitrary extra information, such as the version o
 
 This rule has the action `alwaysRerun` meaning it will be run in every execution that requires it, so the `gcc --version` is always checked. This rule defines no dependencies (no `need` actions), so if it lacked `alwaysRerun`, this rule would only be run when `gcc.version` was missing. The function then runs `gcc --version` storing the output in `stdout`. Finally, it calls `writeFileChanged` which writes `stdout` to `out`, but only if the contents have changed. The use of `writeFileChanged` is important otherwise `gcc.version` would change in every run. To use this rule, we `need ["gcc.version"]` in every rule that calls `gcc`.
 
-Shake also contains a feature called "oracles", which lets you do the same thing without the use of a file, which is sometimes more convenient. Interested reads should look at the function documentation list for `addOracle`.
+Shake also contains a feature called "oracles", which lets you do the same thing without the use of a file, which is sometimes more convenient. Interested readers should look at the function documentation list for `addOracle`.
 
 #### Resources
 

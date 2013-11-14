@@ -7,7 +7,7 @@ module Development.Shake.General(
     Duration, duration, Time, offsetTime, sleep,
     isWindows,
     modifyIORef'', writeIORef'',
-    whenJust, loop, whileM,
+    whenJust, loop, whileM, partitionM, concatMapM,
     fastNub, showQuote,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
@@ -163,6 +163,17 @@ whileM :: Monad m => m Bool -> m ()
 whileM act = do
     b <- act
     when b $ whileM act
+
+concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
+concatMapM f xs = liftM concat $ mapM f xs
+
+partitionM :: Monad m => (a -> m Bool) -> [a] -> m ([a], [a])
+partitionM f [] = return ([], [])
+partitionM f (x:xs) = do
+    t <- f x
+    (a,b) <- partitionM f xs
+    return $ if t then (x:a,b) else (a,x:b)
+
 
 
 ---------------------------------------------------------------------
