@@ -7,6 +7,7 @@ import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule, addEnv)
 import Development.Shake.ByteString
+import Development.Shake.Errors
 import Development.Shake.Rules.File
 import Development.Shake.Rules.OrderOnly
 import General.Timing
@@ -14,6 +15,7 @@ import qualified Data.ByteString.Char8 as BS
 
 import System.Directory
 import qualified Data.HashMap.Strict as Map
+import qualified Data.HashSet as Set
 import Control.Arrow
 import Control.Monad
 import Data.List
@@ -25,6 +27,7 @@ runNinja file args = do
     addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file
     return $ do
+        needDeps <- return $ needDeps ninja -- partial application
         phonys <- return $ Map.fromList phonys
         singles <- return $ Map.fromList $ map (first normalise) singles
         multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map normalise) multiples, x <- xs]
@@ -38,10 +41,10 @@ runNinja file args = do
             else Map.keys singles ++ Map.keys multiples
 
         (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
-            build phonys rules pools out2 $ snd $ multiples Map.! head out2
+            build needDeps phonys rules pools out2 $ snd $ multiples Map.! head out2
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
-            build phonys rules pools [out2] $ singles Map.! out2
+            build needDeps phonys rules pools [out2] $ singles Map.! out2
 
 
 resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
@@ -59,8 +62,8 @@ quote x | BS.any isSpace x = let q = BS.singleton '\"' in BS.concat [q,x,q]
         | otherwise = x
 
 
-build :: Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
-build phonys rules pools out Build{..} = do
+build :: (Build -> [Str] -> Action ()) -> Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
+build needDeps phonys rules pools out build@Build{..} = do
     needBS $ map normalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
     orderOnlyBS $ map normalise $ concatMap (resolvePhony phonys) depsOrderOnly
     case Map.lookup ruleName rules of
@@ -90,14 +93,54 @@ build phonys rules pools out Build{..} = do
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
-                    neededBS $ map (normalise . BS.pack) $ parseShowIncludes stdout
+                    needDeps build $ map (normalise . BS.pack) $ parseShowIncludes stdout
                  else
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile
-                    neededBS $ concatMap snd $ parseMakefile depsrc
+                    needDeps build $ concatMap snd $ parseMakefile depsrc
                     when (deps == "gcc") $ liftIO $ removeFile depfile
+
+
+needDeps :: Ninja -> Build -> [Str] -> Action ()
+needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
+    opts <- getShakeOptions
+    if not $ shakeLint opts then needBS xs else do
+        neededBS xs
+        -- now try and statically validate needed will never fail
+        -- first find which dependencies are generated files
+        xs <- return $ filter (`Map.member` builds) xs
+        -- now try and find them as dependencies
+        let bad = xs `difference` allDependencies build
+        case bad of
+            [] -> return ()
+            x:_ -> errorStructured
+                "Lint checking error - file in deps is generated and not a pre-dependency"
+                [("File", Just $ BS.unpack x)]
+                ""
+    where
+        builds :: Map.HashMap FileStr Build
+        builds = Map.fromList $ singles ++ [(x,y) | (xs,y) <- multiples, x <- xs]
+
+        -- do list difference, assuming a small initial set, most of which occurs early in the list
+        difference :: [Str] -> [Str] -> [Str]
+        difference [] ys = []
+        difference xs ys = f (Set.fromList xs) ys
+            where
+                f xs [] = Set.toList xs
+                f xs (y:ys) | y `Set.member` xs = if Set.null xs2 then [] else f xs2 ys
+                    where xs2 = Set.delete y xs
+                f xs (y:ys) = f xs ys
+
+        -- find all dependencies of a rule, no duplicates, with all dependencies of this rule listed first
+        allDependencies :: Build -> [FileStr]
+        allDependencies rule = f Set.empty [] [rule]
+            where
+                f seen [] [] = []
+                f seen [] (x:xs) = f seen (depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
+                f seen (x:xs) rest | x `Set.member` seen = f seen xs rest
+                                   | otherwise = x : f (Set.insert x seen) xs ((builds Map.! x) : rest)
 
 
 applyRspfile :: Env Str Str -> Action a -> Action a
