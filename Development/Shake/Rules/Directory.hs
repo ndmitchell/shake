@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards #-}
 
 -- | Both System.Directory and System.Environment wrappers
-module Development.Shake.Directory(
+module Development.Shake.Rules.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv,

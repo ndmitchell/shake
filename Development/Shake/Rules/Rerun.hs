@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
-module Development.Shake.Rerun(
+module Development.Shake.Rules.Rerun(
     defaultRuleRerun, alwaysRerun
     ) where
 

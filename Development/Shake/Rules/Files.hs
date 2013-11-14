@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
-module Development.Shake.Files(
+module Development.Shake.Rules.Files(
     (?>>), (*>>)
     ) where
 
@@ -12,7 +12,7 @@ import System.Directory
 import Development.Shake.Core
 import General.Base
 import Development.Shake.Classes
-import Development.Shake.File
+import Development.Shake.Rules.File
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
 

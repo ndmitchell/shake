@@ -14,7 +14,7 @@ import System.Exit
 import System.IO
 
 import Development.Shake.Core
-import Development.Shake.File
+import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Types
 

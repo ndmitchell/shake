@@ -5,7 +5,7 @@ module Development.Shake.Util(
     ) where
 
 import Development.Shake
-import Development.Shake.File
+import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS
 import qualified Development.Shake.ByteString as BS
 import Control.Arrow

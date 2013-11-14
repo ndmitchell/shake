@@ -6,9 +6,9 @@ import Development.Shake.Types
 import General.Timing
 import Development.Shake.Core
 
-import Development.Shake.Directory
-import Development.Shake.File
-import Development.Shake.Rerun
+import Development.Shake.Rules.Directory
+import Development.Shake.Rules.File
+import Development.Shake.Rules.Rerun
 
 
 -- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".

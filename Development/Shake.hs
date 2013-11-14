@@ -109,7 +109,7 @@ module Development.Shake(
     removeFiles, removeFilesAfter,
     -- * File rules
     need, want, (*>), (**>), (?>), phony, (~>),
-    module Development.Shake.Files,
+    module Development.Shake.Rules.Files,
     FilePattern, (?==),
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
@@ -140,9 +140,9 @@ import Development.Shake.Args
 import Development.Shake.Shake
 
 import Development.Shake.Command
-import Development.Shake.Directory
-import Development.Shake.File
+import Development.Shake.Rules.Directory
+import Development.Shake.Rules.File
 import Development.Shake.FilePattern
-import Development.Shake.Files
-import Development.Shake.Oracle
-import Development.Shake.Rerun
+import Development.Shake.Rules.Files
+import Development.Shake.Rules.Oracle
+import Development.Shake.Rules.Rerun

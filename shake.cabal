@@ -107,18 +107,18 @@ library
         Development.Shake.Core
         Development.Shake.Database
         Development.Shake.Derived
-        Development.Shake.Directory
         Development.Shake.Errors
-        Development.Shake.File
         Development.Shake.FilePattern
-        Development.Shake.Files
         Development.Shake.FileTime
-        Development.Shake.Oracle
         Development.Shake.Pool
         Development.Shake.Progress
         Development.Shake.Report
-        Development.Shake.Rerun
         Development.Shake.Resource
+        Development.Shake.Rules.Directory
+        Development.Shake.Rules.File
+        Development.Shake.Rules.Files
+        Development.Shake.Rules.Oracle
+        Development.Shake.Rules.Rerun
         Development.Shake.Shake
         Development.Shake.Special
         Development.Shake.Storage

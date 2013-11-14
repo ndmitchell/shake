@@ -7,7 +7,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 #endif
 
-module Development.Shake.Oracle(
+module Development.Shake.Rules.Oracle(
     addOracle, askOracle, askOracleWith
     ) where
 

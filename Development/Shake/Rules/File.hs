@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
-module Development.Shake.File(
+module Development.Shake.Rules.File(
     need, needBS, want,
     defaultRuleFile,
     (*>), (**>), (?>), phony, (~>),

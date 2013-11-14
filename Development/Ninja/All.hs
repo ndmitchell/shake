@@ -7,7 +7,7 @@ import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (Rule, addEnv)
 import Development.Shake.ByteString
-import Development.Shake.File
+import Development.Shake.Rules.File
 import General.Timing
 import qualified Data.ByteString.Char8 as BS
 

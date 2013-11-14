@@ -5,7 +5,7 @@ module Development.Shake.Args(shakeOptDescrs, shakeArgs, shakeArgsWith) where
 import Paths_shake
 import Development.Shake.Types
 import Development.Shake.Core
-import Development.Shake.File
+import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
