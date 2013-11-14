@@ -220,7 +220,6 @@ data SAction = SAction
     ,timestamp :: IO Time
     ,ruleinfo :: Map.HashMap TypeRep RuleInfo
     ,output :: Verbosity -> String -> IO ()
-    ,verbosity :: Verbosity
     ,opts :: ShakeOptions
     ,diagnostic :: String -> IO ()
     ,lint :: String -> IO ()
@@ -228,6 +227,7 @@ data SAction = SAction
     -- stack variables
     ,stack :: Stack
     -- local variables
+    ,verbosity :: Verbosity
     ,depends :: [Depends] -- built up in reverse
     ,discount :: !Duration
     ,traces :: [Trace] -- in reverse
@@ -311,7 +311,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = SAction database pool start ruleinfo output shakeVerbosity opts diagnostic lint after emptyStack [] 0 [] Nothing
+                    let s0 = SAction database pool start ruleinfo output opts diagnostic lint after emptyStack shakeVerbosity [] 0 [] Nothing
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
 
                 when shakeLint $ do
@@ -436,7 +436,7 @@ applyKeyValue ks = do
     s <- Action State.get
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
-            let s2 = s{depends=[], stack=stack, discount=0, traces=[]}
+            let s2 = s{verbosity=shakeVerbosity $ opts s, depends=[], stack=stack, discount=0, traces=[]}
             let top = topStack stack
             lint s $ "before building " ++ top
             (dur,(res,s2)) <- duration $ runAction s2 $ do
