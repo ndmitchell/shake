@@ -460,7 +460,7 @@ apply1 :: Rule key value => key -> Action value
 apply1 = fmap head . apply . return
 
 
--- | Get the initial 'ShakeOptions'.
+-- | Get the initial 'ShakeOptions', these will not change during the build process.
 getShakeOptions :: Action ShakeOptions
 getShakeOptions = Action $ gets opts
 
@@ -504,6 +504,8 @@ getVerbosity = Action $ gets verbosity
 
 
 -- | Run an action with a particular verbosity level.
+--   Will not update the 'shakeVerbosity' returned by 'getShakeOptions' and will
+--   not have any impact on 'Diagnostic' tracing.
 withVerbosity :: Verbosity -> Action a -> Action a
 withVerbosity new act = do
     old <- Action $ State.gets verbosity
@@ -515,6 +517,8 @@ withVerbosity new act = do
 
 -- | Run an action with 'Quiet' verbosity, in particular messages produced by 'traced'
 --   (including from 'Development.Shake.cmd' or 'Development.Shake.command') will not be printed to the screen.
+--   Will not update the 'shakeVerbosity' returned by 'getShakeOptions' and will
+--   not turn off any 'Diagnostic' tracing.
 quietly :: Action a -> Action a
 quietly = withVerbosity Quiet
 
