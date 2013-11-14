@@ -234,4 +234,5 @@ test-suite shake-test
         Examples.Test.Throttle
         Examples.Test.Unicode
         Examples.Test.Util
+        Examples.Test.Verbosity
         Start

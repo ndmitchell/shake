@@ -41,6 +41,7 @@ import qualified Examples.Test.Resources as Resources
 import qualified Examples.Test.Throttle as Throttle
 import qualified Examples.Test.Unicode as Unicode
 import qualified Examples.Test.Util as Util
+import qualified Examples.Test.Verbosity as Verbosity
 
 import qualified Start as Start
 
@@ -56,7 +57,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main
-        ,"throttle" * Throttle.main]
+        ,"throttle" * Throttle.main, "verbosity" * Verbosity.main]
     where (*) = (,)
 
 
