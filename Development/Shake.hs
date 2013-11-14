@@ -110,6 +110,7 @@ module Development.Shake(
     -- * File rules
     need, want, (*>), (**>), (?>), phony, (~>),
     module Development.Shake.Rules.Files,
+    needed,
     FilePattern, (?==),
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #76, add needed, to assert a need doesn't rebuild
     #78, don't use cabal in the test suite
     #77, add shakeRunCommands and --skip-commands
     #67, add withVerbosity

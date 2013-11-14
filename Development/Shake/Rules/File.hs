@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Rules.File(
-    need, needBS, want,
+    need, needBS, needed, neededBS, want,
     defaultRuleFile,
     (*>), (**>), (?>), phony, (~>),
     newCache, newCacheIO
@@ -19,7 +19,10 @@ import General.Base
 import Development.Shake.Classes
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
+import Development.Shake.Types
+import Development.Shake.Errors
 
+import Data.Maybe
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
 
@@ -120,6 +123,36 @@ need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
+
+
+-- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
+--   Used for adding dependencies on files that have already been used in this rule.
+needed :: [FilePath] -> Action ()
+needed xs = do
+    opts <- getShakeOptions
+    if not $ shakeLint opts then need xs else neededCheck $ map packU xs
+
+
+neededBS :: [BS.ByteString] -> Action ()
+neededBS xs = do
+    opts <- getShakeOptions
+    if not $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
+
+
+neededCheck :: [BSU] -> Action ()
+neededCheck xs = do
+    pre <- liftIO $ mapM getModTimeMaybe xs
+    post <- apply $ map FileQ xs :: Action [FileA]
+    let bad = [ (x, if isJust a then "File change" else "File created")
+              | (x, a, FileA b) <- zip3 xs pre post, Just b /= a]
+    case bad of
+        [] -> return ()
+        (file,msg):_ -> errorStructured
+            "Lint checking error - 'needed' file required rebuilding"
+            [("File", Just $ unpackU file)
+            ,("Error",Just msg)]
+            ""
+
 
 -- | Require that the argument files are built by the rules, used to specify the target.
 --
