@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.10.9
     #76, add Ninja specific lint checking
     #75, add orderOnly dependencies
     #76, add needed, to assert a need doesn't rebuild
