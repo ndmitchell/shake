@@ -41,6 +41,7 @@ extra-source-files:
     Examples/Tar/list.txt
     Examples/Ninja/*.ninja
     Paths.hs
+    CHANGES.txt
 
 data-files:
     html/jquery.flot.js
