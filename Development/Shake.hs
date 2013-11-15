@@ -28,7 +28,15 @@
 --   Finally we call the @tar@ program. If either @result.txt@ changes, or any of the files listed by @result.txt@
 --   change, then @result.tar@ will be rebuilt.
 --
---   The theory behind Shake is described in an ICFP 2012 paper, Shake Before Building -- Replacing Make with Haskell
+--   To find out more:
+--
+-- * The user manual contains a longer example and background information on how to use Shake
+--   <https://github.com/ndmitchell/shake/blob/master/docs/Manual.md#readme>.
+--
+-- * The home page has links to additional information <https://github.com/ndmitchell/shake#readme>, including
+--   a mailing list.
+--
+-- * The theory behind Shake is described in an ICFP 2012 paper, /Shake Before Building -- Replacing Make with Haskell/
 --   <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf>. The associated talk
 --   forms a short overview of Shake <http://www.youtube.com/watch?v=xYCPpXVlqFM>.
 --

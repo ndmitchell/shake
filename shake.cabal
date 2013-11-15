@@ -13,32 +13,24 @@ description:
     Shake is a Haskell library for writing build systems - designed as a
     replacement for @make@. See "Development.Shake" for an introduction,
     including an example. Further examples are included in the Cabal tarball,
-    under the @Examples@ directory.
+    under the @Examples@ directory. The homepage contains links to a user
+    manual, an academic paper and further information:
+    <https://github.com/ndmitchell/shake>
     .
     To use Shake the user writes a Haskell program
     that imports "Development.Shake", defines some build rules, and calls
-    the 'Development.Shake.shake' function. Thanks to do notation and infix
+    the 'Development.Shake.shakeArgs' function. Thanks to do notation and infix
     operators, a simple Shake build system
     is not too dissimilar from a simple Makefile. However, as build systems
     get more complex, Shake is able to take advantage of the excellent
     abstraction facilities offered by Haskell and easily support much larger
-    projects.
-    .
-    The Shake library provides all the standard features available in other
+    projects. The Shake library provides all the standard features available in other
     build systems, including automatic parallelism and minimal rebuilds.
-    Shake provides highly accurate dependency tracking, including seamless
+    Shake also provides more accurate dependency tracking, including seamless
     support for generated files, and dependencies on system information
-    (i.e. compiler version). Shake can produce profile reports, indicating
-    which files and take longest to build, and providing an analysis of the
-    parallelism.
-    .
-    The theory behind Shake is described in an ICFP 2012 paper,
-    Shake Before Building -- Replacing Make with Haskell
-    <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf>.
-    The associated talk forms a short overview of Shake
-    <http://www.youtube.com/watch?v=xYCPpXVlqFM>.
 homepage:           http://community.haskell.org/~ndm/shake/
 stability:          Beta
+    (e.g. compiler version).
 extra-source-files:
     Examples/C/constants.c
     Examples/C/constants.h
