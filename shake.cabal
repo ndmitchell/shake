@@ -28,7 +28,6 @@ description:
     build systems, including automatic parallelism and minimal rebuilds.
     Shake also provides more accurate dependency tracking, including seamless
     support for generated files, and dependencies on system information
-stability:          Beta
     (e.g. compiler version).
 homepage:           https://github.com/ndmitchell/shake
 extra-source-files:
