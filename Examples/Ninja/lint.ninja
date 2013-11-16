@@ -9,5 +9,5 @@ rule run
 build good: run || good.gen bad.gen
 build good.gen: gen
 
-build bad: run
+build bad: run | input
 build bad.gen: gen

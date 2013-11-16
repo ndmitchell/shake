@@ -49,6 +49,7 @@ test build obj = do
     run "-f../../Examples/Ninja/test5.ninja"
     assertExists $ obj "output file"
 
+    writeFile (obj "input") ""
     runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "'needed' file required rebuilding"
     run "-f../../Examples/Ninja/lint.ninja good --lint"
     runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "not a pre-dependency"
