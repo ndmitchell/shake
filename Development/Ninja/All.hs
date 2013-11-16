@@ -18,6 +18,7 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
 import Control.Arrow
 import Control.Monad
+import Data.Maybe
 import Data.List
 import Data.Char
 
@@ -140,7 +141,7 @@ needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
                 f seen [] [] = []
                 f seen [] (x:xs) = f seen (map normalise $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
                 f seen (x:xs) rest | x `Set.member` seen = f seen xs rest
-                                   | otherwise = x : f (Set.insert x seen) xs ((builds Map.! x) : rest)
+                                   | otherwise = x : f (Set.insert x seen) xs (maybeToList (Map.lookup x builds) ++ rest)
 
 
 applyRspfile :: Env Str Str -> Action a -> Action a
