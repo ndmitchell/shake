@@ -138,7 +138,7 @@ needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
         allDependencies rule = f Set.empty [] [rule]
             where
                 f seen [] [] = []
-                f seen [] (x:xs) = f seen (depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
+                f seen [] (x:xs) = f seen (map normalise $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
                 f seen (x:xs) rest | x `Set.member` seen = f seen xs rest
                                    | otherwise = x : f (Set.insert x seen) xs ((builds Map.! x) : rest)
 
