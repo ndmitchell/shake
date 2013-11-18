@@ -36,7 +36,7 @@ runNinja file args = do
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        want $ map (BS.unpack . normalise) $ concatMap (resolvePhony phonys) $
+        action $ needBS $ map normalise $ concatMap (resolvePhony phonys) $
             if not $ null args then map BS.pack args
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
