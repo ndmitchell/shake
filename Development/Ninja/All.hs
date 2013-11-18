@@ -93,7 +93,7 @@ build needDeps phonys rules pools out build@Build{..} = do
 
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
-                    Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
+                    Stdout stdout <- withPool $ command [Shell] commandline []
                     needDeps build $ map (normalise . BS.pack) $ parseShowIncludes stdout
                  else
                     withPool $ command_ [Shell] commandline []
