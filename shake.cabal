@@ -30,6 +30,7 @@ description:
     support for generated files, and dependencies on system information
     (e.g. compiler version).
 homepage:           https://github.com/ndmitchell/shake
+tested-with:        GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
 extra-source-files:
     Examples/C/constants.c
     Examples/C/constants.h
