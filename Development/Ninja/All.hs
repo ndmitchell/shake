@@ -11,6 +11,7 @@ import Development.Shake.Errors
 import Development.Shake.Rules.File
 import Development.Shake.Rules.OrderOnly
 import General.Timing
+import qualified Data.ByteString as BS8
 import qualified Data.ByteString.Char8 as BS
 
 import System.Directory
@@ -19,7 +20,6 @@ import qualified Data.HashSet as Set
 import Control.Arrow
 import Control.Monad
 import Data.Maybe
-import Data.List
 import Data.Char
 
 
@@ -36,7 +36,7 @@ runNinja file args = do
         pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        want $ map (BS.unpack . normalise) $ concatMap (resolvePhony phonys) $
+        action $ needBS $ map normalise $ concatMap (resolvePhony phonys) $
             if not $ null args then map BS.pack args
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
@@ -93,8 +93,8 @@ build needDeps phonys rules pools out build@Build{..} = do
 
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
-                    Stdout stdout <- withPool $ command [Shell, EchoStdout True] commandline []
-                    needDeps build $ map (normalise . BS.pack) $ parseShowIncludes stdout
+                    Stdout stdout <- withPool $ command [Shell] commandline []
+                    needDeps build $ map normalise $ parseShowIncludes $ BS.pack stdout
                  else
                     withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
@@ -157,12 +157,17 @@ applyRspfile env act = do
         return res
 
 
-parseShowIncludes :: String -> [FilePath]
-parseShowIncludes out = [y | x <- lines out, Just x <- [stripPrefix "Note: including file:" x]
-                           , let y = dropWhile isSpace x, not $ isSystemInclude y]
-
+parseShowIncludes :: Str -> [FileStr]
+parseShowIncludes out = [y | x <- BS.lines out, bsNote `BS.isPrefixOf` x
+                           , let y = BS.dropWhile isSpace $ BS.drop (BS.length bsNote) x
+                           , not $ isSystemInclude y]
 
 -- Dodgy, but ported over from the original Ninja
-isSystemInclude :: String -> Bool
-isSystemInclude x = "program files" `isInfixOf` lx || "microsoft visual studio" `isInfixOf` lx
-    where lx = map toLower x
+isSystemInclude :: FileStr -> Bool
+isSystemInclude x = bsProgFiles `BS.isInfixOf` tx || bsVisStudio `BS.isInfixOf` tx
+    where tx = BS8.map (\c -> if c >= 97 then c - 32 else c) x
+               -- optimised toUpper that only cares about letters and spaces
+
+bsNote = BS.pack "Note: including file:"
+bsProgFiles = BS.pack "PROGRAM FILES"
+bsVisStudio = BS.pack "MICROSOFT VISUAL STUDIO"
