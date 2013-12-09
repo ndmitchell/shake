@@ -100,7 +100,7 @@ module Development.Shake(
     liftIO, actionOnException, actionFinally,
     ShakeException(..),
     -- * Configuration
-    ShakeOptions(..), Assume(..), getShakeOptions,
+    ShakeOptions(..), Assume(..), Lint(..), getShakeOptions,
     -- ** Command line
     shakeArgs, shakeArgsWith, shakeOptDescrs,
     -- ** Progress reporting

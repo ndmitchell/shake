@@ -283,7 +283,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     when (shakeVerbosity >= Quiet) $ output Quiet msg
                 Right _ -> return ()
 
-    lint <- if not shakeLint then return $ const $ return () else do
+    lint <- if isNothing shakeLint then return $ const $ return () else do
         dir <- getCurrentDirectory
         return $ \msg -> do
             now <- getCurrentDirectory
@@ -314,7 +314,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s0 = SAction database pool start ruleinfo output opts diagnostic lint after emptyStack shakeVerbosity [] 0 [] Nothing
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
 
-                when shakeLint $ do
+                when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     checkValid database (runStored ruleinfo)
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"

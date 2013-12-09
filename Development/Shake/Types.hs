@@ -2,7 +2,7 @@
 
 -- | Types exposed to the user
 module Development.Shake.Types(
-    Progress(..), Verbosity(..), Assume(..),
+    Progress(..), Verbosity(..), Assume(..), Lint(..),
     ShakeOptions(..), shakeOptions
     ) where
 
@@ -36,6 +36,14 @@ data Assume
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
+-- | Which lint checks to perform, used by 'shakeLint'.
+data Lint
+    = LintBasic
+        -- ^ The most basic form of linting. Checks that the current directory does not change and that results do not change after they
+        --   are first written. Any calls to 'needed' will assert that they do not cause a rule to be rebuilt.
+    deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
+
+
 -- | Options to control the execution of Shake, usually specified by overriding fields in
 --   'shakeOptions':
 --
@@ -65,7 +73,7 @@ data ShakeOptions = ShakeOptions
     ,shakeReport :: Maybe FilePath
         -- ^ Defaults to 'Nothing'. Write an HTML profiling report to a file, showing which
         --   rules rebuilt, why, and how much time they took. Useful for improving the speed of your build systems.
-    ,shakeLint :: Bool
+    ,shakeLint :: Maybe Lint
         -- ^ Defaults to 'False'. Perform basic sanity checks during building, checking the current directory
         --   is not modified and that output files are not modified by multiple rules.
         --   These sanity checks do not check for missing or redundant dependencies.
@@ -103,7 +111,7 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 "1" Normal False Nothing False (Just 10) Nothing [] False True False True
+shakeOptions = ShakeOptions ".shake" 1 "1" Normal False Nothing Nothing (Just 10) Nothing [] False True False True
     (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 
@@ -134,6 +142,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: Maybe FilePath)
                 | Just x <- cast x = show (x :: Maybe Assume)
+                | Just x <- cast x = show (x :: Maybe Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Function (IO Progress -> IO ()))

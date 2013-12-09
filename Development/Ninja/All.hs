@@ -107,7 +107,7 @@ build needDeps phonys rules pools out build@Build{..} = do
 needDeps :: Ninja -> Build -> [Str] -> Action ()
 needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
     opts <- getShakeOptions
-    if not $ shakeLint opts then needBS xs else do
+    if isNothing $ shakeLint opts then needBS xs else do
         neededBS xs
         -- now try and statically validate needed will never fail
         -- first find which dependencies are generated files

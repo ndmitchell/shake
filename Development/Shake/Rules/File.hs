@@ -130,13 +130,13 @@ needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 needed :: [FilePath] -> Action ()
 needed xs = do
     opts <- getShakeOptions
-    if not $ shakeLint opts then need xs else neededCheck $ map packU xs
+    if isNothing $ shakeLint opts then need xs else neededCheck $ map packU xs
 
 
 neededBS :: [BS.ByteString] -> Action ()
 neededBS xs = do
     opts <- getShakeOptions
-    if not $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
+    if isNothing $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
 
 
 neededCheck :: [BSU] -> Action ()
