@@ -82,38 +82,6 @@ class (
     --   stored externally, 'storedValue' should return 'Nothing'.
     storedValue :: key -> IO (Maybe value)
 
-{-
-    -- | Return 'True' if the value should not be changed by the build system. Defaults to returning
-    --   'False'. Only used when running with 'shakeLint'.
-    invariant :: key -> Bool
-    invariant _ = False
-
-    -- | Given an action, return what has changed, along with what you think should
-    --   have stayed the same. Only used when running with 'shakeLint'.
-    observed :: IO a -> IO (Observed key, a)
-    observed = fmap ((,) mempty)
-
-
--- | Determine what was observed to change. For each field @Nothing@ means you don't know anything, while
---   @Just []@ means you know that nothing was changed/used.
-data Observed a = Observed
-    {changed :: Maybe [a] -- ^ A list of keys which had their value altered.
-    ,used :: Maybe [a] -- ^ A list of keys whose value was used.
-    }
-    deriving (Show,Eq,Ord)
-
-instance Functor Observed where
-    fmap f (Observed a b) = Observed (g a) (g b)
-        where g = fmap (map f)
-
-instance Monoid (Observed a) where
-    mempty = Observed Nothing Nothing
-    mappend (Observed x1 y1) (Observed x2 y2) = Observed (f x1 x2) (f y1 y2)
-        where
-            f Nothing Nothing = Nothing
-            f a b = Just $ fromMaybe [] a ++ fromMaybe [] b
--}
-
 
 data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
 
