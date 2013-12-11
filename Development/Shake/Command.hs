@@ -100,8 +100,8 @@ commandExplicit funcName copts results exe args = do
         let skipper act = if null results && not (shakeRunCommands opts) then return [] else act
 
         let verboser act = do
-            putLoud $ saneCommandForUser exe args
-            (if verb >= Loud then quietly else id) act
+                putLoud $ saneCommandForUser exe args
+                (if verb >= Loud then quietly else id) act
 
         let tracer = case reverse [x | Traced x <- copts] of
                 "":_ -> liftIO
