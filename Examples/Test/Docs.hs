@@ -54,6 +54,7 @@ main = shaken noTest $ \args obj -> do
             ,"import Data.Monoid"
             ,"import Development.Shake"
             ,"import Development.Shake.Classes"
+            ,"import Development.Shake.Rule"
             ,"import Development.Shake.Util"
             ,"import System.Console.GetOpt"
             ,"import System.Exit"
