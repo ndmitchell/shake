@@ -592,7 +592,7 @@ blockApply msg act = do
 
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
---   You cannot call 'apply' / 'need' while the resource is acquired.
+--   You cannot depend on a rule (e.g. 'need') while a resource is held.
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     s <- Action State.get
@@ -625,7 +625,7 @@ withResources res act
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
 --   on remote machines using barely any local CPU resources. Unsafe as it allows the 'shakeThreads' limit to be exceeded.
---   You cannot call 'apply' / 'Development.Shake.need' while the extra thread is executing.
+--   You cannot depend on a rule (e.g. 'need') while the extra thread is executing.
 unsafeExtraThread :: Action a -> Action a
 unsafeExtraThread act = do
     s <- Action State.get
