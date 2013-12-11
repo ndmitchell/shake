@@ -109,7 +109,9 @@ module Development.Shake(
     CmdResult, CmdOption(..),
     addPath, addEnv,
     -- * Utility functions
-    module Development.Shake.Derived,
+    copyFile',
+    readFile', readFileLines,
+    writeFile', writeFileLines, writeFileChanged,
     removeFiles, removeFilesAfter,
     -- * File rules
     need, want, (*>), (**>), (?>), phony, (~>),
@@ -129,7 +131,9 @@ module Development.Shake(
     newThrottle, newThrottleIO,
     unsafeExtraThread,
     -- * Cached file contents
-    newCache, newCacheIO
+    newCache, newCacheIO,
+    -- * Deprecated
+    system', systemCwd, systemOutput
     ) where
 
 -- I would love to use module export in the above export list, but alas Haddock
