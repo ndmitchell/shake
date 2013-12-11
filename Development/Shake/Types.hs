@@ -41,6 +41,9 @@ data Lint
     = LintBasic
         -- ^ The most basic form of linting. Checks that the current directory does not change and that results do not change after they
         --   are first written. Any calls to 'needed' will assert that they do not cause a rule to be rebuilt.
+    | LintTracker
+        -- ^ Track which files are accessed by command line programs run by 'command' or 'cmd', using @tracker.exe@ as supplied
+        --   with the Microsoft .NET 4.5 SDK (Windows only). Also performs all checks from 'LintBasic'.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
