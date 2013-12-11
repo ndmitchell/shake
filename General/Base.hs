@@ -6,7 +6,7 @@ module General.Base(
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
     isWindows,
-    readFileUCS2
+    readFileUCS2,
     modifyIORef'', writeIORef'',
     whenJust, loop, whileM, partitionM, concatMapM,
     fastNub, showQuote,
@@ -24,6 +24,7 @@ import qualified Data.ByteString as BS (any)
 import qualified Data.ByteString.Char8 as BS hiding (any)
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.HashSet as Set
+import System.IO
 import Development.Shake.Classes
 
 
@@ -192,7 +193,7 @@ isWindows = False
 -- System.IO
 
 readFileUCS2 :: FilePath -> IO String
-readFileUCS2 = openFile name ReadMode >>= \h -> do
+readFileUCS2 name = openFile name ReadMode >>= \h -> do
     hSetEncoding h utf16
     hGetContents h
 
