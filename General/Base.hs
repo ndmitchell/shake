@@ -6,6 +6,7 @@ module General.Base(
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
     isWindows,
+    readFileUCS2
     modifyIORef'', writeIORef'',
     whenJust, loop, whileM, partitionM, concatMapM,
     fastNub, showQuote,
@@ -185,6 +186,15 @@ isWindows = True
 #else
 isWindows = False
 #endif
+
+
+---------------------------------------------------------------------
+-- System.IO
+
+readFileUCS2 :: FilePath -> IO String
+readFileUCS2 = openFile name ReadMode >>= \h -> do
+    hSetEncoding h utf16
+    hGetContents h
 
 
 ---------------------------------------------------------------------
