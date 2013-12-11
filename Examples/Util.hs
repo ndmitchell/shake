@@ -2,6 +2,7 @@
 module Examples.Util(sleep, module Examples.Util) where
 
 import Development.Shake
+import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.Base
 import Development.Shake.FilePath
 

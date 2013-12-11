@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 
 -- | This module is used for defining Shake build systems. As a simple example of a Shake build system,
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
@@ -92,11 +91,8 @@ module Development.Shake(
     -- * Core
     shake,
     shakeOptions,
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue,
-#endif
-    Rule(..), Rules, defaultRule, rule, action, withoutActions,
-    Action, apply, apply1, traced,
+    Rules, action, withoutActions,
+    Action, traced,
     liftIO, actionOnException, actionFinally,
     ShakeException(..),
     -- * Configuration
