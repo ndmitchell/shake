@@ -116,8 +116,9 @@ module Development.Shake(
     -- * File rules
     need, want, (*>), (**>), (?>), phony, (~>),
     module Development.Shake.Rules.Files,
-    orderOnly, needed,
+    orderOnly,
     FilePattern, (?==),
+    needed, trackRead, trackWrite,
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     -- * Environment rules

@@ -2,6 +2,7 @@
 
 module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
+    trackRead, trackWrite,
     defaultRuleFile,
     (*>), (**>), (?>), phony, (~>),
     newCache, newCacheIO
@@ -98,6 +99,15 @@ neededCheck xs = do
             [("File", Just $ unpackU file)
             ,("Error",Just msg)]
             ""
+
+
+-- | Track that a file was read by the action preceeding it.
+trackRead :: [FilePath] -> Action ()
+trackRead = mapM_ (trackUse . FileQ . packU)
+
+-- | Track that a file was written by the action preceeding it.
+trackWrite :: [FilePath] -> Action ()
+trackWrite = mapM_ (trackChange . FileQ . packU)
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.

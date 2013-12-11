@@ -13,6 +13,7 @@ module Development.Shake.Core(
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
+    trackUse, trackChange,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     unsafeExtraThread,
@@ -146,6 +147,28 @@ rule = rulePriority 1
 rulePriority :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
 rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
+
+
+-- | Track that a key has been used by the action preceeding it.
+trackUse ::
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key
+#else
+    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
+#endif
+    => key -> Action ()
+trackUse _ = return ()
+
+
+-- | Track that a key has been changed by the action preceeding it.
+trackChange ::
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key
+#else
+    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
+#endif
+    => key -> Action ()
+trackChange _ = return ()
 
 
 -- | Run an action, usually used for specifying top-level requirements.
