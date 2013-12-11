@@ -19,6 +19,7 @@ import Data.Char
 import Data.Either
 import Data.List
 import Foreign.C.Error
+import System.Directory
 import System.Environment
 import System.Exit
 import System.IO
@@ -27,6 +28,7 @@ import System.Process
 import Development.Shake.Core
 import Development.Shake.FilePath
 import Development.Shake.Types
+import Development.Shake.Rules.File
 import General.Base
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
@@ -108,7 +110,34 @@ commandExplicit funcName copts results exe args = do
                 msg:_ -> traced msg
                 [] -> traced (takeFileName exe)
 
-        skipper $ verboser $ tracer $ commandExplicitIO funcName copts results exe args
+        let tracker act = case shakeLint opts of
+                Just LintTracker -> do
+                    dir <- liftIO $ getTemporaryDirectory
+                    (file, handle) <- liftIO $ openTempFile dir "shake.lint"
+                    liftIO $ hClose handle
+                    dir <- return $ dir </> "shake.lint.dir"
+                    liftIO $ createDirectory dir
+                    let cleanup = removeDirectoryRecursive dir >> removeFile file
+                    flip actionFinally cleanup $ do
+                        res <- act "tracker" $ "/if":dir:"/c":exe:args
+                        (read,write) <- liftIO $ trackerFiles dir
+                        trackRead read
+                        trackWrite write
+                        return res
+                _ -> act exe args
+
+        skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
+
+
+-- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
+trackerFiles :: FilePath -> IO ([FilePath], [FilePath])
+trackerFiles dir = do
+    curdir <- getCurrentDirectory
+    files <- getDirectoryContents dir
+    xs <- forM [x | x <- files, takeExtension x == ".tlog"] $ \file -> do
+        src <- readFileUCS2 $ dir </> file
+        liftIO $ forM_ (lines src) $ \x -> putStrLn =<< canonicalizePath x
+    return ([], [])
 
 
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
