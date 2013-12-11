@@ -19,7 +19,7 @@
 --
 --   Note that we enclose @output@ as a list so that if the output name contains spaces they are
 --   appropriately escaped.
-module Development.Shake.Sys(
+module Development.Shake.Sys {-# DEPRECATED "Use 'command' or 'cmd' instead" #-} (
     sys, sysCwd, sysOutput, args
     ) where
     

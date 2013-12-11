@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Mark Development.Shake.Sys as DEPRECATED with a pragma
     Change shakeLint to be of type Maybe Lint, instead of Bool
     #50, add shakeArgsAccumulate
 0.10.10
