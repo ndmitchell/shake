@@ -7,7 +7,6 @@ module Development.Shake.Progress(
     progressDisplayTester -- INTERNAL FOR TESTING ONLY
     ) where
 
-import Control.Arrow
 import Control.Applicative
 import Control.Concurrent
 import Control.Exception
@@ -76,29 +75,20 @@ instance Monoid Progress where
 -- STREAM TYPES - for writing the progress functions
 
 -- | A stream of values
-newtype Stream a b = Stream {runStream :: a -> (b, Stream a b)}
+newtype Stream i a = Stream {runStream :: i -> (a, Stream i a)}
 
-instance Functor (Stream a) where
-    fmap f (Stream op) = Stream $ (f *** fmap f) . op
+instance Functor (Stream i) where
+    fmap f s = pure f <*> s
 
-instance Applicative (Stream a) where
+instance Applicative (Stream i) where
     pure x = Stream $ const (x, pure x)
-    Stream ff <*> Stream xx = Stream $ \a ->
-        let (f1,f2) = ff a
-            (x1,x2) = xx a
+    Stream ff <*> Stream xx = Stream $ \i ->
+        let (f1,f2) = ff i
+            (x1,x2) = xx i
         in (f1 x1, f2 <*> x2)
 
-idStream :: Stream a a
-idStream = Stream $ \a -> (a, idStream)
-
-oldStream :: b -> Stream a b -> Stream a (b,b)
-oldStream old (Stream f) = Stream $ \a ->
-    let (new, f2) = f a
-    in ((old,new), oldStream new f2)
-
-
-iff :: Stream a Bool -> Stream a b -> Stream a b -> Stream a b
-iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
+idStream :: Stream i i
+idStream = Stream $ \i -> (i, idStream)
 
 foldStream :: (a -> b -> a) -> a -> Stream i b -> Stream i a
 foldStream f z (Stream op) = Stream $ \a ->
@@ -106,11 +96,22 @@ foldStream f z (Stream op) = Stream $ \a ->
         z2 = f z o1
     in (z2, foldStream f z2 o2)
 
-posStream :: Stream a Int
-posStream = foldStream (+) 0 $ pure 1
 
-fromInt :: Int -> Double
-fromInt = fromInteger . toInteger
+---------------------------------------------------------------------
+-- STREAM UTILITIES
+
+oldStream :: a -> Stream i a -> Stream i (a,a)
+oldStream old = foldStream (\(_,old) new -> (old,new)) (old,old)
+
+latch :: Stream i (Bool, a) -> Stream i a
+latch s = fromJust <$> foldStream f Nothing s
+    where f old (b,v) = Just $ if b then fromMaybe v old else v
+
+iff :: Stream i Bool -> Stream i a -> Stream i a -> Stream i a
+iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
+
+posStream :: Stream i Int
+posStream = foldStream (+) 0 $ pure 1
 
 -- decay'd division, compute a/b, with a decay of f
 -- r' is the new result, r is the last result
@@ -124,11 +125,8 @@ decay f a b = foldStream step 0 $ (,) <$> oldStream 0 a <*> oldStream 0 b
     where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
 
 
-latch :: Stream i (Bool, a) -> Stream i a
-latch = f Nothing
-    where f old (Stream op) = Stream $ \x -> let ((b,v),s) = op x
-                                                 v2 = if b then fromMaybe v old else v
-                                             in (v2, f (Just v2) s)
+fromInt :: Int -> Double
+fromInt = fromInteger . toInteger
 
 
 ---------------------------------------------------------------------
