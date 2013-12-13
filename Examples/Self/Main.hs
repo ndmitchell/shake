@@ -57,13 +57,10 @@ main = shaken noTest $ \args obj -> do
         xs <- filterM (doesFileExist . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
-    obj "/*.hi" *> \out -> do
-        need [out -<.> "o"]
-
-    obj "/*.o" *> \out -> do
-        dep <- readFileLines $ out -<.> "dep"
+    [obj "/*.o",obj "/*.hi"] *>> \[out,_] -> do
+        deps <- readFileLines $ out -<.> "deps"
         let hs = fixPaths $ unobj $ out -<.> "hs"
-        need $ hs : map (obj . moduleToFile "hi") dep
+        need $ hs : map (obj . moduleToFile "hi") deps
         ghc ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"]
 
     obj ".pkgs" *> \out -> do
