@@ -233,10 +233,10 @@ shakeOptsEx =
     ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
     ,no  $ Option ""  ["exception"] (NoArg $ Right ([Exception], id)) "Throw exceptions directly."
-    ,yes $ Option ""  ["flush"] (intArg "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
+    ,yes $ Option ""  ["flush"] (intArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
     ,yes $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
     ,no  $ Option "h" ["help"] (NoArg $ Right ([Help],id)) "Print this message and exit."
-    ,yes $ Option "j" ["jobs"] (intArg "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
+    ,yes $ Option "j" ["jobs"] (intArg 1 "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
     ,yes $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
     ,yes $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
     ,yes $ Option "t" ["lint-tracker"] (noArg $ \s -> s{shakeLint=Just LintTracker}) "Use tracker.exe to do validation."
@@ -253,7 +253,7 @@ shakeOptsEx =
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
     ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (optIntArg "progress" "N" (\i s -> s{shakeProgress=prog $ fromMaybe 5 i})) "Show progress messages [every N seconds, default 5]."
+    ,yes $ Option "p" ["progress"] (optIntArg 1 "progress" "N" (\i s -> s{shakeProgress=prog $ fromMaybe 5 i})) "Show progress messages [every N seconds, default 5]."
     ,yes $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
@@ -275,12 +275,12 @@ shakeOptsEx =
 
         noArg f = NoArg $ Right ([], f)
         reqArg a f = ReqArg (\x -> Right ([], f x)) a
-        intArg flag a f = flip ReqArg a $ \x -> case reads x of
-            [(i,"")] | i >= 1 -> Right ([],f i)
-            _ -> Left $ "the `--" ++ flag ++ "' option requires a positive integral argument"
-        optIntArg flag a f = flip OptArg a $ maybe (Right ([], f Nothing)) $ \x -> case reads x of
-            [(i,"")] | i >= 1 -> Right ([],f $ Just i)
-            _ -> Left $ "the `--" ++ flag ++ "' option only allows a positive integral argument"
+        intArg mn flag a f = flip ReqArg a $ \x -> case reads x of
+            [(i,"")] | i >= mn -> Right ([],f i)
+            _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
+        optIntArg mn flag a f = flip OptArg a $ maybe (Right ([], f Nothing)) $ \x -> case reads x of
+            [(i,"")] | i >= mn -> Right ([],f $ Just i)
+            _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
         pairArg flag a f = flip ReqArg a $ \x -> case break (== '=') x of
             (a,'=':b) -> Right ([],f (a,b))
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
