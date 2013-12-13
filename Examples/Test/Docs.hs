@@ -15,7 +15,12 @@ import System.Exit
 
 reps from to = map (\x -> if x == from then to else x)
 
-main = shaken noTest $ \args obj -> do
+test :: ([String] -> IO ()) -> (String -> String) -> IO ()
+test build obj = do
+    build ["--abbrev=output=$OUT","--lint"] -- do not use --lint-tracker
+    build []
+
+main = shaken test $ \args obj -> do
     let index = "dist/doc/html/shake/index.html"
     want [obj "Success.txt"]
 
