@@ -88,8 +88,8 @@ instance Applicative (Mealy i) where
             (x1,x2) = xx i
         in (f1 x1, f2 <*> x2)
 
-idMealy :: Mealy i i
-idMealy = Mealy $ \i -> (i, idMealy)
+echoMealy :: Mealy i i
+echoMealy = Mealy $ \i -> (i, echoMealy)
 
 foldMealy :: (a -> b -> a) -> a -> Mealy i b -> Mealy i a
 foldMealy f z (Mealy op) = Mealy $ \a ->
@@ -199,7 +199,7 @@ progressDisplayTester = progressDisplayer False
 progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplayer sleep sample disp prog = do
     disp "Starting..." -- no useful info at this stage
-    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample idMealy) (const $ disp "Finished")
+    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample echoMealy) (const $ disp "Finished")
     where
         loop :: Mealy Progress String -> IO ()
         loop mealy = do
