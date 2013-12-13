@@ -2,6 +2,7 @@
 module Examples.Test.Basic(main) where
 
 import Development.Shake
+import Development.Shake.FilePath
 import Examples.Util
 import System.Directory as IO
 import Data.List
@@ -46,6 +47,14 @@ main = shaken test $ \args obj -> do
         need ["dummy","dummy"]
         need ["dummy"]
         liftIO $ appendFile out "1"
+
+    r <- newResource ".log file" 1
+    obj "*.par" *> \out -> do
+        let trace x = withResource r 1 $ liftIO $ appendFile (takeDirectory out </> ".log") x
+        trace "["
+        liftIO $ sleep 0.1
+        trace "]"
+        writeFile' out out
 
 test build obj = do
     writeFile (obj "A.txt") "AAA"
@@ -104,3 +113,12 @@ test build obj = do
     assertContents (obj "dummer.txt") "1"
     build ["dummer.txt"]
     assertContents (obj "dummer.txt") "11"
+
+    build ["1.par","2.par","-j1"]
+    assertContents (obj ".log") "[][]"
+    writeFile (obj ".log") ""
+    build ["3.par","4.par","-j2"]
+    assertContents (obj ".log") "[[]]"
+    writeFile (obj ".log") ""
+    build ["5.par","6.par","-j0"] -- all machines have at least 2 processors nowadays
+    assertContents (obj ".log") "[[]]"
