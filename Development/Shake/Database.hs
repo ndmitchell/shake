@@ -5,6 +5,7 @@
 module Development.Shake.Database(
     Time, offsetTime, Duration, duration, Trace,
     Database, withDatabase,
+    listDepends, lookupDependencies,
     Ops(..), build, Depends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -159,6 +160,22 @@ getResult _ = Nothing
 
 newtype Depends = Depends {fromDepends :: [Id]}
     deriving (NFData)
+
+listDepends :: Database -> Depends -> IO [Key]
+listDepends Database{..} (Depends xs) =
+    withLock lock $ do
+        status <- readIORef status
+        return $ map (fst . fromJust . flip Map.lookup status) xs
+
+lookupDependencies :: Database -> Key -> IO [Key]
+lookupDependencies Database{..} k = do
+    withLock lock $ do
+        intern <- readIORef intern
+        status <- readIORef status
+        let Just i = Intern.lookup k intern
+        let Just (_, Ready r) = Map.lookup i status
+        return $ map (fst . fromJust . flip Map.lookup status) $ concat $ depends r
+
 
 data Ops = Ops
     {stored :: Key -> IO (Maybe Value)
