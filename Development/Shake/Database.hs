@@ -324,7 +324,6 @@ build pool Database{..} Ops{..} stack ks = do
 ---------------------------------------------------------------------
 -- PROGRESS
 
--- Does not need to set shakeRunning, done by something further up
 progress :: Database -> IO Progress
 progress Database{..} = do
     s <- readIORef status
