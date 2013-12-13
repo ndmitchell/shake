@@ -153,7 +153,9 @@ correctCase x = f "" x
             dir <- getDirectoryContents pre
             case find ((==) a . map toUpper) dir of
                 Nothing -> return $ pre ++ x
-                Just v -> f (if null pre then v else pre ++ "/" ++ v) b
+                Just v -> f (pre +/+ v) b
+
+        a +/+ b = if null a then b else a ++ "/" ++ b
 
 
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
