@@ -236,7 +236,7 @@ shakeOptsEx =
     ,yes $ Option ""  ["flush"] (intArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
     ,yes $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
     ,no  $ Option "h" ["help"] (NoArg $ Right ([Help],id)) "Print this message and exit."
-    ,yes $ Option "j" ["jobs"] (intArg 1 "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
+    ,yes $ Option "j" ["jobs"] (intArg 0 "jobs" "N" $ \i s -> s{shakeThreads=i}) "Allow N jobs/threads at once."
     ,yes $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
     ,yes $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
     ,yes $ Option "t" ["lint-tracker"] (noArg $ \s -> s{shakeLint=Just LintTracker}) "Use tracker.exe to do validation."

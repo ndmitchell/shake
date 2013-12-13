@@ -355,6 +355,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             flip whenJust killThread =<< readIORef progressThread
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
+    shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
     flip finally cleanup $
         withCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
