@@ -5,7 +5,7 @@ module General.Base(
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
-    isWindows,
+    isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe,
     modifyIORef'', writeIORef'',
     whenJust, loop, whileM, partitionM, concatMapM, mapMaybeM,
@@ -19,6 +19,7 @@ import Control.Exception
 import Control.Monad
 import Data.Char
 import Data.IORef
+import Data.List
 import Data.Maybe
 import Data.Time
 import qualified Data.ByteString as BS (any)
@@ -193,6 +194,19 @@ isWindows = True
 #else
 isWindows = False
 #endif
+
+-- Could be written better in C, but sticking to Haskell for laziness
+getProcessorCount :: IO Int
+-- unsafePefromIO so we cache the result and only compute it once
+getProcessorCount = let res = unsafePerformIO act in return res
+    where
+        act = handle (\(_ :: SomeException) -> return 1) $ do
+            env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
+            case env of
+                Just s | [(i,"")] <- read s -> return i
+                _ -> do
+                    src <- readFile "/proc/cpuinfo"
+                    return $ length [() | x <- lines src, "processor " `isPrefixOf` x]
 
 
 ---------------------------------------------------------------------
