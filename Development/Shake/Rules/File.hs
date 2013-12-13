@@ -2,7 +2,7 @@
 
 module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
-    trackRead, trackWrite,
+    trackRead, trackWrite, allowWrite,
     defaultRuleFile,
     (*>), (**>), (?>), phony, (~>),
     newCache, newCacheIO
@@ -108,6 +108,10 @@ trackRead = mapM_ (trackUse . FileQ . packU)
 -- | Track that a file was written by the action preceeding it.
 trackWrite :: [FilePath] -> Action ()
 trackWrite = mapM_ (trackChange . FileQ . packU)
+
+-- | Allow writing to a file in a different rule.
+allowWrite :: [FilePath] -> Action ()
+allowWrite = mapM_ (allowChange . FileQ . packU)
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.
