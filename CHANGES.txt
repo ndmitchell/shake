@@ -1,6 +1,6 @@
 Changelog for Shake
 
-    Add trackChange, trackUse, allowChange
+    Add trackUse, trackChange, allowChange
     #85, move rule creation functions into Development.Shake.Rule
     Mark Development.Shake.Sys as DEPRECATED with a pragma
     Change shakeLint to be of type Maybe Lint, instead of Bool
