@@ -203,7 +203,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
         act = handle (\(_ :: SomeException) -> return 1) $ do
             env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
             case env of
-                Just s | [(i,"")] <- read s -> return i
+                Just s | [(i,"")] <- reads s -> return i
                 _ -> do
                     src <- readFile "/proc/cpuinfo"
                     return $ length [() | x <- lines src, "processor " `isPrefixOf` x]
