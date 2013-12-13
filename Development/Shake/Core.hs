@@ -441,7 +441,7 @@ applyKeyValue ks = do
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
             let s2 = s{verbosity=shakeVerbosity $ opts s, depends=[], stack=stack, discount=0, traces=[]}
-            let top = topStack stack
+            let top = showTopStack stack
             lint s $ "before building " ++ top
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putWhen Chatty $ "# " ++ show k
@@ -476,7 +476,7 @@ traced :: String -> IO a -> Action a
 traced msg act = do
     s <- Action State.get
     start <- liftIO $ timestamp s
-    putNormal $ "# " ++ msg ++ " " ++ topStack (stack s)
+    putNormal $ "# " ++ msg ++ " " ++ showTopStack (stack s)
     res <- liftIO act
     stop <- liftIO $ timestamp s
     Action $ State.modify $ \s -> s{traces = (pack msg,start,stop):traces s}

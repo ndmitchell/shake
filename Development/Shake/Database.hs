@@ -7,7 +7,7 @@ module Development.Shake.Database(
     Database, withDatabase,
     Ops(..), build, Depends,
     progress,
-    Stack, emptyStack, showStack, topStack,
+    Stack, emptyStack, topStack, showStack, showTopStack,
     showJSON, checkValid,
     ) where
 
@@ -55,8 +55,11 @@ showStack Database{..} (Stack _ xs _) = do
 addStack :: Id -> Key -> Stack -> Stack
 addStack x key (Stack _ xs set) = Stack (Just key) (x:xs) (Set.insert x set)
 
-topStack :: Stack -> String
-topStack (Stack key _ _) = maybe "<unknown>" show key
+showTopStack :: Stack -> String
+showTopStack = maybe "<unknown>" show . topStack
+
+topStack :: Stack -> Maybe Key
+topStack (Stack key _ _) = key
 
 checkStack :: [Id] -> Stack -> Maybe Id
 checkStack new (Stack _ old set)
