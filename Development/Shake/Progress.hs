@@ -72,46 +72,47 @@ instance Monoid Progress where
 
 
 ---------------------------------------------------------------------
--- STREAM TYPES - for writing the progress functions
+-- MEALY TYPE - for writing the progress functions
+-- See <http://hackage.haskell.org/package/machines-0.2.3.1/docs/Data-Machine-Mealy.html>
 
--- | A stream of values
-newtype Stream i a = Stream {runStream :: i -> (a, Stream i a)}
+-- | A machine that takes inputs and produces outputs
+newtype Mealy i a = Mealy {runMealy :: i -> (a, Mealy i a)}
 
-instance Functor (Stream i) where
+instance Functor (Mealy i) where
     fmap f s = pure f <*> s
 
-instance Applicative (Stream i) where
-    pure x = Stream $ const (x, pure x)
-    Stream ff <*> Stream xx = Stream $ \i ->
+instance Applicative (Mealy i) where
+    pure x = Mealy $ const (x, pure x)
+    Mealy ff <*> Mealy xx = Mealy $ \i ->
         let (f1,f2) = ff i
             (x1,x2) = xx i
         in (f1 x1, f2 <*> x2)
 
-idStream :: Stream i i
-idStream = Stream $ \i -> (i, idStream)
+idMealy :: Mealy i i
+idMealy = Mealy $ \i -> (i, idMealy)
 
-foldStream :: (a -> b -> a) -> a -> Stream i b -> Stream i a
-foldStream f z (Stream op) = Stream $ \a ->
+foldMealy :: (a -> b -> a) -> a -> Mealy i b -> Mealy i a
+foldMealy f z (Mealy op) = Mealy $ \a ->
     let (o1,o2) = op a
         z2 = f z o1
-    in (z2, foldStream f z2 o2)
+    in (z2, foldMealy f z2 o2)
 
 
 ---------------------------------------------------------------------
--- STREAM UTILITIES
+-- MEALY UTILITIES
 
-oldStream :: a -> Stream i a -> Stream i (a,a)
-oldStream old = foldStream (\(_,old) new -> (old,new)) (old,old)
+oldMealy :: a -> Mealy i a -> Mealy i (a,a)
+oldMealy old = foldMealy (\(_,old) new -> (old,new)) (old,old)
 
-latch :: Stream i (Bool, a) -> Stream i a
-latch s = fromJust <$> foldStream f Nothing s
+latch :: Mealy i (Bool, a) -> Mealy i a
+latch s = fromJust <$> foldMealy f Nothing s
     where f old (b,v) = Just $ if b then fromMaybe v old else v
 
-iff :: Stream i Bool -> Stream i a -> Stream i a -> Stream i a
+iff :: Mealy i Bool -> Mealy i a -> Mealy i a -> Mealy i a
 iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
 
-posStream :: Stream i Int
-posStream = foldStream (+) 0 $ pure 1
+posMealy :: Mealy i Int
+posMealy = foldMealy (+) 0 $ pure 1
 
 -- decay'd division, compute a/b, with a decay of f
 -- r' is the new result, r is the last result
@@ -120,8 +121,8 @@ posStream = foldStream (+) 0 $ pure 1
 --      -------------
 --      b + f*(b'-b)
 -- when f == 1, r == r'
-decay :: Double -> Stream i Double -> Stream i Double -> Stream i Double
-decay f a b = foldStream step 0 $ (,) <$> oldStream 0 a <*> oldStream 0 b
+decay :: Double -> Mealy i Double -> Mealy i Double -> Mealy i Double
+decay f a b = foldMealy step 0 $ (,) <$> oldMealy 0 a <*> oldMealy 0 b
     where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
 
 
@@ -132,7 +133,7 @@ fromInt = fromInteger . toInteger
 ---------------------------------------------------------------------
 -- MESSAGE GENERATOR
 
-message :: Double -> Stream Progress Progress -> Stream Progress String
+message :: Double -> Mealy Progress Progress -> Mealy Progress String
 message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time <*> perc
     where
         -- Number of seconds work completed
@@ -153,12 +154,12 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
             where f Progress{..} guess = fst timeTodo + (fromIntegral (snd timeTodo) * guess)
 
         -- Number of seconds we have been going
-        step = fmap ((*) sample . fromInt) posStream
+        step = fmap ((*) sample . fromInt) posMealy
         work = decay 1.2 done step
 
         -- Work value to use, don't divide by 0 and don't update work if done doesn't change
         realWork = iff ((==) 0 <$> done) (pure 1) $
-            latch $ (,) <$> (uncurry (==) <$> oldStream 0 done) <*> work
+            latch $ (,) <$> (uncurry (==) <$> oldMealy 0 done) <*> work
 
         -- Display information
         time = flip fmap ((/) <$> todo <*> realWork) $ \guess ->
@@ -198,15 +199,15 @@ progressDisplayTester = progressDisplayer False
 progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplayer sleep sample disp prog = do
     disp "Starting..." -- no useful info at this stage
-    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample idStream) (const $ disp "Finished")
+    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample idMealy) (const $ disp "Finished")
     where
-        loop :: Stream Progress String -> IO ()
-        loop stream = do
+        loop :: Mealy Progress String -> IO ()
+        loop mealy = do
             when sleep $ threadDelay $ ceiling $ sample * 1000000
             p <- prog
-            (msg, stream) <- return $ runStream stream p
+            (msg, mealy) <- return $ runMealy mealy p
             disp $ msg ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
-            loop stream
+            loop mealy
 
 
 {-# NOINLINE xterm #-}
