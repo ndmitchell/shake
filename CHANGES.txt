@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #81, add --lint-tracker to use tracker.exe
     Add trackRead, trackWrite
     Add trackUse, trackChange, allowChange
     #85, move rule creation functions into Development.Shake.Rule
