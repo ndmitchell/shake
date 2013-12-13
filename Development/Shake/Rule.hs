@@ -6,7 +6,7 @@ module Development.Shake.Rule(
     ShakeValue,
 #endif
     Rule(..), defaultRule, rule, apply, apply1,
-    trackUse, trackChange
+    trackUse, trackChange, allowChange
     ) where
 
 import Development.Shake.Core

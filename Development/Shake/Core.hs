@@ -13,7 +13,7 @@ module Development.Shake.Core(
 #endif
     Rule(..), Rules, defaultRule, rule, action, withoutActions,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
-    trackUse, trackChange,
+    trackUse, trackChange, allowChange,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     unsafeExtraThread,
@@ -169,6 +169,17 @@ trackChange ::
 #endif
     => key -> Action ()
 trackChange _ = return ()
+
+
+-- | This rule is allowed to change a key for someone else.
+allowChange ::
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key
+#else
+    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
+#endif
+    => key -> Action ()
+allowChange _ = return ()
 
 
 -- | Run an action, usually used for specifying top-level requirements.
