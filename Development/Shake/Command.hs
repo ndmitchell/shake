@@ -139,7 +139,7 @@ trackerFiles dir = do
     let f typ = do
             files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file -> do
                 xs <- readFileUCS2 $ dir </> file
-                return $ mapMaybe (stripPrefix pre) $ lines xs
+                return $ filter (not . isPrefixOf "." . takeFileName) . mapMaybe (stripPrefix pre) $ lines xs
             fmap nub $ mapM correctCase $ nub $ concat files
     liftM2 (,) (f "read") (f "write")
 
