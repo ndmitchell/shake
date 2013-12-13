@@ -140,19 +140,19 @@ trackerFiles dir = do
             files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file -> do
                 xs <- readFileUCS2 $ dir </> file
                 return $ filter (not . isPrefixOf "." . takeFileName) . mapMaybe (stripPrefix pre) $ lines xs
-            fmap nub $ mapM correctCase $ nub $ concat files
+            fmap nub $ mapMaybeM correctCase $ nub $ concat files
     liftM2 (,) (f "read") (f "write")
 
 
-correctCase :: FilePath -> IO FilePath
+correctCase :: FilePath -> IO (Maybe FilePath)
 correctCase x = f "" x
     where
-        f pre "" = return pre
+        f pre "" = return $ Just pre
         f pre x = do
             let (a,b) = (takeDirectory1 x, dropDirectory1 x)
             dir <- getDirectoryContents pre
             case find ((==) a . map toUpper) dir of
-                Nothing -> return $ pre ++ x
+                Nothing -> return Nothing -- if it can't be found it probably doesn't exist, so assume a file that wasn't really read
                 Just v -> f (pre +/+ v) b
 
         a +/+ b = if null a then b else a ++ "/" ++ b
