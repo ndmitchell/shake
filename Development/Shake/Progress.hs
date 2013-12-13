@@ -91,28 +91,28 @@ instance Applicative (Mealy i) where
 echoMealy :: Mealy i i
 echoMealy = Mealy $ \i -> (i, echoMealy)
 
-foldMealy :: (a -> b -> a) -> a -> Mealy i b -> Mealy i a
-foldMealy f z (Mealy op) = Mealy $ \a ->
+scanMealy :: (a -> b -> a) -> a -> Mealy i b -> Mealy i a
+scanMealy f z (Mealy op) = Mealy $ \a ->
     let (o1,o2) = op a
         z2 = f z o1
-    in (z2, foldMealy f z2 o2)
+    in (z2, scanMealy f z2 o2)
 
 
 ---------------------------------------------------------------------
 -- MEALY UTILITIES
 
 oldMealy :: a -> Mealy i a -> Mealy i (a,a)
-oldMealy old = foldMealy (\(_,old) new -> (old,new)) (old,old)
+oldMealy old = scanMealy (\(_,old) new -> (old,new)) (old,old)
 
 latch :: Mealy i (Bool, a) -> Mealy i a
-latch s = fromJust <$> foldMealy f Nothing s
+latch s = fromJust <$> scanMealy f Nothing s
     where f old (b,v) = Just $ if b then fromMaybe v old else v
 
 iff :: Mealy i Bool -> Mealy i a -> Mealy i a -> Mealy i a
 iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
 
 posMealy :: Mealy i Int
-posMealy = foldMealy (+) 0 $ pure 1
+posMealy = scanMealy (+) 0 $ pure 1
 
 -- decay'd division, compute a/b, with a decay of f
 -- r' is the new result, r is the last result
@@ -122,7 +122,7 @@ posMealy = foldMealy (+) 0 $ pure 1
 --      b + f*(b'-b)
 -- when f == 1, r == r'
 decay :: Double -> Mealy i Double -> Mealy i Double -> Mealy i Double
-decay f a b = foldMealy step 0 $ (,) <$> oldMealy 0 a <*> oldMealy 0 b
+decay f a b = scanMealy step 0 $ (,) <$> oldMealy 0 a <*> oldMealy 0 b
     where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
 
 
