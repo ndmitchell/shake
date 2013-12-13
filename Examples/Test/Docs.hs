@@ -22,8 +22,7 @@ main = shaken noTest $ \args obj -> do
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
     index *> \_ -> do
-        xs <- getDirectoryFiles "Development" ["//*.hs"]
-        need $ map ("Development" </>) xs
+        need =<< getDirectoryFiles "." ["Development/Shake.hs","Development/Shake//*.hs","General//*.hs"]
         res <- liftIO $ findExecutable "cabal"
         if isJust res then cmd "cabal haddock" else do
             Exit exit <- cmd "runhaskell Setup.hs haddock"
