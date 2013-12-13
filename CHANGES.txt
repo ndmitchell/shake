@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add trackRead, trackWrite
     Add trackUse, trackChange, allowChange
     #85, move rule creation functions into Development.Shake.Rule
     Mark Development.Shake.Sys as DEPRECATED with a pragma
