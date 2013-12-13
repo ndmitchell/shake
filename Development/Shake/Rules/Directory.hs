@@ -9,14 +9,11 @@ module Development.Shake.Rules.Directory(
     defaultRuleDirectory
     ) where
 
-import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
-import System.IO.Error
 import Data.Binary
 import Data.List
 import qualified System.Directory as IO
-import qualified System.Environment as IO
 
 import Development.Shake.Core
 import Development.Shake.Classes
@@ -114,7 +111,7 @@ instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
     -- invariant _ = True
 
 instance Rule GetEnvQ GetEnvA where
-    storedValue (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvIO x
+    storedValue (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvMaybe x
     -- invariant _ = True
 
 instance Rule GetDirectoryQ GetDirectoryA where
@@ -132,7 +129,7 @@ defaultRuleDirectory = do
     defaultRule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
     defaultRule $ \(GetEnvQ x) -> Just $
-        liftIO $ fmap GetEnvA $ getEnvIO x
+        liftIO $ fmap GetEnvA $ getEnvMaybe x
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
@@ -161,9 +158,6 @@ getEnv var = do
     GetEnvA res <- apply1 $ GetEnvQ var
     return res
 
-getEnvIO :: String -> IO (Maybe String)
-getEnvIO x = Control.Exception.catch (fmap Just $ IO.getEnv x) $
-    \e -> if isDoesNotExistError e then return Nothing else ioError e
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative

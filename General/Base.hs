@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving, CPP #-}
+{-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving, CPP, ScopedTypeVariables #-}
 
 module General.Base(
     Lock, newLock, withLock, withLockTry,
@@ -6,7 +6,7 @@ module General.Base(
     Barrier, newBarrier, signalBarrier, waitBarrier,
     Duration, duration, Time, offsetTime, sleep,
     isWindows,
-    readFileUCS2,
+    readFileUCS2, getEnvMaybe,
     modifyIORef'', writeIORef'',
     whenJust, loop, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
@@ -25,7 +25,10 @@ import qualified Data.ByteString as BS (any)
 import qualified Data.ByteString.Char8 as BS hiding (any)
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.HashSet as Set
+import System.Environment
 import System.IO
+import System.IO.Error
+import System.IO.Unsafe
 import Development.Shake.Classes
 
 
@@ -199,6 +202,9 @@ readFileUCS2 :: FilePath -> IO String
 readFileUCS2 name = openFile name ReadMode >>= \h -> do
     hSetEncoding h utf16
     hGetContents h
+
+getEnvMaybe :: String -> IO (Maybe String)
+getEnvMaybe x = catchJust (\x -> if isDoesNotExistError x then Just x else Nothing) (fmap Just $ getEnv x) (const $ return Nothing)
 
 
 ---------------------------------------------------------------------
