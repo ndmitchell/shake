@@ -8,7 +8,7 @@ module General.Base(
     isWindows,
     readFileUCS2,
     modifyIORef'', writeIORef'',
-    whenJust, loop, whileM, partitionM, concatMapM,
+    whenJust, loop, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
@@ -19,6 +19,7 @@ import Control.Exception
 import Control.Monad
 import Data.Char
 import Data.IORef
+import Data.Maybe
 import Data.Time
 import qualified Data.ByteString as BS (any)
 import qualified Data.ByteString.Char8 as BS hiding (any)
@@ -176,6 +177,8 @@ partitionM f (x:xs) = do
     (a,b) <- partitionM f xs
     return $ if t then (x:a,b) else (a,x:b)
 
+mapMaybeM :: Monad m => (a -> m (Maybe b)) -> [a] -> m [b]
+mapMaybeM f xs = liftM catMaybes $ mapM f xs
 
 
 ---------------------------------------------------------------------
