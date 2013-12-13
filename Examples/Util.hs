@@ -10,6 +10,7 @@ import Control.Exception hiding (assert)
 import Control.Monad
 import Data.Char
 import Data.List
+import Data.Maybe
 import System.Directory as IO
 import System.Environment
 import System.Random
@@ -56,10 +57,11 @@ shaken test rules sleeper = do
 
         args -> do
             let (_,files,_) = getOpt Permute [] args
+            tracker <- findExecutable "tracker.exe"
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out) 
-                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html", shakeLint=Just LintBasic})
+                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html", shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
                     (rules files (out++))
 
 
