@@ -157,7 +157,41 @@ trackUse ::
     (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
 #endif
     => key -> Action ()
-trackUse _ = return ()
+-- One of the following must be true:
+-- 1) you have already been used by apply, and are on the dependency list
+-- 2) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
+trackUse key = do
+    let k = newKey key
+    s <- Action State.get
+    deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
+    if k `elem` deps then
+        return () -- condition 1
+     else
+        Action $ State.modify $ \s -> s{trackUsed = k : trackUsed s} -- condition 2
+
+
+trackCheckUsed :: Action ()
+trackCheckUsed = do
+    s <- Action State.get
+    deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
+
+    -- check 2a
+    bad <- return $ trackUsed s \\ deps
+    unless (null bad) $ do
+        let n = length bad
+        errorStructured
+            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+            [("Used", Just $ show x) | x <- bad]
+            ""
+
+    -- check 2b
+    bad <- liftIO $ flip filterM (trackUsed s) $ \k -> fmap (not . null) $ lookupDependencies (database s) k
+    unless (null bad) $ do
+        let n = length bad
+        errorStructured
+            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+            [("Used", Just $ show x) | x <- bad]
+            ""
 
 
 -- | Track that a key has been changed by the action preceeding it.
@@ -168,7 +202,21 @@ trackChange ::
     (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
 #endif
     => key -> Action ()
-trackChange _ = return ()
+-- One of the following must be true:
+-- 1) you are the one building this key (e.g. key == topStack)
+-- 2) someone explicitly gave you permission to write to the file with allowChange
+-- 3) this file is never known to the build system, at the end it is not in the database
+trackChange key = do
+    let k = newKey key
+    s <- Action State.get
+    let top = topStack $ stack s
+    if top == Just k then
+        return () -- condition 1
+     else if k `elem` trackAllow s then
+        return () -- condition 2
+     else
+        -- condition 3
+        liftIO $ atomicModifyIORef (trackAbsent s) $ \ks -> ((fromMaybe k top, k):ks, ())
 
 
 -- | This rule is allowed to change a key for someone else.
@@ -179,7 +227,7 @@ allowChange ::
     (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
 #endif
     => key -> Action ()
-allowChange _ = return ()
+allowChange key = Action $ State.modify $ \s -> s{trackAllow = newKey key : trackAllow s}
 
 
 -- | Run an action, usually used for specifying top-level requirements.
@@ -227,6 +275,7 @@ data SAction = SAction
     ,diagnostic :: String -> IO ()
     ,lint :: String -> IO ()
     ,after :: IORef [IO ()]
+    ,trackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
     -- stack variables
     ,stack :: Stack
     -- local variables
@@ -235,6 +284,8 @@ data SAction = SAction
     ,discount :: !Duration
     ,traces :: [Trace] -- in reverse
     ,blockapply ::  Maybe String -- reason to block apply, or Nothing to allow
+    ,trackAllow :: [Key]
+    ,trackUsed :: [Key]
     }
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
@@ -299,6 +350,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     progressThread <- newIORef Nothing
     after <- newIORef []
+    absent <- newIORef []
     let cleanup = do
             flip whenJust killThread =<< readIORef progressThread
             when shakeTimings printTimings
@@ -314,12 +366,13 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = SAction database pool start ruleinfo output opts diagnostic lint after emptyStack shakeVerbosity [] 0 [] Nothing
+                    let s0 = SAction database pool start ruleinfo output opts diagnostic lint after absent emptyStack shakeVerbosity [] 0 [] Nothing [] []
                     mapM_ (addPool pool . staunch . runAction s0) (actions rs)
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
-                    checkValid database (runStored ruleinfo)
+                    absent <- readIORef absent
+                    checkValid database (runStored ruleinfo) absent
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
                 when (isJust shakeReport) $ do
                     addTiming "Profile report"
@@ -440,12 +493,15 @@ applyKeyValue ks = do
     s <- Action State.get
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
             evaluate $ rnf k
-            let s2 = s{verbosity=shakeVerbosity $ opts s, depends=[], stack=stack, discount=0, traces=[]}
+            let s2 = s{verbosity=shakeVerbosity $ opts s, depends=[], stack=stack, discount=0, traces=[], trackAllow=[], trackUsed=[]}
             let top = showTopStack stack
             lint s $ "before building " ++ top
             (dur,(res,s2)) <- duration $ runAction s2 $ do
                 putWhen Chatty $ "# " ++ show k
-                runExecute (ruleinfo s) k
+                res <- runExecute (ruleinfo s) k
+                when (shakeLint (opts s) == Just LintTracker)
+                    trackCheckUsed
+                return res
             lint s $ "after building " ++ top
             let ans = (res, reverse $ depends s2, dur - discount s2, reverse $ traces s2)
             evaluate $ rnf ans

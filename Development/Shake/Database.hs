@@ -407,10 +407,12 @@ showJSON Database{..} = do
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> IO ()
-checkValid Database{..} stored = do
+checkValid :: Database -> (Key -> IO (Maybe Value)) -> [(Key, Key)] -> IO ()
+checkValid Database{..} stored missing = do
     status <- readIORef status
+    intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
+
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
@@ -419,13 +421,24 @@ checkValid Database{..} stored = do
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
-    if null bad then diagnostic "Validity/lint check passed" else do
+    unless (null bad) $ do
         let n = length bad
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
             (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ maybe "<missing>" show now)]
                                         | (key, result, now) <- bad])
             ""
+
+    bad <- return [(parent,key) | (parent, key) <- missing, isJust $ Intern.lookup key intern]
+    unless (null bad) $ do
+        let n = length bad
+        errorStructured
+            ("Link checking error - " ++ (if n == 1 then "value" else show n ++ " values") ++ " did not have " ++ (if n == 1 then "its" else "their") ++ " creation tracked")
+            (intercalate [("",Just "")] [ [("Rule", Just $ show parent), ("Created", Just $ show key)] | (parent,key) <- bad])
+            ""
+
+    diagnostic "Validity/lint check passed"
+
 
 ---------------------------------------------------------------------
 -- STORAGE
