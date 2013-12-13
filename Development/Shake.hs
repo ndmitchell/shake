@@ -118,7 +118,7 @@ module Development.Shake(
     module Development.Shake.Rules.Files,
     orderOnly,
     FilePattern, (?==),
-    needed, trackRead, trackWrite,
+    needed, trackRead, trackWrite, trackAllow,
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     -- * Environment rules
@@ -142,7 +142,7 @@ module Development.Shake(
 
 import Control.Monad.IO.Class
 import Development.Shake.Types
-import Development.Shake.Core
+import Development.Shake.Core hiding (trackAllow)
 import Development.Shake.Derived
 import Development.Shake.Errors
 import Development.Shake.Progress

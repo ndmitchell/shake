@@ -2,7 +2,7 @@
 
 module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
-    trackRead, trackWrite, allowWrite,
+    trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (*>), (**>), (?>), phony, (~>),
     newCache, newCacheIO
@@ -15,7 +15,8 @@ import qualified Data.HashMap.Strict as Map
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
 
-import Development.Shake.Core
+import Development.Shake.Core hiding (trackAllow)
+import qualified Development.Shake.Core as S
 import General.Base
 import Development.Shake.Classes
 import Development.Shake.FilePattern
@@ -110,8 +111,11 @@ trackWrite :: [FilePath] -> Action ()
 trackWrite = mapM_ (trackChange . FileQ . packU)
 
 -- | Allow writing to a file in a different rule.
-allowWrite :: [FilePath] -> Action ()
-allowWrite = mapM_ (allowChange . FileQ . packU)
+trackAllow :: [FilePattern] -> Action ()
+trackAllow ps = do
+    opts <- getShakeOptions
+    when (shakeLint opts == Just LintTracker) $ 
+        S.trackAllow $ \(FileQ x) -> any (?== unpackU x) ps
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.

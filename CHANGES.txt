@@ -3,7 +3,7 @@ Changelog for Shake
     #82, make -j0 guess at the number of processors
     #81, add --lint-tracker to use tracker.exe
     Add trackRead, trackWrite
-    Add trackUse, trackChange, allowChange
+    Add trackUse, trackChange, trackAllow
     #85, move rule creation functions into Development.Shake.Rule
     Mark Development.Shake.Sys as DEPRECATED with a pragma
     Change shakeLint to be of type Maybe Lint, instead of Bool

@@ -9,13 +9,12 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import System.Directory
 
-import Development.Shake.Core
+import Development.Shake.Core hiding (trackAllow)
 import General.Base
 import Development.Shake.Classes
 import Development.Shake.Rules.File
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
-import Development.Shake.Types
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
@@ -66,7 +65,7 @@ ps *>> act
         rule $ \(FilesQ xs_) -> let xs = map unpackU xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
-                do opts <- getShakeOptions; when (shakeLint opts == Just LintTracker) $ allowWrite xs
+                trackAllow xs
                 act xs
                 liftIO $ getFileTimes "*>>" xs_
 
