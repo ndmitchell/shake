@@ -27,8 +27,9 @@ main = shaken test $ \args obj -> do
         (Exit exit, Stdout stdout, Stderr stderr) <- cmd "ghc --random"
         return $ show (exit, stdout, stderr) -- must force all three parts
 
+    obj "pwd space" *> \out -> writeFileLines out ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
     "pwd" !> do
-        writeFileLines (obj "pwd space.hs") ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
+        need [obj "pwd space.hs"]
         Stdout out <- cmd (Cwd $ obj "") "runhaskell" ["pwd space.hs"]
         return out
 
@@ -52,7 +53,7 @@ test build obj = do
     build ["pwd"]
     assertContentsInfix (obj "pwd") "command"
 
-    build ["env"]
+    build ["env","--no-lint"] -- since it blows away the $PATH, which is necessary for lint-tracker
     assertContentsInfix (obj "env") "HELLO SHAKE"
 
     build ["triple"]
