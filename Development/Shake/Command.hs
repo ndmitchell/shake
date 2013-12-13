@@ -18,6 +18,7 @@ import Control.Monad.IO.Class
 import Data.Char
 import Data.Either
 import Data.List
+import Data.Maybe
 import Foreign.C.Error
 import System.Directory
 import System.Environment
@@ -133,11 +134,26 @@ commandExplicit funcName copts results exe args = do
 trackerFiles :: FilePath -> IO ([FilePath], [FilePath])
 trackerFiles dir = do
     curdir <- getCurrentDirectory
+    let pre = map toUpper curdir ++ "\\"
     files <- getDirectoryContents dir
-    xs <- forM [x | x <- files, takeExtension x == ".tlog"] $ \file -> do
-        src <- readFileUCS2 $ dir </> file
-        liftIO $ forM_ (lines src) $ \x -> putStrLn =<< canonicalizePath x
-    return ([], [])
+    let f typ = do
+            files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file -> do
+                xs <- readFileUCS2 $ dir </> file
+                return $ mapMaybe (stripPrefix pre) $ lines xs
+            fmap nub $ mapM correctCase $ nub $ concat files
+    liftM2 (,) (f "read") (f "write")
+
+
+correctCase :: FilePath -> IO FilePath
+correctCase x = f "" x
+    where
+        f pre "" = return pre
+        f pre x = do
+            let (a,b) = (takeDirectory1 x, dropDirectory1 x)
+            dir <- getDirectoryContents pre
+            case find ((==) a . map toUpper) dir of
+                Nothing -> return $ pre ++ x
+                Just v -> f (if null pre then v else pre ++ "/" ++ v) b
 
 
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
