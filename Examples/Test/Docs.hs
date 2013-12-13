@@ -15,19 +15,18 @@ import System.Exit
 
 reps from to = map (\x -> if x == from then to else x)
 
-test :: ([String] -> IO ()) -> (String -> String) -> IO ()
-test build obj = do
-    build ["--abbrev=output=$OUT","--lint"] -- do not use --lint-tracker
-    build []
-
-main = shaken test $ \args obj -> do
+main = shaken noTest $ \args obj -> do
     let index = "dist/doc/html/shake/index.html"
     want [obj "Success.txt"]
 
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
+    let needSource = need =<< getDirectoryFiles "." ["Development/Shake.hs","Development/Shake//*.hs","General//*.hs"]
+
     index *> \_ -> do
-        need =<< getDirectoryFiles "." ["Development/Shake.hs","Development/Shake//*.hs","General//*.hs"]
+        needSource
+        need ["shake.cabal"]
+        trackAllow ["dist//*"]
         res <- liftIO $ findExecutable "cabal"
         if isJust res then cmd "cabal haddock" else do
             Exit exit <- cmd "runhaskell Setup.hs haddock"
@@ -87,16 +86,22 @@ main = shaken test $ \args obj -> do
             ] ++
             rest
 
-    obj "Main.hs" *> \out -> do
+    obj "Files.lst" *> \out -> do
         need [index,obj "Paths_shake.hs"]
         files <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         files <- return $ filter (not . isSuffixOf "-Classes.html") files
-        let mods = map ((++) "Part_" . reps '-' '_' . takeBaseName) files
-        need [obj m <.> "hs" | m <- mods]
+        writeFileLines out $ map ((++) "Part_" . reps '-' '_' . takeBaseName) files
+
+    let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
+
+    obj "Main.hs" *> \out -> do
+        mods <- needModules
         writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m | m <- mods] ++ ["main = return ()"]
 
     obj "Success.txt" *> \out -> do
-        need [obj "Main.hs"]
+        needModules
+        need [obj "Main.hs", obj "Paths_shake.hs"]
+        needSource
         () <- cmd "runhaskell -ignore-package=hashmap" ["-i" ++ obj "", obj "Main.hs"]
         writeFile' out ""
 
