@@ -116,7 +116,7 @@ commandExplicit funcName copts results exe args = do
                     dir <- liftIO $ getTemporaryDirectory
                     (file, handle) <- liftIO $ openTempFile dir "shake.lint"
                     liftIO $ hClose handle
-                    dir <- return $ dir </> "shake.lint.dir"
+                    dir <- return $ file <.> "dir"
                     liftIO $ createDirectory dir
                     let cleanup = removeDirectoryRecursive dir >> removeFile file
                     flip actionFinally cleanup $ do
