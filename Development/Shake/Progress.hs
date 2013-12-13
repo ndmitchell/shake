@@ -79,23 +79,21 @@ instance Monoid Progress where
 newtype Mealy i a = Mealy {runMealy :: i -> (a, Mealy i a)}
 
 instance Functor (Mealy i) where
-    fmap f (Mealy m) = Mealy $ \a -> case m a of
-        (b, n) -> (f b, fmap f n)
+    fmap f (Mealy m) = Mealy $ \i -> case m i of
+        (x, m) -> (f x, fmap f m)
 
 instance Applicative (Mealy i) where
-    pure b = r where r = Mealy (const (b, r))
-    Mealy m <*> Mealy n = Mealy $ \a -> case m a of
-        (f, m') -> case n a of
-            (b, n') -> (f b, m' <*> n')
+    pure x = let r = Mealy (const (x, r)) in r
+    Mealy mf <*> Mealy mx = Mealy $ \i -> case mf i of
+        (f, mf) -> case mx i of
+            (x, mx) -> (f x, mf <*> mx)
 
 echoMealy :: Mealy i i
 echoMealy = Mealy $ \i -> (i, echoMealy)
 
 scanMealy :: (a -> b -> a) -> a -> Mealy i b -> Mealy i a
-scanMealy f z (Mealy op) = Mealy $ \a ->
-    let (o1,o2) = op a
-        z2 = f z o1
-    in (z2, scanMealy f z2 o2)
+scanMealy f z (Mealy m) = Mealy $ \i -> case m i of
+    (x, m) -> let z2 = f z x in (z2, scanMealy f z2 m)
 
 
 ---------------------------------------------------------------------
