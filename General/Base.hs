@@ -206,9 +206,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
                 Just s | [(i,"")] <- reads s -> return i
                 _ -> do
                     src <- readFile "/proc/cpuinfo"
-                    print src
-                    print $ length [() | x <- lines src, "processor " `isPrefixOf` x]
-                    return $ length [() | x <- lines src, "processor " `isPrefixOf` x]
+                    return $ length [() | x <- lines src, "processor" `isPrefixOf` x]
 
 
 ---------------------------------------------------------------------
