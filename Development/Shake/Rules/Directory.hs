@@ -246,7 +246,9 @@ removeFiles :: FilePath -> [FilePattern] -> IO ()
 removeFiles dir ["//*"] = IO.removeDirectoryRecursive dir -- optimisation
 removeFiles dir pat = f "" >> return ()
     where
-        test = let ps = map (?==) pat in \x -> any ($ x) ps
+        -- because it is generate and match anything like ../ will be ignored, since we never generate ..
+        -- therefore we can safely know we never escape dir
+        test = let ps = map (?==) $ map normalise pat in \x -> any ($ x) ps
 
         -- dir </> dir2 is the part to operate on, return True if you cleaned everything
         f :: FilePath -> IO Bool

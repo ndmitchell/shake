@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #84, ensure you normalise removeFile patterns first
     Change storedValue to take ShakeOptions as the first parameter
     #82, make -j0 guess at the number of processors
     #81, add --lint-tracker to use tracker.exe
