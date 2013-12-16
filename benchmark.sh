@@ -9,16 +9,17 @@ git clone https://github.com/martine/ninja
 export PATH=$PATH:`pwd`/ninja
 
 cd ninja
+cp ninja ninji # So cleaning doesn't wipe the ninja binary
 echo Run Ninja
-ninja -t clean
+ninji -t clean
 date +%H:%M:%S.%N
-ninja -j3
+ninji -j3
 date +%H:%M:%S.%N
-ninja -j3
+ninji -j3
 date +%H:%M:%S.%N
 
 echo Run Shake
-ninja -t clean
+ninji -t clean
 date +%H:%M:%S.%N
 shake -j3
 date +%H:%M:%S.%N
