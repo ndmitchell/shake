@@ -9,8 +9,9 @@ cabal install
 # Grab ninja
 git clone https://github.com/martine/ninja
 (cd ninja && ./bootstrap.py)
-cp ninja/ninja ninja
-export PATH=$PATH:`pwd`
+mkdir bin
+cp ninja/ninja bin/ninja
+export PATH=$PATH:`pwd`/bin
 
 cd ninja
 echo Run Ninja
