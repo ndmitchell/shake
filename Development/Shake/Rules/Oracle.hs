@@ -29,7 +29,7 @@ instance (
     Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a
 #endif
     ) => Rule (OracleQ q) (OracleA a) where
-    storedValue _ = return Nothing
+    storedValue _ _ = return Nothing
 
 
 -- | Add extra information which rules can depend on.

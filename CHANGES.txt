@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Change storedValue to take ShakeOptions as the first parameter
     #82, make -j0 guess at the number of processors
     #81, add --lint-tracker to use tracker.exe
     Add trackRead, trackWrite

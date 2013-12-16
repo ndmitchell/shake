@@ -103,19 +103,19 @@ instance Binary GetDirectoryQ where
 
 
 instance Rule DoesFileExistQ DoesFileExistA where
-    storedValue (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
+    storedValue _ (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
     -- invariant _ = True
 
 instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
-    storedValue (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
+    storedValue _ (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
     -- invariant _ = True
 
 instance Rule GetEnvQ GetEnvA where
-    storedValue (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvMaybe x
+    storedValue _ (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvMaybe x
     -- invariant _ = True
 
 instance Rule GetDirectoryQ GetDirectoryA where
-    storedValue x = fmap Just $ getDir x
+    storedValue _ x = fmap Just $ getDir x
     -- invariant _ = True
 
 

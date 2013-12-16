@@ -44,7 +44,7 @@ instance Eq FileA where FileA x == FileA y = x /= fileTimeNone && x == y
 instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
 
 instance Rule FileQ FileA where
-    storedValue (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
+    storedValue _ (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
