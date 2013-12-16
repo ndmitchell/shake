@@ -114,7 +114,7 @@ trackWrite = mapM_ (trackChange . FileQ . packU)
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
     opts <- getShakeOptions
-    when (shakeLint opts == Just LintTracker) $ 
+    when (isJust $ shakeLint opts) $
         S.trackAllow $ \(FileQ x) -> any (?== unpackU x) ps
 
 
