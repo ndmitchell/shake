@@ -48,6 +48,25 @@ data Lint
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
+{-
+-- | How should you determine if a file has changed, used by 'shakeChange'.
+data Change
+    = ChangeModtime
+        -- ^ Compare equality of modification timestamps, a file has changed if its last modified time changes.
+        --   A @touch@ will force a rebuild. This mode is fast and usually sufficiently accurate, so is the default.
+    | ChangeDigest
+        -- ^ Compare equality of file contents digests, a file has changed if its digest changes.
+        --   A @touch@ will not force a rebuild. Use this mode if modification times on your file system are unreliable.
+    | ChangeModtimeAndDigest
+        -- ^ A file is rebuilt if both its modification time and digest have changed. For efficiency reasons, the modification
+        --   time is checked first, and if that has changed, the digest is checked which may mark
+    | ChangeModtimeOrDigest
+        -- ^ A file is rebuilt if either its modification time or its digest has changed. A @touch@ will force a rebuild,
+        --   but even if a files modification time is reset afterwards, changes will also cause a rebuild.
+    deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
+-}
+
+
 -- | Options to control the execution of Shake, usually specified by overriding fields in
 --   'shakeOptions':
 --
