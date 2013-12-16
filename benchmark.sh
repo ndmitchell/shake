@@ -8,5 +8,5 @@ git clone https://github.com/martine/ninja
 (cd ninja && ./bootstrap.py)
 export PATH=$PATH:`pwd`/ninja
 
-(cd ninja && ninja -t clean && /usr/bin/time ninja -j3 && /usr/bin/time ninja -j3)
-(cd ninja && ninja -t clean && /usr/bin/time shake -j3 && /usr/bin/time shake -j3)
+(cd ninja && ninja -t clean && date +%H:%M:%S.%N && ninja -j3 && date +%H:%M:%S.%N && ninja -j3 && date +%H:%M:%S.%N)
+(cd ninja && ninja -t clean && date +%H:%M:%S.%N && shake -j3 && date +%H:%M:%S.%N && shake -j3 && date +%H:%M:%S.%N)
