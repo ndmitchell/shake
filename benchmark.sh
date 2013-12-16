@@ -3,23 +3,26 @@
 set -e # exit on errors
 set -x # echo each line
 
+# Install shake
+cabal install
+
 # Grab ninja
 git clone https://github.com/martine/ninja
 (cd ninja && ./bootstrap.py)
-export PATH=$PATH:`pwd`/ninja
+cp ninja/ninja ninja
+export PATH=$PATH:`pwd`
 
 cd ninja
-cp ninja ninji # So cleaning doesn't wipe the ninja binary
 echo Run Ninja
-ninji -t clean
+ninja -t clean
 date +%H:%M:%S.%N
-ninji -j3
+ninja -j3
 date +%H:%M:%S.%N
-ninji -j3
+ninja -j3
 date +%H:%M:%S.%N
 
 echo Run Shake
-ninji -t clean
+ninja -t clean
 date +%H:%M:%S.%N
 shake -j3
 date +%H:%M:%S.%N
