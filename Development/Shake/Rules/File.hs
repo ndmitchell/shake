@@ -102,15 +102,20 @@ neededCheck xs = do
             ""
 
 
--- | Track that a file was read by the action preceeding it.
+-- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
+--   then these files must be dependencies of this rule. Calls to 'trackRead' are
+--   automatically inserted in 'LintTracker' mode.
 trackRead :: [FilePath] -> Action ()
 trackRead = mapM_ (trackUse . FileQ . packU)
 
--- | Track that a file was written by the action preceeding it.
+-- | Track that a file was written by the action preceeding it. If 'shakeLint' is activated
+--   then these files must either be the target of this rule, or never referred to by the build system.
+--   Calls to 'trackWrite' are automatically inserted in 'LintTracker' mode.
 trackWrite :: [FilePath] -> Action ()
 trackWrite = mapM_ (trackChange . FileQ . packU)
 
--- | Allow writing to a file in a different rule.
+-- | Allow accessing a file in this rule, ignoring any 'trackRead'\/'trackWrite' calls matching
+--   the pattern.
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
     opts <- getShakeOptions
