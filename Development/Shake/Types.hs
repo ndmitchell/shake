@@ -43,7 +43,8 @@ data Lint
         --   are first written. Any calls to 'needed' will assert that they do not cause a rule to be rebuilt.
     | LintTracker
         -- ^ Track which files are accessed by command line programs run by 'command' or 'cmd', using @tracker.exe@ as supplied
-        --   with the Microsoft .NET 4.5 SDK (Windows only). Also performs all checks from 'LintBasic'.
+        --   with the Microsoft .NET 4.5 SDK (Windows only). Also performs all checks from 'LintBasic'. Note that some programs are not
+        --   tracked properly, particularly cygwin programs (it seems).
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
