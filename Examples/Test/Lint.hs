@@ -6,6 +6,8 @@ import Development.Shake.FilePath
 import Examples.Util
 import Control.Exception hiding (assert)
 import System.Directory as IO
+import Control.Monad
+import Data.Maybe
 
 
 main = shaken test $ \args obj -> do
@@ -66,6 +68,29 @@ main = shaken test $ \args obj -> do
         needed [obj "gen2"]
         writeFile' out ""
 
+    obj "tracker-write1" *> \out -> do
+        () <- cmd "cmd /c" ["echo x > " ++ out <.> "txt"]
+        need [out <.> "txt"]
+        writeFile' out ""
+
+    obj "tracker-write2" *> \out -> do
+        () <- cmd "cmd /c" ["echo x > " ++ out <.> "txt"]
+        writeFile' out ""
+
+    obj "tracker-source2" *> \out -> copyFile' (obj "tracker-source1") out
+    obj "tracker-read1" *> \out -> do
+        () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source1") ++ " > nul"]
+        writeFile' out ""
+    obj "tracker-read2" *> \out -> do
+        () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source1") ++ " > nul"]
+        need [obj "tracker-source1"]
+        writeFile' out ""
+    obj "tracker-read3" *> \out -> do
+        () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source2") ++ " > nul"]
+        need [obj "tracker-source2"]
+        writeFile' out ""
+
+
 test build obj = do
     dir <- getCurrentDirectory
     let crash args parts = do
@@ -82,3 +107,13 @@ test build obj = do
     crash ["--clean","listing","existance"] ["changed since being depended upon"]
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
+
+    tracker <- findExecutable "tracker.exe"
+    when (isJust tracker) $ do
+        writeFile (obj "tracker-source1") ""
+        writeFile (obj "tracker-source2") ""
+        crash ["tracker-write1"] ["not have its creation tracked","lint/tracker-write1","lint/tracker-write1.txt"]
+        build ["tracker-write2"]
+        crash ["tracker-read1"] ["used but not depended upon","lint/tracker-source1"]
+        build ["tracker-read2"]
+        crash ["tracker-read3"] ["depended upon after being used","lint/tracker-source2"]
