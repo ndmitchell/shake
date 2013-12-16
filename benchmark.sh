@@ -21,5 +21,5 @@ time ninja -j3
 
 echo Run Shake
 ninja -t clean
-time shake -j3
-time shake -j3
+time shake -j3 --quiet --timings
+time shake -j3 --quiet --timings
