@@ -15,16 +15,10 @@ export PATH=$PATH:`pwd`
 cd ninja
 echo Run Ninja
 ninja -t clean
-date +%H:%M:%S.%N
-ninja -j3
-date +%H:%M:%S.%N
-ninja -j3
-date +%H:%M:%S.%N
+time ninja -j3
+time ninja -j3
 
 echo Run Shake
 ninja -t clean
-date +%H:%M:%S.%N
-shake -j3
-date +%H:%M:%S.%N
-shake -j3
-date +%H:%M:%S.%N
+time shake -j3
+time shake -j3
