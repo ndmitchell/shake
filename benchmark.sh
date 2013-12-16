@@ -14,12 +14,38 @@ cp ninja/ninja bin/ninja
 export PATH=$PATH:`pwd`/bin
 
 cd ninja
+function timed
+{
+    local START=`date +%s%N`
+    time $1
+    local END=`date +%s%N`
+    RET=$(((END - START) / 1000000)) # in milliseconds
+    echo Took ${RET}ms
+}
+
 echo Run Ninja
 ninja -t clean
-time ninja -j3
-time ninja -j3
+timed "time ninja -j3"
+NINJA_FULL=$RET
+timed "time ninja -j3"
+NINJA_ZERO=$RET
 
 echo Run Shake
 ninja -t clean
-time shake -j3 --quiet --timings
-time shake -j3 --quiet --timings
+timed "shake -j3 --quiet --timings"
+SHAKE_FULL=$RET
+timed "shake -j3 --quiet --timings"
+SHAKE_ZERO=$RET
+
+echo Ninja was $NINJA_FULL then $NINJA_ZERO
+echo Shake was $SHAKE_FULL then $SHAKE_ZERO
+
+if (( NINJA_FULL < SHAKE_FULL )); then
+    echo ERROR: Ninja build was faster than Shake
+    exit 1
+fi
+
+if (( NINJA_ZERO + 100 < SHAKE_ZERO )); then
+    echo ERROR: Ninja zero build was more than 0.1s faster than Shake
+    exit 2
+fi
