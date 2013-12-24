@@ -105,7 +105,7 @@ data Throttle = Throttle
 -- | A version of 'Development.Shake.newThrottle' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newResource' instead.
 newThrottleIO :: String -> Int -> Double -> IO Resource
-newThrottleIO name count period_ = do
+newThrottleIO name count period = do
     when (count < 0) $
         error $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
     key <- resourceId
@@ -115,7 +115,6 @@ newThrottleIO name count period_ = do
     let s = Throttle lock rep time
     return $ Resource key shw (acquire s) (release s)
     where
-        period = fromRational $ toRational period_
         shw = "Throttle " ++ name
 
         release :: Throttle -> Int -> IO ()
