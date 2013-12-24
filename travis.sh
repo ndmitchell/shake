@@ -1,7 +1,11 @@
 #!/bin/bash
-# This script benchmarks time to build Ninja with both Shake and Ninja
 set -e # exit on errors
 set -x # echo each line
+
+# Standard testing
+wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --no-cache --quiet | sh
+
+# This script benchmarks time to build Ninja with both Shake and Ninja
 
 # Install shake
 cabal install
