@@ -330,7 +330,7 @@ progress Database{..} = do
     s <- readIORef status
     return $ foldl' f mempty $ map snd $ Map.elems s
     where
-        g = id
+        g = fromRational . toRational
 
         f s (Ready Result{..}) = if step == built
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
