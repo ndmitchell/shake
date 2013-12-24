@@ -62,9 +62,7 @@ instance Hashable Value where
     hashWithSalt salt (Value a) = hashWithSalt salt (typeOf a) `xor` hashWithSalt salt a
 
 instance Eq Value where
-    Value a == Value b = case cast b of
-        Just bb -> a == bb
-        Nothing -> False
+    Value a == Value b = maybe False (a ==) $ cast b
 
 
 ---------------------------------------------------------------------
