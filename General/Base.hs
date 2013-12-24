@@ -93,7 +93,7 @@ waitBarrier (Barrier x) = readMVar x
 ---------------------------------------------------------------------
 -- Data.Time
 
-type Time = Float -- how far you are through this run, in seconds
+type Time = Double -- how far you are through this run, in seconds
 
 -- | Call once at the start, then call repeatedly to get Time values out
 offsetTime :: IO (IO Time)
@@ -104,7 +104,7 @@ offsetTime = do
         return $ fromRational $ toRational $ end `diffUTCTime` start
 
 
-type Duration = Float -- duration in seconds
+type Duration = Double -- duration in seconds
 
 duration :: IO a -> IO (Duration, a)
 duration act = do
