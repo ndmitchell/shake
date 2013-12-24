@@ -105,10 +105,9 @@ currentWitness = do
 
 
 instance Binary Witness where
-    put (Witness ts _ _) = put $ BinList $ map BS.pack ts
+    put (Witness ts _ _) = put $ BS.unlines $ map BS.pack ts
     get = do
-        BinList ts <- get
-        ts <- return $ map BS.unpack ts
+        ts <- fmap (map BS.unpack . BS.lines) get
         let ws = toStableList $ unsafePerformIO $ readIORefAfter ts witness
         let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
         return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
