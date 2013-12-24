@@ -29,9 +29,9 @@ function timed
 
 echo Run Ninja
 ninja -t clean
-timed "time ninja -j3"
+timed "time ninja -j3 -d stats"
 NINJA_FULL=$RET
-timed "time ninja -j3"
+timed "time ninja -j3 -d stats"
 NINJA_ZERO=$RET
 
 echo Run Shake
