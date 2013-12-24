@@ -487,8 +487,8 @@ instance BinaryWith Witness Step where
     getWith _ = get
 
 instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put x6
-    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; x4 <- get; x5 <- get; x6 <- get; return $ Result x1 x2 x3 x4 x5 x6
+    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map BinList x4) >> put x5 >> put (BinList x6)
+    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; BinList x4 <- get; x5 <- get; BinList x6 <- get; return $ Result x1 x2 x3 (map fromBinList x4) x5 x6
 
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0
