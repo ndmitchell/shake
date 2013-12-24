@@ -20,6 +20,7 @@ import Data.IORef
 import Data.List
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
+import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
 
 
@@ -104,9 +105,10 @@ currentWitness = do
 
 
 instance Binary Witness where
-    put (Witness ts _ _) = put ts
+    put (Witness ts _ _) = put $ BinList $ map BS.pack ts
     get = do
-        ts <- get
+        BinList ts <- get
+        ts <- return $ map BS.unpack ts
         let ws = toStableList $ unsafePerformIO $ readIORefAfter ts witness
         let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
         return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
