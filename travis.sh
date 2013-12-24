@@ -41,6 +41,8 @@ SHAKE_FULL=$RET
 timed "shake -j3 --quiet --timings"
 SHAKE_ZERO=$RET
 
+ls -l .shake* build/.ninja*
+
 echo Ninja was $NINJA_FULL then $NINJA_ZERO
 echo Shake was $SHAKE_FULL then $SHAKE_ZERO
 
