@@ -11,6 +11,7 @@ import System.Directory
 
 import Development.Shake.Core hiding (trackAllow)
 import General.Base
+import General.String
 import Development.Shake.Classes
 import Development.Shake.Rules.File
 import Development.Shake.FilePattern

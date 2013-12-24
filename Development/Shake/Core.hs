@@ -48,6 +48,7 @@ import Development.Shake.Types
 import Development.Shake.Errors
 import General.Timing
 import General.Base
+import General.String
 
 
 ---------------------------------------------------------------------

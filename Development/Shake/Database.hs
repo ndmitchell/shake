@@ -21,6 +21,7 @@ import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
 import General.Base
+import General.String
 import General.Intern as Intern
 
 import Control.Exception

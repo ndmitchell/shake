@@ -5,7 +5,7 @@ module Development.Shake.Rules.OrderOnly(
     ) where
 
 import Development.Shake.Core
-import General.Base
+import General.String
 import Development.Shake.Classes
 import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS

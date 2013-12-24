@@ -122,6 +122,7 @@ library
         General.Base
         General.Binary
         General.Intern
+        General.String
         General.Timing
         Paths_shake
 

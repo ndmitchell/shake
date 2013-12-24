@@ -18,6 +18,7 @@ import qualified Data.ByteString.Char8 as BS
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
 import General.Base
+import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePattern
 import Development.Shake.FileTime
