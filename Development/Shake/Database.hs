@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Database(
-    Time, offsetTime, Duration, duration, Trace,
+    Time, offsetTime, Duration, duration, Trace(..),
     Database, withDatabase,
     listDepends, lookupDependencies,
     Ops(..), build, Depends,
@@ -75,7 +75,11 @@ emptyStack = Stack Nothing [] Set.empty
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
-type Trace = (BS, Time, Time) -- (message, start, end)
+data Trace = Trace BS Time Time -- (message, start, end)
+    deriving Show
+
+instance NFData Trace where
+    rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
 
 -- | Invariant: The database does not have any cycles when a Key depends on itself
 data Database = Database
@@ -403,9 +407,9 @@ showJSON Database{..} = do
                      ,"changed:" ++ showStep changed
                      ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
                      ,"execution:" ++ show execution] ++
-                     ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | traces /= []]
+                     ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | not $ null traces]
                 showStep i = show $ fromJust $ Map.lookup i steps
-                showTrace (a,b,c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show (unpack a) ++ "}"
+                showTrace (Trace a b c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show (unpack a) ++ "}"
             in  ["{" ++ intercalate ", " xs ++ "}"]
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 
@@ -489,8 +493,12 @@ instance BinaryWith Witness Step where
     getWith _ = get
 
 instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map BinList x4) >> put x5 >> put (BinList x6)
-    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; BinList x4 <- get; x5 <- get; BinList x6 <- get; return $ Result x1 x2 x3 (map fromBinList x4) x5 x6
+    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map BinList x4) >> put (BinFloat x5) >> put (BinList x6)
+    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; BinList x4 <- get; BinFloat x5 <- get; BinList x6 <- get; return $ Result x1 x2 x3 (map fromBinList x4) x5 x6
+
+instance Binary Trace where
+    put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
+    get = do a <- get; BinFloat b <- get; BinFloat c <- get; return $ Trace a b c
 
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0

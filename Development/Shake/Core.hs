@@ -548,7 +548,7 @@ traced msg act = do
     putNormal $ "# " ++ msg ++ " " ++ showTopStack (stack s)
     res <- liftIO act
     stop <- liftIO $ timestamp s
-    Action $ State.modify $ \s -> s{traces = (pack msg,start,stop):traces s}
+    Action $ State.modify $ \s -> s{traces = Trace (pack msg) start stop : traces s}
     return res
 
 
