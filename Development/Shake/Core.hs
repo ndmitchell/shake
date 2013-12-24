@@ -484,7 +484,7 @@ runAfter op = do
 --   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: Rule key value => [key] -> Action [value]
-apply = f
+apply = f -- Don't short-circuit as we still want error messages
     where
         -- We don't want the forall in the Haddock docs
         f :: forall key value . Rule key value => [key] -> Action [value]
@@ -501,6 +501,7 @@ apply = f
 
 
 applyKeyValue :: [Key] -> Action [Value]
+applyKeyValue [] = return []
 applyKeyValue ks = do
     s <- Action State.get
     let exec stack k = try $ wrapStack (showStack (database s) stack) $ do
