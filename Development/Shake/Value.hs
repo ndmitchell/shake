@@ -63,6 +63,7 @@ instance Hashable Value where
 
 instance Eq Value where
     Value a == Value b = maybe False (a ==) $ cast b
+    Value a /= Value b = maybe False (a /=) $ cast b
 
 
 ---------------------------------------------------------------------
