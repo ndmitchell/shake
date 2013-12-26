@@ -286,7 +286,7 @@ As shown before, we can use `runhaskell _build/run` to execute our build system,
 
     #!/bin/sh
     mkdir -p _shake
-    ghc --make Build.hs -rtsopts "-with-rtsopts=-I0 -qg -qb" -outputdir=_shake -o _shake/build && _shake/build $*
+    ghc --make Build.hs -rtsopts "-with-rtsopts=-I0 -qg -qb" -outputdir=_shake -o _shake/build && _shake/build "$@"
 
 This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag can be treated as magic - it instructs the Haskell compiler to turn off features that would otherwise steal CPU from the commands you are running.
 
