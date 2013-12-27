@@ -20,7 +20,7 @@ type FileStr = Str
 ---------------------------------------------------------------------
 -- EXPRESSIONS AND BINDINGS
 
-data Expr = Exprs [Expr] | Lit Str | Var Str deriving Show
+data Expr = Exprs [Expr] | Lit Str | Var Str deriving (Show,Eq)
 
 askExpr :: Env Str Str -> Expr -> IO Str
 askExpr e = f
