@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
 
--- | Parsing is a slow point, the below is optimised
+-- | Lexing is a slow point, the code below is optimised
 module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
 
 import qualified Data.ByteString.Char8 as BS
