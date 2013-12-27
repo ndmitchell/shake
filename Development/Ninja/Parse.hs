@@ -58,14 +58,8 @@ splitStmts = stmt . continuation . linesCR
 
 applyStmt :: Env Str Str -> Ninja -> Stmt -> IO Ninja
 applyStmt env ninja@Ninja{..} (Stmt x xs)
-    | key == BS.pack "rule" =
-        return ninja{rules = (BS.takeWhile isVar rest, Rule $ parseBinds xs) : rules}
-    | key == BS.pack "default" = do
-        xs <- parseStrs env rest
-        return ninja{defaults = xs ++ defaults}
-    | key == BS.pack "pool" = do
-        depth <- getDepth env $ parseBinds xs
-        return ninja{pools = (BS.takeWhile isVar rest, depth) : pools}
+    | BS.null $ dropSpace x = return ninja
+    | BS.pack "#" `BS.isPrefixOf` dropSpace x = return ninja -- comments can only occur on their own line
     | key == BS.pack "build" = do
         (out,rest) <- return $ splitColon rest
         outputs <- parseStrs env out
@@ -76,6 +70,14 @@ applyStmt env ninja@Ninja{..} (Stmt x xs)
             if rule == BS.pack "phony" then ninja{phonys = [(x, normal) | x <- outputs] ++ phonys}
             else if length outputs == 1 then ninja{singles = (head outputs, build) : singles}
             else ninja{multiples = (outputs, build) : multiples}
+    | key == BS.pack "rule" =
+        return ninja{rules = (BS.takeWhile isVar rest, Rule $ parseBinds xs) : rules}
+    | key == BS.pack "default" = do
+        xs <- parseStrs env rest
+        return ninja{defaults = xs ++ defaults}
+    | key == BS.pack "pool" = do
+        depth <- getDepth env $ parseBinds xs
+        return ninja{pools = (BS.takeWhile isVar rest, depth) : pools}
     | key == BS.pack "include" = parseFile (BS.unpack rest) env ninja
     | key == BS.pack "subninja" = do
         e <- scopeEnv env
@@ -83,8 +85,6 @@ applyStmt env ninja@Ninja{..} (Stmt x xs)
     | Just (a,b) <- parseBind x = do
         addBind env a b
         return ninja
-    | BS.null $ dropSpace x = return ninja
-    | BS.pack "#" `BS.isPrefixOf` dropSpace x = return ninja -- comments can only occur on their own line
     | otherwise = error $ "Cannot parse line: " ++ BS.unpack x
     where (key,rest) = word1 x
 
