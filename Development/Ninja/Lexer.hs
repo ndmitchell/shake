@@ -25,14 +25,14 @@ endsDollar :: Str -> Bool
 endsDollar = BS.isSuffixOf (BS.singleton '$')
 
 dropSpace :: Str -> Str
-dropSpace = BS.dropWhile isSpace
+dropSpace = BS.dropWhile (== ' ')
 
 startsSpace :: Str -> Bool
 startsSpace = BS.isPrefixOf (BS.singleton ' ')
 
 word1 :: Str -> (Str, Str)
 word1 x = (a, dropSpace b)
-    where (a,b) = BS.break isSpace x
+    where (a,b) = BS.break (== ' ') x
 
 isVar :: Char -> Bool
 isVar x = isAlphaNum x || x == '_'
