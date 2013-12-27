@@ -30,11 +30,10 @@ withBinds (x:xs) = (x,a) : withBinds b
 
 applyStmt :: Env Str Str -> Ninja -> (Lexeme, [(Str,Expr)]) -> IO Ninja
 applyStmt env ninja@Ninja{..} (key, binds) = case key of
-    LexBuild outputs rule normal implicit orderOnly  -> do
+    LexBuild outputs rule deps -> do
         outputs <- mapM (askExpr env) outputs
-        normal <- mapM (askExpr env) normal
-        implicit <- mapM (askExpr env) implicit
-        orderOnly <- mapM (askExpr env) orderOnly
+        deps <- mapM (askExpr env) deps
+        let (normal,implicit,orderOnly) = splitDeps deps
         let build = Build rule env normal implicit orderOnly binds
         return $
             if rule == BS.pack "phony" then ninja{phonys = [(x, normal) | x <- outputs] ++ phonys}
@@ -58,6 +57,14 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
         return ninja
     LexBind a b ->
         error $ "Unexpected binding defining " ++ BS.unpack a
+
+
+splitDeps :: [Str] -> ([Str], [Str], [Str])
+splitDeps (x:xs) | x == BS.pack "|" = ([],a++b,c)
+                 | x == BS.pack "||" = ([],b,a++c)
+                 | otherwise = (x:a,b,c)
+    where (a,b,c) = splitDeps xs
+splitDeps [] = ([], [], [])
 
 
 getDepth :: Env Str Str -> [(Str, Expr)] -> IO Int

@@ -13,7 +13,7 @@ import Data.Maybe
 -- Lex each line separately, rather than each lexeme
 data Lexeme
     = LexBind Str Expr -- [indent]foo = bar
-    | LexBuild [Expr] Str [Expr] [Expr] [Expr] -- build foo: bar | baz || qux
+    | LexBuild [Expr] Str [Expr] -- build foo: bar | baz || qux (| and || are represented as Expr)
     | LexInclude Str -- include file
     | LexSubninja Str -- include file
     | LexRule Str -- rule name
@@ -66,8 +66,7 @@ asKeyword x
         let (out,rest2) = splitColon rest
             outputs = parseExprs out
             (rule,deps) = word1 $ dropSpace rest2
-            (normal,implicit,orderOnly) = splitDeps $ parseExprs deps
-        in Just $ LexBuild outputs rule normal implicit orderOnly
+        in Just $ LexBuild outputs rule $ parseExprs deps
     | key == BS.pack "rule" =
         Just $ LexRule $ BS.takeWhile isVar rest
     | key == BS.pack "default" =
@@ -113,14 +112,6 @@ parseExpr = exprs . f
                 | c == ':' -> Lit (BS.singleton ':') : f s
                 | c == '{' -> let (a,b) = BS.break (== '}') s in Var a : f (BS.drop 1 b)
                 | otherwise -> let (a,b) = BS.span isVar x in Var a : f b
-
-
-splitDeps :: [Expr] -> ([Expr], [Expr], [Expr])
-splitDeps (x:xs) | x == Lit (BS.pack "|") = ([],a++b,c)
-                 | x == Lit (BS.pack "||") = ([],b,a++c)
-                 | otherwise = (x:a,b,c)
-    where (a,b,c) = splitDeps xs
-splitDeps [] = ([], [], [])
 
 
 parseExprs :: Str -> [Expr]
