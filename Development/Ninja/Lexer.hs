@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 
 -- | Parsing is a slow point, the below is optimised
-module Development.Ninja.Lexer(Lexeme(..), lexer) where
+module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
 
 import qualified Data.ByteString.Char8 as BS
 import Development.Shake.ByteString
@@ -36,6 +36,10 @@ word1 x = (a, dropSpace b)
 
 isVar :: Char -> Bool
 isVar x = isAlphaNum x || x == '_'
+
+
+lexerFile :: Maybe FilePath -> IO [Lexeme]
+lexerFile file = fmap lexer $ maybe BS.getContents BS.readFile file
 
 
 lexer :: Str -> [Lexeme]
