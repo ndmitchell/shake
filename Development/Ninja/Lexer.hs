@@ -3,11 +3,10 @@
 -- | Lexing is a slow point, the code below is optimised
 module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
 
+import Control.Arrow
 import qualified Data.ByteString.Char8 as BS
-import Development.Shake.ByteString
 import Development.Ninja.Type
 import Data.Char
-import Data.Maybe
 
 
 -- Lex each line separately, rather than each lexeme
@@ -27,9 +26,6 @@ endsDollar = BS.isSuffixOf (BS.singleton '$')
 dropSpace :: Str -> Str
 dropSpace = BS.dropWhile (== ' ')
 
-startsSpace :: Str -> Bool
-startsSpace = BS.isPrefixOf (BS.singleton ' ')
-
 word1 :: Str -> (Str, Str)
 word1 x = (a, dropSpace b)
     where (a,b) = BS.break (== ' ') x
@@ -43,59 +39,73 @@ lexerFile file = fmap lexer $ maybe BS.getContents BS.readFile file
 
 
 lexer :: Str -> [Lexeme]
-lexer = concatMap f . splitStmts
-    where f (Stmt x xs) = maybeToList (asKeyword x) ++ mapMaybe asBind xs
-
-
-data Stmt = Stmt Str [Str] deriving Show
-
-splitStmts :: Str -> [Stmt]
-splitStmts = stmt . continuation . linesCR
+lexer o@x = case BS.uncons x of
+    Nothing -> []
+    Just (c,x) -> case c of
+        '\r' -> lexer x
+        '\n' -> lexer x
+        ' ' -> lexBind $ BS.dropWhile (== ' ') x
+        '#' -> lexer $ BS.dropWhile (/= '\n') x
+        'b' | Just x <- strip "uild " x -> lexBuild $ dropSpace x
+        'r' | Just x <- strip "ule " x -> lexRule $ dropSpace x
+        'd' | Just x <- strip "efault " x -> lexDefault $ dropSpace x
+        'p' | Just x <- strip "ool " x -> lexPool $ dropSpace x
+        'i' | Just x <- strip "nclude " x -> lexInclude $ dropSpace x
+        's' | Just x <- strip "ubninja " x -> lexSubninja $ dropSpace x
+        _ -> lexDefine o
     where
-        continuation (x:xs) | endsDollar x = BS.concat (BS.init x : map (dropSpace . BS.init) a ++ map dropSpace (take 1 b)) : continuation (drop 1 b)
-            where (a,b) = span endsDollar xs
-        continuation (x:xs) = x : continuation xs
-        continuation [] = []
+        strip str x = if b `BS.isPrefixOf` x then Just $ BS.drop (BS.length b) x else Nothing
+            where b = BS.pack str
 
-        stmt [] = []
-        stmt (x:xs) = Stmt x (map dropSpace a) : stmt b
-            where (a,b) = span startsSpace xs
+lexBind o@x = case BS.uncons x of
+    Nothing -> []
+    Just (c,x) -> case c of
+        '\r' -> lexer x
+        '\n' -> lexer x
+        '#' -> lexer $ BS.dropWhile (/= '\n') x
+        _ -> lexxBind LexBind o
 
+lexBuild x =
+    let (this,next) = splitLineCont x
+        (out,rest) = splitColon this
+        outputs = parseExprs out
+        (rule,deps) = word1 $ dropSpace rest
+    in LexBuild outputs rule (parseExprs deps) : lexer next
 
-asKeyword :: Str -> Maybe Lexeme
-asKeyword x
-    | BS.null $ dropSpace x = Nothing
-    | BS.pack "#" `BS.isPrefixOf` dropSpace x = Nothing -- comments can only occur on their own line
-    | key == BS.pack "build" =
-        let (out,rest2) = splitColon rest
-            outputs = parseExprs out
-            (rule,deps) = word1 $ dropSpace rest2
-        in Just $ LexBuild outputs rule $ parseExprs deps
-    | key == BS.pack "rule" =
-        Just $ LexRule $ BS.takeWhile isVar rest
-    | key == BS.pack "default" =
-        Just $ LexDefault $ parseExprs rest
-    | key == BS.pack "pool" =
-        Just $ LexPool $ BS.takeWhile isVar rest
-    | key == BS.pack "include" =
-        Just $ LexInclude rest
-    | key == BS.pack "subninja" =
-        Just $ LexSubninja rest
-    | Just (a,b) <- parseBind x = do
-        Just $ LexDefine a b
-    | otherwise = error $ "Cannot parse line: " ++ BS.unpack x
-    where (key,rest) = word1 x
+lexDefault x
+    | (files,rest) <- splitLineCont x
+    = LexDefault (parseExprs files) : lexer rest
 
-parseBind :: Str -> Maybe (Str, Expr)
-parseBind x
+lexRule x = lexxName LexRule x
+lexPool x = lexxName LexPool x
+lexInclude x = lexxFile LexInclude x
+lexSubninja x = lexxFile LexSubninja x
+lexDefine x = lexxBind LexDefine x
+
+lexxBind ctor x
     | (var,rest) <- BS.span isVar x
     , Just ('=',rest) <- BS.uncons $ dropSpace rest
-    = Just (var, parseExpr $ dropSpace rest)
-    | otherwise = Nothing
+    , (exp,rest) <- splitLineCont $ dropSpace rest
+    = ctor var (parseExpr exp) : lexer rest
+lexxBind _ x = error $ show ("parse failed when parsing binding", BS.take 100 x)
 
+lexxFile ctor x
+    | (file,rest) <- splitLineCont x
+    = ctor file : lexer rest
 
-asBind :: Str -> Maybe Lexeme
-asBind x = Just $ uncurry LexBind $ fromMaybe (error $ "Unknown Ninja binding: " ++ BS.unpack x) $ parseBind x
+lexxName ctor x
+    | (name,rest) <- splitLineCont x
+    = ctor name : lexer rest
+
+splitLineCont :: Str -> (Str, Str)
+splitLineCont x = first BS.concat $ f x
+    where
+        f x = if not $ endsDollar a then ([a], b) else let (c,d) = f $ dropSpace b in (BS.init a : c, d)
+            where (a,b) = splitLineCR x
+
+splitLineCR :: Str -> (Str, Str)
+splitLineCR x = if BS.singleton '\r' `BS.isSuffixOf` a then (BS.init a, BS.drop 1 b) else (a, BS.drop 1 b)
+    where (a,b) = BS.break (== '\n') x
 
 
 parseExpr :: Str -> Expr
