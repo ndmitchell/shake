@@ -1,34 +1,14 @@
-{-# LANGUAGE PatternGuards, RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- | Parsing is a slow point, the below is optimised
 module Development.Ninja.Parse(parse) where
 
 import qualified Data.ByteString.Char8 as BS
-import Development.Shake.ByteString
 import Development.Ninja.Env
 import Development.Ninja.Type
+import Development.Ninja.Lexer
 import Control.Monad
-import Data.Char
-import Data.Maybe
 
-
-endsDollar :: Str -> Bool
-endsDollar = BS.isSuffixOf (BS.singleton '$')
-
-dropSpace :: Str -> Str
-dropSpace = BS.dropWhile isSpace
-
-startsSpace :: Str -> Bool
-startsSpace = BS.isPrefixOf (BS.singleton ' ')
-
-
-
-word1 :: Str -> (Str, Str)
-word1 x = (a, dropSpace b)
-    where (a,b) = BS.break isSpace x
-
-isVar :: Char -> Bool
-isVar x = isAlphaNum x || x == '_'
 
 parse :: FilePath -> IO Ninja
 parse file = do env <- newEnv; parseFile file env newNinja
@@ -37,56 +17,47 @@ parse file = do env <- newEnv; parseFile file env newNinja
 parseFile :: FilePath -> Env Str Str -> Ninja -> IO Ninja
 parseFile file env ninja = do
     src <- if file == "-" then BS.getContents else BS.readFile file
-    foldM (applyStmt env) ninja $ splitStmts src
+    foldM (applyStmt env) ninja $ withBinds $ lexer src
 
-
-data Stmt = Stmt Str [Str] deriving Show
-
-
-splitStmts :: Str -> [Stmt]
-splitStmts = stmt . continuation . linesCR
+withBinds :: [Lexeme] -> [(Lexeme, [(Str,Expr)])]
+withBinds [] = []
+withBinds (x:xs) = (x,a) : withBinds b
     where
-        continuation (x:xs) | endsDollar x = BS.concat (BS.init x : map (dropSpace . BS.init) a ++ map dropSpace (take 1 b)) : continuation (drop 1 b)
-            where (a,b) = span endsDollar xs
-        continuation (x:xs) = x : continuation xs
-        continuation [] = []
-
-        stmt [] = []
-        stmt (x:xs) = Stmt x (map dropSpace a) : stmt b
-            where (a,b) = span startsSpace xs
+        (a,b) = f xs
+        f (LexBind a b : rest) = let (as,bs) = f rest in ((a,b):as, bs)
+        f xs = ([], xs)
 
 
-applyStmt :: Env Str Str -> Ninja -> Stmt -> IO Ninja
-applyStmt env ninja@Ninja{..} (Stmt x xs)
-    | BS.null $ dropSpace x = return ninja
-    | BS.pack "#" `BS.isPrefixOf` dropSpace x = return ninja -- comments can only occur on their own line
-    | key == BS.pack "build" = do
-        (out,rest) <- return $ splitColon rest
-        outputs <- parseStrs env out
-        (rule,deps) <- return $ word1 $ dropSpace rest
-        (normal,implicit,orderOnly) <- fmap splitDeps $ parseStrs env deps
-        let build = Build rule env normal implicit orderOnly $ parseBinds xs
+applyStmt :: Env Str Str -> Ninja -> (Lexeme, [(Str,Expr)]) -> IO Ninja
+applyStmt env ninja@Ninja{..} (key, binds) = case key of
+    LexBuild outputs rule normal implicit orderOnly  -> do
+        outputs <- mapM (askExpr env) outputs
+        normal <- mapM (askExpr env) normal
+        implicit <- mapM (askExpr env) implicit
+        orderOnly <- mapM (askExpr env) orderOnly
+        let build = Build rule env normal implicit orderOnly binds
         return $
             if rule == BS.pack "phony" then ninja{phonys = [(x, normal) | x <- outputs] ++ phonys}
             else if length outputs == 1 then ninja{singles = (head outputs, build) : singles}
             else ninja{multiples = (outputs, build) : multiples}
-    | key == BS.pack "rule" =
-        return ninja{rules = (BS.takeWhile isVar rest, Rule $ parseBinds xs) : rules}
-    | key == BS.pack "default" = do
-        xs <- parseStrs env rest
+    LexRule name ->
+        return ninja{rules = (name, Rule binds) : rules}
+    LexDefault xs -> do
+        xs <- mapM (askExpr env) xs
         return ninja{defaults = xs ++ defaults}
-    | key == BS.pack "pool" = do
-        depth <- getDepth env $ parseBinds xs
-        return ninja{pools = (BS.takeWhile isVar rest, depth) : pools}
-    | key == BS.pack "include" = parseFile (BS.unpack rest) env ninja
-    | key == BS.pack "subninja" = do
+    LexPool name -> do
+        depth <- getDepth env binds
+        return ninja{pools = (name, depth) : pools}
+    LexInclude file ->
+        parseFile (BS.unpack file) env ninja
+    LexSubninja file -> do
         e <- scopeEnv env
-        parseFile (BS.unpack rest) e ninja
-    | Just (a,b) <- parseBind x = do
+        parseFile (BS.unpack file) e ninja
+    LexDefine a b -> do
         addBind env a b
         return ninja
-    | otherwise = error $ "Cannot parse line: " ++ BS.unpack x
-    where (key,rest) = word1 x
+    LexBind a b ->
+        error $ "Unexpected binding defining " ++ BS.unpack a
 
 
 getDepth :: Env Str Str -> [(Str, Expr)] -> IO Int
@@ -97,69 +68,3 @@ getDepth env xs = case lookup (BS.pack "depth") xs of
         case BS.readInt x of
             Just (i, n) | BS.null n -> return i
             _ -> error $ "Could not parse depth field in pool, got: " ++ BS.unpack x
-
-
-parseBind :: Str -> Maybe (Str, Expr)
-parseBind x
-    | (var,rest) <- BS.span isVar x
-    , Just ('=',rest) <- BS.uncons $ dropSpace rest
-    = Just (var, parseExpr $ dropSpace rest)
-    | otherwise = Nothing
-
-
-parseBinds :: [Str] -> [(Str, Expr)]
-parseBinds = map $ \x -> fromMaybe (error $ "Unknown Ninja binding: " ++ BS.unpack x) $ parseBind x
-
-
-parseExpr :: Str -> Expr
-parseExpr = exprs . f
-    where
-        exprs [x] = x
-        exprs xs = Exprs xs
-
-        f x = case BS.elemIndex '$' x of
-            Nothing -> [Lit x]
-            Just i -> Lit (BS.take i x) : g (BS.drop (i+1) x)
-
-        g x = case BS.uncons x of
-            Nothing -> []
-            Just (c,s)
-                | c == '$' -> Lit (BS.singleton '$') : f s
-                | c == ' ' -> Lit (BS.singleton ' ') : f s
-                | c == ':' -> Lit (BS.singleton ':') : f s
-                | c == '{' -> let (a,b) = BS.break (== '}') s in Var a : f (BS.drop 1 b)
-                | otherwise -> let (a,b) = BS.span isVar x in Var a : f b
-
-
-parseStrs :: Env Str Str -> Str -> IO [Str]
-parseStrs env = mapM (askExpr env) . parseExprs
-
-
-
-splitDeps :: [Str] -> ([Str], [Str], [Str])
-splitDeps (x:xs) | x == BS.pack "|" = ([],a++b,c)
-                 | x == BS.pack "||" = ([],b,a++c)
-                 | otherwise = (x:a,b,c)
-    where (a,b,c) = splitDeps xs
-splitDeps [] = ([], [], [])
-
-
-parseExprs :: Str -> [Expr]
-parseExprs = map parseExpr . f
-    where
-        f x | BS.null x = []
-            | otherwise = let (a,b) = splitUnescaped ' ' x in a : f b
-
-
-splitUnescaped :: Char -> Str -> (Str, Str)
-splitUnescaped c x = case filter valid $ BS.elemIndices c x of
-    [] -> (x, BS.empty)
-    i:_ -> (BS.take i x, BS.drop (i+1) x)
-    where
-        -- technically there could be $$:, so an escaped $ followed by a literal :
-        -- that seems very unlikely...
-        valid i = i == 0 || BS.index x (i-1) /= '$'
-
--- Find a non-escape : 
-splitColon :: Str -> (Str, Str)
-splitColon = splitUnescaped ':'

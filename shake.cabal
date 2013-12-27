@@ -161,6 +161,7 @@ executable shake
         Development.Make.Type
         Development.Ninja.All
         Development.Ninja.Env
+        Development.Ninja.Lexer
         Development.Ninja.Parse
         Development.Ninja.Type
         Start
