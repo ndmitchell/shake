@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternGuards #-}
+{-# OPTIONS_GHC -O2 #-}
 
 -- | Lexing is a slow point, the code below is optimised
 module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
