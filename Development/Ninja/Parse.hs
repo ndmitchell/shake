@@ -1,6 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
 
--- | Parsing is a slow point, the below is optimised
 module Development.Ninja.Parse(parse) where
 
 import qualified Data.ByteString.Char8 as BS
