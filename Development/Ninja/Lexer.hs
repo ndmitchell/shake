@@ -47,6 +47,20 @@ break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
                      | otherwise = go $ inc s
             where c = chr s
 
+{-# INLINE break00 #-}
+-- The predicate must return true for '\0'
+break00 :: (Char -> Bool) -> Str0 -> (Str, Str0)
+break00 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
+    where
+        i = Internal.inlinePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
+            let start = castPtr ptr :: S
+            let end = go start
+            return $! Ptr end `minusPtr` start
+
+        go s@(Ptr a) | f c = a
+                     | otherwise = go $ inc s
+            where c = chr s
+
 head0 :: Str0 -> Char
 head0 (Str0 x) = Internal.w2c $ BS.unsafeHead x
 
@@ -178,6 +192,7 @@ lexxExpr stopColon stopSpace = first exprs . f
             (True , False) -> \x -> x <= ':' && (x == ':'             || x == '$' || x == '\r' || x == '\n' || x == '\0')
             (False, True ) -> \x -> x <= '$' && (            x == ' ' || x == '$' || x == '\r' || x == '\n' || x == '\0')
             (False, False) -> \x -> x <= '$' && (                        x == '$' || x == '\r' || x == '\n' || x == '\0')
+        f x = case break00 special x of (a,x) -> if BS.null a then g x else Lit a $: g x
 
         x $: (xs,y) = (x:xs,y)
 
