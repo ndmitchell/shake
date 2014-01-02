@@ -23,7 +23,7 @@ instance Show OrderOnlyA where show (OrderOnlyA ()) = "OrderOnly"
 
 
 instance Rule OrderOnlyQ OrderOnlyA where
-    storedValue (OrderOnlyQ _) = return $ Just $ OrderOnlyA ()
+    storedValue _ (OrderOnlyQ _) = return $ Just $ OrderOnlyA ()
 
 
 defaultRuleOrderOnly :: Rules ()

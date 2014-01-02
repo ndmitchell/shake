@@ -35,7 +35,7 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . unpackU
 
 
 instance Rule FilesQ FilesA where
-    storedValue (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe xs
+    storedValue _ (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe xs
 
 
 -- | Define a rule for building multiple files at the same time.

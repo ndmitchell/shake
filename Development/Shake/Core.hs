@@ -83,7 +83,7 @@ class (
     --   As an example for filenames/timestamps, if the file exists you should return 'Just'
     --   the timestamp, but otherwise return 'Nothing'. For rules whose values are not
     --   stored externally, 'storedValue' should return 'Nothing'.
-    storedValue :: key -> IO (Maybe value)
+    storedValue :: ShakeOptions -> key -> IO (Maybe value)
 
 
 data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
@@ -376,7 +376,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     stats <- progress database
                     return stats{isFailure=failure}
                 writeIORef progressThread $ Just tid
-                let ruleinfo = createRuleinfo rs
+                let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = SAction database pool start ruleinfo output opts diagnostic lint after absent emptyStack shakeVerbosity [] 0 [] Nothing [] []
@@ -445,12 +445,12 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 
-createRuleinfo :: SRules -> Map.HashMap TypeRep RuleInfo
-createRuleinfo SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
+createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
+createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
-                  f _ = storedValue
+                  f _ = storedValue opt
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r

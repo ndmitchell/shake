@@ -103,20 +103,16 @@ instance Binary GetDirectoryQ where
 
 
 instance Rule DoesFileExistQ DoesFileExistA where
-    storedValue (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
-    -- invariant _ = True
+    storedValue _ (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
 
 instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
-    storedValue (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
-    -- invariant _ = True
+    storedValue _ (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
 
 instance Rule GetEnvQ GetEnvA where
-    storedValue (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvMaybe x
-    -- invariant _ = True
+    storedValue _ (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvMaybe x
 
 instance Rule GetDirectoryQ GetDirectoryA where
-    storedValue x = fmap Just $ getDir x
-    -- invariant _ = True
+    storedValue _ x = fmap Just $ getDir x
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.

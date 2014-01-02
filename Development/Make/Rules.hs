@@ -33,7 +33,7 @@ newtype File_A = File_A (Maybe FileTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule File_Q File_A where
-    storedValue (File_Q x) = fmap (fmap (File_A . Just)) $ getModTimeMaybe x
+    storedValue _ (File_Q x) = fmap (fmap (File_A . Just)) $ getModTimeMaybe x
 
 
 defaultRuleFile_ :: Rules ()
