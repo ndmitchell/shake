@@ -91,7 +91,7 @@ module Development.Shake(
     -- * Core
     shake,
     shakeOptions,
-    Rules, action, withoutActions,
+    Rules, action, withoutActions, alternatives,
     Action, traced,
     liftIO, actionOnException, actionFinally,
     ShakeException(..),

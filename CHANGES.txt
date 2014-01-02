@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add alternatives to allow overlapping rules
     Make storedValue take a ShakeOptions structure
     Generalise the newCache function
     Improve the performance of the Ninja parser

@@ -11,7 +11,7 @@ module Development.Shake.Core(
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
-    Rule(..), Rules, defaultRule, rule, action, withoutActions,
+    Rule(..), Rules, defaultRule, rule, action, withoutActions, alternatives,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -149,6 +149,23 @@ rule = rulePriority 1
 rulePriority :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
 rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
+
+-- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
+--   in order. Only recommended for small blocks containing a handful of rules.
+--
+-- @
+-- alternatives $ do
+--     \"hello.txt\" *> \\out -> writeFile' out \"special\"
+--     \"*.txt\" *> \\out -> writeFile' out \"normal\"
+-- @
+alternatives :: Rules () -> Rules ()
+alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
+    where
+        f (k, v, []) = (k, v, [])
+        f (k, v, xs) = let (is,rs) = unzip xs in (k, v, [(maximum is, foldl1' g rs)])
+
+        g (ARule a) (ARule b) = ARule $ \x -> a x `mplus` b2 x
+            where b2 = fmap (fmap (fromJust . cast)) . b . fromJust . cast
 
 
 -- | Track that a key has been used by the action preceeding it.
