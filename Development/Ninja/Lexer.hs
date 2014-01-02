@@ -174,11 +174,10 @@ lexxExpr stopColon stopSpace = first exprs . f
         exprs xs = Exprs xs
 
         special = case (stopColon, stopSpace) of
-            (True , True ) -> \x -> x == ':' || x == ' ' || x == '$' || x == '\r' || x == '\n'
-            (True , False) -> \x -> x == ':'             || x == '$' || x == '\r' || x == '\n'
-            (False, True ) -> \x ->             x == ' ' || x == '$' || x == '\r' || x == '\n'
-            (False, False) -> \x ->                         x == '$' || x == '\r' || x == '\n'
-        f x = case break0 special x of (a,x) -> if BS.null a then g x else Lit a $: g x
+            (True , True ) -> \x -> x <= ':' && (x == ':' || x == ' ' || x == '$' || x == '\r' || x == '\n' || x == '\0')
+            (True , False) -> \x -> x <= ':' && (x == ':'             || x == '$' || x == '\r' || x == '\n' || x == '\0')
+            (False, True ) -> \x -> x <= '$' && (            x == ' ' || x == '$' || x == '\r' || x == '\n' || x == '\0')
+            (False, False) -> \x -> x <= '$' && (                        x == '$' || x == '\r' || x == '\n' || x == '\0')
 
         x $: (xs,y) = (x:xs,y)
 
