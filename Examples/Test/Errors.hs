@@ -50,6 +50,10 @@ main = shaken test $ \args obj -> do
 
     obj "overlap.txt" *> \out -> writeFile' out "overlap.txt"
     obj "overlap.*" *> \out -> writeFile' out "overlap.*"
+    alternatives $ do
+        obj "alternative.txt" *> \out -> writeFile' out "alternative.txt"
+        obj "alternative.*" *> \out -> writeFile' out "alternative.*"
+
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
@@ -84,3 +88,6 @@ test build obj = do
     build ["overlap.foo"]
     assertContents (obj "overlap.foo") "overlap.*"
     crash ["overlap.txt"] ["key matches multiple rules","overlap.txt"]
+    build ["alternative.foo","alternative.txt"]
+    assertContents (obj "alternative.foo") "alternative.*"
+    assertContents (obj "alternative.txt") "alternative.txt"
