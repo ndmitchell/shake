@@ -131,7 +131,7 @@ module Development.Shake(
     Resource, newResource, newResourceIO, withResource, withResources,
     newThrottle, newThrottleIO,
     unsafeExtraThread,
-    -- * Cached file contents
+    -- * Cache
     newCache, newCacheIO,
     -- * Deprecated
     system', systemCwd, systemOutput

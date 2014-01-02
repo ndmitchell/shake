@@ -4,20 +4,16 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (*>), (**>), (?>), phony, (~>),
-    newCache, newCacheIO
+    (*>), (**>), (?>), phony, (~>)
     ) where
 
-import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
-import qualified Data.HashMap.Strict as Map
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
 
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
-import General.Base
 import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePattern
@@ -205,46 +201,3 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --   Note that matching is case-sensitive, even on Windows.
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
 (*>) test = root (show test) (test ?==)
-
-
--- | A version of 'newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
---   Most people should use 'newCache' instead.
-newCacheIO :: (FilePath -> IO a) -> IO (FilePath -> Action a)
-newCacheIO act = do
-    var <- newVar Map.empty -- Var (Map FilePath (Barrier (Either SomeException a)))
-    let run = either (\e -> throwIO (e :: SomeException)) return
-    return $ \file -> do
-        need [file]
-        liftIO $ join $ modifyVar var $ \mp -> case Map.lookup file mp of
-            Just v -> return (mp, run =<< waitBarrier v)
-            Nothing -> do
-                v <- newBarrier
-                return $ (,) (Map.insert file v mp) $ do
-                    res <- try $ act file
-                    signalBarrier v res
-                    run res
-
-
--- | Given a way of loading information from a file, produce a cached version that will load each file at most once.
---   Using the cached function will still result in a dependency on the original file.
---   The argument function should not access any files other than the one passed as its argument.
---   Each call to 'newCache' creates a separate cache that is independent of all other calls to 'newCache'.
---
---   This function is useful when creating files that store intermediate values,
---   to avoid the overhead of repeatedly reading from disk, particularly if the file requires expensive parsing.
---   As an example:
---
--- @
--- digits \<- 'newCache' $ \\file -> do
---     src \<- readFile file
---     return $ length $ filter isDigit src
--- \"*.digits\" '*>' \\x -> do
---     v1 \<- digits ('dropExtension' x)
---     v2 \<- digits ('dropExtension' x)
---     'Development.Shake.writeFile'' x $ show (v1,v2)
--- @
---
---   To create the result @MyFile.txt.digits@ the file @MyFile.txt@ will be read and counted, but only at most
---   once per execution.
-newCache :: (FilePath -> IO a) -> Rules (FilePath -> Action a)
-newCache = rulesIO . newCacheIO

@@ -16,6 +16,7 @@ module Development.Shake.Core(
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
+    newCache, newCacheIO,
     unsafeExtraThread,
     -- Internal stuff
     rulesIO, runAfter
@@ -701,6 +702,62 @@ withResources res act
     where
         f [] = act
         f (r:rs) = withResource (fst $ head r) (sum $ map snd r) $ f rs
+
+
+-- | A version of 'newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
+--   Most people should use 'newCache' instead.
+newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
+newCacheIO act = do
+    var {- :: Var (Map k (Barrier (Either SomeException ([Depends],v)))) -} <- newVar Map.empty
+    return $ \key -> do
+        join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
+            Just bar -> return $ (,) mp $ do
+                res <- liftIO $ waitBarrier bar
+                case res of
+                    Left err -> liftIO $ throwIO err
+                    Right (deps,v) -> do
+                        Action $ modify $ \s -> s{depends = deps ++ depends s}
+                        return v
+            Nothing -> do
+                bar <- newBarrier
+                return $ (,) (Map.insert key bar mp) $ do
+                    s <- Action State.get
+                    let pre = depends s
+                    res <- liftIO $ try $ runAction s $ act key
+                    case res of
+                        Left err -> liftIO $ do
+                            signalBarrier bar $ Left (err :: SomeException)
+                            throwIO err
+                        Right (v,s) -> do
+                            Action $ State.put s
+                            let post = depends s
+                            let deps = take (length post - length pre) post
+                            liftIO $ signalBarrier bar (Right (deps, v))
+                            return v
+
+
+-- | Given an action on a key, produce a cached version that will execute the action at most once per key.
+--   Using the cached result will still result include any dependencies that the action requires.
+--   Each call to 'newCache' creates a separate cache that is independent of all other calls to 'newCache'.
+--
+--   This function is useful when creating files that store intermediate values,
+--   to avoid the overhead of repeatedly reading from disk, particularly if the file requires expensive parsing.
+--   As an example:
+--
+-- @
+-- digits \<- 'newCache' $ \\file -> do
+--     src \<- readFile\' file
+--     return $ length $ filter isDigit src
+-- \"*.digits\" '*>' \\x -> do
+--     v1 \<- digits ('dropExtension' x)
+--     v2 \<- digits ('dropExtension' x)
+--     'Development.Shake.writeFile'' x $ show (v1,v2)
+-- @
+--
+--   To create the result @MyFile.txt.digits@ the file @MyFile.txt@ will be read and counted, but only at most
+--   once per execution.
+newCache :: (Eq k, Hashable k) => (k -> Action v) -> Rules (k -> Action v)
+newCache = rulesIO . newCacheIO
 
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
