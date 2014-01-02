@@ -48,6 +48,8 @@ main = shaken test $ \args obj -> do
         withResource res 1 $
             need ["resource-dep"]
 
+    obj "overlap.txt" *> \out -> writeFile' out "overlap.txt"
+    obj "overlap.*" *> \out -> writeFile' out "overlap.*"
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
@@ -78,3 +80,7 @@ test build obj = do
     assertContents (obj "exception2") "0"
 
     crash ["resource"] ["cannot currently call apply","withResource","resource_name"]
+
+    build ["overlap.foo"]
+    assertContents (obj "overlap.foo") "overlap.*"
+    crash ["overlap.txt"] ["key matches multiple rules","overlap.txt"]
