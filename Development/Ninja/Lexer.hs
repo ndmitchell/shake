@@ -11,6 +11,7 @@ import qualified Data.ByteString.Unsafe as BS
 import Development.Ninja.Type
 import qualified Data.ByteString.Internal as Internal
 import Foreign
+import GHC.Exts
 
 ---------------------------------------------------------------------
 -- LIBRARY BITS
@@ -40,9 +41,9 @@ break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
         i = Internal.inlinePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
             let start = castPtr ptr :: S
             let end = go start
-            return $! end `minusPtr` start
+            return $! Ptr end `minusPtr` start
 
-        go s | c == '\0' || f c = s
+        go s@(Ptr a) | c == '\0' || f c = a
              | otherwise = go $ inc s
             where c = chr s
 
