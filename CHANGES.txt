@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve the performance of the Ninja parser
     Make the database more compact
     #84, ensure you normalise removeFile patterns first
     #82, make -j0 guess at the number of processors
