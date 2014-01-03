@@ -729,7 +729,10 @@ newCacheIO act = do
     return $ \key -> do
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
-                res <- liftIO $ waitBarrier bar
+                res <- liftIO $ waitBarrierMaybe bar
+                res <- case res of
+                    Nothing -> do pool <- Action $ gets pool; liftIO $ blockPool pool $ fmap ((,) False) $ waitBarrier bar
+                    Just res -> return res
                 case res of
                     Left err -> liftIO $ throwIO err
                     Right (deps,v) -> do
