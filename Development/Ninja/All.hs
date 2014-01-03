@@ -5,7 +5,7 @@ module Development.Ninja.All(runNinja) where
 import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
-import Development.Shake hiding (Rule, addEnv)
+import Development.Shake hiding (addEnv)
 import Development.Shake.ByteString
 import Development.Shake.Errors
 import Development.Shake.Rules.File
