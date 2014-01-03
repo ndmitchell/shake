@@ -3,7 +3,7 @@
 module General.Base(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
-    Barrier, newBarrier, signalBarrier, waitBarrier,
+    Barrier, newBarrier, signalBarrier, waitBarrier, waitBarrierMaybe,
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe,
@@ -88,6 +88,12 @@ signalBarrier (Barrier x) = putMVar x
 
 waitBarrier :: Barrier a -> IO a
 waitBarrier (Barrier x) = readMVar x
+
+waitBarrierMaybe :: Barrier a -> IO (Maybe a)
+waitBarrierMaybe (Barrier x) = do
+    res <- tryTakeMVar x
+    whenJust res $ putMVar x
+    return res
 
 
 ---------------------------------------------------------------------
