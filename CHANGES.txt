@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.11
     Add alternatives to allow overlapping rules
     Make storedValue take a ShakeOptions structure
     Generalise the newCache function
