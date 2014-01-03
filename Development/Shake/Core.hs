@@ -177,19 +177,23 @@ trackUse ::
 #endif
     => key -> Action ()
 -- One of the following must be true:
--- 1) you have already been used by apply, and are on the dependency list
--- 2) someone explicitly gave you permission with trackAllow
--- 3) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
+-- 1) you are the one building this key (e.g. key == topStack)
+-- 2) you have already been used by apply, and are on the dependency list
+-- 3) someone explicitly gave you permission with trackAllow
+-- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
 trackUse key = do
     let k = newKey key
     s <- Action State.get
     deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
-    if k `elem` deps then
+    let top = topStack $ stack s
+    if top == Just k then
         return () -- condition 1
-     else if any ($ k) $ trackAllows s then
+     else if k `elem` deps then
         return () -- condition 2
+     else if any ($ k) $ trackAllows s then
+        return () -- condition 3
      else
-        Action $ State.modify $ \s -> s{trackUsed = k : trackUsed s} -- condition 3
+        Action $ State.modify $ \s -> s{trackUsed = k : trackUsed s} -- condition 4
 
 
 trackCheckUsed :: Action ()
