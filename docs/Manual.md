@@ -375,7 +375,7 @@ If the `$C_LINK_FLAGS` environment variable changes then this rule will rebuild.
 
 #### Dependencies on extra information
 
-Using Shake we can depened on arbitrary extra information, such as the version of `gcc`, allowing us to automatically rebuild all C files when a different compiler is placed on the path. To track the version, we can define a rule for the file `gcc.version` which changes only when `gcc --version` changes:
+Using Shake we can depend on arbitrary extra information, such as the version of `gcc`, allowing us to automatically rebuild all C files when a different compiler is placed on the path. To track the version, we can define a rule for the file `gcc.version` which changes only when `gcc --version` changes:
 
     "gcc.version" *> \out -> do
         alwaysRerun
@@ -418,7 +418,7 @@ _Use configuration files:_ Most build information, such as which files a C file 
 
 _Depend on the build source:_ One approach is to depend on the build system source in each of the rules, then if _any_ rules change, _everything_ will rebuild. While this option is safe, it may cause a significant number of redundant rebuilds. As a restricted version of this technique, for a generated file you can include a dependency on the generator source and use `writeFileChanged`. If the generator changes it will rerun, but typically only a few generated files will change, so little is rebuilt.
 
-_Use a version stamp:_ There is a field named `shakeVersion` in the `ShakeOptions` record. If the build system changes in a significant and incompatible way, you can change this field to force a full rebuild. If you want all rules to depend on all rules, you can put a hash of the build system source in the version field, as [desribed here](http://stackoverflow.com/questions/18532552/shake-how-to-reliably-automatically-force-rebuild-when-my-rules-change-becomi/18532553#18532553).
+_Use a version stamp:_ There is a field named `shakeVersion` in the `ShakeOptions` record. If the build system changes in a significant and incompatible way, you can change this field to force a full rebuild. If you want all rules to depend on all rules, you can put a hash of the build system source in the version field, as [described here](http://stackoverflow.com/questions/18532552/shake-how-to-reliably-automatically-force-rebuild-when-my-rules-change-becomi/18532553#18532553).
 
 ## The Haskell Zone
 
