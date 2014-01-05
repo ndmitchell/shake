@@ -5,6 +5,7 @@ module Development.Make.Parse(parse) where
 import Development.Make.Type
 import Data.Char
 import Data.List
+import Data.Maybe
 
 
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
@@ -44,7 +45,7 @@ parseStmt x
     | (a,':':b) <- break (== ':') x = case b of
         '=':b -> Assign (trim a) ColonEquals (parseExpr $ trim b)
         ':':'=':b -> Assign (trim a) ColonEquals (parseExpr $ trim b)
-        _ -> Rule (parseExpr $ trim a) (parseExpr $ trim b) []
+        _ -> Rule (parseExpr $ trim a) (parseExpr $ trim $ fromMaybe b $ stripPrefix ":" b) []
     | otherwise = error $ "Invalid statement: " ++ x
 
 
