@@ -95,7 +95,7 @@ ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
 ruleValue = err "ruleValue"
 
 
--- | Define a set of rules. Rules can be created with calls to functions such as '*>' or 'action'. Rules are combined
+-- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.*>' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation. To define your own
 --   custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
@@ -772,7 +772,7 @@ newCacheIO act = do
 -- digits \<- 'newCache' $ \\file -> do
 --     src \<- readFile\' file
 --     return $ length $ filter isDigit src
--- \"*.digits\" '*>' \\x -> do
+-- \"*.digits\" 'Development.Shake.*>' \\x -> do
 --     v1 \<- digits ('dropExtension' x)
 --     v2 \<- digits ('dropExtension' x)
 --     'Development.Shake.writeFile'' x $ show (v1,v2)
