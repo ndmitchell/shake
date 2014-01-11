@@ -97,9 +97,7 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'Nothing'. Write an HTML profiling report to a file, showing which
         --   rules rebuilt, why, and how much time they took. Useful for improving the speed of your build systems.
     ,shakeLint :: Maybe Lint
-        -- ^ Defaults to 'False'. Perform basic sanity checks during building, checking the current directory
-        --   is not modified and that output files are not modified by multiple rules.
-        --   These sanity checks do not check for missing or redundant dependencies.
+        -- ^ Defaults to 'Nothing'. Perform sanity checks during building, see 'Lint' for details.
     ,shakeFlush :: Maybe Double
         -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
         --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
