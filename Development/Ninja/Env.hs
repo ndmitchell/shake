@@ -2,7 +2,7 @@
 
 -- | A Ninja style environment, basically a linked-list of mutable hash tables.
 module Development.Ninja.Env(
-    Env, newEnv, scopeEnv, addEnv, askEnv
+    Env, newEnv, scopeEnv, addEnv, askEnv, fromEnv
     ) where
 
 import qualified Data.HashMap.Strict as Map
@@ -34,3 +34,6 @@ askEnv (Env ref e) k = do
         Just v -> return $ Just v
         Nothing | Just e <- e -> askEnv e k
         _ -> return Nothing
+
+fromEnv :: Env k v -> IO (Map.HashMap k v)
+fromEnv (Env ref _) = readIORef ref
