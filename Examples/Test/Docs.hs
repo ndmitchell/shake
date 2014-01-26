@@ -21,7 +21,7 @@ main = shaken noTest $ \args obj -> do
 
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
-    let needSource = need =<< getDirectoryFiles "." ["Development/Shake.hs","Development/Shake//*.hs","General//*.hs"]
+    let needSource = need =<< getDirectoryFiles "." ["Development/Shake.hs","Development/Shake//*.hs","Development/Ninja/*.hs","General//*.hs"]
 
     index *> \_ -> do
         needSource
@@ -89,7 +89,7 @@ main = shaken noTest $ \args obj -> do
     obj "Files.lst" *> \out -> do
         need [index,obj "Paths_shake.hs"]
         files <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
-        files <- return $ filter (not . isSuffixOf "-Classes.html") files
+        files <- return $ filter (\x -> not ("-Classes.html" `isSuffixOf` x) && not ("Config.html" `isSuffixOf` x)) files
         writeFileLines out $ map ((++) "Part_" . reps '-' '_' . takeBaseName) files
 
     let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
