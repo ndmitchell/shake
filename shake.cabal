@@ -90,6 +90,7 @@ library
         Development.Shake
         Development.Shake.Classes
         Development.Shake.Command
+        Development.Shake.Config
         Development.Shake.FilePath
         Development.Shake.Rule
         Development.Shake.Sys
