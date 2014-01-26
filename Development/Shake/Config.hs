@@ -68,5 +68,13 @@ usingConfig mp = do
 --   has no binding. Any build system using 'getConfig' /must/ call either 'usingConfigFile'
 --   or 'usingConfig'. The 'getConfig' function will introduce a dependency on the configuration
 --   variable (but not the whole configuration file), and if the configuration variable changes, the rule will be rerun.
+--   As an example:
+--
+-- @
+-- 'usingConfigFile' \"myconfiguration.cfg\"
+-- \"*.o\" '*>' \\out -> do
+--     cflags <- 'getConfig' \"CFLAGS\"
+--     'cmd' \"gcc\" [out '-<.>' \"c\"] (fromMaybe \"\" cflags)
+-- @
 getConfig :: String -> Action (Maybe String)
 getConfig = askOracle . Config
