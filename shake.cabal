@@ -97,6 +97,10 @@ library
         Development.Shake.Util
 
     other-modules:
+        Development.Ninja.Env
+        Development.Ninja.Lexer
+        Development.Ninja.Parse
+        Development.Ninja.Type
         Development.Shake.Args
         Development.Shake.ByteString
         Development.Shake.Core
@@ -161,10 +165,6 @@ executable shake
         Development.Make.Rules
         Development.Make.Type
         Development.Ninja.All
-        Development.Ninja.Env
-        Development.Ninja.Lexer
-        Development.Ninja.Parse
-        Development.Ninja.Type
         Start
 
 
