@@ -215,6 +215,7 @@ test-suite shake-test
         Examples.Test.Benchmark
         Examples.Test.Cache
         Examples.Test.Command
+        Examples.Test.Config
         Examples.Test.Directory
         Examples.Test.Docs
         Examples.Test.Errors
