@@ -26,7 +26,7 @@ import Data.Char
 runNinja :: FilePath -> [String] -> IO (Rules ())
 runNinja file args = do
     addTiming "Ninja parse"
-    ninja@Ninja{..} <- parse file
+    ninja@Ninja{..} <- parse file =<< newEnv
     return $ do
         needDeps <- return $ needDeps ninja -- partial application
         phonys <- return $ Map.fromList phonys

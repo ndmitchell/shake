@@ -9,8 +9,8 @@ import Development.Ninja.Lexer
 import Control.Monad
 
 
-parse :: FilePath -> IO Ninja
-parse file = do env <- newEnv; parseFile file env newNinja
+parse :: FilePath -> Env Str Str -> IO Ninja
+parse file env = parseFile file env newNinja
 
 
 parseFile :: FilePath -> Env Str Str -> Ninja -> IO Ninja
