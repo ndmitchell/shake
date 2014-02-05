@@ -44,7 +44,7 @@ break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
             return $! Ptr end `minusPtr` start
 
         go s@(Ptr a) | c == '\0' || f c = a
-                     | otherwise = go $ inc s
+                     | otherwise = go (inc s)
             where c = chr s
 
 {-# INLINE break00 #-}
@@ -58,7 +58,7 @@ break00 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
             return $! Ptr end `minusPtr` start
 
         go s@(Ptr a) | f c = a
-                     | otherwise = go $ inc s
+                     | otherwise = go (inc s)
             where c = chr s
 
 head0 :: Str0 -> Char
