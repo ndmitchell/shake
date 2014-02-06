@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #94, GHC 7.8 support
     Add a Config module
     #89, support :: as a build rule separator
 0.11
