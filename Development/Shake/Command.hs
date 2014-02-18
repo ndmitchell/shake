@@ -68,7 +68,7 @@ addPath pre post = do
     args <- liftIO getEnvironment
     let (path,other) = partition ((== "PATH") . (if isWindows then map toUpper else id) . fst) args
     return $ Env $
-        [("PATH",intercalate [searchPathSeparator] $ pre ++ post) | null post] ++
+        [("PATH",intercalate [searchPathSeparator] $ pre ++ post) | null path] ++
         [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
         other
 
