@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.11.2
     #96, fix a bug in addPath that caused $PATH to be added twice
 0.11.1
     #94, GHC 7.8 support
