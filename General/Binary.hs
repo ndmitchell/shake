@@ -37,7 +37,7 @@ instance Show a => Show (BinList a) where show = show . fromBinList
 instance Binary a => Binary (BinList a) where
     put (BinList xs) = case splitAt 254 xs of
         (a, []) -> putWord8 (genericLength xs) >> mapM_ put xs
-        (a, b) -> putWord8 255 >> mapM_ put xs >> put (BinList b)
+        (a, b) -> putWord8 255 >> mapM_ put a >> put (BinList b)
     get = do
         x <- getWord8
         case x of
