@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #97, fix a serialisation bug when > 254 arguments to need
 0.11.2
     #96, fix a bug in addPath that caused $PATH to be added twice
 0.11.1
