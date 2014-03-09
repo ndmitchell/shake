@@ -4,13 +4,14 @@
 module Development.Shake.Rules.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
-    getEnv,
+    getEnv, getEnvWithDefault,
     removeFiles, removeFilesAfter,
     defaultRuleDirectory
     ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.Maybe
 import Data.Binary
 import Data.List
 import qualified System.Directory as IO
@@ -154,6 +155,10 @@ getEnv var = do
     GetEnvA res <- apply1 $ GetEnvQ var
     return res
 
+-- | Return the value of the environment variable, or the default value if it
+--   not set. Similar in function to `getEnv`.
+getEnvWithDefault :: String -> String -> Action (String)
+getEnvWithDefault def var = getEnv var >>= return . fromMaybe def
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative
