@@ -43,6 +43,8 @@ extra-source-files:
     Examples/Ninja/*.ninja
     Paths.hs
     CHANGES.txt
+    js-src/jquery-1.8.3.js
+    js-src/flot-0.8.0.zip
 
 data-files:
     html/jquery.flot.js
