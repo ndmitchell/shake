@@ -156,9 +156,9 @@ getEnv var = do
     return res
 
 -- | Return the value of the environment variable, or the default value if it
---   not set. Similar in function to `getEnv`.
-getEnvWithDefault :: String -> String -> Action (String)
-getEnvWithDefault def var = getEnv var >>= return . fromMaybe def
+--   not set. Similar to 'getEnv'.
+getEnvWithDefault :: String -> String -> Action String
+getEnvWithDefault def var = fromMaybe def <$> getEnv var
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative
