@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix up the profiling report generation
     #99, add getEnvWithDefault
 0.11.3
     #97, fix a serialisation bug when > 254 arguments to need
