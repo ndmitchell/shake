@@ -249,6 +249,8 @@ function runReport()
             var xs = ruleGraph(shakeEx, report.query);
             if (xs.length > 250)
                 $("#output").html("Viewing a graph with > 250 nodes is not supported, and you have " + xs.length + " nodes. Try grouping more aggressively");
+            else if (typeof Viz === 'undefined')
+                $("#output").html("Profile reports do not seem to have been built with GraphViz support, this feature is unavailable.");
             else
             {
                 var res = "digraph \"\"{";
