@@ -23,6 +23,8 @@ instance Arbitrary File where
 
 
 test build obj = do
+    let a === b = a Examples.Util.=== b -- duplicate definition in QuickCheck 2.7 and above
+
     let norm x =
             let s = normalise x
                 b = BS.unpack (BS.normalise $ BS.pack x)
