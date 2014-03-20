@@ -1,3 +1,2 @@
 language: haskell
-before_install: sudo apt-get install -qq time
-script: bash travis.sh
+script: wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --no-cache --quiet | sh
