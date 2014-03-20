@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.11.4
     Work with QuickCheck-2.7 (which defines ===)
     #100, handle GraphViz missing gracefully
     Fix up the profiling report generation
