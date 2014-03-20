@@ -33,3 +33,4 @@ main = do
 
     when (ninjaZero + 0.1 < shakeZero) $
         error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
+
