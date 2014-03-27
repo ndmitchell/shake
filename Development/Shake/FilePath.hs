@@ -99,16 +99,13 @@ toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else
 (-<.>) :: FilePath -> String -> FilePath
 (-<.>) = replaceExtension
 
--- | Combine two file paths. Any leading @.\/@ or @..\/@ components in the right file
---   are eliminated.
+-- | Combine two file paths. Any redundant @.\/@ or @..\/@ components in the
+--   resulting path are eliminated - the result will always have 'normalise' applied.
 --
 -- > combine "aaa/bbb" "ccc" == "aaa/bbb/ccc"
 -- > combine "aaa/bbb" "./ccc" == "aaa/bbb/ccc"
 -- > combine "aaa/bbb" "../ccc" == "aaa/ccc"
 combine :: FilePath -> FilePath -> FilePath
-combine "." y = y
-combine x ('.':'.':'/':y) = combine (takeDirectory x) y
-combine x ('.':'/':y) = combine x y
 combine x y = normalise $ Native.combine (toNative x) (toNative y)
 
 

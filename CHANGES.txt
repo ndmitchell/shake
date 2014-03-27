@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #102, fix up </> when the LHS starts with .
 0.11.4
     Work with QuickCheck-2.7 (which defines ===)
     #100, handle GraphViz missing gracefully
