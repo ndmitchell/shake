@@ -82,9 +82,15 @@ test build obj = do
     takeDirectory1 "aaa/" === "aaa"
     takeDirectory1 "aaa" === "aaa"
 
+    combine "." "ccc" === "ccc"
     combine "aaa/bbb" "ccc" === "aaa/bbb/ccc"
     combine "aaa/bbb" "./ccc" === "aaa/bbb/ccc"
     combine "aaa/bbb" "../ccc" === "aaa/ccc"
+    combine "aaa/bbb" "../../ccc" === "ccc"
+    combine ".." "aaa" === "../aaa"
+    combine "../.." "aaa" === "../../aaa"
+    combine "./a" "../aaa" === "aaa"
+    combine ".." "../aaa" === "../../aaa"
 
     searchPathSeparator === Native.searchPathSeparator
     pathSeparators === Posix.pathSeparators
