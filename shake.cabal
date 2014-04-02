@@ -44,6 +44,12 @@ extra-source-files:
     Examples/Ninja/*.ninja
     Paths.hs
     CHANGES.txt
+    docs/manual/build.bat
+    docs/manual/Build.hs
+    docs/manual/build.sh
+    docs/manual/constants.c
+    docs/manual/constants.h
+    docs/manual/main.c
 
 data-files:
     html/jquery.flot.js
