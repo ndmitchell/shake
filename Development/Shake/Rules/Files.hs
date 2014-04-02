@@ -39,7 +39,7 @@ instance Rule FilesQ FilesA where
 
 
 -- | Define a rule for building multiple files at the same time.
---   As an example, a single invokation of GHC produces both @.hi@ and @.o@ files:
+--   As an example, a single invocation of GHC produces both @.hi@ and @.o@ files:
 --
 -- @
 -- [\"*.o\",\"*.hi\"] '*>>' \\[o,hi] -> do
