@@ -34,6 +34,7 @@ import qualified Examples.Test.FilePattern as FilePattern
 import qualified Examples.Test.Journal as Journal
 import qualified Examples.Test.Lint as Lint
 import qualified Examples.Test.Makefile as Makefile
+import qualified Examples.Test.Manual as Manual
 import qualified Examples.Test.Oracle as Oracle
 import qualified Examples.Test.OrderOnly as OrderOnly
 import qualified Examples.Test.Pool as Pool
@@ -56,7 +57,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"config" * Config.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
-        ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main
+        ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main, "manual" * Manual.main
         ,"pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main

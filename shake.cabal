@@ -232,6 +232,7 @@ test-suite shake-test
         Examples.Test.Journal
         Examples.Test.Lint
         Examples.Test.Makefile
+        Examples.Test.Manual
         Examples.Test.Oracle
         Examples.Test.OrderOnly
         Examples.Test.Pool
