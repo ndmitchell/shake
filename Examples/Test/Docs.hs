@@ -185,7 +185,8 @@ whitelist x = x `elem`
     ,"1m25s (15%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
     ,"# command-name file-name"
-    ,"ghc --make MyBuildSystem -rtsopts \"-with-rtsopts=-I0 -qg -qb\""
+    ,"ghc --make MyBuildSystem -rtsopts -with-rtsopts=-I0"
+    ,"-with-rtsopts"
     ,"-qg -qb"
     ,"gcc -MM"
     ]

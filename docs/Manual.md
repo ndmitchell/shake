@@ -286,11 +286,13 @@ As shown before, we can use `runhaskell _build/run` to execute our build system,
 
     #!/bin/sh
     mkdir -p _shake
-    ghc --make Build.hs -rtsopts "-with-rtsopts=-I0 -qg -qb" -outputdir=_shake -o _shake/build && _shake/build "$@"
+    ghc --make Build.hs -rtsopts -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
 
 This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag can be treated as magic - it instructs the Haskell compiler to turn off features that would otherwise steal CPU from the commands you are running.
 
 Now you can run a build by simply typing `./build.sh` on Linux, or `build` on Windows. On Linux you may want to alias `build` to `./build.sh`. For the rest of this document we will assume `build` runs the build system.
+
+_Warning:_ You should not use the `-threaded` for GHC 7.6 or below because of a [GHC bug](https://ghc.haskell.org/trac/ghc/ticket/7646). If you do turn on `-threaded`, you should include `-qg -qb` in `-with-rtsopts`. 
 
 #### Command line flags
 

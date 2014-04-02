@@ -70,21 +70,22 @@
 --
 --   For large build systems the choice of GHC flags can have a significant impact. We recommend:
 --
--- > ghc --make MyBuildSystem -rtsopts "-with-rtsopts=-I0 -qg -qb"
+-- > ghc --make MyBuildSystem -rtsopts -with-rtsopts=-I0
 --
---   * Compile without @-threaded@: In GHC 7.6 and earlier bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
---     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
---     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
+--   * @-rtsopts@: Allow the setting of further GHC options at runtime.
 --
---   * Compile with @-rtsopts@: Allow the setting of further GHC options at runtime.
---
---   * Run with @-I0@: Disable idle garbage collection. In a build system regularly running many system
+--   * @-I0@: Disable idle garbage collection. In a build system regularly running many system
 --     commands the program appears \"idle\" very often, triggering regular unnecessary garbage collection, stealing
 --     resources from the program doing actual work.
 --
---   * Run with @-qg -qb@: Disable parallel garbage collection. Parallel garbage collection in Shake
+--   * Omit @-threaded@: In GHC 7.6 and earlier bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
+--     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
+--     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
+--
+--   * If you do compile with @-threaded@, pass the options @-qg -qb@ to @-with-rtsopts@
+--     to disable parallel garbage collection. Parallel garbage collection in Shake
 --     programs typically goes slower than sequential garbage collection, while occupying many cores that
---     can be used for running system commands.
+--     could be used for running system commands.
 --
 --   /Acknowledgements/: Thanks to Austin Seipp for properly integrating the profiling code.
 module Development.Shake(
