@@ -168,3 +168,12 @@ getDirectoryContentsRecursive dir = do
     return $ files++rest
     where
         isBadDir x = "." `isPrefixOf` x || "_" `isPrefixOf` x
+
+
+copyDirectory :: FilePath -> FilePath -> IO ()
+copyDirectory old new = do
+    xs <- getDirectoryContentsRecursive old
+    forM_ xs $ \from -> do
+        let to = new </> drop (length $ addTrailingPathSeparator old) from
+        createDirectoryIfMissing True $ takeDirectory to
+        copyFile from to
