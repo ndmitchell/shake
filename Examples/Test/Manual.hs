@@ -5,6 +5,7 @@ import Development.Shake
 import Development.Shake.FilePath
 import Examples.Util
 import General.Base
+import System.Directory
 
 
 main = shaken test $ \args obj ->
@@ -12,6 +13,9 @@ main = shaken test $ \args obj ->
 
 test build obj = do
     copyDirectory "docs/manual" $ obj "manual"
+    copyDirectory "Development" $ obj "manual/Development"
+    copyDirectory "General" $ obj "manual/General"
+    copyFile "Paths.hs" $ obj "manual/Paths_shake.hs"
     let cmdline = if isWindows then "build.bat" else "./build.sh"
     () <- cmd [Cwd $ obj "manual", Shell] cmdline
     assertExists $ obj "manual/_build/run" <.> exe
