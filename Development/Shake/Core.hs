@@ -421,13 +421,12 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
 withCapabilities :: Int -> IO a -> IO a
 #if __GLASGOW_HASKELL__ >= 706
-withCapabilities new act = do
+withCapabilities new act | rtsSupportsBoundThreads = do
     old <- getNumCapabilities
     if old == new then act else
         bracket_ (setNumCapabilities new) (setNumCapabilities old) act
-#else
-withCapabilities new act = act
 #endif
+withCapabilities new act = act
 
 lineBuffering :: IO a -> IO a
 lineBuffering = f stdout . f stderr
