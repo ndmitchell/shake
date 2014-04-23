@@ -17,7 +17,7 @@ test build obj = do
     copyDirectory "General" $ obj "manual/General"
     copyFile "Paths.hs" $ obj "manual/Paths_shake.hs"
     let cmdline = if isWindows then "build.bat" else "./build.sh"
-    () <- cmd [Cwd $ obj "manual", Shell] cmdline
+    () <- cmd [Cwd $ obj "manual", Shell] cmdline "-j2"
     assertExists $ obj "manual/_build/run" <.> exe
     () <- cmd [Cwd $ obj "manual", Shell] cmdline
     () <- cmd [Cwd $ obj "manual", Shell] [cmdline,"clean"]
