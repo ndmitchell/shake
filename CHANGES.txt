@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #111, fixes to the user manual
     #110, don't give a warning if -threaded is turned off
     #103, don't suggest -qg and -qb, they fail without -threaded
     #102, fix up </> when the LHS starts with .
