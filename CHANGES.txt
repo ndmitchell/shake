@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Note that .. in FilePattern values is unlikely to be correct
     #109, make removeFiles delete directories that match
     #84, make removeFiles not delete empty unmatched directories
     #111, fixes to the user manual

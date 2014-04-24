@@ -97,6 +97,9 @@ match _ _ = []
 -- @
 -- \"foo\/bar\" '?==' \"foo\\\\bar\"
 -- @
+--
+--   Patterns with constructs such as @foo\/../\/bar@ will never match
+--   normalised 'FilePath' values, so are unlikely to be correct.
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) "//*" = const True
 (?==) p = \x -> not $ null $ match pat (True, x)
