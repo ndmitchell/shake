@@ -90,9 +90,9 @@ main = shaken noTest $ \args obj -> do
 
     obj "Files.lst" *> \out -> do
         need [index,obj "Paths_shake.hs"]
-        files <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
-        files <- return $ filter (\x -> not ("-Classes.html" `isSuffixOf` x)) files
-        writeFileLines out $ map ((++) "Part_" . reps '-' '_' . takeBaseName) files
+        filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
+        writeFileLines out $
+            ["Part_" ++ reps '-' '_' (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x]
 
     let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
 
