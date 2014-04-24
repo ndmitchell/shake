@@ -15,6 +15,7 @@ import System.Directory as IO
 import System.Environment
 import System.Random
 import System.Console.GetOpt
+import System.IO
 
 
 shaken
@@ -177,3 +178,14 @@ copyDirectory old new = do
         let to = new </> drop (length $ addTrailingPathSeparator old) from
         createDirectoryIfMissing True $ takeDirectory to
         copyFile from to
+
+withTemporaryDirectory :: (FilePath -> IO ()) -> IO ()
+withTemporaryDirectory act = do
+    tdir <- getTemporaryDirectory
+    bracket
+        (openTempFile tdir "shake.hs")
+        (removeFile . fst)
+        $ \(file,h) -> do
+            hClose h
+            let dir = file ++ "_"
+            bracket_ (createDirectory dir) (removeDirectoryRecursive dir) (act dir)
