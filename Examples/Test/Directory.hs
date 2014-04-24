@@ -79,19 +79,19 @@ test build obj = do
     assertContents (obj "dots") $ unlines $ words "True True True True True"
 
     let removeTest pat del keep = do
-        withTemporaryDirectory $ \dir -> do
-            forM_ (del ++ keep) $ \s -> do
-                createDirectoryIfMissing True $ dir </> takeDirectory s
-                when (not $ hasTrailingPathSeparator s) $
-                    writeFile (dir </> s) ""
-            removeFiles dir pat
-            createDirectoryIfMissing True dir
-            forM_ (map ((,) False) del ++ map ((,) True) keep) $ \(b,s) -> do
-                b2 <- (if hasTrailingPathSeparator s then IO.doesDirectoryExist else IO.doesFileExist) $ dir </> s
-                when (b /= b2) $ do
-                    let f b = if b then "present" else "missing"
-                    error $ "removeFiles mismatch: with pattern " ++ show pat ++ ", " ++ s ++
-                            " should be " ++ f b ++ " but is " ++ f b2
+            withTemporaryDirectory $ \dir -> do
+                forM_ (del ++ keep) $ \s -> do
+                    createDirectoryIfMissing True $ dir </> takeDirectory s
+                    when (not $ hasTrailingPathSeparator s) $
+                        writeFile (dir </> s) ""
+                removeFiles dir pat
+                createDirectoryIfMissing True dir
+                forM_ (map ((,) False) del ++ map ((,) True) keep) $ \(b,s) -> do
+                    b2 <- (if hasTrailingPathSeparator s then IO.doesDirectoryExist else IO.doesFileExist) $ dir </> s
+                    when (b /= b2) $ do
+                        let f b = if b then "present" else "missing"
+                        error $ "removeFiles mismatch: with pattern " ++ show pat ++ ", " ++ s ++
+                                " should be " ++ f b ++ " but is " ++ f b2
 
     removeTest ["//bob"] ["test/bob","more/bob"] ["extra/obo"]
     removeTest ["bob"] ["bob/"] ["bar/"]
