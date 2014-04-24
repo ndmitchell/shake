@@ -252,7 +252,7 @@ removeFiles dir pat = f "" >> return ()
         -- therefore we can safely know we never escape the containing directory
         test = let ps = map (?==) $ map normalise pat in \x -> any ($ x) ps
 
-        -- dir </> dir2 is the part to operate on, return True if you cleaned everything
+        -- dir </> dir2 is the part to operate on, return True if you deleted the directory
         f :: FilePath -> IO Bool
         f dir2 = do
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
