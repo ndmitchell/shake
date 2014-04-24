@@ -246,7 +246,7 @@ getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
 --   often as a 'phony' rule.
 removeFiles :: FilePath -> [FilePattern] -> IO ()
 removeFiles dir ["//*"] = IO.removeDirectoryRecursive dir -- optimisation
-removeFiles dir pat = f "" >> return ()
+removeFiles dir pat = void $ f ""
     where
         -- because it is generate and match anything like ../ will be ignored, since we never generate ..
         -- therefore we can safely know we never escape the containing directory
