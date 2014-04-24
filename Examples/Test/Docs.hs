@@ -169,7 +169,7 @@ italics :: [String]
 italics = words "extension command-name file-name"
 
 whitelist :: String -> Bool
-whitelist x | takeExtension x `elem` words ".txt .hi .o .exe .tar .cpp" = True
+whitelist x | all (not . isSpace) x && takeExtension x `elem` words ".txt .hi .o .exe .tar .cpp .cfg" = True
 whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q value key gcc make contents tar ghc cabal clean _make distcc ghc " ++
     ".. /./ /.. ./ // \\ ../ " ++
@@ -194,6 +194,7 @@ whitelist x = x `elem`
     ,"gcc -MM"
     ,"# This is my Config file"
     ,"-g -I/path/to/dir -O2"
+    ,"main _make/henry.txt"
     ]
 
 types = words $
