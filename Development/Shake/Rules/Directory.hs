@@ -259,6 +259,7 @@ removeFiles dir pat = void $ f ""
             print ("removeDirectoryRecursive",dir </> dir2)
             IO.removeDirectoryRecursive (dir </> dir2) >> return True
         f dir2 = do
+            print ("testing",dir2,test dir2,pat)
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
             (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
             noDirs <- fmap and $ mapM f dirs
