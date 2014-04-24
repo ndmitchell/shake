@@ -164,11 +164,9 @@ removeFilesRandom x = do
 getDirectoryContentsRecursive :: FilePath -> IO [FilePath]
 getDirectoryContentsRecursive dir = do
     xs <- IO.getDirectoryContents dir
-    (dirs,files) <- partitionM IO.doesDirectoryExist [dir </> x | x <- xs, not $ isBadDir x]
+    (dirs,files) <- partitionM IO.doesDirectoryExist [dir </> x | x <- xs, not $ "." `isPrefixOf` x]
     rest <- concatMapM getDirectoryContentsRecursive dirs
     return $ files++rest
-    where
-        isBadDir x = "." `isPrefixOf` x || "_" `isPrefixOf` x
 
 
 copyDirectory :: FilePath -> FilePath -> IO ()
