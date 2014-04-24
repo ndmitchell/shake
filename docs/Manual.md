@@ -253,7 +253,7 @@ You can now use `buildDir` in place of `"_build"` throughout. You can also defin
 
 We can now write:
 
-    buildDir ("run" <.> exe) $ \out -> do
+    buildDir ("run" <.> exe) *> \out -> do
         ...
 
 All top-level variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
@@ -353,7 +353,7 @@ This section details a number of build system features that are useful in some b
 
 The `cmd` function can also obtain the stdout and stderr streams, along with the  exit code. As an example:
 
-    (ExitCode code, Stdout out, Stderr err) <- cmd "gcc --version"
+    (Exit code, Stdout out, Stderr err) <- cmd "gcc --version"
 
 Now the variable `code` is bound to the exit code, while `out` and `err` are bound to the stdout and stderr streams. If `ExitCode` is not requested then any non-zero return value will raise an error.
 
@@ -381,7 +381,7 @@ Using Shake we can depend on arbitrary extra information, such as the version of
 
     "gcc.version" *> \out -> do
         alwaysRerun
-        Stdout stdout <- "gcc --version"
+        Stdout stdout <- cmd "gcc --version"
         writeFileChanged out stdout
 
 This rule has the action `alwaysRerun` meaning it will be run in every execution that requires it, so the `gcc --version` is always checked. This rule defines no dependencies (no `need` actions), so if it lacked `alwaysRerun`, this rule would only be run when `gcc.version` was missing. The function then runs `gcc --version` storing the output in `stdout`. Finally, it calls `writeFileChanged` which writes `stdout` to `out`, but only if the contents have changed. The use of `writeFileChanged` is important otherwise `gcc.version` would change in every run. To use this rule, we `need ["gcc.version"]` in every rule that calls `gcc`.
@@ -398,7 +398,7 @@ Resources allow us to limit the number of simultaneous operations more precisely
         withResource disk 1 $ do
             cmd "ld -o" [out] ...
     "*.o" *> \out -> do
-        "cl -o" [out] ...
+        cmd "cl -o" [out] ...
 
 Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
 
@@ -406,7 +406,7 @@ Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
 
 Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `*>>` operator to define rules:
 
-    ["//*.bison.h","//*.bison.c"] *>> $ \[outh, outc] -> do
+    ["//*.bison.h","//*.bison.c"] *>> \[outh, outc] -> do
         let src = outc -<.> "y"
         cmd "bison -d -o" [outc] [src]
 
@@ -441,7 +441,7 @@ We first get the extension with `takeExtension`, then use `drop 1` to remove the
 
 The standard `*>` operator is actually defined as:
 
-    pattern *> actions = (test ?==) ?> actions
+    pattern *> actions = (pattern ?==) ?> actions
 
 Where `?==` is a function for matching file patterns. 
 
@@ -457,9 +457,9 @@ Most common IO operations to run as actions are already wrapped and available in
 
 While `gcc` has the `-MMD` flag to generate a Makefile, the Visual Studio compiler `cl` does not. However, it does have a flag `-showincludes` which writes the include files on stdout as they are used. The initial example could be written using `cl` as:
 
-    Stdout stdout <- cmd "cl -showincludes -c" [c] ["-Fo" ++ out]
-    need [ dropWhile isSpace y
-         | x <- lines out
+    Stdout stdout <- cmd "cl -showincludes -c" [input] ["-Fo" ++ output]
+    need [ dropWhile isSpace x
+         | x <- lines stdout
          , Just x <- [stripPrefix "Note: including file:" x]]
 
 The `stripPrefix` function is available in the `Data.List` module. One warning: the "including file" message is localised, so if your developers are using non-English versions of Visual Studio the prefix string will be different
