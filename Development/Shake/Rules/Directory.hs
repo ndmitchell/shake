@@ -260,7 +260,7 @@ removeFiles dir pat = void $ f ""
             noDirs <- fmap and $ mapM f dirs
             let (del,keep) = partition test files
             mapM_ IO.removeFile $ map (dir </>) del
-            let die = noDirs && null keep
+            let die = noDirs && null keep && not (null xs)
             when die $ IO.removeDirectory $ dir </> dir2
             return die
 
