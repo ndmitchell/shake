@@ -249,7 +249,7 @@ removeFiles dir ["//*"] = IO.removeDirectoryRecursive dir -- optimisation
 removeFiles dir pat = f "" >> return ()
     where
         -- because it is generate and match anything like ../ will be ignored, since we never generate ..
-        -- therefore we can safely know we never escape dir
+        -- therefore we can safely know we never escape the containing directory
         test = let ps = map (?==) $ map normalise pat in \x -> any ($ x) ps
 
         -- dir </> dir2 is the part to operate on, return True if you cleaned everything
