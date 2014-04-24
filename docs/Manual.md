@@ -105,7 +105,7 @@ The <tt><i>actions</i></tt> are a list of steps to perform and are listed one pe
 
 Let's look at a simple example of a rule:
 
-    "*.rot13" *> \out ->
+    "*.rot13" *> \out -> do
         let src = out -<.> "txt"
         need [src]
         cmd "rot13" src "-o" out
@@ -132,7 +132,7 @@ An <tt><i>expression</i></tt> is any combination of variables and function calls
 
 Variables are evaluated by substituting the <tt><i>expression</i></tt> everywhere the <tt><i>variable</i></tt> is used. In the simple example we could have equivalently written: 
 
-    "*.rot13" *> \out ->
+    "*.rot13" *> \out -> do
         need [out -<.> "txt"]
         cmd "rot13" (out -<.> "txt") "-o" out
 
