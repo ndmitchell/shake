@@ -40,7 +40,7 @@ main = shaken noTest $ \args obj -> do
     obj "Part_*.hs" *> \out -> do
         need ["Examples/Test/Docs.hs"] -- so much of the generator is in this module
         src <- readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
-        let f i (Stmt x) | all whitelist x = []
+        let f i (Stmt x) | whitelist $ head x = []
                          | otherwise = restmt i $ map undefDots x
             f i (Expr x) | x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                          | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
@@ -55,11 +55,13 @@ main = shaken noTest $ \args obj -> do
             ,"import Data.Char"
             ,"import Data.Data"
             ,"import Data.List"
+            ,"import Data.Maybe"
             ,"import Data.Monoid"
             ,"import Development.Shake"
             ,"import Development.Shake.Classes"
             ,"import Development.Shake.Rule"
             ,"import Development.Shake.Util"
+            ,"import Development.Shake.FilePath"
             ,"import System.Console.GetOpt"
             ,"import System.Exit"
             ,"import System.IO"
@@ -89,7 +91,7 @@ main = shaken noTest $ \args obj -> do
     obj "Files.lst" *> \out -> do
         need [index,obj "Paths_shake.hs"]
         files <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
-        files <- return $ filter (\x -> not ("-Classes.html" `isSuffixOf` x) && not ("Config.html" `isSuffixOf` x)) files
+        files <- return $ filter (\x -> not ("-Classes.html" `isSuffixOf` x)) files
         writeFileLines out $ map ((++) "Part_" . reps '-' '_' . takeBaseName) files
 
     let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
@@ -175,7 +177,8 @@ whitelist x | elem x $ words $
     "NoProgress Error " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out " ++
     "/usr/special /usr/special/userbinary $CFLAGS -O2 header.h source.c " ++
-    "-threaded -rtsopts -I0 Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues "
+    "-threaded -rtsopts -I0 Function extension $OUT $PATH xterm $TERM main opts result flagValues argValues " ++
+    "HEADERS_DIR /path/to/dir CFLAGS "
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
@@ -189,6 +192,8 @@ whitelist x = x `elem`
     ,"-with-rtsopts"
     ,"-qg -qb"
     ,"gcc -MM"
+    ,"# This is my Config file"
+    ,"-g -I/path/to/dir -O2"
     ]
 
 types = words $
