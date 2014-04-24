@@ -256,16 +256,14 @@ removeFiles dir pat = void $ f ""
         -- dir </> dir2 is the part to operate on, return True if you deleted the directory
         f :: FilePath -> IO Bool
         f dir2 | test dir2 = do
-            print ("removeDirectoryRecursive",dir </> dir2)
-            IO.removeDirectoryRecursive (dir </> dir2) >> return True
+            IO.removeDirectoryRecursive $ dir </> dir2
+            return True
         f dir2 = do
-            print ("testing",dir2,test dir2,pat)
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
             (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
             noDirs <- fmap and $ mapM f dirs
             let (del,keep) = partition test files
             mapM_ IO.removeFile $ map (dir </>) del
-            print ("deleting",dir2,del)
             let die = noDirs && null keep && not (null xs)
             when die $ IO.removeDirectory $ dir </> dir2
             return die

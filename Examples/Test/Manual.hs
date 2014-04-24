@@ -19,9 +19,7 @@ test build obj = do
     let cmdline = if isWindows then "build.bat" else "./build.sh"
     () <- cmd [Cwd $ obj "manual", Shell] cmdline "-j2"
     assertExists $ obj "manual/_build/run" <.> exe
-    print =<< getDirectoryContentsRecursive (obj "manual")
     () <- cmd [Cwd $ obj "manual", Shell] cmdline
     () <- cmd [Cwd $ obj "manual", Shell] [cmdline,"clean"]
     assertMissing $ obj "manual/_build/run" <.> exe
-    print =<< getDirectoryContentsRecursive (obj "manual")
     return ()
