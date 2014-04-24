@@ -251,7 +251,7 @@ removeFiles dir pat = void $ f ""
     where
         -- because it is generate and match anything like ../ will be ignored, since we never generate ..
         -- therefore we can safely know we never escape the containing directory
-        test = let ps = map (?==) $ map normalise pat in \x -> any ($ x) ps
+        test = let ps = map (?==) pat in \x -> any ($ x) ps
 
         -- dir </> dir2 is the part to operate on, return True if you deleted the directory
         f :: FilePath -> IO Bool
