@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #109, make removeFiles delete directories that match
     #84, make removeFiles not delete empty unmatched directories
     #111, fixes to the user manual
     #110, don't give a warning if -threaded is turned off

@@ -234,7 +234,7 @@ getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
             return $ filter test files ++ rest
 
 
--- | Remove all empty directories and files that match any of the patterns beneath a directory.
+-- | Remove all files and directories that match any of the patterns within a directory.
 --   Some examples:
 --
 -- @
@@ -242,10 +242,11 @@ getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
 -- 'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"]
 -- @
 --
+--   Any directories that become empty after deleting items from within them will themselves be deleted,
+--   up to (and including) the containing directory.
 --   This function is often useful when writing a @clean@ action for your build system,
 --   often as a 'phony' rule.
 removeFiles :: FilePath -> [FilePattern] -> IO ()
-removeFiles dir ["//*"] = IO.removeDirectoryRecursive dir -- optimisation
 removeFiles dir pat = void $ f ""
     where
         -- because it is generate and match anything like ../ will be ignored, since we never generate ..
@@ -254,6 +255,7 @@ removeFiles dir pat = void $ f ""
 
         -- dir </> dir2 is the part to operate on, return True if you deleted the directory
         f :: FilePath -> IO Bool
+        f dir2 | test dir2 = IO.removeDirectoryRecursive (dir </> dir2) >> return True
         f dir2 = do
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
             (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
