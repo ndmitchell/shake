@@ -44,6 +44,11 @@ extra-source-files:
     Examples/Ninja/*.ninja
     Paths.hs
     CHANGES.txt
+    README.md
+    docs/Manual.md
+    docs/Ninja.md
+    docs/Why.md
+    docs/shake-progress.png
     docs/manual/build.bat
     docs/manual/Build.hs
     docs/manual/build.sh
