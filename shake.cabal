@@ -50,6 +50,8 @@ extra-source-files:
     docs/manual/constants.c
     docs/manual/constants.h
     docs/manual/main.c
+    js-src/jquery-1.8.3.js
+    js-src/flot-0.8.0.zip
 
 data-files:
     html/jquery.flot.js
