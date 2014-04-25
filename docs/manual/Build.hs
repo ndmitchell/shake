@@ -8,9 +8,7 @@ main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
     want ["_build/run" <.> exe]
 
     phony "clean" $ do
-        putNormal "calling clean"
         removeFilesAfter "_build" ["//*"]
-        putNormal "clean completed"
 
     "_build/run" <.> exe *> \out -> do
         cs <- getDirectoryFiles "" ["//*.c"]
