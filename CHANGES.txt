@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.11.5
     Include the sources for flot and jQuery in the dist tarball
     Note that .. in FilePattern values is unlikely to be correct
     #109, make removeFiles delete directories that match
