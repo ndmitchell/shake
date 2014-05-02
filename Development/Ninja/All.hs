@@ -101,7 +101,8 @@ build needDeps phonys rules pools out build@Build{..} = do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile
                     needDeps build $ concatMap snd $ parseMakefile depsrc
-                    when (deps == "gcc") $ liftIO $ removeFile depfile
+                    -- correct as per the Ninja spec, but breaks --skip-commands
+                    -- when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
 needDeps :: Ninja -> Build -> [Str] -> Action ()
