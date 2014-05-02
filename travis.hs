@@ -10,6 +10,11 @@ main = do
     cmd "cp ninja/ninja nin"
     setCurrentDirectory "ninja"
 
+    let ms x = show $ ceiling $ x * 1000
+    (ninjaVer, _) <- duration $ cmd "../nin --version"
+    (shakeVer, _) <- duration $ cmd "shake --version"
+    putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
+
     retry 3 $ do
 
         -- time Ninja
@@ -26,7 +31,6 @@ main = do
         cmd "ls -l .shake* build/.ninja*"
         cmd "shake -VVVV"
 
-        let ms x = show $ ceiling $ x * 1000
         putStrLn $ "Ninja was " ++ ms ninjaFull ++ " then " ++ ms ninjaZero
         putStrLn $ "Shake was " ++ ms shakeFull ++ " then " ++ ms shakeZero
 
