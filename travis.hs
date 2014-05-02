@@ -11,7 +11,7 @@ main = do
     setCurrentDirectory "ninja"
 
     let ms x = show $ ceiling $ x * 1000
-    retry 3 $ do
+    replicateM 3 $ do
         (ninjaVer, _) <- duration $ cmd "../nin --version"
         (shakeVer, _) <- duration $ cmd "shake --version"
         putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
