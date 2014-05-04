@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #114, run build.sh in the test suite with sh
     #115, fix the test suite on Linux GHC 7.8
     #116, fix for GHC 7.10
 0.11.5
