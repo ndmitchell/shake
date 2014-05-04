@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #116, fix for GHC 7.10
 0.11.5
     Include the sources for flot and jQuery in the dist tarball
     Note that .. in FilePattern values is unlikely to be correct
