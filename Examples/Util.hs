@@ -4,6 +4,8 @@ module Examples.Util(sleep, module Examples.Util) where
 import Development.Shake
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.Base
+import General.String
+import Development.Shake.FileTime
 import Development.Shake.FilePath
 
 import Control.Exception hiding (assert)
@@ -141,15 +143,18 @@ sleepFileTimeCalibrate :: IO (IO ())
 sleepFileTimeCalibrate = do
     let file = "output/calibrate"
     createDirectoryIfMissing True $ takeDirectory file
-    mtime <- fmap maximum $ forM [1..3] $ \i -> fmap fst $ duration $ do
+    mtimes <- forM [1..3] $ \i -> fmap fst $ duration $ do
         writeFile file $ show i
-        t1 <- getModificationTime file
+        -- important to benchmark both modtimes, since #117 means unicode files
+        -- fall back to getModificationTime on Windows
+        let time = liftM2 (,) (getModificationTime file) (getModTimeError "File is missing" $ packU file)
+        t1 <- time
         flip loop 0 $ \j -> do
             writeFile file $ show (i,j)
-            t2 <- getModificationTime file
-            return $ if t1 == t2 then Left $ j+1 else Right ()
-    putStrLn $ "Longest file modification time lag was " ++ show mtime ++ "s"
-    return $ sleep $ min 1 $ mtime * 2
+            t2 <- time
+            return $ if fst t1 == fst t2 || snd t1 == snd t2 then Left $ j+1 else Right ()
+    putStrLn $ "Longest file modification time lag was " ++ show (ceiling (maximum mtimes * 1000)) ++ "ms"
+    return $ sleep $ min 1 $ maximum mtimes * 2
 
 
 removeFilesRandom :: FilePath -> IO Int
