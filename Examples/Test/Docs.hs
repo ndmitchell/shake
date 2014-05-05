@@ -52,7 +52,7 @@ main = shaken noTest $ \args obj -> do
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
             ["{-# LANGUAGE ConstraintKinds, DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
-            ,"{-# OPTIONS_GHC -fno-warn-warnings-deprecations -fno-warn-wrong-do-bind #-}"
+            ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Concurrent"
             ,"import Control.Monad"

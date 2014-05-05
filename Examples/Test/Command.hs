@@ -48,7 +48,7 @@ test build obj = do
     build ["ghc-random"]
     assertContentsInfix (obj "ghc-random") "unrecognised flags: --random"
 
-    crash ["ghc-random2"] ["unrecognised flags: --random"]
+    crash ["ghc-random2"] ["unrecognised flag","--random"]
 
     build ["pwd"]
     assertContentsInfix (obj "pwd") "command"
