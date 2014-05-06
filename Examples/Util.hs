@@ -145,14 +145,12 @@ sleepFileTimeCalibrate = do
     createDirectoryIfMissing True $ takeDirectory file
     mtimes <- forM [1..3] $ \i -> fmap fst $ duration $ do
         writeFile file $ show i
-        -- important to benchmark both modtimes, since #117 means unicode files
-        -- fall back to getModificationTime on Windows
-        let time = liftM2 (,) (getModificationTime file) (getModTimeError "File is missing" $ packU file)
+        let time = getModTimeError "File is missing" $ packU file
         t1 <- time
         flip loop 0 $ \j -> do
             writeFile file $ show (i,j)
             t2 <- time
-            return $ if fst t1 == fst t2 || snd t1 == snd t2 then Left $ j+1 else Right ()
+            return $ if t1 == t2 then Left $ j+1 else Right ()
     putStrLn $ "Longest file modification time lag was " ++ show (ceiling (maximum mtimes * 1000)) ++ "ms"
     return $ sleep $ min 1 $ maximum mtimes * 2
 
