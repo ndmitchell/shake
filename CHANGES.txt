@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #41, use higher precision file times on POSIX
     #117, use higher precision times for Unicode files on Windows
     #118, add support for Ninja -t compdb
     #119, more test fixes for Linux GHC 7.8

@@ -99,6 +99,14 @@ getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
 #else
 -- Unix version
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    t <- fmap modificationTime $ getFileStatus $ unpackU_ x
-    return $ Just $ fileTime $ fromIntegral $ fromEnum t
+    s <- getFileStatus $ unpackU_ x
+    return $ Just $ fileTime $ extractFileTime s
+
+extractFileTime :: FileStatus -> Int32
+#if defined(MIN_VERSION_unix) && MIN_VERSION_unix(2,6,0)
+extractFileTime x = ceiling $ x * 1e4 -- precision of 0.1ms
+#else
+extractFileTime x = fromIntegral $ fromEnum $ modificationTime x
+#endif
+
 #endif
