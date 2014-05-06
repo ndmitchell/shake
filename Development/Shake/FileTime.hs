@@ -106,7 +106,10 @@ getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else
     return $ Just $ fileTime $ extractFileTime s
 
 extractFileTime :: FileStatus -> Int32
-#if defined(MIN_VERSION_unix) && MIN_VERSION_unix(2,6,0)
+#ifndef MIN_VERSION_unix
+#define MIN_VERSION_unix(a,b,c) 0
+#endif
+#if MIN_VERSION_unix(2,6,0)
 extractFileTime x = ceiling $ modificationTimeHiRes x * 1e4 -- precision of 0.1ms
 #else
 extractFileTime x = fromIntegral $ fromEnum $ modificationTime x
