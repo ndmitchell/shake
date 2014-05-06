@@ -61,7 +61,8 @@ main = shaken noTest $ \args obj -> do
         deps <- readFileLines $ out -<.> "deps"
         let hs = fixPaths $ unobj $ out -<.> "hs"
         need $ hs : map (obj . moduleToFile "hi") deps
-        ghc ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"]
+        ghc $ ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
+              ["-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
     obj ".pkgs" *> \out -> do
         src <- readFile' "shake.cabal"
