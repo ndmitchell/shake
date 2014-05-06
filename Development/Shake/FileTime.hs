@@ -10,11 +10,9 @@ import General.String
 import Data.Char
 import Data.Int
 import Data.Word
-import qualified Data.ByteString.Char8 as BS
 import Numeric
 
 #if defined(PORTABLE)
--- Required for Portable
 import System.IO.Error
 import Control.Exception
 import System.Directory
@@ -22,7 +20,7 @@ import Data.Time
 import System.Time
 
 #elif defined(mingw32_HOST_OS)
--- Required for non-portable Windows
+import qualified Data.ByteString.Char8 as BS
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
@@ -35,7 +33,8 @@ size_WIN32_FILE_ATTRIBUTE_DATA = 36
 index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
 
 #else
--- Required for non-portable Unix (since it requires a non-standard library)
+import System.IO.Error
+import Control.Exception
 import System.Posix.Files.ByteString
 #endif
 
