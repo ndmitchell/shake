@@ -23,11 +23,33 @@ import Data.Maybe
 import Data.Char
 
 
-runNinja :: FilePath -> [String] -> IO (Rules ())
-runNinja file args = do
+runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))
+runNinja file args (Just "compdb") = do
+    dir <- getCurrentDirectory
+    Ninja{..} <- parse file =<< newEnv
+    rules <- return $ Map.fromList [r | r <- rules, BS.unpack (fst r) `elem` args]
+    -- the build items are generated in reverse order, hence the reverse
+    let xs = [(a,b,file,rule) | (a,b@Build{..}) <- reverse $ multiples ++ map (first return) singles
+                              , Just rule <- [Map.lookup ruleName rules], file:_ <- [depsNormal]]
+    xs <- forM xs $ \(out,Build{..},file,Rule{..}) -> do
+        -- the order of adding new environment variables matters
+        env <- scopeEnv env
+        addEnv env (BS.pack "out") (BS.unwords $ map quote out)
+        addEnv env (BS.pack "in") (BS.unwords $ map quote depsNormal)
+        addEnv env (BS.pack "in_newline") (BS.unlines depsNormal)
+        addBinds env buildBind
+        addBinds env ruleBind
+        commandline <- fmap BS.unpack $ askVar env $ BS.pack "command"
+        return $ CompDb dir commandline $ BS.unpack $ head depsNormal
+    putStr $ printCompDb xs
+    return Nothing
+
+runNinja file args (Just x) = error $ "Unknown tool argument, expected 'compdb', got " ++ x
+
+runNinja file args tool = do
     addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file =<< newEnv
-    return $ do
+    return $ Just $ do
         needDeps <- return $ needDeps ninja -- partial application
         phonys <- return $ Map.fromList phonys
         singles <- return $ Map.fromList $ map (first normalise) singles
@@ -172,3 +194,23 @@ isSystemInclude x = bsProgFiles `BS.isInfixOf` tx || bsVisStudio `BS.isInfixOf` 
 bsNote = BS.pack "Note: including file:"
 bsProgFiles = BS.pack "PROGRAM FILES"
 bsVisStudio = BS.pack "MICROSOFT VISUAL STUDIO"
+
+
+data CompDb = CompDb
+    {cdbDirectory :: String
+    ,cdbCommand :: String
+    ,cdbFile :: String
+    }
+    deriving Show
+
+printCompDb :: [CompDb] -> String
+printCompDb xs = unlines $ ["["] ++ concat (zipWith f [1..] xs) ++ ["]"]
+    where
+        n = length xs
+        f i CompDb{..} =
+            ["  {"
+            ,"    \"directory\": " ++ g cdbDirectory ++ ","
+            ,"    \"command\": " ++ g cdbCommand ++ ","
+            ,"    \"file\": " ++ g cdbFile
+            ,"  }" ++ (if i == n then "" else ",")]
+        g = show
