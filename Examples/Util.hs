@@ -143,7 +143,7 @@ sleepFileTimeCalibrate :: IO (IO ())
 sleepFileTimeCalibrate = do
     let file = "output/calibrate"
     createDirectoryIfMissing True $ takeDirectory file
-    mtimes <- forM [1..5] $ \i -> fmap fst $ duration $ do
+    mtimes <- forM [1..10] $ \i -> fmap fst $ duration $ do
         writeFile file $ show i
         let time = getModTimeError "File is missing" $ packU file
         t1 <- time
