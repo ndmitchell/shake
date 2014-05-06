@@ -46,7 +46,8 @@ test build obj = do
     assertContentsInfix (obj "ghc-version") "The Glorious Glasgow Haskell Compilation System"
 
     build ["ghc-random"]
-    assertContentsInfix (obj "ghc-random") "unrecognised flags: --random"
+    assertContentsInfix (obj "ghc-random") "unrecognised flag"
+    assertContentsInfix (obj "ghc-random") "--random"
 
     crash ["ghc-random2"] ["unrecognised flag","--random"]
 
