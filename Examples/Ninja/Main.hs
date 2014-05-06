@@ -4,6 +4,8 @@ module Examples.Ninja.Main(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import System.Directory(copyFile)
+import Control.Monad
+import General.Base
 import Examples.Util
 import Data.List
 import qualified Start
@@ -54,5 +56,9 @@ test build obj = do
     run "-f../../Examples/Ninja/lint.ninja good --lint"
     runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
-    run "-f../../Examples/Ninja/compdb.ninja -t compdb cxx"
-    -- should really check the output, but requires capturing stdout which is yuk
+    res <- fmap (reverse . drop 2 . reverse . drop 1 . lines) $ captureOutput $ run "-f../../Examples/Ninja/compdb.ninja -t compdb cxx"
+    want <- fmap lines $ readFile "Examples/Ninja/compdb.output"
+    let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
+               | otherwise = a === b
+    length want === length res
+    sequence_ $ zipWith eq want res
