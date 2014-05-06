@@ -3,10 +3,6 @@ import Neil
 import System.Directory
 
 main = do
-    -- check the portable flag works
-    cmd "cabal configure"
-    cmd "cabal build -flags=portable --ghc-option=-fwarn-unused-imports --disable-library-profiling --ghc-option=-Werror"
-
     -- grab ninja
     cmd "git clone https://github.com/martine/ninja"
     cmd "cd ninja && ./bootstrap.py"
