@@ -11,28 +11,31 @@ import Data.Char
 import Data.Int
 import Data.Word
 import qualified Data.ByteString.Char8 as BS
-import System.IO.Error
-import Control.Exception
 import Numeric
 
+#if defined(PORTABLE)
 -- Required for Portable
+import System.IO.Error
+import Control.Exception
 import System.Directory
 import Data.Time
 import System.Time
 
+#elif defined(mingw32_HOST_OS)
 -- Required for non-portable Windows
-#if defined(mingw32_HOST_OS)
 import Foreign
 import Foreign.C.Types
+import Foreign.C.String
 type WIN32_FILE_ATTRIBUTE_DATA = Ptr ()
 type LPCSTR = Ptr CChar
-foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesEx :: LPCSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+type LPCWSTR = Ptr CWchar
+foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesExA :: LPCSTR  -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import stdcall unsafe "Windows.h GetFileAttributesExW" c_getFileAttributesExW :: LPCWSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
 size_WIN32_FILE_ATTRIBUTE_DATA = 36
 index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
-#endif
 
--- Required for non-portable Unix (since it requires a non-standard library, only require if not portable)
-#if !defined(PORTABLE) && !defined(mingw32_HOST_OS)
+#else
+-- Required for non-portable Unix (since it requires a non-standard library)
 import System.Posix.Files.ByteString
 #endif
 
@@ -64,19 +67,10 @@ getModTimeError msg x = do
 
 
 getModTimeMaybe :: BSU -> IO (Maybe FileTime)
+
 #if defined(PORTABLE)
-getModTimeMaybe x = getModTimeMaybePortable x
-#elif defined(mingw32_HOST_OS)
-getModTimeMaybe x = getModTimeMaybeWindows x
-#else
-getModTimeMaybe x = getModTimeMaybeUnix x
-#endif
-
-
-
 -- Portable fallback
-getModTimeMaybePortable :: BSU -> IO (Maybe FileTime)
-getModTimeMaybePortable x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     time <- getModificationTime $ unpackU x
     return $ Just $ extractFileTime time
 
@@ -86,27 +80,25 @@ instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fileTime $ 
 instance ExtractFileTime UTCTime where extractFileTime = fileTime . floor . fromRational . toRational . utctDayTime
 
 
+#elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
-#if defined(mingw32_HOST_OS)
-getModTimeMaybeWindows :: BSU -> IO (Maybe FileTime)
-getModTimeMaybeWindows x = BS.useAsCString (unpackU_ x) $ \file ->
+getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
     allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA $ \info -> do
-        res <- c_getFileAttributesEx file 0 info
-        if res then do
-            -- Technically a Word32, but we can treak it as an Int32 for peek
-            dword <- peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32
-            return $ Just $ fileTime dword
-         else if requireU x then
-            getModTimeMaybePortable x
+        res <- c_getFileAttributesExA file 0 info
+        if res then
+            peeks info
+         else if requireU x then withCWString (unpackU x) $ \file -> do
+            res <- c_getFileAttributesExW file 0 info
+            if res then peeks info else return Nothing
          else
             return Nothing
-#endif
+    where
+        -- Technically a Word32, but we can treak it as an Int32 for peek
+        peeks info = fmap (Just . fileTime) (peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32)
 
-
+#else
 -- Unix version
-#if !defined(PORTABLE) && !defined(mingw32_HOST_OS)
-getModTimeMaybeUnix :: BSU -> IO (Maybe FileTime)
-getModTimeMaybeUnix x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     t <- fmap modificationTime $ getFileStatus $ unpackU_ x
     return $ Just $ fileTime $ fromIntegral $ fromEnum t
 #endif
