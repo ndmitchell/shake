@@ -24,13 +24,6 @@ import qualified Data.ByteString.Char8 as BS
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
-type WIN32_FILE_ATTRIBUTE_DATA = Ptr ()
-type LPCSTR = Ptr CChar
-type LPCWSTR = Ptr CWchar
-foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesExA :: LPCSTR  -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
-foreign import stdcall unsafe "Windows.h GetFileAttributesExW" c_getFileAttributesExW :: LPCWSTR -> Int32 -> WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
-size_WIN32_FILE_ATTRIBUTE_DATA = 36
-index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
 
 #else
 import System.IO.Error
@@ -82,18 +75,29 @@ instance ExtractFileTime UTCTime where extractFileTime = fileTime . floor . from
 #elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
 getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
-    allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA $ \info -> do
-        res <- c_getFileAttributesExA file 0 info
+    alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
+        res <- c_getFileAttributesExA file 0 fad
         if res then
-            peeks info
+            fmap (Just . fileTime) $ peekLastWriteTimeLow fad
          else if requireU x then withCWString (unpackU x) $ \file -> do
-            res <- c_getFileAttributesExW file 0 info
-            if res then peeks info else return Nothing
+            res <- c_getFileAttributesExW file 0 fad
+            if res then fmap (Just . fileTime) $ peekLastWriteTimeLow fad else return Nothing
          else
             return Nothing
-    where
-        -- Technically a Word32, but we can treak it as an Int32 for peek
-        peeks info = fmap (Just . fileTime) (peekByteOff info index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime :: IO Int32)
+
+foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesExA :: Ptr CChar  -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import stdcall unsafe "Windows.h GetFileAttributesExW" c_getFileAttributesExW :: Ptr CWchar -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+
+data WIN32_FILE_ATTRIBUTE_DATA
+
+alloca_WIN32_FILE_ATTRIBUTE_DATA :: (Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO a) -> IO a
+alloca_WIN32_FILE_ATTRIBUTE_DATA act = allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA act
+    where size_WIN32_FILE_ATTRIBUTE_DATA = 36
+
+peekLastWriteTimeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Int32
+peekLastWriteTimeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
+    where index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
+
 
 #else
 -- Unix version
