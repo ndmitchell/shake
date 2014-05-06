@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #119, more test fixes for Linux GHC 7.8
 0.11.7
     #119, test fixes for Linux GHC 7.8
 0.11.6
