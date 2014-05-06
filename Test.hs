@@ -4,15 +4,13 @@ module Main(main) where
 
 import Control.Exception
 import Control.Monad
-import Data.List
 import Data.Maybe
 import System.Environment
-import Development.Shake.Pool
 import General.Timing
 import Development.Shake.FileTime
 import General.String
 import qualified Data.ByteString.Char8 as BS
-import Examples.Util(sleepFileTime, sleepFileTimeCalibrate)
+import Examples.Util(sleepFileTimeCalibrate)
 import Control.Concurrent
 
 import qualified Examples.Tar.Main as Tar
@@ -92,7 +90,7 @@ main = do
             ,unwords ["  ", exePath, "self",  "--jobs=2", "--trace"]
             ,""
             ,"Which will build Shake, using Shake, on 2 threads."]
-        Just main -> main sleepFileTime
+        Just main -> main =<< sleepFileTimeCalibrate
 
 
 makefile :: IO () -> IO ()
@@ -128,18 +126,7 @@ clean extra = sequence_ [withArgs [name,"clean"] $ main extra | (name,main) <- m
 
 
 test :: IO () -> IO ()
-test _ = do
+test yield = do
     args <- getArgs
-    let tests = filter ((/= "random") . fst) mains
-    let (priority,normal) = partition (flip elem ["assume","journal"] . fst) tests
-    yield <- sleepFileTimeCalibrate
     flip onException (putStrLn "TESTS FAILED") $
-        execute yield [\pause -> withArgs (name:"test":drop 1 args) $ test pause | (name,test) <- priority ++ normal]
-
-
--- | Execute each item in the list. They may yield (call the first parameter) in which case
---   you must execute yield for each one of them.
-execute :: IO () -> [IO () -> IO ()] -> IO ()
-execute yield acts = runPool True 1 $ \pool -> do
-    let pause = blockPool pool $ yield >> return (False,())
-    forM_ acts $ \act -> addPool pool $ act pause
+        sequence_ [withArgs (name:"test":drop 1 args) $ test yield | (name,test) <- mains, name /= "random"]
