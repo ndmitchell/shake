@@ -53,3 +53,6 @@ test build obj = do
     runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "'needed' file required rebuilding"
     run "-f../../Examples/Ninja/lint.ninja good --lint"
     runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "not a pre-dependency"
+
+    run "-f../../Examples/Ninja/compdb.ninja -t compdb cxx"
+    -- should really check the output, but requires capturing stdout which is yuk
