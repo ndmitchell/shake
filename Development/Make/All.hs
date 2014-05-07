@@ -14,7 +14,7 @@ import Data.List
 import Data.Maybe
 import Control.Arrow
 import Control.Monad
-import System.Cmd
+import System.Process
 import System.Exit
 import Control.Monad.Trans.State.Strict
 
@@ -85,15 +85,15 @@ convert rs = match ??> run
                 forM_ cmd $ \c ->
                     case c of
                         Expr c -> (if silent then quietly else id) $
-                            runCommand =<< liftIO (askEnv env c)
+                            execCommand =<< liftIO (askEnv env c)
             return $ if phony then Phony else NotPhony
 
         has auto name target =
             or [(null ws && auto) || target `elem` ws | Ruler t (_,Lit s) _ <- rs, t == name, let ws = words s]
 
 
-runCommand :: String -> Action ()
-runCommand x = do
+execCommand :: String -> Action ()
+execCommand x = do
     res <- if "@" `isPrefixOf` x then sys $ drop 1 x
            else putNormal x >> sys x
     when (res /= ExitSuccess) $
