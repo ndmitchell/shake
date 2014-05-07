@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add a 'console' pool to Ninja
     Avoid using System.Cmd (deprecated in GHC HEAD)
     #41, use higher precision file times on POSIX
     #117, use higher precision times for Unicode files on Windows

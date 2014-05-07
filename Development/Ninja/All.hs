@@ -55,7 +55,7 @@ runNinja file args tool = do
         singles <- return $ Map.fromList $ map (first normalise) singles
         multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map normalise) multiples, x <- xs]
         rules <- return $ Map.fromList rules
-        pools <- fmap Map.fromList $ forM pools $ \(name,depth) ->
+        pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
         action $ needBS $ map normalise $ concatMap (resolvePhony phonys) $
