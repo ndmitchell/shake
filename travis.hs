@@ -16,6 +16,8 @@ main = do
         (shakeVer, _) <- duration $ cmd "shake --version"
         putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
 
+    cmd "shake --version; shake -C does_not_exist; echo end" -- check for #22
+
     retry 3 $ do
 
         -- time Ninja
