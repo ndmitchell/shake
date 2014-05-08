@@ -128,7 +128,7 @@ instance Monoid SRules where
 
 instance Monoid a => Monoid (Rules a) where
     mempty = return mempty
-    mappend a b = do a <- a; b <- b; return $ mappend a b
+    mappend = liftA2 mappend
 
 
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
