@@ -86,40 +86,40 @@ class (
     storedValue :: ShakeOptions -> key -> IO (Maybe value)
 
 
-data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
+data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
 
-ruleKey :: Rule key value => (key -> Maybe (Action value)) -> key
+ruleKey :: Rule key value => (key -> Maybe (m value)) -> key
 ruleKey = err "ruleKey"
 
-ruleValue :: Rule key value => (key -> Maybe (Action value)) -> value
+ruleValue :: Rule key value => (key -> Maybe (m value)) -> value
 ruleValue = err "ruleValue"
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.*>' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation. To define your own
 --   custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Monad, Functor, Applicative)
 
 rulesIO :: IO a -> Rules a
 rulesIO = Rules . liftIO
 
-newRules :: SRules -> Rules ()
+newRules :: SRules Action -> Rules ()
 newRules = Rules . tell
 
-modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
+modifyRules :: (SRules Action -> SRules Action) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-getRules :: Rules () -> IO SRules
+getRules :: Rules () -> IO (SRules Action)
 getRules (Rules r) = execWriterT r
 
 
-data SRules = SRules
-    {actions :: [Action ()]
-    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Int,ARule)]) -- higher fst is higher priority
+data SRules m = SRules
+    {actions :: [m ()]
+    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Int,ARule m)]) -- higher fst is higher priority
     }
 
-instance Monoid SRules where
+instance Monoid (SRules m) where
     mempty = SRules [] (Map.fromList [])
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
         where f (k, v1, xs) (_, v2, ys)
@@ -458,14 +458,14 @@ wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
          else throwIO $ ShakeException (last stk) stk $ SomeException e
 
 
-registerWitnesses :: SRules -> IO ()
+registerWitnesses :: SRules m -> IO ()
 registerWitnesses SRules{..} =
     forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
         registerWitness $ ruleKey r
         registerWitness $ ruleValue r
 
 
-createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
+createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
