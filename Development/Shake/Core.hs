@@ -291,9 +291,9 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 ---------------------------------------------------------------------
 -- MAKE
 
-data RuleInfo = RuleInfo
+data RuleInfo m = RuleInfo
     {stored :: Key -> IO (Maybe Value)
-    ,execute :: Key -> Action Value
+    ,execute :: Key -> m Value
     ,resultType :: TypeRep
     }
 
@@ -302,7 +302,7 @@ data SAction = SAction
     {database :: Database
     ,pool :: Pool
     ,timestamp :: IO Time
-    ,ruleinfo :: Map.HashMap TypeRep RuleInfo
+    ,ruleinfo :: Map.HashMap TypeRep (RuleInfo Action)
     ,output :: Verbosity -> String -> IO ()
     ,opts :: ShakeOptions
     ,diagnostic :: String -> IO ()
@@ -465,11 +465,11 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 
-createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep RuleInfo
+createRuleinfo :: Functor m => ShakeOptions -> SRules m -> Map.HashMap TypeRep (RuleInfo m)
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
-            where f :: Rule key value => (key -> Maybe (Action value)) -> (key -> IO (Maybe value))
+            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
                   f _ = storedValue opt
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
@@ -480,12 +480,12 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
 
-runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
+runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just RuleInfo{..} -> stored k
 
-runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
+runExecute :: Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
     Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing -- Not sure if this is even possible, but best be safe
     Just RuleInfo{..} -> execute k
