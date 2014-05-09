@@ -141,6 +141,7 @@ library
         General.Base
         General.Binary
         General.Intern
+        General.RAW
         General.String
         General.Timing
         Paths_shake
