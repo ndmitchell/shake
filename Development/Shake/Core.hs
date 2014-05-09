@@ -28,7 +28,6 @@ import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
-import Control.Monad.Trans.State.Strict as State
 import Data.Typeable
 import Data.Function
 import Data.List
@@ -50,6 +49,7 @@ import Development.Shake.Errors
 import General.Timing
 import General.Base
 import General.String
+import General.RAW
 
 
 ---------------------------------------------------------------------
@@ -235,8 +235,8 @@ runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
 ---------------------------------------------------------------------
 -- MAKE
 
-data SAction = SAction
-    -- global constants
+-- global constants of Action
+data Global = Global
     {globalDatabase :: Database
     ,globalPool :: Pool
     ,globalTimestamp :: IO Time
@@ -247,8 +247,13 @@ data SAction = SAction
     ,globalLint :: String -> IO ()
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
-    -- constant local variables
-    ,localStack :: Stack
+    }
+
+
+-- local variables of Action
+data Local = Local
+    -- constants
+    {localStack :: Stack
     -- stack scoped local variables
     ,localVerbosity :: Verbosity
     ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
@@ -262,17 +267,14 @@ data SAction = SAction
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
 --   Action values are used by 'rule' and 'action'. The 'Action' monad tracks the dependencies of a 'Rule'.
-newtype Action a = Action (StateT SAction IO a)
-    deriving (Monad, MonadIO, Functor, Applicative)
+newtype Action a = Action {fromAction :: RAW Global Local a}
+    deriving (Functor, Applicative, Monad, MonadIO)
 
 
 -- | If an exception is raised by the 'Action', perform some 'IO'.
 actionOnException :: Action a -> IO b -> Action a
-actionOnException act clean = do
-    s <- Action State.get
-    (res,s) <- liftIO $ onException (runAction s act) clean
-    Action $ State.put s
-    return res
+actionOnException act clean = Action $
+    catchRAW (fromAction act) (\(e :: SomeException) -> liftIO clean >> throwRAW e)
 
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
@@ -339,8 +341,9 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = SAction database pool start ruleinfo output opts diagnostic lint after absent emptyStack shakeVerbosity Nothing [] 0 [] [] []
-                    mapM_ (addPool pool . staunch . runAction s0) (actions rs)
+                    let s0 = Global database pool start ruleinfo output opts diagnostic lint after absent
+                    let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
+                    mapM_ (addPool pool . staunch . runAction s0 s1) (actions rs)
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
@@ -383,14 +386,14 @@ wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
          else throwIO $ ShakeException (last stk) stk $ SomeException e
 
 
-runAction :: SAction -> Action a -> IO (a, SAction)
-runAction s (Action x) = runStateT x s
+runAction :: Global -> Local -> Action a -> IO a
+runAction g l (Action x) = runRAW g l x
 
 
 runAfter :: IO () -> Action ()
 runAfter op = do
-    s <- Action State.get
-    liftIO $ atomicModifyIORef (globalAfter s) $ \ops -> (op:ops, ())
+    Global{..} <- Action getRO
+    liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
@@ -404,10 +407,10 @@ apply = f -- Don't short-circuit [] as we still want error messages
         f ks = do
             let tk = typeOf (err "apply key" :: key)
                 tv = typeOf (err "apply type" :: value)
-            ruleinfo <- Action $ State.gets globalRules
-            block <- Action $ State.gets localBlockApply
+            Global{..} <- Action getRO
+            block <- Action $ getsRW localBlockApply
             whenJust block $ errorNoApply tk (fmap show $ listToMaybe ks)
-            case Map.lookup tk ruleinfo of
+            case Map.lookup tk globalRules of
                 Nothing -> errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
                 Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
                 _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
@@ -416,28 +419,29 @@ apply = f -- Don't short-circuit [] as we still want error messages
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
-    s <- Action State.get
-    let exec stack k = try $ wrapStack (showStack (globalDatabase s) stack) $ do
+    global@Global{..} <- Action getRO
+    let exec stack k = try $ wrapStack (showStack globalDatabase stack) $ do
             evaluate $ rnf k
-            let s2 = s{localVerbosity=shakeVerbosity $ globalOptions s, localDepends=[], localStack=stack
-                      ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
+            let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=[], localStack=stack, localBlockApply=Nothing
+                          ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
             let top = showTopStack stack
-            globalLint s $ "before building " ++ top
-            (dur,(res,s2)) <- duration $ runAction s2 $ do
+            globalLint $ "before building " ++ top
+            (dur,(res,Local{..})) <- duration $ runAction global s $ do
                 putWhen Chatty $ "# " ++ show k
-                res <- runExecute (globalRules s) k
-                when (shakeLint (globalOptions s) == Just LintTracker)
+                res <- runExecute globalRules k
+                when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
-                return res
-            globalLint s $ "after building " ++ top
-            let ans = (res, reverse $ localDepends s2, dur - localDiscount s2, reverse $ localTraces s2)
+                Action $ fmap ((,) res) getRW
+            globalLint $ "after building " ++ top
+            let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
             evaluate $ rnf ans
             return ans
-    res <- liftIO $ build (globalPool s) (globalDatabase s) (Ops (runStored (globalRules s)) exec) (localStack s) ks
+    stack <- Action $ getsRW localStack
+    res <- liftIO $ build globalPool globalDatabase (Ops (runStored globalRules) exec) stack ks
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
-            Action $ State.modify $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
+            Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
             return vs
 
 
@@ -449,7 +453,7 @@ apply1 = fmap head . apply . return
 
 -- | Get the initial 'ShakeOptions', these will not change during the build process.
 getShakeOptions :: Action ShakeOptions
-getShakeOptions = Action $ gets globalOptions
+getShakeOptions = Action $ getsRO globalOptions
 
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
@@ -457,20 +461,22 @@ getShakeOptions = Action $ gets globalOptions
 --   The trace list is used for profile reports (see 'shakeReport').
 traced :: String -> IO a -> Action a
 traced msg act = do
-    s <- Action State.get
-    start <- liftIO $ globalTimestamp s
-    putNormal $ "# " ++ msg ++ " " ++ showTopStack (localStack s)
+    Global{..} <- Action getRO
+    stack <- Action $ getsRW localStack
+    start <- liftIO globalTimestamp
+    putNormal $ "# " ++ msg ++ " " ++ showTopStack stack
     res <- liftIO act
-    stop <- liftIO $ globalTimestamp s
-    Action $ State.modify $ \s -> s{localTraces = Trace (pack msg) start stop : localTraces s}
+    stop <- liftIO globalTimestamp
+    Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) start stop : localTraces s}
     return res
 
 
 putWhen :: Verbosity -> String -> Action ()
 putWhen v msg = do
-    s <- Action State.get
-    when (localVerbosity s >= v) $
-        liftIO $ globalOutput s v msg
+    Global{..} <- Action getRO
+    verb <- getVerbosity
+    when (verb >= v) $
+        liftIO $ globalOutput v msg
 
 
 -- | Write a message to the output when the verbosity ('shakeVerbosity') is appropriate.
@@ -487,19 +493,15 @@ putQuiet = putWhen Quiet
 --   'putLoud' \/ 'putNormal' \/ 'putQuiet', which ensures multiple messages are
 --   not interleaved. The verbosity can be modified locally by 'withVerbosity'.
 getVerbosity :: Action Verbosity
-getVerbosity = Action $ gets localVerbosity
+getVerbosity = Action $ getsRW localVerbosity
 
 
 -- | Run an action with a particular verbosity level.
 --   Will not update the 'shakeVerbosity' returned by 'getShakeOptions' and will
 --   not have any impact on 'Diagnostic' tracing.
 withVerbosity :: Verbosity -> Action a -> Action a
-withVerbosity new act = do
-    old <- Action $ State.gets localVerbosity
-    Action $ State.modify $ \s -> s{localVerbosity=new}
-    res <- act
-    Action $ State.modify $ \s -> s{localVerbosity=old}
-    return res
+withVerbosity new = Action . unmodifyRW f . fromAction
+    where f s0 = (s0{localVerbosity=new}, \s -> s{localVerbosity=localVerbosity s0})
 
 
 -- | Run an action with 'Quiet' verbosity, in particular messages produced by 'traced'
@@ -528,41 +530,44 @@ trackUse ::
 -- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
 trackUse key = do
     let k = newKey key
-    s <- Action State.get
-    deps <- liftIO $ concatMapM (listDepends $ globalDatabase s) (localDepends s)
-    let top = topStack $ localStack s
+    Global{..} <- Action getRO
+    l@Local{..} <- Action getRW
+    deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
+    let top = topStack localStack
     if top == Just k then
         return () -- condition 1
      else if k `elem` deps then
         return () -- condition 2
-     else if any ($ k) $ localTrackAllows s then
+     else if any ($ k) localTrackAllows then
         return () -- condition 3
      else
-        Action $ State.modify $ \s -> s{localTrackUsed = k : localTrackUsed s} -- condition 4
+        Action $ putRW l{localTrackUsed = k : localTrackUsed} -- condition 4
 
 
 trackCheckUsed :: Action ()
 trackCheckUsed = do
-    s <- Action State.get
-    deps <- liftIO $ concatMapM (listDepends $ globalDatabase s) (localDepends s)
+    Global{..} <- Action getRO
+    Local{..} <- Action getRW
+    liftIO $ do
+        deps <- concatMapM (listDepends globalDatabase) localDepends
 
-    -- check 3a
-    bad <- return $ localTrackUsed s \\ deps
-    unless (null bad) $ do
-        let n = length bad
-        errorStructured
-            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
-            [("Used", Just $ show x) | x <- bad]
-            ""
+        -- check 3a
+        bad <- return $ localTrackUsed \\ deps
+        unless (null bad) $ do
+            let n = length bad
+            errorStructured
+                ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+                [("Used", Just $ show x) | x <- bad]
+                ""
 
-    -- check 3b
-    bad <- liftIO $ flip filterM (localTrackUsed s) $ \k -> fmap (not . null) $ lookupDependencies (globalDatabase s) k
-    unless (null bad) $ do
-        let n = length bad
-        errorStructured
-            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
-            [("Used", Just $ show x) | x <- bad]
-            ""
+        -- check 3b
+        bad <- flip filterM localTrackUsed $ \k -> fmap (not . null) $ lookupDependencies globalDatabase k
+        unless (null bad) $ do
+            let n = length bad
+            errorStructured
+                ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+                [("Used", Just $ show x) | x <- bad]
+                ""
 
 
 -- | Track that a key has been changed by the action preceeding it.
@@ -579,15 +584,17 @@ trackChange ::
 -- 3) this file is never known to the build system, at the end it is not in the database
 trackChange key = do
     let k = newKey key
-    s <- Action State.get
-    let top = topStack $ localStack s
-    if top == Just k then
-        return () -- condition 1
-     else if any ($ k) $ localTrackAllows s then
-        return () -- condition 2
-     else
-        -- condition 3
-        liftIO $ atomicModifyIORef (globalTrackAbsent s) $ \ks -> ((fromMaybe k top, k):ks, ())
+    Global{..} <- Action getRO
+    Local{..} <- Action getRW
+    liftIO $ do
+        let top = topStack localStack
+        if top == Just k then
+            return () -- condition 1
+         else if any ($ k) localTrackAllows then
+            return () -- condition 2
+         else
+            -- condition 3
+            atomicModifyIORef globalTrackAbsent $ \ks -> ((fromMaybe k top, k):ks, ())
 
 
 -- | Allow any matching key to violate the tracking rules.
@@ -598,7 +605,7 @@ trackAllow ::
     (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
 #endif
     => (key -> Bool) -> Action ()
-trackAllow test = Action $ State.modify $ \s -> s{localTrackAllows = f : localTrackAllows s}
+trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
         -- We don't want the forall in the Haddock docs
         arrow1Type :: forall a b . Typeable a => (a -> b) -> TypeRep
@@ -678,32 +685,27 @@ newThrottle name count period = rulesIO $ newThrottleIO name count period
 
 
 blockApply :: String -> Action a -> Action a
-blockApply msg act = do
-    s0 <- Action State.get
-    Action $ State.put s0{localBlockApply=Just msg}
-    res <- act
-    Action $ State.modify $ \s -> s{localBlockApply=localBlockApply s0}
-    return res
+blockApply msg = Action . unmodifyRW f . fromAction
+    where f s0 = (s0{localBlockApply=Just msg}, \s -> s{localBlockApply=localBlockApply s0})
 
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
 --   You cannot depend on a rule (e.g. 'need') while a resource is held.
 withResource :: Resource -> Int -> Action a -> Action a
-withResource r i act = do
-    s <- Action State.get
-    (res,s) <- liftIO $ bracket_
+withResource r i act = Action $ do
+    Global{..} <- getRO
+    act <- evalRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) act
+    join $ liftIO $ bracket_
         (do res <- acquireResource r i
             case res of
-                Nothing -> globalDiagnostic s $ show r ++ " acquired " ++ show i ++ " with no wait"
+                Nothing -> globalDiagnostic $ show r ++ " acquired " ++ show i ++ " with no wait"
                 Just wait -> do
-                    globalDiagnostic s $ show r ++ " waiting to acquire " ++ show i
-                    blockPool (globalPool s) $ fmap ((,) False) wait
-                    globalDiagnostic s $ show r ++ " acquired " ++ show i ++ " after waiting")
+                    globalDiagnostic $ show r ++ " waiting to acquire " ++ show i
+                    blockPool globalPool $ fmap ((,) False) wait
+                    globalDiagnostic $ show r ++ " acquired " ++ show i ++ " after waiting")
         (do releaseResource r i
-            globalDiagnostic s $ show r ++ " released " ++ show i)
-        (runAction s $ blockApply ("Within withResource using " ++ show r) act)
-    Action $ State.put s
-    return res
+            globalDiagnostic $ show r ++ " released " ++ show i)
+        act
 
 
 -- | Run an action which uses part of several finite resources. Acquires the resources in a stable
@@ -728,30 +730,27 @@ newCacheIO act = do
             Just bar -> return $ (,) mp $ do
                 res <- liftIO $ waitBarrierMaybe bar
                 res <- case res of
-                    Nothing -> do pool <- Action $ gets globalPool; liftIO $ blockPool pool $ fmap ((,) False) $ waitBarrier bar
+                    Nothing -> do pool <- Action $ getsRO globalPool; liftIO $ blockPool pool $ fmap ((,) False) $ waitBarrier bar
                     Just res -> return res
                 case res of
-                    Left err -> liftIO $ throwIO err
+                    Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
-                        Action $ modify $ \s -> s{localDepends = deps ++ localDepends s}
+                        Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s}
                         return v
             Nothing -> do
                 bar <- newBarrier
                 return $ (,) (Map.insert key bar mp) $ do
-                    s <- Action State.get
-                    let pre = localDepends s
-                    res <- liftIO $ try $ runAction s $ act key
+                    pre <- Action $ getsRW localDepends
+                    res <- Action $ tryRAW $ fromAction $ act key
                     case res of
-                        Left err -> liftIO $ do
-                            signalBarrier bar $ Left (err :: SomeException)
-                            throwIO err
-                        Right (v,s) -> do
-                            Action $ State.put s
-                            let post = localDepends s
+                        Left err -> do
+                            liftIO $ signalBarrier bar $ Left (err :: SomeException)
+                            Action $ throwRAW err
+                        Right v -> do
+                            post <- Action $ getsRW localDepends
                             let deps = take (length post - length pre) post
                             liftIO $ signalBarrier bar (Right (deps, v))
                             return v
-
 
 -- | Given an action on a key, produce a cached version that will execute the action at most once per key.
 --   Using the cached result will still result include any dependencies that the action requires.
@@ -781,8 +780,7 @@ newCache = rulesIO . newCacheIO
 --   on remote machines using barely any local CPU resources. Unsafe as it allows the 'shakeThreads' limit to be exceeded.
 --   You cannot depend on a rule (e.g. 'need') while the extra thread is executing.
 unsafeExtraThread :: Action a -> Action a
-unsafeExtraThread act = do
-    s <- Action State.get
-    (res,s) <- liftIO $ blockPool (globalPool s) $ fmap ((,) False) $ runAction s act
-    Action $ State.put s
-    return res
+unsafeExtraThread act = Action $ do
+    Global{..} <- getRO
+    act <- evalRAW $ fromAction act
+    join $ liftIO $ blockPool globalPool $ fmap ((,) False) act
