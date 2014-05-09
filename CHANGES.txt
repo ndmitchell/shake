@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add DEPRECATED pragmas on system' calls
     Delete Development.Shake.Sys, use command or cmd instead
     Add a 'console' pool to Ninja
     Avoid using System.Cmd (deprecated in GHC HEAD)

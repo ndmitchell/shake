@@ -23,6 +23,10 @@ checkExitCode :: String -> ExitCode -> Action ()
 checkExitCode cmd ExitSuccess = return ()
 checkExitCode cmd (ExitFailure i) = error $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
 
+{-# DEPRECATED system' "Use 'command' or 'cmd'" #-}
+{-# DEPRECATED systemCwd "Use 'command' or 'cmd' with 'Cwd'" #-}
+{-# DEPRECATED systemOutput "Use 'command' or 'cmd' with 'Stdout' or 'Stderr'" #-}
+
 -- | /Deprecated:/ Please use 'command' or 'cmd' instead.
 --   This function will be removed in a future version.
 --
