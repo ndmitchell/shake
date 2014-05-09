@@ -168,101 +168,6 @@ alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
             where b2 = fmap (fmap (fromJust . cast)) . b . fromJust . cast
 
 
--- | Track that a key has been used by the action preceeding it.
-trackUse ::
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key
-#else
-    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
-#endif
-    => key -> Action ()
--- One of the following must be true:
--- 1) you are the one building this key (e.g. key == topStack)
--- 2) you have already been used by apply, and are on the dependency list
--- 3) someone explicitly gave you permission with trackAllow
--- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
-trackUse key = do
-    let k = newKey key
-    s <- Action State.get
-    deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
-    let top = topStack $ stack s
-    if top == Just k then
-        return () -- condition 1
-     else if k `elem` deps then
-        return () -- condition 2
-     else if any ($ k) $ trackAllows s then
-        return () -- condition 3
-     else
-        Action $ State.modify $ \s -> s{trackUsed = k : trackUsed s} -- condition 4
-
-
-trackCheckUsed :: Action ()
-trackCheckUsed = do
-    s <- Action State.get
-    deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
-
-    -- check 3a
-    bad <- return $ trackUsed s \\ deps
-    unless (null bad) $ do
-        let n = length bad
-        errorStructured
-            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
-            [("Used", Just $ show x) | x <- bad]
-            ""
-
-    -- check 3b
-    bad <- liftIO $ flip filterM (trackUsed s) $ \k -> fmap (not . null) $ lookupDependencies (database s) k
-    unless (null bad) $ do
-        let n = length bad
-        errorStructured
-            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
-            [("Used", Just $ show x) | x <- bad]
-            ""
-
-
--- | Track that a key has been changed by the action preceeding it.
-trackChange ::
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key
-#else
-    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
-#endif
-    => key -> Action ()
--- One of the following must be true:
--- 1) you are the one building this key (e.g. key == topStack)
--- 2) someone explicitly gave you permission with trackAllow
--- 3) this file is never known to the build system, at the end it is not in the database
-trackChange key = do
-    let k = newKey key
-    s <- Action State.get
-    let top = topStack $ stack s
-    if top == Just k then
-        return () -- condition 1
-     else if any ($ k) $ trackAllows s then
-        return () -- condition 2
-     else
-        -- condition 3
-        liftIO $ atomicModifyIORef (trackAbsent s) $ \ks -> ((fromMaybe k top, k):ks, ())
-
-
--- | Allow any matching key to violate the tracking rules.
-trackAllow ::
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key
-#else
-    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
-#endif
-    => (key -> Bool) -> Action ()
-trackAllow test = Action $ State.modify $ \s -> s{trackAllows = f : trackAllows s}
-    where
-        -- We don't want the forall in the Haddock docs
-        arrow1Type :: forall a b . Typeable a => (a -> b) -> TypeRep
-        arrow1Type _ = typeOf (err "trackAllow" :: a)
-
-        ty = arrow1Type test
-        f k = typeKey k == ty && test (fromKey k)
-
-
 -- | Run an action, usually used for specifying top-level requirements.
 --
 -- @
@@ -288,14 +193,47 @@ withoutActions :: Rules () -> Rules ()
 withoutActions = modifyRules $ \x -> x{actions=[]}
 
 
----------------------------------------------------------------------
--- MAKE
+registerWitnesses :: SRules m -> IO ()
+registerWitnesses SRules{..} =
+    forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
+        registerWitness $ ruleKey r
+        registerWitness $ ruleValue r
+
 
 data RuleInfo m = RuleInfo
     {stored :: Key -> IO (Maybe Value)
     ,execute :: Key -> m Value
     ,resultType :: TypeRep
     }
+
+createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
+createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
+    where
+        stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
+            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
+                  f _ = storedValue opt
+
+        execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
+               [r]:_ -> r
+               rs -> errorMultipleRulesMatch (typeKey k) (show k) (length rs)
+            where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 
+
+        sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
+        sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
+
+runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
+runStored mp k = case Map.lookup (typeKey k) mp of
+    Nothing -> return Nothing
+    Just RuleInfo{..} -> stored k
+
+runExecute :: Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
+runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
+    Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing -- Not sure if this is even possible, but best be safe
+    Just RuleInfo{..} -> execute k
+
+
+---------------------------------------------------------------------
+-- MAKE
 
 data SAction = SAction
     -- global constants
@@ -458,39 +396,6 @@ wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
          else throwIO $ ShakeException (last stk) stk $ SomeException e
 
 
-registerWitnesses :: SRules m -> IO ()
-registerWitnesses SRules{..} =
-    forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
-        registerWitness $ ruleKey r
-        registerWitness $ ruleValue r
-
-
-createRuleinfo :: Functor m => ShakeOptions -> SRules m -> Map.HashMap TypeRep (RuleInfo m)
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
-    where
-        stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
-            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
-                  f _ = storedValue opt
-
-        execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
-               [r]:_ -> r
-               rs -> errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-            where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 
-
-        sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
-        sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
-
-runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
-runStored mp k = case Map.lookup (typeKey k) mp of
-    Nothing -> return Nothing
-    Just RuleInfo{..} -> stored k
-
-runExecute :: Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
-runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing -- Not sure if this is even possible, but best be safe
-    Just RuleInfo{..} -> execute k
-
-
 runAction :: SAction -> Action a -> IO (a, SAction)
 runAction s (Action x) = runStateT x s
 
@@ -616,6 +521,107 @@ withVerbosity new act = do
 quietly :: Action a -> Action a
 quietly = withVerbosity Quiet
 
+
+---------------------------------------------------------------------
+-- TRACKING
+
+-- | Track that a key has been used by the action preceeding it.
+trackUse ::
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key
+#else
+    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
+#endif
+    => key -> Action ()
+-- One of the following must be true:
+-- 1) you are the one building this key (e.g. key == topStack)
+-- 2) you have already been used by apply, and are on the dependency list
+-- 3) someone explicitly gave you permission with trackAllow
+-- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
+trackUse key = do
+    let k = newKey key
+    s <- Action State.get
+    deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
+    let top = topStack $ stack s
+    if top == Just k then
+        return () -- condition 1
+     else if k `elem` deps then
+        return () -- condition 2
+     else if any ($ k) $ trackAllows s then
+        return () -- condition 3
+     else
+        Action $ State.modify $ \s -> s{trackUsed = k : trackUsed s} -- condition 4
+
+
+trackCheckUsed :: Action ()
+trackCheckUsed = do
+    s <- Action State.get
+    deps <- liftIO $ concatMapM (listDepends $ database s) (depends s)
+
+    -- check 3a
+    bad <- return $ trackUsed s \\ deps
+    unless (null bad) $ do
+        let n = length bad
+        errorStructured
+            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+            [("Used", Just $ show x) | x <- bad]
+            ""
+
+    -- check 3b
+    bad <- liftIO $ flip filterM (trackUsed s) $ \k -> fmap (not . null) $ lookupDependencies (database s) k
+    unless (null bad) $ do
+        let n = length bad
+        errorStructured
+            ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+            [("Used", Just $ show x) | x <- bad]
+            ""
+
+
+-- | Track that a key has been changed by the action preceeding it.
+trackChange ::
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key
+#else
+    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
+#endif
+    => key -> Action ()
+-- One of the following must be true:
+-- 1) you are the one building this key (e.g. key == topStack)
+-- 2) someone explicitly gave you permission with trackAllow
+-- 3) this file is never known to the build system, at the end it is not in the database
+trackChange key = do
+    let k = newKey key
+    s <- Action State.get
+    let top = topStack $ stack s
+    if top == Just k then
+        return () -- condition 1
+     else if any ($ k) $ trackAllows s then
+        return () -- condition 2
+     else
+        -- condition 3
+        liftIO $ atomicModifyIORef (trackAbsent s) $ \ks -> ((fromMaybe k top, k):ks, ())
+
+
+-- | Allow any matching key to violate the tracking rules.
+trackAllow ::
+#if __GLASGOW_HASKELL__ >= 704
+    ShakeValue key
+#else
+    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
+#endif
+    => (key -> Bool) -> Action ()
+trackAllow test = Action $ State.modify $ \s -> s{trackAllows = f : trackAllows s}
+    where
+        -- We don't want the forall in the Haddock docs
+        arrow1Type :: forall a b . Typeable a => (a -> b) -> TypeRep
+        arrow1Type _ = typeOf (err "trackAllow" :: a)
+
+        ty = arrow1Type test
+        f k = typeKey k == ty && test (fromKey k)
+
+
+---------------------------------------------------------------------
+-- RESOURCES
 
 -- | Create a finite resource, given a name (for error messages) and a quantity of the resource that exists.
 --   Shake will ensure that actions using the same finite resource do not execute in parallel.
