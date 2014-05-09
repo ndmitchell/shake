@@ -108,7 +108,6 @@ library
         Development.Shake.Config
         Development.Shake.FilePath
         Development.Shake.Rule
-        Development.Shake.Sys
         Development.Shake.Util
 
     other-modules:
