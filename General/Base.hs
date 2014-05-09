@@ -10,6 +10,7 @@ module General.Base(
     modifyIORef'', writeIORef'',
     whenJust, loop, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
+    withBufferMode, withCapabilities
     ) where
 
 import Control.Concurrent
@@ -239,3 +240,17 @@ captureOutput act = do
     evaluate $ length res
     removeFile f
     return res
+
+withCapabilities :: Int -> IO a -> IO a
+#if __GLASGOW_HASKELL__ >= 706
+withCapabilities new act | rtsSupportsBoundThreads = do
+    old <- getNumCapabilities
+    if old == new then act else
+        bracket_ (setNumCapabilities new) (setNumCapabilities old) act
+#endif
+withCapabilities new act = act
+
+withBufferMode :: Handle -> BufferMode -> IO a -> IO a
+withBufferMode h b act = bracket (hGetBuffering h) (hSetBuffering h) $ const $ do
+    hSetBuffering h LineBuffering
+    act

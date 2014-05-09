@@ -357,22 +357,8 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             sequence_ . reverse =<< readIORef after
 
 
-withCapabilities :: Int -> IO a -> IO a
-#if __GLASGOW_HASKELL__ >= 706
-withCapabilities new act | rtsSupportsBoundThreads = do
-    old <- getNumCapabilities
-    if old == new then act else
-        bracket_ (setNumCapabilities new) (setNumCapabilities old) act
-#endif
-withCapabilities new act = act
-
 lineBuffering :: IO a -> IO a
-lineBuffering = f stdout . f stderr
-    where
-        f h act = do
-            bracket (hGetBuffering h) (hSetBuffering h) $ const $ do
-                hSetBuffering h LineBuffering
-                act
+lineBuffering = withBufferMode stdout LineBuffering . withBufferMode stderr LineBuffering
 
 
 abbreviate :: [(String,String)] -> String -> String
