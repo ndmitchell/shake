@@ -11,7 +11,7 @@ module Development.Shake.Core(
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
-    Rule(..), Rules, defaultRule, rule, action, withoutActions, alternatives,
+    Rule(..), Rules, defaultRule, rule, action, withoutActions, alternatives, priority,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -24,6 +24,7 @@ module Development.Shake.Core(
 
 import Control.Exception as E
 import Control.Applicative
+import Control.Arrow
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
@@ -141,6 +142,13 @@ defaultRule = rulePriority 0
 --   To define lower priority rules use 'defaultRule'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 rule = rulePriority 1
+
+
+-- | Change the priority of a given rule. If two rules match a particular target then
+--   the highest priority rule is picked. If that is ambiguous, it is an error.
+--   All builtin Shake rules have priority between 0 and 1.
+priority :: Double -> Rules () -> Rules ()
+priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
 
 
 -- | Add a rule at a given priority, higher numbers correspond to higher-priority rules.

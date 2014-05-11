@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #120, add a priority function
 0.12
     #62, move to a ReaderT/IORef for the Action monad
     Add DEPRECATED pragmas on system' calls
