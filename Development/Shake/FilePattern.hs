@@ -2,7 +2,7 @@
 
 module Development.Shake.FilePattern(
     FilePattern, (?==),
-    compatible, extract, substitute,
+    compatible, simple, extract, substitute,
     directories, directories1
     ) where
 
@@ -144,6 +144,11 @@ directories ps = foldl f xs xs
 
 ---------------------------------------------------------------------
 -- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
+
+-- | Is the pattern free from any * and //.
+simple :: FilePattern -> Bool
+simple = all isChar . lexer
+
 
 -- | Do they have the same * and // counts in the same order
 compatible :: [FilePattern] -> Bool
