@@ -34,4 +34,4 @@ alwaysRerun :: Action ()
 alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = defaultRule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()
+defaultRuleRerun = rule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()
