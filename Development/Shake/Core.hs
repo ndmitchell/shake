@@ -116,7 +116,7 @@ getRules (Rules r) = execWriterT r
 
 data SRules m = SRules
     {actions :: [m ()]
-    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Int,ARule m)]) -- higher fst is higher priority
+    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule m)]) -- higher fst is higher priority
     }
 
 instance Monoid (SRules m) where
@@ -146,7 +146,7 @@ rule = rulePriority 1
 -- | Add a rule at a given priority, higher numbers correspond to higher-priority rules.
 --   The function 'defaultRule' is priority 0 and 'rule' is priority 1. All rules of the same
 --   priority must be disjoint.
-rulePriority :: Rule key value => Int -> (key -> Maybe (Action value)) -> Rules ()
+rulePriority :: Rule key value => Double -> (key -> Maybe (Action value)) -> Rules ()
 rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
