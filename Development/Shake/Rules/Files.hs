@@ -58,7 +58,7 @@ ps *>> act
     | not $ compatible ps = error $
         "All patterns to *>> must have the same number and position of // and * wildcards\n" ++
         unwords ps
-    | otherwise = do
+    | otherwise = (if all simple ps then id else priority 0.5) $ do
         forM_ ps $ \p ->
             p *> \file -> do
                 _ :: FilesA <- apply1 $ FilesQ $ map (packU . substitute (extract p file)) ps
@@ -91,7 +91,7 @@ ps *>> act
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
 -- Should probably have been called &?>, since it's an and (&&) of ?>
-(?>>) test act = do
+(?>>) test act = priority 0.5 $ do
     let checkedTest x = case test x of
             Nothing -> Nothing
             Just ys | x `elem` ys && all ((== Just ys) . test) ys -> Just ys

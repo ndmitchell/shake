@@ -21,6 +21,7 @@ import Development.Shake.FileTime
 import Development.Shake.Types
 import Development.Shake.Errors
 
+import Data.List
 import Data.Maybe
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
@@ -175,13 +176,14 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --     'Development.Shake.writeFile'' out . map toUpper =<< 'Development.Shake.readFile'' src
 -- @
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-(?>) = root "with ?>"
+(?>) test act = priority 0.5 $ root "with ?>" test act
 
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 -- Should probably have been called |*>, since it's an or (||) of *>
-(**>) test = root "with **>" (\x -> any (?== x) test)
+(**>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
+    where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with **>" (\x -> any ($ x) ps2) act
 
 -- | Define a rule that matches a 'FilePattern'. No file required by the system must be
 --   matched by more than one pattern. For the pattern rules, see '?=='.
@@ -200,4 +202,4 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --
 --   Note that matching is case-sensitive, even on Windows.
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) test = root (show test) (test ?==)
+(*>) test act = (if simple test then id else priority 0.5) $ root (show test) (test ?==) act

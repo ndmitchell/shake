@@ -49,9 +49,10 @@ main = shaken test $ \args obj -> do
             need ["resource-dep"]
 
     obj "overlap.txt" *> \out -> writeFile' out "overlap.txt"
+    obj "overlap.t*" *> \out -> writeFile' out "overlap.t*"
     obj "overlap.*" *> \out -> writeFile' out "overlap.*"
     alternatives $ do
-        obj "alternative.txt" *> \out -> writeFile' out "alternative.txt"
+        obj "alternative.t*" *> \out -> writeFile' out "alternative.txt"
         obj "alternative.*" *> \out -> writeFile' out "alternative.*"
 
 
@@ -87,7 +88,9 @@ test build obj = do
 
     build ["overlap.foo"]
     assertContents (obj "overlap.foo") "overlap.*"
-    crash ["overlap.txt"] ["key matches multiple rules","overlap.txt"]
+    build ["overlap.txt"]
+    assertContents (obj "overlap.txt") "overlap.txt"
+    crash ["overlap.txx"] ["key matches multiple rules","overlap.txx"]
     build ["alternative.foo","alternative.txt"]
     assertContents (obj "alternative.foo") "alternative.*"
     assertContents (obj "alternative.txt") "alternative.txt"
