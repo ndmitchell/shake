@@ -27,7 +27,7 @@ instance Rule OrderOnlyQ OrderOnlyA where
 
 
 defaultRuleOrderOnly :: Rules ()
-defaultRuleOrderOnly = defaultRule $ \(OrderOnlyQ x) -> Just $ do
+defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
     needBS [unpackU_ x]
     return $ OrderOnlyA ()
 

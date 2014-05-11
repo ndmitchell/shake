@@ -37,7 +37,7 @@ instance Rule File_Q File_A where
 
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = defaultRule $ \(File_Q x) -> Just $
+defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $
     liftIO $ fmap (File_A . Just) $ getModTimeError "Error, file does not exist and no rule available:" x
 
 

@@ -47,7 +47,7 @@ instance Rule FileQ FileA where
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = defaultRule $ \(FileQ x) -> Just $
+defaultRuleFile = priority 0 $ rule $ \(FileQ x) -> Just $
     liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
 
 
