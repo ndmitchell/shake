@@ -135,13 +135,14 @@ instance Monoid a => Monoid (Rules a) where
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
 --   All default rules must be disjoint.
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-defaultRule = rulePriority 0
+defaultRule = priority 0 . rule
 
 
 -- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.
 --   To define lower priority rules use 'defaultRule'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-rule = rulePriority 1
+rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
+    where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
 -- | Change the priority of a given rule. If two rules match a particular target then
@@ -150,13 +151,6 @@ rule = rulePriority 1
 priority :: Double -> Rules () -> Rules ()
 priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
 
-
--- | Add a rule at a given priority, higher numbers correspond to higher-priority rules.
---   The function 'defaultRule' is priority 0 and 'rule' is priority 1. All rules of the same
---   priority must be disjoint.
-rulePriority :: Rule key value => Double -> (key -> Maybe (Action value)) -> Rules ()
-rulePriority i r = newRules mempty{rules = Map.singleton k (k, v, [(i,ARule r)])}
-    where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
 --   in order. Only recommended for small blocks containing a handful of rules.
