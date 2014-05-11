@@ -399,7 +399,7 @@ runAfter op = do
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
---   This function requires that appropriate rules have been added with 'rule' or 'defaultRule'.
+--   This function requires that appropriate rules have been added with 'rule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: Rule key value => [key] -> Action [value]
 apply = f -- Don't short-circuit [] as we still want error messages
