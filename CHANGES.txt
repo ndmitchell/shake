@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Deprecate defaultRule
     Make literal *> matches take precedence over wildcard matches
     #120, add a priority function
 0.12

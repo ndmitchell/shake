@@ -12,6 +12,8 @@ module Development.Shake.Rule(
 
 import Development.Shake.Core
 
+{-# DEPRECATED defaultRule "Use 'rule' with 'priority 0'" #-}
+
 -- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
 --   All default rules must be disjoint.
 defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
