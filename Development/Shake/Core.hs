@@ -11,7 +11,7 @@ module Development.Shake.Core(
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
-    Rule(..), Rules, defaultRule, rule, action, withoutActions, alternatives, priority,
+    Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -130,12 +130,6 @@ instance Monoid (SRules m) where
 instance Monoid a => Monoid (Rules a) where
     mempty = return mempty
     mappend = liftA2 mappend
-
-
--- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
---   All default rules must be disjoint.
-defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-defaultRule = priority 0 . rule
 
 
 -- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.

@@ -11,3 +11,8 @@ module Development.Shake.Rule(
     ) where
 
 import Development.Shake.Core
+
+-- | Like 'rule', but lower priority, if no 'rule' exists then 'defaultRule' is checked.
+--   All default rules must be disjoint.
+defaultRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
+defaultRule = priority 0 . rule
