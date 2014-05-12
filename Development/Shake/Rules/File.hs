@@ -179,14 +179,16 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 (?>) test act = priority 0.5 $ root "with ?>" test act
 
 
--- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
+-- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '*>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 -- Should probably have been called |*>, since it's an or (||) of *>
 (**>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
     where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with **>" (\x -> any ($ x) ps2) act
 
--- | Define a rule that matches a 'FilePattern'. No file required by the system must be
---   matched by more than one pattern. For the pattern rules, see '?=='.
+-- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
+--   Patterns with no wildcards have higher priority than those with wildcards, and no file
+--   required by the system may be matched by more than one pattern at the same priority
+--   (see 'priority' and 'alternatives' to modify this behaviour).
 --   This function will create the directory for the result file, if necessary.
 --
 -- @

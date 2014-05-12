@@ -132,16 +132,24 @@ instance Monoid a => Monoid (Rules a) where
     mappend = liftA2 mappend
 
 
--- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.
---   To define lower priority rules use 'defaultRule'.
+-- | Add a rule to build a key, returning an appropriate 'Action'. All rules at a given priority
+--   must be disjoint. Rules have priority 1 by default, but can be modified with 'priority'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
--- | Change the priority of a given rule. If two rules match a particular target then
---   the highest priority rule is picked. If that is ambiguous, it is an error.
+-- | Change the priority of a given set of rules, where higher priorities take precedence.
+--   All matching rules at a given priority must be disjoint, or an error is raised.
 --   All builtin Shake rules have priority between 0 and 1.
+--   Excessive use of 'priority' is discouraged. As an example:
+--
+-- @
+-- 'priority' 4 $ \"hello.*\" *> \\out -> 'writeFile'' out \"hello.*\"
+-- 'priority' 8 $ \"*.txt\" *> \\out -> 'writeFile'' out \"*.txt\"
+-- @
+--
+--   In this example @hello.txt@ will match the second rule, instead of raising an error about ambiguity.
 priority :: Double -> Rules () -> Rules ()
 priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
 
@@ -150,10 +158,12 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first
 --   in order. Only recommended for small blocks containing a handful of rules.
 --
 -- @
--- alternatives $ do
---     \"hello.txt\" *> \\out -> writeFile' out \"special\"
---     \"*.txt\" *> \\out -> writeFile' out \"normal\"
+-- 'alternatives' $ do
+--     \"hello.*\" *> \\out -> 'writeFile'' out \"hello.*\"
+--     \"*.txt\" *> \\out -> 'writeFile'' out \"*.txt\"
 -- @
+--
+--   In this example @hello.txt@ will match the first rule, instead of raising an error about ambiguity.
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
     where
