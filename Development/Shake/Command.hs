@@ -1,7 +1,14 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
--- | /Deprecated:/ This module should no longer be imported as all the functions are available directly
---   from "Development.Shake". In future versions this module will be removed.
+-- | This module provides functions for calling command line programs, primarily
+--   'command' and 'cmd'. As a simple example:
+--
+-- @
+-- 'command' [\"gcc\",\"-c\",myfile]
+-- @
+--
+--   The functions from this module are now available directly from "Development.Shake".
+--   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd,
     Stdout(..), Stderr(..), Exit(..),
