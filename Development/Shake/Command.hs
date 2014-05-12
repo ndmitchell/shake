@@ -4,7 +4,7 @@
 --   'command' and 'cmd'. As a simple example:
 --
 -- @
--- 'command' [\"gcc\",\"-c\",myfile]
+-- 'command' [] \"gcc\" [\"-c\",myfile]
 -- @
 --
 --   The functions from this module are now available directly from "Development.Shake".
