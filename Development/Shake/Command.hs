@@ -370,7 +370,7 @@ command opts x xs = fmap b $ commandExplicit "command" opts a x xs
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
-command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
+command_ opts x xs = void $ commandExplicit "command_" opts [] x xs
 
 
 ---------------------------------------------------------------------

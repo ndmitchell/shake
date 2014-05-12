@@ -4,10 +4,9 @@ module Examples.Test.Directory(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Examples.Util
-import System.Directory(createDirectory)
 import Data.List
 import Control.Monad
-import System.Directory(getCurrentDirectory, setCurrentDirectory, createDirectoryIfMissing)
+import System.Directory(getCurrentDirectory, setCurrentDirectory, createDirectory, createDirectoryIfMissing)
 import qualified System.Directory as IO
 
 

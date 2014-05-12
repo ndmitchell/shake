@@ -399,7 +399,7 @@ showJSON Database{..} = do
         ids = Map.fromList $ zip order [0..]
 
         steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
-                in Map.fromList $ zip (reverse $ sort xs) [0..]
+                in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
 
         f (k, Result{..})  =
             let xs = ["name:" ++ show (show k)

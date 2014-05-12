@@ -61,4 +61,4 @@ test build obj = do
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b
     length want === length res
-    sequence_ $ zipWith eq want res
+    zipWithM_ eq want res

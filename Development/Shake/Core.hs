@@ -1,5 +1,5 @@
-{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses #-}
 
 {-# LANGUAGE CPP #-}
 #if __GLASGOW_HASKELL__ >= 704
@@ -190,7 +190,7 @@ alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
 --   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
 --   see 'Development.Shake.want'.
 action :: Action a -> Rules ()
-action a = newRules mempty{actions=[a >> return ()]}
+action a = newRules mempty{actions=[void a]}
 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing
@@ -306,7 +306,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let output v = outputLocked v . abbreviate shakeAbbreviations
 
     except <- newIORef (Nothing :: Maybe (String, SomeException))
-    let staunch act | not shakeStaunch = act >> return ()
+    let staunch act | not shakeStaunch = void act
                     | otherwise = do
             res <- try act
             case res of
@@ -376,7 +376,7 @@ abbreviate [] = id
 abbreviate abbrev = f
     where
         -- order so longer appreviations are preferred
-        ordAbbrev = reverse $ sortBy (compare `on` length . fst) abbrev
+        ordAbbrev = sortBy (flip (compare `on` length . fst)) abbrev
 
         f [] = []
         f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest

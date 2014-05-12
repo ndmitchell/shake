@@ -101,7 +101,7 @@ errorDuplicateOracle tk k tvs = errorStructured
 
 errorNoApply :: TypeRep -> Maybe String -> String -> a
 errorNoApply tk k msg = structured (specialIsOracleKey tk)
-    ("Build system error - cannot currently call _apply_")
+    "Build system error - cannot currently call _apply_"
     [("Reason", Just msg)
     ,("_Key_ type", Just $ show tk)
     ,("_Key_ value", k)]

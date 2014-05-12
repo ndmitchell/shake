@@ -4,6 +4,7 @@ module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where
 
 import Control.Concurrent
 import Control.Exception hiding (blocked)
+import Control.Monad
 import General.Base
 import General.Timing
 import qualified Data.HashSet as Set
@@ -121,7 +122,7 @@ step pool@(Pool n var done) op = do
 -- | Add a new task to the pool
 addPool :: Pool -> IO a -> IO ()
 addPool pool act = step pool $ \s -> do
-    todo <- enqueue (act >> return ()) (todo s)
+    todo <- enqueue (void act) (todo s)
     return s{todo = todo}
 
 

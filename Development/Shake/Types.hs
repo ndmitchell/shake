@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving, RecordWildCards, PatternGuards #-}
+{-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types(
