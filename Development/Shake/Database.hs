@@ -24,6 +24,7 @@ import General.Base
 import General.String
 import General.Intern as Intern
 
+import Control.Applicative
 import Control.Exception
 import Control.Monad
 import qualified Data.HashSet as Set
@@ -507,11 +508,12 @@ instance BinaryWith Witness Step where
 
 instance BinaryWith Witness Result where
     putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map BinList x4) >> put (BinFloat x5) >> put (BinList x6)
-    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; BinList x4 <- get; BinFloat x5 <- get; BinList x6 <- get; return $ Result x1 x2 x3 (map fromBinList x4) x5 x6
+    getWith ws = (\x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> Result x1 x2 x3 (map fromBinList x4) x5 x6) <$>
+        getWith ws <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
-    get = do a <- get; BinFloat b <- get; BinFloat c <- get; return $ Trace a b c
+    get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
 
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0

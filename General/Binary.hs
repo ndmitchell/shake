@@ -5,6 +5,7 @@ module General.Binary(
     BinList(..), BinFloat(..)
     ) where
 
+import Control.Applicative
 import Control.Monad
 import Data.Binary
 import Data.List
@@ -18,7 +19,7 @@ class BinaryWith ctx a where
 
 instance (BinaryWith ctx a, BinaryWith ctx b) => BinaryWith ctx (a,b) where
     putWith ctx (a,b) = putWith ctx a >> putWith ctx b
-    getWith ctx = do a <- getWith ctx; b <- getWith ctx; return (a,b)
+    getWith ctx = liftA2 (,) (getWith ctx) (getWith ctx)
 
 instance BinaryWith ctx a => BinaryWith ctx [a] where
     putWith ctx xs = put (length xs) >> mapM_ (putWith ctx) xs
