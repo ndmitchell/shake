@@ -4,7 +4,9 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (*>), (**>), (?>), phony, (~>)
+    (*>), (**>), (?>), phony, (~>),
+    -- * Internal only
+    FileQ(..), FileA
     ) where
 
 import Control.Monad
