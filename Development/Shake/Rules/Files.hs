@@ -66,17 +66,18 @@ ps *>> act
     | not $ compatible ps = error $
         "All patterns to *>> must have the same number and position of // and * wildcards\n" ++
         unwords ps
-    | otherwise = (if all simple ps then id else priority 0.5) $ do
+    | otherwise = do
         forM_ ps $ \p ->
             p *> \file -> do
                 _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU . substitute (extract p file)) ps
                 return ()
-        rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
-            if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
-                liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
-                trackAllow xs
-                act xs
-                getFileTimes "*>>" xs_
+        (if all simple ps then id else priority 0.5) $
+            rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
+                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
+                    liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
+                    trackAllow xs
+                    act xs
+                    getFileTimes "*>>" xs_
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
