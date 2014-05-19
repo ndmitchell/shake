@@ -2,7 +2,7 @@
 
 module Development.Shake.FileInfo(
     FileSize, fileSizeZero, ModTime, modTimeNone, modTimeZero,
-    getFileInfoError, getFileInfoMaybe
+    getFileInfoMaybe
     ) where
 
 import Development.Shake.Classes
@@ -56,15 +56,6 @@ modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
 modTimeNone, modTimeZero :: ModTime
 modTimeNone = ModTime maxBound
 modTimeZero = ModTime 0
-
-
-getFileInfoError :: String -> BSU -> IO (ModTime, FileSize)
-getFileInfoError msg x = do
-    res <- getFileInfoMaybe x
-    case res of
-        -- Make sure you raise an error in IO, not return a value which will error later
-        Nothing -> error $ msg ++ "\n  " ++ unpackU x
-        Just x -> return x
 
 
 getFileInfoMaybe :: BSU -> IO (Maybe (ModTime, FileSize))
