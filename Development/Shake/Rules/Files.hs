@@ -15,6 +15,7 @@ import General.String
 import Development.Shake.Classes
 import Development.Shake.Rules.File
 import Development.Shake.FilePattern
+import Development.Shake.Types
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
@@ -37,9 +38,12 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) x
 
 instance Rule FilesQ FilesA where
     storedValue opts (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM (storedValue opts) xs
-    equivalentValue opts (FilesQ qs) (FilesA xs) (FilesA ys) =
-        (let n = length qs in n == length xs && n == length ys) &&
-        and (zipWith3 (equivalentValue opts) qs xs ys)
+    equalValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
+        | let n = length qs in n /= length xs || n /= length ys = NotEqual
+        | otherwise = foldr and_ EqualCheap (zipWith3 (equalValue opts) qs xs ys)
+            where and_ NotEqual x = NotEqual
+                  and_ EqualCheap x = x
+                  and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
 
 
 -- | Define a rule for building multiple files at the same time.

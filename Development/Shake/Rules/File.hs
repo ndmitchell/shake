@@ -78,13 +78,16 @@ instance Rule FileQ FileA where
                 hash <- unsafeInterleaveIO $ fileHash x
                 return $ Just $ FileA (if c == ChangeDigest then modTimeZero else time) size hash
 
-    equivalentValue ShakeOptions{shakeChange=c} _ (FileA x1 x2 x3) (FileA y1 y2 y3)
-        | x1 == modTimeNone = False
+    equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3)
+        | x1 == modTimeNone = NotEqual
         | otherwise = case c of
-            ChangeModtime -> x1 == y1
-            ChangeDigest -> x2 == y2 && x3 == y3
-            ChangeModtimeAndDigest -> x1 == y1 || (x2 == y2 && x3 == y3)
-            ChangeModtimeOrDigest -> False -- (==) captures it all
+            ChangeModtime -> bool $ x1 == y1
+            ChangeDigest -> bool $ x2 == y2 && x3 == y3
+            ChangeModtimeAndDigest -> if x1 == y1 then EqualCheap
+                                      else if x2 == y2 && x3 == y3 then EqualExpensive
+                                      else NotEqual
+            ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+            where bool b = if b then EqualCheap else NotEqual
 
 storedValueError :: ShakeOptions -> String -> FileQ -> IO FileA
 storedValueError opts msg x = fromMaybe (error err) <$> storedValue opts x

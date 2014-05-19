@@ -86,9 +86,9 @@ class (
     --   stored externally, 'storedValue' should return 'Nothing'.
     storedValue :: ShakeOptions -> key -> IO (Maybe value)
 
-    -- | /[Optional]/ Are two non-equal values equivalent in some sense that implies no rebuilding is required.
-    equivalentValue :: ShakeOptions -> key -> value -> value -> Bool
-    equivalentValue _ _ _ _ = False
+    -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
+    equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
+    equalValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
 
 
 data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
@@ -212,21 +212,21 @@ registerWitnesses SRules{..} =
 
 data RuleInfo m = RuleInfo
     {stored :: Key -> IO (Maybe Value)
-    ,equivalent :: Key -> Value -> Value -> Bool
+    ,equal :: Key -> Value -> Value -> EqualCost
     ,execute :: Key -> m Value
     ,resultType :: TypeRep
     }
 
 createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equivalent rs) (execute rs) tv
+createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
                   f _ = storedValue opt
 
-        equivalent ((_,ARule r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
-            where f :: Rule key value => (key -> Maybe (m value)) -> key -> value -> value -> Bool
-                  f _ = equivalentValue opt
+        equal ((_,ARule r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
+            where f :: Rule key value => (key -> Maybe (m value)) -> key -> value -> value -> EqualCost
+                  f _ = equalValue opt
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
@@ -241,10 +241,10 @@ runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just RuleInfo{..} -> stored k
 
-runEquivalent :: Map.HashMap TypeRep (RuleInfo m) -> Key -> Value -> Value -> Bool
-runEquivalent mp k v1 v2 = case Map.lookup (typeKey k) mp of
-    Nothing -> False
-    Just RuleInfo{..} -> equivalent k v1 v2
+runEqual :: Map.HashMap TypeRep (RuleInfo m) -> Key -> Value -> Value -> EqualCost
+runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
+    Nothing -> NotEqual
+    Just RuleInfo{..} -> equal k v1 v2
 
 runExecute :: Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
@@ -457,7 +457,7 @@ applyKeyValue ks = do
             evaluate $ rnf ans
             return ans
     stack <- Action $ getsRW localStack
-    res <- liftIO $ build globalPool globalDatabase (Ops (runStored globalRules) (runEquivalent globalRules) exec) stack ks
+    res <- liftIO $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do

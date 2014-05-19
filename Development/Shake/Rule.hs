@@ -6,11 +6,12 @@ module Development.Shake.Rule(
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
-    Rule(..), defaultRule, rule, apply, apply1,
+    Rule(..), EqualCost(..), defaultRule, rule, apply, apply1,
     trackUse, trackChange, trackAllow
     ) where
 
 import Development.Shake.Core
+import Development.Shake.Types
 
 {-# DEPRECATED defaultRule "Use 'rule' with 'priority' 0" #-}
 

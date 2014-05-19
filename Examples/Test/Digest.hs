@@ -42,5 +42,5 @@ test build obj = do
     assertOut "YX"
 
     writeFile (obj "In.txt") "X"
-    build ["--sleep","--digest"]
+    build ["--sleep","--digest","--no-lint"]
     assertOut "YX"

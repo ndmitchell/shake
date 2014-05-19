@@ -186,8 +186,8 @@ lookupDependencies Database{..} k = do
 data Ops = Ops
     {stored :: Key -> IO (Maybe Value)
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
-    ,equivalent :: Key -> Value -> Value -> Bool
-        -- ^ Given both Values, see if they are equivalent in some sense
+    ,equal :: Key -> Value -> Value -> EqualCost
+        -- ^ Given both Values, see if they are equal and how expensive that check was
     ,execute :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     }
@@ -264,13 +264,15 @@ build pool Database{..} Ops{..} stack ks = do
                         _ -> do
                             s <- stored k
                             case s of
-                                Just s | result r == s -> continue r
-                                       | equivalent k (result r) s -> do
-                                            -- warning, have the db lock while appending (may harm performance)
-                                            r <- return r{result=s}
-                                            journal i (k, Loaded r)
-                                            i #= (k, Loaded r)
-                                            continue r
+                                Just s -> case equal k (result r) s of
+                                    NotEqual -> rebuild
+                                    EqualCheap -> continue r
+                                    EqualExpensive -> do
+                                        -- warning, have the db lock while appending (may harm performance)
+                                        r <- return r{result=s}
+                                        journal i (k, Loaded r)
+                                        i #= (k, Loaded r)
+                                        continue r
                                 _ -> rebuild
                 Just (k, res) -> return res
 

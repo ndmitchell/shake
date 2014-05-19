@@ -2,7 +2,7 @@
 
 -- | Types exposed to the user
 module Development.Shake.Types(
-    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..),
+    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..),
     ShakeOptions(..), shakeOptions
     ) where
 
@@ -198,4 +198,11 @@ data Verbosity
     | Loud   -- ^ Print errors and full command lines when running a 'Development.Shake.command' or 'Development.Shake.cmd' command.
     | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
+      deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
+
+-- | An equality check and a cost.
+data EqualCost
+    = EqualCheap -- ^ The equality check was cheap.
+    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
+    | NotEqual -- ^ The values are not equal.
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
