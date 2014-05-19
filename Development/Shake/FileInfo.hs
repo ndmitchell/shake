@@ -8,7 +8,6 @@ module Development.Shake.FileInfo(
 import Development.Shake.Classes
 import General.String
 import Data.Char
-import Data.Int
 import Data.Word
 import Numeric
 
@@ -36,11 +35,11 @@ import System.Posix.Files.ByteString
 -- ModTime is an optimised type, which stores some portion of the file time,
 -- or maxBound to indicate there is no valid time. The moral type is @Maybe Datetime@
 -- but it needs to be more efficient.
-newtype ModTime = ModTime Int32
+newtype ModTime = ModTime Word32
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show ModTime where
-    show (ModTime x) = "0x" ++ map toUpper (showHex (fromIntegral x :: Word32) "")
+    show (ModTime x) = "0x" ++ map toUpper (showHex x "")
 
 newtype FileSize = FileSize Word32
     deriving (Typeable,Eq,Hashable,Binary,NFData)
@@ -51,7 +50,7 @@ instance Show FileSize where
 fileSizeZero :: FileSize
 fileSizeZero = FileSize 0
 
-modTime :: Int32 -> ModTime
+modTime :: Word32 -> ModTime
 modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
 
 modTimeNone, modTimeZero :: ModTime
@@ -107,7 +106,7 @@ alloca_WIN32_FILE_ATTRIBUTE_DATA :: (Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO a) -> I
 alloca_WIN32_FILE_ATTRIBUTE_DATA act = allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA act
     where size_WIN32_FILE_ATTRIBUTE_DATA = 36
 
-peekLastWriteTimeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Int32
+peekLastWriteTimeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Word32
 peekLastWriteTimeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
     where index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
 
@@ -122,7 +121,7 @@ getFileInfoMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () els
     s <- getFileStatus $ unpackU_ x
     return $ Just (modTime $ extractFileTime s, FileSize $ fromIntegral $ fileSize s)
 
-extractFileTime :: FileStatus -> Int32
+extractFileTime :: FileStatus -> Word32
 #ifndef MIN_VERSION_unix
 #define MIN_VERSION_unix(a,b,c) 0
 #endif

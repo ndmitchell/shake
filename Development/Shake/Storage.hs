@@ -41,7 +41,6 @@ type Map = Map.HashMap
 -- @x@ is for the users version number
 databaseVersion :: String -> String
 -- THINGS I WANT TO DO ON THE NEXT CHANGE
--- * Change FileTime to be a Word32, not an Int32, with maxBound for fileNone
 -- * Change filepaths to store a 1 byte prefix saying 8bit ASCII or UTF8
 -- * Duration and Time should be stored as number of 1/10000th seconds Int32
 databaseVersion x = "SHAKE-DATABASE-10-" ++ s ++ "\r\n"
