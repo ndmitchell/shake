@@ -10,10 +10,12 @@ module Development.Shake.Rules.File(
     ) where
 
 import Control.Applicative hiding ((*>))
+import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LBS
 
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
@@ -24,9 +26,13 @@ import Development.Shake.FileInfo
 import Development.Shake.Types
 import Development.Shake.Errors
 
+import Data.Bits
 import Data.List
 import Data.Maybe
+import Data.Word
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
+import qualified System.IO as IO
+import System.IO.Unsafe(unsafeInterleaveIO)
 
 
 infix 1 *>, ?>, **>, ~>
@@ -37,15 +43,48 @@ newtype FileQ = FileQ {fromFileQ :: BSU}
 
 instance Show FileQ where show (FileQ x) = unpackU x
 
-newtype FileA = FileA ModTime
-    deriving (Typeable,Hashable,Binary,NFData)
+data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize Word32
+    deriving Typeable
 
-instance Eq FileA where FileA x == FileA y = x /= modTimeNone && x == y
+fileHash :: BSU -> IO Word32
+fileHash x = IO.withFile (unpackU x) IO.ReadMode $ \h -> do
+    s <- LBS.hGetContents h
+    let res = fromIntegral $ hash s
+    evaluate res
+    return res
 
-instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
+instance Hashable FileA where
+    hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
+
+instance NFData FileA where
+    rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
+
+instance Binary FileA where
+    put (FileA a b c) = put a >> put b >> put c
+    get = liftA3 FileA get get get
+
+
+instance Eq FileA where FileA x1 x2 x3 == FileA y1 y2 y3 = x1 /= modTimeNone && x1 == y1 && x2 == y2 && x3 == y3
+
+instance Show FileA where show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
 instance Rule FileQ FileA where
-    storedValue _ (FileQ x) = fmap (fmap $ FileA . fst) $ getFileInfoMaybe x
+    storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
+        res <- getFileInfoMaybe x
+        case res of
+            Nothing -> return Nothing
+            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size 0
+            Just (time,size) -> do
+                hash <- unsafeInterleaveIO $ fileHash x
+                return $ Just $ FileA (if c == ChangeDigest then modTimeZero else time) size hash
+
+    equivalentValue ShakeOptions{shakeChange=c} _ (FileA x1 x2 x3) (FileA y1 y2 y3)
+        | x1 == modTimeNone = False
+        | otherwise = case c of
+            ChangeModtime -> x1 == y1
+            ChangeDigest -> x2 == y2 && x3 == y3
+            ChangeModtimeAndDigest -> x1 == y1 || (x2 == y2 && x3 == y3)
+            ChangeModtimeOrDigest -> False -- (==) captures it all
 
 storedValueError :: ShakeOptions -> String -> FileQ -> IO FileA
 storedValueError opts msg x = fromMaybe (error err) <$> storedValue opts x
@@ -167,7 +206,7 @@ phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
-        return $ FileA modTimeNone
+        return $ FileA modTimeNone fileSizeZero 0
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
