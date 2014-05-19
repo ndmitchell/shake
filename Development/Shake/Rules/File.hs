@@ -10,12 +10,10 @@ module Development.Shake.Rules.File(
     ) where
 
 import Control.Applicative hiding ((*>))
-import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as LBS
 
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
@@ -27,13 +25,9 @@ import Development.Shake.Types
 import Development.Shake.Errors
 
 import Data.Bits
-import Data.Char
 import Data.List
 import Data.Maybe
-import Data.Word
-import Numeric
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
-import qualified System.IO as IO
 import System.IO.Unsafe(unsafeInterleaveIO)
 
 
@@ -45,15 +39,8 @@ newtype FileQ = FileQ {fromFileQ :: BSU}
 
 instance Show FileQ where show (FileQ x) = unpackU x
 
-data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize Word32
+data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving Typeable
-
-fileHash :: BSU -> IO Word32
-fileHash x = IO.withFile (unpackU x) IO.ReadMode $ \h -> do
-    s <- LBS.hGetContents h
-    let res = fromIntegral $ hash s
-    evaluate res
-    return res
 
 instance Hashable FileA where
     hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
@@ -69,16 +56,16 @@ instance Eq FileA where
     FileA x1 x2 x3 == FileA y1 y2 y3 = x1 /= modTimeNone && x1 == y1 && x2 == y2 && x3 == y3
 
 instance Show FileA where
-    show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=0x" ++ map toUpper (showHex h "") ++ "}"
+    show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
 instance Rule FileQ FileA where
     storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
         res <- getFileInfo x
         case res of
             Nothing -> return Nothing
-            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size 0
+            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileHashZero
             Just (time,size) -> do
-                hash <- unsafeInterleaveIO $ fileHash x
+                hash <- unsafeInterleaveIO $ getFileHash x
                 return $ Just $ FileA (if c == ChangeDigest then modTimeZero else time) size hash
 
     equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3)
@@ -212,7 +199,7 @@ phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
-        return $ FileA modTimeNone fileSizeZero 0
+        return $ FileA modTimeNone fileSizeZero fileHashZero
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.

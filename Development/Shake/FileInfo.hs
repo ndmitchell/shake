@@ -1,20 +1,23 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    FileSize, fileSizeZero, ModTime, modTimeNone, modTimeZero,
-    getFileInfo
+    FileSize, fileSizeZero,
+    ModTime, modTimeNone, modTimeZero,
+    FileHash, fileHashZero,
+    getFileHash, getFileInfo
     ) where
 
+import Control.Exception
 import Development.Shake.Classes
 import General.String
+import qualified Data.ByteString.Lazy as LBS
 import Data.Char
 import Data.Word
 import Numeric
+import System.IO
 
 #if defined(PORTABLE)
-import System.IO
 import System.IO.Error
-import Control.Exception
 import System.Directory
 import Data.Time
 import System.Time
@@ -31,6 +34,22 @@ import Control.Exception
 import System.Posix.Files.ByteString
 #endif
 
+
+newtype FileHash = FileHash Word32
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show FileHash where
+    show (FileHash x) = "0x" ++ map toUpper (showHex x "")
+
+getFileHash :: BSU -> IO FileHash
+getFileHash x = withFile (unpackU x) ReadMode $ \h -> do
+    s <- LBS.hGetContents h
+    let res = FileHash $ fromIntegral $ hash s
+    evaluate res
+    return res
+
+fileHashZero :: FileHash
+fileHashZero = FileHash 0
 
 -- ModTime is an optimised type, which stores some portion of the file time,
 -- or maxBound to indicate there is no valid time. The moral type is @Maybe Datetime@
@@ -56,6 +75,8 @@ modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
 modTimeNone, modTimeZero :: ModTime
 modTimeNone = ModTime maxBound
 modTimeZero = ModTime 0
+
+
 
 
 getFileInfo :: BSU -> IO (Maybe (ModTime, FileSize))
