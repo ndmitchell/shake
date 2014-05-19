@@ -89,10 +89,11 @@ neededBS xs = do
 
 neededCheck :: [BSU] -> Action ()
 neededCheck xs = do
-    pre <- liftIO $ mapM (fmap (fmap fst) . getFileInfoMaybe) xs
+    opts <- getShakeOptions
+    pre <- liftIO $ mapM (storedValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, FileA b) <- zip3 xs pre post, Just b /= a]
+              | (x, a, b) <- zip3 xs pre post, Just b /= a]
     case bad of
         [] -> return ()
         (file,msg):_ -> errorStructured
