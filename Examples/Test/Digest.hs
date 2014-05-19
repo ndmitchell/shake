@@ -25,6 +25,7 @@ test build obj = do
     let assertOut x = forM_ outs $ \out -> assertContents out x
 
     writeFile (obj "In.txt") "X"
+    writeOut "X"
     build ["--sleep","--digest-or"]
     assertOut "XX"
 
