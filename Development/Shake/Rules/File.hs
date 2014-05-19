@@ -17,7 +17,7 @@ import qualified Development.Shake.Core as S
 import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePattern
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 import Development.Shake.Types
 import Development.Shake.Errors
 

@@ -121,8 +121,8 @@ library
         Development.Shake.Database
         Development.Shake.Derived
         Development.Shake.Errors
+        Development.Shake.FileInfo
         Development.Shake.FilePattern
-        Development.Shake.FileTime
         Development.Shake.Pool
         Development.Shake.Progress
         Development.Shake.Report

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
-module Development.Shake.FileTime(
+module Development.Shake.FileInfo(
     FileTime, fileTimeNone,
     getModTimeError, getModTimeMaybe
     ) where

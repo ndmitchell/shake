@@ -5,7 +5,7 @@ import Development.Shake
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.Base
 import General.String
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 import Development.Shake.FilePath
 
 import Control.Exception hiding (assert)

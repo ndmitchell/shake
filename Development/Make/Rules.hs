@@ -14,7 +14,7 @@ import Development.Shake.Core
 import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePath
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 
 infix 1 ??>
 
