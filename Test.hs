@@ -114,7 +114,7 @@ filetime _ = do
     vars <- forM [a,b,c,d] $ \xs -> do
         mvar <- newEmptyMVar
         forkIO $ do
-            mapM_ (getModTimeMaybe . packU_) xs
+            mapM_ (getFileInfoMaybe . packU_) xs
             putMVar mvar ()
         return $ takeMVar mvar
     sequence_ vars

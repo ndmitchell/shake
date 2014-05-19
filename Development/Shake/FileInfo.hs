@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    ModTime, modTimeNone,
-    getModTimeError, getModTimeMaybe
+    FileSize, ModTime, modTimeNone,
+    getFileInfoError, getFileInfoMaybe
     ) where
 
 import Development.Shake.Classes
@@ -13,6 +13,7 @@ import Data.Word
 import Numeric
 
 #if defined(PORTABLE)
+import System.IO
 import System.IO.Error
 import Control.Exception
 import System.Directory
@@ -42,6 +43,12 @@ instance Show ModTime where
     show (ModTime x) = "0x" ++ replicate (length s - 8) '0' ++ map toUpper s
         where s = showHex (fromIntegral x :: Word32) ""
 
+newtype FileSize = FileSize Word32
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show FileSize where
+    show (FileSize x) = show x
+
 modTime :: Int32 -> ModTime
 modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
 
@@ -49,22 +56,24 @@ modTimeNone :: ModTime
 modTimeNone = ModTime maxBound
 
 
-getModTimeError :: String -> BSU -> IO ModTime
-getModTimeError msg x = do
-    res <- getModTimeMaybe x
+getFileInfoError :: String -> BSU -> IO (ModTime, FileSize)
+getFileInfoError msg x = do
+    res <- getFileInfoMaybe x
     case res of
         -- Make sure you raise an error in IO, not return a value which will error later
         Nothing -> error $ msg ++ "\n  " ++ unpackU x
         Just x -> return x
 
 
-getModTimeMaybe :: BSU -> IO (Maybe ModTime)
+getFileInfoMaybe :: BSU -> IO (Maybe (ModTime, FileSize))
 
 #if defined(PORTABLE)
 -- Portable fallback
-getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
-    time <- getModificationTime $ unpackU x
-    return $ Just $ extractFileTime time
+getFileInfoMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+    let file = unpackU x
+    time <- getModificationTime file
+    size <- withFile file ReadMode hFileSize
+    return $ Just (extractFileTime time, FileSize $ fromIntegral size)
 
 -- deal with difference in return type of getModificationTime between directory versions
 class ExtractFileTime a where extractFileTime :: a -> ModTime
@@ -74,14 +83,15 @@ instance ExtractFileTime UTCTime where extractFileTime = modTime . floor . fromR
 
 #elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
-getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
+getFileInfoMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_getFileAttributesExA file 0 fad
+        let peek = do mt <- peekLastWriteTimeLow fad; sz <- peekFileSizeLow fad; return $ Just (modTime mt, FileSize sz)
         if res then
-            fmap (Just . modTime) $ peekLastWriteTimeLow fad
+            peek
          else if requireU x then withCWString (unpackU x) $ \file -> do
             res <- c_getFileAttributesExW file 0 fad
-            if res then fmap (Just . modTime) $ peekLastWriteTimeLow fad else return Nothing
+            if res then peek else return Nothing
          else
             return Nothing
 
@@ -98,12 +108,16 @@ peekLastWriteTimeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Int32
 peekLastWriteTimeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
     where index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
 
+peekFileSizeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Word32
+peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
+    where index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow = 32
+
 
 #else
 -- Unix version
-getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getFileInfoMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
-    return $ Just $ modTime $ extractFileTime s
+    return $ Just (modTime $ extractFileTime s, FileSize $ fromIntegral $ fileSize s)
 
 extractFileTime :: FileStatus -> Int32
 #ifndef MIN_VERSION_unix

@@ -35,7 +35,7 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . unpackU
 
 
 instance Rule FilesQ FilesA where
-    storedValue _ (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM getModTimeMaybe xs
+    storedValue _ (FilesQ xs) = fmap (fmap (FilesA . map fst) . sequence) $ mapM getFileInfoMaybe xs
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -113,9 +113,9 @@ ps *>> act
 
 getFileTimes :: String -> [BSU] -> IO FilesA
 getFileTimes name xs = do
-    ys <- mapM getModTimeMaybe xs
+    ys <- mapM getFileInfoMaybe xs
     case sequence ys of
-        Just ys -> return $ FilesA ys
+        Just ys -> return $ FilesA $ map fst ys
         Nothing -> do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++

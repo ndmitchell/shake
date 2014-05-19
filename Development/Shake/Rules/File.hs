@@ -42,13 +42,13 @@ instance Eq FileA where FileA x == FileA y = x /= modTimeNone && x == y
 instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
 
 instance Rule FileQ FileA where
-    storedValue _ (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
+    storedValue _ (FileQ x) = fmap (fmap $ FileA . fst) $ getFileInfoMaybe x
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = priority 0 $ rule $ \(FileQ x) -> Just $
-    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
+    liftIO $ fmap (FileA . fst) $ getFileInfoError "Error, file does not exist and no rule available:" x
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -87,7 +87,7 @@ neededBS xs = do
 
 neededCheck :: [BSU] -> Action ()
 neededCheck xs = do
-    pre <- liftIO $ mapM getModTimeMaybe xs
+    pre <- liftIO $ mapM (fmap (fmap fst) . getFileInfoMaybe) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
               | (x, a, FileA b) <- zip3 xs pre post, Just b /= a]
@@ -143,7 +143,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
+        liftIO $ fmap (FileA . fst) $ getFileInfoError ("Error, rule " ++ help ++ " failed to build file:") x_
 
 
 -- | Declare a phony action -- an action that does not produce a file, and will be rerun

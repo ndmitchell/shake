@@ -33,12 +33,12 @@ newtype File_A = File_A (Maybe ModTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule File_Q File_A where
-    storedValue _ (File_Q x) = fmap (fmap (File_A . Just)) $ getModTimeMaybe x
+    storedValue _ (File_Q x) = fmap (fmap (File_A . Just . fst)) $ getFileInfoMaybe x
 
 
 defaultRuleFile_ :: Rules ()
 defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $
-    liftIO $ fmap (File_A . Just) $ getModTimeError "Error, file does not exist and no rule available:" x
+    liftIO $ fmap (File_A . Just . fst) $ getFileInfoError "Error, file does not exist and no rule available:" x
 
 
 need_ :: [FilePath] -> Action ()
@@ -54,6 +54,6 @@ data Phony = Phony | NotPhony deriving Eq
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         res <- act x
-        liftIO $ fmap File_A $ if res == Phony
+        liftIO $ fmap (File_A . fmap fst) $ if res == Phony
             then return Nothing
-            else getModTimeMaybe x_
+            else getFileInfoMaybe x_
