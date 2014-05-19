@@ -13,6 +13,7 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Maybe
+import qualified Data.ByteString as BS
 import System.Directory as IO
 import System.Environment
 import System.Random
@@ -172,13 +173,21 @@ getDirectoryContentsRecursive dir = do
     return $ files++rest
 
 
-copyDirectory :: FilePath -> FilePath -> IO ()
-copyDirectory old new = do
+copyDirectoryChanged :: FilePath -> FilePath -> IO ()
+copyDirectoryChanged old new = do
     xs <- getDirectoryContentsRecursive old
     forM_ xs $ \from -> do
         let to = new </> drop (length $ addTrailingPathSeparator old) from
         createDirectoryIfMissing True $ takeDirectory to
-        copyFile from to
+        copyFileChanged from to
+
+
+copyFileChanged :: FilePath -> FilePath -> IO ()
+copyFileChanged old new = do
+    good <- IO.doesFileExist new
+    good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
+    when (not good) $ copyFile old new
+
 
 withTemporaryDirectory :: (FilePath -> IO ()) -> IO ()
 withTemporaryDirectory act = do
