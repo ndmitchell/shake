@@ -14,7 +14,6 @@ import General.Base
 import General.String
 import Development.Shake.Classes
 import Development.Shake.Rules.File
-import Development.Shake.FileInfo
 import Development.Shake.FilePattern
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
@@ -23,19 +22,24 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 infix 1 ?>>, *>>
 
 
-newtype FilesQ = FilesQ [BSU]
+newtype FilesQ = FilesQ [FileQ]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-newtype FilesA = FilesA [ModTime]
+
+
+newtype FilesA = FilesA [FileA]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show FilesA where show (FilesA xs) = unwords $ "FileTimeHashes" : map show xs
+instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . show) xs
 
-instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . unpackU) xs
+instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) xs
 
 
 instance Rule FilesQ FilesA where
-    storedValue _ (FilesQ xs) = fmap (fmap (FilesA . map fst) . sequence) $ mapM getFileInfoMaybe xs
+    storedValue opts (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM (storedValue opts) xs
+    equivalentValue opts (FilesQ qs) (FilesA xs) (FilesA ys) =
+        (let n = length qs in n == length xs && n == length ys) &&
+        and (zipWith3 (equivalentValue opts) qs xs ys)
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -61,14 +65,14 @@ ps *>> act
     | otherwise = (if all simple ps then id else priority 0.5) $ do
         forM_ ps $ \p ->
             p *> \file -> do
-                _ :: FilesA <- apply1 $ FilesQ $ map (packU . substitute (extract p file)) ps
+                _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU . substitute (extract p file)) ps
                 return ()
-        rule $ \(FilesQ xs_) -> let xs = map unpackU xs_ in
+        rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
             if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
                 trackAllow xs
                 act xs
-                liftIO $ getFileTimes "*>>" xs_
+                getFileTimes "*>>" xs_
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
@@ -98,26 +102,27 @@ ps *>> act
                     | otherwise -> error $ "Invariant broken in ?>> when trying on " ++ x
 
     isJust . checkedTest ?> \x -> do
-        _ :: FilesA <- apply1 $ FilesQ $ map packU $ fromJust $ test x
+        _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU) $ fromJust $ test x
         return ()
 
-    rule $ \(FilesQ xs_) -> let xs@(x:_) = map unpackU xs_ in
+    rule $ \(FilesQ xs_) -> let xs@(x:_) = map (unpackU . fromFileQ) xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
                 act xs
-                liftIO $ getFileTimes "?>>" xs_
+                getFileTimes "?>>" xs_
             Just ys -> error $ "Error, ?>> is incompatible with " ++ show xs ++ " vs " ++ show ys
             Nothing -> Nothing
 
 
-getFileTimes :: String -> [BSU] -> IO FilesA
+getFileTimes :: String -> [FileQ] -> Action FilesA
 getFileTimes name xs = do
-    ys <- mapM getFileInfoMaybe xs
+    opts <- getShakeOptions
+    ys <- liftIO $ mapM (storedValue opts) xs
     case sequence ys of
-        Just ys -> return $ FilesA $ map fst ys
+        Just ys -> return $ FilesA ys
         Nothing -> do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ unpackU x ++ if isNothing y then " - MISSING" else "" | (x,y) <- zip xs ys]
+                    concat ["\n  " ++ unpackU x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
