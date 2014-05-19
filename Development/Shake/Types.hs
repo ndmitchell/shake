@@ -60,7 +60,7 @@ data Change
         --   A @touch@ will not force a rebuild. Use this mode if modification times on your file system are unreliable.
     | ChangeModtimeAndDigest
         -- ^ A file is rebuilt if both its modification time and digest have changed. For efficiency reasons, the modification
-        --   time is checked first, and if that has changed, the digest is checked which.
+        --   time is checked first, and if that has changed, the digest is checked.
     | ChangeModtimeOrDigest
         -- ^ A file is rebuilt if either its modification time or its digest has changed. A @touch@ will force a rebuild,
         --   but even if a files modification time is reset afterwards, changes will also cause a rebuild.
