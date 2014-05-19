@@ -40,7 +40,7 @@ newtype FileQ = FileQ {fromFileQ :: BSU}
 instance Show FileQ where show (FileQ x) = unpackU x
 
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
-    deriving Typeable
+    deriving (Typeable,Eq)
 
 instance Hashable FileA where
     hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
@@ -52,9 +52,6 @@ instance Binary FileA where
     put (FileA a b c) = put a >> put b >> put c
     get = liftA3 FileA get get get
 
-instance Eq FileA where
-    FileA x1 x2 x3 == FileA y1 y2 y3 = x1 /= modTimeNone && x1 == y1 && x2 == y2 && x3 == y3
-
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
@@ -63,21 +60,19 @@ instance Rule FileQ FileA where
         res <- getFileInfo x
         case res of
             Nothing -> return Nothing
-            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileHashZero
+            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoEq
             Just (time,size) -> do
                 hash <- unsafeInterleaveIO $ getFileHash x
-                return $ Just $ FileA (if c == ChangeDigest then modTimeZero else time) size hash
+                return $ Just $ FileA (if c == ChangeDigest then fileInfoEq else time) size hash
 
-    equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3)
-        | x1 == modTimeNone = NotEqual
-        | otherwise = case c of
-            ChangeModtime -> bool $ x1 == y1
-            ChangeDigest -> bool $ x2 == y2 && x3 == y3
-            ChangeModtimeAndDigest -> if x1 == y1 then EqualCheap
-                                      else if x2 == y2 && x3 == y3 then EqualExpensive
-                                      else NotEqual
-            ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
-            where bool b = if b then EqualCheap else NotEqual
+    equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+        ChangeModtime -> bool $ x1 == y1
+        ChangeDigest -> bool $ x2 == y2 && x3 == y3
+        ChangeModtimeAndDigest -> if x1 == y1 then EqualCheap
+                                  else if x2 == y2 && x3 == y3 then EqualExpensive
+                                  else NotEqual
+        ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+        where bool b = if b then EqualCheap else NotEqual
 
 storedValueError :: ShakeOptions -> String -> FileQ -> IO FileA
 storedValueError opts msg x = fromMaybe (error err) <$> storedValue opts x
@@ -199,7 +194,7 @@ phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
-        return $ FileA modTimeNone fileSizeZero fileHashZero
+        return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.

@@ -1,9 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    FileSize, fileSizeZero,
-    ModTime, modTimeNone, modTimeZero,
-    FileHash, fileHashZero,
+    FileInfo, fileInfoEq, fileInfoNeq,
+    FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
     ) where
 
@@ -34,49 +33,40 @@ import Control.Exception
 import System.Posix.Files.ByteString
 #endif
 
+-- A piece of file information, where 0 = Eq to everything, 1 = Eq to nothing, 2+ = normal values
+newtype FileInfo a = FileInfo Word32
+    deriving (Typeable,Hashable,Binary,NFData)
 
-newtype FileHash = FileHash Word32
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+instance Show (FileInfo a) where
+    show (FileInfo x)
+        | x == 0 = "EQ"
+        | x == 1 = "NEQ"
+        | otherwise = "0x" ++ map toUpper (showHex (x-1) "")
 
-instance Show FileHash where
-    show (FileHash x) = "0x" ++ map toUpper (showHex x "")
+instance Eq (FileInfo a) where
+    FileInfo a == FileInfo b
+        | a == 0 || b == 0 = True
+        | a == 1 || b == 1 = False
+        | otherwise = a == b
+
+fileInfoEq, fileInfoNeq :: FileInfo a
+fileInfoEq  = FileInfo 0
+fileInfoNeq = FileInfo 1
+
+fileInfo :: Word32 -> FileInfo a
+fileInfo a = FileInfo $ if a > maxBound - 2 then a else a + 2
+
+data FileInfoHash; type FileHash = FileInfo FileInfoHash
+data FileInfoMod ; type ModTime  = FileInfo FileInfoMod
+data FileInfoSize; type FileSize = FileInfo FileInfoSize
+
 
 getFileHash :: BSU -> IO FileHash
 getFileHash x = withFile (unpackU x) ReadMode $ \h -> do
     s <- LBS.hGetContents h
-    let res = FileHash $ fromIntegral $ hash s
+    let res = fileInfo $ fromIntegral $ hash s
     evaluate res
     return res
-
-fileHashZero :: FileHash
-fileHashZero = FileHash 0
-
--- ModTime is an optimised type, which stores some portion of the file time,
--- or maxBound to indicate there is no valid time. The moral type is @Maybe Datetime@
--- but it needs to be more efficient.
-newtype ModTime = ModTime Word32
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
-
-instance Show ModTime where
-    show (ModTime x) = "0x" ++ map toUpper (showHex x "")
-
-newtype FileSize = FileSize Word32
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
-
-instance Show FileSize where
-    show (FileSize x) = show x
-
-fileSizeZero :: FileSize
-fileSizeZero = FileSize 0
-
-modTime :: Word32 -> ModTime
-modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
-
-modTimeNone, modTimeZero :: ModTime
-modTimeNone = ModTime maxBound
-modTimeZero = ModTime 0
-
-
 
 
 getFileInfo :: BSU -> IO (Maybe (ModTime, FileSize))
@@ -87,12 +77,12 @@ getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Not
     let file = unpackU x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
-    return $ Just (extractFileTime time, FileSize $ fromIntegral size)
+    return $ Just (fileInfo $ extractFileTime time, fileInfo $ fromIntegral size)
 
 -- deal with difference in return type of getModificationTime between directory versions
-class ExtractFileTime a where extractFileTime :: a -> ModTime
-instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = modTime $ fromIntegral t
-instance ExtractFileTime UTCTime where extractFileTime = modTime . floor . fromRational . toRational . utctDayTime
+class ExtractFileTime a where extractFileTime :: a -> Word32
+instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fromIntegral t
+instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . toRational . utctDayTime
 
 
 #elif defined(mingw32_HOST_OS)
@@ -100,7 +90,7 @@ instance ExtractFileTime UTCTime where extractFileTime = modTime . floor . fromR
 getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_getFileAttributesExA file 0 fad
-        let peek = do mt <- peekLastWriteTimeLow fad; sz <- peekFileSizeLow fad; return $ Just (modTime mt, FileSize sz)
+        let peek = do mt <- peekLastWriteTimeLow fad; sz <- peekFileSizeLow fad; return $ Just (fileInfo mt, fileInfo sz)
         if res then
             peek
          else if requireU x then withCWString (unpackU x) $ \file -> do
@@ -131,7 +121,7 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 -- Unix version
 getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
-    return $ Just (modTime $ extractFileTime s, FileSize $ fromIntegral $ fileSize s)
+    return $ Just (fileInfo $ extractFileTime s, fileInfo $ fromIntegral $ fileSize s)
 
 extractFileTime :: FileStatus -> Word32
 #ifndef MIN_VERSION_unix
