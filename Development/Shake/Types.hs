@@ -2,7 +2,7 @@
 
 -- | Types exposed to the user
 module Development.Shake.Types(
-    Progress(..), Verbosity(..), Assume(..), Lint(..),
+    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..),
     ShakeOptions(..), shakeOptions
     ) where
 
@@ -48,8 +48,9 @@ data Lint
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 
-{-
--- | How should you determine if a file has changed, used by 'shakeChange'.
+-- | How should you determine if a file has changed, used by 'shakeChange'. The most common values are
+--   'ChangeModtime' (very fast, @touch@ causes files to rebuild) and 'ChangeModtimeAndDigest'
+--   (a bit slower, @touch@ does not cause files to rebuild).
 data Change
     = ChangeModtime
         -- ^ Compare equality of modification timestamps, a file has changed if its last modified time changes.
@@ -59,12 +60,11 @@ data Change
         --   A @touch@ will not force a rebuild. Use this mode if modification times on your file system are unreliable.
     | ChangeModtimeAndDigest
         -- ^ A file is rebuilt if both its modification time and digest have changed. For efficiency reasons, the modification
-        --   time is checked first, and if that has changed, the digest is checked which may mark
+        --   time is checked first, and if that has changed, the digest is checked which.
     | ChangeModtimeOrDigest
         -- ^ A file is rebuilt if either its modification time or its digest has changed. A @touch@ will force a rebuild,
         --   but even if a files modification time is reset afterwards, changes will also cause a rebuild.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
--}
 
 
 -- | Options to control the execution of Shake, usually specified by overriding fields in
@@ -118,6 +118,8 @@ data ShakeOptions = ShakeOptions
     ,shakeRunCommands :: Bool
         -- ^ Default to 'True'. Should you run command line actions, set to 'False' to skip actions whose output streams and exit code
         --   are not used. Useful for profiling the non-command portion of the build system.
+    ,shakeChange :: Change
+        -- ^ Default to 'ChangeModtime'. How to check if a file has changed, see 'Change' for details.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -132,23 +134,24 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 "1" Normal False Nothing Nothing (Just 10) Nothing [] False True False True
+shakeOptions = ShakeOptions ".shake" 1 "1" Normal False Nothing Nothing (Just 10) Nothing [] False True False True ChangeModtime
     (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
-    ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeProgress", "shakeOutput"]
+    ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeProgress", "shakeOutput"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 (fromFunction x15) (fromFunction x16)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 (fromFunction x16) (fromFunction x17)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16) =
-        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` x13 `k` x14 `k` Function x15 `k` Function x16
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17) =
+        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` x13 `k` x14 `k` x15 `k`
+        Function x16 `k` Function x17
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -160,6 +163,7 @@ instance Show ShakeOptions where
             f x | Just x <- cast x = show (x :: Int)
                 | Just x <- cast x = show (x :: FilePath)
                 | Just x <- cast x = show (x :: Verbosity)
+                | Just x <- cast x = show (x :: Change)
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: Maybe FilePath)
                 | Just x <- cast x = show (x :: Maybe Assume)
