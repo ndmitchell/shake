@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    FileInfo, fileInfoEq, fileInfoNeq,
+    FileInfo, fileInfoEq, fileInfoNeq, fileInfoVal,
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
     ) where
@@ -41,7 +41,8 @@ instance Show (FileInfo a) where
     show (FileInfo x)
         | x == 0 = "EQ"
         | x == 1 = "NEQ"
-        | otherwise = "0x" ++ map toUpper (showHex (x-1) "")
+        | x == 2 = "VAL"
+        | otherwise = "0x" ++ map toUpper (showHex (x-2) "")
 
 instance Eq (FileInfo a) where
     FileInfo a == FileInfo b
@@ -49,12 +50,13 @@ instance Eq (FileInfo a) where
         | a == 1 || b == 1 = False
         | otherwise = a == b
 
-fileInfoEq, fileInfoNeq :: FileInfo a
-fileInfoEq  = FileInfo 0
+fileInfoEq, fileInfoNeq, fileInfoVal :: FileInfo a
+fileInfoEq = FileInfo 0
 fileInfoNeq = FileInfo 1
+fileInfoVal = FileInfo 2
 
 fileInfo :: Word32 -> FileInfo a
-fileInfo a = FileInfo $ if a > maxBound - 2 then a else a + 2
+fileInfo a = FileInfo $ if a > maxBound - 3 then a else a + 3
 
 data FileInfoHash; type FileHash = FileInfo FileInfoHash
 data FileInfoMod ; type ModTime  = FileInfo FileInfoMod
