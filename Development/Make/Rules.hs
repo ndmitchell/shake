@@ -37,8 +37,11 @@ instance Rule File_Q File_A where
 
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $
-    liftIO $ fmap (File_A . Just . fst) $ getFileInfoError "Error, file does not exist and no rule available:" x
+defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ liftIO $ do
+    res <- getFileInfoMaybe x
+    case res of
+        Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
+        Just (mt,_) -> return $ File_A $ Just mt
 
 
 need_ :: [FilePath] -> Action ()
