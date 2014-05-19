@@ -20,12 +20,13 @@ main = shaken test $ \args obj -> do
 
 
 test build obj = do
-    let outs = map obj ["Out.txt","Out1.txt","Out2.txt"]
+    let outs = take 1 $ map obj ["Out.txt","Out1.txt","Out2.txt"]
     let writeOut x = forM_ outs $ \out -> writeFile out x
+    let writeIn x = writeFile (obj "In.txt") x
     let assertOut x = forM_ outs $ \out -> assertContents out x
 
     writeOut ""
-    writeFile (obj "In.txt") "X"
+    writeIn "X"
     build ["--sleep","--digest-and"]
     assertOut "X"
 
@@ -33,15 +34,15 @@ test build obj = do
     build ["--sleep","--digest-and"]
     assertOut "X"
 
-    writeFile (obj "In.txt") "X"
+    writeIn "X"
     build ["--sleep","--digest-and"]
     assertOut "X"
 
-    writeFile (obj "In.txt") "X"
+    writeIn "X"
     build ["--sleep","--digest-or"]
     assertOut "XX"
 
-    writeFile (obj "In.txt") "X"
+    writeIn "X"
     build ["--sleep","--digest-and"]
     assertOut "XX"
 
@@ -53,6 +54,22 @@ test build obj = do
     build ["--sleep","--digest-and"]
     assertOut "YX"
 
-    writeFile (obj "In.txt") "X"
-    build ["--sleep","--digest"]
+    writeIn "X"
+    build ["--sleep","--digest","--no-lint"]
     assertOut "YX"
+
+    writeIn "Z"
+    build ["--sleep","--digest-and-input","--no-lint"]
+    assertOut "YXZ"
+
+    writeOut "YXZ"
+    build ["--sleep","--digest-and-input","--no-lint"]
+    assertOut "YXZZ"
+
+    writeIn "Q"
+    build ["--sleep","--digest-and-input","--no-lint"]
+    assertOut "YXZZQ"
+
+    writeIn "Q"
+    build ["--sleep","--digest-and-input","--no-lint"]
+    assertOut "YXZZQ"
