@@ -34,10 +34,10 @@ newtype FileQ = FileQ BSU
 
 instance Show FileQ where show (FileQ x) = unpackU x
 
-newtype FileA = FileA FileTime
+newtype FileA = FileA ModTime
     deriving (Typeable,Hashable,Binary,NFData)
 
-instance Eq FileA where FileA x == FileA y = x /= fileTimeNone && x == y
+instance Eq FileA where FileA x == FileA y = x /= modTimeNone && x == y
 
 instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
 
@@ -157,7 +157,7 @@ phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
-        return $ FileA fileTimeNone
+        return $ FileA modTimeNone
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.

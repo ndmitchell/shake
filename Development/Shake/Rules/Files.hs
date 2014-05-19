@@ -26,7 +26,7 @@ infix 1 ?>>, *>>
 newtype FilesQ = FilesQ [BSU]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-newtype FilesA = FilesA [FileTime]
+newtype FilesA = FilesA [ModTime]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show FilesA where show (FilesA xs) = unwords $ "FileTimeHashes" : map show xs

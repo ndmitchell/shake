@@ -29,7 +29,7 @@ newtype File_Q = File_Q BSU
 
 instance Show File_Q where show (File_Q x) = unpackU x
 
-newtype File_A = File_A (Maybe FileTime)
+newtype File_A = File_A (Maybe ModTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule File_Q File_A where

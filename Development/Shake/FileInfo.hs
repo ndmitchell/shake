@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    FileTime, fileTimeNone,
+    ModTime, modTimeNone,
     getModTimeError, getModTimeMaybe
     ) where
 
@@ -32,24 +32,24 @@ import System.Posix.Files.ByteString
 #endif
 
 
--- FileTime is an optimised type, which stores some portion of the file time,
+-- ModTime is an optimised type, which stores some portion of the file time,
 -- or maxBound to indicate there is no valid time. The moral type is @Maybe Datetime@
 -- but it needs to be more efficient.
-newtype FileTime = FileTime Int32
+newtype ModTime = ModTime Int32
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show FileTime where
-    show (FileTime x) = "0x" ++ replicate (length s - 8) '0' ++ map toUpper s
+instance Show ModTime where
+    show (ModTime x) = "0x" ++ replicate (length s - 8) '0' ++ map toUpper s
         where s = showHex (fromIntegral x :: Word32) ""
 
-fileTime :: Int32 -> FileTime
-fileTime x = FileTime $ if x == maxBound then maxBound - 1 else x
+modTime :: Int32 -> ModTime
+modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
 
-fileTimeNone :: FileTime
-fileTimeNone = FileTime maxBound
+modTimeNone :: ModTime
+modTimeNone = ModTime maxBound
 
 
-getModTimeError :: String -> BSU -> IO FileTime
+getModTimeError :: String -> BSU -> IO ModTime
 getModTimeError msg x = do
     res <- getModTimeMaybe x
     case res of
@@ -58,7 +58,7 @@ getModTimeError msg x = do
         Just x -> return x
 
 
-getModTimeMaybe :: BSU -> IO (Maybe FileTime)
+getModTimeMaybe :: BSU -> IO (Maybe ModTime)
 
 #if defined(PORTABLE)
 -- Portable fallback
@@ -67,9 +67,9 @@ getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else
     return $ Just $ extractFileTime time
 
 -- deal with difference in return type of getModificationTime between directory versions
-class ExtractFileTime a where extractFileTime :: a -> FileTime
-instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fileTime $ fromIntegral t
-instance ExtractFileTime UTCTime where extractFileTime = fileTime . floor . fromRational . toRational . utctDayTime
+class ExtractFileTime a where extractFileTime :: a -> ModTime
+instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = modTime $ fromIntegral t
+instance ExtractFileTime UTCTime where extractFileTime = modTime . floor . fromRational . toRational . utctDayTime
 
 
 #elif defined(mingw32_HOST_OS)
@@ -78,10 +78,10 @@ getModTimeMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_getFileAttributesExA file 0 fad
         if res then
-            fmap (Just . fileTime) $ peekLastWriteTimeLow fad
+            fmap (Just . modTime) $ peekLastWriteTimeLow fad
          else if requireU x then withCWString (unpackU x) $ \file -> do
             res <- c_getFileAttributesExW file 0 fad
-            if res then fmap (Just . fileTime) $ peekLastWriteTimeLow fad else return Nothing
+            if res then fmap (Just . modTime) $ peekLastWriteTimeLow fad else return Nothing
          else
             return Nothing
 
@@ -103,7 +103,7 @@ peekLastWriteTimeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWri
 -- Unix version
 getModTimeMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
-    return $ Just $ fileTime $ extractFileTime s
+    return $ Just $ modTime $ extractFileTime s
 
 extractFileTime :: FileStatus -> Int32
 #ifndef MIN_VERSION_unix
