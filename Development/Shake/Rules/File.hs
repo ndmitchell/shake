@@ -31,7 +31,7 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 infix 1 *>, ?>, **>, ~>
 
 
-newtype FileQ = FileQ BSU
+newtype FileQ = FileQ {fromFileQ :: BSU}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show FileQ where show (FileQ x) = unpackU x
