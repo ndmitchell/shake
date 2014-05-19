@@ -73,7 +73,7 @@ instance Show FileA where
 
 instance Rule FileQ FileA where
     storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
-        res <- getFileInfoMaybe x
+        res <- getFileInfo x
         case res of
             Nothing -> return Nothing
             Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size 0

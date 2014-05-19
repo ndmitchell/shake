@@ -33,12 +33,12 @@ newtype File_A = File_A (Maybe ModTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule File_Q File_A where
-    storedValue _ (File_Q x) = fmap (fmap (File_A . Just . fst)) $ getFileInfoMaybe x
+    storedValue _ (File_Q x) = fmap (fmap (File_A . Just . fst)) $ getFileInfo x
 
 
 defaultRuleFile_ :: Rules ()
 defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ liftIO $ do
-    res <- getFileInfoMaybe x
+    res <- getFileInfo x
     case res of
         Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
         Just (mt,_) -> return $ File_A $ Just mt
@@ -59,4 +59,4 @@ data Phony = Phony | NotPhony deriving Eq
         res <- act x
         liftIO $ fmap (File_A . fmap fst) $ if res == Phony
             then return Nothing
-            else getFileInfoMaybe x_
+            else getFileInfo x_

@@ -2,7 +2,7 @@
 
 module Development.Shake.FileInfo(
     FileSize, fileSizeZero, ModTime, modTimeNone, modTimeZero,
-    getFileInfoMaybe
+    getFileInfo
     ) where
 
 import Development.Shake.Classes
@@ -58,11 +58,11 @@ modTimeNone = ModTime maxBound
 modTimeZero = ModTime 0
 
 
-getFileInfoMaybe :: BSU -> IO (Maybe (ModTime, FileSize))
+getFileInfo :: BSU -> IO (Maybe (ModTime, FileSize))
 
 #if defined(PORTABLE)
 -- Portable fallback
-getFileInfoMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     let file = unpackU x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
@@ -76,7 +76,7 @@ instance ExtractFileTime UTCTime where extractFileTime = modTime . floor . fromR
 
 #elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
-getFileInfoMaybe x = BS.useAsCString (unpackU_ x) $ \file ->
+getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_getFileAttributesExA file 0 fad
         let peek = do mt <- peekLastWriteTimeLow fad; sz <- peekFileSizeLow fad; return $ Just (modTime mt, FileSize sz)
@@ -108,7 +108,7 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 
 #else
 -- Unix version
-getFileInfoMaybe x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
     return $ Just (modTime $ extractFileTime s, FileSize $ fromIntegral $ fileSize s)
 
