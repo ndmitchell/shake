@@ -40,8 +40,7 @@ newtype ModTime = ModTime Int32
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show ModTime where
-    show (ModTime x) = "0x" ++ replicate (length s - 8) '0' ++ map toUpper s
-        where s = showHex (fromIntegral x :: Word32) ""
+    show (ModTime x) = "0x" ++ map toUpper (showHex (fromIntegral x :: Word32) "")
 
 newtype FileSize = FileSize Word32
     deriving (Typeable,Eq,Hashable,Binary,NFData)
