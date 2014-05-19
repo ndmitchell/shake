@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #83, add equivalentValue function to Rule typeclass
     Deprecate defaultRule
     Make literal *> matches take precedence over wildcard matches
     #120, add a priority function
