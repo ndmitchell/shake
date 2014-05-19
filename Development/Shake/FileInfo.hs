@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    FileSize, ModTime, modTimeNone,
+    FileSize, fileSizeZero, ModTime, modTimeNone, modTimeZero,
     getFileInfoError, getFileInfoMaybe
     ) where
 
@@ -49,11 +49,15 @@ newtype FileSize = FileSize Word32
 instance Show FileSize where
     show (FileSize x) = show x
 
+fileSizeZero :: FileSize
+fileSizeZero = FileSize 0
+
 modTime :: Int32 -> ModTime
 modTime x = ModTime $ if x == maxBound then maxBound - 1 else x
 
-modTimeNone :: ModTime
+modTimeNone, modTimeZero :: ModTime
 modTimeNone = ModTime maxBound
+modTimeZero = ModTime 0
 
 
 getFileInfoError :: String -> BSU -> IO (ModTime, FileSize)
