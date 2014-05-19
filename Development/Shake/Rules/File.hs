@@ -9,6 +9,7 @@ module Development.Shake.Rules.File(
     FileQ(..), FileA
     ) where
 
+import Control.Applicative hiding ((*>))
 import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
@@ -46,11 +47,16 @@ instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
 instance Rule FileQ FileA where
     storedValue _ (FileQ x) = fmap (fmap $ FileA . fst) $ getFileInfoMaybe x
 
+storedValueError :: ShakeOptions -> String -> FileQ -> IO FileA
+storedValueError opts msg x = fromMaybe (error err) <$> storedValue opts x
+    where err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = priority 0 $ rule $ \(FileQ x) -> Just $
-    liftIO $ fmap (FileA . fst) $ getFileInfoError "Error, file does not exist and no rule available:" x
+defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
+    opts <- getShakeOptions
+    liftIO $ storedValueError opts "Error, file does not exist and no rule available:" x
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -146,7 +152,8 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ fmap (FileA . fst) $ getFileInfoError ("Error, rule " ++ help ++ " failed to build file:") x_
+        opts <- getShakeOptions
+        liftIO $ storedValueError opts ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
 
 
 -- | Declare a phony action -- an action that does not produce a file, and will be rerun
