@@ -27,9 +27,11 @@ import Development.Shake.Types
 import Development.Shake.Errors
 
 import Data.Bits
+import Data.Char
 import Data.List
 import Data.Maybe
 import Data.Word
+import Numeric
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 import qualified System.IO as IO
 import System.IO.Unsafe(unsafeInterleaveIO)
@@ -63,10 +65,11 @@ instance Binary FileA where
     put (FileA a b c) = put a >> put b >> put c
     get = liftA3 FileA get get get
 
+instance Eq FileA where
+    FileA x1 x2 x3 == FileA y1 y2 y3 = x1 /= modTimeNone && x1 == y1 && x2 == y2 && x3 == y3
 
-instance Eq FileA where FileA x1 x2 x3 == FileA y1 y2 y3 = x1 /= modTimeNone && x1 == y1 && x2 == y2 && x3 == y3
-
-instance Show FileA where show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
+instance Show FileA where
+    show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=0x" ++ map toUpper (showHex h "") ++ "}"
 
 instance Rule FileQ FileA where
     storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
