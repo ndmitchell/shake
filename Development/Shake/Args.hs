@@ -234,6 +234,7 @@ shakeOptsEx =
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
     ,yes $ Option ""  ["digest"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeDigest})) "Files change when digest changes."
     ,yes $ Option ""  ["digest-and"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeAndDigest})) "Files change when modtime and digest change."
+    ,yes $ Option ""  ["digest-and-input"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeAndDigestInput})) "Files change on modtime (and digest for inputs)."
     ,yes $ Option ""  ["digest-or"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeOrDigest})) "Files change when modtime or digest change."
     ,no  $ Option ""  ["exception"] (NoArg $ Right ([Exception], id)) "Throw exceptions directly."
     ,yes $ Option ""  ["flush"] (intArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."

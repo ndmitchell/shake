@@ -60,30 +60,31 @@ instance Rule FileQ FileA where
         res <- getFileInfo x
         case res of
             Nothing -> return Nothing
-            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoEq
+            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoVal
             Just (time,size) -> do
                 hash <- unsafeInterleaveIO $ getFileHash x
-                return $ Just $ FileA (if c == ChangeDigest then fileInfoEq else time) size hash
+                return $ Just $ FileA (if c == ChangeDigest then fileInfoVal else time) size hash
 
     equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
         ChangeModtime -> bool $ x1 == y1
         ChangeDigest -> bool $ x2 == y2 && x3 == y3
-        ChangeModtimeAndDigest -> if x1 == y1 then EqualCheap
-                                  else if x2 == y2 && x3 == y3 then EqualExpensive
-                                  else NotEqual
         ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+        _ -> if x1 == y1 then EqualCheap
+             else if x2 == y2 && x3 == y3 then EqualExpensive
+             else NotEqual
         where bool b = if b then EqualCheap else NotEqual
 
-storedValueError :: ShakeOptions -> String -> FileQ -> IO FileA
-storedValueError opts msg x = fromMaybe (error err) <$> storedValue opts x
+storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
+storedValueError opts input msg x = fromMaybe (error err) <$> storedValue opts2 x
     where err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+          opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
     opts <- getShakeOptions
-    liftIO $ storedValueError opts "Error, file does not exist and no rule available:" x
+    liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -180,7 +181,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
         opts <- getShakeOptions
-        liftIO $ storedValueError opts ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
+        liftIO $ storedValueError opts False ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
 
 
 -- | Declare a phony action -- an action that does not produce a file, and will be rerun
