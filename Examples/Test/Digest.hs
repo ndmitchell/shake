@@ -24,8 +24,20 @@ test build obj = do
     let writeOut x = forM_ outs $ \out -> writeFile out x
     let assertOut x = forM_ outs $ \out -> assertContents out x
 
+    writeOut ""
     writeFile (obj "In.txt") "X"
-    writeOut "X"
+    build ["--sleep","--digest-and"]
+    assertOut "X"
+
+    -- should not involve a hash calculation (sadly no way to test that)
+    build ["--sleep","--digest-and"]
+    assertOut "X"
+
+    writeFile (obj "In.txt") "X"
+    build ["--sleep","--digest-and"]
+    assertOut "X"
+
+    writeFile (obj "In.txt") "X"
     build ["--sleep","--digest-or"]
     assertOut "XX"
 
