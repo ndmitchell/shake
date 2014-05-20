@@ -368,7 +368,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent
-                    checkValid database (runStored ruleinfo) absent
+                    checkValid database (runStored ruleinfo) (runEqual ruleinfo) absent
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
                 when (isJust shakeReport) $ do
                     addTiming "Profile report"

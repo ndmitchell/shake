@@ -430,8 +430,8 @@ showJSON Database{..} = do
     return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> [(Key, Key)] -> IO ()
-checkValid Database{..} stored missing = do
+checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
+checkValid Database{..} stored equal missing = do
     status <- readIORef status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
@@ -440,7 +440,7 @@ checkValid Database{..} stored missing = do
     bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             now <- stored key
-            let good = now == Just result
+            let good = maybe False ((==) EqualCheap . equal key result) now
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
