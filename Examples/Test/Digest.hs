@@ -46,10 +46,12 @@ test build obj = do
     build ["--sleep","--digest-and"]
     assertOut "XX"
 
+    build ["--sleep","--digest-and"]
     writeOut "XX"
     build ["--sleep","--digest-and"]
     assertOut "XX"
 
+    build ["--sleep","--digest-and"]
     writeOut "Y"
     build ["--sleep","--digest-and"]
     assertOut "YX"
@@ -62,6 +64,7 @@ test build obj = do
     build ["--sleep","--digest-and-input","--no-lint"]
     assertOut "YXZ"
 
+    build ["--sleep","--digest-and-input","--no-lint"]
     writeOut "YXZ"
     build ["--sleep","--digest-and-input","--no-lint"]
     assertOut "YXZZ"
