@@ -57,22 +57,22 @@ test build obj = do
     assertOut "YX"
 
     writeIn "X"
-    build ["--sleep","--digest","--no-lint"]
+    build ["--sleep","--digest"]
     assertOut "YX"
 
     writeIn "Z"
-    build ["--sleep","--digest-and-input","--no-lint"]
+    build ["--sleep","--digest-and-input"]
     assertOut "YXZ"
 
-    build ["--sleep","--digest-and-input","--no-lint"]
+    build ["--sleep","--digest-and-input"]
     writeOut "YXZ"
-    build ["--sleep","--digest-and-input","--no-lint"]
+    build ["--sleep","--digest-and-input"]
     assertOut "YXZZ"
 
     writeIn "Q"
-    build ["--sleep","--digest-and-input","--no-lint"]
+    build ["--sleep","--digest-and-input"]
     assertOut "YXZZQ"
 
     writeIn "Q"
-    build ["--sleep","--digest-and-input","--no-lint"]
+    build ["--sleep","--digest-and-input"]
     assertOut "YXZZQ"
