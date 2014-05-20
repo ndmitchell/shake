@@ -4,7 +4,7 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (*>), (**>), (?>), phony, (~>),
+    (*>), (|*>), (**>), (?>), phony, (~>),
     -- * Internal only
     FileQ(..), FileA
     ) where
@@ -31,7 +31,11 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 import System.IO.Unsafe(unsafeInterleaveIO)
 
 
-infix 1 *>, ?>, **>, ~>
+infix 1 *>, ?>, |*>, **>, ~>
+
+-- | /Deprecated:/ Alias for '|*>'.
+(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(**>) = (|*>)
 
 
 newtype FileQ = FileQ {fromFileQ :: BSU}
@@ -218,10 +222,10 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '*>'.
-(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
--- Should probably have been called |*>, since it's an or (||) of *>
-(**>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
-    where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with **>" (\x -> any ($ x) ps2) act
+--   Think of it as the OR (@||@) equivalent of '*>'.
+(|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(|*>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
+    where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with |*>" (\x -> any ($ x) ps2) act
 
 -- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
 --   Patterns with no wildcards have higher priority than those with wildcards, and no file

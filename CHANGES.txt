@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Replace **> with |*> , ?>> with &?> and *>> with &*>
     IMPORTANT: Incompatible on disk format change
     #83, support digest rules for files
     #83, add shakeChange parameter and --digest* args

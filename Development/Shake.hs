@@ -115,8 +115,8 @@ module Development.Shake(
     writeFile', writeFileLines, writeFileChanged,
     removeFiles, removeFilesAfter,
     -- * File rules
-    need, want, (*>), (**>), (?>), phony, (~>),
-    module Development.Shake.Rules.Files,
+    need, want, (*>), (|*>), (?>), phony, (~>),
+    (&*>), (&?>),
     orderOnly,
     FilePattern, (?==),
     needed, trackRead, trackWrite, trackAllow,
@@ -135,6 +135,7 @@ module Development.Shake(
     -- * Cache
     newCache, newCacheIO,
     -- * Deprecated
+    (**>), (*>>), (?>>),
     system', systemCwd, systemOutput
     ) where
 
