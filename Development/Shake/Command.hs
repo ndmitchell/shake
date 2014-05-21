@@ -251,7 +251,8 @@ commandExplicitIO funcName opts results exe args =
     where
         msgPrefix =
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-            "Command: " ++ saneCommandForUser exe args ++ "\n"
+            "Command: " ++ saneCommandForUser exe args ++ "\n" ++
+            (case cwd cp of Nothing -> ""; Just v -> "Current directory: " ++ v ++ "\n")
 
         input = last $ "" : [x | Stdin x <- opts]
 
