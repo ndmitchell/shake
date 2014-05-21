@@ -484,7 +484,7 @@ traced msg act = do
     Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
     start <- liftIO globalTimestamp
-    putNormal $ "# " ++ msg ++ " " ++ showTopStack stack
+    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
     res <- liftIO act
     stop <- liftIO globalTimestamp
     Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) start stop : localTraces s}
