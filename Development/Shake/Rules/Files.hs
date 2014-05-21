@@ -116,6 +116,8 @@ ps &*> act
                     | otherwise -> error $ "Invariant broken in &?> when trying on " ++ x
 
     isJust . checkedTest ?> \x -> do
+        -- FIXME: Could optimise this test by calling rule directly and returning FileA Eq Eq Eq
+        --        But only saves noticable time on uncommon Change modes
         _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU) $ fromJust $ test x
         return ()
 
