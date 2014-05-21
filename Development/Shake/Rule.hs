@@ -6,8 +6,10 @@ module Development.Shake.Rule(
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
 #endif
-    Rule(..), EqualCost(..), defaultRule, rule, apply, apply1,
-    trackUse, trackChange, trackAllow
+    Rule(..), EqualCost(..), rule, apply, apply1,
+    trackUse, trackChange, trackAllow,
+    -- * Deprecated
+    defaultRule
     ) where
 
 import Development.Shake.Core
