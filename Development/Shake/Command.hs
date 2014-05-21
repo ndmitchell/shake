@@ -174,10 +174,7 @@ commandExplicitIO funcName opts results exe args =
       (inh, outh, errh, pid) <- case ans of
           Right a -> return a
           Left err -> do
-              let msg = "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-                        "Command: " ++ saneCommandForUser exe args ++ "\n" ++
-                        show (err :: SomeException)
-              error msg
+              error $ msgPrefix ++ show (err :: SomeException)
 
       let close = maybe (return ()) hClose
       flip onException
@@ -241,19 +238,21 @@ commandExplicitIO funcName opts results exe args =
 -- END COPIED
 
         when (ResultCode ExitSuccess `notElem` results && ex /= ExitSuccess) $ do
-            let msg = "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-                      "Command: " ++ saneCommandForUser exe args ++ "\n" ++
-                      "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-                      (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
-                       else if null err then "Stderr was empty"
-                       else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
-            error msg
+            error $ msgPrefix ++
+                    "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
+                    (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
+                    else if null err then "Stderr was empty"
+                    else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
 
         return $ flip map results $ \x -> case x of
             ResultStdout _ -> ResultStdout out
             ResultStderr _ -> ResultStderr err
             ResultCode   _ -> ResultCode ex
     where
+        msgPrefix =
+            "Development.Shake." ++ funcName ++ ", system command failed\n" ++
+            "Command: " ++ saneCommandForUser exe args ++ "\n"
+
         input = last $ "" : [x | Stdin x <- opts]
 
         -- what should I do with these handles
