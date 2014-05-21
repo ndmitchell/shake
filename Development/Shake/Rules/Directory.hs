@@ -272,4 +272,6 @@ removeFiles dir pat = void $ f ""
 -- | Remove files, like 'removeFiles', but executed after the build completes successfully.
 --   Useful for implementing @clean@ actions that delete files Shake may have open for building.
 removeFilesAfter :: FilePath -> [FilePattern] -> Action ()
-removeFilesAfter a b = runAfter $ removeFiles a b
+removeFilesAfter a b = do
+    putLoud $ "Will remove " ++ unwords b ++ " from " ++ a
+    runAfter $ removeFiles a b

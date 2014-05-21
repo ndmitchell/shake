@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #113, print info about copyFile' and removeFilesAfter at -V
     Replace **> with |*> , ?>> with &?> and *>> with &*>
     IMPORTANT: Incompatible on disk format change
     #83, support digest rules for files

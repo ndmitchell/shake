@@ -84,7 +84,10 @@ systemOutput path args = do
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
 --   The @old@ file will be tracked as a dependency.
 copyFile' :: FilePath -> FilePath -> Action ()
-copyFile' old new = need [old] >> liftIO (copyFile old new)
+copyFile' old new = do
+    need [old]
+    putLoud $ "Copying from " ++ old ++ " to " ++ new
+    liftIO $ copyFile old new
 
 
 -- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.
