@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #60, improve how command lines are printed out
     #113, print info about copyFile' and removeFilesAfter at -V
     Replace **> with |*> , ?>> with &?> and *>> with &*>
     IMPORTANT: Incompatible on disk format change
