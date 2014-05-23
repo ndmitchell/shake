@@ -7,12 +7,14 @@ module General.Base(
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe, captureOutput,
+    showDP,
     modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
     withBufferMode, withCapabilities
     ) where
 
+import Control.Arrow
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
@@ -22,6 +24,7 @@ import Data.List
 import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
+import Numeric
 import System.Directory
 import System.Environment
 import System.IO
@@ -154,6 +157,11 @@ fastNub = f Set.empty
 showQuote :: String -> String
 showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
              | otherwise = xs
+
+
+showDP :: Int -> Double -> String
+showDP n x = a ++ "." ++ b ++ replicate (n - length b) '0'
+    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
 
 
 ---------------------------------------------------------------------
