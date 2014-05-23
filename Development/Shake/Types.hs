@@ -169,7 +169,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Verbosity)
                 | Just x <- cast x = show (x :: Change)
                 | Just x <- cast x = show (x :: Bool)
-                | Just x <- cast x = show (x :: Maybe FilePath)
+                | Just x <- cast x = show (x :: [FilePath])
                 | Just x <- cast x = show (x :: Maybe Assume)
                 | Just x <- cast x = show (x :: Maybe Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
