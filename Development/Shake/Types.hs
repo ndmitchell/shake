@@ -96,8 +96,10 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'False'. Operate in staunch mode, where building continues even after errors,
         --   similar to @make --keep-going@.
     ,shakeReport :: [FilePath]
-        -- ^ Defaults to '[]'. Write an HTML profiling report to a file, showing which
-        --   rules rebuilt, why, and how much time they took. Useful for improving the speed of your build systems.
+        -- ^ Defaults to '[]'. Write a profiling report to a file, showing which rules rebuilt,
+        --   why, and how much time they took. Useful for improving the speed of your build systems.
+        --   If the file extension is @.json@ it will write JSON data, if @.js@ it will write Javascript,
+        --   otherwise it will write HTML.
     ,shakeLint :: Maybe Lint
         -- ^ Defaults to 'Nothing'. Perform sanity checks during building, see 'Lint' for details.
     ,shakeFlush :: Maybe Double

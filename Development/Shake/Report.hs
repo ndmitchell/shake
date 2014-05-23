@@ -16,15 +16,17 @@ data ReportTrace = ReportTrace
     {repCommand :: String, repStart :: Double, repStop :: Double}
 
 
--- | Generates an HTML report given some build system
---   profiling data in JSON format.
+-- | Generates an report given some build system profiling data.
 buildReport :: [ReportEntry] -> FilePath -> IO ()
-buildReport reports out = do
-    htmlDir <- getDataFileName "html"
-    report <- LBS.readFile $ htmlDir </> "report.html"
-    let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ showJSON reports
-               | otherwise = LBS.readFile $ htmlDir </> name
-    LBS.writeFile out =<< runTemplate f report
+buildReport reports out
+    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ showJSON reports
+    | takeExtension out == ".json" = writeFile out $ showJSON reports
+    | otherwise = do
+        htmlDir <- getDataFileName "html"
+        report <- LBS.readFile $ htmlDir </> "report.html"
+        let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ showJSON reports
+                   | otherwise = LBS.readFile $ htmlDir </> name
+        LBS.writeFile out =<< runTemplate f report
 
 
 showJSON :: [ReportEntry] -> String
