@@ -37,7 +37,7 @@ buildReport reports out
 reportSummary :: [ReportEntry] -> [String]
 reportSummary xs =
     ["* This database has tracked " ++ show (maximum (0 : map repChanged xs) + 1) ++ " runs."
-    ,let f = show . length in "There are " ++ f xs ++ " rules (" ++ f ls ++ " rebuilt in the last run)."
+    ,let f = show . length in "* There are " ++ f xs ++ " rules (" ++ f ls ++ " rebuilt in the last run)."
     ,let f = show . sum . map (length . repTraces) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
     ,"* The total (unparallelised) build time is " ++ showTime (sum $ map repExecution xs) ++
         " of which " ++ showTime (sum $ map repTime $ concatMap repTraces xs) ++ " is traced commands."
