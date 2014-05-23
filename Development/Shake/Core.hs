@@ -372,11 +372,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
-                    json <- showJSON database
+                    report <- toReport database
                     forM_ shakeReport $ \file -> do
                         when (shakeVerbosity >= Normal) $
                             output Normal $ "Writing report to " ++ file
-                        buildReport json file
+                        buildReport report file
             maybe (return ()) (throwIO . snd) =<< readIORef except
             sequence_ . reverse =<< readIORef after
 

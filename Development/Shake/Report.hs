@@ -1,23 +1,44 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, RecordWildCards #-}
 
-module Development.Shake.Report(buildReport) where
+module Development.Shake.Report(ReportEntry(..), ReportTrace(..), buildReport) where
 
 import Control.Monad
 import Data.Char
+import Data.List
 import System.FilePath
 import Paths_shake
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
 
+data ReportEntry = ReportEntry
+    {repName :: String, repBuilt :: Int, repChanged :: Int, repDepends :: [Int], repExecution :: Double, repTraces :: [ReportTrace]}
+data ReportTrace = ReportTrace
+    {repCommand :: String, repStart :: Double, repStop :: Double}
+
+
 -- | Generates an HTML report given some build system
 --   profiling data in JSON format.
-buildReport :: String -> FilePath -> IO ()
-buildReport json out = do
+buildReport :: [ReportEntry] -> FilePath -> IO ()
+buildReport reports out = do
     htmlDir <- getDataFileName "html"
     report <- LBS.readFile $ htmlDir </> "report.html"
-    let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ json
+    let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ showJSON reports
                | otherwise = LBS.readFile $ htmlDir </> name
     LBS.writeFile out =<< runTemplate f report
+
+
+showJSON :: [ReportEntry] -> String
+showJSON xs = "[" ++ intercalate "\n," (map showEntry xs) ++ "\n]"
+    where
+        showEntry ReportEntry{..} = (\xs -> "{" ++ intercalate ", " xs ++ "}") $
+            ["name:" ++ show repName
+            ,"built:" ++ show repBuilt
+            ,"changed:" ++ show repChanged
+            ,"depends:" ++ show repDepends
+            ,"execution:" ++ show repExecution] ++
+            ["traces:[" ++ intercalate "," (map showTrace repTraces) ++ "]" | not $ null repTraces]
+        showTrace ReportTrace{..} =
+            "{command:" ++ show repCommand ++ ",start:" ++ show repStart ++ ",stop:" ++ show repStop ++ "}"
 
 
 -- | Template Engine. Perform the following replacements on a line basis:

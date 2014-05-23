@@ -9,7 +9,7 @@ module Development.Shake.Database(
     Ops(..), build, Depends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
-    showJSON, checkValid,
+    toReport, checkValid,
     ) where
 
 import Development.Shake.Classes
@@ -20,6 +20,7 @@ import Development.Shake.Errors
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
+import Development.Shake.Report
 import General.Base
 import General.String
 import General.Intern as Intern
@@ -407,8 +408,8 @@ resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends =
 removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
-showJSON :: Database -> IO String
-showJSON Database{..} = do
+toReport :: Database -> IO [ReportEntry]
+toReport Database{..} = do
     status <- fmap (removeStep . resultsOnly) $ readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . depends . snd) status
@@ -417,17 +418,18 @@ showJSON Database{..} = do
         steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
                 in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
 
-        f (k, Result{..})  =
-            let xs = ["name:" ++ show (show k)
-                     ,"built:" ++ showStep built
-                     ,"changed:" ++ showStep changed
-                     ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
-                     ,"execution:" ++ show execution] ++
-                     ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | not $ null traces]
-                showStep i = show $ fromJust $ Map.lookup i steps
-                showTrace (Trace a b c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show (unpack a) ++ "}"
-            in  ["{" ++ intercalate ", " xs ++ "}"]
-    return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
+        f (k, Result{..}) = ReportEntry
+            {repName = show k
+            ,repBuilt = fromStep built
+            ,repChanged = fromStep changed
+            ,repDepends = mapMaybe (`Map.lookup` ids) (concat depends)
+            ,repExecution = fromFloat execution
+            ,repTraces = map fromTrace traces
+            }
+            where fromStep i = fromJust $ Map.lookup i steps
+                  fromTrace (Trace a b c) = ReportTrace (unpack a) (fromFloat b) (fromFloat c)
+                  fromFloat = fromRational . toRational
+    return $ [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
