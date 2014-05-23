@@ -7,7 +7,7 @@ module General.Base(
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe, captureOutput,
-    showDP,
+    showDP, showTime,
     modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
@@ -159,9 +159,20 @@ showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"
              | otherwise = xs
 
 
+---------------------------------------------------------------------
+-- Data.String
+
 showDP :: Int -> Double -> String
 showDP n x = a ++ "." ++ b ++ replicate (n - length b) '0'
     where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
+
+showTime :: Double -> String
+showTime x | x >= 3600 = f (x / 60) "h" "m"
+           | x >= 60 = f x "m" "s"
+           | otherwise = showDP 2 x ++ "s"
+    where
+        f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ m
+            where (ms,ss) = round x `divMod` 60
 
 
 ---------------------------------------------------------------------
