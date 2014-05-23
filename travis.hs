@@ -33,7 +33,7 @@ main = do
 
         -- Diagnostics
         cmd "ls -l .shake* build/.ninja*"
-        cmd "shake -VVVV"
+        cmd "shake -VV"
         (shakeNone, _) <- duration $ cmd "shake --always-make --skip-commands --timings"
         putStrLn $ "--always-make --skip-commands took " ++ ms shakeNone
 
