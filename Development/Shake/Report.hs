@@ -31,14 +31,14 @@ showJSON :: [ReportEntry] -> String
 showJSON xs = "[" ++ intercalate "\n," (map showEntry xs) ++ "\n]"
     where
         showEntry ReportEntry{..} = (\xs -> "{" ++ intercalate ", " xs ++ "}") $
-            ["name:" ++ show repName
-            ,"built:" ++ show repBuilt
-            ,"changed:" ++ show repChanged
-            ,"depends:" ++ show repDepends
-            ,"execution:" ++ show repExecution] ++
-            ["traces:[" ++ intercalate "," (map showTrace repTraces) ++ "]" | not $ null repTraces]
+            ["\"name\":" ++ show repName
+            ,"\"built\":" ++ show repBuilt
+            ,"\"changed\":" ++ show repChanged
+            ,"\"depends\":" ++ show repDepends
+            ,"\"execution\":" ++ show repExecution] ++
+            ["\"traces\":[" ++ intercalate "," (map showTrace repTraces) ++ "]" | not $ null repTraces]
         showTrace ReportTrace{..} =
-            "{command:" ++ show repCommand ++ ",start:" ++ show repStart ++ ",stop:" ++ show repStop ++ "}"
+            "{\"command\":" ++ show repCommand ++ ",\"start\":" ++ show repStart ++ ",\"stop\":" ++ show repStop ++ "}"
 
 
 -- | Template Engine. Perform the following replacements on a line basis:
