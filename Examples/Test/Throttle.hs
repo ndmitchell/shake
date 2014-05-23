@@ -19,7 +19,7 @@ test build obj = do
     forM_ [[],["-j8"]] $ \flags -> do
         -- we are sometimes over the window if the machine is "a bit loaded" at some particular time
         -- therefore we rerun the test three times, and only fail if it fails on all of them
-        flip loop 3 $ \i -> do
+        flip loopM 3 $ \i -> do
             build ["clean"]
             (s, _) <- duration $ build []
             -- the 0.1s cap is a guess at an upper bound for how long everything else should take

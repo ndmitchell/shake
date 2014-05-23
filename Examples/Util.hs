@@ -148,7 +148,7 @@ sleepFileTimeCalibrate = do
         writeFile file $ show i
         let time = fmap (fst . fromMaybe (error "File missing during sleepFileTimeCalibrate")) $ getFileInfo $ packU file
         t1 <- time
-        flip loop 0 $ \j -> do
+        flip loopM 0 $ \j -> do
             writeFile file $ show (i,j)
             t2 <- time
             return $ if t1 == t2 then Left $ j+1 else Right ()

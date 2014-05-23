@@ -8,7 +8,7 @@ module General.Base(
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe, captureOutput,
     modifyIORef'', writeIORef'',
-    whenJust, loop, whileM, partitionM, concatMapM, mapMaybeM,
+    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
     withBufferMode, withCapabilities
     ) where
@@ -163,11 +163,11 @@ whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust (Just a) f = f a
 whenJust Nothing f = return ()
 
-loop :: Monad m => (a -> m (Either a b)) -> a -> m b
-loop act x = do
+loopM :: Monad m => (a -> m (Either a b)) -> a -> m b
+loopM act x = do
     res <- act x
     case res of
-        Left x -> loop act x
+        Left x -> loopM act x
         Right v -> return v
 
 whileM :: Monad m => m Bool -> m ()
