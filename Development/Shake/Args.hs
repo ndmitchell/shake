@@ -257,7 +257,7 @@ shakeOptsEx =
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
     ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (optIntArg 1 "progress" "N" (\i s -> s{shakeProgress=prog $ fromMaybe 5 i})) "Show progress messages [every N seconds, default 5]."
+    ,yes $ Option "p" ["progress"] (optIntArg 1 "progress" "N" (\i s -> s{shakeProgress=prog $ fromMaybe 5 i})) "Show progress messages [every N secs, default 5]."
     ,yes $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
