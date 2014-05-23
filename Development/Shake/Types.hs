@@ -72,7 +72,7 @@ data Change
 -- | Options to control the execution of Shake, usually specified by overriding fields in
 --   'shakeOptions':
 --
---   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=Just \"report.html\"} @
+--   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=[\"report.html\"]} @
 --
 --   The 'Data' instance for this type reports the 'shakeProgress' and 'shakeOutput' fields as having the abstract type 'Function',
 --   because 'Data' cannot be defined for functions.

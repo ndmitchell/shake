@@ -204,7 +204,7 @@ whitelist x | elem x $ words $
     ".. /./ /.. ./ // \\ ../ " ++
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath main.m run .rot13 " ++
-    "NoProgress Error src rot13 " ++
+    "NoProgress Error src rot13 .js .json " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out build " ++
     "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
     "-threaded -rtsopts -I0 Function extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
