@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #122, make --report=- write a report to stdout
     Improve the profile report summary
     #122, turn shakeReport into a list of files, instead of a Maybe
     #60, improve how command lines are printed out
