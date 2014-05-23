@@ -28,6 +28,7 @@ main = do
         -- time Shake
         cmd "../nin -t clean"
         (shakeFull, _) <- duration $ cmd "shake -j3 --quiet --timings"
+        cmd "shake --no-build --report=-"
         (shakeZero, _) <- duration $ cmd "shake -j3 --quiet --timings"
 
         -- Diagnostics
