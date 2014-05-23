@@ -370,13 +370,13 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     absent <- readIORef absent
                     checkValid database (runStored ruleinfo) (runEqual ruleinfo) absent
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
-                when (isJust shakeReport) $ do
+                when (shakeReport /= []) $ do
                     addTiming "Profile report"
-                    let file = fromJust shakeReport
                     json <- showJSON database
-                    when (shakeVerbosity >= Normal) $
-                        output Normal $ "Writing HTML report to " ++ file
-                    buildReport json file
+                    forM_ shakeReport $ \file -> do
+                        when (shakeVerbosity >= Normal) $
+                            output Normal $ "Writing report to " ++ file
+                        buildReport json file
             maybe (return ()) (throwIO . snd) =<< readIORef except
             sequence_ . reverse =<< readIORef after
 

@@ -65,7 +65,7 @@ shaken test rules sleeper = do
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out) 
-                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html", shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
+                    (shakeOptions{shakeFiles=out, shakeReport=["output/" ++ name ++ "/report.html"], shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
                     (rules files (out++))
 
 

@@ -95,8 +95,8 @@ data ShakeOptions = ShakeOptions
     ,shakeStaunch :: Bool
         -- ^ Defaults to 'False'. Operate in staunch mode, where building continues even after errors,
         --   similar to @make --keep-going@.
-    ,shakeReport :: Maybe FilePath
-        -- ^ Defaults to 'Nothing'. Write an HTML profiling report to a file, showing which
+    ,shakeReport :: [FilePath]
+        -- ^ Defaults to '[]'. Write an HTML profiling report to a file, showing which
         --   rules rebuilt, why, and how much time they took. Useful for improving the speed of your build systems.
     ,shakeLint :: Maybe Lint
         -- ^ Defaults to 'Nothing'. Perform sanity checks during building, see 'Lint' for details.
@@ -136,7 +136,7 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 "1" Normal False Nothing Nothing (Just 10) Nothing [] False True False True ChangeModtime
+shakeOptions = ShakeOptions ".shake" 1 "1" Normal False [] Nothing (Just 10) Nothing [] False True False True ChangeModtime
     (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 

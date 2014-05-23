@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #122, turn shakeReport into a list of files, instead of a Maybe
     #60, improve how command lines are printed out
     #113, print info about copyFile' and removeFilesAfter at -V
     Replace **> with |*> , ?>> with &?> and *>> with &*>
