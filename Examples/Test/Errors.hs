@@ -17,7 +17,7 @@ main = shaken test $ \args obj -> do
     obj "failcreate" *> \_ ->
         return ()
 
-    [obj "failcreates", obj "failcreates2"] *>> \_ ->
+    [obj "failcreates", obj "failcreates2"] &*> \_ ->
         writeFile' (obj "failcreates") ""
 
     obj "recursive" *> \out ->

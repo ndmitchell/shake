@@ -403,9 +403,9 @@ Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
 
 #### Multiple outputs
 
-Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `*>>` operator to define rules:
+Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `&*>` operator to define rules:
 
-    ["//*.bison.h","//*.bison.c"] *>> \[outh, outc] -> do
+    ["//*.bison.h","//*.bison.c"] &*> \[outh, outc] -> do
         let src = outc -<.> "y"
         cmd "bison -d -o" [outc] [src]
 
@@ -488,7 +488,7 @@ This code calls `readFile'` (which automatically calls `need` on the source file
 
 The previous section described how to deal with generated include files, but only coped with headers included directly by the C file. This section describes how to extend that to work with generated headers used either in C or header files, even when used by headers that were themselves generated. We can write:
 
-    ["*.c.dep","*.h.dep"] **> \out -> do
+    ["*.c.dep","*.h.dep"] |*> \out -> do
         src <- readFile' $ dropExtension out
         writeFileLines out $ usedHeaders src
 
@@ -504,7 +504,7 @@ The previous section described how to deal with generated include files, but onl
 
 For simplicity, this code assumes all files are in a single directory and all objects are generated files are placed in the same directory. We define three rules:
 
-* The `*.c.dep` and `*.h.dep` rule uses `**>`, which defines a single action that matches multiple patterns. The file `foo.h.dep` contains a list of headers directly included by `foo.h`, using `usedHeaders` from the previous section.
+* The `*.c.dep` and `*.h.dep` rule uses `|*>`, which defines a single action that matches multiple patterns. The file `foo.h.dep` contains a list of headers directly included by `foo.h`, using `usedHeaders` from the previous section.
 * The `*.deps` rule takes the transitive closure of dependencies, so `foo.h.deps` contains `foo.h` and all headers that `foo.h` pulls in. The rule takes the target file, and all the `.deps` for anything in the `.dep` file, and combines them. More abstractly, the rule calculates the transitive closure of _a_, namely _a*_, by taking the dependencies of _a_ (say _b_ and _c_) and computing _a\* = union(a, b\*, c\*)_.
 * The `*.o` rule reads the associated `.deps` file (ensuring it is up to date) and then depends on its contents.
 

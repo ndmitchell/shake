@@ -32,7 +32,7 @@ main = shaken test $ \xs obj -> do
         b <- readFile' $ obj pre <.> "multi1"
         writeFile' out $ a ++ b
 
-    map obj ["*.multi1","*.multi2"] *>> \[m1,m2] -> do
+    map obj ["*.multi1","*.multi2"] &*> \[m1,m2] -> do
         b <- doesFileExist $ m1 -<.> "exist"
         writeFile' m1 $ show b
         writeFile' m2 $ show b

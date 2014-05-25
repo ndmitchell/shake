@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
 
 module Development.Ninja.All(runNinja) where
 
@@ -63,7 +63,7 @@ runNinja file args tool = do
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
 
-        (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) ?>> \out -> let out2 = map BS.pack out in
+        (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) &?> \out -> let out2 = map BS.pack out in
             build needDeps phonys rules pools out2 $ snd $ multiples Map.! head out2
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in

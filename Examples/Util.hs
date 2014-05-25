@@ -5,7 +5,7 @@ import Development.Shake
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.Base
 import General.String
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 import Development.Shake.FilePath
 
 import Control.Exception hiding (assert)
@@ -13,6 +13,7 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Maybe
+import qualified Data.ByteString as BS
 import System.Directory as IO
 import System.Environment
 import System.Random
@@ -64,7 +65,7 @@ shaken test rules sleeper = do
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out) 
-                    (shakeOptions{shakeFiles=out, shakeReport=Just $ "output/" ++ name ++ "/report.html", shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
+                    (shakeOptions{shakeFiles=out, shakeReport=["output/" ++ name ++ "/report.html"], shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
                     (rules files (out++))
 
 
@@ -130,7 +131,8 @@ assertException parts act = do
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
 noTest build obj = do
-    build ["--abbrev=output=$OUT"]
+    build ["--abbrev=output=$OUT","-j3"]
+    build ["--no-build","--report=-"]
     build []
 
 
@@ -145,9 +147,9 @@ sleepFileTimeCalibrate = do
     createDirectoryIfMissing True $ takeDirectory file
     mtimes <- forM [1..10] $ \i -> fmap fst $ duration $ do
         writeFile file $ show i
-        let time = getModTimeError "File is missing" $ packU file
+        let time = fmap (fst . fromMaybe (error "File missing during sleepFileTimeCalibrate")) $ getFileInfo $ packU file
         t1 <- time
-        flip loop 0 $ \j -> do
+        flip loopM 0 $ \j -> do
             writeFile file $ show (i,j)
             t2 <- time
             return $ if t1 == t2 then Left $ j+1 else Right ()
@@ -172,13 +174,21 @@ getDirectoryContentsRecursive dir = do
     return $ files++rest
 
 
-copyDirectory :: FilePath -> FilePath -> IO ()
-copyDirectory old new = do
+copyDirectoryChanged :: FilePath -> FilePath -> IO ()
+copyDirectoryChanged old new = do
     xs <- getDirectoryContentsRecursive old
     forM_ xs $ \from -> do
         let to = new </> drop (length $ addTrailingPathSeparator old) from
         createDirectoryIfMissing True $ takeDirectory to
-        copyFile from to
+        copyFileChanged from to
+
+
+copyFileChanged :: FilePath -> FilePath -> IO ()
+copyFileChanged old new = do
+    good <- IO.doesFileExist new
+    good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
+    when (not good) $ copyFile old new
+
 
 withTemporaryDirectory :: (FilePath -> IO ()) -> IO ()
 withTemporaryDirectory act = do

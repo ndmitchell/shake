@@ -11,7 +11,7 @@ main = do
     setCurrentDirectory "ninja"
 
     let ms x = show $ ceiling $ x * 1000
-    replicateM 3 $ do
+    replicateM_ 3 $ do
         (ninjaVer, _) <- duration $ cmd "../nin --version"
         (shakeVer, _) <- duration $ cmd "shake --version"
         putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
@@ -28,11 +28,12 @@ main = do
         -- time Shake
         cmd "../nin -t clean"
         (shakeFull, _) <- duration $ cmd "shake -j3 --quiet --timings"
+        cmd "shake --no-build --report=-"
         (shakeZero, _) <- duration $ cmd "shake -j3 --quiet --timings"
 
         -- Diagnostics
         cmd "ls -l .shake* build/.ninja*"
-        cmd "shake -VVVV"
+        cmd "shake -VV"
         (shakeNone, _) <- duration $ cmd "shake --always-make --skip-commands --timings"
         putStrLn $ "--always-make --skip-commands took " ++ ms shakeNone
 

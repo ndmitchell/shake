@@ -7,12 +7,14 @@ module General.Base(
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe, captureOutput,
+    showDP, showTime,
     modifyIORef'', writeIORef'',
-    whenJust, loop, whileM, partitionM, concatMapM, mapMaybeM,
+    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM,
     fastNub, showQuote,
     withBufferMode, withCapabilities
     ) where
 
+import Control.Arrow
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
@@ -22,6 +24,7 @@ import Data.List
 import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
+import Numeric
 import System.Directory
 import System.Environment
 import System.IO
@@ -157,17 +160,33 @@ showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"
 
 
 ---------------------------------------------------------------------
+-- Data.String
+
+showDP :: Int -> Double -> String
+showDP n x = a ++ "." ++ b ++ replicate (n - length b) '0'
+    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
+
+showTime :: Double -> String
+showTime x | x >= 3600 = f (x / 60) "h" "m"
+           | x >= 60 = f x "m" "s"
+           | otherwise = showDP 2 x ++ "s"
+    where
+        f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ m
+            where (ms,ss) = round x `divMod` 60
+
+
+---------------------------------------------------------------------
 -- Control.Monad
 
 whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust (Just a) f = f a
 whenJust Nothing f = return ()
 
-loop :: Monad m => (a -> m (Either a b)) -> a -> m b
-loop act x = do
+loopM :: Monad m => (a -> m (Either a b)) -> a -> m b
+loopM act x = do
     res <- act x
     case res of
-        Left x -> loop act x
+        Left x -> loopM act x
         Right v -> return v
 
 whileM :: Monad m => m Bool -> m ()

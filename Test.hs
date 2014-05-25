@@ -7,7 +7,7 @@ import Control.Monad
 import Data.Maybe
 import System.Environment
 import General.Timing
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 import General.String
 import qualified Data.ByteString.Char8 as BS
 import Examples.Util(sleepFileTimeCalibrate)
@@ -23,6 +23,7 @@ import qualified Examples.Test.Benchmark as Benchmark
 import qualified Examples.Test.Cache as Cache
 import qualified Examples.Test.Command as Command
 import qualified Examples.Test.Config as Config
+import qualified Examples.Test.Digest as Digest
 import qualified Examples.Test.Directory as Directory
 import qualified Examples.Test.Docs as Docs
 import qualified Examples.Test.Errors as Errors
@@ -52,7 +53,7 @@ fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetim
 
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main
-        ,"config" * Config.main, "directory" * Directory.main
+        ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
         ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main, "manual" * Manual.main
@@ -114,7 +115,7 @@ filetime _ = do
     vars <- forM [a,b,c,d] $ \xs -> do
         mvar <- newEmptyMVar
         forkIO $ do
-            mapM_ (getModTimeMaybe . packU_) xs
+            mapM_ (getFileInfo . packU_) xs
             putMVar mvar ()
         return $ takeMVar mvar
     sequence_ vars

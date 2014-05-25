@@ -19,3 +19,4 @@ Shake is a tool for writing build systems - an alternative to make, Scons, Ant e
 * [Questions](http://stackoverflow.com/questions/tagged/shake-build-system) can be asked on StackOverflow with the tag `shake-build-system`.
 * [Bugs](https://github.com/ndmitchell/shake/issues) can be reported on the GitHub issue tracker.
 * [Source code](http://github.com/ndmitchell/shake) in a git repo, stored at GitHub.
+* Continuous integration with [Travis](https://travis-ci.org/ndmitchell/shake) and [Hydra](http://hydra.cryp.to/jobset/shake/master).

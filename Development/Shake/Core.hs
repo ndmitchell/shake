@@ -1,5 +1,5 @@
-{-# LANGUAGE RecordWildCards, DeriveDataTypeable, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses #-}
 
 {-# LANGUAGE CPP #-}
 #if __GLASGOW_HASKELL__ >= 704
@@ -79,12 +79,16 @@ class (
 #endif
     ) => Rule key value where
 
-    -- | Retrieve the @value@ associated with a @key@, if available.
+    -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
     --
     --   As an example for filenames/timestamps, if the file exists you should return 'Just'
     --   the timestamp, but otherwise return 'Nothing'. For rules whose values are not
     --   stored externally, 'storedValue' should return 'Nothing'.
     storedValue :: ShakeOptions -> key -> IO (Maybe value)
+
+    -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
+    equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
+    equalValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
 
 
 data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
@@ -132,16 +136,24 @@ instance Monoid a => Monoid (Rules a) where
     mappend = liftA2 mappend
 
 
--- | Add a rule to build a key, returning an appropriate 'Action'. All rules must be disjoint.
---   To define lower priority rules use 'defaultRule'.
+-- | Add a rule to build a key, returning an appropriate 'Action'. All rules at a given priority
+--   must be disjoint. Rules have priority 1 by default, but can be modified with 'priority'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
--- | Change the priority of a given rule. If two rules match a particular target then
---   the highest priority rule is picked. If that is ambiguous, it is an error.
+-- | Change the priority of a given set of rules, where higher priorities take precedence.
+--   All matching rules at a given priority must be disjoint, or an error is raised.
 --   All builtin Shake rules have priority between 0 and 1.
+--   Excessive use of 'priority' is discouraged. As an example:
+--
+-- @
+-- 'priority' 4 $ \"hello.*\" *> \\out -> 'writeFile'' out \"hello.*\"
+-- 'priority' 8 $ \"*.txt\" *> \\out -> 'writeFile'' out \"*.txt\"
+-- @
+--
+--   In this example @hello.txt@ will match the second rule, instead of raising an error about ambiguity.
 priority :: Double -> Rules () -> Rules ()
 priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
 
@@ -150,10 +162,12 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first
 --   in order. Only recommended for small blocks containing a handful of rules.
 --
 -- @
--- alternatives $ do
---     \"hello.txt\" *> \\out -> writeFile' out \"special\"
---     \"*.txt\" *> \\out -> writeFile' out \"normal\"
+-- 'alternatives' $ do
+--     \"hello.*\" *> \\out -> 'writeFile'' out \"hello.*\"
+--     \"*.txt\" *> \\out -> 'writeFile'' out \"*.txt\"
 -- @
+--
+--   In this example @hello.txt@ will match the first rule, instead of raising an error about ambiguity.
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
     where
@@ -180,7 +194,7 @@ alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
 --   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
 --   see 'Development.Shake.want'.
 action :: Action a -> Rules ()
-action a = newRules mempty{actions=[a >> return ()]}
+action a = newRules mempty{actions=[void a]}
 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing
@@ -198,16 +212,21 @@ registerWitnesses SRules{..} =
 
 data RuleInfo m = RuleInfo
     {stored :: Key -> IO (Maybe Value)
+    ,equal :: Key -> Value -> Value -> EqualCost
     ,execute :: Key -> m Value
     ,resultType :: TypeRep
     }
 
 createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (execute rs) tv
+createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
                   f _ = storedValue opt
+
+        equal ((_,ARule r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
+            where f :: Rule key value => (key -> Maybe (m value)) -> key -> value -> value -> EqualCost
+                  f _ = equalValue opt
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
@@ -221,6 +240,11 @@ runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just RuleInfo{..} -> stored k
+
+runEqual :: Map.HashMap TypeRep (RuleInfo m) -> Key -> Value -> Value -> EqualCost
+runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
+    Nothing -> NotEqual
+    Just RuleInfo{..} -> equal k v1 v2
 
 runExecute :: Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
@@ -296,7 +320,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let output v = outputLocked v . abbreviate shakeAbbreviations
 
     except <- newIORef (Nothing :: Maybe (String, SomeException))
-    let staunch act | not shakeStaunch = act >> return ()
+    let staunch act | not shakeStaunch = void act
                     | otherwise = do
             res <- try act
             case res of
@@ -344,15 +368,15 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent
-                    checkValid database (runStored ruleinfo) absent
+                    checkValid database (runStored ruleinfo) (runEqual ruleinfo) absent
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
-                when (isJust shakeReport) $ do
+                when (shakeReport /= []) $ do
                     addTiming "Profile report"
-                    let file = fromJust shakeReport
-                    json <- showJSON database
-                    when (shakeVerbosity >= Normal) $
-                        output Normal $ "Writing HTML report to " ++ file
-                    buildReport json file
+                    report <- toReport database
+                    forM_ shakeReport $ \file -> do
+                        when (shakeVerbosity >= Normal) $
+                            output Normal $ "Writing report to " ++ file
+                        buildReport report file
             maybe (return ()) (throwIO . snd) =<< readIORef except
             sequence_ . reverse =<< readIORef after
 
@@ -366,7 +390,7 @@ abbreviate [] = id
 abbreviate abbrev = f
     where
         -- order so longer appreviations are preferred
-        ordAbbrev = reverse $ sortBy (compare `on` length . fst) abbrev
+        ordAbbrev = sortBy (flip (compare `on` length . fst)) abbrev
 
         f [] = []
         f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
@@ -433,7 +457,7 @@ applyKeyValue ks = do
             evaluate $ rnf ans
             return ans
     stack <- Action $ getsRW localStack
-    res <- liftIO $ build globalPool globalDatabase (Ops (runStored globalRules) exec) stack ks
+    res <- liftIO $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
     case res of
         Left err -> throw err
         Right (dur, dep, vs) -> do
@@ -460,7 +484,7 @@ traced msg act = do
     Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
     start <- liftIO globalTimestamp
-    putNormal $ "# " ++ msg ++ " " ++ showTopStack stack
+    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
     res <- liftIO act
     stop <- liftIO globalTimestamp
     Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) start stop : localTraces s}

@@ -9,7 +9,7 @@ module Development.Shake.Database(
     Ops(..), build, Depends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
-    showJSON, checkValid,
+    toReport, checkValid,
     ) where
 
 import Development.Shake.Classes
@@ -20,10 +20,12 @@ import Development.Shake.Errors
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
+import Development.Shake.Report
 import General.Base
 import General.String
 import General.Intern as Intern
 
+import Control.Applicative
 import Control.Exception
 import Control.Monad
 import qualified Data.HashSet as Set
@@ -185,6 +187,8 @@ lookupDependencies Database{..} k = do
 data Ops = Ops
     {stored :: Key -> IO (Maybe Value)
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
+    ,equal :: Key -> Value -> Value -> EqualCost
+        -- ^ Given both Values, see if they are equal and how expensive that check was
     ,execute :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     }
@@ -252,12 +256,25 @@ build pool Database{..} Ops{..} stack ks = do
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
-                    b <- case assume of
-                        Just AssumeDirty -> return False
-                        Just AssumeSkip -> return True
-                        _ -> fmap (== Just (result r)) $ stored k
-                    diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-                    if not b then run stack i k $ Just r else check stack i k r (depends r)
+                    let out b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
+                    let continue r = out True >> check stack i k r (depends r)
+                    let rebuild = out False >> run stack i k (Just r)
+                    case assume of
+                        Just AssumeDirty -> rebuild
+                        Just AssumeSkip -> continue r
+                        _ -> do
+                            s <- stored k
+                            case s of
+                                Just s -> case equal k (result r) s of
+                                    NotEqual -> rebuild
+                                    EqualCheap -> continue r
+                                    EqualExpensive -> do
+                                        -- warning, have the db lock while appending (may harm performance)
+                                        r <- return r{result=s}
+                                        journal i (k, Loaded r)
+                                        i #= (k, Loaded r)
+                                        continue r
+                                _ -> rebuild
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
@@ -391,31 +408,32 @@ resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends =
 removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
-showJSON :: Database -> IO String
-showJSON Database{..} = do
+toReport :: Database -> IO [ReportEntry]
+toReport Database{..} = do
     status <- fmap (removeStep . resultsOnly) $ readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]
 
         steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
-                in Map.fromList $ zip (reverse $ sort xs) [0..]
+                in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
 
-        f (k, Result{..})  =
-            let xs = ["name:" ++ show (show k)
-                     ,"built:" ++ showStep built
-                     ,"changed:" ++ showStep changed
-                     ,"depends:" ++ show (mapMaybe (`Map.lookup` ids) (concat depends))
-                     ,"execution:" ++ show execution] ++
-                     ["traces:[" ++ intercalate "," (map showTrace traces) ++ "]" | not $ null traces]
-                showStep i = show $ fromJust $ Map.lookup i steps
-                showTrace (Trace a b c) = "{start:" ++ show b ++ ",stop:" ++ show c ++ ",command:" ++ show (unpack a) ++ "}"
-            in  ["{" ++ intercalate ", " xs ++ "}"]
-    return $ "[" ++ intercalate "\n," (concat [maybe (error "Internal error in showJSON") f $ Map.lookup i status | i <- order]) ++ "\n]"
+        f (k, Result{..}) = ReportEntry
+            {repName = show k
+            ,repBuilt = fromStep built
+            ,repChanged = fromStep changed
+            ,repDepends = mapMaybe (`Map.lookup` ids) (concat depends)
+            ,repExecution = fromFloat execution
+            ,repTraces = map fromTrace traces
+            }
+            where fromStep i = fromJust $ Map.lookup i steps
+                  fromTrace (Trace a b c) = ReportTrace (unpack a) (fromFloat b) (fromFloat c)
+                  fromFloat = fromRational . toRational
+    return $ [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> [(Key, Key)] -> IO ()
-checkValid Database{..} stored missing = do
+checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
+checkValid Database{..} stored equal missing = do
     status <- readIORef status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
@@ -424,7 +442,7 @@ checkValid Database{..} stored missing = do
     bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             now <- stored key
-            let good = now == Just result
+            let good = maybe False ((==) EqualCheap . equal key result) now
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
@@ -494,11 +512,12 @@ instance BinaryWith Witness Step where
 
 instance BinaryWith Witness Result where
     putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map BinList x4) >> put (BinFloat x5) >> put (BinList x6)
-    getWith ws = do x1 <- getWith ws; x2 <- get; x3 <- get; BinList x4 <- get; BinFloat x5 <- get; BinList x6 <- get; return $ Result x1 x2 x3 (map fromBinList x4) x5 x6
+    getWith ws = (\x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> Result x1 x2 x3 (map fromBinList x4) x5 x6) <$>
+        getWith ws <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
-    get = do a <- get; BinFloat b <- get; BinFloat c <- get; return $ Trace a b c
+    get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
 
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0

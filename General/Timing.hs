@@ -1,11 +1,10 @@
 
 module General.Timing(resetTimings, addTiming, printTimings) where
 
-import Control.Arrow
 import Data.IORef
 import Data.Time
 import System.IO.Unsafe
-import Numeric
+import General.Base
 
 
 {-# NOINLINE timings #-}
@@ -51,8 +50,3 @@ showTimings stop times = showGap $
 showGap :: [(String,String)] -> [String]
 showGap xs = [a ++ replicate (n - length a - length b) ' ' ++ b | (a,b) <- xs]
     where n = maximum [length a + length b | (a,b) <- xs]
-
-
-showDP :: Int -> Double -> String
-showDP n x = a ++ "." ++ b ++ replicate (n - length b) '0'
-    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""

@@ -1,7 +1,14 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
--- | /Deprecated:/ This module should no longer be imported as all the functions are available directly
---   from "Development.Shake". In future versions this module will be removed.
+-- | This module provides functions for calling command line programs, primarily
+--   'command' and 'cmd'. As a simple example:
+--
+-- @
+-- 'command' [] \"gcc\" [\"-c\",myfile]
+-- @
+--
+--   The functions from this module are now available directly from "Development.Shake".
+--   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd,
     Stdout(..), Stderr(..), Exit(..),
@@ -103,7 +110,8 @@ commandExplicit funcName copts results exe args = do
         let skipper act = if null results && not (shakeRunCommands opts) then return [] else act
 
         let verboser act = do
-                putLoud $ saneCommandForUser exe args
+                let cwd = listToMaybe $ reverse [x | Cwd x <- copts]
+                putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ saneCommandForUser exe args
                 (if verb >= Loud then quietly else id) act
 
         let tracer = case reverse [x | Traced x <- copts] of
@@ -167,10 +175,7 @@ commandExplicitIO funcName opts results exe args =
       (inh, outh, errh, pid) <- case ans of
           Right a -> return a
           Left err -> do
-              let msg = "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-                        "Command: " ++ saneCommandForUser exe args ++ "\n" ++
-                        show (err :: SomeException)
-              error msg
+              error $ msgPrefix ++ show (err :: SomeException)
 
       let close = maybe (return ()) hClose
       flip onException
@@ -234,19 +239,22 @@ commandExplicitIO funcName opts results exe args =
 -- END COPIED
 
         when (ResultCode ExitSuccess `notElem` results && ex /= ExitSuccess) $ do
-            let msg = "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-                      "Command: " ++ saneCommandForUser exe args ++ "\n" ++
-                      "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-                      (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
-                       else if null err then "Stderr was empty"
-                       else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
-            error msg
+            error $ msgPrefix ++
+                    "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
+                    (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
+                    else if null err then "Stderr was empty"
+                    else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
 
         return $ flip map results $ \x -> case x of
             ResultStdout _ -> ResultStdout out
             ResultStderr _ -> ResultStderr err
             ResultCode   _ -> ResultCode ex
     where
+        msgPrefix =
+            "Development.Shake." ++ funcName ++ ", system command failed\n" ++
+            "Command: " ++ saneCommandForUser exe args ++ "\n" ++
+            (case cwd cp of Nothing -> ""; Just v -> "Current directory: " ++ v ++ "\n")
+
         input = last $ "" : [x | Stdin x <- opts]
 
         -- what should I do with these handles
@@ -363,7 +371,7 @@ command opts x xs = fmap b $ commandExplicit "command" opts a x xs
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
-command_ opts x xs = commandExplicit "command_" opts [] x xs >> return ()
+command_ opts x xs = void $ commandExplicit "command_" opts [] x xs
 
 
 ---------------------------------------------------------------------

@@ -121,8 +121,8 @@ library
         Development.Shake.Database
         Development.Shake.Derived
         Development.Shake.Errors
+        Development.Shake.FileInfo
         Development.Shake.FilePattern
-        Development.Shake.FileTime
         Development.Shake.Pool
         Development.Shake.Progress
         Development.Shake.Report
@@ -231,6 +231,7 @@ test-suite shake-test
         Examples.Test.Cache
         Examples.Test.Command
         Examples.Test.Config
+        Examples.Test.Digest
         Examples.Test.Directory
         Examples.Test.Docs
         Examples.Test.Errors

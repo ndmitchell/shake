@@ -44,6 +44,7 @@ function /* export */ summary(dat) // :: Data -> Summary
         ,countTrace : 0, countTraceLast : 0 // :: Int, traced commands run
         ,sumTrace : 0, sumTraceLast : 0 // :: Seconds, time running traced commands
         ,maxTrace : 0 // :: Seconds, longest traced command
+        ,maxTraceName : "" // :: String, longest trace command
         ,maxTraceStopLast : 0 // :: Seconds, time the last traced command stopped
         };
 
@@ -67,6 +68,7 @@ function /* export */ summary(dat) // :: Data -> Summary
             res.sumTrace += time;
             res.sumTraceLast += isLast ? time : 0;
             res.maxTrace = Math.max(res.maxTrace, time);
+            if (res.maxTrace == time) res.maxTraceName = traces[j].command;
             res.maxTraceStopLast = Math.max(res.maxTraceStopLast, isLast ? traces[j].stop : 0);
         }
     }
@@ -79,7 +81,7 @@ function /* export */ showSummary(sum) // Summary -> [String]
            ,"There are " + sum.count + " rules (" + sum.countLast + " rebuilt in the last run)."
            ,"Building required " + sum.countTrace + " traced commands (" + sum.countTraceLast + " in the last run)."
            ,"The total (unparallelised) build time is " + showTime(sum.sumExecution) + " of which " + showTime(sum.sumTrace) + " is traced commands."
-           ,"The longest rule takes " + showTime(sum.maxExecution) + ", and the longest traced command takes " + showTime(sum.maxTrace) + "."
+           ,"The longest rule takes " + showTime(sum.maxExecution) + " (" + sum.maxExecutionName + ") and the longest traced command takes " + showTime(sum.maxTrace) + " (" + sum.maxTraceName + ")."
            ,"Last run gave an average parallelism of " + (sum.maxTraceStopLast === 0 ? 0 : sum.sumTraceLast / sum.maxTraceStopLast).toFixed(2) + " times over " + showTime(sum.maxTraceStopLast) + "."
            ];
 }

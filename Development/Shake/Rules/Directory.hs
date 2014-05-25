@@ -263,7 +263,7 @@ removeFiles dir pat = void $ f ""
             (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
             noDirs <- fmap and $ mapM f dirs
             let (del,keep) = partition test files
-            mapM_ IO.removeFile $ map (dir </>) del
+            forM del $ \d -> IO.removeFile $ dir </> d
             let die = noDirs && null keep && not (null xs)
             when die $ IO.removeDirectory $ dir </> dir2
             return die
@@ -272,4 +272,6 @@ removeFiles dir pat = void $ f ""
 -- | Remove files, like 'removeFiles', but executed after the build completes successfully.
 --   Useful for implementing @clean@ actions that delete files Shake may have open for building.
 removeFilesAfter :: FilePath -> [FilePattern] -> Action ()
-removeFilesAfter a b = runAfter $ removeFiles a b
+removeFilesAfter a b = do
+    putLoud $ "Will remove " ++ unwords b ++ " from " ++ a
+    runAfter $ removeFiles a b

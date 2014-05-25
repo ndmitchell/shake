@@ -14,7 +14,7 @@ import Development.Shake.Core
 import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePath
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 
 infix 1 ??>
 
@@ -29,16 +29,19 @@ newtype File_Q = File_Q BSU
 
 instance Show File_Q where show (File_Q x) = unpackU x
 
-newtype File_A = File_A (Maybe FileTime)
+newtype File_A = File_A (Maybe ModTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule File_Q File_A where
-    storedValue _ (File_Q x) = fmap (fmap (File_A . Just)) $ getModTimeMaybe x
+    storedValue _ (File_Q x) = fmap (fmap (File_A . Just . fst)) $ getFileInfo x
 
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $
-    liftIO $ fmap (File_A . Just) $ getModTimeError "Error, file does not exist and no rule available:" x
+defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ liftIO $ do
+    res <- getFileInfo x
+    case res of
+        Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
+        Just (mt,_) -> return $ File_A $ Just mt
 
 
 need_ :: [FilePath] -> Action ()
@@ -54,6 +57,6 @@ data Phony = Phony | NotPhony deriving Eq
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         res <- act x
-        liftIO $ fmap File_A $ if res == Phony
+        liftIO $ fmap (File_A . fmap fst) $ if res == Phony
             then return Nothing
-            else getModTimeMaybe x_
+            else getFileInfo x_

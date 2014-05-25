@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, PatternGuards #-}
+{-# LANGUAGE PatternGuards #-}
 
 -- | A Ninja style environment, basically a linked-list of mutable hash tables.
 module Development.Ninja.Env(

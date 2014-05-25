@@ -20,7 +20,7 @@ main = shaken test $ \args obj -> do
         return stderr
 
     "ghc-random2" !> do
-        () <- cmd (EchoStderr False) "ghc --random"
+        () <- cmd (EchoStderr False) (Cwd $ obj "") "ghc --random"
         return ""
 
     "triple" !> do
@@ -49,7 +49,7 @@ test build obj = do
     assertContentsInfix (obj "ghc-random") "unrecognised flag"
     assertContentsInfix (obj "ghc-random") "--random"
 
-    crash ["ghc-random2"] ["unrecognised flag","--random"]
+    crash ["ghc-random2"] [obj "","unrecognised flag","--random"]
 
     build ["pwd"]
     assertContentsInfix (obj "pwd") "command"

@@ -4,9 +4,12 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (*>), (**>), (?>), phony, (~>)
+    (*>), (|*>), (**>), (?>), phony, (~>),
+    -- * Internal only
+    FileQ(..), FileA
     ) where
 
+import Control.Applicative hiding ((*>))
 import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
@@ -17,38 +20,75 @@ import qualified Development.Shake.Core as S
 import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePattern
-import Development.Shake.FileTime
+import Development.Shake.FileInfo
 import Development.Shake.Types
 import Development.Shake.Errors
 
+import Data.Bits
 import Data.List
 import Data.Maybe
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
+import System.IO.Unsafe(unsafeInterleaveIO)
 
 
-infix 1 *>, ?>, **>, ~>
+infix 1 *>, ?>, |*>, **>, ~>
+
+-- | /Deprecated:/ Alias for '|*>'.
+(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(**>) = (|*>)
 
 
-newtype FileQ = FileQ BSU
+newtype FileQ = FileQ {fromFileQ :: BSU}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show FileQ where show (FileQ x) = unpackU x
 
-newtype FileA = FileA FileTime
-    deriving (Typeable,Hashable,Binary,NFData)
+data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
+    deriving (Typeable,Eq)
 
-instance Eq FileA where FileA x == FileA y = x /= fileTimeNone && x == y
+instance Hashable FileA where
+    hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
 
-instance Show FileA where show (FileA x) = "FileTimeHash " ++ show x
+instance NFData FileA where
+    rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
+
+instance Binary FileA where
+    put (FileA a b c) = put a >> put b >> put c
+    get = liftA3 FileA get get get
+
+instance Show FileA where
+    show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
 instance Rule FileQ FileA where
-    storedValue _ (FileQ x) = fmap (fmap FileA) $ getModTimeMaybe x
+    storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
+        res <- getFileInfo x
+        case res of
+            Nothing -> return Nothing
+            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoVal
+            Just (time,size) -> do
+                hash <- unsafeInterleaveIO $ getFileHash x
+                return $ Just $ FileA (if c == ChangeDigest then fileInfoVal else time) size hash
+
+    equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+        ChangeModtime -> bool $ x1 == y1
+        ChangeDigest -> bool $ x2 == y2 && x3 == y3
+        ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+        _ -> if x1 == y1 then EqualCheap
+             else if x2 == y2 && x3 == y3 then EqualExpensive
+             else NotEqual
+        where bool b = if b then EqualCheap else NotEqual
+
+storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
+storedValueError opts input msg x = fromMaybe (error err) <$> storedValue opts2 x
+    where err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+          opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = priority 0 $ rule $ \(FileQ x) -> Just $
-    liftIO $ fmap FileA $ getModTimeError "Error, file does not exist and no rule available:" x
+defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
+    opts <- getShakeOptions
+    liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -87,10 +127,11 @@ neededBS xs = do
 
 neededCheck :: [BSU] -> Action ()
 neededCheck xs = do
-    pre <- liftIO $ mapM getModTimeMaybe xs
+    opts <- getShakeOptions
+    pre <- liftIO $ mapM (storedValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, FileA b) <- zip3 xs pre post, Just b /= a]
+              | (x, a, b) <- zip3 xs pre post, Just b /= a]
     case bad of
         [] -> return ()
         (file,msg):_ -> errorStructured
@@ -143,7 +184,8 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
-        liftIO $ fmap FileA $ getModTimeError ("Error, rule " ++ help ++ " failed to build file:") x_
+        opts <- getShakeOptions
+        liftIO $ storedValueError opts False ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
 
 
 -- | Declare a phony action -- an action that does not produce a file, and will be rerun
@@ -157,7 +199,7 @@ phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
         act
-        return $ FileA fileTimeNone
+        return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
@@ -179,14 +221,16 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 (?>) test act = priority 0.5 $ root "with ?>" test act
 
 
--- | Define a set of patterns, and if any of them match, run the associated rule. See '*>'.
-(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
--- Should probably have been called |*>, since it's an or (||) of *>
-(**>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
-    where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with **>" (\x -> any ($ x) ps2) act
+-- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '*>'.
+--   Think of it as the OR (@||@) equivalent of '*>'.
+(|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(|*>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
+    where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with |*>" (\x -> any ($ x) ps2) act
 
--- | Define a rule that matches a 'FilePattern'. No file required by the system must be
---   matched by more than one pattern. For the pattern rules, see '?=='.
+-- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
+--   Patterns with no wildcards have higher priority than those with wildcards, and no file
+--   required by the system may be matched by more than one pattern at the same priority
+--   (see 'priority' and 'alternatives' to modify this behaviour).
 --   This function will create the directory for the result file, if necessary.
 --
 -- @
