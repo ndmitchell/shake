@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Shake profile demo</title>
+	<script src="jquery.js"></script>
+<style type="text/css">
+html, body, #root, iframe {margin:0;padding:0; height:100%;width:100%;border:0px;}
+body {scrolling:no;}
+</style>
+</head>
+<body>
+<table id="root">
+	<tr><td style="height:100px;">Below is a profile report, showing a graph of what file extensions depend on which bits:</td></td>
+	<tr><td><iframe src="report.html?mode=rule-graph&query=name%28/%28%5C.%5Ba-zA-Z0-9_%5D%2B%29%24/%2C%20%22%3F%3F%3F%22%29" /></td></tr>
+</table>
+</body>
+</html>
