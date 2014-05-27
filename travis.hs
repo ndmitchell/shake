@@ -1,6 +1,10 @@
 
 import Neil
 import System.Directory
+import Data.Function
+
+
+ms x = show $ ceiling $ x * 1000
 
 main = do
     -- grab ninja
@@ -10,7 +14,6 @@ main = do
     cmd "cp ninja/ninja nin"
     setCurrentDirectory "ninja"
 
-    let ms x = show $ ceiling $ x * 1000
     replicateM_ 3 $ do
         (ninjaVer, _) <- duration $ cmd "../nin --version"
         (shakeVer, _) <- duration $ cmd "shake --version"
@@ -23,6 +26,7 @@ main = do
         -- time Ninja
         cmd "../nin -t clean"
         (ninjaFull, _) <- duration $ cmd "../nin -j3 -d stats"
+        ninjaProfile ".ninja_log"
         (ninjaZero, _) <- duration $ cmd "../nin -j3 -d stats"
 
         -- time Shake
@@ -45,3 +49,14 @@ main = do
 
         when (ninjaZero + 0.1 < shakeZero) $
             error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
+
+
+ninjaProfile :: FilePath -> IO ()
+ninjaProfile src = do
+    src <- readFile src
+    let times = [(read start, read stop)
+                | start:stop:_ <- nubBy ((==) `on` (!! 3)) $
+                        reverse $ map words $ filter (not . isPrefixOf "#") $ lines src]
+    let work = sum $ map (uncurry subtract) times
+    let last = maximum $ map snd times
+    putStrLn $ "Ninja profile report: in " ++ show last ++ " ms did " ++ show work ++ " ms work, ratio of " ++ show (work / last)
