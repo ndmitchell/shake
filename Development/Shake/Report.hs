@@ -21,17 +21,12 @@ repTime ReportTrace{..} = repStop - repStart
 
 
 -- | Generates an report given some build system profiling data.
-buildReport :: [ReportEntry] -> FilePath -> IO ()
-buildReport reports out
-    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ showJSON reports
-    | takeExtension out == ".json" = writeFile out $ showJSON reports
-    | out == "-" = putStr $ unlines $ reportSummary reports
-    | otherwise = do
-        htmlDir <- getDataFileName "html"
-        report <- LBS.readFile $ htmlDir </> "report.html"
-        let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ showJSON reports
-                   | otherwise = LBS.readFile $ htmlDir </> name
-        LBS.writeFile out =<< runTemplate f report
+buildReport :: FilePath -> [ReportEntry] -> IO ()
+buildReport out xs
+    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ reportJSON xs
+    | takeExtension out == ".json" = writeFile out $ reportJSON xs
+    | out == "-" = putStr $ unlines $ reportSummary xs
+    | otherwise = LBS.writeFile out =<< reportHTML xs
 
 
 reportSummary :: [ReportEntry] -> [String]
@@ -52,8 +47,17 @@ reportSummary xs =
     where ls = filter ((==) 0 . repBuilt) xs
 
 
-showJSON :: [ReportEntry] -> String
-showJSON xs = "[" ++ intercalate "\n," (map showEntry xs) ++ "\n]"
+reportHTML :: [ReportEntry] -> IO LBS.ByteString
+reportHTML xs = do
+    htmlDir <- getDataFileName "html"
+    report <- LBS.readFile $ htmlDir </> "report.html"
+    let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ reportJSON xs
+               | otherwise = LBS.readFile $ htmlDir </> name
+    runTemplate f report
+
+
+reportJSON :: [ReportEntry] -> String
+reportJSON xs = "[" ++ intercalate "\n," (map showEntry xs) ++ "\n]"
     where
         showEntry ReportEntry{..} = (\xs -> "{" ++ intercalate ", " xs ++ "}") $
             ["\"name\":" ++ show repName
@@ -65,6 +69,9 @@ showJSON xs = "[" ++ intercalate "\n," (map showEntry xs) ++ "\n]"
         showTrace ReportTrace{..} =
             "{\"command\":" ++ show repCommand ++ ",\"start\":" ++ show repStart ++ ",\"stop\":" ++ show repStop ++ "}"
 
+
+---------------------------------------------------------------------
+-- TEMPLATE ENGINE
 
 -- | Template Engine. Perform the following replacements on a line basis:
 --

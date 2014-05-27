@@ -376,7 +376,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     forM_ shakeReport $ \file -> do
                         when (shakeVerbosity >= Normal) $
                             output Normal $ "Writing report to " ++ file
-                        buildReport report file
+                        buildReport file report
             maybe (return ()) (throwIO . snd) =<< readIORef except
             sequence_ . reverse =<< readIORef after
 
