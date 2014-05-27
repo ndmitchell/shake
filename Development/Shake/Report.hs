@@ -57,18 +57,21 @@ reportHTML xs = do
 
 
 reportJSON :: [ReportEntry] -> String
-reportJSON xs = "[" ++ intercalate "\n," (map showEntry xs) ++ "\n]"
+reportJSON = jsonListLines . map showEntry
     where
-        showEntry ReportEntry{..} = (\xs -> "{" ++ intercalate ", " xs ++ "}") $
-            ["\"name\":" ++ show repName
-            ,"\"built\":" ++ show repBuilt
-            ,"\"changed\":" ++ show repChanged
-            ,"\"depends\":" ++ show repDepends
-            ,"\"execution\":" ++ show repExecution] ++
-            ["\"traces\":[" ++ intercalate "," (map showTrace repTraces) ++ "]" | not $ null repTraces]
-        showTrace ReportTrace{..} =
-            "{\"command\":" ++ show repCommand ++ ",\"start\":" ++ show repStart ++ ",\"stop\":" ++ show repStop ++ "}"
+        showEntry ReportEntry{..} = jsonObject $
+            [("name", show repName)
+            ,("built", show repBuilt)
+            ,("changed", show repChanged)
+            ,("depends", show repDepends)
+            ,("execution", show repExecution)] ++
+            [("traces", jsonList $ map showTrace repTraces) | not $ null repTraces]
+        showTrace ReportTrace{..} = jsonObject
+            [("command",show repCommand), ("start",show repStart), ("stop",show repStop)]
 
+jsonListLines xs = "[" ++ intercalate "\n," xs ++ "\n]"
+jsonList xs = "[" ++ intercalate "," xs ++ "]"
+jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}"
 
 ---------------------------------------------------------------------
 -- TEMPLATE ENGINE
