@@ -26,7 +26,7 @@ main = do
         -- time Ninja
         cmd "../nin -t clean"
         (ninjaFull, _) <- duration $ cmd "../nin -j3 -d stats"
-        ninjaProfile ".ninja_log"
+        ninjaProfile "build/.ninja_log"
         (ninjaZero, _) <- duration $ cmd "../nin -j3 -d stats"
 
         -- time Shake
