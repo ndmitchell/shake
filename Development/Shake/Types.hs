@@ -98,7 +98,8 @@ data ShakeOptions = ShakeOptions
     ,shakeReport :: [FilePath]
         -- ^ Defaults to '[]'. Write a profiling report to a file, showing which rules rebuilt,
         --   why, and how much time they took. Useful for improving the speed of your build systems.
-        --   If the file extension is @.json@ it will write JSON data, if @.js@ it will write Javascript,
+        --   If the file extension is @.json@ it will write JSON data; if @.js@ it will write Javascript;
+        --   if @.trace@ it will write trace events (load into @about:\/\/tracing@ in Chrome);
         --   otherwise it will write HTML.
     ,shakeLint :: Maybe Lint
         -- ^ Defaults to 'Nothing'. Perform sanity checks during building, see 'Lint' for details.

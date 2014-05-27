@@ -25,6 +25,7 @@ buildReport :: FilePath -> [ReportEntry] -> IO ()
 buildReport out xs
     | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ reportJSON xs
     | takeExtension out == ".json" = writeFile out $ reportJSON xs
+    | takeExtension out == ".trace" = writeFile out $ reportTrace xs
     | out == "-" = putStr $ unlines $ reportSummary xs
     | otherwise = LBS.writeFile out =<< reportHTML xs
 
@@ -54,6 +55,20 @@ reportHTML xs = do
     let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ reportJSON xs
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
+
+
+reportTrace :: [ReportEntry] -> String
+reportTrace xs = jsonListLines $
+    showEntries 0 (concatMap repTraces xs) ++
+    showEntries 1 [y{repCommand=repName x} | x <- xs, y <- repTraces x]
+    where
+        showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortBy (compare `on` repStart) xs
+        alloc as r | (a1,an:a2) <- break (\a -> repStop a <= repStart r) as = (a1++r:a2, (length a1,r))
+                   | otherwise = (as++[r], (length as,r))
+        showEntry pid (tid, ReportTrace{..}) = jsonObject
+            [("args","{}"), ("ph",show "X"), ("cat",show "target")
+            ,("name",show repCommand), ("tid",show tid), ("pid",show pid)
+            ,("ts",show $ 1000000*repStart), ("dur",show $ 1000000*(repStop-repStart))]
 
 
 reportJSON :: [ReportEntry] -> String
