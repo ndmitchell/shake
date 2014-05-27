@@ -59,8 +59,8 @@ reportHTML xs = do
 
 reportTrace :: [ReportEntry] -> String
 reportTrace xs = jsonListLines $
-    showEntries 0 (concatMap repTraces xs) ++
-    showEntries 1 [y{repCommand=repName x} | x <- xs, y <- repTraces x]
+    showEntries 0 [y{repCommand=repName x} | x <- xs, y <- repTraces x] ++
+    showEntries 1 (concatMap repTraces xs)
     where
         showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortBy (compare `on` repStart) xs
         alloc as r | (a1,an:a2) <- break (\a -> repStop a <= repStart r) as = (a1++r:a2, (length a1,r))
