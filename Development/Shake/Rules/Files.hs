@@ -137,6 +137,7 @@ getFileTimes name xs = do
     ys <- liftIO $ mapM (storedValue opts) xs
     case sequence ys of
         Just ys -> return $ FilesA ys
+        Nothing | not $ shakeCreationCheck opts -> return $ FilesA []
         Nothing -> do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++

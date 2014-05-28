@@ -79,8 +79,9 @@ instance Rule FileQ FileA where
         where bool b = if b then EqualCheap else NotEqual
 
 storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
-storedValueError opts input msg x = fromMaybe (error err) <$> storedValue opts2 x
-    where err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
+    where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
+          err = msg ++ "\n  " ++ unpackU (fromFileQ x)
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
