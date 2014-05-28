@@ -92,7 +92,7 @@ library
         utf8-string >= 0.3,
         time,
         random,
-        transformers >= 0.2 && < 0.4,
+        transformers >= 0.2 && < 0.5,
         deepseq >= 1.1 && < 1.4
 
     if flag(portable)
@@ -164,7 +164,7 @@ executable shake
         utf8-string >= 0.3,
         time,
         random,
-        transformers >= 0.2 && < 0.4,
+        transformers >= 0.2 && < 0.5,
         deepseq >= 1.1 && < 1.4
 
     if flag(portable)
@@ -201,7 +201,7 @@ test-suite shake-test
         utf8-string >= 0.3,
         time,
         random,
-        transformers >= 0.2 && < 0.4,
+        transformers >= 0.2 && < 0.5,
         deepseq >= 1.1 && < 1.4,
         QuickCheck >= 2.0
 
