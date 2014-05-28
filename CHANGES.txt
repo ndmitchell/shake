@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Remove all package upper bounds
     #126, Ninja compatibility if Ninja fails to create a file
     #123, generate Chrome compatible traces
 0.13

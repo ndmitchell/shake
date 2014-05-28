@@ -83,17 +83,17 @@ library
         base == 4.*,
         old-time,
         directory,
-        hashable >= 1.1.2.3 && < 1.3,
+        hashable >= 1.1.2.3,
         binary,
         filepath,
         process >= 1.1,
-        unordered-containers >= 0.2.1 && < 0.3,
+        unordered-containers >= 0.2.1,
         bytestring,
         utf8-string >= 0.3,
         time,
         random,
-        transformers >= 0.2 && < 0.5,
-        deepseq >= 1.1 && < 1.4
+        transformers >= 0.2,
+        deepseq >= 1.1
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -155,17 +155,17 @@ executable shake
         base == 4.*,
         old-time,
         directory,
-        hashable >= 1.1.2.3 && < 1.3,
+        hashable >= 1.1.2.3,
         binary,
         filepath,
         process >= 1.1,
-        unordered-containers >= 0.2.1 && < 0.3,
+        unordered-containers >= 0.2.1,
         bytestring,
         utf8-string >= 0.3,
         time,
         random,
-        transformers >= 0.2 && < 0.5,
-        deepseq >= 1.1 && < 1.4
+        transformers >= 0.2,
+        deepseq >= 1.1
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -192,17 +192,17 @@ test-suite shake-test
         base == 4.*,
         old-time,
         directory,
-        hashable >= 1.1.2.3 && < 1.3,
+        hashable >= 1.1.2.3,
         binary,
         filepath,
         process >= 1.1,
-        unordered-containers >= 0.2.1 && < 0.3,
+        unordered-containers >= 0.2.1,
         bytestring,
         utf8-string >= 0.3,
         time,
         random,
-        transformers >= 0.2 && < 0.5,
-        deepseq >= 1.1 && < 1.4,
+        transformers >= 0.2,
+        deepseq >= 1.1,
         QuickCheck >= 2.0
 
     if flag(portable)
