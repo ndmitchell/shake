@@ -17,7 +17,7 @@ main = do
     resetTimings
     args <- getArgs
     withArgs ("--no-time":args) $
-        shakeArgsWith shakeOptions flags $ \opts targets -> do
+        shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
             let tool = listToMaybe [x | Tool x <- opts]
             makefile <- case reverse [x | UseMakefile x <- opts] of
                 x:_ -> return x
