@@ -51,6 +51,14 @@ test build obj = do
     run "-f../../Examples/Ninja/test5.ninja"
     assertExists $ obj "output file"
 
+    writeFile (obj "nocreate.log") ""
+    writeFile (obj "nocreate.in") ""
+    run "-f../../Examples/Ninja/nocreate.ninja"
+    assertNonSpace (obj "nocreate.log") "x"
+    run "-f../../Examples/Ninja/nocreate.ninja"
+    run "-f../../Examples/Ninja/nocreate.ninja"
+    assertNonSpace (obj "nocreate.log") "xxx"
+
     writeFile (obj "input") ""
     runFail "-f../../Examples/Ninja/lint.ninja bad --lint" "'needed' file required rebuilding"
     run "-f../../Examples/Ninja/lint.ninja good --lint"
