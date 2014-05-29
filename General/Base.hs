@@ -10,7 +10,7 @@ module General.Base(
     showDP, showTime,
     modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM,
-    fastNub, showQuote,
+    fastNub, showQuote, word1,
     withBufferMode, withCapabilities
     ) where
 
@@ -157,6 +157,10 @@ fastNub = f Set.empty
 showQuote :: String -> String
 showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
              | otherwise = xs
+
+
+word1 :: String -> (String, String)
+word1 x = second (dropWhile isSpace) $ break isSpace $ dropWhile isSpace x
 
 
 ---------------------------------------------------------------------
