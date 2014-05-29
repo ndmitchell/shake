@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix --report=- for builds with no commands in them
 0.13.1
     Remove all package upper bounds
     #126, Ninja compatibility if Ninja fails to create a file

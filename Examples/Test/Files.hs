@@ -35,4 +35,5 @@ test build obj = do
         assertContents (obj "even.txt") $ nums [2,4,2]
         assertContents (obj "odd.txt" ) $ nums [1,5,3,1]
         build ["clean"]
+        build ["--no-build","--report=-"]
         build ["dir1/out.txt"]

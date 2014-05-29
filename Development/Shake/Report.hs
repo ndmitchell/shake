@@ -37,7 +37,7 @@ reportSummary xs =
     ,let f = show . sum . map (length . repTraces) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
     ,"* The total (unparallelised) build time is " ++ showTime (sum $ map repExecution xs) ++
         " of which " ++ showTime (sum $ map repTime $ concatMap repTraces xs) ++ " is traced commands."
-    ,let f = (\(a,b) -> showTime a ++ " (" ++ b ++ ")") . maximumBy (compare `on` fst) in
+    ,let f xs = if null xs then "0s" else (\(a,b) -> showTime a ++ " (" ++ b ++ ")") $ maximumBy (compare `on` fst) xs in
         "* The longest rule takes " ++ f (map (repExecution &&& repName) xs) ++
         ", and the longest traced command takes " ++ f (map (repTime &&& repCommand) $ concatMap repTraces xs) ++ "."
     ,let sumLast = sum $ map repTime $ concatMap repTraces ls
