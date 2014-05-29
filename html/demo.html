@@ -4,15 +4,69 @@
 	<meta charset="UTF-8" />
 	<title>Shake profile demo</title>
 	<script src="jquery.js"></script>
+
+<script>
+function at(args,desc)
+{
+    var url = "";
+    for (var x in args)
+        url += (url == "" ? "?" : "&") + x + "=" + escape(args[x]);
+    return {url:url,desc:desc};
+}
+
+var items =
+    [at({}, "The summary supplies the overall data about the build. Looking at the build below, we can see there was 1 execution, involving 80 files and 27 command lines. If we ran the build sequentially, we'd expect it to take 42.95s, but parallelism reduced that to 12.28s.")
+    ,at({mode:"help"}, "These reports provide a way of filtering, grouping and viewing the result of running a Shake build system. A query is entered at the top using the text box, run using the 'Run' button, and produces a report whose type is selected from the drop-down box. The 'Link' hyperlink provides a link to the currently entered query, which is useful for copying/sharing. The help page provides lots of good example reports.")
+    ,at({mode:"cmd-plot"}, "The command plot view shows how many commands were executing at each point throughout the build. We can see the build runs about 6 parallel 'cl' commands to start with, then at the end runs a single 'link' command. We could speed up the build if we could make the 'link' phase run in parallel or reduce it's time.")
+    ,at({mode:"cmd-plot",query:"name(/(\.[a-zA-Z0-9_]+)$/, \"???\")"}, "Staying on the command plot view, we can now group by extension of the file being produced, instead of the command being run. We use a regular expression to 'name' in the filter, where the matched expression produces a group (this example is available on the 'Help' tab). We can now see the 'link' phase creates '.lib' files quickly then spends a lot of time producing '.exe' files.")
+    ,at({mode:"cmd-table"}, "The command table gives us the data from the plot in tabular form. We can see there are 25 'cl' commands and 2 'link' commands. While this table shows the 'cl' calls taking 86% of the time, we know from the plot that these calls are mostly parallelised.")
+    ,at({mode:"cmd-table",query:"group(command() + \" - \" + name())"}, "Since there are only 27 commands in total we can view all commands separately by grouping on the command plus the name of the file (which is probably unique). We can see the slowest action is the 'link' phase producing 'ninja.exe' in 5.26s.")
+    ]
+var i = 0;
+
+function update()
+{
+    $("#desc").text(items[i].desc);
+    $("iframe").attr("src", "report.html" + items[i].url);
+    $("#count").text((i+1) + " of " + items.length);
+}
+
+function goBack()
+{
+    if (i > 0) {
+        i--;
+        update();
+    }
+}
+
+function goNext()
+{
+    if (i < items.length - 1){
+        i++;
+        update();
+    }
+}
+
+$(update);
+</script>
+
 <style type="text/css">
-html, body, #root, iframe {margin:0;padding:0; height:100%;width:100%;border:0px;}
-body {scrolling:no;}
+html, body, #root, iframe {margin:0px;padding:0px;height:100%;width:100%;border:0px;}
+body {font-family: sans-serif; font-size: 10pt;}
+body {overflow: hidden;}
+
+#top {height: 75px; background-color: #ffa; vertical-align: top;}
 </style>
+
 </head>
-<body>
-<table id="root">
-	<tr><td style="height:100px;">Below is a profile report, showing a graph of what file extensions depend on which bits:</td></td>
-	<tr><td><iframe src="report.html?mode=rule-graph&query=name%28/%28%5C.%5Ba-zA-Z0-9_%5D%2B%29%24/%2C%20%22%3F%3F%3F%22%29" /></td></tr>
-</table>
-</body>
+<body><table id="root" cellpadding="0" cellspacing="0">
+	<tr><td id="top"><div style="margin:3px;">
+        <b>Shake Profiling Examples</b>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <a href="javascript:goBack()">&lt; Back</a>
+        <span id="count">N of M</span>
+        <a href="javascript:goNext()">Next &gt;</a><br/>
+        <p style="margin-top:4px;" id="desc"></p></div></td></td>
+	<tr><td><iframe src="report.html?mode=rule-graph&amp;query=name%28/%28%5C.%5Ba-zA-Z0-9_%5D%2B%29%24/%2C%20%22%3F%3F%3F%22%29" /></td></tr>
+</table></body>
 </html>
