@@ -151,10 +151,16 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
         -- Predicted build time for a rule that has never been built before
         -- The high decay means if a build goes in "phases" - lots of source files, then lots of compiling
         -- we reach a reasonable number fairly quickly, without bouncing too much
-        ruleTime = iff ((==) 0 <$> samples) (pure 0) $ decay 10 time $ fmap fromInt samples
+        ruleTime = liftA2 weightedAverage
+            (f (decay 10) timeBuilt countBuilt)
+            (f (liftA2 (/)) (fst . timeTodo) (\Progress{..} -> countTodo - snd timeTodo))
+            -- don't call decay on todo, since it goes up and down (as things get done)
             where
-                time = flip fmap progress $ \Progress{..} -> timeBuilt + fst timeTodo
-                samples = flip fmap progress $ \Progress{..} -> countBuilt + countTodo - snd timeTodo
+                weightedAverage (w1,x1) (w2,x2)
+                    | w1 == 0 && w2 == 0 = 0
+                    | otherwise = ((fromInt w1 * x1) + (fromInt w2 * x2)) / fromInt (w1+w2)
+
+                f divide time count = let xs = count <$> progress in liftA2 (,) xs $ divide (time <$> progress) (fromInt <$> xs)
 
         -- Number of seconds work remaining, ignoring multiple threads
         todo = f <$> progress <*> ruleTime
