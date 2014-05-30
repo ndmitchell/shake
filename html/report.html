@@ -139,7 +139,7 @@ ul.space {padding-left: 20px;}
 	</ul>
 	<h3>Query language</h3>
 	<p>
-		The query language takes is a Javascript expression which produces <code>true</code> to include the row, and may call <code>group</code> to indicate grouping. The standard Javascript operators (e.g. <code>==</code> and <code>&amp;&amp;</code>). Anything which takes a <code>RegExp</code> can also accept a <code>string</code>, which is then treated as a literal unanchored regular expression. The following functions are available:
+		The query language is a Javascript expression which produces <code>true</code> to include the row, and may call <code>group</code> to indicate grouping. You can use the standard Javascript operators (e.g. <code>==</code> and <code>&amp;&amp;</code>). Anything which takes a <code>RegExp</code> can also accept a <code>string</code>, which is then treated as a literal unanchored regular expression. The following functions are available:
 	</p>
 	<ul class="space">
 		<li><code>group(x : string) : true</code> - assign this item the given group. Multiple calls to <code>group</code> result in a space-separated name. The group name can also be set using <code>name</code> or <code>command</code> with captured regular expressions.</li>
