@@ -10,7 +10,7 @@ function at(args,desc)
 {
     var url = "";
     for (var x in args)
-        url += (url == "" ? "?" : "&") + x + "=" + escape(args[x]);
+        url += (url == "" ? "?" : "&") + x + "=" + escape(args[x]).replace(/\+/g,"%2B");
     return {url:url,desc:desc};
 }
 

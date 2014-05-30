@@ -29,7 +29,7 @@ var report = {}; // :: Report
 function reportURL(report) // :: Report -> URL
 {
     return "?mode=" + report.mode +
-           (report.query === defaultQuery ? "" : "&query=" + escape(report.query).replace("+","%2B")) +
+           (report.query === defaultQuery ? "" : "&query=" + escape(report.query).replace(/\+/g,"%2B")) +
            (report.sort === undefined || (!report.sortRev && report.sort === defaultSort) ? "" :
                "&sort=" + (report.sortRev ? "!" : "") + report.sort);
 }
