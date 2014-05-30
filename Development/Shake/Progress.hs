@@ -119,6 +119,8 @@ posMealy = scanMealy (+) 0 $ pure 1
 --      -------------
 --      b + f*(b'-b)
 -- when f == 1, r == r'
+--
+-- both streams must only ever increase
 decay :: Double -> Mealy i Double -> Mealy i Double -> Mealy i Double
 decay f a b = scanMealy step 0 $ (,) <$> oldMealy 0 a <*> oldMealy 0 b
     where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
