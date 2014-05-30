@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #124, add a profile report demo
     #128, allow long Ninja command lines
     Fix --report=- for builds with no commands in them
 0.13.1
