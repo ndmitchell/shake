@@ -21,6 +21,7 @@ import Data.List
 import Data.Maybe
 import Data.Monoid
 import qualified Data.ByteString.Char8 as BS
+import General.Base
 import System.IO.Unsafe
 
 #ifdef mingw32_HOST_OS
@@ -143,7 +144,7 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
 
         -- Work done per second, don't divide by 0 and don't update if 'done' doesn't change
         donePerSec = iff ((==) 0 <$> done) (pure 1) perSecStable
-            where perSecStable = latch $ (,) <$> (uncurry (==) <$> oldMealy 0 done) <*> perSecRaw
+            where perSecStable = latch $ liftA2 (,) (uncurry (==) <$> oldMealy 0 done) perSecRaw
                   perSecRaw = decay 1.2 done secs
                   secs = ((*) sample . fromInt) <$> posMealy
 
@@ -160,11 +161,11 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
             where f Progress{..} ruleTime = fst timeTodo + (fromIntegral (snd timeTodo) * ruleTime)
 
         -- Display information
-        time = flip fmap ((/) <$> todo <*> donePerSec) $ \guess ->
+        time = flip fmap (liftA2 (/) todo donePerSec) $ \guess ->
             let (mins,secs) = divMod (ceiling guess) (60 :: Int)
             in (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs ++ "s"
         perc = iff ((==) 0 <$> done) (pure "0") $
-            (\done todo -> show (floor (100 * done / (done + todo)) :: Int)) <$> done <*> todo
+            liftA2' done todo $ \done todo -> show (floor (100 * done / (done + todo)) :: Int)
 
 
 ---------------------------------------------------------------------
