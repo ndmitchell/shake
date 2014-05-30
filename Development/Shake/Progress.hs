@@ -134,33 +134,31 @@ fromInt = fromInteger . toInteger
 message :: Double -> Mealy Progress Progress -> Mealy Progress String
 message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time <*> perc
     where
-        -- Number of seconds work completed
+        -- Number of seconds work completed in this build run
         -- Ignores timeSkipped which would be more truthful, but it makes the % drop sharply
         -- which isn't what users want
-        done = fmap timeBuilt progress
+        done = timeBuilt <$> progress
+
+        -- Work done per second, don't divide by 0 and don't update if 'done' doesn't change
+        donePerSec = iff ((==) 0 <$> done) (pure 1) perSecStable
+            where perSecStable = latch $ (,) <$> (uncurry (==) <$> oldMealy 0 done) <*> perSecRaw
+                  perSecRaw = decay 1.2 done secs
+                  secs = ((*) sample . fromInt) <$> posMealy
 
         -- Predicted build time for a rule that has never been built before
         -- The high decay means if a build goes in "phases" - lots of source files, then lots of compiling
         -- we reach a reasonable number fairly quickly, without bouncing too much
-        guess = iff ((==) 0 <$> samples) (pure 0) $ decay 10 time $ fmap fromInt samples
+        ruleTime = iff ((==) 0 <$> samples) (pure 0) $ decay 10 time $ fmap fromInt samples
             where
                 time = flip fmap progress $ \Progress{..} -> timeBuilt + fst timeTodo
                 samples = flip fmap progress $ \Progress{..} -> countBuilt + countTodo - snd timeTodo
 
         -- Number of seconds work remaining, ignoring multiple threads
-        todo = f <$> progress <*> guess
-            where f Progress{..} guess = fst timeTodo + (fromIntegral (snd timeTodo) * guess)
-
-        -- Number of seconds we have been going
-        step = fmap ((*) sample . fromInt) posMealy
-        work = decay 1.2 done step
-
-        -- Work value to use, don't divide by 0 and don't update work if done doesn't change
-        realWork = iff ((==) 0 <$> done) (pure 1) $
-            latch $ (,) <$> (uncurry (==) <$> oldMealy 0 done) <*> work
+        todo = f <$> progress <*> ruleTime
+            where f Progress{..} ruleTime = fst timeTodo + (fromIntegral (snd timeTodo) * ruleTime)
 
         -- Display information
-        time = flip fmap ((/) <$> todo <*> realWork) $ \guess ->
+        time = flip fmap ((/) <$> todo <*> donePerSec) $ \guess ->
             let (mins,secs) = divMod (ceiling guess) (60 :: Int)
             in (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs ++ "s"
         perc = iff ((==) 0 <$> done) (pure "0") $
