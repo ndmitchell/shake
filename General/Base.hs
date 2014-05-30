@@ -9,11 +9,12 @@ module General.Base(
     readFileUCS2, getEnvMaybe, captureOutput,
     showDP, showTime,
     modifyIORef'', writeIORef'',
-    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM,
+    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2',
     fastNub, showQuote, word1,
     withBufferMode, withCapabilities
     ) where
 
+import Control.Applicative
 import Control.Arrow
 import Control.Concurrent
 import Control.Exception
@@ -210,6 +211,9 @@ partitionM f (x:xs) = do
 
 mapMaybeM :: Monad m => (a -> m (Maybe b)) -> [a] -> m [b]
 mapMaybeM f xs = liftM catMaybes $ mapM f xs
+
+liftA2' :: Applicative m => m a -> m b -> (a -> b -> c) -> m c
+liftA2' a b f = liftA2 f a b
 
 
 ---------------------------------------------------------------------
