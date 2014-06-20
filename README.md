@@ -9,6 +9,7 @@ Shake is a tool for writing build systems - an alternative to make, Scons, Ant e
 * [Generated documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) for all functions, includes lots of examples.
 * [Running Ninja builds](https://github.com/ndmitchell/shake/blob/master/docs/Ninja.md#readme) using Shake.
 * [Blog posts](http://neilmitchell.blogspot.co.uk/search/label/shake) detailing ongoing development work.
+* [Profile report demo](https://cdn.rawgit.com/ndmitchell/shake/35fbe03c8d3bafeae17b58af89497ff3fdd54b22/html/demo.html) explaining what the profile reports mean.
 * [Academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf) on the underlying principles behind Shake.
 * [Video](http://www.youtube.com/watch?v=xYCPpXVlqFM) of a talk introducing Shake.
 
