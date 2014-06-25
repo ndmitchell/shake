@@ -229,11 +229,8 @@ xterm = System.IO.Unsafe.unsafePerformIO $
 progressTitlebar :: String -> IO ()
 progressTitlebar x
     | xterm = BS.putStr $ BS.pack $ "\ESC]0;" ++ x ++ "\BEL"
-#ifdef mingw32_HOST_OS
-    | otherwise = BS.useAsCString (BS.pack x) $ \x -> c_setConsoleTitle x >> return ()
-#else
+    | isWindows = BS.useAsCString (BS.pack x) $ \x -> c_setConsoleTitle x >> return ()
     | otherwise = return ()
-#endif
 
 
 -- | Call the program @shake-progress@ if it is on the @$PATH@. The program is called with
