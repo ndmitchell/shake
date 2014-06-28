@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, PatternGuards, CPP #-}
+{-# LANGUAGE RecordWildCards, PatternGuards #-}
 
 module Development.Make.All(runMakefile) where
 
@@ -10,6 +10,7 @@ import Development.Make.Env
 import Development.Make.Rules
 import Development.Make.Type
 import qualified System.Directory as IO
+import General.Base
 import Data.List
 import Data.Maybe
 import Control.Arrow
@@ -120,12 +121,7 @@ vpath (x:xs) y = do
 
 defaultEnv :: IO Env
 defaultEnv = do
-#if __GLASGOW_HASKELL__ >= 706
-    exePath <- getExecutablePath
-#else
-    exePath <- getProgName
-#endif
-
+    exePath <- getExePath
     env <- getEnvironment
     cur <- IO.getCurrentDirectory
     return $ newEnv $

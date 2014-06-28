@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 
 -- | A module for 'FilePath' operations, to be used instead of "System.FilePath"
 --   when writing build systems. In build systems, when using the file name
@@ -114,8 +113,4 @@ combine x y = normalise $ Native.combine (toNative x) (toNative y)
 
 -- | The extension of executables, @\"exe\"@ on Windows and @\"\"@ otherwise.
 exe :: String
-#ifdef mingw32_HOST_OS
-exe = "exe"
-#else
-exe = ""
-#endif
+exe = if isWindows then "exe" else ""

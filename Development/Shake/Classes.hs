@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 
 -- | This module reexports the six necessary type classes that every 'Rule' type must support.
 --   You can use this module to define new rules without depending on the @binary@, @deepseq@ and @hashable@ packages.

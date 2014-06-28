@@ -6,7 +6,7 @@ module General.Base(
     Barrier, newBarrier, signalBarrier, waitBarrier, waitBarrierMaybe,
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
-    readFileUCS2, getEnvMaybe, captureOutput,
+    readFileUCS2, getEnvMaybe, captureOutput, getExePath,
     showDP, showTime,
     modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2',
@@ -281,3 +281,11 @@ withBufferMode :: Handle -> BufferMode -> IO a -> IO a
 withBufferMode h b act = bracket (hGetBuffering h) (hSetBuffering h) $ const $ do
     hSetBuffering h LineBuffering
     act
+
+
+getExePath :: IO FilePath
+#if __GLASGOW_HASKELL__ >= 706
+getExePath = getExecutablePath
+#else
+getExePath = getProgName
+#endif

@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 
 module Main(main) where
 
@@ -6,6 +5,7 @@ import Control.Exception
 import Control.Monad
 import Data.Maybe
 import System.Environment
+import General.Base
 import General.Timing
 import Development.Shake.FileInfo
 import General.String
@@ -68,11 +68,7 @@ main :: IO ()
 main = do
     resetTimings
     xs <- getArgs
-#if __GLASGOW_HASKELL__ >= 706
-    exePath <- getExecutablePath
-#else
-    exePath <- getProgName
-#endif
+    exePath <- getExePath
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
         _ | null xs -> do
             putStrLn "******************************************************************"
