@@ -14,24 +14,28 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import Data.IORef
 
+data S ro rw = S
+    {ro :: ro
+    ,rww :: IORef rw -- Read/Write Writeable var (rww)
+    }
 
-newtype RAW ro rw a = RAW {fromRAW :: ReaderT (ro, IORef rw) IO a}
+newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) IO a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
 runRAW :: ro -> rw -> RAW ro rw a -> IO a
 runRAW ro rw (RAW m) = do
-    ref <- newIORef rw
-    runReaderT m (ro, ref)
+    rww <- newIORef rw
+    runReaderT m $ S ro rww
 
 
 ---------------------------------------------------------------------
 -- STANDARD
 
 getRO :: RAW ro rw ro
-getRO = RAW $ asks fst
+getRO = RAW $ asks ro
 
 getRW :: RAW ro rw rw
-getRW = RAW $ liftIO . readIORef =<< asks snd
+getRW = RAW $ liftIO . readIORef =<< asks rww
 
 getsRO :: (ro -> a) -> RAW ro rw a
 getsRO f = fmap f getRO
@@ -41,19 +45,22 @@ getsRW f = fmap f getRW
 
 -- | Strict version
 putRW :: rw -> RAW ro rw ()
-putRW rw = rw `seq` RAW $ liftIO . flip writeIORef rw =<< asks snd
+putRW rw = rw `seq` RAW $ liftIO . flip writeIORef rw =<< asks rww
+
+withRAW :: (S ro rw -> S ro2 rw2) -> RAW ro2 rw2 a -> RAW ro rw a
+withRAW f m = RAW $ withReaderT f $ fromRAW m
 
 modifyRW :: (rw -> rw) -> RAW ro rw ()
 modifyRW f = do x <- getRW; putRW $ f x
 
 withRO :: (ro -> ro2) -> RAW ro2 rw a -> RAW ro rw a
-withRO f m = RAW $ withReaderT (\(ro,rw) -> (f ro, rw)) $ fromRAW m
+withRO f = withRAW $ \s -> s{ro=f $ ro s}
 
 withRW :: (rw -> rw2) -> RAW ro rw2 a -> RAW ro rw a
-withRW f m = RAW $ do
-    rw <- asks snd
-    ref <- liftIO $ newIORef . f =<< readIORef rw
-    withReaderT (\(ro,_) -> (ro,ref)) $ fromRAW m
+withRW f m = do
+    rw <- getRW
+    rww <- liftIO $ newIORef $ f rw
+    withRAW (\s -> s{rww=rww}) m
 
 
 ---------------------------------------------------------------------
@@ -77,12 +84,12 @@ throwRAW = liftIO . throwIO
 --   that runs fast.
 evalRAW :: RAW ro rw a -> RAW ro rw (IO (RAW ro rw a))
 evalRAW m = RAW $ do
-    (ro,rw) <- ask
+    S ro rw <- ask
     return $ do
         ref <- newIORef =<< readIORef rw
-        res <- runReaderT (fromRAW m) (ro,ref)
+        res <- runReaderT (fromRAW m) $ S ro ref
         return $ RAW $ do
-            (ro,rw) <- ask
+            rww <- ask
             liftIO $ writeIORef rw =<< readIORef ref
             return res
 
