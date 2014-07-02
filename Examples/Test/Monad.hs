@@ -36,3 +36,9 @@ test build obj = do
             return "x"
         liftIO $ res === Left Overflow
         dump 1 "new"
+        catchRAW (catchRAW (throwRAW Overflow) $ \Overflow -> modifyRW (++ "x")) $
+            \Overflow -> modifyRW (++ "y")
+        dump 1 "newx"
+        catchRAW (catchRAW (throwRAW Overflow) $ \Overflow -> modifyRW (++ "x") >> throwRAW Overflow) $
+            \Overflow -> modifyRW (++ "y")
+        dump 1 "newxxy"
