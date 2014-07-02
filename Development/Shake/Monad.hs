@@ -103,7 +103,9 @@ unmodifyRW f m = do
     return res
 
 
-captureRAW :: ((a -> IO ()) -> IO ()) -> RAW ro rw a
+-- | Capture a continuation. The continuation must be called exactly once, either with an
+--   exception, or with a result.
+captureRAW :: ((Either SomeException a -> IO ()) -> IO ()) -> RAW ro rw a
 captureRAW f = do
     s <- RAW ask
     undefined {- ContT $ \c -> do
