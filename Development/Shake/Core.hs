@@ -42,6 +42,7 @@ import System.IO
 import Development.Shake.Classes
 import Development.Shake.Pool
 import Development.Shake.Database
+import Development.Shake.Monad
 import Development.Shake.Resource
 import Development.Shake.Value
 import Development.Shake.Report
@@ -50,7 +51,6 @@ import Development.Shake.Errors
 import General.Timing
 import General.Base
 import General.String
-import General.RAW
 
 
 ---------------------------------------------------------------------

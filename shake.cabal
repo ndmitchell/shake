@@ -123,6 +123,7 @@ library
         Development.Shake.Errors
         Development.Shake.FileInfo
         Development.Shake.FilePattern
+        Development.Shake.Monad
         Development.Shake.Pool
         Development.Shake.Progress
         Development.Shake.Report
@@ -141,7 +142,6 @@ library
         General.Base
         General.Binary
         General.Intern
-        General.RAW
         General.String
         General.Timing
         Paths_shake

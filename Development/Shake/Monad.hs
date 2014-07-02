@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module General.RAW(
+module Development.Shake.Monad(
     RAW, runRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
