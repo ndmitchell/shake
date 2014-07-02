@@ -242,6 +242,7 @@ test-suite shake-test
         Examples.Test.Lint
         Examples.Test.Makefile
         Examples.Test.Manual
+        Examples.Test.Monad
         Examples.Test.Oracle
         Examples.Test.OrderOnly
         Examples.Test.Pool
