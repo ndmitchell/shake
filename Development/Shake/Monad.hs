@@ -66,10 +66,10 @@ withRW f m = do
 ---------------------------------------------------------------------
 -- EXCEPTIONS
 
-catchRAW :: Exception e => RAW ro rw a -> (e -> RAW ro rw a) -> RAW ro rw a
+catchRAW :: RAW ro rw a -> (SomeException -> RAW ro rw a) -> RAW ro rw a
 catchRAW m handle = RAW $ liftCatch E.catch (fromRAW m) (fromRAW . handle)
 
-tryRAW :: Exception e => RAW ro rw a -> RAW ro rw (Either e a)
+tryRAW :: RAW ro rw a -> RAW ro rw (Either SomeException a)
 tryRAW m = catchRAW (fmap Right m) (return . Left)
 
 throwRAW :: Exception e => e -> RAW ro rw a
