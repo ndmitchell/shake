@@ -82,7 +82,7 @@ throwRAW = liftIO . throwIO
 
 -- | Given an action, produce a 'RAW' that runs fast, containing
 --   an 'IO' that runs slowly (the bulk of the work) and a 'RAW'
---   that runs fast.
+--   that runs fast. The resulting IO/RAW should each be run exactly once.
 evalRAW :: RAW ro rw a -> RAW ro rw (IO (RAW ro rw a))
 evalRAW m = do
         ro <- getRO
