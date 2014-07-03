@@ -5,7 +5,7 @@ module Development.Shake.Monad(
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
     catchRAW, tryRAW, throwRAW,
-    evalRAW, unmodifyRW, captureRAW,
+    evalRAW, unmodifyRW, Capture, captureRAW,
     ) where
 
 import Control.Applicative
@@ -122,9 +122,11 @@ unmodifyRW f m = do
     return res
 
 
+type Capture a = (a -> IO ()) -> IO ()
+
 -- | Capture a continuation. The continuation must be called exactly once, either with an
 --   exception, or with a result.
-captureRAW :: ((Either SomeException a -> IO ()) -> IO ()) -> RAW ro rw a
+captureRAW :: Capture (Either SomeException a) -> RAW ro rw a
 captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
     f $ \x -> case x of
         Left e -> do hdl <- readIORef (handler s); hdl e
