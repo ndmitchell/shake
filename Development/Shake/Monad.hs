@@ -9,24 +9,33 @@ module Development.Shake.Monad(
     ) where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Exception as E
+import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Reader
 import Data.IORef
 
 
 data S ro rw = S
-    {ro :: ro
+    {handler :: IORef (SomeException -> IO ())
+    ,ro :: ro
     ,rww :: IORef rw -- Read/Write Writeable var (rww)
     }
 
-newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) IO a}
+newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
 runRAW :: ro -> rw -> RAW ro rw a -> IO a
 runRAW ro rw m = do
+    res <- newEmptyMVar
     rww <- newIORef rw
-    fromRAW m `runReaderT` S ro rww
+    handler <- newIORef $ \e -> void $ tryPutMVar res $ Left e
+    forkIO $ do
+        fromRAW m `runReaderT` S handler ro rww `runContT` (liftIO . putMVar res . Right)
+            `E.catch` \e -> ($ e) =<< readIORef handler
+    either throwIO return =<< readMVar res
 
 
 ---------------------------------------------------------------------
@@ -68,7 +77,16 @@ withRW f m = do
 -- EXCEPTIONS
 
 catchRAW :: RAW ro rw a -> (SomeException -> RAW ro rw a) -> RAW ro rw a
-catchRAW m handle = RAW $ liftCatch E.catch (fromRAW m) (fromRAW . handle)
+catchRAW m hdl = RAW $ ReaderT $ \s -> ContT $ \k -> do
+    old <- readIORef $ handler s
+    writeIORef (handler s) $ \e -> do
+        writeIORef (handler s) old
+        fromRAW (hdl $ toException e) `runReaderT` s `runContT` k `E.catch`
+            \e -> ($ e) =<< readIORef (handler s)
+    fromRAW m `runReaderT` s `runContT` \v -> do
+        writeIORef (handler s) old
+        k v
+
 
 tryRAW :: RAW ro rw a -> RAW ro rw (Either SomeException a)
 tryRAW m = catchRAW (fmap Right m) (return . Left)
@@ -107,7 +125,7 @@ unmodifyRW f m = do
 -- | Capture a continuation. The continuation must be called exactly once, either with an
 --   exception, or with a result.
 captureRAW :: ((Either SomeException a -> IO ()) -> IO ()) -> RAW ro rw a
-captureRAW f = do
-    s <- RAW ask
-    undefined {- ContT $ \c -> do
-        lift $ f $ \a -> do runReaderT (c a) s; return () -}
+captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
+    f $ \x -> case x of
+        Left e -> do hdl <- readIORef (handler s); hdl e
+        Right v -> k v `E.catch` \e -> ($ e) =<< readIORef (handler s)
