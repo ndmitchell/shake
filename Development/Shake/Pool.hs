@@ -5,6 +5,7 @@ module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where
 import Control.Concurrent
 import Control.Exception hiding (blocked)
 import Control.Monad
+import Data.Maybe
 import General.Base
 import General.Timing
 import qualified Data.HashSet as Set
@@ -29,6 +30,9 @@ data Queue a = Queue [a] (Either [a] (Maybe (Tree a)))
 newQueue :: Bool -> Queue a
 newQueue deterministic = Queue [] $ if deterministic then Left [] else Right Nothing
 
+queueToList :: Queue a -> [a]
+queueToList (Queue p t) = p ++ either id (maybe [] treeToList) t
+
 enqueuePriority :: a -> Queue a -> Queue a
 enqueuePriority x (Queue p t) = Queue (x:p) t
 
@@ -51,6 +55,10 @@ dequeue (Queue [] (Right Nothing)) = Nothing
 -- Note that for a Random tree, since everything is Random, Branch x y =~= Branch y x
 data Tree a = Leaf a | Branch (Tree a) (Tree a)
 
+treeToList :: Tree a -> [a]
+treeToList (Leaf x) = [x]
+treeToList (Branch x y) = treeToList x ++ treeToList y
+
 insertTree :: [Bool] -> a -> Tree a -> Tree a
 insertTree _ x (Leaf y) = Branch (Leaf x) (Leaf y)
 insertTree (b:bs) x (Branch y z) = if b then f y z else f z y
@@ -63,7 +71,6 @@ removeTree (b:bs) (Branch y z) = if b then f y z else f z y
         f y z = case removeTree bs z of
                     (x, Nothing) -> (x, Just y)
                     (x, Just z) -> (x, Just $ Branch y z)
-
 
 ---------------------------------------------------------------------
 -- THREAD POOL
@@ -82,7 +89,7 @@ data S = S
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
     ,working :: {-# UNPACK #-} !Int -- threads which are actively working
     ,blocked :: {-# UNPACK #-} !Int -- threads which are blocked
-    ,todo :: !(Queue (IO ()))
+    ,todo :: !(Queue (Maybe SomeException -> IO ()))
     }
 
 
@@ -103,10 +110,11 @@ step pool@(Pool n var done) op = do
                 -- spawn a new worker
                 t <- forkIO $ do
                     t <- myThreadId
-                    res <- try now
+                    res <- try $ now Nothing
                     case res of
                         Left e -> onVar $ \s -> do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
+                            mapM_ ($ Just (toException ThreadKilled)) $ queueToList $ todo s
                             signalBarrier done $ Left e
                             return Nothing
                         Right _ -> step pool $ \s -> return s{working = working s - 1, threads = Set.delete t $ threads s}
@@ -121,8 +129,12 @@ step pool@(Pool n var done) op = do
 
 -- | Add a new task to the pool
 addPool :: Pool -> IO a -> IO ()
-addPool pool act = step pool $ \s -> do
-    todo <- enqueue (void act) (todo s)
+addPool pool act = addPoolEx pool (\e -> when (isNothing e) $ void act)
+
+-- | Add a new task to the pool, may be cancelled by sending it an exception
+addPoolEx :: Pool -> (Maybe SomeException -> IO a) -> IO ()
+addPoolEx pool act = step pool $ \s -> do
+    todo <- enqueue (void . act) (todo s)
     return s{todo = todo}
 
 
@@ -144,7 +156,7 @@ blockPool pool act = do
     if urgent then
         act -- may exceed the pool count
      else
-        step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
+        step pool $ \s -> return s{todo = enqueuePriority (\e -> when (isNothing e) act) $ todo s}
     waitBarrier var
     return res
 
@@ -157,7 +169,9 @@ runPool deterministic n act = do
     let cleanup = modifyVar_ s $ \s -> do
             -- if someone kills our thread, make sure we kill our child threads
             case s of
-                Just s -> mapM_ killThread $ Set.toList $ threads s
+                Just s -> do
+                    mapM_ killThread $ Set.toList $ threads s
+                    mapM_ ($ Just (toException ThreadKilled)) $ queueToList $ todo s
                 Nothing -> return ()
             return Nothing
     flip onException cleanup $ do
