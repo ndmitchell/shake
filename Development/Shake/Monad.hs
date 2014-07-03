@@ -85,13 +85,13 @@ throwRAW = liftIO . throwIO
 --   that runs fast. The resulting IO/RAW should each be run exactly once.
 evalRAW :: RAW ro rw a -> RAW ro rw (IO (RAW ro rw a))
 evalRAW m = do
-        ro <- getRO
-        rw <- getRW
+    ro <- getRO
+    rw <- getRW
+    return $ do
+        (a,rw) <- runRAW ro rw $ liftA2 (,) m getRW
         return $ do
-            (a,rw) <- runRAW ro rw $ liftA2 (,) m getRW
-            return $ do
-                putRW rw
-                return a
+            putRW rw
+            return a
 
 
 -- | Apply a modification, run an action, then undo the changes after.
