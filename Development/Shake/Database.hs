@@ -21,6 +21,7 @@ import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
 import Development.Shake.Report
+import Development.Shake.Monad
 import General.Base
 import General.String
 import General.Intern as Intern
@@ -189,14 +190,14 @@ data Ops = Ops
         -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
     ,equal :: Key -> Value -> Value -> EqualCost
         -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> IO (Either SomeException (Value, [Depends], Duration, [Trace]))
+    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Duration, [Trace]))
         -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
     }
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> Stack -> [Key] -> IO (Either SomeException (Duration,Depends,[Value]))
-build pool Database{..} Ops{..} stack ks = do
+build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Duration,Depends,[Value]))
+build pool Database{..} Ops{..} stack ks continue = do
     join $ withLock lock $ do
         is <- forM ks $ \k -> do
             is <- readIORef intern
@@ -217,9 +218,9 @@ build pool Database{..} Ops{..} stack ks = do
         vs <- mapM (reduce stack) is
         let errs = [e | Error e <- vs]
         if all isReady vs then
-            return $ return $ Right (0, Depends is, [result r | Ready r <- vs])
+            return $ continue $ Right (0, Depends is, [result r | Ready r <- vs])
          else if not $ null errs then
-            return $ return $ Left $ head errs
+            return $ continue $ Left $ head errs
          else do
             wait <- newBarrier
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
@@ -231,7 +232,7 @@ build pool Database{..} Ops{..} stack ks = do
                                       | otherwise -> return False
             return $ do
                 (dur,res) <- duration $ blockPool pool $ waitBarrier wait
-                return $ case res of
+                continue $ case res of
                     Left e -> Left e
                     Right v -> Right (dur,Depends is,v)
     where
@@ -280,35 +281,36 @@ build pool Database{..} Ops{..} stack ks = do
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
         run stack i k r = do
             w <- newWaiting r
-            addPool pool $ do
-                let norm = do
-                        res <- execute (addStack i k stack) k
-                        return $ case res of
+            addPoolEx pool $ \e -> do
+                let reply res =  do
+                        ans <- withLock lock $ do
+                            ans <- i #= (k, res)
+                            runWaiting w
+                            return ans
+                        case ans of
+                            Ready r -> do
+                                diagnostic $ "result " ++ atom k ++ " = " ++ atom (result r)
+                                journal i (k, Loaded r) -- leave the DB lock before appending
+                            Error _ -> do
+                                diagnostic $ "result " ++ atom k ++ " = error"
+                                journal i (k, Missing)
+                            _ -> return ()
+                let norm = execute (addStack i k stack) k $ \res ->
+                        reply $ case res of
                             Left err -> Error err
                             Right (v,deps,execution,traces) ->
                                 let c | Just r <- r, result r == v = changed r
                                       | otherwise = step
                                 in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
-                res <- case r of
-                    Just r | assume == Just AssumeClean -> do
-                        v <- stored k
-                        case v of
-                            Just v -> return $ Ready r{result=v}
-                            Nothing -> norm
-                    _ -> norm
 
-                ans <- withLock lock $ do
-                    ans <- i #= (k, res)
-                    runWaiting w
-                    return ans
-                case ans of
-                    Ready r -> do
-                        diagnostic $ "result " ++ atom k ++ " = " ++ atom (result r)
-                        journal i (k, Loaded r) -- leave the DB lock before appending
-                    Error _ -> do
-                        diagnostic $ "result " ++ atom k ++ " = error"
-                        journal i (k, Missing)
-                    _ -> return ()
+                case () of
+                    _ | Just e <- e -> reply $ Error e
+                      | Just r <- r, assume == Just AssumeClean -> do
+                            v <- stored k
+                            case v of
+                                Just v -> reply $ Ready r{result=v}
+                                Nothing -> norm
+                    _ -> norm
             i #= (k, w)
 
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status

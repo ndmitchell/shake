@@ -440,7 +440,7 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    let exec stack k = try $ wrapStack (showStack globalDatabase stack) $ do
+    let exec stack k continue = (continue =<<) $ try $ wrapStack (showStack globalDatabase stack) $ do
             evaluate $ rnf k
             let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=[], localStack=stack, localBlockApply=Nothing
                           ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
@@ -457,12 +457,9 @@ applyKeyValue ks = do
             evaluate $ rnf ans
             return ans
     stack <- Action $ getsRW localStack
-    res <- liftIO $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
-    case res of
-        Left err -> throw err
-        Right (dur, dep, vs) -> do
-            Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
-            return vs
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
+    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
+    return vs
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
