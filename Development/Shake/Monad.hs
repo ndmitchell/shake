@@ -14,6 +14,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import Data.IORef
 
+
 data S ro rw = S
     {ro :: ro
     ,rww :: IORef rw -- Read/Write Writeable var (rww)
