@@ -111,26 +111,3 @@ captureRAW f = do
     s <- RAW ask
     undefined {- ContT $ \c -> do
         lift $ f $ \a -> do runReaderT (c a) s; return () -}
-
-
-{-
-type CaptureT m a = ContT () m a
-
-runCaptureT :: Monad m => CaptureT m a -> m ()
-runCaptureT act = runContT act $ \c -> return ()
-
-capture :: ((a -> m ()) -> m ()) -> CaptureT m a
-capture = ContT
-
-
-type CaptureStateT s m a = CaptureT (StateT s m) a
-
-runCaptureStateT :: Monad m => CaptureStateT s m a -> s -> m ()
-runCaptureStateT act s = do runStateT (runCaptureT act) s; return ()
-
-captureState :: Monad m => ((a -> m ()) -> m ()) -> CaptureStateT s m a
-captureState f = do
-    s <- lift State.get
-    capture $ \c -> do
-        lift $ f $ \a -> do runStateT (c a) s; return ()
--}
