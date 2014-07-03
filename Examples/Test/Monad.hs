@@ -60,3 +60,13 @@ test build obj = do
         res
         refEq "1"
         dump 1 "x"
+
+    -- test capture
+    runRAW 1 "test" $ do
+        i <- captureRAW $ \k -> k $ Right 1
+        liftIO $ i === 1
+        i <- tryRAW $ captureRAW $ \k -> k $ Left $ toException Overflow
+        liftIO $ conv i === Left (Just Overflow)
+        captureRAW $ \k -> k $ Right ()
+        i <- tryRAW $ throwRAW Underflow
+        liftIO $ conv i === Left (Just Underflow)
