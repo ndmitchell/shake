@@ -23,9 +23,9 @@ newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) IO a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
 runRAW :: ro -> rw -> RAW ro rw a -> IO a
-runRAW ro rw (RAW m) = do
+runRAW ro rw m = do
     rww <- newIORef rw
-    runReaderT m $ S ro rww
+    fromRAW m `runReaderT` S ro rww
 
 
 ---------------------------------------------------------------------
