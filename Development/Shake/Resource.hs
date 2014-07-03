@@ -103,7 +103,7 @@ data Throttle = Throttle
     }
 
 -- | A version of 'Development.Shake.newThrottle' that runs in IO, and can be called before calling 'Development.Shake.shake'.
---   Most people should use 'Development.Shake.newResource' instead.
+--   Most people should use 'Development.Shake.newThrottle' instead.
 newThrottleIO :: String -> Int -> Double -> IO Resource
 newThrottleIO name count period_ = do
     when (count < 0) $
