@@ -7,6 +7,7 @@ import Development.Shake.Pool
 import Control.Concurrent
 import Control.Exception hiding (assert)
 import Control.Monad
+import Data.Maybe
 
 
 main = shaken test $ \args obj -> return ()
@@ -79,3 +80,14 @@ test build obj = do
         wait >> wait >> wait -- allow the bad thread to continue
         res <- readMVar res
         assert res "Early termination"
+
+        -- check that queued threads get notified
+        trace <- newMVar ""
+        res <- try $ runPool deterministic 1 $ \pool -> do
+            let act i e = modifyMVar_ trace $ \x -> return $ x ++ i ++ (if isNothing e then "r" else "e")
+            addPoolEx pool $ \e -> do
+                addPoolEx pool $ act "2"
+                act "1" e
+                throwIO Overflow
+        (=== "1r2e") =<< readMVar trace
+        res === Left Overflow
