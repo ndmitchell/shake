@@ -84,7 +84,7 @@ data Trace = Trace BS Time Time -- (message, start, end)
 instance NFData Trace where
     rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
 
--- | Invariant: The database does not have any cycles when a Key depends on itself
+-- | Invariant: The database does not have any cycles where a Key depends on itself
 data Database = Database
     {lock :: Lock
     ,intern :: IORef (Intern Key)
