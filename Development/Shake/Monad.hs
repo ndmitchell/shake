@@ -8,8 +8,8 @@ module Development.Shake.Monad(
     evalRAW, unmodifyRW, captureRAW,
     ) where
 
-import Control.Exception as E
 import Control.Applicative
+import Control.Exception as E
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import Data.IORef
