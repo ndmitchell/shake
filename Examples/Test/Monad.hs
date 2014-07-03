@@ -6,6 +6,7 @@ import Development.Shake.Monad
 
 import Control.Exception hiding (assert)
 import Control.Monad.IO.Class
+import Data.IORef
 
 
 main = shaken test $ \args obj -> return ()
@@ -13,8 +14,10 @@ main = shaken test $ \args obj -> return ()
 
 test build obj = do
     let conv x = either (Left . fromException) Right x :: Either (Maybe ArithException) Int
+    let dump ro rw = do liftIO . (=== ro) =<< getRO; liftIO . (=== rw) =<< getRW
+
+    -- test the basics plus exception handling
     runRAW 1 "test" $ do
-        let dump ro rw = do liftIO . (=== ro) =<< getRO; liftIO . (=== rw) =<< getRW
         dump 1 "test"
         putRW "more"
         dump 1 "more"
@@ -43,3 +46,17 @@ test build obj = do
         catchRAW (catchRAW (throwRAW Overflow) $ \e -> modifyRW (++ "x") >> throwRAW e) $
             \_ -> modifyRW (++ "y")
         dump 1 "newxxy"
+
+    -- test eval
+    ref <- newIORef ""
+    let refEq s = liftIO $ (=== s) =<< readIORef ref
+    runRAW 1 "test" $ do
+        refEq ""
+        res <- evalRAW $ do liftIO $ modifyIORef ref (++"1"); putRW "x"
+        refEq ""
+        res <- liftIO res
+        refEq "1"
+        dump 1 "test"
+        res
+        refEq "1"
+        dump 1 "x"
