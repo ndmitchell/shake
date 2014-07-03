@@ -83,15 +83,15 @@ throwRAW = liftIO . throwIO
 --   an 'IO' that runs slowly (the bulk of the work) and a 'RAW'
 --   that runs fast.
 evalRAW :: RAW ro rw a -> RAW ro rw (IO (RAW ro rw a))
-evalRAW m = RAW $ do
-    S ro rw <- ask
-    return $ do
-        ref <- newIORef =<< readIORef rw
-        res <- runReaderT (fromRAW m) $ S ro ref
-        return $ RAW $ do
-            rww <- ask
-            liftIO $ writeIORef rw =<< readIORef ref
-            return res
+evalRAW m = do
+        ro <- getRO
+        rw <- getRW
+        return $ do
+            (a,rw) <- runRAW ro rw $ liftA2 (,) m getRW
+            return $ do
+                putRW rw
+                return a
+
 
 -- | Apply a modification, run an action, then undo the changes after.
 unmodifyRW :: (rw -> (rw, rw -> rw)) -> RAW ro rw a -> RAW ro rw a
