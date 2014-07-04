@@ -32,9 +32,8 @@ runRAW ro rw m = do
     res <- newEmptyMVar
     rww <- newIORef rw
     handler <- newIORef $ \e -> void $ tryPutMVar res $ Left e
-    forkIO $ do
-        fromRAW m `runReaderT` S handler ro rww `runContT` (liftIO . putMVar res . Right)
-            `E.catch` \e -> ($ e) =<< readIORef handler
+    fromRAW m `runReaderT` S handler ro rww `runContT` (liftIO . putMVar res . Right)
+        `E.catch` \e -> ($ e) =<< readIORef handler
     either throwIO return =<< readMVar res
 
 
