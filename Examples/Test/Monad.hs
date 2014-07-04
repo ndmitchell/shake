@@ -60,6 +60,8 @@ test build obj = do
         res
         refEq "1"
         dump 1 "x"
+        liftIO $ writeIORef ref "3"
+    refEq "3"
 
     -- test capture
     runRAW 1 "test" $ do
