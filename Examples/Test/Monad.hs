@@ -5,6 +5,7 @@ import Examples.Util
 import Development.Shake.Monad
 
 import Control.Exception hiding (assert)
+import Control.Monad
 import Control.Monad.IO.Class
 import Data.IORef
 
@@ -17,7 +18,7 @@ test build obj = do
     let dump ro rw = do liftIO . (=== ro) =<< getRO; liftIO . (=== rw) =<< getRW
 
     -- test the basics plus exception handling
-    runRAW 1 "test" $ do
+    join $ runRAW 1 "test" $ do
         dump 1 "test"
         putRW "more"
         dump 1 "more"
@@ -50,7 +51,7 @@ test build obj = do
     -- test eval
     ref <- newIORef ""
     let refEq s = liftIO $ (=== s) =<< readIORef ref
-    runRAW 1 "test" $ do
+    join $ runRAW 1 "test" $ do
         refEq ""
         res <- evalRAW $ do liftIO $ modifyIORef ref (++"1"); putRW "x"
         refEq ""
@@ -64,7 +65,7 @@ test build obj = do
     refEq "3"
 
     -- test capture
-    runRAW 1 "test" $ do
+    join $ runRAW 1 "test" $ do
         i <- captureRAW $ \k -> k $ Right 1
         liftIO $ i === 1
         i <- tryRAW $ captureRAW $ \k -> k $ Left $ toException Overflow

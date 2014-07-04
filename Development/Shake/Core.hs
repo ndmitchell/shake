@@ -407,7 +407,7 @@ wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
 
 
 runAction :: Global -> Local -> Action a -> IO a
-runAction g l (Action x) = runRAW g l x
+runAction g l (Action x) = join $ runRAW g l x
 
 
 runAfter :: IO () -> Action ()

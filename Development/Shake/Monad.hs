@@ -27,14 +27,15 @@ data S ro rw = S
 newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
-runRAW :: ro -> rw -> RAW ro rw a -> IO a
+-- | Run on this thread until the first IO, then wait til the second
+runRAW :: ro -> rw -> RAW ro rw a -> IO (IO a)
 runRAW ro rw m = do
     res <- newEmptyMVar
     rww <- newIORef rw
     handler <- newIORef $ \e -> void $ tryPutMVar res $ Left e
     fromRAW m `runReaderT` S handler ro rww `runContT` (liftIO . putMVar res . Right)
         `E.catch` \e -> ($ e) =<< readIORef handler
-    either throwIO return =<< readMVar res
+    return $ either throwIO return =<< readMVar res
 
 
 ---------------------------------------------------------------------
@@ -105,7 +106,7 @@ evalRAW m = do
     ro <- getRO
     rw <- getRW
     return $ do
-        (a,rw) <- runRAW ro rw $ liftA2 (,) m getRW
+        (a,rw) <- join $ runRAW ro rw $ liftA2 (,) m getRW
         return $ do
             putRW rw
             return a
