@@ -67,7 +67,7 @@ test build obj = do
     writeFile (obj "chain.1") "x"
     build ["chain.3"]
     writeFile (obj "chain.1") "err"
-    crash ["chain.3"] ["err_chain"]
+    crash ["chain.3","--sleep"] ["err_chain"]
 
     crash ["norule"] ["norule_isavailable"]
     crash ["failcreate"] ["failcreate"]
