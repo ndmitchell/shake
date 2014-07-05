@@ -114,7 +114,7 @@ step pool@(Pool n var done) op = do
                     case res of
                         Left e -> onVar $ \s -> do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
-                            mapM_ ($ Just (toException ThreadKilled)) $ queueToList $ todo s
+                            forkIO $ mapM_ ($ Just (toException ThreadKilled)) $ queueToList $ todo s
                             signalBarrier done $ Left e
                             return Nothing
                         Right _ -> step pool $ \s -> return s{working = working s - 1, threads = Set.delete t $ threads s}
