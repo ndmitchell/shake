@@ -55,9 +55,19 @@ main = shaken test $ \args obj -> do
         obj "alternative.t*" *> \out -> writeFile' out "alternative.txt"
         obj "alternative.*" *> \out -> writeFile' out "alternative.*"
 
+    obj "chain.2" *> \out -> do
+        src <- readFile' $ obj "chain.1"
+        if src == "err" then error "err_chain" else writeFileChanged out src
+    obj "chain.3" *> \out -> copyFile' (obj "chain.2") out
+
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
+
+    writeFile (obj "chain.1") "x"
+    build ["chain.3"]
+    writeFile (obj "chain.1") "err"
+    crash ["chain.3"] ["err_chain"]
 
     crash ["norule"] ["norule_isavailable"]
     crash ["failcreate"] ["failcreate"]
