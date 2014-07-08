@@ -222,19 +222,21 @@ build pool Database{..} Ops{..} stack ks continue = do
          else if not $ null errs then
             return $ continue $ Left $ head errs
          else do
-            wait <- newBarrier
+            time <- offsetTime
+            let done (priority, x) = do
+                    -- FIXME: pass priority to addPoolEx
+                    addPoolEx pool $ \e -> case (e, x) of
+                        (Just e, _) -> continue $ Left e
+                        (_, Left e) -> continue $ Left e
+                        (_, Right v) -> do dur <- time; continue $ Right (dur, Depends is, v)
+                    return True
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
-                let done x = do signalBarrier wait x; return True
                 case Map.lookup i s of
                     Just (_, Error e) -> done (True, Left e) -- on error make sure we immediately kick off our parent
                     Just (_, Ready{}) | finish -> done (False, Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s])
                                       | otherwise -> return False
-            return $ do
-                (dur,res) <- duration $ blockPool pool $ waitBarrier wait
-                continue $ case res of
-                    Left e -> Left e
-                    Right v -> Right (dur,Depends is,v)
+            return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
         i #= (k,v) = do
