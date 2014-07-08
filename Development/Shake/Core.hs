@@ -748,32 +748,35 @@ withResources res act
 --   Most people should use 'newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
 newCacheIO act = do
-    var {- :: Var (Map k (Barrier (Either SomeException ([Depends],v)))) -} <- newVar Map.empty
+    var {- :: Var (Map k (Fence (Either SomeException ([Depends],v)))) -} <- newVar Map.empty
     return $ \key -> do
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
-                res <- liftIO $ waitBarrierMaybe bar
+                res <- liftIO $ testFence bar
                 res <- case res of
-                    Nothing -> do pool <- Action $ getsRO globalPool; liftIO $ blockPool pool $ fmap ((,) False) $ waitBarrier bar
                     Just res -> return res
+                    Nothing -> do
+                        pool <- Action $ getsRO globalPool
+                        Action $ captureRAW $ \k -> waitFence bar $ \v ->
+                            addPool pool $ maybe (k $ Right v) (k . Left)
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
                         Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s}
                         return v
             Nothing -> do
-                bar <- newBarrier
+                bar <- newFence
                 return $ (,) (Map.insert key bar mp) $ do
                     pre <- Action $ getsRW localDepends
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
-                            liftIO $ signalBarrier bar $ Left (err :: SomeException)
+                            liftIO $ signalFence bar $ Left (err :: SomeException)
                             Action $ throwRAW err
                         Right v -> do
                             post <- Action $ getsRW localDepends
                             let deps = take (length post - length pre) post
-                            liftIO $ signalBarrier bar (Right (deps, v))
+                            liftIO $ signalFence bar (Right (deps, v))
                             return v
 
 -- | Given an action on a key, produce a cached version that will execute the action at most once per key.
