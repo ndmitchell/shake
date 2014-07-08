@@ -363,7 +363,10 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = Global database pool start ruleinfo output opts diagnostic lint after absent
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
-                    mapM_ (addPool pool . staunch . runAction s0 s1) (actions rs)
+                    forM_ (actions rs) $ \act -> do
+                        addPoolEx pool $ \e -> case e of
+                            Just e -> staunch $ throwIO e
+                            Nothing -> runAction s0 s1 act $ \x -> staunch $ either throwIO return x
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
@@ -406,11 +409,8 @@ wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
          else throwIO $ ShakeException (last stk) stk $ SomeException e
 
 
-runAction :: Global -> Local -> Action a -> IO a
-runAction g l (Action x) = do -- join $ runRAW g l x
-    res <- runRAW g l x
-    res <- blockPool (globalPool g) $ fmap ((,) False) $ try res
-    either (\e -> throwIO (e :: SomeException)) return res
+runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
+runAction g l (Action x) k = runCaptureRAW g l x k
 
 
 runAfter :: IO () -> Action ()
@@ -443,22 +443,26 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    let exec stack k continue = (continue =<<) $ try $ wrapStack (showStack globalDatabase stack) $ do
-            evaluate $ rnf k
+    let exec stack k continue = do
             let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=[], localStack=stack, localBlockApply=Nothing
                           ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
             let top = showTopStack stack
-            globalLint $ "before building " ++ top
-            (dur,(res,Local{..})) <- duration $ runAction global s $ do
+            time <- offsetTime
+            runAction global s (do
+                liftIO $ evaluate $ rnf k
+                liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
                 res <- runExecute globalRules k
                 when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
-                Action $ fmap ((,) res) getRW
-            globalLint $ "after building " ++ top
-            let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
-            evaluate $ rnf ans
-            return ans
+                Action $ fmap ((,) res) getRW) $ \x -> case x of
+                    Left e -> (continue =<<) $ try $ wrapStack (showStack globalDatabase stack) $ throwIO e
+                    Right (res, Local{..}) -> do
+                        dur <- time
+                        globalLint $ "after building " ++ top
+                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
+                        evaluate $ rnf ans
+                        continue $ Right ans
     stack <- Action $ getsRW localStack
     (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
