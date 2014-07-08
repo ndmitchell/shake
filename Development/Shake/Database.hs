@@ -224,8 +224,8 @@ build pool Database{..} Ops{..} stack ks continue = do
          else do
             time <- offsetTime
             let done (priority, x) = do
-                    -- FIXME: pass priority to addPoolEx
-                    addPoolEx pool $ \e -> case (e, x) of
+                    -- FIXME: pass priority to addPool
+                    addPool pool $ \e -> case (e, x) of
                         (Just e, _) -> continue $ Left e
                         (_, Left e) -> continue $ Left e
                         (_, Right v) -> do dur <- time; continue $ Right (dur, Depends is, v)
@@ -283,7 +283,7 @@ build pool Database{..} Ops{..} stack ks continue = do
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
         run stack i k r = do
             w <- newWaiting r
-            addPoolEx pool $ \e -> do
+            addPool pool $ \e -> do
                 let reply res =  do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)

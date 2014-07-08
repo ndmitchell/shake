@@ -15,7 +15,7 @@ main = shaken test $ \args obj -> return ()
 
 test build obj = do
     let wait = sleep 0.01
-    let addPool_ pool act = addPoolEx pool $ \e -> assert (isNothing e) "No exception" >> act
+    let addPool_ pool act = addPool pool $ \e -> assert (isNothing e) "No exception" >> act
     forM_ [False,True] $ \deterministic -> do
 
         -- check that it aims for exactly the limit
@@ -86,8 +86,8 @@ test build obj = do
         trace <- newMVar ""
         res <- try $ runPool deterministic 1 $ \pool -> do
             let act i e = modifyMVar_ trace $ \x -> return $ x ++ i ++ (if isNothing e then "r" else "e")
-            addPoolEx pool $ \e -> do
-                addPoolEx pool $ act "2"
+            addPool pool $ \e -> do
+                addPool pool $ act "2"
                 act "1" e
                 throwIO Overflow
         (=== "1r2e") =<< readMVar trace

@@ -364,7 +364,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s0 = Global database pool start ruleinfo output opts diagnostic lint after absent
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
-                        addPoolEx pool $ \e -> case e of
+                        addPool pool $ \e -> case e of
                             Just e -> staunch $ throwIO e
                             Nothing -> runAction s0 s1 act $ \x -> staunch $ either throwIO return x
 
