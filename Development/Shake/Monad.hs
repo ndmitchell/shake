@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Monad(
-    RAW, runRAW,
+    RAW, runRAW, Capture, runCaptureRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
     catchRAW, tryRAW, throwRAW,
-    evalRAW, unmodifyRW, Capture, captureRAW,
+    evalRAW, unmodifyRW, captureRAW,
     ) where
 
 import Control.Applicative
@@ -27,14 +27,23 @@ data S ro rw = S
 newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
--- | Run on this thread until the first IO, then wait til the second
+type Capture a = (a -> IO ()) -> IO ()
+
+
+-- | Run and then call a continuation.
+runCaptureRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
+runCaptureRAW ro rw m k = do
+    rww <- newIORef rw
+    handler <- newIORef $ k . Left
+    fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)
+        `E.catch` \e -> ($ e) =<< readIORef handler
+
+
+-- | Run on this thread until the first IO, then wait til the second.
 runRAW :: ro -> rw -> RAW ro rw a -> IO (IO a)
 runRAW ro rw m = do
     res <- newEmptyMVar
-    rww <- newIORef rw
-    handler <- newIORef $ \e -> void $ tryPutMVar res $ Left e
-    fromRAW m `runReaderT` S handler ro rww `runContT` (liftIO . putMVar res . Right)
-        `E.catch` \e -> ($ e) =<< readIORef handler
+    runCaptureRAW ro rw m $ void . tryPutMVar res
     return $ either throwIO return =<< readMVar res
 
 
@@ -121,8 +130,6 @@ unmodifyRW f m = do
     modifyRW undo
     return res
 
-
-type Capture a = (a -> IO ()) -> IO ()
 
 -- | Capture a continuation. The continuation must be called exactly once, either with an
 --   exception, or with a result.
