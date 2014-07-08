@@ -1,6 +1,6 @@
 
 -- | Thread pool implementation.
-module Development.Shake.Pool(Pool, addPool, addPoolEx, blockPool, runPool) where
+module Development.Shake.Pool(Pool, addPoolEx, blockPool, runPool) where
 
 import Control.Concurrent
 import Control.Exception hiding (blocked)
@@ -127,10 +127,6 @@ step pool@(Pool n var done) op = do
             _ -> return $ Just s
 
 
--- | Add a new task to the pool
-addPool :: Pool -> IO a -> IO ()
-addPool pool act = addPoolEx pool (\e -> when (isNothing e) $ void act)
-
 -- | Add a new task to the pool, may be cancelled by sending it an exception
 addPoolEx :: Pool -> (Maybe SomeException -> IO a) -> IO ()
 addPoolEx pool act = step pool $ \s -> do
@@ -177,7 +173,7 @@ runPool deterministic n act = do
     flip onException cleanup $ do
         res <- newBarrier
         let pool = Pool n s res
-        addPool pool $ act pool
+        addPoolEx pool $ const $ act pool
         res <- waitBarrier res
         case res of
             Left e -> throw e
