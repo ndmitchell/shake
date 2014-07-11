@@ -255,7 +255,7 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
         {
             var x = dat.original[xs[i]];
             time += x.execution;
-            leaf = bools(leaf, x.depends === 0);
+            leaf = bools(leaf, x.depends.length === 0);
             unchanged = bools(unchanged, x.changed !== x.built);
             run = Math.min(run,x.built);
         }

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix the leaf column in profile reports
     Add Maybe instances for cmd arguments
     Add a --profile flag (alias for --report)
     Switch to an underlying continuation monad
