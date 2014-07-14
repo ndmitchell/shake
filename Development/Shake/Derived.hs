@@ -1,7 +1,7 @@
 
 module Development.Shake.Derived(
     system', systemCwd, systemOutput,
-    copyFile',
+    copyFile', copyFileChanged,
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged
     ) where
@@ -17,6 +17,8 @@ import Development.Shake.Core
 import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Types
+import General.Base
+import qualified Data.ByteString as BS
 
 
 checkExitCode :: String -> ExitCode -> Action ()
@@ -88,6 +90,21 @@ copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
     liftIO $ copyFile old new
+
+
+-- | @copyFile' old new@ copies the existing file from @old@ to @new@, if the contents have changed.
+--   The @old@ file will be tracked as a dependency.
+copyFileChanged :: FilePath -> FilePath -> Action ()
+copyFileChanged old new = do
+    need [old]
+    eq <- liftIO $ doesFileExist new &&^ do
+        withBinaryFile old ReadMode $ \h1 -> withBinaryFile new ReadMode $ \h2 ->
+            liftM2 (==) (hFileSize h1) (hFileSize h2) &&^
+                liftM2 (==) (BS.hGetContents h1) (BS.hGetContents h2)
+    when (not eq) $ do
+        putLoud $ "Copying from " ++ old ++ " to " ++ new
+        -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
+        liftIO $ copyFile old new
 
 
 -- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.
