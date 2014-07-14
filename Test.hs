@@ -10,41 +10,41 @@ import General.Timing
 import Development.Shake.FileInfo
 import General.String
 import qualified Data.ByteString.Char8 as BS
-import Examples.Util(sleepFileTimeCalibrate)
+import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent
 
-import qualified Examples.Tar.Main as Tar
-import qualified Examples.Self.Main as Self
-import qualified Examples.C.Main as C
-import qualified Examples.Ninja.Main as Ninja
-import qualified Examples.Test.Assume as Assume
-import qualified Examples.Test.Basic as Basic
-import qualified Examples.Test.Benchmark as Benchmark
-import qualified Examples.Test.Cache as Cache
-import qualified Examples.Test.Command as Command
-import qualified Examples.Test.Config as Config
-import qualified Examples.Test.Digest as Digest
-import qualified Examples.Test.Directory as Directory
-import qualified Examples.Test.Docs as Docs
-import qualified Examples.Test.Errors as Errors
-import qualified Examples.Test.Files as Files
-import qualified Examples.Test.FilePath as FilePath
-import qualified Examples.Test.FilePattern as FilePattern
-import qualified Examples.Test.Journal as Journal
-import qualified Examples.Test.Lint as Lint
-import qualified Examples.Test.Makefile as Makefile
-import qualified Examples.Test.Manual as Manual
-import qualified Examples.Test.Monad as Monad
-import qualified Examples.Test.Oracle as Oracle
-import qualified Examples.Test.OrderOnly as OrderOnly
-import qualified Examples.Test.Pool as Pool
-import qualified Examples.Test.Progress as Progress
-import qualified Examples.Test.Random as Random
-import qualified Examples.Test.Resources as Resources
-import qualified Examples.Test.Throttle as Throttle
-import qualified Examples.Test.Unicode as Unicode
-import qualified Examples.Test.Util as Util
-import qualified Examples.Test.Verbosity as Verbosity
+import qualified Test.Assume as Assume
+import qualified Test.Basic as Basic
+import qualified Test.Benchmark as Benchmark
+import qualified Test.C as C
+import qualified Test.Cache as Cache
+import qualified Test.Command as Command
+import qualified Test.Config as Config
+import qualified Test.Digest as Digest
+import qualified Test.Directory as Directory
+import qualified Test.Docs as Docs
+import qualified Test.Errors as Errors
+import qualified Test.Files as Files
+import qualified Test.FilePath as FilePath
+import qualified Test.FilePattern as FilePattern
+import qualified Test.Journal as Journal
+import qualified Test.Lint as Lint
+import qualified Test.Makefile as Makefile
+import qualified Test.Manual as Manual
+import qualified Test.Monad as Monad
+import qualified Test.Ninja as Ninja
+import qualified Test.Oracle as Oracle
+import qualified Test.OrderOnly as OrderOnly
+import qualified Test.Pool as Pool
+import qualified Test.Progress as Progress
+import qualified Test.Random as Random
+import qualified Test.Resources as Resources
+import qualified Test.Self as Self
+import qualified Test.Tar as Tar
+import qualified Test.Throttle as Throttle
+import qualified Test.Unicode as Unicode
+import qualified Test.Util as Util
+import qualified Test.Verbosity as Verbosity
 
 import qualified Start as Start
 

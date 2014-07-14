@@ -33,16 +33,16 @@ homepage:           https://github.com/ndmitchell/shake
 bug-reports:        https://github.com/ndmitchell/shake/issues
 tested-with:        GHC==7.8.2, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
 extra-source-files:
-    Examples/C/constants.c
-    Examples/C/constants.h
-    Examples/C/main.c
-    Examples/MakeTutor/Makefile
-    Examples/MakeTutor/hellofunc.c
-    Examples/MakeTutor/hellomake.c
-    Examples/MakeTutor/hellomake.h
-    Examples/Tar/list.txt
-    Examples/Ninja/*.ninja
-    Examples/Ninja/*.output
+    Test/C/constants.c
+    Test/C/constants.h
+    Test/C/main.c
+    Test/MakeTutor/Makefile
+    Test/MakeTutor/hellofunc.c
+    Test/MakeTutor/hellomake.c
+    Test/MakeTutor/hellomake.h
+    Test/Tar/list.txt
+    Test/Ninja/*.ninja
+    Test/Ninja/*.output
     Paths.hs
     CHANGES.txt
     README.md
@@ -220,37 +220,37 @@ test-suite shake-test
         Development.Ninja.All
         Development.Ninja.Parse
         Development.Ninja.Type
-        Examples.Util
-        Examples.C.Main
-        Examples.Ninja.Main
-        Examples.Self.Main
-        Examples.Tar.Main
-        Examples.Test.Assume
-        Examples.Test.Basic
-        Examples.Test.Benchmark
-        Examples.Test.Cache
-        Examples.Test.Command
-        Examples.Test.Config
-        Examples.Test.Digest
-        Examples.Test.Directory
-        Examples.Test.Docs
-        Examples.Test.Errors
-        Examples.Test.FilePath
-        Examples.Test.FilePattern
-        Examples.Test.Files
-        Examples.Test.Journal
-        Examples.Test.Lint
-        Examples.Test.Makefile
-        Examples.Test.Manual
-        Examples.Test.Monad
-        Examples.Test.Oracle
-        Examples.Test.OrderOnly
-        Examples.Test.Pool
-        Examples.Test.Progress
-        Examples.Test.Random
-        Examples.Test.Resources
-        Examples.Test.Throttle
-        Examples.Test.Unicode
-        Examples.Test.Util
-        Examples.Test.Verbosity
         Start
+        Test.Type
+        Test.Assume
+        Test.Basic
+        Test.Benchmark
+        Test.C
+        Test.Cache
+        Test.Command
+        Test.Config
+        Test.Digest
+        Test.Directory
+        Test.Docs
+        Test.Errors
+        Test.FilePath
+        Test.FilePattern
+        Test.Files
+        Test.Journal
+        Test.Lint
+        Test.Makefile
+        Test.Manual
+        Test.Monad
+        Test.Ninja
+        Test.Oracle
+        Test.OrderOnly
+        Test.Pool
+        Test.Progress
+        Test.Random
+        Test.Resources
+        Test.Self
+        Test.Tar
+        Test.Throttle
+        Test.Unicode
+        Test.Util
+        Test.Verbosity
