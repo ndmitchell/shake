@@ -65,9 +65,9 @@ test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
 
     writeFile (obj "chain.1") "x"
-    build ["chain.3"]
+    build ["chain.3","--sleep"]
     writeFile (obj "chain.1") "err"
-    crash ["chain.3","--sleep"] ["err_chain"]
+    crash ["chain.3"] ["err_chain"]
 
     crash ["norule"] ["norule_isavailable"]
     crash ["failcreate"] ["failcreate"]
