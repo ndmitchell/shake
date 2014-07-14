@@ -11,6 +11,7 @@ module General.Base(
     showDP, showTime,
     modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2',
+    ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
     withBufferMode, withCapabilities
     ) where
@@ -239,6 +240,16 @@ mapMaybeM f xs = liftM catMaybes $ mapM f xs
 
 liftA2' :: Applicative m => m a -> m b -> (a -> b -> c) -> m c
 liftA2' a b f = liftA2 f a b
+
+ifM :: Monad m => m Bool -> m a -> m a -> m a
+ifM b t f = do b <- b; if b then t else f
+
+notM :: Functor m => m Bool -> m Bool
+notM = fmap not
+
+(||^), (&&^) :: Monad m => m Bool -> m Bool -> m Bool
+(||^) a b = do a <- a; if a then return True else b
+(&&^) a b = do a <- a; if a then b else return False
 
 
 ---------------------------------------------------------------------
