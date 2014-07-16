@@ -40,6 +40,7 @@ import System.Directory
 import System.IO
 
 import Development.Shake.Classes
+import Development.Shake.Continue
 import Development.Shake.Pool
 import Development.Shake.Database
 import Development.Shake.Monad
@@ -757,7 +758,7 @@ newCacheIO act = do
                     Just res -> return res
                     Nothing -> do
                         pool <- Action $ getsRO globalPool
-                        Action $ captureRAW $ \k -> waitFence bar $ \v ->
+                        Action $ captureRAW $ \k -> waitFence bar $ Continue $ \v ->
                             addPool pool $ maybe (k $ Right v) (k . Left)
                 case res of
                     Left err -> Action $ throwRAW err
@@ -771,12 +772,12 @@ newCacheIO act = do
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
-                            liftIO $ signalFence bar $ Left (err :: SomeException)
+                            liftIO $ signalFence bar `runContinue` Left (err :: SomeException)
                             Action $ throwRAW err
                         Right v -> do
                             post <- Action $ getsRW localDepends
                             let deps = take (length post - length pre) post
-                            liftIO $ signalFence bar (Right (deps, v))
+                            liftIO $ signalFence bar `runContinue` Right (deps, v)
                             return v
 
 -- | Given an action on a key, produce a cached version that will execute the action at most once per key.

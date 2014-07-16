@@ -4,7 +4,6 @@ module General.Base(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier, waitBarrierMaybe,
-    Fence, newFence, signalFence, waitFence, testFence,
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe, captureOutput, getExePath,
@@ -103,30 +102,6 @@ waitBarrierMaybe (Barrier x) = do
     res <- tryTakeMVar x
     whenJust res $ putMVar x
     return res
-
-
----------------------------------------------------------------------
--- FENCE
-
--- | Like a barrier, but based on callbacks
-newtype Fence a = Fence (IORef (Either [a -> IO ()] a))
-instance Show (Fence a) where show _ = "Fence"
-
-newFence :: IO (Fence a)
-newFence = fmap Fence $ newIORef $ Left []
-
-signalFence :: Fence a -> a -> IO ()
-signalFence (Fence x) v = join $ atomicModifyIORef x $ \x -> case x of
-    Left queue -> (Right v, mapM_ ($ v) $ reverse queue)
-    Right v -> error "Shake internal error, signalFence called twice on one Fence"
-
-waitFence :: Fence a -> (a -> IO ()) -> IO ()
-waitFence (Fence x) call = join $ atomicModifyIORef x $ \x -> case x of
-    Left queue -> (Left (call:queue), return ())
-    Right v -> (Right v, call v)
-
-testFence :: Fence a -> IO (Maybe a)
-testFence (Fence x) = either (const Nothing) Just <$> readIORef x
 
 
 ---------------------------------------------------------------------
