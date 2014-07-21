@@ -117,6 +117,7 @@ library
         Development.Ninja.Type
         Development.Shake.Args
         Development.Shake.ByteString
+        Development.Shake.Continue
         Development.Shake.Core
         Development.Shake.Database
         Development.Shake.Derived
