@@ -21,3 +21,11 @@ Shake is a tool for writing build systems - an alternative to make, Scons, Ant e
 * [Bugs](https://github.com/ndmitchell/shake/issues) can be reported on the GitHub issue tracker.
 * [Source code](http://github.com/ndmitchell/shake) in a git repo, stored at GitHub.
 * Continuous integration with [Travis](https://travis-ci.org/ndmitchell/shake) and [Hydra](http://hydra.cryp.to/jobset/shake/master).
+
+#### Companies using Shake
+
+* [Standard Chartered](http://www.standardchartered.com/), as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
+* [factis research GmbH](http://www.factisresearch.com/), as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
+* At least 10 other companies who have not mentioned so publicly.
+
+Is your company using Shake? Write something public (even just a Tweet) and I'll include a link.
