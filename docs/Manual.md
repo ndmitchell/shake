@@ -182,7 +182,7 @@ Shake provides a complete library of filepath manipulation functions (see the ma
 
 * `str1 </> str2` - add the path components together with a slash, e.g. `"_build" </> "main.o"` equals `"_build/main.o"`.
 * `str1 <.> str2` - add an extension, e.g. `"main" <.> "o"` equals `"main.o"`.
-* `str1 ++ str2` - append two strings together, e.g. `"hello" ++ "world"` equals `"hello world"`.
+* `str1 ++ str2` - append two strings together, e.g. `"hello" ++ "world"` equals `"helloworld"`.
 * `str1 -<.> str2` - replace an extension, e.g. `"main.c" -<.> "o"` equals `"main.o"`.
 * `dropExtension str` - drop the final extension of a filepath if it has one, e.g. `dropExtension "main.o"` equals `"main"`, while `dropExtension "main"` equals `"main"`.
 * `takeFileName str` - drop the path component, e.g. `takeFileName "_build/src/main.o"` equals `"main.o"`.
