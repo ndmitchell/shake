@@ -6,12 +6,12 @@ DEPS = hellomake.h
 OBJ = hellomake.o hellofunc.o 
 
 hellomake$(EXE): $(OBJ)
-    $(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 %.o: %.c $(DEPS)
-    $(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 .PHONY: clean
 clean:
-    rm hellomake$(EXE)
-    rm *.o
+	rm hellomake$(EXE)
+	rm *.o
