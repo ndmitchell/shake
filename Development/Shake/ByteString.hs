@@ -4,12 +4,20 @@ module Development.Shake.ByteString(parseMakefile, filepathNormalise, linesCR) w
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native
 import General.Base
+import Data.Char
 import Data.List
 
 
 endsSlash :: BS.ByteString -> Bool
 endsSlash = BS.isSuffixOf (BS.singleton '\\')
 
+wordsMakefile :: BS.ByteString -> [BS.ByteString]
+wordsMakefile = f . BS.splitWith isSpace
+    where
+        f (x:xs) | BS.null x = f xs
+        f (x:y:xs) | endsSlash x = BS.concat [BS.init x, BS.singleton ' ', y] : f xs
+        f (x:xs) = x : f xs
+        f [] = []
 
 parseMakefile :: BS.ByteString -> [(BS.ByteString, [BS.ByteString])]
 parseMakefile = concatMap f . join . linesCR
@@ -20,7 +28,7 @@ parseMakefile = concatMap f . join . linesCR
             ([], y:ys) -> y : join ys
             (xs, y:ys) -> BS.unwords (map BS.init xs ++ [y]) : join ys
 
-        f x = [(a, BS.words $ BS.drop 1 b) | a <- BS.words a]
+        f x = [(a, wordsMakefile $ BS.drop 1 b) | a <- wordsMakefile a]
             where (a,b) = BS.break (== ':') $ BS.takeWhile (/= '#') x
 
 
