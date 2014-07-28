@@ -1,5 +1,5 @@
 
-module Development.Shake.ByteString(parseMakefile, normalise, linesCR) where
+module Development.Shake.ByteString(parseMakefile, filepathNormalise, linesCR) where
 
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native
@@ -35,9 +35,10 @@ linesCR x = case BS.split '\n' x of
                  | otherwise = Just (BS.last x, BS.init x)
 
 
-normalise :: BS.ByteString -> BS.ByteString
-normalise xs | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.uncons xs, sep b = '/' `BS.cons` f xs
-             | otherwise = f xs
+filepathNormalise :: BS.ByteString -> BS.ByteString
+filepathNormalise xs
+    | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.uncons xs, sep b = '/' `BS.cons` f xs
+    | otherwise = f xs
     where
         sep = Native.isPathSeparator
         f o = deslash o $ BS.concat $ (slash:) $ intersperse slash $ reverse $ (BS.empty:) $ g 0 $ reverse $ split $ o
