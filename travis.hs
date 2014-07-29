@@ -51,6 +51,12 @@ main = do
         when (ninjaZero + 0.1 < shakeZero) $
             error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
+    setCurrentDirectory ".."
+    cmd "ghc -threaded -rtsopts -isrc -i. Main.hs --make -O -prof -auto-all -caf-all"
+    setCurrentDirectory "ninja"
+    cmd "../Main --skip-commands --always-make +RTS -p"
+    cmd "head -n32 Main.prof"
+
 
 ninjaProfile :: FilePath -> IO ()
 ninjaProfile src = do
