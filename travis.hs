@@ -54,7 +54,13 @@ main = do
     setCurrentDirectory ".."
     cmd "ghc -threaded -rtsopts -isrc -i. Main.hs --make -O -prof -auto-all -caf-all"
     setCurrentDirectory "ninja"
-    cmd "../Main --skip-commands --always-make +RTS -p"
+    putStrLn "== PROFILE BUILDING FROM SCRATCH =="
+    cmd "rm .shake*"
+    cmd "../Main --skip-commands +RTS -p"
+    cmd "head -n32 Main.prof"
+
+    putStrLn "== PROFILE BUILDING NOTHING =="
+    cmd "../Main +RTS -p"
     cmd "head -n32 Main.prof"
 
 
