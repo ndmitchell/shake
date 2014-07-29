@@ -16,3 +16,5 @@ test build obj = do
     parseMakefile "#comment\\    a : b" === []
     parseMakefile "a: b c \\\n    d e\n\nf:g" === [("a",["b","c","d","e"]),("f",["g"])]
     parseMakefile "foo/bar: \\\r\n c:/a1 \\\r\n x\r\n" === [("foo/bar",["c:/a1","x"])]
+    parseMakefile "output.o: src/file/with\\ space.cpp" === [("output.o",["src/file/with space.cpp"])]
+    parseMakefile "a: b\\  c" === [("a",["b ","c"])]

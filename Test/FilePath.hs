@@ -27,7 +27,7 @@ test build obj = do
 
     let norm x =
             let s = normalise x
-                b = BS.unpack (BS.normalise $ BS.pack x)
+                b = BS.unpack (BS.filepathNormalise $ BS.pack x)
             in if s == b then s else error $ show ("Normalise functions differ",x,s,b)
     -- basic examples
     norm "" === "."

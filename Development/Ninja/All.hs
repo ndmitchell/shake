@@ -53,13 +53,13 @@ runNinja file args tool = do
     return $ Just $ do
         needDeps <- return $ needDeps ninja -- partial application
         phonys <- return $ Map.fromList phonys
-        singles <- return $ Map.fromList $ map (first normalise) singles
-        multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map normalise) multiples, x <- xs]
+        singles <- return $ Map.fromList $ map (first filepathNormalise) singles
+        multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map filepathNormalise) multiples, x <- xs]
         rules <- return $ Map.fromList rules
         pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        action $ needBS $ map normalise $ concatMap (resolvePhony phonys) $
+        action $ needBS $ map filepathNormalise $ concatMap (resolvePhony phonys) $
             if not $ null args then map BS.pack args
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
@@ -88,8 +88,8 @@ quote x | BS.any isSpace x = let q = BS.singleton '\"' in BS.concat [q,x,q]
 
 build :: (Build -> [Str] -> Action ()) -> Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
 build needDeps phonys rules pools out build@Build{..} = do
-    needBS $ map normalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
-    orderOnlyBS $ map normalise $ concatMap (resolvePhony phonys) depsOrderOnly
+    needBS $ map filepathNormalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
+    orderOnlyBS $ map filepathNormalise $ concatMap (resolvePhony phonys) depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
@@ -118,7 +118,7 @@ build needDeps phonys rules pools out build@Build{..} = do
                 let (cmdOpts, cmdProg, cmdArgs) = toCommand commandline
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command cmdOpts cmdProg cmdArgs
-                    needDeps build $ map normalise $ parseShowIncludes $ BS.pack stdout
+                    needDeps build $ map filepathNormalise $ parseShowIncludes $ BS.pack stdout
                  else
                     withPool $ command_ cmdOpts cmdProg cmdArgs
                 when (depfile /= "") $ do
@@ -164,7 +164,7 @@ needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
         allDependencies rule = f Set.empty [] [rule]
             where
                 f seen [] [] = []
-                f seen [] (x:xs) = f seen (map normalise $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
+                f seen [] (x:xs) = f seen (map filepathNormalise $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
                 f seen (x:xs) rest | x `Set.member` seen = f seen xs rest
                                    | otherwise = x : f (Set.insert x seen) xs (maybeToList (Map.lookup x builds) ++ rest)
 

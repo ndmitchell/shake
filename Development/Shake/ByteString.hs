@@ -1,15 +1,23 @@
 
-module Development.Shake.ByteString(parseMakefile, normalise, linesCR) where
+module Development.Shake.ByteString(parseMakefile, filepathNormalise, linesCR) where
 
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native
 import General.Base
+import Data.Char
 import Data.List
 
 
 endsSlash :: BS.ByteString -> Bool
 endsSlash = BS.isSuffixOf (BS.singleton '\\')
 
+wordsMakefile :: BS.ByteString -> [BS.ByteString]
+wordsMakefile = f . BS.splitWith isSpace
+    where
+        f (x:xs) | BS.null x = f xs
+        f (x:y:xs) | endsSlash x = BS.concat [BS.init x, BS.singleton ' ', y] : f xs
+        f (x:xs) = x : f xs
+        f [] = []
 
 parseMakefile :: BS.ByteString -> [(BS.ByteString, [BS.ByteString])]
 parseMakefile = concatMap f . join . linesCR
@@ -20,7 +28,7 @@ parseMakefile = concatMap f . join . linesCR
             ([], y:ys) -> y : join ys
             (xs, y:ys) -> BS.unwords (map BS.init xs ++ [y]) : join ys
 
-        f x = [(a, BS.words $ BS.drop 1 b) | a <- BS.words a]
+        f x = [(a, wordsMakefile $ BS.drop 1 b) | a <- wordsMakefile a]
             where (a,b) = BS.break (== ':') $ BS.takeWhile (/= '#') x
 
 
@@ -35,9 +43,10 @@ linesCR x = case BS.split '\n' x of
                  | otherwise = Just (BS.last x, BS.init x)
 
 
-normalise :: BS.ByteString -> BS.ByteString
-normalise xs | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.uncons xs, sep b = '/' `BS.cons` f xs
-             | otherwise = f xs
+filepathNormalise :: BS.ByteString -> BS.ByteString
+filepathNormalise xs
+    | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.uncons xs, sep b = '/' `BS.cons` f xs
+    | otherwise = f xs
     where
         sep = Native.isPathSeparator
         f o = deslash o $ BS.concat $ (slash:) $ intersperse slash $ reverse $ (BS.empty:) $ g 0 $ reverse $ split $ o
