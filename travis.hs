@@ -52,7 +52,7 @@ main = do
             error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
     setCurrentDirectory ".."
-    cmd "ghc -threaded -rtsopts -isrc -i. Main.hs --make -O -prof -auto-all -caf-all"
+    cmd "ghc -threaded -rtsopts -isrc -i. Paths.hs Main.hs --make -O -prof -auto-all -caf-all"
     setCurrentDirectory "ninja"
     putStrLn "== PROFILE BUILDING FROM SCRATCH =="
     cmd "rm .shake*"
