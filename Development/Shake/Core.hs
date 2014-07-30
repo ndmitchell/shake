@@ -51,6 +51,7 @@ import Development.Shake.Types
 import Development.Shake.Errors
 import General.Timing
 import General.Base
+import General.Cleanup
 import General.String
 
 
@@ -260,6 +261,7 @@ runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
 data Global = Global
     {globalDatabase :: Database
     ,globalPool :: Pool
+    ,globalCleanup :: Cleanup
     ,globalTimestamp :: IO Time
     ,globalRules :: Map.HashMap TypeRep (RuleInfo Action)
     ,globalOutput :: Verbosity -> String -> IO ()
@@ -294,8 +296,10 @@ newtype Action a = Action {fromAction :: RAW Global Local a}
 
 -- | If an exception is raised by the 'Action', perform some 'IO'.
 actionOnException :: Action a -> IO b -> Action a
-actionOnException act clean = Action $
-    catchRAW (fromAction act) (\(e :: SomeException) -> liftIO clean >> throwRAW e)
+actionOnException act clean = do
+    cleanup <- Action $ getsRO globalCleanup
+    clean <- liftIO $ addCleanup cleanup $ void clean
+    Action $ catchRAW (fromAction act) (\(e :: SomeException) -> liftIO clean >> throwRAW e)
 
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
@@ -346,12 +350,12 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     progressThread <- newIORef Nothing
     after <- newIORef []
     absent <- newIORef []
-    let cleanup = do
+    shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
+    withCleanup $ \cleanup -> do
+        _ <- addCleanup cleanup $ do
             flip whenJust killThread =<< readIORef progressThread
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
-    shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
-    flip finally cleanup $
         withCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
                 tid <- forkIO $ shakeProgress $ do
@@ -362,7 +366,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool start ruleinfo output opts diagnostic lint after absent
+                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
                         addPool pool $ \e -> case e of

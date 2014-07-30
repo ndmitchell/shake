@@ -142,6 +142,7 @@ library
         Development.Shake.Value
         General.Base
         General.Binary
+        General.Cleanup
         General.Intern
         General.String
         General.Timing
