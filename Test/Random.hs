@@ -13,7 +13,6 @@ import System.Environment
 import System.Exit
 import System.Random
 import General.Base
-import qualified Data.ByteString.Char8 as BS
 
 
 inputRange = [1..10]
@@ -138,7 +137,3 @@ randomLogic = do
                 replicateM ns $ randomElem avail
             let r = Logic i xs
             fmap (r:) $ f (i-1) (Output i:avail)
-
-
-readFileStrict :: FilePath -> IO String
-readFileStrict = fmap BS.unpack . BS.readFile

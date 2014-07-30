@@ -6,7 +6,7 @@ module General.Base(
     Barrier, newBarrier, signalBarrier, waitBarrier, waitBarrierMaybe,
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
-    readFileUCS2, getEnvMaybe, captureOutput, getExePath,
+    readFileStrict, readFileUCS2, getEnvMaybe, captureOutput, getExePath,
     randomElem,
     showDP, showTime,
     modifyIORef'', writeIORef'',
@@ -264,6 +264,12 @@ getProcessorCount = let res = unsafePerformIO act in return res
 
 ---------------------------------------------------------------------
 -- System.IO
+
+readFileStrict :: FilePath -> IO String
+readFileStrict file = withFile file ReadMode $ \h -> do
+    src <- hGetContents h
+    evaluate $ length src
+    return src
 
 readFileUCS2 :: FilePath -> IO String
 readFileUCS2 name = openFile name ReadMode >>= \h -> do
