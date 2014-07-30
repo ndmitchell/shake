@@ -40,7 +40,7 @@ main = shaken test $ \args obj -> do
 
     let catcher out op = obj out *> \out -> do
             writeFile' out "0"
-            op $ writeFile out "1"
+            op $ do src <- readFileStrict out; writeFile out $ show (read src + 1 :: Int)
     catcher "finally1" $ actionFinally $ fail "die"
     catcher "finally2" $ actionFinally $ return ()
     catcher "finally3" $ actionFinally $ liftIO $ sleep 10
