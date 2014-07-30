@@ -7,6 +7,7 @@ module General.Base(
     Duration, duration, Time, offsetTime, sleep,
     isWindows, getProcessorCount,
     readFileUCS2, getEnvMaybe, captureOutput, getExePath,
+    randomElem,
     showDP, showTime,
     modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
@@ -32,6 +33,7 @@ import System.Environment
 import System.IO
 import System.IO.Error
 import System.IO.Unsafe
+import System.Random
 import GHC.IO.Handle(hDuplicate,hDuplicateTo)
 import Development.Shake.Classes
 
@@ -309,3 +311,9 @@ getExePath = getExecutablePath
 #else
 getExePath = getProgName
 #endif
+
+
+randomElem :: [a] -> IO a
+randomElem xs = do
+    i <- randomRIO (0, length xs - 1)
+    return $ xs !! i

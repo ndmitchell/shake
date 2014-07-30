@@ -12,6 +12,7 @@ import Data.Time
 import System.Environment
 import System.Exit
 import System.Random
+import General.Base
 import qualified Data.ByteString.Char8 as BS
 
 
@@ -137,12 +138,6 @@ randomLogic = do
                 replicateM ns $ randomElem avail
             let r = Logic i xs
             fmap (r:) $ f (i-1) (Output i:avail)
-
-
-randomElem :: [a] -> IO a
-randomElem xs = do
-    i <- randomRIO (0, length xs - 1)
-    return $ xs !! i
 
 
 readFileStrict :: FilePath -> IO String
