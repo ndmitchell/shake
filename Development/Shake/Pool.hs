@@ -30,9 +30,6 @@ data Queue a = Queue [a] (Either [a] (Maybe (Tree a)))
 newQueue :: Bool -> Queue a
 newQueue deterministic = Queue [] $ if deterministic then Left [] else Right Nothing
 
-queueToList :: Queue a -> [a]
-queueToList (Queue p t) = p ++ either id (maybe [] treeToList) t
-
 enqueuePriority :: a -> Queue a -> Queue a
 enqueuePriority x (Queue p t) = Queue (x:p) t
 
@@ -54,10 +51,6 @@ dequeue (Queue [] (Right Nothing)) = Nothing
 
 -- Note that for a Random tree, since everything is Random, Branch x y =~= Branch y x
 data Tree a = Leaf a | Branch (Tree a) (Tree a)
-
-treeToList :: Tree a -> [a]
-treeToList (Leaf x) = [x]
-treeToList (Branch x y) = treeToList x ++ treeToList y
 
 insertTree :: [Bool] -> a -> Tree a -> Tree a
 insertTree _ x (Leaf y) = Branch (Leaf x) (Leaf y)
