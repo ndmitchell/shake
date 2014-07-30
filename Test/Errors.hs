@@ -35,13 +35,13 @@ main = shaken test $ \args obj -> do
         writeFile' out "test"
     obj "staunch2" *> \_ -> error "crash"
 
-    let catcher out op die = obj out *> \out -> do
+    let catcher out op = obj out *> \out -> do
             writeFile' out "0"
-            op (when die $ error "die") (writeFile out "1")
-    catcher "finally1" actionFinally True
-    catcher "finally2" actionFinally False
-    catcher "exception1" actionOnException True
-    catcher "exception2" actionOnException False
+            op $ writeFile out "1"
+    catcher "finally1" $ actionFinally $ fail "die"
+    catcher "finally2" $ actionFinally $ return ()
+    catcher "exception1" $ actionOnException $ fail "die"
+    catcher "exception2" $ actionOnException $ return ()
 
     res <- newResource "resource_name" 1
     obj "resource" *> \out -> do
