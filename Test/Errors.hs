@@ -69,6 +69,8 @@ main = shaken test $ \args obj -> do
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
+    build ["clean"]
+    build ["--sleep"]
 
     writeFile (obj "chain.1") "x"
     build ["chain.3","--sleep"]
