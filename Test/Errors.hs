@@ -5,6 +5,9 @@ module Test.Errors(main) where
 import Development.Shake
 import Test.Type
 import Control.Monad
+import General.Base
+import Control.Concurrent
+import Control.Exception hiding (assert)
 import System.Directory as IO
 
 
@@ -40,6 +43,9 @@ main = shaken test $ \args obj -> do
             op $ writeFile out "1"
     catcher "finally1" $ actionFinally $ fail "die"
     catcher "finally2" $ actionFinally $ return ()
+    catcher "finally3" $ actionFinally $ liftIO $ sleep 10
+    catcher "finally4" $ actionFinally $ need ["wait"]
+    "wait" ~> do liftIO $ sleep 10
     catcher "exception1" $ actionOnException $ fail "die"
     catcher "exception2" $ actionOnException $ return ()
 
@@ -93,6 +99,12 @@ test build obj = do
     assertContents (obj "exception1") "1"
     build ["exception2"]
     assertContents (obj "exception2") "0"
+
+    forM_ ["finally3","finally4"] $ \name -> do
+        t <- forkIO $ build [name,"--exception"] `catch` \(_ :: SomeException) -> return ()
+        retry 10 $ sleep 0.1 >> assertContents (obj name) "0"
+        throwTo t (IndexOutOfBounds "test")
+        retry 10 $ sleep 0.1 >> assertContents (obj name) "1"
 
     crash ["resource"] ["cannot currently call apply","withResource","resource_name"]
 
