@@ -9,7 +9,7 @@ module General.Base(
     readFileUCS2, getEnvMaybe, captureOutput, getExePath,
     showDP, showTime,
     modifyIORef'', writeIORef'',
-    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2',
+    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
     withBufferMode, withCapabilities
@@ -225,6 +225,15 @@ notM = fmap not
 (||^), (&&^) :: Monad m => m Bool -> m Bool -> m Bool
 (||^) a b = do a <- a; if a then return True else b
 (&&^) a b = do a <- a; if a then b else return False
+
+retry :: Int -> IO a -> IO a
+retry i x | i <= 0 = error "retry count must be 1 or more"
+retry 1 x = x
+retry i x = do
+    res <- try x
+    case res of
+        Left (_ :: SomeException) -> retry (i-1) x
+        Right v -> return v
 
 
 ---------------------------------------------------------------------
