@@ -299,7 +299,7 @@ actionOnException :: Action a -> IO b -> Action a
 actionOnException act clean = do
     cleanup <- Action $ getsRO globalCleanup
     clean <- liftIO $ addCleanup cleanup $ void clean
-    Action $ catchRAW (fromAction act) (\(e :: SomeException) -> liftIO clean >> throwRAW e)
+    Action $ catchRAW (fromAction act) $ \(e :: SomeException) -> liftIO clean >> throwRAW e
 
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
