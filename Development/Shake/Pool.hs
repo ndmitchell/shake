@@ -1,6 +1,6 @@
 
 -- | Thread pool implementation.
-module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where
+module Development.Shake.Pool(Pool, addPool, addPoolPriority, blockPool, runPool) where
 
 import Control.Concurrent
 import Control.Exception hiding (blocked)
@@ -122,6 +122,13 @@ step pool@(Pool n var done) op = do
 addPool :: Pool -> IO a -> IO ()
 addPool pool act = step pool $ \s -> do
     todo <- enqueue (void act) (todo s)
+    return s{todo = todo}
+
+-- | Add a new task to the pool, may be cancelled by sending it an exception.
+--   Takes priority over everything else.
+addPoolPriority :: Pool -> IO a -> IO ()
+addPoolPriority pool act = step pool $ \s -> do
+    todo <- return $ enqueuePriority (void act) (todo s)
     return s{todo = todo}
 
 
