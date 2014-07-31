@@ -19,7 +19,7 @@ module General.Base(
 import Control.Applicative
 import Control.Arrow
 import Control.Concurrent
-import Control.Exception
+import Control.Exception as E
 import Control.Monad
 import Data.Char
 import Data.IORef
@@ -232,7 +232,7 @@ retry :: Int -> IO a -> IO a
 retry i x | i <= 0 = error "retry count must be 1 or more"
 retry 1 x = x
 retry i x = do
-    res <- try x
+    res <- E.try x
     case res of
         Left (_ :: SomeException) -> retry (i-1) x
         Right v -> return v
