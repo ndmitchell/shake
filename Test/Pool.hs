@@ -7,7 +7,6 @@ import Development.Shake.Pool
 import Control.Concurrent
 import Control.Exception hiding (assert)
 import Control.Monad
-import Data.Maybe
 
 
 main = shaken test $ \args obj -> return ()
@@ -15,7 +14,6 @@ main = shaken test $ \args obj -> return ()
 
 test build obj = do
     let wait = sleep 0.01
-    let addPool_ pool act = addPool pool $ \e -> assert (isNothing e) "No exception" >> act
     forM_ [False,True] $ \deterministic -> do
 
         -- check that it aims for exactly the limit
@@ -23,7 +21,7 @@ test build obj = do
             var <- newMVar (0,0) -- (maximum, current)
             runPool deterministic n $ \pool ->
                 forM_ [1..5] $ \i ->
-                    addPool_ pool $ do
+                    addPool pool $ do
                         modifyMVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
                         wait
                         modifyMVar_ var $ \(mx,now) -> return (mx,now-1)
@@ -34,10 +32,10 @@ test build obj = do
         self <- myThreadId
         handle (\(ErrorCall msg) -> msg === "pass") $
             runPool deterministic 3 $ \pool -> do
-                addPool_ pool $ do
+                addPool pool $ do
                     wait
                     error "pass"
-                addPool_ pool $ do
+                addPool pool $ do
                     wait >> wait
                     throwTo self $ ErrorCall "fail" 
         wait >> wait -- give chance for a delayed exception
@@ -46,8 +44,8 @@ test build obj = do
         done <- newMVar False
         runPool deterministic 1 $ \pool -> do
             var <- newEmptyMVar
-            addPool_ pool $ do
-                addPool_ pool $ do
+            addPool pool $ do
+                addPool pool $ do
                     wait
                     putMVar var ()
                 blockPool pool $ fmap ((,) False) $ takeMVar var
@@ -58,9 +56,9 @@ test build obj = do
         -- check someone spawned when at zero todo still gets run
         done <- newMVar False
         runPool deterministic 1 $ \pool ->
-            addPool_ pool $ do
+            addPool pool $ do
                 wait
-                addPool_ pool $ do
+                addPool pool $ do
                     wait
                     modifyMVar_ done $ const $ return True
         done <- readMVar done
@@ -71,7 +69,7 @@ test build obj = do
         done <- newEmptyMVar
         res <- newMVar True
         t <- forkIO $ finally (putMVar done ()) $ runPool deterministic 1 $ \pool ->
-            addPool_ pool $ do
+            addPool pool $ do
                 t <- takeMVar thread
                 killThread t
                 wait -- allow the thread to die first

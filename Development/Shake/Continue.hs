@@ -66,4 +66,4 @@ mendFences deps r op = do
 -- FIXME: Move this to Pool
 addPoolContinue :: Pool -> Continue a -> Continue a
 addPoolContinue pool c = Continue $ \v ->
-    addPool pool $ runContinue c . maybe v Left
+    addPool pool $ runContinue c v

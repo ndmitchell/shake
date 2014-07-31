@@ -119,9 +119,9 @@ step pool@(Pool n var done) op = do
 
 
 -- | Add a new task to the pool, may be cancelled by sending it an exception
-addPool :: Pool -> (Maybe SomeException -> IO a) -> IO ()
+addPool :: Pool -> IO a -> IO ()
 addPool pool act = step pool $ \s -> do
-    todo <- enqueue (void $ act Nothing) (todo s)
+    todo <- enqueue (void act) (todo s)
     return s{todo = todo}
 
 
@@ -162,7 +162,7 @@ runPool deterministic n act = do
     flip onException cleanup $ do
         res <- newBarrier
         let pool = Pool n s res
-        addPool pool $ const $ act pool
+        addPool pool $ act pool
         res <- waitBarrier res
         case res of
             Left e -> throw e

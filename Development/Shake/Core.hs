@@ -371,9 +371,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
-                        addPool pool $ \e -> case e of
-                            Just e -> staunch $ throwIO e
-                            Nothing -> runAction s0 s1 act $ \x -> staunch $ either throwIO return x
+                        addPool pool $ runAction s0 s1 act $ \x -> staunch $ either throwIO return x
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
@@ -765,7 +763,7 @@ newCacheIO act = do
                     Nothing -> do
                         pool <- Action $ getsRO globalPool
                         Action $ captureRAW $ \k -> waitFence bar $ Continue $ \v ->
-                            addPool pool $ maybe (k $ Right v) (k . Left)
+                            addPool pool $ k $ Right v
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do

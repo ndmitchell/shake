@@ -225,10 +225,9 @@ build pool Database{..} Ops{..} stack ks continue = do
             time <- offsetTime
             let done (priority, x) = do
                     -- FIXME: pass priority to addPool
-                    addPool pool $ \e -> case (e, x) of
-                        (Just e, _) -> continue $ Left e
-                        (_, Left e) -> continue $ Left e
-                        (_, Right v) -> do dur <- time; continue $ Right (dur, Depends is, v)
+                    addPool pool $ case x of
+                        Left e -> continue $ Left e
+                        Right v -> do dur <- time; continue $ Right (dur, Depends is, v)
                     return True
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
@@ -283,7 +282,7 @@ build pool Database{..} Ops{..} stack ks continue = do
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
         run stack i k r = do
             w <- newWaiting r
-            addPool pool $ \e -> do
+            addPool pool $ do
                 let reply res =  do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)
@@ -305,9 +304,8 @@ build pool Database{..} Ops{..} stack ks continue = do
                                       | otherwise = step
                                 in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
 
-                case () of
-                    _ | Just e <- e -> reply $ Error e
-                      | Just r <- r, assume == Just AssumeClean -> do
+                case r of
+                    Just r | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
                                 Just v -> reply $ Ready r{result=v}
