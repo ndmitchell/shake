@@ -223,17 +223,16 @@ build pool Database{..} Ops{..} stack ks continue = do
             return $ continue $ Left $ head errs
          else do
             time <- offsetTime
-            let done (priority, x) = do
-                    -- FIXME: pass priority to addPool
-                    addPool pool $ case x of
-                        Left e -> continue $ Left e
-                        Right v -> do dur <- time; continue $ Right (dur, Depends is, v)
+            let done x = do
+                    case x of
+                        Left e -> addPoolPriority pool $ continue $ Left e
+                        Right v -> addPool pool $ do dur <- time; continue $ Right (dur, Depends is, v)
                     return True
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
                 case Map.lookup i s of
-                    Just (_, Error e) -> done (True, Left e) -- on error make sure we immediately kick off our parent
-                    Just (_, Ready{}) | finish -> done (False, Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s])
+                    Just (_, Error e) -> done $ Left e -- on error make sure we immediately kick off our parent
+                    Just (_, Ready{}) | finish -> done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
                                       | otherwise -> return False
             return $ return ()
     where
