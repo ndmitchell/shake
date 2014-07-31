@@ -5,7 +5,6 @@ module Development.Shake.Pool(Pool, addPool, blockPool, runPool) where
 import Control.Concurrent
 import Control.Exception hiding (blocked)
 import Control.Monad
-import Data.Maybe
 import General.Base
 import General.Timing
 import qualified Data.HashSet as Set
@@ -82,7 +81,7 @@ data S = S
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
     ,working :: {-# UNPACK #-} !Int -- threads which are actively working
     ,blocked :: {-# UNPACK #-} !Int -- threads which are blocked
-    ,todo :: !(Queue (Maybe SomeException -> IO ()))
+    ,todo :: !(Queue (IO ()))
     }
 
 
@@ -103,7 +102,7 @@ step pool@(Pool n var done) op = do
                 -- spawn a new worker
                 t <- forkIO $ do
                     t <- myThreadId
-                    res <- try $ now Nothing
+                    res <- try now
                     case res of
                         Left e -> onVar $ \s -> do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
@@ -122,7 +121,7 @@ step pool@(Pool n var done) op = do
 -- | Add a new task to the pool, may be cancelled by sending it an exception
 addPool :: Pool -> (Maybe SomeException -> IO a) -> IO ()
 addPool pool act = step pool $ \s -> do
-    todo <- enqueue (void . act) (todo s)
+    todo <- enqueue (void $ act Nothing) (todo s)
     return s{todo = todo}
 
 
@@ -144,7 +143,7 @@ blockPool pool act = do
     if urgent then
         act -- may exceed the pool count
      else
-        step pool $ \s -> return s{todo = enqueuePriority (\e -> when (isNothing e) act) $ todo s}
+        step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
     waitBarrier var
     return res
 
