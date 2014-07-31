@@ -7,6 +7,8 @@ import Test.Type
 import System.Directory as IO
 import Data.List
 import Data.Maybe
+import Control.Monad
+import General.Base
 
 
 main = shaken test $ \args obj -> do
@@ -120,5 +122,7 @@ test build obj = do
     build ["3.par","4.par","-j2"]
     assertContents (obj ".log") "[[]]"
     writeFile (obj ".log") ""
-    build ["5.par","6.par","-j0"] -- all machines have at least 2 processors nowadays
-    assertContents (obj ".log") "[[]]"
+    i <- getProcessorCount
+    when (i > 1) $ do
+        build ["5.par","6.par","-j0"]
+        assertContents (obj ".log") "[[]]"
