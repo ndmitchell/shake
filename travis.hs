@@ -56,11 +56,11 @@ main = do
     setCurrentDirectory "ninja"
     putStrLn "== PROFILE BUILDING FROM SCRATCH =="
     cmd "rm .shake*"
-    cmd "../Main --skip-commands +RTS -p"
+    cmd "../Main --skip-commands +RTS -p -V0.001"
     cmd "head -n32 Main.prof"
 
     putStrLn "== PROFILE BUILDING NOTHING =="
-    cmd "../Main +RTS -p"
+    cmd "../Main +RTS -p -V0.001"
     cmd "head -n32 Main.prof"
 
 
