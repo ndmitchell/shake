@@ -7,7 +7,7 @@ import Test.Type
 import Control.Monad
 import General.Base
 import Control.Concurrent
-import Control.Exception hiding (assert)
+import Control.Exception as E hiding (assert)
 import System.Directory as IO
 
 
@@ -103,7 +103,7 @@ test build obj = do
     assertContents (obj "exception2") "0"
 
     forM_ ["finally3","finally4"] $ \name -> do
-        t <- forkIO $ build [name,"--exception"] `catch` \(_ :: SomeException) -> return ()
+        t <- forkIO $ build [name,"--exception"] `E.catch` \(_ :: SomeException) -> return ()
         retry 10 $ sleep 0.1 >> assertContents (obj name) "0"
         throwTo t (IndexOutOfBounds "test")
         retry 10 $ sleep 0.1 >> assertContents (obj name) "1"
