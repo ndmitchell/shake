@@ -295,22 +295,21 @@ newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
 
+actionBoom :: Bool -> Action a -> IO b -> Action a
+actionBoom runOnSuccess act clean = do
+    cleanup <- Action $ getsRO globalCleanup
+    clean <- liftIO $ addCleanup cleanup $ void clean
+    res <- Action $ catchRAW (fromAction act) $ \(e :: SomeException) -> liftIO (clean True) >> throwRAW e
+    liftIO $ clean runOnSuccess
+    return res
+
 -- | If an exception is raised by the 'Action', perform some 'IO'.
 actionOnException :: Action a -> IO b -> Action a
-actionOnException act clean = do
-    ref <- liftIO $ newIORef True
-    actionFinally
-        (do res <- act; liftIO $ writeIORef ref False; return res)
-        (do b <- readIORef ref; when b $ void clean)
+actionOnException = actionBoom False
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
 actionFinally :: Action a -> IO b -> Action a
-actionFinally act clean = do
-    cleanup <- Action $ getsRO globalCleanup
-    clean <- liftIO $ addCleanup cleanup $ void clean
-    res <- Action $ catchRAW (fromAction act) $ \(e :: SomeException) -> liftIO clean >> throwRAW e
-    liftIO clean
-    return res
+actionFinally = actionBoom True
 
 
 -- | Internal main function (not exported publicly)

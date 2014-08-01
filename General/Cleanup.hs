@@ -25,10 +25,11 @@ withCleanup act = do
 
 
 -- | Add a cleanup action to a 'Cleanup' scope. If the return action is not run by the time
---   'withCleanup' terminates then it will be run then.
-addCleanup :: Cleanup -> IO () -> IO (IO ())
+--   'withCleanup' terminates then it will be run then. The argument 'Bool' is 'True' to say
+--   run the action, 'False' to say ignore the action (and never run it).
+addCleanup :: Cleanup -> IO () -> IO (Bool -> IO ())
 addCleanup (Cleanup ref) act = atomicModifyIORef ref $ \s -> let i = unique s in
-    (,) (S (unique s + 1) (Map.insert i act $ items s)) $ do
-        join $ atomicModifyIORef ref $ \s ->
-            if not $ i `Map.member` items s then (s, return ()) else
-                (s{items = Map.delete i $ items s}, act)
+    (,) (S (unique s + 1) (Map.insert i act $ items s)) $ \b -> do
+        join $ atomicModifyIORef ref $ \s -> case Map.lookup i $ items s of
+            Nothing -> (s, return ())
+            Just act -> (s{items = Map.delete i $ items s}, when b act)
