@@ -53,7 +53,7 @@ main = shaken test $ \args obj -> do
     let trace x = withResource r 1 $ liftIO $ appendFile (obj ".log") x
     obj "*.par" *> \out -> do
         trace "["
-        liftIO $ sleep 0.1
+        (if "unsafe" `isInfixOf` out then unsafeExtraThread else id) $ liftIO $ sleep 0.1
         trace "]"
         writeFile' out out
 
@@ -125,3 +125,7 @@ test build obj = do
     when (i > 1) $ do
         build ["5.par","6.par","-j0"]
         assertContents (obj ".log") "[[]]"
+
+    writeFile (obj ".log") ""
+    build ["unsafe1.par","unsafe2.par","-j2"]
+    assertContents (obj ".log") "[[]]"
