@@ -1,6 +1,6 @@
 
 -- | Thread pool implementation.
-module Development.Shake.Pool(Pool, addPool, addPoolPriority, blockPool, runPool) where
+module Development.Shake.Pool(Pool, addPool, addPoolPriority, increasePool, blockPool, runPool) where
 
 import Control.Concurrent
 import Control.Exception hiding (blocked)
@@ -133,6 +133,14 @@ addPoolPriority :: Pool -> IO a -> IO ()
 addPoolPriority pool act = step pool $ \s -> do
     todo <- return $ enqueuePriority (void act) (todo s)
     return s{todo = todo}
+
+
+-- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
+--   After calling cleanup you should requeue onto a new thread.
+increasePool :: Pool -> IO (IO ())
+increasePool pool = do
+    step pool $ \s -> return s{threadsLimit = threadsLimit s + 1}
+    return $ step pool $ \s -> return s{threadsLimit = threadsLimit s - 1}
 
 
 -- | A blocking action is being run while on the pool, yield your thread.
