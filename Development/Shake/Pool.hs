@@ -1,6 +1,10 @@
 
 -- | Thread pool implementation.
-module Development.Shake.Pool(Pool, addPool, addPoolPriority, increasePool, blockPool, runPool) where
+module Development.Shake.Pool(
+    Pool, runPool,
+    addPool, addPoolPriority,
+    increasePool, blockPool
+    ) where
 
 import Control.Concurrent
 import Control.Exception hiding (blocked)
