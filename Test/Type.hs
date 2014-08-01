@@ -123,6 +123,9 @@ assertContentsInfix file want = do
     got <- readFile file
     assert (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
 
+assertContentsUnordered :: FilePath -> [String] -> IO ()
+assertContentsUnordered file xs = assertContentsOn (unlines . sort . lines) file (unlines xs)
+
 assertException :: [String] -> IO () -> IO ()
 assertException parts act = do
     res <- try act
