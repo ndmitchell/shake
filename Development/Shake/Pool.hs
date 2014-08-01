@@ -74,12 +74,12 @@ If any worker throws an exception, must signal to all the other workers
 -}
 
 data Pool = Pool
-    {-# UNPACK #-} !Int -- ^ Users supplied thread limit
     !(Var (Maybe S)) -- ^ Current state, 'Nothing' to say we are aborting
     !(Barrier (Either SomeException S)) -- ^ Barrier to signal that we are
 
 data S = S
-    {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stackssss
+    {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stacks
+    ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit
     ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
     ,working :: {-# UNPACK #-} !Int -- threads which are actively working
@@ -88,20 +88,20 @@ data S = S
     }
 
 
-emptyS :: Bool -> S
-emptyS deterministic = S Set.empty 0 0 0 0 $ newQueue deterministic
+emptyS :: Int -> Bool -> S
+emptyS n deterministic = S Set.empty n 0 0 0 0 $ newQueue deterministic
 
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch working or todo
 step :: Pool -> (S -> NonDet S) -> IO ()
-step pool@(Pool n var done) op = do
+step pool@(Pool var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
     onVar $ \s -> do
         s <- op s
         res <- maybe (return Nothing) (fmap Just) $ dequeue $ todo s
         case res of
-            Just (now, todo2) | working s < n -> do
+            Just (now, todo2) | working s < threadsLimit s -> do
                 -- spawn a new worker
                 t <- forkIO $ do
                     t <- myThreadId
@@ -162,7 +162,7 @@ blockPool pool act = do
 --   If any thread throws an exception, the exception will be reraised.
 runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool deterministic n act = do
-    s <- newVar $ Just $ emptyS deterministic
+    s <- newVar $ Just $ emptyS n deterministic
     let cleanup = modifyVar_ s $ \s -> do
             -- if someone kills our thread, make sure we kill our child threads
             case s of
@@ -171,7 +171,7 @@ runPool deterministic n act = do
             return Nothing
     flip onException cleanup $ do
         res <- newBarrier
-        let pool = Pool n s res
+        let pool = Pool s res
         addPool pool $ act pool
         res <- waitBarrier res
         case res of
