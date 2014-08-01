@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #155, add --live and shakeLiveFiles
     #153, handle escaped spaces in parseMakefile
     #152, fix typo in the manual
     Add copyFileChanged
