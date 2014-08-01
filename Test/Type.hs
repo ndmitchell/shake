@@ -109,11 +109,14 @@ assertContents file want = do
     got <- readFile file
     assert (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
 
-assertNonSpace :: FilePath -> String -> IO ()
-assertNonSpace file want = do
+assertContentsOn :: (String -> String) -> FilePath -> String -> IO ()
+assertContentsOn f file want = do
     got <- readFile file
-    let f = filter (not . isSpace)
-    assert (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
+    assert (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got ++
+                               "\nWANT (transformed): " ++ f want ++ "\nGOT (transformed): " ++ f got
+
+assertNonSpace :: FilePath -> String -> IO ()
+assertNonSpace = assertContentsOn $ filter (not . isSpace)
 
 assertContentsInfix :: FilePath -> String -> IO ()
 assertContentsInfix file want = do
