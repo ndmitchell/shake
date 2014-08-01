@@ -29,6 +29,7 @@ import qualified Test.FilePath as FilePath
 import qualified Test.FilePattern as FilePattern
 import qualified Test.Journal as Journal
 import qualified Test.Lint as Lint
+import qualified Test.Live as Live
 import qualified Test.Makefile as Makefile
 import qualified Test.Manual as Manual
 import qualified Test.Monad as Monad
@@ -57,7 +58,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
-        ,"journal" * Journal.main, "lint" * Lint.main, "makefile" * Makefile.main, "manual" * Manual.main
+        ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "makefile" * Makefile.main, "manual" * Manual.main
         ,"monad" * Monad.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main

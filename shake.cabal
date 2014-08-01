@@ -240,6 +240,7 @@ test-suite shake-test
         Test.Files
         Test.Journal
         Test.Lint
+        Test.Live
         Test.Makefile
         Test.Manual
         Test.Monad
