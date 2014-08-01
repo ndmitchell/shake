@@ -9,7 +9,7 @@ module Development.Shake.Database(
     Ops(..), build, Depends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
-    toReport, checkValid,
+    toReport, checkValid, listLive
     ) where
 
 import Development.Shake.Classes
@@ -464,6 +464,13 @@ checkValid Database{..} stored equal missing = do
             ""
 
     diagnostic "Validity/lint check passed"
+
+
+listLive :: Database -> IO [Key]
+listLive Database{..} = do
+    diagnostic "Listing live keys"
+    status <- readIORef status
+    return [k | (k, Ready{}) <- Map.elems status]
 
 
 ---------------------------------------------------------------------

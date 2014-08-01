@@ -49,6 +49,7 @@ import Development.Shake.Value
 import Development.Shake.Report
 import Development.Shake.Types
 import Development.Shake.Errors
+import Development.Shake.Special
 import General.Timing
 import General.Base
 import General.Cleanup
@@ -385,6 +386,14 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         when (shakeVerbosity >= Normal) $
                             output Normal $ "Writing report to " ++ file
                         buildReport file report
+                when (shakeLiveFiles /= []) $ do
+                    addTiming "Listing live"
+                    live <- listLive database
+                    let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
+                    forM_ shakeLiveFiles $ \file -> do
+                        when (shakeVerbosity >= Normal) $
+                            output Normal $ "Writing live list to " ++ file
+                        (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             maybe (return ()) (throwIO . snd) =<< readIORef except
             sequence_ . reverse =<< readIORef after
 

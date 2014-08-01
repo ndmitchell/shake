@@ -128,6 +128,9 @@ data ShakeOptions = ShakeOptions
     ,shakeCreationCheck :: Bool
         -- ^ Default to 'True'. After running a rule to create a file, is it an error if the file does not exist.
         --   Provided for compatibility with @make@ and @ninja@ (which have ugly file creation semantics).
+    ,shakeLiveFiles :: [FilePath]
+        -- ^ Default to '[]'. After the build system completes, write a list of all files which were /live/ in that run,
+        --   i.e. those which Shake checked were valid or rebuilt. Produces best answers if nothing rebuilds.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -142,7 +145,9 @@ data ShakeOptions = ShakeOptions
 
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
-shakeOptions = ShakeOptions ".shake" 1 "1" Normal False [] Nothing (Just 10) Nothing [] False True False True ChangeModtime True
+shakeOptions = ShakeOptions
+    ".shake" 1 "1" Normal False [] Nothing (Just 10) Nothing [] False True False
+    True ChangeModtime True []
     (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 
@@ -150,17 +155,18 @@ fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
-    ,"shakeProgress", "shakeOutput"]
+    ,"shakeLiveFiles","shakeProgress", "shakeOutput"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 (fromFunction x17) (fromFunction x18)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 (fromFunction x18) (fromFunction x19)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18) =
-        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k` x12 `k` x13 `k` x14 `k` x15 `k` x16 `k`
-        Function x17 `k` Function x18
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19) =
+        z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k`
+        Function x18 `k` Function x19
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
