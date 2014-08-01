@@ -2,7 +2,6 @@
 module Test.Basic(main) where
 
 import Development.Shake
-import Development.Shake.FilePath
 import Test.Type
 import System.Directory as IO
 import Data.List
@@ -51,8 +50,8 @@ main = shaken test $ \args obj -> do
         liftIO $ appendFile out "1"
 
     r <- newResource ".log file" 1
+    let trace x = withResource r 1 $ liftIO $ appendFile (obj ".log") x
     obj "*.par" *> \out -> do
-        let trace x = withResource r 1 $ liftIO $ appendFile (takeDirectory out </> ".log") x
         trace "["
         liftIO $ sleep 0.1
         trace "]"
