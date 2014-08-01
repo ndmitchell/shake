@@ -73,7 +73,10 @@ Must spawn a fresh thread to do blockPool
 If any worker throws an exception, must signal to all the other workers
 -}
 
-data Pool = Pool {-# UNPACK #-} !Int !(Var (Maybe S)) !(Barrier (Either SomeException S))
+data Pool = Pool
+    {-# UNPACK #-} !Int -- ^ Users supplied thread limit
+    !(Var (Maybe S)) -- ^ Current state, 'Nothing' to say we are aborting
+    !(Barrier (Either SomeException S)) -- ^ Barrier to signal that we are
 
 data S = S
     {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stackssss
