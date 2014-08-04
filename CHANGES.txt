@@ -1,6 +1,6 @@
 Changelog for Shake
 
-    #129, fix processor count detection on Mac
+    #129, fix processor count detection on Mac with -threaded
     #155, add --live and shakeLiveFiles
     #153, handle escaped spaces in parseMakefile
     #152, fix typo in the manual
