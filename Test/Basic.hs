@@ -122,6 +122,7 @@ test build obj = do
     assertContents (obj ".log") "[[]]"
     writeFile (obj ".log") ""
     i <- getProcessorCount
+    putStrLn $ "getProcessorCount returned " ++ show i
     when (i > 1) $ do
         build ["5.par","6.par","-j0"]
         assertContents (obj ".log") "[[]]"
