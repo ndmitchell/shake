@@ -244,7 +244,9 @@ retry 1 x = x
 retry i x = do
     res <- E.try x
     case res of
-        Left (_ :: SomeException) -> retry (i-1) x
+        Left (e :: SomeException) -> do
+            putStrLn $ "Retrying after exception: " ++ show e
+            retry (i-1) x
         Right v -> return v
 
 
