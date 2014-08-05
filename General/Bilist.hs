@@ -1,6 +1,6 @@
 
 module General.Bilist(
-    Bilist, cons, snoc, uncons, unsnoc, toList, isEmpty
+    Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
 
 import Control.Arrow
@@ -43,9 +43,3 @@ uncons (Bilist Nothing) = Nothing
 uncons (Bilist (Just x)) = Just $ f x
     where f (Leaf x) = (x, mempty)
           f (Branch x y) = second (`mappend` Bilist (Just y)) $ f x
-
-unsnoc :: Bilist a -> Maybe (Bilist a, a)
-unsnoc (Bilist Nothing) = Nothing
-unsnoc (Bilist (Just x)) = Just $ f x
-    where f (Leaf x) = (mempty, x)
-          f (Branch x y) = first (Bilist (Just x) `mappend`) $ f y
