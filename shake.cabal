@@ -141,6 +141,7 @@ library
         Development.Shake.Types
         Development.Shake.Value
         General.Base
+        General.Bilist
         General.Binary
         General.Cleanup
         General.Intern
