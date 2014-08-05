@@ -3,7 +3,7 @@
 module Development.Shake.Pool(
     Pool, runPool,
     addPool, addPoolPriority,
-    increasePool, blockPool
+    increasePool
     ) where
 
 import Control.Concurrent
@@ -73,7 +73,6 @@ removeTree (b:bs) (Branch y z) = if b then f y z else f z y
 
 {-
 Must keep a list of active threads, so can raise exceptions in a timely manner
-Must spawn a fresh thread to do blockPool
 If any worker throws an exception, must signal to all the other workers
 -}
 
@@ -145,29 +144,6 @@ increasePool :: Pool -> IO (IO ())
 increasePool pool = do
     step pool $ \s -> return s{threadsLimit = threadsLimit s + 1}
     return $ step pool $ \s -> return s{threadsLimit = threadsLimit s - 1}
-
-
--- | A blocking action is being run while on the pool, yield your thread.
---   Should only be called by an action under addPool.
---
---   If the first part of the result is True then the result is sufficiently high
---   priority that you may exceed the pool limit to get it done immediately.
---   Always the result of a child thread raising an error, which will probably
---   raise an error in the parent.
-blockPool :: Pool -> IO (Bool, a) -> IO a
-blockPool pool act = do
-    step pool $ \s -> return s{working = working s - 1, blocked = blocked s + 1}
-    (urgent,res) <- act
-    var <- newBarrier
-    let act = do
-            step pool $ \s -> return s{working = working s + 1, blocked = blocked s - 1}
-            signalBarrier var ()
-    if urgent then
-        act -- may exceed the pool count
-     else
-        step pool $ \s -> return s{todo = enqueuePriority act $ todo s}
-    waitBarrier var
-    return res
 
 
 -- | Run all the tasks in the pool on the given number of works.
