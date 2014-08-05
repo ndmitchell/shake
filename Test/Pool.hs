@@ -40,19 +40,6 @@ test build obj = do
                     throwTo self $ ErrorCall "fail" 
         wait >> wait -- give chance for a delayed exception
 
-        -- check blocking works
-        done <- newMVar False
-        runPool deterministic 1 $ \pool -> do
-            var <- newEmptyMVar
-            addPool pool $ do
-                addPool pool $ do
-                    wait
-                    putMVar var ()
-                blockPool pool $ fmap ((,) False) $ takeMVar var
-                modifyMVar_ done $ const $ return True
-        done <- readMVar done
-        assert done "Blocking"
-
         -- check someone spawned when at zero todo still gets run
         done <- newMVar False
         runPool deterministic 1 $ \pool ->
