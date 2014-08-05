@@ -4,7 +4,7 @@ module General.Base(
     Lock, newLock, withLock, withLockTry,
     Var, newVar, readVar, modifyVar, modifyVar_, withVar,
     Barrier, newBarrier, signalBarrier, waitBarrier, waitBarrierMaybe,
-    Duration, duration, Time, offsetTime, sleep,
+    Duration, duration, Time, offsetTime, offsetTimeIncrease, sleep,
     isWindows, getProcessorCount,
     readFileStrict, readFileUCS2, getEnvMaybe, captureOutput, getExePath,
     randomElem,
@@ -120,6 +120,15 @@ offsetTime = do
     return $ do
         end <- getCurrentTime
         return $ fromRational $ toRational $ end `diffUTCTime` start
+
+-- | Like offsetTime, but results will never decrease (though they may stay the same)
+offsetTimeIncrease :: IO (IO Time)
+offsetTimeIncrease = do
+    t <- offsetTime
+    ref <- newIORef 0
+    return $ do
+        t <- t
+        atomicModifyIORef ref $ \o -> let m = max t o in m `seq` (m, m)
 
 
 type Duration = Float -- duration in seconds
