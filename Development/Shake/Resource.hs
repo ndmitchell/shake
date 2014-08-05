@@ -108,8 +108,9 @@ waiter period act = void $ forkIO $ do
     sleep $ fromRational $ toRational period
     act
 
-blockerPool :: Pool -> IO (IO ())
-blockerPool pool = do
+-- Make sure the pool cannot run try until after you have finished with it
+blockPool :: Pool -> IO (IO ())
+blockPool pool = do
     bar <- newBarrier
     addPool pool $ do
         cancel <- increasePool pool
@@ -145,7 +146,7 @@ newThrottleIO name count period = do
                 ThrottleAvailable i
                     | i >= want -> return (ThrottleAvailable $ i - want, continue)
                     | otherwise -> do
-                        stop <- blockerPool pool
+                        stop <- blockPool pool
                         return (ThrottleWaiting stop $ (want - i, addPool pool continue) `cons` mempty, return ())
                 ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPool pool continue), return ())
 
