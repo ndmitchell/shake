@@ -85,17 +85,16 @@ data S = S
     ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit
     ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
-    ,working :: {-# UNPACK #-} !Int -- threads which are actively working
     ,todo :: !(Queue (IO ()))
     }
 
 
 emptyS :: Int -> Bool -> S
-emptyS n deterministic = S Set.empty n 0 0 0 $ newQueue deterministic
+emptyS n deterministic = S Set.empty n 0 0 $ newQueue deterministic
 
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
---   They are only allowed to touch working or todo
+--   They are only allowed to touch threadsLimit or todo
 step :: Pool -> (S -> NonDet S) -> IO ()
 step pool@(Pool var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
@@ -103,7 +102,7 @@ step pool@(Pool var done) op = do
         s <- op s
         res <- maybe (return Nothing) (fmap Just) $ dequeue $ todo s
         case res of
-            Just (now, todo2) | working s < threadsLimit s -> do
+            Just (now, todo2) | Set.size (threads s) < threadsLimit s -> do
                 -- spawn a new worker
                 t <- forkIO $ do
                     t <- myThreadId
@@ -113,11 +112,11 @@ step pool@(Pool var done) op = do
                             mapM_ killThread $ Set.toList $ Set.delete t $ threads s
                             signalBarrier done $ Left e
                             return Nothing
-                        Right _ -> step pool $ \s -> return s{working = working s - 1, threads = Set.delete t $ threads s}
+                        Right _ -> step pool $ \s -> return s{threads = Set.delete t $ threads s}
                 let threads2 = Set.insert t $ threads s
-                return $ Just s{working = working s + 1, todo = todo2, threads = threads2
+                return $ Just s{todo = todo2, threads = threads2
                                ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` Set.size threads2}
-            Nothing | working s == 0 -> do
+            Nothing | Set.null $ threads s -> do
                 signalBarrier done $ Right s
                 return Nothing
             _ -> return $ Just s
