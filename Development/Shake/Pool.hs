@@ -82,10 +82,10 @@ data Pool = Pool
 
 data S = S
     {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stacks
-    ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit
-    ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads
-    ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
-    ,todo :: !(Queue (IO ()))
+    ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit, Set.size threads <= threadsLimit
+    ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads (accounting only)
+    ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through (accounting only)
+    ,todo :: !(Queue (IO ())) -- operations waiting a thread
     }
 
 
