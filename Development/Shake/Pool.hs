@@ -7,7 +7,7 @@ module Development.Shake.Pool(
     ) where
 
 import Control.Concurrent
-import Control.Exception hiding (blocked)
+import Control.Exception
 import Control.Monad
 import General.Base
 import General.Timing
@@ -86,13 +86,12 @@ data S = S
     ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through
     ,working :: {-# UNPACK #-} !Int -- threads which are actively working
-    ,blocked :: {-# UNPACK #-} !Int -- threads which are blocked
     ,todo :: !(Queue (IO ()))
     }
 
 
 emptyS :: Int -> Bool -> S
-emptyS n deterministic = S Set.empty n 0 0 0 0 $ newQueue deterministic
+emptyS n deterministic = S Set.empty n 0 0 0 $ newQueue deterministic
 
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
@@ -118,7 +117,7 @@ step pool@(Pool var done) op = do
                 let threads2 = Set.insert t $ threads s
                 return $ Just s{working = working s + 1, todo = todo2, threads = threads2
                                ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` Set.size threads2}
-            Nothing | working s == 0 && blocked s == 0 -> do
+            Nothing | working s == 0 -> do
                 signalBarrier done $ Right s
                 return Nothing
             _ -> return $ Just s
