@@ -729,20 +729,16 @@ blockApply msg = Action . unmodifyRW f . fromAction
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
 --   You cannot depend on a rule (e.g. 'need') while a resource is held.
 withResource :: Resource -> Int -> Action a -> Action a
-withResource r i act = Action $ do
-    Global{..} <- getRO
-    act <- evalRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) act
-    join $ liftIO $ bracket_
-        (do res <- acquireResource r i
-            case res of
-                Nothing -> globalDiagnostic $ show r ++ " acquired " ++ show i ++ " with no wait"
-                Just wait -> do
-                    globalDiagnostic $ show r ++ " waiting to acquire " ++ show i
-                    blockPool globalPool $ fmap ((,) False) wait
-                    globalDiagnostic $ show r ++ " acquired " ++ show i ++ " after waiting")
-        (do releaseResource r i
-            globalDiagnostic $ show r ++ " released " ++ show i)
-        act
+withResource r i act = do
+    Global{..} <- Action getRO
+    liftIO $ globalDiagnostic $ show r ++ " waiting to acquire " ++ show i
+    Action $ captureRAW $ \continue -> acquireResource r globalPool i $ do
+        globalDiagnostic $ show r ++ " acquired " ++ show i
+        continue $ Right ()
+    res <- Action $ tryRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) act
+    liftIO $ releaseResource r globalPool i
+    liftIO $ globalDiagnostic $ show r ++ " released " ++ show i
+    Action $ either throwRAW return res
 
 
 -- | Run an action which uses part of several finite resources. Acquires the resources in a stable

@@ -1,15 +1,18 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, ViewPatterns #-}
 
 module Development.Shake.Resource(
     Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
     ) where
 
-import Development.Shake.Errors
 import General.Base
 import Data.Function
+import Data.Monoid
 import System.IO.Unsafe
+import Control.Concurrent
 import Control.Arrow
 import Control.Monad
+import General.Bilist
+import Development.Shake.Pool
 
 
 {-# NOINLINE resourceIds #-}
@@ -41,10 +44,10 @@ data Resource = Resource
         -- ^ Key used for Eq/Ord operations. To make withResources work, we require newResourceIO < newThrottleIO
     ,resourceShow :: String
         -- ^ String used for Show
-    ,acquireResource :: Int -> IO (Maybe (IO ()))
-        -- ^ Try to acquire a resource. Returns Nothing to indicate you have acquired with no blocking, or Just act to
-        --   say after act completes (which will block) then you will have the resource.
-    ,releaseResource :: Int -> IO ()
+    ,acquireResource :: Pool -> Int -> IO () -> IO ()
+        -- ^ Acquire the resource and call the function. Passes 'False' to indicate you have acquired with no blocking,
+        --   or 'True' to say there was waiting and you must not do significant computation on that thread.
+    ,releaseResource :: Pool -> Int -> IO ()
         -- ^ You should only ever releaseResource that you obtained with acquireResource.
     }
 
@@ -56,8 +59,12 @@ instance Ord Resource where compare = compare `on` resourceOrd
 ---------------------------------------------------------------------
 -- FINITE RESOURCES
 
--- | (number available, queue of people with how much they want and a barrier to signal when it is allocated to them)
-type Finite = Var (Int, [(Int,Barrier ())])
+data Finite = Finite
+    {finiteAvailable :: !Int
+        -- ^ number of currently available resources
+    ,finiteWaiting :: Bilist (Int, IO ())
+        -- ^ queue of people with how much they want and the action when it is allocated to them
+    }
 
 -- | A version of 'Development.Shake.newResource' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newResource' instead.
@@ -66,105 +73,88 @@ newResourceIO name mx = do
     when (mx < 0) $
         error $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     key <- resourceId
-    var <- newVar (mx, [])
+    var <- newVar $ Finite mx mempty
     return $ Resource (negate key) shw (acquire var) (release var)
     where
         shw = "Resource " ++ name
 
-        acquire :: Finite -> Int -> IO (Maybe (IO ()))
-        acquire var want
+        acquire :: Var Finite -> Pool -> Int -> IO () -> IO ()
+        acquire var pool want continue
             | want < 0 = error $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > mx = error $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
-            | otherwise = modifyVar var $ \(available,waiting) ->
-                if want <= available then
-                    return ((available - want, waiting), Nothing)
-                else do
-                    bar <- newBarrier
-                    return ((available, waiting ++ [(want,bar)]), Just $ waitBarrier bar)
+            | otherwise = join  $ modifyVar var $ \x@Finite{..} -> return $
+                if want <= finiteAvailable then
+                    (x{finiteAvailable = finiteAvailable - want}, continue)
+                else
+                    (x{finiteWaiting = finiteWaiting `snoc` (want, addPool pool continue)}, return ())
 
-        release :: Finite -> Int -> IO ()
-        release var i = modifyVar_ var $ \(available,waiting) -> f (available+i) waiting
+        release :: Var Finite -> Pool -> Int -> IO ()
+        release var _ i = join $ modifyVar var $ \x -> return $ f x{finiteAvailable = finiteAvailable x + i}
             where
-                f i ((wi,wa):ws) | wi <= i = signalBarrier wa () >> f (i-wi) ws
-                                 | otherwise = do (i,ws) <- f i ws; return (i,(wi,wa):ws)
-                f i [] = return (i, [])
+                f (Finite i (uncons -> Just ((wi,wa),ws)))
+                    | wi <= i = second (wa >>) $ f $ Finite (i-wi) ws
+                    | otherwise = first (add (wi,wa)) $ f $ Finite i ws
+                f (Finite i _) = (Finite i mempty, return ())
+                add a s = s{finiteWaiting = a `cons` finiteWaiting s}
 
 
 ---------------------------------------------------------------------
 -- THROTTLE RESOURCES
 
-data Throttle = Throttle
-    {throttleLock :: Lock
-        -- people queue up to grab from replenish, full means no one is queued
-    ,throttleVal :: Var (Either (Barrier ()) [(Time, Int)])
-        -- either someone waiting for resources, or the time to wait until before N resources become available
-        -- anyone who puts a Barrier in the Left must be holding the Lock
-    ,throttleTime :: IO Time
-    }
+
+-- call a function after a certain delay
+waiter :: Double -> IO () -> IO ()
+waiter period act = void $ forkIO $ do
+    sleep $ fromRational $ toRational period
+    act
+
+blockerPool :: Pool -> IO (IO ())
+blockerPool pool = do
+    bar <- newBarrier
+    addPool pool $ do
+        cancel <- increasePool pool
+        waitBarrier bar
+        cancel
+    return $ signalBarrier bar ()
+
+
+data Throttle
+      -- | Some number of resources are available
+    = ThrottleAvailable !Int
+      -- | Some users are blocked (non-empty), plus an action to call once we go back to Available
+    | ThrottleWaiting (IO ()) (Bilist (Int, IO ()))
+
 
 -- | A version of 'Development.Shake.newThrottle' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newThrottle' instead.
 newThrottleIO :: String -> Int -> Double -> IO Resource
-newThrottleIO name count period_ = do
+newThrottleIO name count period = do
     when (count < 0) $
         error $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
     key <- resourceId
-    lock <- newLock
-    time <- offsetTime
-    rep <- newVar $ Right [(0, count)]
-    let s = Throttle lock rep time
-    return $ Resource key shw (acquire s) (release s)
+    var <- newVar $ ThrottleAvailable count
+    return $ Resource key shw (acquire var) (release var)
     where
-        period = fromRational $ toRational period_
         shw = "Throttle " ++ name
 
-        release :: Throttle -> Int -> IO ()
-        release Throttle{..} n = do
-            t <- throttleTime
-            modifyVar_ throttleVal $ \v -> case v of
-                Left b -> signalBarrier b () >> return (Right [(t+period, n)])
-                Right ts -> return $ Right $ ts ++ [(t+period, n)]
-
-        acquire :: Throttle -> Int -> IO (Maybe (IO ()))
-        acquire Throttle{..} want
+        acquire :: Var Throttle -> Pool -> Int -> IO () -> IO ()
+        acquire var pool want continue
             | want < 0 = error $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > count = error $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
-            | otherwise = do
-                let grab t vs = do
-                        let (a,b) = span ((<= t) . fst) vs
-                        -- renormalise for clock skew, nothing can ever be > t+period away
-                        return (sum $ map snd a, map (first $ min $ t+period) b)
-                let push i vs = [(0,i) | i > 0] ++ vs
+            | otherwise = join $ modifyVar var $ \x -> case x of
+                ThrottleAvailable i
+                    | i >= want -> return (ThrottleAvailable $ i - want, continue)
+                    | otherwise -> do
+                        stop <- blockerPool pool
+                        return (ThrottleWaiting stop $ (want - i, addPool pool continue) `cons` mempty, return ())
+                ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPool pool continue), return ())
 
-                -- attempt to grab without locking
-                res <- withLockTry throttleLock $ do
-                    modifyVar throttleVal $ \v -> case v of
-                        Right vs -> do
-                            t <- throttleTime
-                            (got,vs) <- grab t vs
-                            if got >= want then
-                                return (Right $ push (got - want) vs, True)
-                             else
-                                return (Right $ push got vs, False)
-                        _ -> return (v, False)
-                if res == Just True then
-                    return Nothing
-                 else
-                    return $ Just $ withLock throttleLock $ do
-                        -- keep trying to acquire more resources until you have everything you need
-                        let f want = join $ modifyVar throttleVal $ \v -> case v of
-                                Left _ -> err "newThrottle, invariant failed, Left while holding throttleLock"
-                                Right vs -> do
-                                    t <- throttleTime
-                                    (got,vs) <- grab t vs
-                                    case vs of
-                                        _ | got >= want -> return (Right $ push (got - want) vs, return ())
-                                        [] -> do
-                                            b <- newBarrier
-                                            return (Left b, waitBarrier b >> f (want - got))
-                                        (t2,n):vs -> do
-                                            -- be robust to clock skew - only ever sleep for 'period' at most and always mark the next as good.
-                                            return $ (,) (Right $ (0,n):vs) $ do
-                                                sleep $ min period (t2-t)
-                                                f $ want - got
-                        f want
+        release :: Var Throttle -> Pool -> Int -> IO ()
+        release var pool n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
+                ThrottleAvailable i -> (ThrottleAvailable $ i+n, return ())
+                ThrottleWaiting stop xs -> f stop n xs
+            where
+                f stop i (uncons -> Just ((wi,wa),ws))
+                    | i >= wi = second (wa >>) $ f stop (i-wi) ws
+                    | otherwise = (ThrottleWaiting stop $ (wi-i,wa) `cons` ws, return ())
+                f stop i _ = (ThrottleAvailable i, stop)
