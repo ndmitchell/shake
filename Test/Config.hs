@@ -42,7 +42,6 @@ test build obj = do
     assertContents (obj "none.times") "X"
 
     -- Test readConfigFileWithEnv
-    build ["clean"]
     writeFile (obj "config") $ unlines
       ["HEADERS_DIR = ${SOURCE_DIR}/path/to/dir"
       ,"CFLAGS = -O2 -I${HEADERS_DIR} -g"]
