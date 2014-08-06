@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #156, add readConfigFileWithEnv for configs with an initial arg
     #129, fix processor count detection on Mac with -threaded
     #155, add --live and shakeLiveFiles
     #153, handle escaped spaces in parseMakefile
