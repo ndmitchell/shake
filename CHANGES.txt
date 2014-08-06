@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #28, switch to continuation passing style, uses far less threads
     #156, add readConfigFileWithEnv for configs with an initial env
     #129, fix processor count detection on Mac with -threaded
     #155, add --live and shakeLiveFiles
