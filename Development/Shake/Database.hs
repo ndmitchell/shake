@@ -430,7 +430,7 @@ toReport Database{..} = do
             where fromStep i = fromJust $ Map.lookup i steps
                   fromTrace (Trace a b c) = ReportTrace (unpack a) (fromFloat b) (fromFloat c)
                   fromFloat = fromRational . toRational
-    return $ [maybe (err "toReport") f $ Map.lookup i status | i <- order]
+    return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
