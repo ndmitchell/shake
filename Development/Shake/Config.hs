@@ -18,7 +18,7 @@
 --   and use the values directly, or 'usingConfigFile' and 'getConfig' to track the configuration
 --   values, so they become build dependencies.
 module Development.Shake.Config(
-    readConfigFile,
+    readConfigFile, readConfigFileWithEnv,
     usingConfigFile, usingConfig,
     getConfig
     ) where
@@ -37,8 +37,16 @@ import Control.Arrow
 --   Config files use the Ninja lexical syntax:
 --   <http://martine.github.io/ninja/manual.html#_lexical_syntax>
 readConfigFile :: FilePath -> IO (Map.HashMap String String)
-readConfigFile file = do
+readConfigFile = readConfigFileWithEnv []
+
+
+-- | Read a config file with an initial environment, returning a list of the variables and their bindings.
+--   Config files use the Ninja lexical syntax:
+--   <http://martine.github.io/ninja/manual.html#_lexical_syntax>
+readConfigFileWithEnv :: [(String, String)] -> FilePath -> IO (Map.HashMap String String)
+readConfigFileWithEnv vars file = do
     env <- Ninja.newEnv
+    mapM_ (uncurry (Ninja.addEnv env) . (UTF8.fromString *** UTF8.fromString)) vars
     Ninja.parse file env
     mp <- Ninja.fromEnv env
     return $ Map.fromList $ map (UTF8.toString *** UTF8.toString) $ Map.toList mp
