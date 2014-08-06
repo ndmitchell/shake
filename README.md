@@ -1,4 +1,4 @@
-# Shake [![Build Status](https://travis-ci.org/ndmitchell/shake.svg)](https://travis-ci.org/ndmitchell/shake)
+# Shake [![Hackage version](https://img.shields.io/hackage/v/shake.svg?style=flat)](http://hackage.haskell.org/package/shake) [![Build Status](http://img.shields.io/travis/ndmitchell/shake.svg?style=flat)](https://travis-ci.org/ndmitchell/shake)
 
 Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day.
 
