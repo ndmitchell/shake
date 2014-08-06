@@ -47,7 +47,7 @@ test build obj = do
       ["HEADERS_DIR = ${SOURCE_DIR}/path/to/dir"
       ,"CFLAGS = -O2 -I${HEADERS_DIR} -g"]
     vars <- readConfigFileWithEnv [("SOURCE_DIR", "/path/to/src")]
-                                  (obj "readConfigFileWithEnv")
+                                  (obj "config")
     assert (Map.lookup "HEADERS_DIR" vars == Just "/path/to/src/path/to/dir")
         $ "readConfigFileWithEnv:"
             ++ " Expected: " ++ show (Just "/path/to/src/path/to/dir")
