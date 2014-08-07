@@ -127,6 +127,8 @@ shakeArgsWith baseOpts userOptions rules = do
         showHelp
      else if Version `elem` flagsExtra then
         putStrLn $ "Shake build system, version " ++ showVersion version
+     else if NumericVersion `elem` flagsExtra then
+        putStrLn $ showVersion version
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         start <- getCurrentTime
@@ -202,6 +204,7 @@ shakeOptDescrs = [fmapOptDescr (either Left (Right . snd)) o | (True, o) <- shak
 
 data Extra = ChangeDirectory FilePath
            | Version
+           | NumericVersion
            | AssumeNew FilePath
            | AssumeOld FilePath
            | PrintDirectory Bool
@@ -247,6 +250,7 @@ shakeOptsEx =
     ,yes $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
     ,yes $ Option ""  ["live"] (OptArg (\x -> Right ([], \s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]})) "FILE") "List the files that are live [to live.txt]."
     ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
+    ,no  $ Option ""  ["numeric-version"] (NoArg $ Right ([NumericVersion],id)) "Print just the version number and exit."
     ,no  $ Option "o" ["old-file","assume-old"] (ReqArg (\x -> Right ([AssumeOld x],id)) "FILE") "Consider FILE to be very old and don't remake it."
     ,yes $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
     ,yes $ Option ""  ["assume-skip"] (noArg $ \s -> s{shakeAssume=Just AssumeSkip}) "Don't remake any files this run."
