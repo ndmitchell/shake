@@ -8,6 +8,7 @@ import Control.Monad
 import Data.Char
 import Data.Function
 import Data.List
+import Data.Version
 import System.FilePath
 import Paths_shake
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -53,6 +54,7 @@ reportHTML xs = do
     htmlDir <- getDataFileName "html"
     report <- LBS.readFile $ htmlDir </> "report.html"
     let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ reportJSON xs
+               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 

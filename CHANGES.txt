@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #147, add the version in the profile reports
     #147, add --numeric-version flag
     #28, switch to continuation passing style, uses far less threads
     #156, add readConfigFileWithEnv for configs with an initial env
