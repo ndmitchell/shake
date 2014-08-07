@@ -117,7 +117,6 @@ library
         Development.Ninja.Type
         Development.Shake.Args
         Development.Shake.ByteString
-        Development.Shake.Continue
         Development.Shake.Core
         Development.Shake.Database
         Development.Shake.Derived
@@ -144,6 +143,7 @@ library
         General.Bilist
         General.Binary
         General.Cleanup
+        General.Concurrent
         General.Intern
         General.String
         General.Timing

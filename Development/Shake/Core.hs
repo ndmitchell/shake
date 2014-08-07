@@ -40,7 +40,6 @@ import System.Directory
 import System.IO
 
 import Development.Shake.Classes
-import Development.Shake.Continue
 import Development.Shake.Pool
 import Development.Shake.Database
 import Development.Shake.Monad
@@ -52,6 +51,7 @@ import Development.Shake.Errors
 import Development.Shake.Special
 import General.Timing
 import General.Base
+import General.Concurrent
 import General.Cleanup
 import General.String
 

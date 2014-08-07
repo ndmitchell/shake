@@ -1,5 +1,5 @@
 
-module Development.Shake.Continue(
+module General.Concurrent(
     Fence, newFence, signalFence, waitFence, testFence,
     ) where
 
