@@ -5,7 +5,7 @@ module Development.Shake.Monad(
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
     catchRAW, tryRAW, throwRAW,
-    evalRAW, unmodifyRW, captureRAW,
+    unmodifyRW, captureRAW,
     ) where
 
 import Control.Applicative
@@ -106,20 +106,6 @@ throwRAW = liftIO . throwIO
 
 ---------------------------------------------------------------------
 -- WEIRD STUFF
-
--- | Given an action, produce a 'RAW' that runs fast, containing
---   an 'IO' that runs slowly (the bulk of the work) and a 'RAW'
---   that runs fast. The resulting IO/RAW should each be run exactly once.
-evalRAW :: RAW ro rw a -> RAW ro rw (IO (RAW ro rw a))
-evalRAW m = do
-    ro <- getRO
-    rw <- getRW
-    return $ do
-        (a,rw) <- join $ runRAW ro rw $ liftA2 (,) m getRW
-        return $ do
-            putRW rw
-            return a
-
 
 -- | Apply a modification, run an action, then undo the changes after.
 unmodifyRW :: (rw -> (rw, rw -> rw)) -> RAW ro rw a -> RAW ro rw a
