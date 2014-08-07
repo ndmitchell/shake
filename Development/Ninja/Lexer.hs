@@ -81,8 +81,8 @@ take0 i (Str0 x) = BS.takeWhile (/= '\0') $ BS.take i x
 data Lexeme
     = LexBind Str Expr -- [indent]foo = bar
     | LexBuild [Expr] Str [Expr] -- build foo: bar | baz || qux (| and || are represented as Expr)
-    | LexInclude Str -- include file
-    | LexSubninja Str -- include file
+    | LexInclude Expr -- include file
+    | LexSubninja Expr -- include file
     | LexRule Str -- rule name
     | LexPool Str -- pool name
     | LexDefault [Expr] -- default foo bar
@@ -158,8 +158,8 @@ lexxBind ctor x
 lexxBind _ x = error $ show ("parse failed when parsing binding", take0 100 x)
 
 lexxFile ctor x
-    | (file,rest) <- splitLineCont x
-    = ctor file : lexerLoop rest
+    | (exp,rest) <- lexxExpr False False $ dropSpace x
+    = ctor exp : lexerLoop rest
 
 lexxName ctor x
     | (name,rest) <- splitLineCont x
