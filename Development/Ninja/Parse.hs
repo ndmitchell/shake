@@ -46,9 +46,11 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
     LexPool name -> do
         depth <- getDepth env binds
         return ninja{pools = (name, depth) : pools}
-    LexInclude file ->
+    LexInclude expr -> do
+        file <- askExpr env expr
         parseFile (BS.unpack file) env ninja
-    LexSubninja file -> do
+    LexSubninja expr -> do
+        file <- askExpr env expr
         e <- scopeEnv env
         parseFile (BS.unpack file) e ninja
     LexDefine a b -> do
