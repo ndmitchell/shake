@@ -278,6 +278,9 @@ getExePath = getProgName
 #endif
 
 
+---------------------------------------------------------------------
+-- System.Random
+
 randomElem :: [a] -> IO a
 randomElem xs = do
     i <- randomRIO (0, length xs - 1)
