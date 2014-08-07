@@ -5,6 +5,7 @@ module Development.Shake.Resource(
     ) where
 
 import General.Base
+import General.Concurrent
 import Data.Function
 import Data.Monoid
 import System.IO.Unsafe

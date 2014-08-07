@@ -9,7 +9,7 @@ module Development.Shake.Pool(
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
-import General.Base
+import General.Concurrent
 import General.Timing
 import qualified Data.HashSet as Set
 import System.IO.Unsafe

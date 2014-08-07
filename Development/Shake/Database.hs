@@ -23,6 +23,7 @@ import Development.Shake.Special
 import Development.Shake.Report
 import Development.Shake.Monad
 import General.Base
+import General.Concurrent
 import General.String
 import General.Intern as Intern
 

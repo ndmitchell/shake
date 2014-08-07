@@ -11,6 +11,7 @@ module Development.Shake.Storage(
 
 import General.Binary
 import General.Base
+import General.Concurrent
 import Development.Shake.Types
 import General.Timing
 
