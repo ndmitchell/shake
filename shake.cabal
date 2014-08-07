@@ -29,7 +29,7 @@ description:
     Shake also provides more accurate dependency tracking, including seamless
     support for generated files, and dependencies on system information
     (e.g. compiler version).
-homepage:           https://github.com/ndmitchell/shake
+homepage:           https://github.com/ndmitchell/shake#readme
 bug-reports:        https://github.com/ndmitchell/shake/issues
 tested-with:        GHC==7.8.2, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
 extra-source-files:
