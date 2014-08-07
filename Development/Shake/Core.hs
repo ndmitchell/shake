@@ -766,7 +766,7 @@ newCacheIO act = do
                     Just res -> return res
                     Nothing -> do
                         pool <- Action $ getsRO globalPool
-                        Action $ captureRAW $ \k -> waitFence bar $ Continue $ \v ->
+                        Action $ captureRAW $ \k -> waitFence bar $ \v ->
                             addPool pool $ k $ Right v
                 case res of
                     Left err -> Action $ throwRAW err
@@ -780,12 +780,12 @@ newCacheIO act = do
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
-                            liftIO $ signalFence bar `runContinue` Left (err :: SomeException)
+                            liftIO $ signalFence bar $ Left (err :: SomeException)
                             Action $ throwRAW err
                         Right v -> do
                             post <- Action $ getsRW localDepends
                             let deps = take (length post - length pre) post
-                            liftIO $ signalFence bar `runContinue` Right (deps, v)
+                            liftIO $ signalFence bar $ Right (deps, v)
                             return v
 
 -- | Given an action on a key, produce a cached version that will execute the action at most once per key.
