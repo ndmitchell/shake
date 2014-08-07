@@ -173,11 +173,11 @@ newtype Depends = Depends {fromDepends :: [Id]}
 
 data Ops = Ops
     {stored :: Key -> IO (Maybe Value)
-        -- ^ Given a Key and a Value from the database, check it still matches the value stored on disk
+        -- ^ Given a Key, find the value stored on disk
     ,equal :: Key -> Value -> Value -> EqualCost
         -- ^ Given both Values, see if they are equal and how expensive that check was
     ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Duration, [Trace]))
-        -- ^ Given a chunk of stack (bottom element first), and a key, either raise an exception or successfully build it
+        -- ^ Given a stack and a key, either raise an exception or successfully build it
     }
 
 
