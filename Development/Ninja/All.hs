@@ -118,7 +118,9 @@ build needDeps phonys rules pools out build@Build{..} = do
                 let (cmdOpts, cmdProg, cmdArgs) = toCommand commandline
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command cmdOpts cmdProg cmdArgs
-                    needDeps build $ map filepathNormalise $ parseShowIncludes $ BS.pack stdout
+                    prefix <- liftIO $ fmap (fromMaybe $ BS.pack "Note: including file: ") $
+                                       askEnv env $ BS.pack "msvc_deps_prefix"
+                    needDeps build $ map filepathNormalise $ parseShowIncludes prefix $ BS.pack stdout
                  else
                     withPool $ command_ cmdOpts cmdProg cmdArgs
                 when (depfile /= "") $ do
@@ -182,10 +184,11 @@ applyRspfile env act = do
         return res
 
 
-parseShowIncludes :: Str -> [FileStr]
-parseShowIncludes out = [y | x <- BS.lines out, bsNote `BS.isPrefixOf` x
-                           , let y = BS.dropWhile isSpace $ BS.drop (BS.length bsNote) x
-                           , not $ isSystemInclude y]
+parseShowIncludes :: Str -> Str -> [FileStr]
+parseShowIncludes prefix out =
+    [y | x <- BS.lines out, prefix `BS.isPrefixOf` x
+       , let y = BS.dropWhile isSpace $ BS.drop (BS.length prefix) x
+       , not $ isSystemInclude y]
 
 -- Dodgy, but ported over from the original Ninja
 isSystemInclude :: FileStr -> Bool
@@ -193,7 +196,6 @@ isSystemInclude x = bsProgFiles `BS.isInfixOf` tx || bsVisStudio `BS.isInfixOf` 
     where tx = BS8.map (\c -> if c >= 97 then c - 32 else c) x
                -- optimised toUpper that only cares about letters and spaces
 
-bsNote = BS.pack "Note: including file:"
 bsProgFiles = BS.pack "PROGRAM FILES"
 bsVisStudio = BS.pack "MICROSOFT VISUAL STUDIO"
 

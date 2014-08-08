@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #130, support msvc_deps_prefix in Ninja
     #157, allow variable substitution in include/subninja statements
     #147, add the version in the profile reports
     #147, add --numeric-version flag
