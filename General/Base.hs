@@ -21,6 +21,7 @@ import Control.Exception as E
 import Control.Monad
 import Data.Char
 import Data.IORef
+import Data.List
 import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
@@ -33,11 +34,7 @@ import System.IO.Unsafe
 import System.Random
 import GHC.IO.Handle(hDuplicate,hDuplicateTo)
 import Development.Shake.Classes
-#if __GLASGOW_HASKELL__ >= 704
-import GHC.Conc(getNumProcessors)
-#else
 import Foreign.C.Types
-#endif
 
 
 ---------------------------------------------------------------------
@@ -202,18 +199,26 @@ isWindows = False
 #endif
 
 
-{-# NOINLINE getProcessorCount #-}
-getProcessorCount :: IO Int
-
-#if __GLASGOW_HASKELL__ >= 704
-getProcessorCount = let res = unsafePerformIO getNumProcessors in return res
-#else
--- unsafePefromIO so we cache the result and only compute it once
-getProcessorCount = let res = unsafePerformIO $ fromIntegral <$> getNumberOfProcessors in return res
-
 -- Use the underlying GHC function
 foreign import ccall getNumberOfProcessors :: IO CInt
-#endif
+
+
+{-# NOINLINE getProcessorCount #-}
+getProcessorCount :: IO Int
+-- unsafePefromIO so we cache the result and only compute it once
+getProcessorCount = let res = unsafePerformIO act in return res
+    where
+        act =
+            if rtsSupportsBoundThreads then
+                fromIntegral <$> getNumberOfProcessors
+            else
+                handle (\(_ :: SomeException) -> return 1) $ do
+                    env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
+                    case env of
+                        Just s | [(i,"")] <- reads s -> return i
+                        _ -> do
+                            src <- readFile "/proc/cpuinfo"
+                            return $ length [() | x <- lines src, "processor" `isPrefixOf` x]
 
 
 ---------------------------------------------------------------------
