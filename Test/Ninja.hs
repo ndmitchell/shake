@@ -3,10 +3,12 @@ module Test.Ninja(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import qualified Development.Shake.Config as Config
 import System.Directory(copyFile)
 import Control.Monad
 import General.Base
 import Test.Type
+import qualified Data.HashMap.Strict as Map
 import Data.List
 import qualified Start
 import System.Environment
@@ -70,3 +72,14 @@ test build obj = do
                | otherwise = a === b
     length want === length res
     zipWithM_ eq want res
+
+    -- Test initial variable bindings and variables in include/subninja statements
+    let test6 = obj "test6"
+
+    copyFile "Test/Ninja/test6-sub.ninja" $ test6 ++ "-sub.ninja"
+    copyFile "Test/Ninja/test6-inc.ninja" $ test6 ++ "-inc.ninja"
+    copyFile "Test/Ninja/test6.ninja" $ test6 ++ ".ninja"
+
+    config <- Config.readConfigFileWithEnv [("v1", test6)] $ test6 ++ ".ninja"
+    -- The file included by subninja should have a separate variable scope
+    Map.lookup "v2" config === Just "g2"
