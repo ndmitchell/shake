@@ -68,7 +68,7 @@ test build obj = do
     run "-f../../Test/Ninja/lint.ninja good --lint"
     runFail "-f../../Test/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
-    res <- fmap (reverse . drop 2 . reverse . drop 1 . lines) $ captureOutput $ run "-f../../Test/Ninja/compdb.ninja -t compdb cxx"
+    res <- fmap (drop 1 . lines) $ captureOutput $ run "-f../../Test/Ninja/compdb.ninja -t compdb cxx @--no-report @--quiet"
     want <- fmap lines $ readFile "Test/Ninja/compdb.output"
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b
