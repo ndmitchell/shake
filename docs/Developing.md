@@ -11,7 +11,7 @@ I generally load Shake up in `ghci`, starting from the root directory, which has
 
 Individual test can be run interactively, too:
 
-    $ :main list-tests
+    $ :main help
     $ :main TEST_NAME test
 
 Replace `TEST_NAME` with one of the tests listed.
