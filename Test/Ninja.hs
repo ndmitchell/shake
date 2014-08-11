@@ -10,6 +10,7 @@ import General.Base
 import Test.Type
 import qualified Data.HashMap.Strict as Map
 import Data.List
+import Data.Maybe
 import qualified Start
 import System.Environment
 
@@ -22,7 +23,8 @@ main = shaken test $ \args obj -> do
 
 
 test build obj = do
-    let run xs = build $ "--exception" : map ('@':) (words xs)
+    -- when calling run anything with a leading @ gets given to Shake, anything without gets given to Ninja
+    let run xs = build $ "--exception" : map (\x -> fromMaybe ('@':x) $ stripPrefix "@" x) (words xs)
     let runFail xs bad = assertException [bad] $ run $ xs ++ " --quiet"
 
     build ["clean"]
