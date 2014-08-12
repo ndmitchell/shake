@@ -317,10 +317,10 @@ class CmdResult a where
     cmdResult :: ([Result], [Result] -> a)
 
 instance CmdResult Exit where
-    cmdResult = ([ResultCode $ ExitSuccess], \[ResultCode x] -> Exit x)
+    cmdResult = ([ResultCode ExitSuccess], \[ResultCode x] -> Exit x)
 
 instance CmdResult ExitCode where
-    cmdResult = ([ResultCode $ ExitSuccess], \[ResultCode x] -> x)
+    cmdResult = ([ResultCode ExitSuccess], \[ResultCode x] -> x)
 
 instance CmdResult Stdout where
     cmdResult = ([ResultStdout ""], \[ResultStdout x] -> Stdout x)
