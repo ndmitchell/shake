@@ -10,7 +10,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd,
+    command, command_, cmd, CmdArguments,
     Stdout(..), Stderr(..), Exit(..),
     CmdResult, CmdOption(..),
     addPath, addEnv,
