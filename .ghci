@@ -31,9 +31,9 @@ let _ghci_make name flags =
 :def hpc_ const $ return $ unlines
         [_ghci_make "hpc" "-fhpc"
         ,":!del shake.tix"
-        ,":!.hpc\\hpc\\shake"
         ,":!.hpc\\hpc\\shake clean"
         ,":!.hpc\\hpc\\shake test"
+        ,":!.hpc\\hpc\\shake random test 1m"
         ,":!hpc.exe markup shake.tix --destdir=.hpc"
         ,":!hpc.exe report shake.tix"
         ,":!del shake.tix"]
