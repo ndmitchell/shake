@@ -8,7 +8,6 @@ module Development.Shake.Progress(
     ) where
 
 import Control.Applicative
-import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import System.Environment
@@ -202,13 +201,13 @@ progressDisplayTester = progressDisplayer False
 
 
 progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplayer sleep sample disp prog = do
+progressDisplayer pause sample disp prog = do
     disp "Starting..." -- no useful info at this stage
     catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample echoMealy) (const $ disp "Finished")
     where
         loop :: Mealy Progress String -> IO ()
         loop mealy = do
-            when sleep $ threadDelay $ ceiling $ sample * 1000000
+            when pause $ sleep $ fromRational $ toRational sample
             p <- prog
             (msg, mealy) <- return $ runMealy mealy p
             disp $ msg ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
