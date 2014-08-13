@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #165, make |*> matching with simple files much faster
     Add toStandard to the FilePath module
     #130, support msvc_deps_prefix in Ninja
     #157, allow variable substitution in include/subninja statements

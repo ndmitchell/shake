@@ -14,11 +14,13 @@ import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.HashSet as Set
 
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
 import General.String
 import Development.Shake.Classes
+import Development.Shake.FilePath(toStandard)
 import Development.Shake.FilePattern
 import Development.Shake.FileInfo
 import Development.Shake.Types
@@ -225,8 +227,14 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 -- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '*>'.
 --   Think of it as the OR (@||@) equivalent of '*>'.
 (|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(|*>) pats act = let (simp,other) = partition simple pats in f simp >> priority 0.5 (f other)
-    where f ps = let ps2 = map (?==) ps in unless (null ps2) $ root "with |*>" (\x -> any ($ x) ps2) act
+(|*>) pats act = do
+    let (simp,other) = partition simple pats
+    case simp of
+        [] -> return ()
+        [p] -> root "with |*>" (\x -> toStandard x == p) act
+        ps -> let ps = Set.fromList pats in root "with |*>" (flip Set.member ps . toStandard) act
+    unless (null other) $
+        let ps = map (?==) other in priority 0.5 $ root "with |*>" (\x -> any ($ x) ps) act
 
 -- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
 --   Patterns with no wildcards have higher priority than those with wildcards, and no file
