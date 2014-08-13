@@ -12,7 +12,7 @@ module Development.Shake.FilePath(
     module System.FilePath, -- only search-path stuff
     dropDirectory1, takeDirectory1, normalise,
     (-<.>),
-    toNative, (</>), combine,
+    toNative, toStandard, (</>), combine,
     exe
     ) where
 
@@ -91,6 +91,11 @@ normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- a
 -- | Convert to native path separators, namely @\\@ on Windows. 
 toNative :: FilePath -> FilePath
 toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else x)
+
+-- | Convert all path separators to @/@, even on Windows.
+toStandard :: FilePath -> FilePath
+toStandard | Native.pathSeparators == [pathSeparator] = id
+           | otherwise = map (\x -> if Native.isPathSeparator x then pathSeparator else x)
 
 
 -- | Combine two file paths, an alias for 'combine'.
