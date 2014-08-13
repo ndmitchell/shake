@@ -1,7 +1,7 @@
 
 module Test.Manual(main) where
 
-import Development.Shake
+import Development.Shake hiding (copyFileChanged)
 import Development.Shake.FilePath
 import Test.Type
 import General.Base

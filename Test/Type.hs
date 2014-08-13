@@ -1,7 +1,7 @@
 
 module Test.Type(sleep, module Test.Type) where
 
-import Development.Shake
+import Development.Shake hiding (copyFileChanged)
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.Base
 import General.String

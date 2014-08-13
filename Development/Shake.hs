@@ -110,7 +110,7 @@ module Development.Shake(
     CmdResult, CmdOption(..),
     addPath, addEnv,
     -- * Utility functions
-    copyFile',
+    copyFile', copyFileChanged,
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,
     removeFiles, removeFilesAfter,
