@@ -241,6 +241,8 @@ whitelist x = x `elem`
     ,"build _build/main.o"
     ,"build clean"
     ,"build -j8"
+    ,"cabal update && cabal install shake"
+    ,"shake-build-system"
     ,"runhaskell _build/run"
     ,"runhaskell _build/run clean"
     ,"gcc -c main.c -o main.o -MMD -MF main.m"
