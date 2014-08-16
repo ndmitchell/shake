@@ -44,7 +44,7 @@ body {
     clear: both;
 }
 
-h2 {
+#messages h2 {
     float: left;
     margin-top: 0px;
     margin-right: 10px;
@@ -64,7 +64,7 @@ h2 {
 }
 
 @media print, screen and (max-width: 800px) {
-    h2 {
+    #messages h2, #messages p {
         float:none;
         width: 100%;
     }
