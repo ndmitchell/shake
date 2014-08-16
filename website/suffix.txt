@@ -1,0 +1,9 @@
+
+</div>
+
+<div id="footer">
+    <p>Copyright <a href="https://github.com/ndmitchell">Neil Mitchell</a> 2014</p>
+</div>
+
+</body>
+</html>
