@@ -206,3 +206,6 @@ withTemporaryDirectory act = do
             hClose h
             let dir = file ++ "_"
             bracket_ (createDirectory dir) (removeDirectoryRecursive dir) (act dir)
+
+skip :: Monad m => a -> m ()
+skip x = return ()
