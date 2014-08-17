@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Monad(
-    RAW, runRAW, Capture, runCaptureRAW,
+    RAW, Capture, runCaptureRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
     catchRAW, tryRAW, throwRAW,
@@ -9,9 +9,7 @@ module Development.Shake.Monad(
     ) where
 
 import Control.Applicative
-import Control.Concurrent
 import Control.Exception as E
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Reader
@@ -37,14 +35,6 @@ runCaptureRAW ro rw m k = do
     handler <- newIORef $ k . Left
     fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)
         `E.catch` \e -> ($ e) =<< readIORef handler
-
-
--- | Run on this thread until the first IO, then wait til the second.
-runRAW :: ro -> rw -> RAW ro rw a -> IO (IO a)
-runRAW ro rw m = do
-    res <- newEmptyMVar
-    runCaptureRAW ro rw m $ void . tryPutMVar res
-    return $ either throwIO return =<< readMVar res
 
 
 ---------------------------------------------------------------------

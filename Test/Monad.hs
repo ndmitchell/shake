@@ -4,6 +4,7 @@ module Test.Monad(main) where
 import Test.Type
 import Development.Shake.Monad
 
+import Control.Concurrent
 import Control.Exception hiding (assert)
 import Control.Monad
 import Control.Monad.IO.Class
@@ -12,12 +13,19 @@ import Control.Monad.IO.Class
 main = shaken test $ \args obj -> return ()
 
 
+run :: ro -> rw -> RAW ro rw a -> IO a
+run ro rw m = do
+    res <- newEmptyMVar
+    runCaptureRAW ro rw m $ void . tryPutMVar res
+    either throwIO return =<< readMVar res
+
+
 test build obj = do
     let conv x = either (Left . fromException) Right x :: Either (Maybe ArithException) Int
     let dump ro rw = do liftIO . (=== ro) =<< getRO; liftIO . (=== rw) =<< getRW
 
     -- test the basics plus exception handling
-    join $ runRAW 1 "test" $ do
+    run 1 "test" $ do
         dump 1 "test"
         putRW "more"
         dump 1 "more"
@@ -48,7 +56,7 @@ test build obj = do
         dump 1 "newxxy"
 
     -- test capture
-    join $ runRAW 1 "test" $ do
+    run 1 "test" $ do
         i <- captureRAW $ \k -> k $ Right 1
         liftIO $ i === 1
         i <- tryRAW $ captureRAW $ \k -> k $ Left $ toException Overflow
