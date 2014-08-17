@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Monad(
-    RAW, Capture, runCaptureRAW,
+    RAW, Capture, runRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
     catchRAW, tryRAW, throwRAW,
@@ -29,8 +29,8 @@ type Capture a = (a -> IO ()) -> IO ()
 
 
 -- | Run and then call a continuation.
-runCaptureRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
-runCaptureRAW ro rw m k = do
+runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
+runRAW ro rw m k = do
     rww <- newIORef rw
     handler <- newIORef $ k . Left
     fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)

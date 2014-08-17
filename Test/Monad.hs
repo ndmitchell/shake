@@ -16,7 +16,7 @@ main = shaken test $ \args obj -> return ()
 run :: ro -> rw -> RAW ro rw a -> IO a
 run ro rw m = do
     res <- newEmptyMVar
-    runCaptureRAW ro rw m $ void . tryPutMVar res
+    runRAW ro rw m $ void . tryPutMVar res
     either throwIO return =<< readMVar res
 
 
