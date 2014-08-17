@@ -13,5 +13,5 @@
     <p id="tagline">Powerful, efficient, robust - choose three</p>
 </div>
 
-<remove:h1 />
+<remove:h1>
 <div id="body">
