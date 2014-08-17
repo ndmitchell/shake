@@ -4,6 +4,7 @@ module Test.Monad(main) where
 import Test.Type
 import Development.Shake.Monad
 
+import Data.IORef
 import Control.Concurrent
 import Control.Exception hiding (assert)
 import Control.Monad
@@ -64,3 +65,25 @@ test build obj = do
         captureRAW $ \k -> k $ Right ()
         i <- tryRAW $ throwRAW Underflow
         liftIO $ conv i === Left (Just Underflow)
+
+    -- catch does not scope too far
+    res <- try $ run 1 "test" $
+        fmap (either show id) $ tryRAW $ captureRAW $ \k -> throwIO Overflow
+    skip $ res === Left Overflow
+    res <- try $ run 1 "test" $ do
+        captureRAW $ \k -> throwIO Overflow
+        return "x"
+    res === Left Overflow
+
+    -- catch works properly if continuation called multiple times
+    ref <- newIORef []
+    run 1 "test" $
+        flip catchRAW (const $ liftIO $ modifyIORef ref ('x':)) $ do
+            captureRAW $ \k -> do
+                k $ Right ()
+                k $ Right ()
+                k $ Left $ toException Overflow
+                k $ Right ()
+                k $ Left $ toException Overflow
+            flip catchRAW (const $ liftIO $ modifyIORef ref ('y':)) $ throwRAW $ toException Overflow
+    skip $ (===) "xyxyy" =<< readIORef ref
