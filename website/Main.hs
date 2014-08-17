@@ -34,8 +34,7 @@ fixup o = f [] o
     where
         f s (TagOpen "pre" []:TagClose "pre":xs) = f s $ TagClose "pre":xs
             -- BUG: inserts random extra pre tag
-        f s (TagComment x:xs) = f s $ parseTags (tail $ init x) ++ xs
-            -- BUG: tail/init combo
+        f s (TagComment x:xs) = f s $ parseTags x ++ xs
 
         -- special tags
         f s (TagOpen "h2" a:xs) | "insert:br" `elem` s =

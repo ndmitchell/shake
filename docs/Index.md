@@ -2,8 +2,8 @@
 
 Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day.
 
-<!-- <div id="messages"> -->
-<!-- <insert:br> -->
+<!--<div id="messages">-->
+<!--<insert:br>-->
 
 ## Why try Shake?
 
@@ -33,4 +33,4 @@ Can execute Ninja files, integrate with CMake, progress messages, profiling supp
 
 Standard Chartered, Fractis, etc.
 
-<!-- </div> -->
+<!--</div>-->
