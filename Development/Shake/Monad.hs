@@ -111,8 +111,11 @@ unmodifyRW f m = do
 --   exception, or with a result.
 captureRAW :: Capture (Either SomeException a) -> RAW ro rw a
 captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
-    -- FIXME: Should continue on with a fresh IORef
-    --        Should clear out the IORef handler of your parent before returning the continuation
+    old <- readIORef (handler s)
+    writeIORef (handler s) throwIO
     f $ \x -> case x of
-        Left e -> do hdl <- readIORef (handler s); hdl e
-        Right v -> k v `E.catch` \e -> ($ e) =<< readIORef (handler s)
+        Left e -> old e
+        Right v -> do
+            writeIORef (handler s) old
+            k v `E.catch` \e -> ($ e) =<< readIORef (handler s)
+            writeIORef (handler s) throwIO
