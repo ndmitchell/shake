@@ -69,7 +69,7 @@ test build obj = do
     -- catch does not scope too far
     res <- try $ run 1 "test" $
         fmap (either show id) $ tryRAW $ captureRAW $ \k -> throwIO Overflow
-    skip $ res === Left Overflow
+    res === Left Overflow
     res <- try $ run 1 "test" $ do
         captureRAW $ \k -> throwIO Overflow
         return "x"
@@ -86,4 +86,4 @@ test build obj = do
                 k $ Right ()
                 k $ Left $ toException Overflow
             flip catchRAW (const $ liftIO $ modifyIORef ref ('y':)) $ throwRAW $ toException Overflow
-    skip $ (===) "xyxyy" =<< readIORef ref
+    (===) "xyxyy" =<< readIORef ref
