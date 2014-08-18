@@ -80,7 +80,7 @@ catchRAW m hdl = RAW $ ReaderT $ \s -> ContT $ \k -> do
     old <- readIORef $ handler s
     writeIORef (handler s) $ \e -> do
         writeIORef (handler s) old
-        fromRAW (hdl $ toException e) `runReaderT` s `runContT` k `E.catch`
+        fromRAW (hdl e) `runReaderT` s `runContT` k `E.catch`
             \e -> ($ e) =<< readIORef (handler s)
     fromRAW m `runReaderT` s `runContT` \v -> do
         writeIORef (handler s) old
