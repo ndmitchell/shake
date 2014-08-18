@@ -107,8 +107,8 @@ unmodifyRW f m = do
     return res
 
 
--- | Capture a continuation. The continuation must be called exactly once, either with an
---   exception, or with a result.
+-- | Capture a continuation. The continuation should be called at most once.
+--   Calling the same continuation, multiple times, in parallel, results in incorrect behaviour.
 captureRAW :: Capture (Either SomeException a) -> RAW ro rw a
 captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
     old <- readIORef (handler s)
