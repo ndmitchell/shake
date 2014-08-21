@@ -110,7 +110,7 @@ word1 x = second (dropWhile isSpace) $ break isSpace $ dropWhile isSpace x
 ---------------------------------------------------------------------
 -- Data.String
 
-showDP :: Int -> Double -> String
+showDP :: RealFloat a => Int -> a -> String
 showDP n x = a ++ "." ++ b ++ replicate (n - length b) '0'
     where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
 
