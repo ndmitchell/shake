@@ -332,7 +332,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             res <- try act
             case res of
                 Left err -> do
-                    let named = maybe "unknown rule" (abbreviate shakeAbbreviations . shakeExceptionTarget) . fromException
+                    let named = maybe "" (abbreviate shakeAbbreviations . shakeExceptionTarget) . fromException
                     atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                     let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
                     when (shakeVerbosity >= Quiet) $ output Quiet msg
