@@ -157,7 +157,8 @@ message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time 
             where
                 weightedAverage (w1,x1) (w2,x2)
                     | w1 == 0 && w2 == 0 = 0
-                    | otherwise = ((fromInt w1 * x1) + (fromInt w2 * x2)) / fromInt (w1+w2)
+                    | otherwise = ((w1 *. x1) + (w2 *. x2)) / fromInt (w1+w2)
+                    where i *. d = if i == 0 then 0 else fromInt i * d -- since d might be NaN
 
                 f divide time count = let xs = count <$> progress in liftA2 (,) xs $ divide (time <$> progress) (fromInt <$> xs)
 

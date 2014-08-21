@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix progress reporting to work even on the first run
     Apply abbreviations to staunch failure messages
     Fix failure progress messages during staunch mode
     #165, make |*> matching with simple files much faster
