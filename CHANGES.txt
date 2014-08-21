@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Apply abbreviations to staunch failure messages
     Fix failure progress messages during staunch mode
     #165, make |*> matching with simple files much faster
     Add toStandard to the FilePath module
