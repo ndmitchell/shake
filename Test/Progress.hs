@@ -3,12 +3,8 @@
 module Test.Progress(main) where
 
 import Development.Shake.Progress
-import Development.Shake.Classes
 import Test.Type
-import qualified Control.Exception as E
-import Data.IORef
 import Data.Monoid
-import Data.Char
 
 
 main = shaken test $ \args obj -> return ()
@@ -17,27 +13,13 @@ main = shaken test $ \args obj -> return ()
 -- | Given a list of todo times, get out a list of how long is predicted
 prog = progEx 10000000000000000
 
-data MyException = MyException deriving (Show, Typeable)
-instance E.Exception MyException
-
 
 progEx :: Double -> [Double] -> IO [Double]
 progEx mxDone todo = do
     let resolution = 10000 -- Use resolution to get extra detail on the numbers
     let done = scanl (+) 0 $ map (min mxDone . max 0) $ zipWith (-) todo (tail todo)
-    pile <- newIORef $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
-    let get = do a <- readIORef pile
-                 case a of
-                     [] -> E.throw MyException
-                     x:xs -> do writeIORef pile xs; return x
-
-    out <- newIORef []
-    let put x = do let (mins,secs) = break (== 'm') $ takeWhile (/= '(') x
-                   let f x = let y = filter isDigit x in if null y then 0/0 else read y
-                   modifyIORef out (++ [(if null secs then f mins else f mins * 60 + f secs) / resolution])
-    -- we abort by killing the thread, but then catch the abort and resume normally
-    E.catch (progressDisplayTester resolution put get) $ \MyException -> return ()
-    fmap (take $ length todo) $ readIORef out
+    let res = progressTest $ zip (map (*resolution) [1..]) $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
+    return $ (0/0) : map ((/ resolution) . fst) res
 
 
 test build obj = do
