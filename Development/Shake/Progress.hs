@@ -110,9 +110,6 @@ latch s = fromJust <$> scanMealy f Nothing s
 iff :: Mealy i Bool -> Mealy i a -> Mealy i a -> Mealy i a
 iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
 
-posMealy :: Mealy i Int
-posMealy = scanMealy (+) 0 $ pure 1
-
 -- decay'd division, compute a/b, with a decay of f
 -- r' is the new result, r is the last result
 -- r ~= a / b
@@ -145,9 +142,11 @@ showMinSec secs = (if m == 0 then "" else show m ++ "m" ++ ['0' | s < 10]) ++ sh
 
 
 -- | return (number of seconds, percentage, explanation)
-message :: Double -> Mealy Progress Progress -> Mealy Progress (Double, Double, String)
-message sample progress = liftA3 (,,) time perc debug
+message :: Mealy (Double, Progress) (Double, Progress) -> Mealy (Double, Progress) (Double, Double, String)
+message input = liftA3 (,,) time perc debug
     where
+        progress = snd <$> input
+        secs = fst <$> input
         debug = (\donePerSec ruleTime (todoKnown,todoUnknown) ->
             "Progress: " ++
                 "((known=" ++ showDP 2 todoKnown ++ "s) + " ++
@@ -164,7 +163,6 @@ message sample progress = liftA3 (,,) time perc debug
         donePerSec = iff ((==) 0 <$> done) (pure 1) perSecStable
             where perSecStable = latch $ liftA2 (,) (uncurry (==) <$> oldMealy 0 done) perSecRaw
                   perSecRaw = decay 1.2 done secs
-                  secs = ((*) sample . fromInt) <$> posMealy
 
         -- Predicted build time for a rule that has never been built before
         -- The high decay means if a build goes in "phases" - lots of source files, then lots of compiling
@@ -221,16 +219,23 @@ progressDisplayTester = progressDisplayer False
 progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplayer pause sample disp prog = do
     disp "Starting..." -- no useful info at this stage
-    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample echoMealy) (const $ disp "Finished")
+    time <-
+        if pause then
+            fmap (fromRational . toRational) <$> offsetTime
+        else do
+            ref <- newIORef 0
+            return $ atomicModifyIORef ref $ \v -> (v+sample,v+sample)
+    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop time $ message echoMealy) (const $ disp "Finished")
     where
-        loop :: Mealy Progress (Double, Double, String) -> IO ()
-        loop mealy = do
+        loop :: IO Double -> Mealy (Double, Progress) (Double, Double, String) -> IO ()
+        loop time mealy = do
             when pause $ sleep $ fromRational $ toRational sample
+            t <- time
             p <- prog
-            ((secs,perc,debug), mealy) <- return $ runMealy mealy p
+            ((secs,perc,debug), mealy) <- return $ runMealy mealy (t, p)
             -- putStrLn debug
             disp $ formatMessage secs perc ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
-            loop mealy
+            loop time mealy
 
 
 {-# NOINLINE xterm #-}
