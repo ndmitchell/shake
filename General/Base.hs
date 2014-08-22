@@ -8,6 +8,7 @@ module General.Base(
     showDP, showTime,
     modifyIORef'', writeIORef'',
     isLeft_, isRight_,
+    swap,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
@@ -129,6 +130,13 @@ showTime x | x >= 3600 = f (x / 60) "h" "m"
 isLeft_, isRight_ :: Either a b -> Bool
 isLeft_ Left{} = True; isLeft_ Right{} = False
 isRight_ = not . isLeft_
+
+
+---------------------------------------------------------------------
+-- Data.Tuple
+
+swap :: (a, b) -> (b, a)
+swap (a, b) = (b, a)
 
 
 ---------------------------------------------------------------------
