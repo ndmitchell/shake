@@ -133,10 +133,20 @@ fromInt = fromInteger . toInteger
 ---------------------------------------------------------------------
 -- MESSAGE GENERATOR
 
-message :: Double -> Mealy Progress Progress -> Mealy Progress (String, String)
-message sample progress = liftA2 (,) output debug
+formatMessage :: Double -> Double -> String
+formatMessage secs perc =
+    (if secs < 0 then "??s" else showMinSec $ ceiling secs) ++ " (" ++
+    (if perc < 0 || perc > 100 then "??" else show (floor perc)) ++ "%)"
+
+showMinSec :: Int -> String
+showMinSec secs = (if m == 0 then "" else show m ++ "m" ++ ['0' | s < 10]) ++ show s ++ "s"
+    where (m,s) = divMod secs 60
+
+
+-- | return (number of seconds, percentage, explanation)
+message :: Double -> Mealy Progress Progress -> Mealy Progress (Double, Double, String)
+message sample progress = liftA3 (,,) time perc debug
     where
-        output = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time <*> perc
         debug = (\donePerSec ruleTime (todoKnown,todoUnknown) ->
             "Progress: " ++
                 "((known=" ++ showDP 2 todoKnown ++ "s) + " ++
@@ -175,11 +185,9 @@ message sample progress = liftA2 (,) output debug
             where f Progress{..} ruleTime = fst timeTodo + (fromIntegral (snd timeTodo) * ruleTime)
 
         -- Display information
-        time = flip fmap (liftA2 (/) todo donePerSec) $ \guess ->
-            let (mins,secs) = divMod (ceiling guess) (60 :: Int)
-            in (if mins == 0 then "" else show mins ++ "m" ++ ['0' | secs < 10]) ++ show secs ++ "s"
-        perc = iff ((==) 0 <$> done) (pure "0") $
-            liftA2' done todo $ \done todo -> show (floor (100 * done / (done + todo)) :: Int)
+        time = liftA2 (/) todo donePerSec
+        perc = iff ((==) 0 <$> done) (pure 0) $
+            liftA2' done todo $ \done todo -> 100 * done / (done + todo)
 
 
 ---------------------------------------------------------------------
@@ -214,13 +222,13 @@ progressDisplayer pause sample disp prog = do
     disp "Starting..." -- no useful info at this stage
     catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample echoMealy) (const $ disp "Finished")
     where
-        loop :: Mealy Progress (String, String) -> IO ()
+        loop :: Mealy Progress (Double, Double, String) -> IO ()
         loop mealy = do
             when pause $ sleep $ fromRational $ toRational sample
             p <- prog
-            ((output,debug), mealy) <- return $ runMealy mealy p
+            ((secs,perc,debug), mealy) <- return $ runMealy mealy p
             -- putStrLn debug
-            disp $ output ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
+            disp $ formatMessage secs perc ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
             loop mealy
 
 
