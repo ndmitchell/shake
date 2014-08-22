@@ -208,34 +208,25 @@ message input = liftA3 (,,) time perc debug
 --   while time left is calculated by scaling @remaining@ by the observed work rate in this build,
 --   roughly @done / time_elapsed@.
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplay = progressDisplayer True
-
-
--- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
-progressReplay :: [(Double, Progress)] -> [(Double, Double)]
-progressReplay = snd . mapAccumL (\a b -> let ((x,y,_),m) = runMealy a b in (m,(x,y))) (message echoMealy)
-
-
-progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplayer pause sample disp prog = do
+progressDisplay sample disp prog = do
     disp "Starting..." -- no useful info at this stage
-    time <-
-        if pause then
-            fmap (fromRational . toRational) <$> offsetTime
-        else do
-            ref <- newIORef 0
-            return $ atomicModifyIORef ref $ \v -> (v+sample,v+sample)
+    time <- fmap (fromRational . toRational) <$> offsetTime
     catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop time $ message echoMealy) (const $ disp "Finished")
     where
         loop :: IO Double -> Mealy (Double, Progress) (Double, Double, String) -> IO ()
         loop time mealy = do
-            when pause $ sleep $ fromRational $ toRational sample
+            sleep $ fromRational $ toRational sample
             t <- time
             p <- prog
             ((secs,perc,debug), mealy) <- return $ runMealy mealy (t, p)
             -- putStrLn debug
             disp $ formatMessage secs perc ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
             loop time mealy
+
+
+-- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
+progressReplay :: [(Double, Progress)] -> [(Double, Double)]
+progressReplay = snd . mapAccumL (\a b -> let ((x,y,_),m) = runMealy a b in (m,(x,y))) (message echoMealy)
 
 
 {-# NOINLINE xterm #-}
