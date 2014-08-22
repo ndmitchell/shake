@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface, ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Progress tracking
 module Development.Shake.Progress(
@@ -134,9 +135,9 @@ fromInt = fromInteger . toInteger
 -- MESSAGE GENERATOR
 
 formatMessage :: Double -> Double -> String
-formatMessage secs perc =
-    (if secs < 0 then "??s" else showMinSec $ ceiling secs) ++ " (" ++
-    (if perc < 0 || perc > 100 then "??" else show (floor perc)) ++ "%)"
+formatMessage (ceiling -> secs) (floor -> perc) =
+    (if secs < 0 then "??s" else showMinSec secs) ++ " (" ++
+    (if perc < 0 || perc > 100 then "??" else show perc) ++ "%)"
 
 showMinSec :: Int -> String
 showMinSec secs = (if m == 0 then "" else show m ++ "m" ++ ['0' | s < 10]) ++ show s ++ "s"
