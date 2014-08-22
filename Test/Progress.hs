@@ -18,7 +18,7 @@ progEx :: Double -> [Double] -> IO [Double]
 progEx mxDone todo = do
     let resolution = 10000 -- Use resolution to get extra detail on the numbers
     let done = scanl (+) 0 $ map (min mxDone . max 0) $ zipWith (-) todo (tail todo)
-    let res = progressTest $ zip (map (*resolution) [1..]) $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
+    let res = progressReplay $ zip (map (*resolution) [1..]) $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
     return $ (0/0) : map ((/ resolution) . fst) res
 
 
