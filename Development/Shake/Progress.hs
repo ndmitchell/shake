@@ -5,7 +5,7 @@
 module Development.Shake.Progress(
     Progress(..),
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
-    progressDisplayTester, progressTest -- INTERNAL FOR TESTING ONLY
+    progressTest -- INTERNAL FOR TESTING ONLY
     ) where
 
 import Control.Applicative
@@ -209,11 +209,6 @@ message input = liftA3 (,,) time perc debug
 --   roughly @done / time_elapsed@.
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplay = progressDisplayer True
-
-
--- | Version of 'progressDisplay' that omits the sleep
-progressDisplayTester :: Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplayTester = progressDisplayer False
 
 
 -- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
