@@ -5,7 +5,7 @@
 module Development.Shake.Progress(
     Progress(..),
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
-    progressDisplayTester -- INTERNAL FOR TESTING ONLY
+    progressDisplayTester, progressTest -- INTERNAL FOR TESTING ONLY
     ) where
 
 import Control.Applicative
@@ -214,6 +214,11 @@ progressDisplay = progressDisplayer True
 -- | Version of 'progressDisplay' that omits the sleep
 progressDisplayTester :: Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplayTester = progressDisplayer False
+
+
+-- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
+progressTest :: [(Double, Progress)] -> [(Double, Double)]
+progressTest = snd . mapAccumL (\a b -> let ((x,y,_),m) = runMealy a b in (m,(x,y))) (message echoMealy)
 
 
 progressDisplayer :: Bool -> Double -> (String -> IO ()) -> IO Progress -> IO ()
