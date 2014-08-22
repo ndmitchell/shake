@@ -133,9 +133,17 @@ fromInt = fromInteger . toInteger
 ---------------------------------------------------------------------
 -- MESSAGE GENERATOR
 
-message :: Double -> Mealy Progress Progress -> Mealy Progress String
-message sample progress = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time <*> perc
+message :: Double -> Mealy Progress Progress -> Mealy Progress (String, String)
+message sample progress = liftA2 (,) output debug
     where
+        output = (\time perc -> time ++ " (" ++ perc ++ "%)") <$> time <*> perc
+        debug = (\donePerSec ruleTime (todoKnown,todoUnknown) ->
+            "Progress: " ++
+                "((known=" ++ showDP 2 todoKnown ++ "s) + " ++
+                "(unknown=" ++ show todoUnknown ++ " * time=" ++ showDP 2 ruleTime ++ "s)) " ++
+                "(rate=" ++ showDP 2 donePerSec ++ "))")
+            <$> donePerSec <*> ruleTime <*> (timeTodo <$> progress)
+
         -- Number of seconds work completed in this build run
         -- Ignores timeSkipped which would be more truthful, but it makes the % drop sharply
         -- which isn't what users want
@@ -206,12 +214,13 @@ progressDisplayer pause sample disp prog = do
     disp "Starting..." -- no useful info at this stage
     catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop $ message sample echoMealy) (const $ disp "Finished")
     where
-        loop :: Mealy Progress String -> IO ()
+        loop :: Mealy Progress (String, String) -> IO ()
         loop mealy = do
             when pause $ sleep $ fromRational $ toRational sample
             p <- prog
-            (msg, mealy) <- return $ runMealy mealy p
-            disp $ msg ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
+            ((output,debug), mealy) <- return $ runMealy mealy p
+            -- putStrLn debug
+            disp $ output ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
             loop mealy
 
 
