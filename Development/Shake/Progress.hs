@@ -52,7 +52,7 @@ data Progress = Progress
     ,timeUnknown :: {-# UNPACK #-} !Double -- ^ Time spent building 'countUnknown' rules in previous runs.
     ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (have never been built before).
     }
-    deriving (Eq,Ord,Show,Data,Typeable)
+    deriving (Eq,Ord,Show,Read,Data,Typeable)
 
 instance Monoid Progress where
     mempty = Progress Nothing 0 0 0 0 0 0 0 (0,0)
