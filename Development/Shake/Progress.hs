@@ -4,7 +4,7 @@
 module Development.Shake.Progress(
     Progress(..),
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
-    progressReplay -- INTERNAL FOR TESTING ONLY
+    progressReplay, progressAnalyse -- INTERNAL USE ONLY
     ) where
 
 import Control.Applicative
@@ -226,6 +226,17 @@ progressDisplay sample disp prog = do
 -- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
 progressReplay :: [(Double, Progress)] -> [(Double, Double)]
 progressReplay = snd . mapAccumL (\a b -> let ((x,y,_),m) = runMealy a b in (m,(x,y))) (message echoMealy)
+
+
+-- | Given a trace, display information about how well we did
+progressAnalyse :: [(Double, Progress)] -> [String]
+progressAnalyse [] = []
+progressAnalyse ps = zipWith f ps $ progressReplay ps
+    where
+        end = fst $ last ps
+        f (time,_) (secs,perc) = "Output: " ++ formatMessage secs perc ++ "   Ideal: " ++ formatMessage isecs iperc
+            where isecs = end - time
+                  iperc = (time / end) * 100
 
 
 {-# NOINLINE xterm #-}
