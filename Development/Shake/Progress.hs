@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Progress tracking
 module Development.Shake.Progress(
