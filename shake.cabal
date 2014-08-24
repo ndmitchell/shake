@@ -146,6 +146,7 @@ library
         General.Concurrent
         General.Intern
         General.String
+        General.Template
         General.Timing
         Paths_shake
 
