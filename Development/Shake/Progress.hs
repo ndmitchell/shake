@@ -215,8 +215,8 @@ progressDisplay sample disp prog = do
         loop :: IO Double -> Mealy (Double, Progress) (Double, Double, String) -> IO ()
         loop time mealy = do
             sleep $ fromRational $ toRational sample
-            t <- time
             p <- prog
+            t <- time
             ((secs,perc,debug), mealy) <- return $ runMealy mealy (t, p)
             -- putStrLn debug
             disp $ formatMessage secs perc ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
