@@ -25,10 +25,9 @@ $(function(){
             raw.push([-shake[i].values[j].idealSecs, shake[i].values[j].actualSecs]);
             raw2.push([-shake[i].values[j].idealSecs, shake[i].values[j].idealSecs]);
         }
-        var ys = [{label:shake[i].name, data:raw, color:"red"},{data:raw2, color:"blue"}];
+        var ys = [{data:raw2, color:"gray"}, {label:shake[i].name, data:raw, color:"red"}];
         var div = $("<div style='float:left;'>").width(300).height(200);
         $("#output").append(div);
-
         $.plot(div, ys, {width: 100, height: 100});
     }
 })
