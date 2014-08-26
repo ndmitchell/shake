@@ -256,10 +256,13 @@ writeProgressReport out (map (second progressReplay) -> xs)
 
 generateSummary :: [(FilePath, [ProgressEntry])] -> [String]
 generateSummary xs = flip concatMap xs $ \(file,xs) ->
-    ["# " ++ file, f xs "seconds" idealSecs actualSecs, f xs "percentages" idealPerc actualPerc]
+    ["# " ++ file, f xs "Seconds" idealSecs actualSecs, f xs "Percent" idealPerc actualPerc]
     where
-        f xs lbl ideal actual = "90% of " ++ lbl ++ " were within " ++ show (ceiling bad)
-            where bad = maximum $ (0:) $ drop (length xs `div` 10) $ sort [abs $ ideal x - actual x | x <- xs]
+        levels = [100,90,80,50]
+        f xs lbl ideal actual = lbl ++ ": " ++ intercalate ", "
+            [show l ++ "% within " ++ show (ceiling $ maximum $ 0 : take ((length xs * l) `div` 100) diff) | l <- levels]
+            where diff = sort [abs $ ideal x - actual x | x <- xs]
+
 
 generateHTML :: [(FilePath, [ProgressEntry])] -> IO LBS.ByteString
 generateHTML xs = do
