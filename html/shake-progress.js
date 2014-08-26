@@ -19,14 +19,17 @@ $(function(){
     $("#output").html("");
     for (var i = 0; i < shake.length; i++)
     {
-        var raw = [];
-        var raw2 = [];
-        for (var j = 5; j < shake[i].values.length; j++)
+        var x = shake[i];
+        var actual = [];
+        var ideal = [];
+        // Start at t = 5 seconds, since the early progress jumps a lot
+        for (var t = 5; t < x.values.length; t++)
         {
-            raw.push([shake[i].values[j].idealSecs, shake[i].values[j].actualSecs]);
-            raw2.push([shake[i].values[j].idealSecs, shake[i].values[j].idealSecs]);
+            var y = x.values[t];
+            actual.push([y.idealSecs, y.actualSecs]);
+            ideal.push([y.idealSecs, y.idealSecs]);
         }
-        var ys = [{data:raw2, color:"gray"}, {label:shake[i].name, data:raw, color:"red"}];
+        var ys = [{data:ideal, color:"gray"}, {label:x.name, data:actual, color:"red"}];
         var div = $("<div class='plot'>");
         $("#output").append(div);
         $.plot(div, ys, {
