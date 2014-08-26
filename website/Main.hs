@@ -1,16 +1,12 @@
 
 module Main(main) where
 
-import Text.Markdown
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
-import Text.Blaze.Html.Renderer.Text
 import System.FilePath
 import System.Directory
 import Control.Monad
-import Data.Monoid
+import Data.Maybe
+import Library
 import Data.Char
-import Data.List
 import Text.HTML.TagSoup
 
 
@@ -22,26 +18,39 @@ main = do
     suffix <- readFile "suffix.txt"
     forM_ files $ \file -> do
         when (takeExtension file == ".md") $ do
-            src <- T.readFile $ "../docs" </> file
-            let html = parseTags $ prefix ++ T.unpack (renderHtml $ markdown def src) ++ suffix
-            writeFile ("output" </> map toLower (takeBaseName file) <.> "html") $ renderTags (fixup html)
+            putChar '.'
+            src <- readFile $ "../docs" </> file
+            let html = parseTags $ prefix ++ convertMarkdown src ++ suffix
+            let dir = if takeBaseName file == "Index" then "output" else "output" </> map toLower (takeBaseName file)
+            createDirectoryIfMissing True dir
+            writeFile (dir </> "index.html") $ renderTags (operations html)
     copyFile "index.css" "output/index.css"
     copyFile "../docs/shake-progress.png" "output/shake-progress.png"
+    putStrLn " done"
+
+operations :: Tags -> Tags
+operations xs =
+    tagName "neil:body" `self` inner $
+    tagName "neil:toc" `whole` tableOfContents $
+    heading `self` addId $
+    tagName "a" `self` markdownLink $
+    tagName "neil:body" . tagName "h1" `literal` [] $
+    tagName "neil:h1" `whole` getLL (tagName "neil:body" . tagName "h1" . innerL) $
+    tagName "neil:home" `self` tag "<div id=messages>" . inner $
+    tagName "neil:home" . tagName "h2" `self` (parseTags "<br class=gap />" ++) $
+    xs
 
 
-fixup :: [Tag String] -> [Tag String]
-fixup o = f [] o
-    where
-        f s (TagOpen "pre" []:TagClose "pre":xs) = f s $ TagClose "pre":xs
-            -- BUG: inserts random extra pre tag
-        f s (TagComment x:xs) = f s $ parseTags x ++ xs
+tableOfContents :: Tags -> Tags
+tableOfContents xs = tag "<ul>" $ concat
+    [ tag "<li>" $ tagOpen "a" [("href",'#' : fromJust (lookup "id" a))] $ inner o
+    | o@(TagOpen h a:_) <- getL heading xs, h /= "h1"]
 
-        -- special tags
-        f s (TagOpen "h2" a:xs) | "insert:br" `elem` s =
-            TagOpen "br" [("class","gap")] : TagClose "br" : TagOpen "h2" a : f s xs
-        f s (TagOpen "h1" _:xs) | "remove:h1" `elem` s = f s $ drop 1 $ dropWhile (~/= "</h1>") xs
-        f s (TagOpen x []:xs) | x `elem` ["insert:br","remove:h1"] = f (x:s) xs
-        f s (TagOpen "copy:h1" []:xs) = [x | TagOpen "h1" _:x:_ <- tails xs] ++ f s xs
+addId :: Tags -> Tags
+addId (TagOpen x a:xs) = TagOpen x (("id",filter isAlpha $ innerText xs):a) : xs
 
-        f s (x:xs) = x : f s xs
-        f s [] = []
+markdownLink :: Tags -> Tags
+markdownLink (TagOpen "a" a:xs) = TagOpen "a" (map f a) : xs
+    where f ("href",x) | takeExtension x == ".md" = ("href", map toLower (takeBaseName x) ++ "/index.html")
+          f x = x
+markdownLink x = x

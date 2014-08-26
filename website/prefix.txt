@@ -3,15 +3,19 @@
     <head>
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-        <title>Shake Build System - <copy:h1></title>
-        <link rel="stylesheet" href="index.css" />
+        <title>Shake Build System - <neil:h1 /></title>
+        <link rel="stylesheet" href="../index.css" />
     </head>
     <body>
 
 <div id="header">
-    <h1>Shake build system - <copy:h1></h1>
+    <h1>Shake build system - <neil:h1 /></h1>
     <p id="tagline">Powerful, efficient, robust - choose three</p>
 </div>
 
-<remove:h1>
-<div id="body">
+<div id="toc">
+    <neil:toc />
+</div>
+
+<div id="top">
+<neil:body>

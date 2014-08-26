@@ -1,4 +1,4 @@
-
+</neil:body>
 </div>
 
 <div id="footer">
