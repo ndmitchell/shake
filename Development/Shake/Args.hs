@@ -9,10 +9,8 @@ import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
-import qualified Data.ByteString.Lazy as LBS
 import General.Base
 import General.Timing
-import General.Template
 
 import Control.Arrow
 import Control.Concurrent
