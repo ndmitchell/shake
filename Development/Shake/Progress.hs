@@ -277,9 +277,10 @@ generateJSON = concat . jsonList . map ((++"}") . unlines . f)
             ("{\"name\":" ++ show (takeFileName file) ++ ", \"values\":") :
             indent (jsonList $ map g ps)
 
+        shw = showDP 1
         g ProgressEntry{..} = jsonObject
-            [("idealSecs",show idealSecs),("idealPerc",show idealPerc)
-            ,("actualSecs",show actualSecs),("actualPerc",show actualPerc)]
+            [("idealSecs",shw idealSecs),("idealPerc",shw idealPerc)
+            ,("actualSecs",shw actualSecs),("actualPerc",shw actualPerc)]
 
 indent = map ("  "++)
 jsonList xs = zipWith (:) ('[':repeat ',') xs ++ ["]"]
