@@ -406,12 +406,12 @@ toReport Database{..} = do
                 in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
 
         f (k, Result{..}) = ProfileEntry
-            {repName = show k
-            ,repBuilt = fromStep built
-            ,repChanged = fromStep changed
-            ,repDepends = mapMaybe (`Map.lookup` ids) (concat depends)
-            ,repExecution = fromFloat execution
-            ,repTraces = map fromTrace traces
+            {prfName = show k
+            ,prfBuilt = fromStep built
+            ,prfChanged = fromStep changed
+            ,prfDepends = mapMaybe (`Map.lookup` ids) (concat depends)
+            ,prfExecution = fromFloat execution
+            ,prfTraces = map fromTrace traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
                   fromTrace (Trace a b c) = ProfileTrace (unpack a) (fromFloat b) (fromFloat c)
