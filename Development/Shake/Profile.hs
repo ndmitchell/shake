@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, RecordWildCards #-}
 
-module Development.Shake.Profile(ProfileEntry(..), ProfileTrace(..), buildReport) where
+module Development.Shake.Profile(ProfileEntry(..), ProfileTrace(..), writeProfile) where
 
 import General.Base
 import General.Template
@@ -21,8 +21,8 @@ repTime ProfileTrace{..} = repStop - repStart
 
 
 -- | Generates an report given some build system profiling data.
-buildReport :: FilePath -> [ProfileEntry] -> IO ()
-buildReport out xs
+writeProfile :: FilePath -> [ProfileEntry] -> IO ()
+writeProfile out xs
     | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ reportJSON xs
     | takeExtension out == ".json" = writeFile out $ reportJSON xs
     | takeExtension out == ".trace" = writeFile out $ reportTrace xs

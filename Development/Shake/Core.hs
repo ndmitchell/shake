@@ -384,7 +384,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     forM_ shakeReport $ \file -> do
                         when (shakeVerbosity >= Normal) $
                             output Normal $ "Writing report to " ++ file
-                        buildReport file report
+                        writeProfile file report
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
                     live <- listLive database
