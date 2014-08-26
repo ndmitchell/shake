@@ -27,7 +27,7 @@ $(function(){
             raw2.push([shake[i].values[j].idealSecs, shake[i].values[j].idealSecs]);
         }
         var ys = [{data:raw2, color:"gray"}, {label:shake[i].name, data:raw, color:"red"}];
-        var div = $("<div style='float:left;'>").width(300).height(200);
+        var div = $("<div class='plot'>");
         $("#output").append(div);
         $.plot(div, ys, {
             xaxis: {
