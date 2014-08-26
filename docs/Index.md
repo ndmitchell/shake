@@ -2,8 +2,7 @@
 
 Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day.
 
-<!--<div id="messages">-->
-<!--<insert:br>-->
+<!--<neil:home>-->
 
 ## Why try Shake?
 
@@ -27,10 +26,13 @@ Shake build systems are Haskell programs that make heavy use of the `shake` libr
 
 ## What else?
 
-Can execute Ninja files, integrate with CMake, progress messages, profiling support, robust underlying theory.
+Can execute [Ninja files](Ninja.md), integrate with CMake, progress messages, profiling support, robust underlying theory.
 
 ## Used by
 
+![Standard Chartered](standard-chartered.png) ![](sample-count.png) ![](fractis.png)
+
+
 Standard Chartered, Fractis, etc.
 
-<!--</div>-->
+<!--</neil:home>-->
