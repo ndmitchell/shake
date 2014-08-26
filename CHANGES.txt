@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add -j to run with one thread per processor
     Fix progress reporting to work even on the first run
     Apply abbreviations to staunch failure messages
     Fix failure progress messages during staunch mode
