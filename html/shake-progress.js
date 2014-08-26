@@ -1,5 +1,4 @@
 /*jsl:option explicit*/
-/*jsl:import shake-util.js*/
 "use strict";
 
 // Data
