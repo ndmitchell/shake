@@ -64,7 +64,7 @@ data-files:
     html/jquery.flot.stack.js
     html/jquery.js
     html/viz.js
-    html/report.html
+    html/profile.html
     html/shake-logic.js
     html/shake-ui.js
     html/shake-util.js
