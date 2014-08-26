@@ -1,1 +1,1 @@
-var version = "$VERSION$";
+var version = "HEAD";
