@@ -265,13 +265,25 @@ generateHTML :: [(FilePath, [ProgressEntry])] -> IO LBS.ByteString
 generateHTML xs = do
     htmlDir <- getDataFileName "html"
     report <- LBS.readFile $ htmlDir </> "progress.html"
-    let f name | name == "progress-data.js" = return $ LBS.pack $ "var shake = \n" ++ generateJSON xs
+    let f name | name == "progress-data.js" = return $ LBS.pack $ "var shake =\n" ++ generateJSON xs
                | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 
 generateJSON :: [(FilePath, [ProgressEntry])] -> String
-generateJSON _ = ""
+generateJSON = concat . jsonList . map ((++"}") . unlines . f)
+    where
+        f (file,ps) =
+            ("{\"name\":" ++ show file ++ ", \"values\":") :
+            indent (jsonList $ map g ps)
+
+        g ProgressEntry{..} = jsonObject
+            [("idealSecs",show idealSecs),("idealPerc",show idealPerc)
+            ,("actualSecs",show actualSecs),("actualPerc",show actualPerc)]
+
+indent = map ("  "++)
+jsonList xs = zipWith (:) ('[':repeat ',') xs ++ ["]"]
+jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}"
 
 
 {-# NOINLINE xterm #-}
