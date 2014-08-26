@@ -274,7 +274,7 @@ generateJSON :: [(FilePath, [ProgressEntry])] -> String
 generateJSON = concat . jsonList . map ((++"}") . unlines . f)
     where
         f (file,ps) =
-            ("{\"name\":" ++ show file ++ ", \"values\":") :
+            ("{\"name\":" ++ show (takeFileName file) ++ ", \"values\":") :
             indent (jsonList $ map g ps)
 
         g ProgressEntry{..} = jsonObject
