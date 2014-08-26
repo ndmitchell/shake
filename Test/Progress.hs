@@ -5,6 +5,8 @@ module Test.Progress(main) where
 import Development.Shake.Progress
 import Test.Type
 import Data.Monoid
+import System.Directory
+import System.FilePath
 
 
 main = shaken test $ \args obj -> return ()
@@ -55,3 +57,7 @@ test build obj = do
     -- if the work rate changes, should somewhat reflect that
     xs <- prog [10,9,8,7,6.5,6,5.5,5]
     assert (last xs > 7.1) "Some discounting (factor=0 would give 7)"
+
+    xs <- getDirectoryContents "Test/Progress"
+    build $ ["--progress=replay=Test/Progress/" ++ x | x <- xs, takeExtension x == ".prog"] ++
+            ["--no-report","--report=-","--report=" ++ obj "progress.html"]

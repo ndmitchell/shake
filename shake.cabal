@@ -43,6 +43,7 @@ extra-source-files:
     Test/Tar/list.txt
     Test/Ninja/*.ninja
     Test/Ninja/*.output
+    Test/Progress/*.prog
     Paths.hs
     CHANGES.txt
     README.md
