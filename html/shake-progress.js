@@ -20,7 +20,7 @@ $(function(){
     {
         var raw = [];
         var raw2 = [];
-        for (var j = 10; j < shake[i].values.length; j++)
+        for (var j = 5; j < shake[i].values.length; j++)
         {
             raw.push([-shake[i].values[j].idealSecs, shake[i].values[j].actualSecs]);
             raw2.push([-shake[i].values[j].idealSecs, shake[i].values[j].idealSecs]);
