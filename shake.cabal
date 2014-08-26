@@ -125,8 +125,8 @@ library
         Development.Shake.FilePattern
         Development.Shake.Monad
         Development.Shake.Pool
+        Development.Shake.Profile
         Development.Shake.Progress
-        Development.Shake.Report
         Development.Shake.Resource
         Development.Shake.Rules.Directory
         Development.Shake.Rules.File

@@ -45,7 +45,7 @@ import Development.Shake.Database
 import Development.Shake.Monad
 import Development.Shake.Resource
 import Development.Shake.Value
-import Development.Shake.Report
+import Development.Shake.Profile
 import Development.Shake.Types
 import Development.Shake.Errors
 import Development.Shake.Special

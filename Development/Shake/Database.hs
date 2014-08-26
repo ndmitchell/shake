@@ -20,7 +20,7 @@ import Development.Shake.Errors
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Special
-import Development.Shake.Report
+import Development.Shake.Profile
 import Development.Shake.Monad
 import General.Base
 import General.Concurrent

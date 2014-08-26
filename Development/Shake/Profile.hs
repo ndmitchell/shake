@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, RecordWildCards #-}
 
-module Development.Shake.Report(ReportEntry(..), ReportTrace(..), buildReport) where
+module Development.Shake.Profile(ReportEntry(..), ReportTrace(..), buildReport) where
 
 import General.Base
 import General.Template
