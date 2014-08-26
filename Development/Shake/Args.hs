@@ -9,8 +9,10 @@ import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
+import qualified Data.ByteString.Lazy as LBS
 import General.Base
 import General.Timing
+import General.Template
 
 import Control.Arrow
 import Control.Concurrent
@@ -132,11 +134,13 @@ shakeArgsWith baseOpts userOptions rules = do
         putStrLn $ "Shake build system, version " ++ showVersion version
      else if NumericVersion `elem` flagsExtra then
         putStrLn $ showVersion version
-     else if not $ null progressReplays then
-        forM_ progressReplays $ \file -> do
+     else if not $ null progressReplays then do
+        dat <- forM progressReplays $ \file -> do
             src <- readFile file
-            putStrLn $ "# Replay of progress file: " ++ file
-            putStr $ unlines $ progressAnalyse $ map read $ lines src
+            return (file, map read $ lines src)
+        forM_ (if null $ shakeReport shakeOpts then ["-"] else shakeReport shakeOpts) $ \file -> do
+            putStrLn $ "Writing report to " ++ file
+            writeProgressReport file dat
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         start <- getCurrentTime

@@ -1,27 +1,34 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface, ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Progress tracking
 module Development.Shake.Progress(
     Progress(..),
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
-    progressReplay, progressAnalyse -- INTERNAL USE ONLY
+    ProgressEntry(..), progressReplay, writeProgressReport -- INTERNAL USE ONLY
     ) where
 
 import Control.Applicative
+import Control.Arrow
 import Control.Exception
 import Control.Monad
 import System.Environment
 import System.Directory
 import System.Process
+import System.FilePath
 import Data.Char
 import Data.Data
 import Data.IORef
 import Data.List
 import Data.Maybe
 import Data.Monoid
+import Data.Version
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Base
+import General.Template
 import System.IO.Unsafe
+import Paths_shake
 
 #ifdef mingw32_HOST_OS
 
@@ -223,20 +230,48 @@ progressDisplay sample disp prog = do
             loop time mealy
 
 
+data ProgressEntry = ProgressEntry
+    {idealSecs :: Double, idealPerc :: Double
+    ,actualSecs :: Double, actualPerc :: Double
+    }
+
 -- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
-progressReplay :: [(Double, Progress)] -> [(Double, Double)]
-progressReplay = snd . mapAccumL (\a b -> let ((x,y,_),m) = runMealy a b in (m,(x,y))) (message echoMealy)
+progressReplay :: [(Double, Progress)] -> [ProgressEntry]
+progressReplay [] = []
+progressReplay ps = snd $ mapAccumL f (message echoMealy) ps
+    where
+        end = fst $ last ps
+        f a (time,p) = (a2, ProgressEntry (end - time) (time * 100 / end) secs perc)
+            where ((secs,perc,_),a2) = runMealy a (time,p)
 
 
 -- | Given a trace, display information about how well we did
-progressAnalyse :: [(Double, Progress)] -> [String]
-progressAnalyse [] = []
-progressAnalyse ps = zipWith f ps $ progressReplay ps
+writeProgressReport :: FilePath -> [(FilePath, [(Double, Progress)])] -> IO ()
+writeProgressReport out (map (second progressReplay) -> xs)
+    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ generateJSON xs
+    | takeExtension out == ".json" = writeFile out $ generateJSON xs
+    | out == "-" = putStr $ unlines $ generateSummary xs
+    | otherwise = LBS.writeFile out =<< generateHTML xs
+
+
+generateSummary :: [(FilePath, [ProgressEntry])] -> [String]
+generateSummary xs = flip concatMap xs $ \(file,xs) ->
+    ["# " ++ file, f xs "seconds" idealSecs actualSecs, f xs "percentages" idealPerc actualPerc]
     where
-        end = fst $ last ps
-        f (time,_) (secs,perc) = "Output: " ++ formatMessage secs perc ++ "   Ideal: " ++ formatMessage isecs iperc
-            where isecs = end - time
-                  iperc = (time / end) * 100
+        f xs lbl ideal actual = "90% of " ++ lbl ++ " were within " ++ show (ceiling bad)
+            where bad = maximum $ (0:) $ drop (length xs `div` 10) $ sort [abs $ ideal x - actual x | x <- xs]
+
+generateHTML :: [(FilePath, [ProgressEntry])] -> IO LBS.ByteString
+generateHTML xs = do
+    htmlDir <- getDataFileName "html"
+    report <- LBS.readFile $ htmlDir </> "progress.html"
+    let f name | name == "progress-data.js" = return $ LBS.pack $ "var shake = \n" ++ generateJSON xs
+               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
+               | otherwise = LBS.readFile $ htmlDir </> name
+    runTemplate f report
+
+generateJSON :: [(FilePath, [ProgressEntry])] -> String
+generateJSON _ = ""
 
 
 {-# NOINLINE xterm #-}
