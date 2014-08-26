@@ -9,6 +9,7 @@ import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
+import General.Base
 import General.Timing
 
 import Control.Arrow
@@ -110,6 +111,8 @@ shakeArgsWith baseOpts userOptions rules = do
         (flagsExtra,flagsShake) = first concat $ unzip self
         assumeNew = [x | AssumeNew x <- flagsExtra]
         assumeOld = [x | AssumeOld x <- flagsExtra]
+        progressReplays = [x | ProgressReplay x <- flagsExtra]
+        progressRecords = [x | ProgressRecord x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
         printDirectory = last $ False : [x | PrintDirectory x <- flagsExtra]
         shakeOpts = foldl' (flip ($)) baseOpts flagsShake
@@ -129,6 +132,11 @@ shakeArgsWith baseOpts userOptions rules = do
         putStrLn $ "Shake build system, version " ++ showVersion version
      else if NumericVersion `elem` flagsExtra then
         putStrLn $ showVersion version
+     else if not $ null progressReplays then
+        forM_ progressReplays $ \file -> do
+            src <- readFile file
+            putStrLn $ "# Replay of progress file: " ++ file
+            putStr $ unlines $ progressAnalyse $ map read $ lines src
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         start <- getCurrentTime
@@ -138,6 +146,19 @@ shakeArgsWith baseOpts userOptions rules = do
                 -- get the "html" directory so it caches with the current directory
                 -- required only for debug code
                 Just d -> bracket_ (getDataFileName "html" >> setCurrentDirectory d) (setCurrentDirectory curdir)
+        shakeOpts <- if null progressRecords then return shakeOpts else do
+            t <- offsetTime
+            return shakeOpts{shakeProgress = \p -> do
+                bracket
+                    (forkIO $ shakeProgress shakeOpts p)
+                    killThread
+                    $ const $ progressDisplay 1 (const $ return ()) $ do
+                        p <- p
+                        t <- t
+                        forM_ progressRecords $ \file -> do
+                            appendFile file $ show (t,p) ++ "\n"
+                        return p
+            }
         (ran,res) <- redir $ do
             when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
             rules <- rules user files
@@ -214,6 +235,8 @@ data Extra = ChangeDirectory FilePath
            | NoTime
            | Exception
            | NoBuild
+           | ProgressRecord FilePath
+           | ProgressReplay FilePath
              deriving Eq
 
 
@@ -262,7 +285,7 @@ shakeOptsEx =
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
     ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (optIntArg 1 "progress" "N" (\i s -> s{shakeProgress=prog $ fromMaybe 5 i})) "Show progress messages [every N secs, default 5]."
+    ,yes $ Option "p" ["progress"] (progress $ optIntArg 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
     ,yes $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Don't print much."
     ,no  $ Option ""  ["no-time"] (NoArg $ Right ([NoTime],id)) "Don't print build time."
@@ -293,6 +316,11 @@ shakeOptsEx =
         pairArg flag a f = flip ReqArg a $ \x -> case break (== '=') x of
             (a,'=':b) -> Right ([],f (a,b))
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
+
+        progress (OptArg func msg) = flip OptArg msg $ \x -> case break (== '=') `fmap` x of
+            Just ("record",file) -> Right ([ProgressRecord $ if null file then "progress.txt" else tail file], id)
+            Just ("replay",file) -> Right ([ProgressReplay $ if null file then "progress.txt" else tail file], id)
+            _ -> func x
 
         outputDebug output Nothing = output
         outputDebug output (Just file) = \v msg -> do
