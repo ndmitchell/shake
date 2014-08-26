@@ -18,10 +18,8 @@
 
 <style type="text/css">
 body {font-family: sans-serif; font-size: 10pt;}
-* {box-sizing: border-box;}
-html, body {height: 100%; width:100%;}
-#link:visited {color: rgb(0,0,238);}
-.version {color: gray; font-style: italic;}
+h1 {font-size: 12pt;}
+.version {color: gray; font-style: italic; clear: both; padding-top: 30px;}
 .shake {
     text-decoration: none;
     font-family: monospace;
@@ -30,9 +28,16 @@ html, body {height: 100%; width:100%;}
 </style>
 
 </head>
-<body style="margin:0px;padding:0px;">
+<body>
 
-<div style="height:100%;width:100%;min-width:150px;min-height:150px;overflow:auto;" id="output">Loading...</div>
+<h1>Shake Progress Analysis</h1>
+<p>
+    The red line represents the real performance, with time to completion on the X axis and predicted time on the Y axis. A perfect progress prediction would follow the gray line.
+</p>
+
+<div id="output">Loading...</div>
+
+<p class="version"></p>
 
 </body>
 </html>
