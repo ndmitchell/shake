@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8" />
+<title>Shake progress diagnostic</title>
+
+<!-- Libraries -->
+<script src="jquery.js"></script>
+<script src="jquery.flot.js"></script>
+<script src="jquery.flot.stack.js"></script>
+<!-- Progress output -->
+<script src="progress-data.js"></script>
+<script src="version.js"></script>
+<!-- Functions for creating info from progress info -->
+<script src="shake-util.js"></script>
+<script src="shake-progress.js"></script>
+
+<style type="text/css">
+body {font-family: sans-serif; font-size: 10pt;}
+* {box-sizing: border-box;}
+html, body {height: 100%; width:100%;}
+#link:visited {color: rgb(0,0,238);}
+.version {color: gray; font-style: italic;}
+.shake {
+    text-decoration: none;
+    font-family: monospace;
+    color: black;
+}
+</style>
+
+</head>
+<body style="margin:0px;padding:0px;">
+
+<div style="height:100%;width:100%;min-width:150px;min-height:150px;overflow:auto;" id="output">Loading...</div>
+
+</body>
+</html>

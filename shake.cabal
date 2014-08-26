@@ -65,7 +65,9 @@ data-files:
     html/jquery.js
     html/viz.js
     html/profile.html
+    html/progress.html
     html/shake-logic.js
+    html/shake-progress.js
     html/shake-ui.js
     html/shake-util.js
 
