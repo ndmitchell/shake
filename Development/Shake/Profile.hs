@@ -23,15 +23,15 @@ prfTime ProfileTrace{..} = prfStop - prfStart
 -- | Generates an report given some build system profiling data.
 writeProfile :: FilePath -> [ProfileEntry] -> IO ()
 writeProfile out xs
-    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ reportJSON xs
-    | takeExtension out == ".json" = writeFile out $ reportJSON xs
-    | takeExtension out == ".trace" = writeFile out $ reportTrace xs
-    | out == "-" = putStr $ unlines $ reportSummary xs
-    | otherwise = LBS.writeFile out =<< reportHTML xs
+    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ generateJSON xs
+    | takeExtension out == ".json" = writeFile out $ generateJSON xs
+    | takeExtension out == ".trace" = writeFile out $ generateTrace xs
+    | out == "-" = putStr $ unlines $ generateSummary xs
+    | otherwise = LBS.writeFile out =<< generateHTML xs
 
 
-reportSummary :: [ProfileEntry] -> [String]
-reportSummary xs =
+generateSummary :: [ProfileEntry] -> [String]
+generateSummary xs =
     ["* This database has tracked " ++ show (maximum (0 : map prfChanged xs) + 1) ++ " runs."
     ,let f = show . length in "* There are " ++ f xs ++ " rules (" ++ f ls ++ " rebuilt in the last run)."
     ,let f = show . sum . map (length . prfTraces) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
@@ -48,18 +48,18 @@ reportSummary xs =
     where ls = filter ((==) 0 . prfBuilt) xs
 
 
-reportHTML :: [ProfileEntry] -> IO LBS.ByteString
-reportHTML xs = do
+generateHTML :: [ProfileEntry] -> IO LBS.ByteString
+generateHTML xs = do
     htmlDir <- getDataFileName "html"
     report <- LBS.readFile $ htmlDir </> "report.html"
-    let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ reportJSON xs
+    let f name | name == "data.js" = return $ LBS.pack $ "var shake = \n" ++ generateJSON xs
                | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 
 
-reportTrace :: [ProfileEntry] -> String
-reportTrace xs = jsonListLines $
+generateTrace :: [ProfileEntry] -> String
+generateTrace xs = jsonListLines $
     showEntries 0 [y{prfCommand=prfName x} | x <- xs, y <- prfTraces x] ++
     showEntries 1 (concatMap prfTraces xs)
     where
@@ -72,8 +72,8 @@ reportTrace xs = jsonListLines $
             ,("ts",show $ 1000000*prfStart), ("dur",show $ 1000000*(prfStop-prfStart))]
 
 
-reportJSON :: [ProfileEntry] -> String
-reportJSON = jsonListLines . map showEntry
+generateJSON :: [ProfileEntry] -> String
+generateJSON = jsonListLines . map showEntry
     where
         showEntry ProfileEntry{..} = jsonObject $
             [("name", show prfName)
