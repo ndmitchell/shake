@@ -395,7 +395,7 @@ resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends =
 removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
-toReport :: Database -> IO [ReportEntry]
+toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
     status <- fmap (removeStep . resultsOnly) $ readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
@@ -405,7 +405,7 @@ toReport Database{..} = do
         steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
                 in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
 
-        f (k, Result{..}) = ReportEntry
+        f (k, Result{..}) = ProfileEntry
             {repName = show k
             ,repBuilt = fromStep built
             ,repChanged = fromStep changed
@@ -414,7 +414,7 @@ toReport Database{..} = do
             ,repTraces = map fromTrace traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
-                  fromTrace (Trace a b c) = ReportTrace (unpack a) (fromFloat b) (fromFloat c)
+                  fromTrace (Trace a b c) = ProfileTrace (unpack a) (fromFloat b) (fromFloat c)
                   fromFloat = fromRational . toRational
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
