@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add --demo mode
     Add --progress=record and --progress=replay
     Add -j to run with one thread per processor
     Fix progress reporting to work even on the first run

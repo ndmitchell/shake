@@ -122,6 +122,7 @@ library
         Development.Shake.ByteString
         Development.Shake.Core
         Development.Shake.Database
+        Development.Shake.Demo
         Development.Shake.Derived
         Development.Shake.Errors
         Development.Shake.FileInfo

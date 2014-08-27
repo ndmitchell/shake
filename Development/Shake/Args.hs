@@ -5,6 +5,7 @@ module Development.Shake.Args(shakeOptDescrs, shakeArgs, shakeArgsWith) where
 import Paths_shake
 import Development.Shake.Types
 import Development.Shake.Core
+import Development.Shake.Demo
 import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
@@ -132,6 +133,8 @@ shakeArgsWith baseOpts userOptions rules = do
         putStrLn $ "Shake build system, version " ++ showVersion version
      else if NumericVersion `elem` flagsExtra then
         putStrLn $ showVersion version
+     else if Demo `elem` flagsExtra then
+        demo
      else if not $ null progressReplays then do
         dat <- forM progressReplays $ \file -> do
             src <- readFile file
@@ -239,6 +242,7 @@ data Extra = ChangeDirectory FilePath
            | NoBuild
            | ProgressRecord FilePath
            | ProgressReplay FilePath
+           | Demo
              deriving Eq
 
 
@@ -260,6 +264,7 @@ shakeOptsEx =
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
     ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
+    ,no  $ Option ""  ["demo"] (NoArg $ Right ([Demo], id)) "Run in demo mode."
     ,yes $ Option ""  ["digest"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeDigest})) "Files change when digest changes."
     ,yes $ Option ""  ["digest-and"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeAndDigest})) "Files change when modtime and digest change."
     ,yes $ Option ""  ["digest-and-input"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeAndDigestInput})) "Files change on modtime (and digest for inputs)."
