@@ -14,7 +14,7 @@ You need to install the [Haskell Platform](http://www.haskell.org/platform/), ty
 
 ## Going deeper
 
-Read the user manual and see the Haddock documentation. Try the profiling.
+Read the [user manual](Manual.md) and see the [individual function documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html), including lots of examples. Read about the [theory behind Shake](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf) and a [video introducing the theory](http://www.youtube.com/watch?v=xYCPpXVlqFM). Read about the [history and philosophy](About.md).
 
 ## Asking questions
 
@@ -26,13 +26,14 @@ Shake build systems are Haskell programs that make heavy use of the `shake` libr
 
 ## What else?
 
-Can execute [Ninja files](Ninja.md), integrate with CMake, progress messages, profiling support, robust underlying theory.
+Shake can execute [Ninja files](Ninja.md), integrate with [CMake](http://www.cmake.org/) and [Meson](https://jpakkane.github.io/meson/), predict completion time progress messages, profiling support, robust underlying theory.
 
 ## Used by
 
-![Standard Chartered](standard-chartered.png) ![](sample-count.png) ![](fractis.png)
-
-
-Standard Chartered, Fractis, etc.
+Shake is used by lots of companies, but only a few have declared so publicly.
+ 
+* [Standard Chartered](http://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
+* [factis research GmbH](http://www.factisresearch.com/), as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
+* [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872).
 
 <!--</neil:home>-->
