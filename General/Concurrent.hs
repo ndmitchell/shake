@@ -70,7 +70,7 @@ newBarrier :: IO (Barrier a)
 newBarrier = fmap Barrier newEmptyMVar
 
 signalBarrier :: Barrier a -> a -> IO ()
-signalBarrier (Barrier x) = putMVar x
+signalBarrier (Barrier x) = void . tryPutMVar x
 
 waitBarrier :: Barrier a -> IO a
 waitBarrier (Barrier x) = readMVar x
@@ -78,7 +78,7 @@ waitBarrier (Barrier x) = readMVar x
 waitBarrierMaybe :: Barrier a -> IO (Maybe a)
 waitBarrierMaybe (Barrier x) = do
     res <- tryTakeMVar x
-    whenJust res $ putMVar x
+    whenJust res $ void . tryPutMVar x
     return res
 
 
