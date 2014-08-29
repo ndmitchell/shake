@@ -37,10 +37,8 @@ To run the example above:
 
 1. Install the [Haskell Platform](http://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
 2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
-3. Type `cabal install shake --global --profile`, to build and install Shake and all its dependencies.
-4. Grab a [tarball of the repo](https://github.com/ndmitchell/shake/archive/master.tar.gz) and move to the `docs/manual` directory, which includes the code at the beginning as `Build.hs`, along with some small sample C files.
-5. In the directory of the example, type `runhaskell Build.hs`, which should produce an executable `_build/run`.
-6. Run `_build/run` to confirm everything worked.
+3. Type `cabal install shake`, to build and install Shake and all its dependencies.
+4. Type `shake --demo`, which will create a directory containing a sample project, the above Shake script, and execute it. For more details see a [trace of `shake --demo`](Demo.md).
 
 ## Basic syntax
 
