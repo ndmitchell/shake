@@ -16,14 +16,15 @@ import Data.Version(showVersion)
 import System.Directory
 import System.Exit
 import System.FilePath
+import Development.Shake.FilePath(exe)
 import System.IO
 
 
 demo :: IO ()
 demo = do
     hSetBuffering stdout NoBuffering
-    putStrLn $ "# Welcome to the Shake v" ++ showVersion version ++ " demo mode!"
-    putStr $ "# Detecting machine configuration... "
+    putStrLn $ "% Welcome to the Shake v" ++ showVersion version ++ " demo mode!"
+    putStr $ "% Detecting machine configuration... "
 
     -- CONFIGURE
 
@@ -39,15 +40,14 @@ demo = do
                 return $ if b then Just dir else Nothing
             _ -> return v
     shakeLib <- wrap $ fmap (not . null . words . fromStdout) (cmd "ghc-pkg list --simple-output shake")
-    shake <- findExecutable "shake"
     ninja <- findExecutable "ninja"
     putStrLn "done\n"
 
     let path = if isWindows then "%PATH%" else "$PATH"
-    require (isJust ghc) $ "You don't have 'ghc' on your " ++ path ++ ", which is required to run the demo."
-    require (isJust gcc) $ "You don't have 'gcc' on your " ++ path ++ ", which is required to run the demo."
-    require shakeLib "You don't have the 'shake' library installed with GHC, which is required to run the demo."
-    require hasManual "You don't have the Shake data files installed, which are required to run the demo."
+    require (isJust ghc) $ "% You don't have 'ghc' on your " ++ path ++ ", which is required to run the demo."
+    require (isJust gcc) $ "% You don't have 'gcc' on your " ++ path ++ ", which is required to run the demo."
+    require shakeLib "% You don't have the 'shake' library installed with GHC, which is required to run the demo."
+    require hasManual "% You don't have the Shake data files installed, which are required to run the demo."
 
     empty <- fmap (null . filter (not . all (== '.'))) $ getDirectoryContents "."
     dir <- if empty then getCurrentDirectory else do
@@ -55,40 +55,59 @@ demo = do
         dir <- getDirectoryContents home
         return $ home </> head (map ("shake-demo" ++) ("":map show [2..]) \\ dir)
 
-    putStrLn $ "# Shake requires an empty directory for the demo, is it OK to use:"
-    putStrLn $ "    " ++ dir ++ "?"
+    putStrLn $ "% The Shake demo uses an empty directory, OK to use:"
+    putStrLn $ "%     " ++ dir
     b <- yesNo
-    require b "Please create an empty directory to run the demo from, then run 'shake --demo' again."
+    require b "% Please create an empty directory to run the demo from, then run 'shake --demo' again."
 
-    putStr "# Copying files... "
+    putStr "% Copying files... "
     createDirectoryIfMissing True dir
     forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
         copyFile (manual </> file) (dir </> file)
     putStrLn "done"
 
-    putStr "\n# Shake is about to build an example project, press <ENTER> to continue:"
-    getLine
-    putStrLn $ "# RUNNING: cd " ++ dir
-    putStrLn $ "# RUNNING: " ++ (if isWindows then "build" else "./build.sh")
-    () <- cmd (Cwd dir) Shell $ if isWindows then "build.bat" else "./build.sh"
+    let pause = putStr "% Press ENTER to continue: " >> getLine
+    let execute x = do
+            putStrLn $ "% RUNNING: " ++ x
+            cmd (Cwd dir) Shell x :: IO ()
+    let build = if isWindows then "build.bat" else "./build.sh"
 
-    putStr "\n# Shake is about to rebuild the project (nothing should change), press <ENTER> to continue:"
-    getLine
-    putStrLn $ "# RUNNING: " ++ (if isWindows then "build" else "./build.sh")
-    () <- cmd (Cwd dir) Shell $ if isWindows then "build.bat" else "./build.sh"
+    putStrLn "\n% [1/5] Building an example project with Shake."
+    pause
+    putStrLn $ "% RUNNING: cd " ++ dir
+    execute build
 
-    putStr "\n# Shake is going to tell you some profiling statistics, press <ENTER> to continue:"
-    getLine
-    putStrLn $ "# RUNNING: " ++ (if isWindows then "build" else "./build.sh") ++ " --profile --profile=-"
-    () <- cmd (Cwd dir) Shell (if isWindows then "build.bat" else "./build.sh") "--profile --profile=-"
+    putStrLn "\n% [2/5] Running the produced example."
+    pause
+    execute $ "_build" </> "run" <.> exe
 
-    putStrLn "# Demo complete"
+    putStrLn "\n% [3/5] Rebuilding an example project with Shake (nothing should change)."
+    pause
+    execute build
+
+    putStrLn "\n% [4/5] Cleaning the build."
+    pause
+    execute $ build ++ " clean"
+
+    putStrLn "\n% [5/5] Rebuilding with 2 threads and profiling."
+    pause
+    execute $ build ++ " -j2 --report --report=-"
+    putStrLn "\n% See the profiling summary above, or look at the HTML profile report in"
+    putStrLn $ "%     " ++ dir </> "report.html"
+
+    putStrLn "\n% Demo complete - all the examples can be run from:"
+    putStrLn $ "%     " ++ dir
+    putStrLn "% For more info see http://www.shakebuild.com/"
+    when (isJust ninja) $ do
+        putStrLn "\n% PS. Shake can also execute Ninja build files"
+        putStrLn "% For more info see http://www.shakebuild.com/ninja"
+
 
 
 -- | Require the user to press @y@ before continuing.
 yesNo :: IO Bool
 yesNo = do
-    putStr $ "Press y/n followed by <ENTER>. "
+    putStr $ "% [Y/N] (then ENTER): "
     x <- fmap (map toLower) getLine
     if "y" `isPrefixOf` x then
         return True
