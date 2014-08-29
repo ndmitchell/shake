@@ -70,7 +70,7 @@ demo = do
     let execute x = do
             putStrLn $ "% RUNNING: " ++ x
             cmd (Cwd dir) Shell x :: IO ()
-    let build = if isWindows then "build.bat" else "./build.sh"
+    let build = if isWindows then "build" else "./build.sh"
 
     putStrLn "\n% [1/5] Building an example project with Shake."
     pause
