@@ -14,6 +14,7 @@ Shake is a Haskell library for writing build systems - designed as a replacement
         want ["_build/run" <.> exe]
     
         phony "clean" $ do
+            putNormal "Cleaning files in _build"
             removeFilesAfter "_build" ["//*"]
     
         "_build/run" <.> exe *> \out -> do
@@ -262,6 +263,7 @@ All top-level variables and functions can be though of as being expanded whereve
 A standard clean command is defined as:
 
     phony "clean" $ do
+        putNormal "Cleaning files in _build"
         removeFilesAfter "_build" ["//*"]
 
 Running the build system with the `clean` argument, e.g. `runhaskell _build/run clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
@@ -273,7 +275,7 @@ phony "<i>name</i>" $ do
 
 Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are simply run afresh each time they are requested.
 
-The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell _build/run clean`) then deletes all files matching `//*` in the `_build` directory.
+The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell _build/run clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
 
 ## Running
 
