@@ -20,8 +20,17 @@ body {
 }
 
 #toc {
-    float: right;
+    position: fixed;
+    right: 0px;
     font-size: 9pt;
+    margin: 10px;
+    padding: 7px;
+    border: 1px solid #ddd;
+}
+#toc ul {
+    list-style-type: none;
+    padding: 0px;
+    margin: 0px;
 }
 
 #top, #footer {
@@ -60,7 +69,7 @@ body {
 }
 
 .gap {
-    clear: both;
+    clear: left;
 }
 
 #messages p {

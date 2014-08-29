@@ -7,6 +7,7 @@ import Control.Monad
 import Data.Maybe
 import Library
 import Data.Char
+import Data.List
 import Text.HTML.TagSoup
 
 
@@ -47,7 +48,8 @@ tableOfContents xs = tag "<ul>" $ concat
     | o@(TagOpen h a:_) <- getL heading xs, h /= "h1"]
 
 addId :: Tags -> Tags
-addId (TagOpen x a:xs) = TagOpen x (("id",filter isAlpha $ innerText xs):a) : xs
+addId (TagOpen x a:xs) = TagOpen x (("id", norm $ innerText xs):a) : xs
+    where norm = intercalate "-" . words . filter (\x -> x == ' ' || isAlpha x) . map toLower
 
 markdownLink :: Tags -> Tags
 markdownLink (TagOpen "a" a:xs) = TagOpen "a" (map f a) : xs
