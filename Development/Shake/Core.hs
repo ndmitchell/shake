@@ -349,22 +349,28 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Got",Just now)]
                 ""
 
-    progressThread <- newIORef Nothing
+    progressAbort <- newIORef $ return ()
     after <- newIORef []
     absent <- newIORef []
     shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
     withCleanup $ \cleanup -> do
         _ <- addCleanup cleanup $ do
-            flip whenJust killThread =<< readIORef progressThread
+            join $ readIORef progressAbort
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
         withCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
-                tid <- forkIO $ shakeProgress $ do
-                    failure <- fmap (fmap fst) $ readIORef except
-                    stats <- progress database
-                    return stats{isFailure=failure}
-                writeIORef progressThread $ Just tid
+                wait <- newBarrier
+                tid <- forkIO $ flip finally (signalBarrier wait ()) $
+                    shakeProgress $ do
+                        failure <- fmap (fmap fst) $ readIORef except
+                        stats <- progress database
+                        return stats{isFailure=failure}
+                writeIORef progressAbort $ do
+                    forkIO $ sleep 1 >> signalBarrier wait ()
+                    killThread tid
+                    waitBarrier wait
+
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do

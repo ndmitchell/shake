@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Ensure you wait until the progress thread cleans up
     Add --demo mode
     Add --progress=record and --progress=replay
     Add -j to run with one thread per processor
