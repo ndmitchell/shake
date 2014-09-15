@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns, CPP, ScopedTypeVariables #-}
 
 module General.Base(
-    Duration, duration, Time, offsetTime, offsetTimeIncrease, sleep,
+    Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
     intToDouble, floatToDouble, doubleToFloat,
     isWindows, getProcessorCount,
     readFileStrict, readFileUCS2, getEnvMaybe, captureOutput, getExePath,
@@ -44,13 +44,16 @@ import Foreign.C.Types
 
 type Time = Float -- how far you are through this run, in seconds
 
+diffTime :: UTCTime -> UTCTime -> Duration
+diffTime end start = fromRational $ toRational $ end `diffUTCTime` start
+
 -- | Call once at the start, then call repeatedly to get Time values out
 offsetTime :: IO (IO Time)
 offsetTime = do
     start <- getCurrentTime
     return $ do
         end <- getCurrentTime
-        return $ fromRational $ toRational $ end `diffUTCTime` start
+        return $ diffTime end start
 
 -- | Like offsetTime, but results will never decrease (though they may stay the same)
 offsetTimeIncrease :: IO (IO Time)
