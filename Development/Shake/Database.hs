@@ -338,7 +338,7 @@ progress Database{..} = do
     s <- readIORef status
     return $ foldl' f mempty $ map snd $ Map.elems s
     where
-        g = fromRational . toRational
+        g = floatToDouble
 
         f s (Ready Result{..}) = if step == built
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
@@ -410,12 +410,11 @@ toReport Database{..} = do
             ,prfBuilt = fromStep built
             ,prfChanged = fromStep changed
             ,prfDepends = mapMaybe (`Map.lookup` ids) (concat depends)
-            ,prfExecution = fromFloat execution
+            ,prfExecution = floatToDouble execution
             ,prfTraces = map fromTrace traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
-                  fromTrace (Trace a b c) = ProfileTrace (unpack a) (fromFloat b) (fromFloat c)
-                  fromFloat = fromRational . toRational
+                  fromTrace (Trace a b c) = ProfileTrace (unpack a) (floatToDouble b) (floatToDouble c)
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
