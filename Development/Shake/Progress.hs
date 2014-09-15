@@ -130,10 +130,6 @@ decay f a b = scanMealy step 0 $ (,) <$> oldMealy 0 a <*> oldMealy 0 b
     where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
 
 
-fromInt :: Int -> Double
-fromInt = fromInteger . toInteger
-
-
 ---------------------------------------------------------------------
 -- MESSAGE GENERATOR
 
@@ -180,10 +176,10 @@ message input = liftA3 (,,) time perc debug
             where
                 weightedAverage (w1,x1) (w2,x2)
                     | w1 == 0 && w2 == 0 = 0
-                    | otherwise = ((w1 *. x1) + (w2 *. x2)) / fromInt (w1+w2)
-                    where i *. d = if i == 0 then 0 else fromInt i * d -- since d might be NaN
+                    | otherwise = ((w1 *. x1) + (w2 *. x2)) / intToDouble (w1+w2)
+                    where i *. d = if i == 0 then 0 else intToDouble i * d -- since d might be NaN
 
-                f divide time count = let xs = count <$> progress in liftA2 (,) xs $ divide (time <$> progress) (fromInt <$> xs)
+                f divide time count = let xs = count <$> progress in liftA2 (,) xs $ divide (time <$> progress) (intToDouble <$> xs)
 
         -- Number of seconds work remaining, ignoring multiple threads
         todo = f <$> progress <*> ruleTime
