@@ -8,7 +8,6 @@ import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
-import Data.Time
 import System.Environment
 import System.Exit
 import System.Random
@@ -59,10 +58,10 @@ test build obj = do
     limit <- do
         args <- getArgs
         let bound = listToMaybe $ reverse $ mapMaybe asDuration args
-        start <- getCurrentTime
+        time <- offsetTime
         return $ when (isJust bound) $ do
-            now <- getCurrentTime
-            when (fromRational (toRational $ now `diffUTCTime` start) > fromJust bound) exitSuccess
+            now <- time
+            when (floatToDouble now > fromJust bound) exitSuccess
 
     forM_ [1..] $ \count -> do
         limit
