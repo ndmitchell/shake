@@ -109,7 +109,7 @@ data Result = Result
     ,built :: {-# UNPACK #-} !Step -- when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- the step for deciding if it's valid
     ,depends :: [[Id]] -- dependencies
-    ,execution :: {-# UNPACK #-} !Duration -- how long it took when it was last run (seconds)
+    ,execution :: {-# UNPACK #-} !Float -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
 
