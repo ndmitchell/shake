@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Database(
-    Time, offsetTime, Duration, duration, Trace(..),
+    Trace(..),
     Database, withDatabase,
     listDepends, lookupDependencies,
     Ops(..), build, Depends,
