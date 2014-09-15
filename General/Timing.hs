@@ -43,7 +43,7 @@ showTimings stop times = showGap $
         progress x = let i = floor $ x * 25 // mx in replicate i '=' ++ replicate (25-i) ' '
         mx = maximum $ map snd xs
         sm = sum $ map snd xs
-        xs = [ (name, fromRational $ toRational $ stop `diffUTCTime` start)
+        xs = [ (name, stop `diffTime` start)
              | ((start, name), stop) <- zip times $ map fst (drop 1 times) ++ [stop]]
 
 
