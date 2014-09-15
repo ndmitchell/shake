@@ -104,9 +104,9 @@ newResourceIO name mx = do
 
 
 -- call a function after a certain delay
-waiter :: Double -> IO () -> IO ()
+waiter :: Duration -> IO () -> IO ()
 waiter period act = void $ forkIO $ do
-    sleep $ fromRational $ toRational period
+    sleep period
     act
 
 -- Make sure the pool cannot run try until after you have finished with it
@@ -152,7 +152,7 @@ newThrottleIO name count period = do
                 ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPool pool continue), return ())
 
         release :: Var Throttle -> Pool -> Int -> IO ()
-        release var pool n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
+        release var pool n = waiter (doubleToFloat period) $ join $ modifyVar var $ \x -> return $ case x of
                 ThrottleAvailable i -> (ThrottleAvailable $ i+n, return ())
                 ThrottleWaiting stop xs -> f stop n xs
             where
