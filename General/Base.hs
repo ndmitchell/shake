@@ -2,6 +2,7 @@
 
 module General.Base(
     Duration, duration, Time, offsetTime, offsetTimeIncrease, sleep,
+    intToDouble, floatToDouble, doubleToFloat,
     isWindows, getProcessorCount,
     readFileStrict, readFileUCS2, getEnvMaybe, captureOutput, getExePath,
     randomElem,
@@ -73,6 +74,19 @@ duration act = do
 
 sleep :: Duration -> IO ()
 sleep x = threadDelay $ ceiling $ x * 1000000
+
+
+---------------------------------------------------------------------
+-- Numeric
+
+intToDouble :: Int -> Double
+intToDouble = fromInteger . toInteger
+
+floatToDouble :: Float -> Double
+floatToDouble = fromRational . toRational
+
+doubleToFloat :: Double -> Float
+doubleToFloat = fromRational . toRational
 
 
 ---------------------------------------------------------------------
