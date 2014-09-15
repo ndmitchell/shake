@@ -35,7 +35,7 @@ main = shaken test $ \args obj -> do
 
     let randomSleep = liftIO $ do
             i <- randomRIO (0, 25)
-            sleep $ fromInteger i / 100
+            sleep $ doubleToFloat $ intToDouble i / 100
 
     forM_ (map read $ filter (isNothing . asDuration) args) $ \x -> case x of
         Want xs -> want $ map (toFile . Output) xs
