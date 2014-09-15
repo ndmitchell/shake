@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
@@ -284,7 +284,7 @@ build pool Database{..} Ops{..} stack ks continue = do
                 let norm = execute (addStack i k stack) k $ \res ->
                         reply $ case res of
                             Left err -> Error err
-                            Right (v,deps,execution,traces) ->
+                            Right (v,deps,(doubleToFloat -> execution),traces) ->
                                 let c | Just r <- r, result r == v = changed r
                                       | otherwise = step
                                 in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}

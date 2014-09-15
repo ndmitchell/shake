@@ -34,7 +34,7 @@ main = shaken test $ \args obj -> do
 
     let randomSleep = liftIO $ do
             i <- randomRIO (0, 25)
-            sleep $ doubleToFloat $ intToDouble i / 100
+            sleep $ intToDouble i / 100
 
     forM_ (map read $ filter (isNothing . asDuration) args) $ \x -> case x of
         Want xs -> want $ map (toFile . Output) xs
@@ -61,7 +61,7 @@ test build obj = do
         time <- offsetTime
         return $ when (isJust bound) $ do
             now <- time
-            when (floatToDouble now > fromJust bound) exitSuccess
+            when (now > fromJust bound) exitSuccess
 
     forM_ [1..] $ \count -> do
         limit

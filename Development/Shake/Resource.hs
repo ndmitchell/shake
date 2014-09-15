@@ -152,7 +152,7 @@ newThrottleIO name count period = do
                 ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPool pool continue), return ())
 
         release :: Var Throttle -> Pool -> Int -> IO ()
-        release var pool n = waiter (doubleToFloat period) $ join $ modifyVar var $ \x -> return $ case x of
+        release var pool n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
                 ThrottleAvailable i -> (ThrottleAvailable $ i+n, return ())
                 ThrottleWaiting stop xs -> f stop n xs
             where

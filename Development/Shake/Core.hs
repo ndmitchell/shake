@@ -510,7 +510,7 @@ traced msg act = do
     putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
     res <- liftIO act
     stop <- liftIO globalTimestamp
-    Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) start stop : localTraces s}
+    Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop) : localTraces s}
     return res
 
 

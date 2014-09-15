@@ -42,7 +42,7 @@ import Foreign.C.Types
 ---------------------------------------------------------------------
 -- Data.Time
 
-type Time = Float -- how far you are through this run, in seconds
+type Time = Double -- how far you are through this run, in seconds
 
 diffTime :: UTCTime -> UTCTime -> Duration
 diffTime end start = fromRational $ toRational $ end `diffUTCTime` start
@@ -65,7 +65,7 @@ offsetTimeIncrease = do
         atomicModifyIORef ref $ \o -> let m = max t o in m `seq` (m, m)
 
 
-type Duration = Float -- duration in seconds
+type Duration = Double -- duration in seconds
 
 duration :: IO a -> IO (Duration, a)
 duration act = do
