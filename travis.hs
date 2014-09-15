@@ -1,8 +1,10 @@
 
 import Neil
 import System.Directory
+import Data.Char
 import Data.Function
 
+requiresShake = words "ghc-make pec sunroof-examples"
 
 ms x = show $ ceiling $ x * 1000
 
@@ -62,7 +64,13 @@ main = do
     putStrLn "== PROFILE BUILDING NOTHING =="
     cmd "../Main +RTS -p -V0.001"
     cmd "head -n32 Main.prof"
+    setCurrentDirectory ".."
 
+    ver <- do
+        src <- readFile "shake.cabal"
+        return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
+    forM_ requiresShake $ \x ->
+        retry 3 $ cmd $ "cabal install ghc-make --constraint=shake==" ++ ver
 
 ninjaProfile :: FilePath -> IO ()
 ninjaProfile src = do
