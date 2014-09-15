@@ -212,12 +212,12 @@ message input = liftA3 (,,) time perc debug
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplay sample disp prog = do
     disp "Starting..." -- no useful info at this stage
-    time <- fmap (fromRational . toRational) <$> offsetTime
+    time <- fmap floatToDouble <$> offsetTime
     catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop time $ message echoMealy) (const $ disp "Finished")
     where
         loop :: IO Double -> Mealy (Double, Progress) (Double, Double, String) -> IO ()
         loop time mealy = do
-            sleep $ fromRational $ toRational sample
+            sleep $ doubleToFloat sample
             p <- prog
             t <- time
             ((secs,perc,debug), mealy) <- return $ runMealy mealy (t, p)
