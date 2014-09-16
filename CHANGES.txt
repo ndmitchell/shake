@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.13.3
     Ensure you wait until the progress thread cleans up
     Add --demo mode
     Add --progress=record and --progress=replay
