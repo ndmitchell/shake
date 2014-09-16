@@ -4,7 +4,7 @@ import System.Directory
 import Data.Char
 import Data.Function
 
-requiresShake = words "ghc-make"
+requiresShake = words "ghc-make avr-shake"
 
 ms x = show $ ceiling $ x * 1000
 
