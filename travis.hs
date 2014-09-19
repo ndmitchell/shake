@@ -1,14 +1,18 @@
 
 import Neil
-import System.Directory
 import Data.Char
 import Data.Function
+import System.Directory
+import System.Environment
 
 requiresShake = words "ghc-make avr-shake"
 
 ms x = show $ ceiling $ x * 1000
 
 main = do
+    args <- getArgs
+    unless (null args) $ error "Terminating early"
+
     -- grab ninja
     cmd "git clone https://github.com/martine/ninja"
     cmd "cd ninja && ./bootstrap.py"
