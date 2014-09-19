@@ -51,12 +51,6 @@ extra-source-files:
     docs/Ninja.md
     docs/Why.md
     docs/shake-progress.png
-    docs/manual/build.bat
-    docs/manual/Build.hs
-    docs/manual/build.sh
-    docs/manual/constants.c
-    docs/manual/constants.h
-    docs/manual/main.c
     js-src/jquery-1.8.3.js
     js-src/flot-0.8.0.zip
 
@@ -71,6 +65,12 @@ data-files:
     html/shake-progress.js
     html/shake-ui.js
     html/shake-util.js
+    docs/manual/build.bat
+    docs/manual/Build.hs
+    docs/manual/build.sh
+    docs/manual/constants.c
+    docs/manual/constants.h
+    docs/manual/main.c
 
 source-repository head
     type:     git
