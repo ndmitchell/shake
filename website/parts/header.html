@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+        <meta name="viewport" content="width=device-width" />
+        <title>Shake Build System</title>
+
+<style type="text/css">
+body {
+    margin: 0px;
+    padding: 0px;
+    font-size: 14px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #333;
+    background-color: #fff;
+}
+
+#header {
+    position: fixed;
+    height: 40px;
+    background-color: purple;
+    width: 100%;
+
+    -webkit-box-shadow: 0 1px 10px rgba(0,0,0,.1);
+    -moz-box-shadow: 0 1px 10px rgba(0,0,0,.1);
+    box-shadow: 0 1px 10px rgba(0,0,0,.1);
+    background-color: #99bad0;
+    background-image: -moz-linear-gradient(top, #a0bfd3, #8fb3cb);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#a0bfd3), to(#8fb3cb));
+    background-image: -webkit-linear-gradient(top, #a0bfd3, #8fb3cb);
+    background-image: -o-linear-gradient(top, #a0bfd3, #8fb3cb);
+    background-image: linear-gradient(to bottom, #a0bfd3, #8fb3cb);
+    background-repeat: repeat-x;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffa0bfd3', endColorstr='#ff8fb3cb', GradientType=0);
+    border: 1px solid #6597b8;
+    border-top: 0px;
+}
+
+#header a {
+    color: #000;
+    text-decoration: none;
+    padding: 10px 15px;
+    text-shadow: 0 1px 0 #a0bfd3;
+    display: block;
+    float: left;
+    line-height: 20px;
+}
+
+#header a:hover {
+    color: #333;
+}
+
+#header a.active {
+    background-color: #7da8c3;
+    -webkit-box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.125);
+    -moz-box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.125);
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.125);
+}
+
+#header a.root {
+    font-size: 150%;
+}
+
+#content {
+    padding-top: 40px;
+}
+
+
+@media print, screen and (max-width: 600px) {
+    #header a.first {clear: both;}
+    #header a {padding: 3px 15px;}
+    #header a.root {padding: 10px 15px;}
+    #header {height: 66px;}
+    #content {padding-top: 66px;}
+}
+
+@media print, screen and (max-height: 400px) {
+    #header {position: static;}
+    #content {padding-top: 0px;}
+}
+</style>
+
+    </head>
+    <body>
+
+<div id="header">
+    <a href="#" class="root">Shake build system</a>
+    <a href="#" class="active first">Home</a>
+    <a href="#">Why Shake</a>
+    <a href="#">Manual</a>
+    <a href="#">About</a>
+</div>
+
+<div id="content">
+    <h2>main</h2><p>Stuff goes here</p>
+    <h2>entry 1</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+    <h2>entry 2</h2><p>Stuff goes here</p>
+</div>
+
+</body>
+</html>
