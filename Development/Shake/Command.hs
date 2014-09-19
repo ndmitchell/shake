@@ -50,7 +50,7 @@ data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
                             --   Use 'addPath' to modify the @$PATH@ variable, or 'addEnv' to modify other variables.
-    | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default no @stdin@ is given.
+    | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default streams use text encoding.
     | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
