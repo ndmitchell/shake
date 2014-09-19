@@ -64,6 +64,9 @@ demo = do
     createDirectoryIfMissing True dir
     forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
         copyFile (manual </> file) (dir </> file)
+    when (not isWindows) $ do
+         p <- getPermissions $ dir </> "build.sh"
+         setPermissions (dir </> "build.sh") p{executable=True}
     putStrLn "done"
 
     let pause = putStr "% Press ENTER to continue: " >> getLine
