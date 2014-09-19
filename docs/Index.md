@@ -2,8 +2,6 @@
 
 Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day.
 
-<!--<neil:home>-->
-
 ## Why try Shake?
 
 Shake lets you express lots of dependencies more precisely and directly than other build systems. This power is coupled with a fast and robust implementation that ensures builds run quickly and produce results you can rely on. In particular, Shake excels at working with generated files, somewhere other build systems often struggle. [Read more](Why.md).
@@ -35,5 +33,3 @@ Shake is used by lots of companies, but only a few have declared so publicly.
 * [Standard Chartered](http://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
 * [factis research GmbH](http://www.factisresearch.com/), as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872).
-
-<!--</neil:home>-->
