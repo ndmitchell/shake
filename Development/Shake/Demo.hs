@@ -20,8 +20,8 @@ import Development.Shake.FilePath(exe)
 import System.IO
 
 
-demo :: IO ()
-demo = do
+demo :: Bool -> IO ()
+demo auto = do
     hSetBuffering stdout NoBuffering
     putStrLn $ "% Welcome to the Shake v" ++ showVersion version ++ " demo mode!"
     putStr $ "% Detecting machine configuration... "
@@ -57,7 +57,7 @@ demo = do
 
     putStrLn $ "% The Shake demo uses an empty directory, OK to use:"
     putStrLn $ "%     " ++ dir
-    b <- yesNo
+    b <- yesNo auto
     require b "% Please create an empty directory to run the demo from, then run 'shake --demo' again."
 
     putStr "% Copying files... "
@@ -69,7 +69,9 @@ demo = do
          setPermissions (dir </> "build.sh") p{executable=True}
     putStrLn "done"
 
-    let pause = putStr "% Press ENTER to continue: " >> getLine
+    let pause = do
+            putStr "% Press ENTER to continue: "
+            if auto then putLine "" else getLine
     let execute x = do
             putStrLn $ "% RUNNING: " ++ x
             cmd (Cwd dir) Shell x :: IO ()
@@ -108,16 +110,19 @@ demo = do
 
 
 -- | Require the user to press @y@ before continuing.
-yesNo :: IO Bool
-yesNo = do
+yesNo :: Bool -> IO Bool
+yesNo auto = do
     putStr $ "% [Y/N] (then ENTER): "
-    x <- fmap (map toLower) getLine
+    x <- if auto then putLine "y" else fmap (map toLower) getLine
     if "y" `isPrefixOf` x then
         return True
      else if "n" `isPrefixOf` x then
         return False
      else
-        yesNo
+        yesNo auto
+
+putLine :: String -> IO String
+putLine x = putStrLn x >> return x
 
 
 -- | Replace exceptions with 'False'.

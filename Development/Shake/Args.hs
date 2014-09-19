@@ -134,7 +134,7 @@ shakeArgsWith baseOpts userOptions rules = do
      else if NumericVersion `elem` flagsExtra then
         putStrLn $ showVersion version
      else if Demo `elem` flagsExtra then
-        demo
+        demo $ shakeStaunch shakeOpts
      else if not $ null progressReplays then do
         dat <- forM progressReplays $ \file -> do
             src <- readFile file
