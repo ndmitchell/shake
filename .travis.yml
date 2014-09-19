@@ -1,5 +1,5 @@
 language: haskell
-install: cabal install --only-dependencies --enable-library-profiling --enable-tests || cabal install --only-dependencies --enable-library-profiling --enable-tests || cabal install --only-dependencies --enable-library-profiling --enable-tests
+install: cabal install --only-dependencies --enable-tests || cabal install --enable-library-profiling --enable-tests || cabal install --only-dependencies --enable-tests
 script: wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --no-cache --quiet | sh
 relevant: |
     Ninja was

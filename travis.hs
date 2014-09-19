@@ -58,6 +58,9 @@ main = do
             error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
     setCurrentDirectory ".."
+
+    {-
+    -- Don't bother profiling, we only get under 25 ticks, which doesn't say anything useful
     cmd "ghc -threaded -rtsopts -isrc -i. Paths.hs Main.hs --make -O -prof -auto-all -caf-all"
     setCurrentDirectory "ninja"
     putStrLn "== PROFILE BUILDING FROM SCRATCH =="
@@ -69,6 +72,7 @@ main = do
     cmd "../Main +RTS -p -V0.001"
     cmd "head -n32 Main.prof"
     setCurrentDirectory ".."
+    -}
 
     createDirectoryIfMissing True "temp"
     setCurrentDirectory "temp"
