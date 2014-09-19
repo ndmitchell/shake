@@ -70,6 +70,11 @@ main = do
     cmd "head -n32 Main.prof"
     setCurrentDirectory ".."
 
+    createDirectoryIfMissing True "temp"
+    setCurrentDirectory "temp"
+    cmd "shake --demo --keep-going"
+    setCurrentDirectory ".."
+
     ver <- do
         src <- readFile "shake.cabal"
         return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
