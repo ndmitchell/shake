@@ -48,7 +48,7 @@ body {
 }
 
 #header a:hover {
-    color: #333;
+    color: #444;
 }
 
 #header a.active {
@@ -58,7 +58,7 @@ body {
     box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.125);
 }
 
-#header a.root {
+#header a#header-root {
     font-size: 150%;
 }
 
@@ -67,9 +67,9 @@ body {
 }
 
 @media print, screen and (max-width: 600px) {
-    #header a.first {clear: both;}
+    #header a#header-first {clear: both;}
     #header a {padding: 3px 15px;}
-    #header a.root {padding: 10px 15px;}
+    #header a#header-root {padding: 10px 15px;}
     #header {height: 66px; position: static;}
     #content {padding-top: 0px;}
 }
@@ -79,11 +79,11 @@ body {
     <body>
 
 <div id="header">
-    <a href="#" class="root">Shake build system</a>
-    <a href="#" class="active first">Home</a>
-    <a href="#">Why Shake</a>
-    <a href="#">Manual</a>
-    <a href="#">About</a>
+    <a href="https://shakebuild.com/" id="header-root">Shake build system</a>
+    <a href="/" id="header-first" class="active">Home</a>
+    <a href="/why">Why Shake</a>
+    <a href="/manual">Manual</a>
+    <a href="/about">About</a>
 </div>
 
 <div id="content">
