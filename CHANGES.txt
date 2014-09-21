@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.13.4
     #171, fix the --demo mode on Linux
 0.13.3
     Ensure you wait until the progress thread cleans up
