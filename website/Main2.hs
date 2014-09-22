@@ -2,23 +2,17 @@
 
 module Main2(main) where
 
-import System.FilePath
-import System.Directory
+import Control.Arrow
 import Control.Monad
-import Data.Maybe
 import Data.Char
 import Data.List
-import Text.HTML.TagSoup
-import Text.Markdown
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
-import Text.Blaze.Html.Renderer.Text
-import Control.Applicative
-import Data.Traversable
-import Control.Arrow
-import Data.Functor.Identity
-import Data.List
 import Text.HTML.TagSoup
+import Text.Markdown
+import Text.Blaze.Html.Renderer.Text
+import System.Directory
+import System.FilePath
 
 
 main :: IO ()
@@ -62,16 +56,28 @@ writeFileTags file = writeFile file . renderTags
 
 readPage :: FilePath -> IO Page
 readPage file = do
-    (pageTOC, pageBody) <- fmap links $ readFileMarkdown $ "../docs" </> file
+    (pageTOC, pageBody) <- fmap (links . reformat) $ readFileMarkdown $ "../docs" </> file
     let pageTitle = innerText $ inside "h1" pageBody
     return Page{..}
     where
         links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "123" =
                 first (Link{..}:) $ second (TagOpen linkLevel (("id",linkKey):at):) $ links xs
             where linkTitle = innerText $ takeWhile (/= TagClose linkLevel) xs
-                  linkKey = map toLower $ filter isAlpha linkTitle
+                  linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words linkTitle
         links (x:xs) = second (x:) $ links xs
         links [] = ([], [])
+
+
+reformat :: [Tag String] -> [Tag String]
+reformat (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefixOf` s =
+    reformat $ drop 1 $ dropWhile (~/= "</p>") xs
+reformat (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat xs
+    where f ("href",x) | ".md" `isPrefixOf` takeExtension x =
+                -- watch out for Manual.md#readme
+                ("href", dropFileName x ++ map toLower (takeBaseName x) <.> "html")
+          f x = x
+reformat (x:xs) = x : reformat xs
+reformat [] = []
 
 
 ---------------------------------------------------------------------
@@ -85,7 +91,7 @@ skeleton dir cssOut = do
     footer <- readFileTags $ dir </> "footer.html"
     writeFile cssOut $ common ++ style header ++ style content ++ style footer
     return $ \file Page{..} -> writeFileTags file $
-        takeWhile (~/= "<div id=content>") (map (activate $ takeFileName file) $ noStyle header) ++
+        inject (takeBaseName file) (takeWhile (~/= "<div id=content>") (map (activate $ takeFileName file) $ noStyle header)) ++
         parseTags "<div id=content>" ++ {- <div id=toc>" ++
         concat [ [TagOpen "a" [("class",linkLevel),("href",'#':linkKey)], TagText linkTitle, TagClose "a"]
                | Link{..} <- pageTOC] ++
@@ -101,6 +107,10 @@ skeleton dir cssOut = do
         activate url (TagOpen "a" ats) = TagOpen "a" $ let act = ("class","active") in
             [act | ("href",url) `elem` ats] ++ delete act ats
         activate url x = x
+
+        inject name (TagOpen "body" at:xs) = TagOpen "body" (("class","page-"++name):at) : inject name xs
+        inject name (x:xs) = x : inject name xs
+        inject name [] = []
 
 
 inside :: String -> [Tag String] -> [Tag String]
