@@ -2,6 +2,16 @@
 
 This page gives the background philosophy behind Shake today, and also some of the history. The information is intended to be interesting, but not necessarily useful.
 
+## Technical Details
+
+Shake build systems are Haskell programs that make heavy use of the `shake` library. While Shake build systems are Haskell programs, they can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means. The library features monadic dependencies (new dependencies can be discovered after files can depend on other files), polymorphic dependencies (your dependencies don't have to be files) and dependencies that rebuild but don't change stop rebuilding.
+
+The library features monadic dependencies (new dependencies can be discovered after files can depend on other files), polymorphic dependencies (your dependencies don't have to be files) and dependencies that rebuild but don't change stop rebuilding.
+
+
+Read about the [theory behind Shake](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf) and a [video introducing the theory](http://www.youtube.com/watch?v=xYCPpXVlqFM). Read about the [history and philosophy](About.md).
+
+
 ## Philosophy
 
 Shake is about giving you lots of power. The idea is we don't want to restrict you, so you can express the things you need directly and clearly. Hopefully by expressing things directly, you have less distance between what you were aiming for and what you produce, and the result is more robust.
