@@ -35,4 +35,7 @@ Shake is used by lots of companies, but only a few have declared so publicly.
 * [factis research GmbH](http://www.factisresearch.com/), as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872).
 
-There are also lots of examples:
+There are also lots of examples, including:
+
+* [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
+* [Kanas Lava build rules](https://github.com/gergoerdi/kansas-lava-shake).
