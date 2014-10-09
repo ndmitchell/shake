@@ -11,6 +11,8 @@
 :def hlint_ const $ return ":!hlint . --report"
 :def hlint const $ return $ unlines [":hlint_",":!start report.html"]
 
+:def travis const $ return ":!ghc -fno-code travis.hs"
+
 :{
 let _ghci_make name flags =
         ":!" ++
