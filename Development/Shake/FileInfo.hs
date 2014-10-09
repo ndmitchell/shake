@@ -29,7 +29,6 @@ import Foreign.C.String
 
 #else
 import System.IO.Error
-import Control.Exception
 import System.Posix.Files.ByteString
 #endif
 
