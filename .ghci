@@ -1,5 +1,5 @@
 :set -ignore-package=hashmap
-:set -fno-warn-overlapping-patterns -fwarn-unused-binds -fwarn-unused-imports
+:set -fwarn-unused-binds -fwarn-unused-imports
 :load Test Paths
 
 :def test \x -> return $ ":main test " ++ x
