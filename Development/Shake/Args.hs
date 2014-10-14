@@ -193,7 +193,9 @@ shakeArgsWith baseOpts userOptions rules = do
                     putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
         opts = map (wrap Left . snd) shakeOptsEx ++ map (wrap Right) userOptions
-        showHelp = putStr $ unlines $ "Usage: shake [options] [target] ..." : "Options:" : showOptDescr opts
+        showHelp = do
+            progName <- getProgName
+            putStr $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
 
         wrap :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
         wrap f = fmapOptDescr (either Left (Right . f))
