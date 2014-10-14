@@ -60,12 +60,12 @@ main = shaken test $ \args obj -> do
         writeFile' out out
 
     obj "needed1" *> \out -> do
-        needed [obj "gen1"]
+        needed $ obj "gen1"
         writeFile' out ""
 
     obj "needed2" *> \out -> do
         orderOnly [obj "gen2"]
-        needed [obj "gen2"]
+        needed $ obj "gen2"
         writeFile' out ""
 
     obj "tracker-write1" *> \out -> do

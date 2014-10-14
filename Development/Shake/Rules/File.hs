@@ -116,10 +116,10 @@ needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
-needed :: [FilePath] -> Action ()
-needed xs = do
+needed :: Target target => target -> Action ()
+needed target = do
     opts <- getShakeOptions
-    if isNothing $ shakeLint opts then need xs else neededCheck $ map packU xs
+    if isNothing $ shakeLint opts then need target else neededCheck $ map packU $ filePaths target
 
 
 neededBS :: [BS.ByteString] -> Action ()
