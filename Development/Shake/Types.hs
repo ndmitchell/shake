@@ -9,6 +9,7 @@ module Development.Shake.Types(
 
 import Data.Data
 import Data.List
+import Data.Maybe (maybeToList)
 import Development.Shake.Progress
 import qualified Data.ByteString.Char8 as BS
 
@@ -233,3 +234,6 @@ instance Targets [FilePath] where
 
 instance Targets FilePath where
     filePaths fp = [fp]
+
+instance Targets (Maybe FilePath) where
+    filePaths = maybeToList
