@@ -4,7 +4,7 @@
 module Development.Shake.Types(
     Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..),
     ShakeOptions(..), shakeOptions,
-    Target, filePaths
+    Targets, filePaths
     ) where
 
 import Data.Data
@@ -225,11 +225,11 @@ data EqualCost
 
 
 -- | Everything that can be a target or a list of targets
-class Target target where
-    filePaths :: target -> [FilePath]
+class Targets targets where
+    filePaths :: targets -> [FilePath]
 
-instance Target [FilePath] where
+instance Targets [FilePath] where
     filePaths = id
 
-instance Target FilePath where
+instance Targets FilePath where
     filePaths fp = [fp]

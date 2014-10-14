@@ -107,8 +107,8 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 --
 --   Usually @need [foo,bar]@ is preferable to @need foo >> need bar@ as the former allows greater
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
-need :: Target target => target -> Action ()
-need target = (apply $ map (FileQ . packU) $ filePaths target :: Action [FileA]) >> return ()
+need :: Targets targets => targets -> Action ()
+need targets = (apply $ map (FileQ . packU) $ filePaths targets :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
@@ -116,10 +116,10 @@ needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
-needed :: Target target => target -> Action ()
-needed target = do
+needed :: Targets targets => targets -> Action ()
+needed targets = do
     opts <- getShakeOptions
-    if isNothing $ shakeLint opts then need target else neededCheck $ map packU $ filePaths target
+    if isNothing $ shakeLint opts then need targets else neededCheck $ map packU $ filePaths targets
 
 
 neededBS :: [BS.ByteString] -> Action ()
@@ -178,7 +178,7 @@ trackAllow ps = do
 --
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
-want :: Target target => target -> Rules ()
+want :: Targets targets => targets -> Rules ()
 want = action . need
 
 

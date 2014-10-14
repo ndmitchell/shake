@@ -48,8 +48,8 @@ defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
 --   If @header.h@ is included by @source.c@ then the call to 'needMakefileDependencies' will cause
 --   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
 --   and you will have lost some opportunity for parallelism.
-orderOnly :: Target target => target -> Action ()
-orderOnly target = (apply $ map (OrderOnlyQ . packU) $ filePaths target :: Action [OrderOnlyA]) >> return ()
+orderOnly :: Targets targets => targets -> Action ()
+orderOnly targets = (apply $ map (OrderOnlyQ . packU) $ filePaths targets :: Action [OrderOnlyA]) >> return ()
 
 
 orderOnlyBS :: [BS.ByteString] -> Action ()
