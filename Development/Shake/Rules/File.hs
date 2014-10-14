@@ -101,11 +101,11 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 -- @
 -- \"\/\/*.rot13\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
---     'need' [src]
+--     'need' src
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
 --
---   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
+--   Usually @need [foo,bar]@ is preferable to @need foo >> need bar@ as the former allows greater
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
 need :: Target target => target -> Action ()
 need target = (apply $ map (FileQ . packU) $ filePaths target :: Action [FileA]) >> return ()
@@ -245,7 +245,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 -- @
 -- \"*.asm.o\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
---     'need' [src]
+--     'need' src
 --     'Development.Shake.cmd' \"as\" [src] \"-o\" [out]
 -- @
 --

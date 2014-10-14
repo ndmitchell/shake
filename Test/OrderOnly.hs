@@ -16,7 +16,7 @@ main = shaken test $ \args obj -> do
         let src = obj "bar.txt"
         orderOnly [src]
         writeFile' out =<< liftIO (readFile src)
-        need [src]
+        need src
 
     obj "baz.txt" *> \out -> do
         let src = obj "bar.txt"

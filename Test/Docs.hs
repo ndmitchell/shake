@@ -25,7 +25,7 @@ main = shaken noTest $ \args obj -> do
 
     index *> \_ -> do
         needSource
-        need ["shake.cabal"]
+        need "shake.cabal"
         trackAllow ["dist//*"]
         res <- liftIO $ findExecutable "cabal"
         if isJust res then cmd "cabal haddock" else do
@@ -38,7 +38,7 @@ main = shaken noTest $ \args obj -> do
         copyFile' "Paths.hs" out
 
     obj "Part_*.hs" *> \out -> do
-        need ["Test/Docs.hs"] -- so much of the generator is in this module
+        need "Test/Docs.hs" -- so much of the generator is in this module
         src <- if "_md" `isSuffixOf` takeBaseName out then
             fmap (findCodeMarkdown . lines) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
@@ -98,7 +98,7 @@ main = shaken noTest $ \args obj -> do
             rest
 
     obj "Files.lst" *> \out -> do
-        need ["Test/Docs.hs"] -- so much of the generator is in this module
+        need "Test/Docs.hs" -- so much of the generator is in this module
         need [index,obj "Paths_shake.hs"]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles "docs" ["*.md"]

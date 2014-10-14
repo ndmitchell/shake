@@ -46,7 +46,7 @@ main = shaken test $ \args obj -> do
 
     obj "dummer.txt" *> \out -> do
         need ["dummy","dummy"]
-        need ["dummy"]
+        need "dummy"
         liftIO $ appendFile out "1"
 
     r <- newResource ".log file" 1

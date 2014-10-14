@@ -124,7 +124,7 @@ build needDeps phonys rules pools out build@Build{..} = do
                  else
                     withPool $ command_ cmdOpts cmdProg cmdArgs
                 when (depfile /= "") $ do
-                    when (deps /= "gcc") $ need [depfile]
+                    when (deps /= "gcc") $ need depfile
                     depsrc <- liftIO $ BS.readFile depfile
                     needDeps build $ concatMap snd $ parseMakefile depsrc
                     -- correct as per the Ninja spec, but breaks --skip-commands

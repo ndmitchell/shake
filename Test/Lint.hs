@@ -24,7 +24,7 @@ main = shaken test $ \args obj -> do
 
     obj "pause.*" *> \out -> do
         liftIO $ sleep 0.1
-        need [obj "cdir" <.> takeExtension out]
+        need $ obj "cdir" <.> takeExtension out
         writeFile' out ""
 
     obj "cdir.*" *> \out -> do
@@ -70,7 +70,7 @@ main = shaken test $ \args obj -> do
 
     obj "tracker-write1" *> \out -> do
         () <- cmd "cmd /c" ["echo x > " ++ out <.> "txt"]
-        need [out <.> "txt"]
+        need $ out <.> "txt"
         writeFile' out ""
 
     obj "tracker-write2" *> \out -> do
@@ -83,11 +83,11 @@ main = shaken test $ \args obj -> do
         writeFile' out ""
     obj "tracker-read2" *> \out -> do
         () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source1") ++ " > nul"]
-        need [obj "tracker-source1"]
+        need $ obj "tracker-source1"
         writeFile' out ""
     obj "tracker-read3" *> \out -> do
         () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source2") ++ " > nul"]
-        need [obj "tracker-source2"]
+        need $ obj "tracker-source2"
         writeFile' out ""
 
 

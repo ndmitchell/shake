@@ -17,7 +17,7 @@ main = shaken noTest $ \args obj -> do
 
     obj "*.c.o" *> \out -> do
         let c = src </> takeBaseName out
-        need [c]
+        need c
         headers <- cIncludes c
         need $ map ((</>) src . takeFileName) headers
         cmd "gcc -o" [out] "-c" [c]

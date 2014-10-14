@@ -15,7 +15,7 @@ main = shaken test $ \args obj -> do
     want $ map obj args
 
     obj "norule" *> \_ ->
-        need [obj "norule_isavailable"]
+        need $ obj "norule_isavailable"
 
     obj "failcreate" *> \_ ->
         return ()
@@ -24,13 +24,13 @@ main = shaken test $ \args obj -> do
         writeFile' (obj "failcreates") ""
 
     obj "recursive" *> \out ->
-        need [out]
+        need out
 
     obj "systemcmd" *> \_ ->
         cmd "random_missing_command"
 
-    obj "stack1" *> \_ -> need [obj "stack2"]
-    obj "stack2" *> \_ -> need [obj "stack3"]
+    obj "stack1" *> \_ -> need $ obj "stack2"
+    obj "stack2" *> \_ -> need $ obj "stack3"
     obj "stack3" *> \_ -> error "crash"
 
     obj "staunch1" *> \out -> do
@@ -44,7 +44,7 @@ main = shaken test $ \args obj -> do
     catcher "finally1" $ actionFinally $ fail "die"
     catcher "finally2" $ actionFinally $ return ()
     catcher "finally3" $ actionFinally $ liftIO $ sleep 10
-    catcher "finally4" $ actionFinally $ need ["wait"]
+    catcher "finally4" $ actionFinally $ need "wait"
     "wait" ~> do liftIO $ sleep 10
     catcher "exception1" $ actionOnException $ fail "die"
     catcher "exception2" $ actionOnException $ return ()
@@ -52,7 +52,7 @@ main = shaken test $ \args obj -> do
     res <- newResource "resource_name" 1
     obj "resource" *> \out -> do
         withResource res 1 $
-            need ["resource-dep"]
+            need "resource-dep"
 
     obj "overlap.txt" *> \out -> writeFile' out "overlap.txt"
     obj "overlap.t*" *> \out -> writeFile' out "overlap.t*"

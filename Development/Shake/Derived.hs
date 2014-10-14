@@ -87,7 +87,7 @@ systemOutput path args = do
 --   The @old@ file will be tracked as a dependency.
 copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = do
-    need [old]
+    need old
     putLoud $ "Copying from " ++ old ++ " to " ++ new
     liftIO $ copyFile old new
 
@@ -96,7 +96,7 @@ copyFile' old new = do
 --   The @old@ file will be tracked as a dependency.
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
-    need [old]
+    need old
     eq <- liftIO $ doesFileExist new &&^ do
         withBinaryFile old ReadMode $ \h1 -> withBinaryFile new ReadMode $ \h2 ->
             liftM2 (==) (hFileSize h1) (hFileSize h2) &&^
@@ -109,7 +109,7 @@ copyFileChanged old new = do
 
 -- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.
 readFile' :: FilePath -> Action String
-readFile' x = need [x] >> liftIO (readFile x)
+readFile' x = need x >> liftIO (readFile x)
 
 -- | Write a file, lifted to the 'Action' monad.
 writeFile' :: FilePath -> String -> Action ()
