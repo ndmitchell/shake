@@ -7,6 +7,7 @@ module Development.Shake.Rules.OrderOnly(
 import Development.Shake.Core
 import General.String
 import Development.Shake.Classes
+import Development.Shake.Types
 import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS
 
@@ -39,7 +40,7 @@ defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
 --
 -- @
 -- \"source.o\" *> \\out -> do
---     'orderOnly' [\"header.h\"]
+--     'orderOnly' \"header.h\"
 --     () <- 'cmd' \"gcc -c source.c -o source.o -MMD -MF source.m\"
 --     'neededMakefileDependencies' \"source.m\"
 -- @
@@ -47,8 +48,8 @@ defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
 --   If @header.h@ is included by @source.c@ then the call to 'needMakefileDependencies' will cause
 --   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
 --   and you will have lost some opportunity for parallelism.
-orderOnly :: [FilePath] -> Action ()
-orderOnly xs = (apply $ map (OrderOnlyQ . packU) xs :: Action [OrderOnlyA]) >> return ()
+orderOnly :: Target target => target -> Action ()
+orderOnly target = (apply $ map (OrderOnlyQ . packU) $ filePaths target :: Action [OrderOnlyA]) >> return ()
 
 
 orderOnlyBS :: [BS.ByteString] -> Action ()

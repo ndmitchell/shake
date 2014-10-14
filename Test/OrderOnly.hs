@@ -14,13 +14,13 @@ main = shaken test $ \args obj -> do
 
     obj "foo.txt" *> \out -> do
         let src = obj "bar.txt"
-        orderOnly [src]
+        orderOnly src
         writeFile' out =<< liftIO (readFile src)
         need src
 
     obj "baz.txt" *> \out -> do
         let src = obj "bar.txt"
-        orderOnly [src]
+        orderOnly src
         liftIO $ appendFile out "x"
 
 

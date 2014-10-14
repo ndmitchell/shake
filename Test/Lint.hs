@@ -64,7 +64,7 @@ main = shaken test $ \args obj -> do
         writeFile' out ""
 
     obj "needed2" *> \out -> do
-        orderOnly [obj "gen2"]
+        orderOnly $ obj "gen2"
         needed $ obj "gen2"
         writeFile' out ""
 
