@@ -7,7 +7,7 @@
 --import "Development.Shake.FilePath"
 --
 --main = 'shakeArgs' 'shakeOptions' $ do
---    'want' [\"result.tar\"]
+--    'want' \"result.tar\"
 --    \"*.tar\" '*>' \\out -> do
 --        contents \<- 'readFileLines' $ out 'Development.Shake.FilePath.-<.>' \"txt\"
 --        'need' contents

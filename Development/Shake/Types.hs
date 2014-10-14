@@ -1,9 +1,10 @@
-{-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types(
     Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..),
-    ShakeOptions(..), shakeOptions
+    ShakeOptions(..), shakeOptions,
+    Target, filePaths
     ) where
 
 import Data.Data
@@ -221,3 +222,14 @@ data EqualCost
     | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
     | NotEqual -- ^ The values are not equal.
       deriving (Eq,Ord,Bounded,Enum,Show,Read,Typeable,Data)
+
+
+-- | Everything that can be a target or a list of targets
+class Target target where
+    filePaths :: target -> [FilePath]
+
+instance Target [FilePath] where
+    filePaths = id
+
+instance Target FilePath where
+    filePaths fp = [fp]

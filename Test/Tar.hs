@@ -6,7 +6,7 @@ import Test.Type
 
 
 main = shaken noTest $ \args obj -> do
-    want [obj "result.tar"]
+    want $ obj "result.tar"
     obj "result.tar" *> \out -> do
         contents <- readFileLines "Test/Tar/list.txt"
         need contents

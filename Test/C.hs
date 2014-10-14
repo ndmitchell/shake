@@ -7,7 +7,7 @@ import Test.Type
 
 main = shaken noTest $ \args obj -> do
     let src = "Test/C"
-    want [obj "Main.exe"]
+    want $ obj "Main.exe"
 
     obj "Main.exe" *> \out -> do
         cs <- getDirectoryFiles src ["*.c"]

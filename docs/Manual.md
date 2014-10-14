@@ -11,7 +11,7 @@ Shake is a Haskell library for writing build systems - designed as a replacement
     
     main :: IO ()
     main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
-        want ["_build/run" <.> exe]
+        want ("_build/run" <.> exe)
     
         phony "clean" $ do
             putNormal "Cleaning files in _build"
@@ -65,13 +65,17 @@ All the interesting build-specific code is placed under <tt><i>build rules</i></
 
 A target is a file we want the build system to produce (typically executable files). For example, if we want to produce the file `manual/examples.txt` we can write:
 
+    want "manual/examples.txt"
+
+or
+
     want ["manual/examples.txt"]
 
-The `want` function takes a list of strings. In Shake lists are written `[item1,item2,item2]` and strings are written `"contents of a string"`. Special characters in strings can be escaped using `\` (e.g. `"\n"` for newline) and directory separators are always written `/`, even on Windows.
+The `want` function takes a string or a list of strings. In Shake lists are written `[item1,item2,item2]` and strings are written `"contents of a string"`. Special characters in strings can be escaped using `\` (e.g. `"\n"` for newline) and directory separators are always written `/`, even on Windows.
 
 Most files have the same name on all platforms, but executable files on Windows usually have the `.exe` extension, while on POSIX they have no extension. When writing cross-platform build systems (like the initial example), we can write:
 
-    want ["_build/run" <.> exe]
+    want ("_build/run" <.> exe)
 
 The `<.>` function adds an extension to a file path, and the built-in `exe` variable evaluates to `"exe"` on Windows and `""` otherwise.
 

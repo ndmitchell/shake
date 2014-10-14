@@ -24,7 +24,7 @@ parseMakefile = map (BS.unpack *** map BS.unpack) . BS.parseMakefile . BS.pack
 
 -- | Depend on the dependencies listed in a Makefile. Does not depend on the Makefile itself.
 --
--- > needMakefileDependencies file = need . concatMap snd . parseMakefile =<< liftIO (readFile file)
+-- > needMakefileDependencies file = need . (id :: [FilePath] -> [FilePath]) . concatMap snd . parseMakefile =<< liftIO (readFile file)
 needMakefileDependencies :: FilePath -> Action ()
 needMakefileDependencies file = needBS . concatMap snd . BS.parseMakefile =<< liftIO (BS.readFile file)
 
@@ -47,7 +47,7 @@ neededMakefileDependencies file = neededBS . concatMap snd . BS.parseMakefile =<
 --flags = [Option \"\" [\"distcc\"] (NoArg $ Right $ \\x -> x{distCC=True}) \"Run distributed.\"]
 --
 --main = 'shakeArgsAccumulate' 'shakeOptions' flags (Flags False) $ \\flags targets -> return $ Just $ do
---     if null targets then 'want' [\"result.exe\"] else 'want' targets
+--     if null targets then 'want' \"result.exe\" else 'want' targets
 --     let compiler = if distCC flags then \"distcc\" else \"gcc\"
 --     \"*.o\" '*>' \\out -> do
 --         'need' ...

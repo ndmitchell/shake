@@ -17,7 +17,7 @@ reps from to = map (\x -> if x == from then to else x)
 
 main = shaken noTest $ \args obj -> do
     let index = "dist/doc/html/shake/index.html"
-    want [obj "Success.txt"]
+    want $ obj "Success.txt"
 
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
@@ -90,7 +90,8 @@ main = shaken noTest $ \args obj -> do
             ,"launchMissiles = undefined :: Bool -> IO ()"
             ,"myVariable = ()"
             ,"instance Eq (OptDescr a)"
-            ,"(foo,bar,baz) = undefined"
+            ,"foo = \"\""
+            ,"bar = \"\""
             ,"str1 = \"\""
             ,"str2 = \"\""
             ,"str = \"\""] ++
@@ -171,7 +172,7 @@ dropComment xs = onTail dropComment xs
 undefDots o = f o
     where
         f ('.':'.':'.':xs) =
-            (if "cmd" `elem` words o then "[\"\"]" else "undefined") ++
+            (if any (`elem` words o) ["cmd", "need"] then "[\"\"]" else "undefined") ++
             (if "..." `isSuffixOf` xs then "" else undefDots xs)
         f xs = onTail f xs
 

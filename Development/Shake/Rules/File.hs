@@ -107,8 +107,8 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 --
 --   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
-need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
+need :: Target target => target -> Action ()
+need target = (apply $ map (FileQ . packU) $ filePaths target :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
@@ -169,7 +169,7 @@ trackAllow ps = do
 --
 -- @
 -- main = 'Development.Shake.shake' 'shakeOptions' $ do
---    'want' [\"Main.exe\"]
+--    'want' \"Main.exe\"
 --    ...
 -- @
 --
@@ -178,7 +178,7 @@ trackAllow ps = do
 --
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
-want :: [FilePath] -> Rules ()
+want :: Target target => target -> Rules ()
 want = action . need
 
 
