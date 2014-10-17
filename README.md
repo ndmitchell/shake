@@ -34,3 +34,5 @@ Is your company using Shake? Write something public (even just a [tweet  to `@nd
 #### Projects using Shake
 
 * [Kansas Lava build rules](https://github.com/gergoerdi/kansas-lava-shake).
+* [shake-language-c](http://hackage.haskell.org/package/shake-language-c) is a small library on top of Shake that allows cross-compiling C, C++ and Objective-C code to various target platforms.
+* [shake-cabal-build](http://hackage.haskell.org/package/shake-cabal-build) is a small script that uses Cabal sandboxes for initialising and updating build systems based on Shake.

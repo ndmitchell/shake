@@ -39,3 +39,5 @@ There are also lots of examples, including:
 
 * [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
 * [Kanas Lava build rules](https://github.com/gergoerdi/kansas-lava-shake).
+* [shake-language-c](http://hackage.haskell.org/package/shake-language-c) is a small library on top of Shake that allows cross-compiling C, C++ and Objective-C code to various target platforms.
+* [shake-cabal-build](http://hackage.haskell.org/package/shake-cabal-build) is a small script that uses Cabal sandboxes for initialising and updating build systems based on Shake.
