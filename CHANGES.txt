@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #178, make --help show the current executable name
 0.13.4
     #171, fix the --demo mode on Linux
 0.13.3

@@ -93,8 +93,7 @@ main = shaken noTest $ \args obj -> do
             ,"(foo,bar,baz) = undefined"
             ,"str1 = \"\""
             ,"str2 = \"\""
-            ,"str = \"\""
-            ,"((/./),(/../),(//)) = undefined"] ++
+            ,"str = \"\""] ++
             rest
 
     obj "Files.lst" *> \out -> do
@@ -211,6 +210,9 @@ whitelist x | elem x $ words $
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat //* [out] manual/examples.zip manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja "
+    = True
+whitelist x
+    | "foo/" `isPrefixOf` x -- path examples
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
