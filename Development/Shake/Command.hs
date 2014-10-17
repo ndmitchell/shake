@@ -174,8 +174,7 @@ commandExplicitIO funcName opts results exe args =
       ans <- try $ createProcess cp
       (inh, outh, errh, pid) <- case ans of
           Right a -> return a
-          Left err -> do
-              error $ msgPrefix ++ show (err :: SomeException)
+          Left err -> failure $ show (err :: SomeException)
 
       let close = maybe (return ()) hClose
       flip onException
@@ -239,21 +238,25 @@ commandExplicitIO funcName opts results exe args =
 -- END COPIED
 
         when (ResultCode ExitSuccess `notElem` results && ex /= ExitSuccess) $ do
-            error $ msgPrefix ++
-                    "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-                    (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
-                    else if null err then "Stderr was empty"
-                    else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
+            failure $
+                "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
+                (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
+                else if null err then "Stderr was empty"
+                else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
 
         return $ flip map results $ \x -> case x of
             ResultStdout _ -> ResultStdout out
             ResultStderr _ -> ResultStderr err
             ResultCode   _ -> ResultCode ex
     where
-        msgPrefix =
-            "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-            "Command: " ++ saneCommandForUser exe args ++ "\n" ++
-            (case cwd cp of Nothing -> ""; Just v -> "Current directory: " ++ v ++ "\n")
+        failure extra = do
+            cwd <- case cwd cp of
+                Nothing -> return ""
+                Just v -> return $ "Current directory: " ++ v ++ "\n"
+            fail $
+                "Development.Shake." ++ funcName ++ ", system command failed\n" ++
+                "Command: " ++ saneCommandForUser exe args ++ "\n" ++
+                cwd ++ extra
 
         input = last $ "" : [x | Stdin x <- opts]
 
