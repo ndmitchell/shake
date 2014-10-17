@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables #-}
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
@@ -252,7 +252,9 @@ commandExplicitIO funcName opts results exe args =
         failure extra = do
             cwd <- case cwd cp of
                 Nothing -> return ""
-                Just v -> return $ "Current directory: " ++ v ++ "\n"
+                Just v -> do
+                    v <- canonicalizePath v `catch` \(_ :: SomeException) -> return v
+                    return $ "Current directory: " ++ v ++ "\n"
             fail $
                 "Development.Shake." ++ funcName ++ ", system command failed\n" ++
                 "Command: " ++ saneCommandForUser exe args ++ "\n" ++
