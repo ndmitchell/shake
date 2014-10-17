@@ -253,7 +253,7 @@ commandExplicitIO funcName opts results exe args =
             cwd <- case cwd cp of
                 Nothing -> return ""
                 Just v -> do
-                    v <- canonicalizePath v `catch` \(_ :: SomeException) -> return v
+                    v <- canonicalizePath v `C.catch` \(_ :: SomeException) -> return v
                     return $ "Current directory: " ++ v ++ "\n"
             fail $
                 "Development.Shake." ++ funcName ++ ", system command failed\n" ++
