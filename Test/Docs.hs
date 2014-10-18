@@ -103,7 +103,7 @@ main = shaken noTest $ \args obj -> do
         filesMd <- getDirectoryFiles "docs" ["*.md"]
         writeFileChanged out $ unlines $
             ["Part_" ++ reps '-' '_' (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
-            ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd, takeBaseName x /= "Developing"]
+            ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd, takeBaseName x `notElem` ["Developing","Model"]]
 
     let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
 
