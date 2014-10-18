@@ -1,9 +1,14 @@
 
-import Neil
 import Data.Char
 import Data.Function
 import System.Directory
 import System.Environment
+import System.Time.Extra
+import Data.List
+import Control.Exception.Extra
+import Control.Monad
+import System.Process.Extra
+
 
 requiresShake = words "ghc-make avr-shake shake-language-c"
 
@@ -14,38 +19,38 @@ main = do
     unless (null args) $ error "Terminating early"
 
     -- grab ninja
-    cmd "git clone https://github.com/martine/ninja"
-    cmd "cd ninja && ./bootstrap.py"
-    cmd "mkdir bin"
-    cmd "cp ninja/ninja nin"
+    system_ "git clone https://github.com/martine/ninja"
+    system_ "cd ninja && ./bootstrap.py"
+    system_ "mkdir bin"
+    system_ "cp ninja/ninja nin"
     setCurrentDirectory "ninja"
 
     replicateM_ 3 $ do
-        (ninjaVer, _) <- duration $ cmd "../nin --version"
-        (shakeVer, _) <- duration $ cmd "shake --version"
+        (ninjaVer, _) <- duration $ system_ "../nin --version"
+        (shakeVer, _) <- duration $ system_ "shake --version"
         putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
 
-    cmd "shake --version; shake -C does_not_exist; echo end" -- check for #22
+    system_ "shake --version; shake -C does_not_exist; echo end" -- check for #22
 
     retry 3 $ do
 
         -- time Ninja
-        cmd "../nin -t clean"
-        (ninjaFull, _) <- duration $ cmd "../nin -j3 -d stats"
+        system_ "../nin -t clean"
+        (ninjaFull, _) <- duration $ system_ "../nin -j3 -d stats"
         ninjaProfile "build/.ninja_log"
         putStrLn =<< readFile "build/.ninja_log"
-        (ninjaZero, _) <- duration $ cmd "../nin -j3 -d stats"
+        (ninjaZero, _) <- duration $ system_ "../nin -j3 -d stats"
 
         -- time Shake
-        cmd "../nin -t clean"
-        (shakeFull, _) <- duration $ cmd "shake -j3 --quiet --timings"
-        cmd "shake --no-build --report=-"
-        (shakeZero, _) <- duration $ cmd "shake -j3 --quiet --timings"
+        system_ "../nin -t clean"
+        (shakeFull, _) <- duration $ system_ "shake -j3 --quiet --timings"
+        system_ "shake --no-build --report=-"
+        (shakeZero, _) <- duration $ system_ "shake -j3 --quiet --timings"
 
         -- Diagnostics
-        cmd "ls -l .shake* build/.ninja*"
-        cmd "shake -VV"
-        (shakeNone, _) <- duration $ cmd "shake --always-make --skip-commands --timings"
+        system_ "ls -l .shake* build/.ninja*"
+        system_ "shake -VV"
+        (shakeNone, _) <- duration $ system_ "shake --always-make --skip-commands --timings"
         putStrLn $ "--always-make --skip-commands took " ++ ms shakeNone
 
         putStrLn $ "Ninja was " ++ ms ninjaFull ++ " then " ++ ms ninjaZero
@@ -61,29 +66,29 @@ main = do
 
     {-
     -- Don't bother profiling, we only get under 25 ticks, which doesn't say anything useful
-    cmd "ghc -threaded -rtsopts -isrc -i. Paths.hs Main.hs --make -O -prof -auto-all -caf-all"
+    system_ "ghc -threaded -rtsopts -isrc -i. Paths.hs Main.hs --make -O -prof -auto-all -caf-all"
     setCurrentDirectory "ninja"
     putStrLn "== PROFILE BUILDING FROM SCRATCH =="
-    cmd "rm .shake*"
-    cmd "../Main --skip-commands +RTS -p -V0.001"
-    cmd "head -n32 Main.prof"
+    system_ "rm .shake*"
+    system_ "../Main --skip-commands +RTS -p -V0.001"
+    system_ "head -n32 Main.prof"
 
     putStrLn "== PROFILE BUILDING NOTHING =="
-    cmd "../Main +RTS -p -V0.001"
-    cmd "head -n32 Main.prof"
+    system_ "../Main +RTS -p -V0.001"
+    system_ "head -n32 Main.prof"
     setCurrentDirectory ".."
     -}
 
     createDirectoryIfMissing True "temp"
     setCurrentDirectory "temp"
-    cmd "shake --demo --keep-going"
+    system_ "shake --demo --keep-going"
     setCurrentDirectory ".."
 
     ver <- do
         src <- readFile "shake.cabal"
         return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
     forM_ requiresShake $ \x ->
-        retry 3 $ cmd $ "cabal install " ++ x ++ " --constraint=shake==" ++ ver
+        retry 3 $ system_ $ "cabal install " ++ x ++ " --constraint=shake==" ++ ver
 
 ninjaProfile :: FilePath -> IO ()
 ninjaProfile src = do
