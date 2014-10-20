@@ -106,7 +106,7 @@ The differences from the model are:
 
 As we can see, the code follows the optimised model quite closely.
 
-## Questions/Answers
+## Questions/Answers (Simon Peyton Jones)
 
 > Could you state the invariants of the Shake database?
 
@@ -173,3 +173,40 @@ Given a build system that does:
 If you run that, and then run "touch output", the file "output" will
 be dirty and a subsequent execution will rebuild it. In Make that
 isn't the case, and "output" would still be clean.
+
+## Questions/Answers (mb14)
+
+> I'm still confused with the Shake model.
+>
+> In you rule `File -(ModTime, [(File, ModTime)]`. Is the time stored for a dependency
+>
+> 1 - the time the dependency has been last used 
+> 
+> 2 - the dependency last modification when the dependency has been used?
+>
+> For example. Let's say B depends on A and A has been modified yesterday.
+> 
+> If I'm building B today: scenario (1) would be store 
+> 
+> database B = (Today, [(A, Today)])
+> 
+> where as scenario (2) would store
+> 
+> database B = (Today, [(A, Yesterday)])
+> 
+> My understanding is scenario 2, in that case, ModTime could be easily replaced by a SHA. However, *Consequence 1*
+> 
+> The ModTime for a file and the ModTime for its dependencies are all recorded in the same run, so they share the same Step
+> 
+> Let's suppose we are using scenario (1).
+
+In the simple model, the time stored for a dependency is the last modification when the dependency has been used. So the semantics are based on scenario 2.
+
+In the complex model, I move to scenario 1, but using some fake notion of Step to be the time.
+
+The key is that I couldn't record only the scenario 2 information in the simple model because I need to know if the time has changed. I solve that in the complex model by storing two Step values, and relying on some assumptions.
+
+> Also, `valid` doesn't seem to be recursive, whereas you would expect an invalid dependency to invalidate all of it's dependees.
+Is this assumption wrong or is the recursion is *hidden* in the code.
+
+For valid, I am assuming that before you call valid on a File, you have already called valid on all its dependencies, and if necessary, built them so they have become valid. I had noted that in an earlier draft of this post, but it got lost in editing :(.
