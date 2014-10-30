@@ -77,7 +77,7 @@ reformat code (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefi
 reformat code (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat code xs
     where f ("href",x) | ".md" `isPrefixOf` takeExtension x =
                 -- watch out for Manual.md#readme
-                ("href", dropFileName x ++ map toLower (takeBaseName x) <.> "html")
+                ("href", dropFileName x ++ map toLower (takeBaseName x) <.> "html" ++ drop 3 (takeExtension x))
           f x = x
 reformat code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat code $ TagOpen "pre" [] : xs
 reformat code (TagClose "code":TagClose "pre":xs) = reformat code $ TagClose "pre" : xs
