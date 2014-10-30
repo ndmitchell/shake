@@ -64,6 +64,15 @@
     #header a#header-root {padding: 10px 15px;}
     #header {height: 66px; position: static;}
     #content {padding-top: 0px;}
+    .target {top: 0px;}
+}
+
+.target {
+    position: relative;
+    top: -33px;
+    display: block;
+    visibility: hidden;
+    border: 1px solid purple;
 }
 </style>
 
@@ -85,7 +94,7 @@
     <h2>entry 2</h2><p>Stuff goes here</p>
     <h2>entry 2</h2><p>Stuff goes here</p>
     <h2>entry 2</h2><p>Stuff goes here</p>
-    <h2>entry 2</h2><p>Stuff goes here</p>
+    <span id="foo" class="target"></span><h2>Foo</h2><p>Stuff goes here</p>
     <h2>entry 2</h2><p>Stuff goes here</p>
     <h2>entry 2</h2><p>Stuff goes here</p>
     <h2>entry 2</h2><p>Stuff goes here</p>
