@@ -44,7 +44,7 @@ data Page = Page
     } deriving Show
 
 readFileMarkdown :: FilePath -> IO [Tag String]
-readFileMarkdown = fmap (parseTags . T.unpack . renderHtml . markdown def) . T.readFile
+readFileMarkdown = fmap (parseTags . T.unpack . renderHtml . markdown def{msXssProtect=False}) . T.readFile
 
 readFileTags :: FilePath -> IO [Tag String]
 readFileTags = fmap parseTags . readFile 
