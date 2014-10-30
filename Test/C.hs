@@ -7,7 +7,7 @@ import Test.Type
 
 main = shaken noTest $ \args obj -> do
     let src = "Test/C"
-    want [obj "Main.exe"]
+    want $ obj "Main.exe"
 
     obj "Main.exe" *> \out -> do
         cs <- getDirectoryFiles src ["*.c"]
@@ -17,7 +17,7 @@ main = shaken noTest $ \args obj -> do
 
     obj "*.c.o" *> \out -> do
         let c = src </> takeBaseName out
-        need [c]
+        need c
         headers <- cIncludes c
         need $ map ((</>) src . takeFileName) headers
         cmd "gcc -o" [out] "-c" [c]

@@ -17,7 +17,7 @@ main = shaken test $ \args obj -> do
         x <- getVerbosity
         ys <- withVerbosity Loud $ do
             a <- getVerbosity
-            need [obj "in.txt"] -- make sure the inherited verbosity does not get passed along
+            need $ obj "in.txt" -- make sure the inherited verbosity does not get passed along
             b <- getVerbosity
             c <- quietly getVerbosity
             d <- fmap shakeVerbosity getShakeOptions

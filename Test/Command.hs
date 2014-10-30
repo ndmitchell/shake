@@ -29,7 +29,7 @@ main = shaken test $ \args obj -> do
 
     obj "pwd space.hs" *> \out -> writeFileLines out ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
     "pwd" !> do
-        need [obj "pwd space.hs"]
+        need $ obj "pwd space.hs"
         Stdout out <- cmd (Cwd $ obj "") "runhaskell" ["pwd space.hs"]
         return out
 

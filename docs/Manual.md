@@ -11,7 +11,7 @@ Shake is a Haskell library for writing build systems - designed as a replacement
     
     main :: IO ()
     main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
-        want ["_build/run" <.> exe]
+        want ("_build/run" <.> exe)
     
         phony "clean" $ do
             putNormal "Cleaning files in _build"
@@ -65,13 +65,17 @@ All the interesting build-specific code is placed under <tt><i>build rules</i></
 
 A target is a file we want the build system to produce (typically executable files). For example, if we want to produce the file `manual/examples.txt` we can write:
 
+    want "manual/examples.txt"
+
+or
+
     want ["manual/examples.txt"]
 
-The `want` function takes a list of strings. In Shake lists are written `[item1,item2,item2]` and strings are written `"contents of a string"`. Special characters in strings can be escaped using `\` (e.g. `"\n"` for newline) and directory separators are always written `/`, even on Windows.
+The `want` function takes a string or a list of strings. In Shake lists are written `[item1,item2,item2]` and strings are written `"contents of a string"`. Special characters in strings can be escaped using `\` (e.g. `"\n"` for newline) and directory separators are always written `/`, even on Windows.
 
 Most files have the same name on all platforms, but executable files on Windows usually have the `.exe` extension, while on POSIX they have no extension. When writing cross-platform build systems (like the initial example), we can write:
 
-    want ["_build/run" <.> exe]
+    want ("_build/run" <.> exe)
 
 The `<.>` function adds an extension to a file path, and the built-in `exe` variable evaluates to `"exe"` on Windows and `""` otherwise.
 
@@ -106,7 +110,7 @@ Let's look at a simple example of a rule:
 
     "*.rot13" *> \out -> do
         let src = out -<.> "txt"
-        need [src]
+        need src
         cmd "rot13" src "-o" out
 
 This rule can build any `.rot13` file. Imagine we are building `"file.rot13"`, it proceeds by:
@@ -132,7 +136,7 @@ An <tt><i>expression</i></tt> is any combination of variables and function calls
 Variables are evaluated by substituting the <tt><i>expression</i></tt> everywhere the <tt><i>variable</i></tt> is used. In the simple example we could have equivalently written: 
 
     "*.rot13" *> \out -> do
-        need [out -<.> "txt"]
+        need (out -<.> "txt")
         cmd "rot13" (out -<.> "txt") "-o" out
 
 Variables are local to the rule they are defined in, cannot be modified, and should not be defined multiple times within a single rule.
@@ -140,6 +144,10 @@ Variables are local to the rule they are defined in, cannot be modified, and sho
 #### File dependencies
 
 You can express a dependency on a file with:
+
+    need "file.src"
+
+or
 
     need ["file.src"]
 
@@ -149,8 +157,8 @@ To depend on multiple files you can write:
 
 Or alternatively:
 
-    need ["file.1"]
-    need ["file.2"]
+    need "file.1"
+    need "file.2"
 
 It is preferable to use fewer calls to `need`, if possible, as multiple files required by a `need` can be built in parallel.
 
@@ -389,7 +397,7 @@ Using Shake we can depend on arbitrary extra information, such as the version of
         Stdout stdout <- cmd "gcc --version"
         writeFileChanged out stdout
 
-This rule has the action `alwaysRerun` meaning it will be run in every execution that requires it, so the `gcc --version` is always checked. This rule defines no dependencies (no `need` actions), so if it lacked `alwaysRerun`, this rule would only be run when `gcc.version` was missing. The function then runs `gcc --version` storing the output in `stdout`. Finally, it calls `writeFileChanged` which writes `stdout` to `out`, but only if the contents have changed. The use of `writeFileChanged` is important otherwise `gcc.version` would change in every run. To use this rule, we `need ["gcc.version"]` in every rule that calls `gcc`.
+This rule has the action `alwaysRerun` meaning it will be run in every execution that requires it, so the `gcc --version` is always checked. This rule defines no dependencies (no `need` actions), so if it lacked `alwaysRerun`, this rule would only be run when `gcc.version` was missing. The function then runs `gcc --version` storing the output in `stdout`. Finally, it calls `writeFileChanged` which writes `stdout` to `out`, but only if the contents have changed. The use of `writeFileChanged` is important otherwise `gcc.version` would change in every run. To use this rule, we `need "gcc.version"` in every rule that calls `gcc`.
 
 Shake also contains a feature called "oracles", which lets you do the same thing without the use of a file, which is sometimes more convenient. Interested readers should look at the function documentation list for `addOracle`.
 

@@ -17,7 +17,7 @@ reps from to = map (\x -> if x == from then to else x)
 
 main = shaken noTest $ \args obj -> do
     let index = "dist/doc/html/shake/index.html"
-    want [obj "Success.txt"]
+    want $ obj "Success.txt"
 
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
@@ -25,7 +25,7 @@ main = shaken noTest $ \args obj -> do
 
     index *> \_ -> do
         needSource
-        need ["shake.cabal"]
+        need "shake.cabal"
         trackAllow ["dist//*"]
         res <- liftIO $ findExecutable "cabal"
         if isJust res then cmd "cabal haddock" else do
@@ -38,7 +38,7 @@ main = shaken noTest $ \args obj -> do
         copyFile' "Paths.hs" out
 
     obj "Part_*.hs" *> \out -> do
-        need ["Test/Docs.hs"] -- so much of the generator is in this module
+        need "Test/Docs.hs" -- so much of the generator is in this module
         src <- if "_md" `isSuffixOf` takeBaseName out then
             fmap (findCodeMarkdown . lines) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
@@ -90,14 +90,15 @@ main = shaken noTest $ \args obj -> do
             ,"launchMissiles = undefined :: Bool -> IO ()"
             ,"myVariable = ()"
             ,"instance Eq (OptDescr a)"
-            ,"(foo,bar,baz) = undefined"
+            ,"foo = \"\""
+            ,"bar = \"\""
             ,"str1 = \"\""
             ,"str2 = \"\""
             ,"str = \"\""] ++
             rest
 
     obj "Files.lst" *> \out -> do
-        need ["Test/Docs.hs"] -- so much of the generator is in this module
+        need "Test/Docs.hs" -- so much of the generator is in this module
         need [index,obj "Paths_shake.hs"]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles "docs" ["*.md"]
@@ -171,7 +172,7 @@ dropComment xs = onTail dropComment xs
 undefDots o = f o
     where
         f ('.':'.':'.':xs) =
-            (if "cmd" `elem` words o then "[\"\"]" else "undefined") ++
+            (if any (`elem` words o) ["cmd", "need"] then "[\"\"]" else "undefined") ++
             (if "..." `isSuffixOf` xs then "" else undefDots xs)
         f xs = onTail f xs
 

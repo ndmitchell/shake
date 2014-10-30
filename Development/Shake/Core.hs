@@ -187,7 +187,7 @@ alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
 -- main = 'Development.Shake.shake' 'shakeOptions' $ do
 --    'action' $ do
 --        b <- 'Development.Shake.doesFileExist' \"file.src\"
---        when b $ 'Development.Shake.need' [\"file.out\"]
+--        when b $ 'Development.Shake.need' \"file.out\"
 -- @
 --
 --   This 'action' builds @file.out@, but only if @file.src@ exists. The 'action'

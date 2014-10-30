@@ -101,14 +101,14 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 -- @
 -- \"\/\/*.rot13\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
---     'need' [src]
+--     'need' src
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
 -- @
 --
---   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
+--   Usually @need [foo,bar]@ is preferable to @need foo >> need bar@ as the former allows greater
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
-need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
+need :: Targets targets => targets -> Action ()
+need targets = (apply $ map (FileQ . packU) $ filePaths targets :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
@@ -116,10 +116,10 @@ needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
-needed :: [FilePath] -> Action ()
-needed xs = do
+needed :: Targets targets => targets -> Action ()
+needed targets = do
     opts <- getShakeOptions
-    if isNothing $ shakeLint opts then need xs else neededCheck $ map packU xs
+    if isNothing $ shakeLint opts then need targets else neededCheck $ map packU $ filePaths targets
 
 
 neededBS :: [BS.ByteString] -> Action ()
@@ -169,7 +169,7 @@ trackAllow ps = do
 --
 -- @
 -- main = 'Development.Shake.shake' 'shakeOptions' $ do
---    'want' [\"Main.exe\"]
+--    'want' \"Main.exe\"
 --    ...
 -- @
 --
@@ -178,7 +178,7 @@ trackAllow ps = do
 --
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
-want :: [FilePath] -> Rules ()
+want :: Targets targets => targets -> Rules ()
 want = action . need
 
 
@@ -245,7 +245,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 -- @
 -- \"*.asm.o\" '*>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
---     'need' [src]
+--     'need' src
 --     'Development.Shake.cmd' \"as\" [src] \"-o\" [out]
 -- @
 --

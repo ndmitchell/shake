@@ -93,7 +93,7 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
 --
 --main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
---     if null targets then 'want' [\"result.exe\"] else 'want' targets
+--     if null targets then 'want' \"result.exe\" else 'want' targets
 --     let compiler = if DistCC \`elem\` flags then \"distcc\" else \"gcc\"
 --     \"*.o\" '*>' \\out -> do
 --         'need' ...

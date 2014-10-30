@@ -10,7 +10,7 @@ main = shaken test $ \args obj -> do
     want $ map obj args
 
     obj "foo" *> \ out -> do
-        need [obj "bar"]
+        need $ obj "bar"
         writeFile' out ""
 
     obj "bar" *> \out -> writeFile' out ""
