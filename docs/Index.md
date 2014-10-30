@@ -15,7 +15,7 @@ To try Shake you need to install the [Haskell Platform](http://www.haskell.org/p
 
 To write your own Shake build system, read the [user manual](Manual.md) and refer to the [API documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html). Shake build systems are [Haskell](http://haskell.org/) programs, but can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
 
-[Click to read about the background and approach of Shake.](Why.md)
+[Click to read about the background and approach of Shake.](About.md)
 
 ## Asking questions
 
