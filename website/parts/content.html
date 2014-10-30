@@ -44,13 +44,55 @@
 
 #content {
     max-width: 800px;
-    margin-left: 3%;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 15px;
 }
 
 @media print, screen and (max-width: 900px) {
     #toc {display: none;}
 }
+
+h1 {
+    font-size: 36px;
+    margin-bottom: 0em;
+}
+
+h2 {
+    margin-top: 0.3em;
+    margin-bottom: 0.2em;
+    font-size: 28px;
+    border-bottom: 1px solid #ddd;
+}
+
+body {
+    line-height: 1.6;
+}
+
+a {
+    color: #4183c4;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+pre, code {
+    background-color: #f2f2f2;
+    border-radius: 3px;
+    color: #333;
+    font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-size: 14px;
+}
+code {
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+pre {
+    line-height: 1.3;
+    padding: 4px;
+}
+
 </style>
     </head>
     <body>
@@ -58,22 +100,25 @@
 
 <div id="content">
     <div id="toc">
-        <a class="h1" href="#key1">Header 1</a>
+        <a class="h2" href="#key1">Header 1</a>
         <a class="h2" href="#key2">Header 2</a>
-        <a class="h2" href="#key3">Header 2 #2</a>
-        <a class="h3" href="#key4">Header 3</a>
-        <a class="h2" href="#key5">Header 2 #3</a>
-        <a class="h3" href="#key6">Header 3 #2</a>
-        <a class="h3" href="#key7">Header 3 #3</a>
+        <a class="h3" href="#key3">Header 2 #2</a>
+        <a class="h4" href="#key4">Header 3</a>
+        <a class="h3" href="#key5">Header 2 #3</a>
+        <a class="h4" href="#key6">Header 3 #2</a>
+        <a class="h4" href="#key7">Header 3 #3</a>
     </div>
 
-    <h1 id="key1">Item 1</h1> Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. 
-    <h1 id="key2">Item 1</h1> Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. 
-    <h2 id="key3">Item 1</h2> Stuff about item 1
-    <h3 id="key4">Item 1</h3> Stuff about item 1
-    <h2 id="key5">Item 1</h2> Stuff about item 1
-    <h3 id="key6">Item 1</h3> Stuff about item 1
-    <h3 id="key7">Item 1</h3> Stuff about item 1
+    <h1>Main title</h1>
+    <h2 id="key1">Item 1</h2> Visit <a href="http://shakebuild.com/">shakebuild.com</a>. There is lots of <code>code on this site</code>. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. 
+    <h2 id="key2">Item 1</h2>
+    <pre><code>here are a few lines
+of code</code></pre> Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. Stuff about item 1. 
+    <h3 id="key3">Item 1</h3> Stuff about item 1
+    <h4 id="key4">Item 1</h4> Stuff about item 1
+    <h3 id="key5">Item 1</h3> Stuff about item 1
+    <h4 id="key6">Item 1</h4> Stuff about item 1
+    <h4 id="key7">Item 1</h4> Stuff about item 1
 
 </div>
 
