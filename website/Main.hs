@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Main2(main) where
+module Main(main) where
 
 import Control.Arrow
 import Control.Monad
