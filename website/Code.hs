@@ -2,13 +2,10 @@
 
 module Code(code) where
 
-import Control.Monad
 import Data.Char
 import Data.List.Extra
 import Data.Maybe
 import Text.HTML.TagSoup
-import System.Directory
-import System.FilePath
 
 
 code :: FilePath -> IO (String -> [Tag String])
