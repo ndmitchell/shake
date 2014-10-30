@@ -13,6 +13,7 @@ import Text.Markdown
 import Text.Blaze.Html.Renderer.Text
 import System.Directory
 import System.FilePath
+import Code
 
 
 main :: IO ()
@@ -76,6 +77,12 @@ reformat (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat xs
                 -- watch out for Manual.md#readme
                 ("href", dropFileName x ++ map toLower (takeBaseName x) <.> "html")
           f x = x
+reformat (TagOpen "pre" []:TagOpen "code" []:xs) = reformat $ TagOpen "pre" [] : xs
+reformat (TagClose "code":TagClose "pre":xs) = reformat $ TagClose "pre" : xs
+reformat (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat b
+    where (a,b) = break (== TagClose t) xs
+          f (TagText x) = code x
+          f x = [x]
 reformat (x:xs) = x : reformat xs
 reformat [] = []
 
