@@ -29,6 +29,7 @@ main = do
             p <- readPage code $ "../docs" </> file
             skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p 
     copyFile "../docs/shake-progress.png" "output/shake-progress.png"
+    copyFile "parts/favicon.ico" "output/favicon.ico"
     putStrLn " done"
 
 
