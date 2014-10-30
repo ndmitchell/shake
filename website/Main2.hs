@@ -20,11 +20,12 @@ main :: IO ()
 main = do
     createDirectoryIfMissing True "output"
     files <- getDirectoryContents "../docs"
+    code <- code "../dist/doc/html/shake/shake.txt"
     skeleton <- skeleton "parts" "output/index.css"
     forM_ files $ \file -> do
         when (takeExtension file == ".md") $ do
             putChar '.'
-            p <- readPage $ "../docs" </> file
+            p <- readPage code $ "../docs" </> file
             skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p 
     copyFile "../docs/shake-progress.png" "output/shake-progress.png"
     putStrLn " done"
@@ -55,9 +56,9 @@ writeFileTags file = writeFile file . renderTags
 ---------------------------------------------------------------------
 -- READ A PAGE
 
-readPage :: FilePath -> IO Page
-readPage file = do
-    (pageTOC, pageBody) <- fmap (links . reformat) $ readFileMarkdown $ "../docs" </> file
+readPage :: (String -> [Tag String]) -> FilePath -> IO Page
+readPage code file = do
+    (pageTOC, pageBody) <- fmap (links . reformat code) $ readFileMarkdown $ "../docs" </> file
     let pageTitle = innerText $ inside "h1" pageBody
     return Page{..}
     where
@@ -69,22 +70,22 @@ readPage file = do
         links [] = ([], [])
 
 
-reformat :: [Tag String] -> [Tag String]
-reformat (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefixOf` s =
-    reformat $ drop 1 $ dropWhile (~/= "</p>") xs
-reformat (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat xs
+reformat :: (String -> [Tag String]) -> [Tag String] -> [Tag String]
+reformat code (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefixOf` s =
+    reformat code $ drop 1 $ dropWhile (~/= "</p>") xs
+reformat code (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat code xs
     where f ("href",x) | ".md" `isPrefixOf` takeExtension x =
                 -- watch out for Manual.md#readme
                 ("href", dropFileName x ++ map toLower (takeBaseName x) <.> "html")
           f x = x
-reformat (TagOpen "pre" []:TagOpen "code" []:xs) = reformat $ TagOpen "pre" [] : xs
-reformat (TagClose "code":TagClose "pre":xs) = reformat $ TagClose "pre" : xs
-reformat (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat b
+reformat code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat code $ TagOpen "pre" [] : xs
+reformat code (TagClose "code":TagClose "pre":xs) = reformat code $ TagClose "pre" : xs
+reformat code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat code b
     where (a,b) = break (== TagClose t) xs
           f (TagText x) = code x
           f x = [x]
-reformat (x:xs) = x : reformat xs
-reformat [] = []
+reformat code (x:xs) = x : reformat code xs
+reformat code [] = []
 
 
 ---------------------------------------------------------------------
