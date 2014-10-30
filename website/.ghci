@@ -1,0 +1,3 @@
+:set -fwarn-unused-binds -fwarn-unused-imports
+:load Main
+:def go const $ return $ unlines [":reload",":main",":reload"]
