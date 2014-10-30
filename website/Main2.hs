@@ -60,8 +60,8 @@ readPage file = do
     let pageTitle = innerText $ inside "h1" pageBody
     return Page{..}
     where
-        links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "123" =
-                first (Link{..}:) $ second (TagOpen linkLevel (("id",linkKey):at):) $ links xs
+        links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "23" =
+                first (Link{..}:) $ second (\xs -> TagOpen "span" [("class","target"),("id",linkKey)]:TagClose "span":TagOpen linkLevel at:xs) $ links xs
             where linkTitle = innerText $ takeWhile (/= TagClose linkLevel) xs
                   linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words linkTitle
         links (x:xs) = second (x:) $ links xs
@@ -92,10 +92,12 @@ skeleton dir cssOut = do
     writeFile cssOut $ common ++ style header ++ style content ++ style footer
     return $ \file Page{..} -> writeFileTags file $
         inject (takeBaseName file) (takeWhile (~/= "<div id=content>") (map (activate $ takeFileName file) $ noStyle header)) ++
-        parseTags "<div id=content>" ++ {- <div id=toc>" ++
-        concat [ [TagOpen "a" [("class",linkLevel),("href",'#':linkKey)], TagText linkTitle, TagClose "a"]
-               | Link{..} <- pageTOC] ++
-        parseTags "</div>" ++ -}
+        parseTags "<div id=content>" ++
+        (if length pageTOC <= 1 then [] else
+            parseTags "<div id=toc>" ++
+            concat [ [TagOpen "a" [("class",linkLevel),("href",'#':linkKey)], TagText linkTitle, TagClose "a"]
+                   | Link{..} <- pageTOC] ++
+            parseTags "</div>") ++
         pageBody ++
         parseTags "</div>" ++
         dropWhile (~/= "<p id=footer>") footer
