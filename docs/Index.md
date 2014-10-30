@@ -2,7 +2,7 @@
 
 * **A build system** - an alternative to make, Scons, Ant etc.
 * **Reliable and robust** - having been relied on commercially for over five years.
-* **Powerful dependencies** - letting you express many relationships precisely and directly.
+* **Powerful dependencies** - letting you express the problem precisely and directly.
 * **Fast to run** - both to build from scratch and to rebuild.
 
 Large build systems written using Shake tend to be significantly shorter and simpler, while also running faster. If your project can use a canned build system (e.g. Visual Studio, cabal) do that; if your project is very simple use a Makefile; otherwise use Shake.
@@ -29,15 +29,26 @@ Shake can execute [Ninja files](Ninja.md), integrate with [CMake](http://www.cma
 
 ## Who uses Shake?
 
-Shake is used by lots of companies, but only a few have declared so publicly.
+Shake is used by lots of companies, but only a few have declared so publicly. (Is your company using Shake? Let me know, even just a [tweet to `@ndm_haskell`](https://twitter.com/ndm_haskell)).  
  
 * [Standard Chartered](http://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
 * [factis research GmbH](http://www.factisresearch.com/), as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872).
 
-There are also lots of examples, including:
+There are a few packages of rules for Shake, along with some utilities:
 
-* [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
 * [Kanas Lava build rules](https://github.com/gergoerdi/kansas-lava-shake).
 * [shake-language-c](http://hackage.haskell.org/package/shake-language-c) is a small library on top of Shake that allows cross-compiling C, C++ and Objective-C code to various target platforms.
 * [shake-cabal-build](http://hackage.haskell.org/package/shake-cabal-build) is a small script that uses Cabal sandboxes for initialising and updating build systems based on Shake.
+* [shake-cpp](https://github.com/jfeltz/shake-cpp) is a C++ abstraction layer for Shake.
+* [avr-shake](https://hackage.haskell.org/package/avr-shake) are rules for building AVR crosspack things.
+
+Several projects are using Shake:
+
+* [ToolCabal](https://github.com/TiborIntelSoft/ToolCabal) is a rewrite of [Cabal](https://www.haskell.org/cabal/) using Shake as the dependency engine.
+* [ghc-make](https://github.com/ndmitchell/ghc-make) uses Shake to build a fast compilation checker for GHC.
+* [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) is in the process of migrating to Shake.
+
+And finally, here are a few tutorials:
+
+* [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
