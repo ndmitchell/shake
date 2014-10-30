@@ -49,6 +49,7 @@ Several projects are using Shake:
 * [ghc-make](https://github.com/ndmitchell/ghc-make) uses Shake to build a fast compilation checker for GHC.
 * [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) is in the process of migrating to Shake.
 
-And finally, here are a few tutorials:
+And finally, here are a few tutorials and blog posts:
 
+* [Many articles from the author of Shake](http://neilmitchell.blogspot.co.uk/search/label/shake).
 * [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
