@@ -13,6 +13,7 @@ import Text.Markdown
 import Text.Blaze.Html.Renderer.Text
 import System.Directory
 import System.FilePath
+import System.IO.Extra
 import Code
 
 
@@ -47,7 +48,7 @@ readFileMarkdown :: FilePath -> IO [Tag String]
 readFileMarkdown = fmap (parseTags . T.unpack . renderHtml . markdown def{msXssProtect=False}) . T.readFile
 
 readFileTags :: FilePath -> IO [Tag String]
-readFileTags = fmap parseTags . readFile 
+readFileTags = fmap parseTags . readFile'
 
 writeFileTags :: FilePath -> [Tag String] -> IO ()
 writeFileTags file = writeFile file . renderTags
@@ -93,7 +94,7 @@ reformat code [] = []
 
 skeleton :: FilePath -> FilePath -> IO (FilePath -> Page -> IO ())
 skeleton dir cssOut = do
-    common <- readFile $ dir </> "index.css"
+    common <- readFile' $ dir </> "index.css"
     header <- readFileTags $ dir </> "header.html"
     content <- readFileTags $ dir </> "content.html"
     footer <- readFileTags $ dir </> "footer.html"
