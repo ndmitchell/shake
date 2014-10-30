@@ -305,6 +305,8 @@ The initial example build system supports a number of command line flags, includ
 
 Most flags can also be set within the program by modifying the `shakeOptions` value. As an example, `build --metadata=_metadata/` causes all Shake metadata files to be stored with names such as `_metadata/.database`. Alternatively we can write `shakeOptions{shakeFiles="_metadata/"}` instead of our existing `shakeFiles="_build/"`. Values passed on the command line take preference over those given by `shakeOptions`. Multiple overrides can be given to `shakeOptions` by separating them with a comma, for example `shakeOptions{shakeFiles="_build/",shakeThreads=8}`.
 
+<span class="target" id="progress"></span>
+
 #### Progress prediction
 
 One useful feature of Shake is that it can predict the remaining build time, based on how long previous builds have taken. The number is only a prediction, but it does take account of which files require rebuilding, how fast your machine is currently running, parallelism settings etc. You can display progress messages in the titlebar of a Window by either:
@@ -318,6 +320,8 @@ The progress message will be displayed in the titlebar of the window, for exampl
 
 Progress prediction is likely to be relatively poor during the first build and after running `build clean`, as then Shake has no information about the predicted execution time for each rule. To rebuild from scratch without running clean (because you really want to see the progress bar!) you can use the argument `--always-make`, which assumes all rules need rerunning. 
 
+<span class="target" id="lint"></span>
+
 #### Lint
 
 Shake features a built in "lint" features to check the build system is well formed. To run `build --lint`. You are likely to catch more lint violations if you first `build clean`. Sadly, lint does _not_ catch missing dependencies. However, it does catch:
@@ -326,6 +330,8 @@ Shake features a built in "lint" features to check the build system is well form
 * Dependencies are not modified after they are depended upon. The common reason for violating this check is that you one rule writing to a file which has a different rule associated with it.
 
 There is a performance penalty for building with `--lint`, but it is typically small.
+
+<span class="target" id="profiling"></span>
 
 #### Profiling
 
