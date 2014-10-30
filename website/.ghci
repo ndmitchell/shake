@@ -1,3 +1,6 @@
 :set -fwarn-unused-binds -fwarn-unused-imports
+:set -hide-all-packages
+:set -package=base -package=directory -package=filepath -package=text
+:set -package=blaze-html -package=tagsoup -package=markdown -package=extra
 :load Main
 :def go const $ return $ unlines [":reload",":main",":reload"]
