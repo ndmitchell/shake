@@ -73,6 +73,7 @@ main = shaken noTest $ \args obj -> do
             imports ++
             ["(==>) :: Bool -> Bool -> Bool"
             ,"(==>) = undefined"
+            ,"(<==) = ()"
             ,"infix 1 ==>"
             ,"forAll f = f undefined"
             ,"remaining = 1.1"
@@ -209,7 +210,8 @@ whitelist x | elem x $ words $
     "-threaded -rtsopts -I0 Function extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat //* [out] manual/examples.zip manual " ++
-    "docs/manual _build _build/run ninja depfile build.ninja "
+    "docs/manual _build _build/run ninja depfile build.ninja " ++
+    "@ndm_haskell "
     = True
 whitelist x
     | "foo/" `isPrefixOf` x -- path examples
