@@ -1,7 +1,13 @@
-language: haskell
-install: cabal install --only-dependencies --enable-tests || cabal install --enable-library-profiling --enable-tests || cabal install --only-dependencies --enable-tests
-script: wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --no-cache --quiet | sh
-relevant: |
-    Ninja was
-    Shake was
-    -rw-rw
+env:
+ - GHCVER=7.2.2
+ - GHCVER=7.4.2
+ - GHCVER=7.6.3
+ - GHCVER=7.8.3
+ - GHCVER=head
+
+matrix:
+  allow_failures:
+   - env: GHCVER=head
+
+script:
+ - wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --quiet | sh
