@@ -7,7 +7,6 @@ module General.Base(
     readFileStrict, readFileUCS2, getEnvMaybe, getExePath,
     randomElem,
     showDP, showTime,
-    modifyIORef'', writeIORef'',
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
@@ -88,19 +87,6 @@ floatToDouble = fromRational . toRational
 
 doubleToFloat :: Double -> Float
 doubleToFloat = fromRational . toRational
-
-
----------------------------------------------------------------------
--- Data.IORef
-
--- Two 's because GHC 7.6 has a strict modifyIORef
-modifyIORef'' :: IORef a -> (a -> a) -> IO ()
-modifyIORef'' ref f = do
-    x <- readIORef ref
-    writeIORef'' ref $ f x
-
-writeIORef'' :: IORef a -> a -> IO ()
-writeIORef'' ref !x = writeIORef ref x
 
 
 ---------------------------------------------------------------------
