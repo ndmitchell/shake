@@ -36,7 +36,9 @@ import System.IO.Unsafe
 import System.Random
 import GHC.IO.Handle(hDuplicate,hDuplicateTo)
 import Development.Shake.Classes
+#if __GLASGOW_HASKELL__ >= 704
 import Foreign.C.Types
+#endif
 
 
 ---------------------------------------------------------------------
