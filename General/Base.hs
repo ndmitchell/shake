@@ -24,7 +24,7 @@ import Data.List
 import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
-import Numeric
+import Numeric.Extra
 import System.Environment
 import System.IO
 import System.IO.Error
@@ -77,19 +77,6 @@ sleep x = threadDelay $ ceiling $ x * 1000000
 
 
 ---------------------------------------------------------------------
--- Numeric
-
-intToDouble :: Int -> Double
-intToDouble = fromInteger . toInteger
-
-floatToDouble :: Float -> Double
-floatToDouble = fromRational . toRational
-
-doubleToFloat :: Double -> Float
-doubleToFloat = fromRational . toRational
-
-
----------------------------------------------------------------------
 -- Data.List
 
 -- | Like 'nub', but the results may be in any order.
@@ -111,10 +98,6 @@ word1 x = second (dropWhile isSpace) $ break isSpace $ dropWhile isSpace x
 
 ---------------------------------------------------------------------
 -- Data.String
-
-showDP :: RealFloat a => Int -> a -> String
-showDP n x = a ++ (if n > 0 then "." else "") ++ b ++ replicate (n - length b) '0'
-    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
 
 showTime :: Double -> String
 showTime x | x >= 3600 = f (x / 60) "h" "m"
