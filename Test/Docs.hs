@@ -39,10 +39,11 @@ main = shaken noTest $ \args obj -> do
 
     obj "Part_*.hs" *> \out -> do
         need ["Test/Docs.hs"] -- so much of the generator is in this module
+        let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
-            fmap (findCodeMarkdown . lines) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
+            fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap findCodeHaddock $ readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
         let f i (Stmt x) | whitelist $ head x = []
                          | otherwise = restmt i $ map undefDots $ trims x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
