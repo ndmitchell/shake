@@ -212,7 +212,7 @@ whitelist x | elem x $ words $
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat //* [out] manual/examples.zip manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja " ++
     "@ndm_haskell " ++
-    "Rule CmdResult "
+    "Rule CmdResult ShakeValue "
     = True
 whitelist x
     | "foo/" `isPrefixOf` x -- path examples
