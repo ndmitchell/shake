@@ -38,6 +38,7 @@ import Data.Monoid
 import Data.IORef
 import System.Directory
 import System.IO
+import System.Timeout
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -365,9 +366,8 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         stats <- progress database
                         return stats{isFailure=failure}
                 addCleanup cleanup $ do
-                    forkIO $ sleep 1 >> signalBarrier wait ()
                     killThread tid
-                    waitBarrier wait
+                    void $ timeout 1000000 $ waitBarrier wait
 
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
