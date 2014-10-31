@@ -15,7 +15,7 @@ import Development.Shake.Types
 import General.Timing
 
 import Data.Tuple.Extra
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Monad
 import Control.Concurrent.Extra
 import Data.Binary.Get
@@ -66,7 +66,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
     when b $ do
         unexpected "Backup file exists, restoring over the previous file\n"
         diagnostic $ "Backup file move to original"
-        E.catch (removeFile dbfile) (\(e :: SomeException) -> return ())
+        ignore $ removeFile dbfile
         renameFile bupfile dbfile
 
     addTiming "Database read"
@@ -122,11 +122,11 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                         when (shakeVerbosity == Diagnostic) $ do
                             let raw x = "[len " ++ show (LBS.length x) ++ "] " ++ concat
                                         [['0' | length c == 1] ++ c | x <- LBS8.unpack x, let c = showHex x ""]
-                            let pretty (Left x) = "FAILURE: " ++ show (x :: SomeException)
+                            let pretty (Left x) = "FAILURE: " ++ show x
                                 pretty (Right x) = x
                             diagnostic $ "Witnesses " ++ raw w
                             forM_ (zip3 [1..] xs ents) $ \(i,x,ent) -> do
-                                x2 <- try $ evaluate $ let s = show ent in rnf s `seq` s
+                                x2 <- try_ $ evaluate $ let s = show ent in rnf s `seq` s
                                 diagnostic $ "Chunk " ++ show i ++ " " ++ raw x ++ " " ++ pretty x2
                             diagnostic $ "Slop " ++ raw slopRaw
 
@@ -207,7 +207,7 @@ flushThread flush h act = do
             writeChan chan $ hFlush h >> return True
 
     root <- myThreadId
-    writer <- forkIO $ handle (\(e :: SomeException) -> signalBarrier died () >> throwTo root e) $
+    writer <- forkIO $ handle_ (\e -> signalBarrier died () >> throwTo root e) $
         -- only one thread ever writes, ensuring only the final write can be torn
         whileM $ join $ readChan chan
 
@@ -236,14 +236,6 @@ readChunks x
 toChunk :: LBS.ByteString -> LBS.ByteString
 toChunk x = n `LBS.append` x
     where n = encode (fromIntegral $ LBS.length x :: Word32)
-
-
--- Some exceptions may have an error message which is itself an exception,
--- make sure you show them properly
-showException :: SomeException -> IO String
-showException err = do
-    let msg = show err
-    E.catch (evaluate $ rnf msg `seq` msg) (\(_ :: SomeException) -> return "Unknown exception (error while showing error message)")
 
 
 -- | Is the exception asyncronous, not a "coding error" that should be ignored

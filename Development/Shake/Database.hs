@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 

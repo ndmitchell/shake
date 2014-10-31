@@ -9,7 +9,7 @@ module Development.Shake.Monad(
     ) where
 
 import Control.Applicative
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Reader
@@ -34,7 +34,7 @@ runRAW ro rw m k = do
     rww <- newIORef rw
     handler <- newIORef $ k . Left
     fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)
-        `E.catch` \e -> ($ e) =<< readIORef handler
+        `catch_` \e -> ($ e) =<< readIORef handler
 
 
 ---------------------------------------------------------------------
@@ -80,7 +80,7 @@ catchRAW m hdl = RAW $ ReaderT $ \s -> ContT $ \k -> do
     old <- readIORef $ handler s
     writeIORef (handler s) $ \e -> do
         writeIORef (handler s) old
-        fromRAW (hdl e) `runReaderT` s `runContT` k `E.catch`
+        fromRAW (hdl e) `runReaderT` s `runContT` k `catch_`
             \e -> ($ e) =<< readIORef (handler s)
     fromRAW m `runReaderT` s `runContT` \v -> do
         writeIORef (handler s) old
@@ -117,5 +117,5 @@ captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
         Left e -> old e
         Right v -> do
             writeIORef (handler s) old
-            k v `E.catch` \e -> ($ e) =<< readIORef (handler s)
+            k v `catch_` \e -> ($ e) =<< readIORef (handler s)
             writeIORef (handler s) throwIO

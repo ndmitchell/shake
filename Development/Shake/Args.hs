@@ -15,7 +15,7 @@ import General.Timing
 
 import Data.Tuple.Extra
 import Control.Concurrent
-import Control.Exception
+import Control.Exception.Extra
 import Control.Monad
 import Data.Char
 import Data.Either
@@ -170,7 +170,7 @@ shakeArgsWith baseOpts userOptions rules = do
             case rules of
                 Nothing -> return (False,Right ())
                 Just rules -> do
-                    res <- try $ shake shakeOpts $
+                    res <- try_ $ shake shakeOpts $
                         if NoBuild `elem` flagsExtra then withoutActions rules else rules
                     return (True, res)
 
@@ -183,7 +183,7 @@ shakeArgsWith baseOpts userOptions rules = do
                     if Exception `elem` flagsExtra then
                         throw err
                     else do
-                        putStrLn $ esc "31" $ show (err :: SomeException)
+                        putStrLn $ esc "31" $ show err
                         exitFailure
                 Right () -> do
                     stop <- getCurrentTime

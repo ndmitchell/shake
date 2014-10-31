@@ -1,11 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Unicode(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
-import Control.Exception
+import Control.Exception.Extra
 import Control.Monad
 import System.Directory(createDirectoryIfMissing)
 
@@ -46,9 +45,9 @@ test build obj = do
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
         createDirectoryIfMissing True $ obj ""
         let ext x = obj $ decode pre <.> x
-        res <- try $ writeFile (ext "source") "x"
+        res <- try_ $ writeFile (ext "source") "x"
         case res of
-            Left (err :: SomeException) ->
+            Left err ->
                 putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
             Right _ -> do
                 build [pre,pre <.> "out","--sleep"]

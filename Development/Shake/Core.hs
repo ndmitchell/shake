@@ -301,7 +301,7 @@ actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act clean = do
     cleanup <- Action $ getsRO globalCleanup
     clean <- liftIO $ addCleanup cleanup $ void clean
-    res <- Action $ catchRAW (fromAction act) $ \(e :: SomeException) -> liftIO (clean True) >> throwRAW e
+    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (clean True) >> throwRAW e
     liftIO $ clean runOnSuccess
     return res
 
@@ -785,7 +785,7 @@ newCacheIO act = do
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
-                            liftIO $ signalFence bar $ Left (err :: SomeException)
+                            liftIO $ signalFence bar $ Left err
                             Action $ throwRAW err
                         Right v -> do
                             post <- Action $ getsRW localDepends

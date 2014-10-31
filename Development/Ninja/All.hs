@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, ViewPatterns #-}
 
 module Development.Ninja.All(runNinja) where
 

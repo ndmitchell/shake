@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
@@ -19,7 +19,7 @@ module Development.Shake.Command(
 import Data.Tuple.Extra
 import Control.Concurrent
 import Control.DeepSeq
-import Control.Exception as C
+import Control.Exception.Extra as C
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Char
@@ -171,10 +171,10 @@ commandExplicitIO funcName opts results exe args =
 -- BEGIN COPIED
 -- Originally from readProcessWithExitCode with as few changes as possible
     mask $ \restore -> do
-      ans <- try $ createProcess cp
+      ans <- try_ $ createProcess cp
       (inh, outh, errh, pid) <- case ans of
           Right a -> return a
-          Left err -> failure $ show (err :: SomeException)
+          Left err -> failure $ show err
 
       let close = maybe (return ()) hClose
       flip onException
@@ -253,7 +253,7 @@ commandExplicitIO funcName opts results exe args =
             cwd <- case cwd cp of
                 Nothing -> return ""
                 Just v -> do
-                    v <- canonicalizePath v `C.catch` \(_ :: SomeException) -> return v
+                    v <- canonicalizePath v `catch_` const (return v)
                     return $ "Current directory: " ++ v ++ "\n"
             fail $
                 "Development.Shake." ++ funcName ++ ", system command failed\n" ++
@@ -286,8 +286,8 @@ commandExplicitIO funcName opts results exe args =
 forkWait :: IO a -> IO (IO a)
 forkWait a = do
     res <- newEmptyMVar
-    _ <- mask $ \restore -> forkIO $ try (restore a) >>= putMVar res
-    return (takeMVar res >>= either (\ex -> throwIO (ex :: SomeException)) return)
+    _ <- mask $ \restore -> forkIO $ try_ (restore a) >>= putMVar res
+    return (takeMVar res >>= either throwIO return)
 
 
 -- Like System.Process, but tweaked to show less escaping,

@@ -4,7 +4,7 @@ module Test.Random(main) where
 
 import Development.Shake
 import Test.Type
-import Control.Exception
+import Control.Exception.Extra
 import Control.Monad
 import Data.List
 import Data.Maybe
@@ -80,10 +80,10 @@ test build obj = do
             writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
         logicBang <- addBang =<< addBang logic
         j <- randomRIO (1::Int,8)
-        res <- try $ build $ "--exception" : ("-j" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
+        res <- try_ $ build $ "--exception" : ("-j" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
         case res of
             Left err
-                | "BANG" `isInfixOf` show (err :: SomeException) -> return () -- error I expected
+                | "BANG" `isInfixOf` show err -> return () -- error I expected
                 | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
             _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
         runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]

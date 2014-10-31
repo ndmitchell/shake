@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Errors(main) where
 
@@ -7,7 +6,7 @@ import Test.Type
 import Control.Monad
 import General.Base
 import Control.Concurrent
-import Control.Exception as E hiding (assert)
+import Control.Exception.Extra hiding (assert)
 import System.Directory as IO
 
 
@@ -103,7 +102,7 @@ test build obj = do
     assertContents (obj "exception2") "0"
 
     forM_ ["finally3","finally4"] $ \name -> do
-        t <- forkIO $ build [name,"--exception"] `E.catch` \(_ :: SomeException) -> return ()
+        t <- forkIO $ ignore $ build [name,"--exception"]
         retry 10 $ sleep 0.1 >> assertContents (obj name) "0"
         throwTo t (IndexOutOfBounds "test")
         retry 10 $ sleep 0.1 >> assertContents (obj name) "1"

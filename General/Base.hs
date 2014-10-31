@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, CPP, ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns, CPP #-}
 
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
@@ -17,7 +17,7 @@ module General.Base(
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Monad
 import Data.Char
 import Data.IORef
@@ -184,17 +184,6 @@ notM = fmap not
 (||^) a b = do a <- a; if a then return True else b
 (&&^) a b = do a <- a; if a then b else return False
 
-retry :: Int -> IO a -> IO a
-retry i x | i <= 0 = error "retry count must be 1 or more"
-retry 1 x = x
-retry i x = do
-    res <- E.try x
-    case res of
-        Left (e :: SomeException) -> do
-            putStrLn $ "Retrying after exception: " ++ show e
-            retry (i-1) x
-        Right v -> return v
-
 
 ---------------------------------------------------------------------
 -- System.Info
@@ -224,7 +213,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
                 fromIntegral <$> getNumberOfProcessors
             else
 #endif
-                handle (\(_ :: SomeException) -> return 1) $ do
+                handle_ (const $ return 1) $ do
                     env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
                     case env of
                         Just s | [(i,"")] <- reads s -> return i
