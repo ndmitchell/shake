@@ -3,7 +3,7 @@
 import Data.Char
 import Data.Function
 import System.Directory.Extra
-import System.Environment
+import System.Environment.Extra
 import System.Time.Extra
 import Data.List
 import Control.Exception.Extra
