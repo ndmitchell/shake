@@ -8,7 +8,6 @@ module General.Base(
     randomElem,
     showDP, showTime,
     modifyIORef'', writeIORef'',
-    isLeft_, isRight_,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
@@ -138,14 +137,6 @@ showTime x | x >= 3600 = f (x / 60) "h" "m"
     where
         f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ m
             where (ms,ss) = round x `divMod` 60
-
-
----------------------------------------------------------------------
--- Data.Either
-
-isLeft_, isRight_ :: Either a b -> Bool
-isLeft_ Left{} = True; isLeft_ Right{} = False
-isRight_ = not . isLeft_
 
 
 ---------------------------------------------------------------------

@@ -31,6 +31,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
 import Data.Typeable
 import Data.Function
+import Data.Either.Extra
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -827,4 +828,4 @@ unsafeExtraThread act = Action $ do
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
-    captureRAW $ \continue -> (if isLeft_ res then addPoolPriority else addPool) globalPool $ continue res
+    captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
