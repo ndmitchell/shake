@@ -5,6 +5,7 @@ import Data.IORef
 import Data.Time
 import System.IO.Unsafe
 import General.Base
+import Numeric.Extra
 
 
 {-# NOINLINE timings #-}

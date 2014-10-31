@@ -26,6 +26,7 @@ import General.Base
 import General.String
 import General.Intern as Intern
 
+import Numeric.Extra
 import Control.Applicative
 import Control.Exception
 import Control.Monad

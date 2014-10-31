@@ -9,6 +9,7 @@ import Data.Function
 import Data.List
 import Data.Version
 import System.FilePath
+import Numeric.Extra
 import Paths_shake
 import qualified Data.ByteString.Lazy.Char8 as LBS
 

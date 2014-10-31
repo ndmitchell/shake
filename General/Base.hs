@@ -2,11 +2,10 @@
 
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
-    intToDouble, floatToDouble, doubleToFloat,
     isWindows, getProcessorCount,
     readFileStrict, readFileUCS2, getEnvMaybe, getExePath,
     randomElem,
-    showDP, showTime,
+    showTime,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,

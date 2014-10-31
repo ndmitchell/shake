@@ -3,6 +3,7 @@
 module Test.Random(main) where
 
 import Development.Shake
+import Numeric.Extra
 import Test.Type
 import Control.Exception.Extra
 import Control.Monad

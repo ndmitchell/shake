@@ -32,6 +32,7 @@ import Control.Monad.Trans.Writer.Strict
 import Data.Typeable
 import Data.Function
 import Data.Either.Extra
+import Numeric.Extra
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
