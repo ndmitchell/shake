@@ -22,7 +22,7 @@ module Development.Shake.Core(
     rulesIO, runAfter
     ) where
 
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra
@@ -419,7 +419,7 @@ abbreviate abbrev = f
 
 
 wrapStack :: IO [String] -> IO a -> IO a
-wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
+wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
     Just s@ShakeException{} -> throwIO s
     Nothing -> do
         stk <- stk
