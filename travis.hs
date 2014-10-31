@@ -62,21 +62,6 @@ main = do
             when (ninjaZero + 0.1 < shakeZero) $
                 error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
-    {-
-    -- Don't bother profiling, we only get under 25 ticks, which doesn't say anything useful
-    system_ "ghc -threaded -rtsopts -isrc -i. Paths.hs Main.hs --make -O -prof -auto-all -caf-all"
-    setCurrentDirectory "ninja"
-    putStrLn "== PROFILE BUILDING FROM SCRATCH =="
-    system_ "rm .shake*"
-    system_ "../Main --skip-commands +RTS -p -V0.001"
-    system_ "head -n32 Main.prof"
-
-    putStrLn "== PROFILE BUILDING NOTHING =="
-    system_ "../Main +RTS -p -V0.001"
-    system_ "head -n32 Main.prof"
-    setCurrentDirectory ".."
-    -}
-
     createDirectoryIfMissing True "temp"
     withCurrentDirectory "temp" $
         system_ "shake --demo --keep-going"
