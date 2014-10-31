@@ -4,7 +4,7 @@ module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
     intToDouble, floatToDouble, doubleToFloat,
     isWindows, getProcessorCount,
-    readFileStrict, readFileUCS2, getEnvMaybe, captureOutput, getExePath,
+    readFileStrict, readFileUCS2, getEnvMaybe, getExePath,
     randomElem,
     showDP, showTime,
     modifyIORef'', writeIORef'',
@@ -28,13 +28,11 @@ import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
 import Numeric
-import System.Directory
 import System.Environment
 import System.IO
 import System.IO.Error
 import System.IO.Unsafe
 import System.Random
-import GHC.IO.Handle(hDuplicate,hDuplicateTo)
 import Development.Shake.Classes
 #if __GLASGOW_HASKELL__ >= 704
 import Foreign.C.Types
@@ -268,23 +266,6 @@ readFileUCS2 name = openFile name ReadMode >>= \h -> do
 
 getEnvMaybe :: String -> IO (Maybe String)
 getEnvMaybe x = catchJust (\x -> if isDoesNotExistError x then Just x else Nothing) (fmap Just $ getEnv x) (const $ return Nothing)
-
-captureOutput :: IO () -> IO String
-captureOutput act = do
-    tmp <- getTemporaryDirectory
-    (f,h) <- openTempFile tmp "hlint"
-    sto <- hDuplicate stdout
-    ste <- hDuplicate stderr
-    hDuplicateTo h stdout
-    hDuplicateTo h stderr
-    hClose h
-    act
-    hDuplicateTo sto stdout
-    hDuplicateTo ste stderr
-    res <- readFile f
-    evaluate $ length res
-    removeFile f
-    return res
 
 withCapabilities :: Int -> IO a -> IO a
 #if __GLASGOW_HASKELL__ >= 706
