@@ -11,14 +11,13 @@ module Development.Shake.Storage(
 
 import General.Binary
 import General.Base
-import General.Concurrent
 import Development.Shake.Types
 import General.Timing
 
 import Data.Tuple.Extra
 import Control.Exception as E
 import Control.Monad
-import Control.Concurrent
+import Control.Concurrent.Extra
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.Time

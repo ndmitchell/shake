@@ -23,13 +23,13 @@ import Development.Shake.Special
 import Development.Shake.Profile
 import Development.Shake.Monad
 import General.Base
-import General.Concurrent
 import General.String
 import General.Intern as Intern
 
 import Control.Applicative
 import Control.Exception
 import Control.Monad
+import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
 import Data.IORef

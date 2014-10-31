@@ -1,13 +1,9 @@
 
 module General.Concurrent(
-    Lock, newLock, withLock, withLockTry,
-    Var, newVar, readVar, modifyVar, modifyVar_, withVar,
-    Barrier, newBarrier, signalBarrier, waitBarrier, waitBarrierMaybe,
     Fence, newFence, signalFence, waitFence, testFence,
     ) where
 
 import Control.Applicative
-import Control.Concurrent.Extra
 import Control.Monad
 import Data.IORef
 
