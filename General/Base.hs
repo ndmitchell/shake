@@ -224,8 +224,10 @@ isWindows = False
 #endif
 
 
+#if __GLASGOW_HASKELL__ >= 704
 -- Use the underlying GHC function
 foreign import ccall getNumberOfProcessors :: IO CInt
+#endif
 
 
 {-# NOINLINE getProcessorCount #-}
@@ -234,9 +236,11 @@ getProcessorCount :: IO Int
 getProcessorCount = let res = unsafePerformIO act in return res
     where
         act =
+#if __GLASGOW_HASKELL__ >= 704
             if rtsSupportsBoundThreads then
                 fromIntegral <$> getNumberOfProcessors
             else
+#endif
                 handle (\(_ :: SomeException) -> return 1) $ do
                     env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
                     case env of
