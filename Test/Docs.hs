@@ -212,8 +212,8 @@ whitelist x | elem x $ words $
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat //* [out] manual/examples.zip manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja " ++
-    "@ndm_haskell " ++
-    "Rule CmdResult ShakeValue "
+    "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
+    "@ndm_haskell "
     = True
 whitelist x
     | "foo/" `isPrefixOf` x -- path examples
@@ -266,7 +266,7 @@ whitelist x = x `elem`
     ]
 
 types = words $
-    "MVar IO Monad Monoid String FilePath Data Maybe [String] Eq Typeable Char ExitCode Change " ++
+    "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
     "Action Resource Assume FilePattern Lint Verbosity Rules CmdOption Int Double"
 
 dupes = words "main progressSimple rules"
