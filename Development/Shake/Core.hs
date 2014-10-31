@@ -349,13 +349,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Got",Just now)]
                 ""
 
-    progressAbort <- newIORef $ return ()
     after <- newIORef []
     absent <- newIORef []
     shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
     withCleanup $ \cleanup -> do
         _ <- addCleanup cleanup $ do
-            join $ readIORef progressAbort
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
         withCapabilities shakeThreads $ do
@@ -366,7 +364,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         failure <- fmap (fmap fst) $ readIORef except
                         stats <- progress database
                         return stats{isFailure=failure}
-                writeIORef progressAbort $ do
+                addCleanup cleanup $ do
                     forkIO $ sleep 1 >> signalBarrier wait ()
                     killThread tid
                     waitBarrier wait
