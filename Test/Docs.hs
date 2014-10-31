@@ -173,7 +173,7 @@ dropComment xs = onTail dropComment xs
 undefDots o = f o
     where
         f ('.':'.':'.':xs) =
-            (if "cmd" `elem` words o then "[\"\"]" else "undefined") ++
+            (if any (`elem` words o) ["cmd","Development.Shake.cmd"] then "[\"\"]" else "undefined") ++
             (if "..." `isSuffixOf` xs then "" else undefDots xs)
         f xs = onTail f xs
 
