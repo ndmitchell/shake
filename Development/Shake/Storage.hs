@@ -15,7 +15,7 @@ import General.Concurrent
 import Development.Shake.Types
 import General.Timing
 
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Exception as E
 import Control.Monad
 import Control.Concurrent

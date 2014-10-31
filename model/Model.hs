@@ -3,7 +3,7 @@
 module Model(props) where
 
 import Control.Monad.State
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Applicative
 import Control.Monad.Extra
 import Data.Monoid

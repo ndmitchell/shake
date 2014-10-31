@@ -5,7 +5,7 @@
 -- | Lexing is a slow point, the code below is optimised
 module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
 
-import Control.Arrow
+import Data.Tuple.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Unsafe as BS
 import Development.Ninja.Type

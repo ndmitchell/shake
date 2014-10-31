@@ -13,7 +13,7 @@ import Development.Shake.Shake
 import General.Base
 import General.Timing
 
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Concurrent
 import Control.Exception
 import Control.Monad

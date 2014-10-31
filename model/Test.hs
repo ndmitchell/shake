@@ -9,7 +9,7 @@ module Test(
     ) where
 
 import Control.Monad.State
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Applicative
 import Data.Monoid
 import Data.IORef

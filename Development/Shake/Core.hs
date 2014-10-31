@@ -24,7 +24,7 @@ module Development.Shake.Core(
 
 import Control.Exception as E
 import Control.Applicative
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class

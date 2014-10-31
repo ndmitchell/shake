@@ -9,7 +9,7 @@ module Development.Shake.Progress(
     ) where
 
 import Control.Applicative
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Exception
 import Control.Monad
 import System.Environment

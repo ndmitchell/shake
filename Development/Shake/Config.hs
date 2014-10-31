@@ -30,7 +30,7 @@ import qualified Development.Ninja.Env as Ninja
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.UTF8 as UTF8
 import Control.Applicative
-import Control.Arrow
+import Data.Tuple.Extra
 
 
 -- | Read a config file, returning a list of the variables and their bindings.

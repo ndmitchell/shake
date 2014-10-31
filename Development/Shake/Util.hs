@@ -9,7 +9,7 @@ import Development.Shake
 import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS
 import qualified Development.Shake.ByteString as BS
-import Control.Arrow
+import Data.Tuple.Extra
 import Data.List
 import System.Console.GetOpt
 

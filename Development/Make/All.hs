@@ -13,7 +13,7 @@ import qualified System.Directory as IO
 import General.Base
 import Data.List
 import Data.Maybe
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Monad
 import System.Process
 import System.Exit

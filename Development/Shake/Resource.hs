@@ -10,7 +10,7 @@ import Data.Function
 import Data.Monoid
 import System.IO.Unsafe
 import Control.Concurrent
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
 import Development.Shake.Pool

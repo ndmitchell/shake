@@ -8,7 +8,7 @@ module Development.Shake.Errors(
     errorMultipleRulesMatch, errorRuleRecursion, errorNoApply,
     ) where
 
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Exception
 import Data.Typeable
 import Data.List

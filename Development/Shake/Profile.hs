@@ -4,7 +4,7 @@ module Development.Shake.Profile(ProfileEntry(..), ProfileTrace(..), writeProfil
 
 import General.Base
 import General.Template
-import Control.Arrow
+import Data.Tuple.Extra
 import Data.Function
 import Data.List
 import Data.Version

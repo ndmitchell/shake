@@ -16,7 +16,7 @@ module Development.Shake.Command(
     addPath, addEnv,
     ) where
 
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception as C

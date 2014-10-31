@@ -2,7 +2,7 @@
 
 module Main(main) where
 
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Monad
 import Data.Char
 import Data.List

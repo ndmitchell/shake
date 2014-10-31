@@ -16,7 +16,7 @@ module General.Base(
     ) where
 
 import Control.Applicative
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Concurrent
 import Control.Exception as E
 import Control.Monad
