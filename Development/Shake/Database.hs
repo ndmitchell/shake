@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
@@ -23,16 +23,17 @@ import Development.Shake.Special
 import Development.Shake.Profile
 import Development.Shake.Monad
 import General.Base
-import General.Concurrent
 import General.String
 import General.Intern as Intern
 
+import Numeric.Extra
 import Control.Applicative
 import Control.Exception
 import Control.Monad
+import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
-import Data.IORef
+import Data.IORef.Extra
 import Data.Maybe
 import Data.List
 import Data.Monoid
@@ -136,7 +137,7 @@ isReady Ready{} = True; isReady _ = False
 type Waiting = Status
 
 afterWaiting :: Waiting -> IO () -> IO ()
-afterWaiting (Waiting (Pending p) _) act = modifyIORef'' p (>> act)
+afterWaiting (Waiting (Pending p) _) act = modifyIORef' p (>> act)
 
 newWaiting :: Maybe Result -> IO Waiting
 newWaiting r = do ref <- newIORef $ return (); return $ Waiting (Pending ref) r
@@ -154,7 +155,7 @@ waitFor ws@(_:_) act = do
         t <- readIORef todo
         when (t /= 0) $ do
             b <- act (t == 1) k
-            writeIORef'' todo $ if b then 0 else t - 1
+            writeIORef' todo $ if b then 0 else t - 1
 
 
 getResult :: Status -> Maybe Result
@@ -191,8 +192,8 @@ build pool Database{..} Ops{..} stack ks continue = do
                 Just i -> return i
                 Nothing -> do
                     (is, i) <- return $ Intern.add k is
-                    writeIORef'' intern is
-                    modifyIORef'' status $ Map.insert i (k,Missing)
+                    writeIORef' intern is
+                    modifyIORef' status $ Map.insert i (k,Missing)
                     return i
 
         whenJust (checkStack is stack) $ \bad -> do
@@ -225,7 +226,7 @@ build pool Database{..} Ops{..} stack ks continue = do
         (#=) :: Id -> (Key, Status) -> IO Status
         i #= (k,v) = do
             s <- readIORef status
-            writeIORef'' status $ Map.insert i (k,v) s
+            writeIORef' status $ Map.insert i (k,v) s
             diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
             return v
 

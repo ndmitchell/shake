@@ -22,15 +22,17 @@ module Development.Shake.Core(
     rulesIO, runAfter
     ) where
 
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Applicative
-import Control.Arrow
-import Control.Concurrent
+import Data.Tuple.Extra
+import Control.Concurrent.Extra
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
 import Data.Typeable
 import Data.Function
+import Data.Either.Extra
+import Numeric.Extra
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -38,6 +40,7 @@ import Data.Monoid
 import Data.IORef
 import System.Directory
 import System.IO
+import System.Timeout
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -299,7 +302,7 @@ actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act clean = do
     cleanup <- Action $ getsRO globalCleanup
     clean <- liftIO $ addCleanup cleanup $ void clean
-    res <- Action $ catchRAW (fromAction act) $ \(e :: SomeException) -> liftIO (clean True) >> throwRAW e
+    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (clean True) >> throwRAW e
     liftIO $ clean runOnSuccess
     return res
 
@@ -349,13 +352,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Got",Just now)]
                 ""
 
-    progressAbort <- newIORef $ return ()
     after <- newIORef []
     absent <- newIORef []
     shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
     withCleanup $ \cleanup -> do
         _ <- addCleanup cleanup $ do
-            join $ readIORef progressAbort
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
         withCapabilities shakeThreads $ do
@@ -366,10 +367,9 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         failure <- fmap (fmap fst) $ readIORef except
                         stats <- progress database
                         return stats{isFailure=failure}
-                writeIORef progressAbort $ do
-                    forkIO $ sleep 1 >> signalBarrier wait ()
+                addCleanup cleanup $ do
                     killThread tid
-                    waitBarrier wait
+                    void $ timeout 1000000 $ waitBarrier wait
 
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
@@ -420,7 +420,7 @@ abbreviate abbrev = f
 
 
 wrapStack :: IO [String] -> IO a -> IO a
-wrapStack stk act = E.catch act $ \(SomeException e) -> case cast e of
+wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
     Just s@ShakeException{} -> throwIO s
     Nothing -> do
         stk <- stk
@@ -786,7 +786,7 @@ newCacheIO act = do
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
-                            liftIO $ signalFence bar $ Left (err :: SomeException)
+                            liftIO $ signalFence bar $ Left err
                             Action $ throwRAW err
                         Right v -> do
                             post <- Action $ getsRW localDepends
@@ -829,4 +829,4 @@ unsafeExtraThread act = Action $ do
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
-    captureRAW $ \continue -> (if isLeft_ res then addPoolPriority else addPool) globalPool $ continue res
+    captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res

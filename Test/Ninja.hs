@@ -6,11 +6,11 @@ import Development.Shake.FilePath
 import qualified Development.Shake.Config as Config
 import System.Directory(copyFile)
 import Control.Monad
-import General.Base
 import Test.Type
 import qualified Data.HashMap.Strict as Map
 import Data.List
 import Data.Maybe
+import System.IO.Extra
 import qualified Start
 import System.Environment
 
@@ -68,7 +68,7 @@ test build obj = do
     run "-f../../Test/Ninja/lint.ninja good --lint"
     runFail "-f../../Test/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
-    res <- fmap (drop 1 . lines) $ captureOutput $ run "-f../../Test/Ninja/compdb.ninja -t compdb cxx @--no-report @--quiet"
+    res <- fmap (drop 1 . lines . fst) $ captureOutput $ run "-f../../Test/Ninja/compdb.ninja -t compdb cxx @--no-report @--quiet"
     want <- fmap lines $ readFile "Test/Ninja/compdb.output"
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b

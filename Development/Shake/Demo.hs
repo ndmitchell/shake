@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Demo tutorial, accessed with --demo
 module Development.Shake.Demo(demo) where
@@ -7,7 +6,7 @@ import Paths_shake
 import Development.Shake.Command
 import General.Base
 
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Monad
 import Data.Char
 import Data.List
@@ -127,7 +126,7 @@ putLine x = putStrLn x >> return x
 
 -- | Replace exceptions with 'False'.
 wrap :: IO Bool -> IO Bool
-wrap act = act `E.catch` \(_ :: SomeException) -> return False
+wrap act = act `catch_` const (return False)
 
 
 -- | Require a condition to be true, or exit with a message.

@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, ViewPatterns #-}
 
 module Development.Ninja.All(runNinja) where
 
@@ -18,7 +18,7 @@ import qualified Data.ByteString.Char8 as BS
 import System.Directory
 import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char

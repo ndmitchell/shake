@@ -8,7 +8,7 @@ module Development.Shake.FilePattern(
 
 import System.FilePath(pathSeparators)
 import Data.List
-import Control.Arrow
+import Data.Tuple.Extra
 import General.Base
 
 

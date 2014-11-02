@@ -6,10 +6,9 @@ module Development.Shake.Pool(
     increasePool
     ) where
 
-import Control.Concurrent
+import Control.Concurrent.Extra
 import Control.Exception
 import Control.Monad
-import General.Concurrent
 import General.Timing
 import qualified Data.HashSet as Set
 import System.IO.Unsafe

@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface, ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Progress tracking
@@ -9,8 +9,8 @@ module Development.Shake.Progress(
     ) where
 
 import Control.Applicative
-import Control.Arrow
-import Control.Exception
+import Data.Tuple.Extra
+import Control.Exception.Extra
 import Control.Monad
 import System.Environment
 import System.Directory
@@ -26,6 +26,7 @@ import Data.Version
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Base
+import Numeric.Extra
 import General.Template
 import System.IO.Unsafe
 import Paths_shake
@@ -290,8 +291,8 @@ jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}
 xterm :: Bool
 xterm = System.IO.Unsafe.unsafePerformIO $
     -- Terminal.app uses "xterm-256color" as its env variable
-    Control.Exception.catch (fmap ("xterm" `isPrefixOf`) $ getEnv "TERM") $
-    \(e :: SomeException) -> return False
+    catch_ (fmap ("xterm" `isPrefixOf`) $ getEnv "TERM") $
+    \e -> return False
 
 
 -- | Set the title of the current console window to the given text. If the

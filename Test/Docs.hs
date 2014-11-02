@@ -39,10 +39,11 @@ main = shaken noTest $ \args obj -> do
 
     obj "Part_*.hs" *> \out -> do
         need ["Test/Docs.hs"] -- so much of the generator is in this module
+        let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
-            fmap (findCodeMarkdown . lines) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
+            fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap findCodeHaddock $ readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
         let f i (Stmt x) | whitelist $ head x = []
                          | otherwise = restmt i $ map undefDots $ trims x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
@@ -51,7 +52,7 @@ main = shaken noTest $ \args obj -> do
             code = concat $ zipWith f [1..] (nub src)
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
-            ["{-# LANGUAGE ConstraintKinds, DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
+            ["{-# LANGUAGE DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Concurrent"
@@ -116,7 +117,7 @@ main = shaken noTest $ \args obj -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
-        () <- cmd "runhaskell -ignore-package=hashmap" ["-i" ++ obj "", obj "Main.hs"]
+        () <- cmd "runhaskell -ignore-package=hashmap -DPORTABLE " ["-i" ++ obj "", obj "Main.hs"]
         writeFile' out ""
 
 
@@ -172,7 +173,7 @@ dropComment xs = onTail dropComment xs
 undefDots o = f o
     where
         f ('.':'.':'.':xs) =
-            (if "cmd" `elem` words o then "[\"\"]" else "undefined") ++
+            (if any (`elem` words o) ["cmd","Development.Shake.cmd"] then "[\"\"]" else "undefined") ++
             (if "..." `isSuffixOf` xs then "" else undefDots xs)
         f xs = onTail f xs
 
@@ -211,6 +212,7 @@ whitelist x | elem x $ words $
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat //* [out] manual/examples.zip manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja " ++
+    "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
     "@ndm_haskell "
     = True
 whitelist x
@@ -264,7 +266,7 @@ whitelist x = x `elem`
     ]
 
 types = words $
-    "MVar IO Monad Monoid String FilePath Data Maybe [String] Eq Typeable Char ExitCode Change " ++
-    "Action Resource Assume FilePattern Lint Verbosity Rules Rule CmdOption CmdResult Int Double"
+    "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
+    "Action Resource Assume FilePattern Lint Verbosity Rules CmdOption Int Double"
 
 dupes = words "main progressSimple rules"

@@ -1,15 +1,11 @@
-{-# LANGUAGE BangPatterns, CPP, ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns, CPP #-}
 
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
-    intToDouble, floatToDouble, doubleToFloat,
     isWindows, getProcessorCount,
-    readFileStrict, readFileUCS2, getEnvMaybe, captureOutput, getExePath,
+    readFileStrict, readFileUCS2, getEnvMaybe, getExePath,
     randomElem,
-    showDP, showTime,
-    modifyIORef'', writeIORef'',
-    isLeft_, isRight_,
-    swap,
+    showTime,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
@@ -17,9 +13,9 @@ module General.Base(
     ) where
 
 import Control.Applicative
-import Control.Arrow
+import Data.Tuple.Extra
 import Control.Concurrent
-import Control.Exception as E
+import Control.Exception.Extra
 import Control.Monad
 import Data.Char
 import Data.IORef
@@ -27,16 +23,16 @@ import Data.List
 import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
-import Numeric
-import System.Directory
+import Numeric.Extra
 import System.Environment
 import System.IO
 import System.IO.Error
 import System.IO.Unsafe
 import System.Random
-import GHC.IO.Handle(hDuplicate,hDuplicateTo)
 import Development.Shake.Classes
+#if __GLASGOW_HASKELL__ >= 704
 import Foreign.C.Types
+#endif
 
 
 ---------------------------------------------------------------------
@@ -80,32 +76,6 @@ sleep x = threadDelay $ ceiling $ x * 1000000
 
 
 ---------------------------------------------------------------------
--- Numeric
-
-intToDouble :: Int -> Double
-intToDouble = fromInteger . toInteger
-
-floatToDouble :: Float -> Double
-floatToDouble = fromRational . toRational
-
-doubleToFloat :: Double -> Float
-doubleToFloat = fromRational . toRational
-
-
----------------------------------------------------------------------
--- Data.IORef
-
--- Two 's because GHC 7.6 has a strict modifyIORef
-modifyIORef'' :: IORef a -> (a -> a) -> IO ()
-modifyIORef'' ref f = do
-    x <- readIORef ref
-    writeIORef'' ref $ f x
-
-writeIORef'' :: IORef a -> a -> IO ()
-writeIORef'' ref !x = writeIORef ref x
-
-
----------------------------------------------------------------------
 -- Data.List
 
 -- | Like 'nub', but the results may be in any order.
@@ -128,10 +98,6 @@ word1 x = second (dropWhile isSpace) $ break isSpace $ dropWhile isSpace x
 ---------------------------------------------------------------------
 -- Data.String
 
-showDP :: RealFloat a => Int -> a -> String
-showDP n x = a ++ (if n > 0 then "." else "") ++ b ++ replicate (n - length b) '0'
-    where (a,b) = second (drop 1) $ break (== '.') $ showFFloat (Just n) x ""
-
 showTime :: Double -> String
 showTime x | x >= 3600 = f (x / 60) "h" "m"
            | x >= 60 = f x "m" "s"
@@ -139,21 +105,6 @@ showTime x | x >= 3600 = f (x / 60) "h" "m"
     where
         f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ m
             where (ms,ss) = round x `divMod` 60
-
-
----------------------------------------------------------------------
--- Data.Either
-
-isLeft_, isRight_ :: Either a b -> Bool
-isLeft_ Left{} = True; isLeft_ Right{} = False
-isRight_ = not . isLeft_
-
-
----------------------------------------------------------------------
--- Data.Tuple
-
-swap :: (a, b) -> (b, a)
-swap (a, b) = (b, a)
 
 
 ---------------------------------------------------------------------
@@ -201,17 +152,6 @@ notM = fmap not
 (||^) a b = do a <- a; if a then return True else b
 (&&^) a b = do a <- a; if a then b else return False
 
-retry :: Int -> IO a -> IO a
-retry i x | i <= 0 = error "retry count must be 1 or more"
-retry 1 x = x
-retry i x = do
-    res <- E.try x
-    case res of
-        Left (e :: SomeException) -> do
-            putStrLn $ "Retrying after exception: " ++ show e
-            retry (i-1) x
-        Right v -> return v
-
 
 ---------------------------------------------------------------------
 -- System.Info
@@ -224,8 +164,10 @@ isWindows = False
 #endif
 
 
+#if __GLASGOW_HASKELL__ >= 704
 -- Use the underlying GHC function
 foreign import ccall getNumberOfProcessors :: IO CInt
+#endif
 
 
 {-# NOINLINE getProcessorCount #-}
@@ -234,10 +176,12 @@ getProcessorCount :: IO Int
 getProcessorCount = let res = unsafePerformIO act in return res
     where
         act =
+#if __GLASGOW_HASKELL__ >= 704
             if rtsSupportsBoundThreads then
                 fromIntegral <$> getNumberOfProcessors
             else
-                handle (\(_ :: SomeException) -> return 1) $ do
+#endif
+                handle_ (const $ return 1) $ do
                     env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
                     case env of
                         Just s | [(i,"")] <- reads s -> return i
@@ -262,23 +206,6 @@ readFileUCS2 name = openFile name ReadMode >>= \h -> do
 
 getEnvMaybe :: String -> IO (Maybe String)
 getEnvMaybe x = catchJust (\x -> if isDoesNotExistError x then Just x else Nothing) (fmap Just $ getEnv x) (const $ return Nothing)
-
-captureOutput :: IO () -> IO String
-captureOutput act = do
-    tmp <- getTemporaryDirectory
-    (f,h) <- openTempFile tmp "hlint"
-    sto <- hDuplicate stdout
-    ste <- hDuplicate stderr
-    hDuplicateTo h stdout
-    hDuplicateTo h stderr
-    hClose h
-    act
-    hDuplicateTo sto stdout
-    hDuplicateTo ste stderr
-    res <- readFile f
-    evaluate $ length res
-    removeFile f
-    return res
 
 withCapabilities :: Int -> IO a -> IO a
 #if __GLASGOW_HASKELL__ >= 706

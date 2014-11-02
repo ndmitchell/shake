@@ -1,8 +1,9 @@
+{-# OPTIONS_GHC -fwarn-unused-binds -fwarn-unused-imports #-}
 
 import Data.Char
 import Data.Function
-import System.Directory
-import System.Environment
+import System.Directory.Extra
+import System.Environment.Extra
 import System.Time.Extra
 import Data.List
 import Control.Exception.Extra
@@ -21,74 +22,58 @@ main = do
     -- grab ninja
     system_ "git clone https://github.com/martine/ninja"
     system_ "cd ninja && ./bootstrap.py"
-    system_ "mkdir bin"
-    system_ "cp ninja/ninja nin"
-    setCurrentDirectory "ninja"
+    copyFile "ninja/ninja" "nin"
 
-    replicateM_ 3 $ do
-        (ninjaVer, _) <- duration $ system_ "../nin --version"
-        (shakeVer, _) <- duration $ system_ "shake --version"
-        putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
+    withCurrentDirectory "ninja" $ do
 
-    system_ "shake --version; shake -C does_not_exist; echo end" -- check for #22
+        replicateM_ 3 $ do
+            (ninjaVer, _) <- duration $ system_ "../nin --version"
+            (shakeVer, _) <- duration $ system_ "shake --version"
+            putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
 
-    retry 3 $ do
+        system_ "shake --version; shake -C does_not_exist; echo end" -- check for #22
 
-        -- time Ninja
-        system_ "../nin -t clean"
-        (ninjaFull, _) <- duration $ system_ "../nin -j3 -d stats"
-        ninjaProfile "build/.ninja_log"
-        putStrLn =<< readFile "build/.ninja_log"
-        (ninjaZero, _) <- duration $ system_ "../nin -j3 -d stats"
+        retry 3 $ do
 
-        -- time Shake
-        system_ "../nin -t clean"
-        (shakeFull, _) <- duration $ system_ "shake -j3 --quiet --timings"
-        system_ "shake --no-build --report=-"
-        (shakeZero, _) <- duration $ system_ "shake -j3 --quiet --timings"
+            -- time Ninja
+            system_ "../nin -t clean"
+            (ninjaFull, _) <- duration $ system_ "../nin -j3 -d stats"
+            ninjaProfile "build/.ninja_log"
+            putStrLn =<< readFile "build/.ninja_log"
+            (ninjaZero, _) <- duration $ system_ "../nin -j3 -d stats"
 
-        -- Diagnostics
-        system_ "ls -l .shake* build/.ninja*"
-        system_ "shake -VV"
-        (shakeNone, _) <- duration $ system_ "shake --always-make --skip-commands --timings"
-        putStrLn $ "--always-make --skip-commands took " ++ ms shakeNone
+            -- time Shake
+            system_ "../nin -t clean"
+            (shakeFull, _) <- duration $ system_ "shake -j3 --quiet --timings"
+            system_ "shake --no-build --report=-"
+            (shakeZero, _) <- duration $ system_ "shake -j3 --quiet --timings"
 
-        putStrLn $ "Ninja was " ++ ms ninjaFull ++ " then " ++ ms ninjaZero
-        putStrLn $ "Shake was " ++ ms shakeFull ++ " then " ++ ms shakeZero
+            -- Diagnostics
+            system_ "ls -l .shake* build/.ninja*"
+            system_ "shake -VV"
+            (shakeNone, _) <- duration $ system_ "shake --always-make --skip-commands --timings"
+            putStrLn $ "--always-make --skip-commands took " ++ ms shakeNone
 
-        when (ninjaFull < shakeFull) $
-            error "ERROR: Ninja build was faster than Shake"
+            putStrLn $ "Ninja was " ++ ms ninjaFull ++ " then " ++ ms ninjaZero
+            putStrLn $ "Shake was " ++ ms shakeFull ++ " then " ++ ms shakeZero
 
-        when (ninjaZero + 0.1 < shakeZero) $
-            error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
+            when (ninjaFull < shakeFull) $
+                error "ERROR: Ninja build was faster than Shake"
 
-    setCurrentDirectory ".."
-
-    {-
-    -- Don't bother profiling, we only get under 25 ticks, which doesn't say anything useful
-    system_ "ghc -threaded -rtsopts -isrc -i. Paths.hs Main.hs --make -O -prof -auto-all -caf-all"
-    setCurrentDirectory "ninja"
-    putStrLn "== PROFILE BUILDING FROM SCRATCH =="
-    system_ "rm .shake*"
-    system_ "../Main --skip-commands +RTS -p -V0.001"
-    system_ "head -n32 Main.prof"
-
-    putStrLn "== PROFILE BUILDING NOTHING =="
-    system_ "../Main +RTS -p -V0.001"
-    system_ "head -n32 Main.prof"
-    setCurrentDirectory ".."
-    -}
+            when (ninjaZero + 0.1 < shakeZero) $
+                error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
     createDirectoryIfMissing True "temp"
-    setCurrentDirectory "temp"
-    system_ "shake --demo --keep-going"
-    setCurrentDirectory ".."
+    withCurrentDirectory "temp" $
+        system_ "shake --demo --keep-going"
 
-    ver <- do
-        src <- readFile "shake.cabal"
-        return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
-    forM_ requiresShake $ \x ->
-        retry 3 $ system_ $ "cabal install " ++ x ++ " --constraint=shake==" ++ ver
+    ghcver <- lookupEnv "GHCVER"
+    when (ghcver >= Just "7.6") $ do
+        ver <- do
+            src <- readFile "shake.cabal"
+            return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
+        forM_ requiresShake $ \x ->
+            retry 3 $ system_ $ "cabal install " ++ x ++ " --constraint=shake==" ++ ver
 
 ninjaProfile :: FilePath -> IO ()
 ninjaProfile src = do

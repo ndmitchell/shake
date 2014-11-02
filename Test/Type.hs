@@ -8,7 +8,7 @@ import General.String
 import Development.Shake.FileInfo
 import Development.Shake.FilePath
 
-import Control.Exception hiding (assert)
+import Control.Exception.Extra hiding (assert)
 import Control.Monad
 import Data.Char
 import Data.List
@@ -128,9 +128,9 @@ assertContentsUnordered file xs = assertContentsOn (unlines . sort . lines) file
 
 assertException :: [String] -> IO () -> IO ()
 assertException parts act = do
-    res <- try act
+    res <- try_ act
     case res of
-        Left err -> let s = show (err :: SomeException) in forM_ parts $ \p ->
+        Left err -> let s = show err in forM_ parts $ \p ->
             assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
         Right _ -> error "Expected an exception but succeeded"
 

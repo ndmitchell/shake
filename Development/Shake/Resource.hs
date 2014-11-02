@@ -5,12 +5,11 @@ module Development.Shake.Resource(
     ) where
 
 import General.Base
-import General.Concurrent
 import Data.Function
 import Data.Monoid
 import System.IO.Unsafe
-import Control.Concurrent
-import Control.Arrow
+import Control.Concurrent.Extra
+import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
 import Development.Shake.Pool
