@@ -5,10 +5,9 @@ module General.Base(
     getProcessorCount,
     randomElem,
     showTime,
-    fastNub, showQuote, word1
+    fastNub, showQuote
     ) where
 
-import Data.Tuple.Extra
 import Control.Concurrent
 import Control.Exception.Extra
 import Data.Char
@@ -80,10 +79,6 @@ fastNub = f Set.empty
 showQuote :: String -> String
 showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
              | otherwise = xs
-
-
-word1 :: String -> (String, String)
-word1 x = second (dropWhile isSpace) $ break isSpace $ dropWhile isSpace x
 
 
 ---------------------------------------------------------------------

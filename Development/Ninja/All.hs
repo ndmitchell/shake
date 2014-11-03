@@ -10,7 +10,6 @@ import Development.Shake.ByteString
 import Development.Shake.Errors
 import Development.Shake.Rules.File
 import Development.Shake.Rules.OrderOnly
-import General.Base
 import General.Timing
 import qualified Data.ByteString as BS8
 import qualified Data.ByteString.Char8 as BS
@@ -22,6 +21,7 @@ import Data.Tuple.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
+import Data.List.Extra
 import System.Info.Extra
 
 
