@@ -46,7 +46,7 @@ import qualified Test.Unicode as Unicode
 import qualified Test.Util as Util
 import qualified Test.Verbosity as Verbosity
 
-import qualified Start as Start
+import qualified Start
 
 
 fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetime]
