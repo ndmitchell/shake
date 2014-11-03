@@ -48,6 +48,7 @@ Several open-source projects make key use of Shake:
 * [ToolCabal](https://github.com/TiborIntelSoft/ToolCabal) is a rewrite of [Cabal](https://www.haskell.org/cabal/) using Shake as the dependency engine.
 * [ghc-make](https://github.com/ndmitchell/ghc-make) uses Shake to build programs with GHC, speeding up checking if the build is clean.
 * [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) is in the process of migrating to a Shake-based build system.
+* [shake-install](https://github.com/alphaHeavy/shake-install) helps build a set of cabal packages in the correct order.
 
 And finally, here are a few tutorials and blog posts:
 
