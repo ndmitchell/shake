@@ -95,7 +95,7 @@ showTime x | x >= 3600 = f (x / 60) "h" "m"
            | x >= 60 = f x "m" "s"
            | otherwise = showDP 2 x ++ "s"
     where
-        f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ m
+        f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ s
             where (ms,ss) = round x `divMod` 60
 
 
