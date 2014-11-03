@@ -77,7 +77,7 @@ source-repository head
     location: https://github.com/ndmitchell/shake.git
 
 flag portable
-    default: True
+    default: False
     description: Obtain FileTime using portable functions
 
 library
