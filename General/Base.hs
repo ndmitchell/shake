@@ -5,7 +5,6 @@ module General.Base(
     getProcessorCount,
     randomElem,
     showTime,
-    liftA2',
     fastNub, showQuote, word1
     ) where
 
@@ -98,13 +97,6 @@ showTime x | x >= 3600 = f (x / 60) "h" "m"
     where
         f x m s = show ms ++ m ++ ['0' | ss < 10] ++ show ss ++ m
             where (ms,ss) = round x `divMod` 60
-
-
----------------------------------------------------------------------
--- Control.Monad
-
-liftA2' :: Applicative m => m a -> m b -> (a -> b -> c) -> m c
-liftA2' a b f = liftA2 f a b
 
 
 ---------------------------------------------------------------------

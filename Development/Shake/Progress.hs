@@ -143,6 +143,9 @@ showMinSec :: Int -> String
 showMinSec secs = (if m == 0 then "" else show m ++ "m" ++ ['0' | s < 10]) ++ show s ++ "s"
     where (m,s) = divMod secs 60
 
+liftA2' :: Applicative m => m a -> m b -> (a -> b -> c) -> m c
+liftA2' a b f = liftA2 f a b
+
 
 -- | return (number of seconds, percentage, explanation)
 message :: Mealy (Double, Progress) (Double, Progress) -> Mealy (Double, Progress) (Double, Double, String)
