@@ -18,7 +18,7 @@ import Data.List
 import Data.Time
 import qualified Data.HashSet as Set
 import Numeric.Extra
-import System.Environment
+import System.Environment.Extra
 import System.IO.Unsafe
 import System.Random
 import Development.Shake.Classes
