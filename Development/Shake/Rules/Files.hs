@@ -10,7 +10,7 @@ import Data.Maybe
 import System.Directory
 
 import Development.Shake.Core hiding (trackAllow)
-import General.Base
+import General.Extra
 import General.String
 import Development.Shake.Classes
 import Development.Shake.Rules.File

@@ -12,7 +12,7 @@ import Data.Maybe
 import System.Environment
 import System.Exit
 import System.Random
-import General.Base
+import General.Extra
 import qualified System.IO.Extra as IO
 import System.Time.Extra
 

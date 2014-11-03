@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns, CPP #-}
 
-module General.Base(
+module General.Extra(
     getProcessorCount,
     randomElem,
     fastNub,

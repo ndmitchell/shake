@@ -53,7 +53,7 @@ import Development.Shake.Types
 import Development.Shake.Errors
 import Development.Shake.Special
 import General.Timing
-import General.Base
+import General.Extra
 import General.Concurrent
 import General.Cleanup
 import General.String

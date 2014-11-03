@@ -7,7 +7,7 @@ import System.Directory as IO
 import Data.List
 import Data.Maybe
 import Control.Monad
-import General.Base
+import General.Extra
 
 
 main = shaken test $ \args obj -> do

@@ -144,11 +144,11 @@ library
         Development.Shake.Storage
         Development.Shake.Types
         Development.Shake.Value
-        General.Base
         General.Bilist
         General.Binary
         General.Cleanup
         General.Concurrent
+        General.Extra
         General.Intern
         General.String
         General.Template

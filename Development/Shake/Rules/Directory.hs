@@ -22,7 +22,7 @@ import Development.Shake.Core
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
-import General.Base
+import General.Extra
 
 
 newtype DoesFileExistQ = DoesFileExistQ FilePath
