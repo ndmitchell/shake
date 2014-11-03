@@ -10,13 +10,12 @@ module Development.Shake.Storage(
     ) where
 
 import General.Binary
-import General.Base
 import Development.Shake.Types
 import General.Timing
 
 import Data.Tuple.Extra
 import Control.Exception.Extra
-import Control.Monad
+import Control.Monad.Extra
 import Control.Concurrent.Extra
 import Data.Binary.Get
 import Data.Binary.Put

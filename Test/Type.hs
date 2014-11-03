@@ -9,7 +9,7 @@ import Development.Shake.FileInfo
 import Development.Shake.FilePath
 
 import Control.Exception.Extra hiding (assert)
-import Control.Monad
+import Control.Monad.Extra
 import Data.Char
 import Data.List
 import Data.Maybe

@@ -20,7 +20,7 @@ import Data.Tuple.Extra
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception.Extra as C
-import Control.Monad
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Char
 import Data.Either
@@ -38,7 +38,6 @@ import Development.Shake.Core
 import Development.Shake.FilePath
 import Development.Shake.Types
 import Development.Shake.Rules.File
-import General.Base
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 

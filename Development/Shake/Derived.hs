@@ -6,7 +6,7 @@ module Development.Shake.Derived(
     writeFile', writeFileLines, writeFileChanged
     ) where
 
-import Control.Monad
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Process
 import System.Directory
@@ -17,7 +17,6 @@ import Development.Shake.Core
 import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Types
-import General.Base
 import qualified Data.ByteString as BS
 
 

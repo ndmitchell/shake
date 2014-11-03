@@ -5,8 +5,7 @@ module General.Base(
     getProcessorCount,
     randomElem,
     showTime,
-    whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
-    ifM, notM, (&&^), (||^),
+    liftA2',
     fastNub, showQuote, word1,
     withCapabilities
     ) where
@@ -15,11 +14,9 @@ import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent
 import Control.Exception.Extra
-import Control.Monad
 import Data.Char
 import Data.IORef
 import Data.List
-import Data.Maybe
 import Data.Time
 import qualified Data.HashSet as Set
 import Numeric.Extra
@@ -107,47 +104,8 @@ showTime x | x >= 3600 = f (x / 60) "h" "m"
 ---------------------------------------------------------------------
 -- Control.Monad
 
-whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
-whenJust (Just a) f = f a
-whenJust Nothing f = return ()
-
-loopM :: Monad m => (a -> m (Either a b)) -> a -> m b
-loopM act x = do
-    res <- act x
-    case res of
-        Left x -> loopM act x
-        Right v -> return v
-
-whileM :: Monad m => m Bool -> m ()
-whileM act = do
-    b <- act
-    when b $ whileM act
-
-concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
-concatMapM f xs = liftM concat $ mapM f xs
-
-partitionM :: Monad m => (a -> m Bool) -> [a] -> m ([a], [a])
-partitionM f [] = return ([], [])
-partitionM f (x:xs) = do
-    t <- f x
-    (a,b) <- partitionM f xs
-    return $ if t then (x:a,b) else (a,x:b)
-
-mapMaybeM :: Monad m => (a -> m (Maybe b)) -> [a] -> m [b]
-mapMaybeM f xs = liftM catMaybes $ mapM f xs
-
 liftA2' :: Applicative m => m a -> m b -> (a -> b -> c) -> m c
 liftA2' a b f = liftA2 f a b
-
-ifM :: Monad m => m Bool -> m a -> m a -> m a
-ifM b t f = do b <- b; if b then t else f
-
-notM :: Functor m => m Bool -> m Bool
-notM = fmap not
-
-(||^), (&&^) :: Monad m => m Bool -> m Bool -> m Bool
-(||^) a b = do a <- a; if a then return True else b
-(&&^) a b = do a <- a; if a then b else return False
 
 
 ---------------------------------------------------------------------

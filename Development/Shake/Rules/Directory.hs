@@ -10,7 +10,7 @@ module Development.Shake.Rules.Directory(
     ) where
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Binary

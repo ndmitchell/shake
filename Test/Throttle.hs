@@ -5,7 +5,8 @@ import Development.Shake
 import General.Base
 import Development.Shake.FilePath
 import Test.Type
-import Control.Monad
+import Control.Exception.Extra hiding (assert)
+import Control.Monad.Extra
 
 
 main = shaken test $ \args obj -> do

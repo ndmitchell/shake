@@ -26,7 +26,7 @@ import Control.Exception.Extra
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra
-import Control.Monad
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
 import Data.Typeable

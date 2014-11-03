@@ -4,7 +4,6 @@ module Test.Errors(main) where
 import Development.Shake
 import Test.Type
 import Control.Monad
-import General.Base
 import Control.Concurrent
 import Control.Exception.Extra hiding (assert)
 import System.Directory as IO

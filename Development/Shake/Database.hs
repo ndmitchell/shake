@@ -29,7 +29,7 @@ import General.Intern as Intern
 import Numeric.Extra
 import Control.Applicative
 import Control.Exception
-import Control.Monad
+import Control.Monad.Extra
 import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
