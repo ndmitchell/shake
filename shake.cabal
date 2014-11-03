@@ -161,7 +161,7 @@ executable shake
     main-is: Main.hs
     ghc-options: -threaded -rtsopts
     if impl(ghc >= 7.4)
-        ghc-options: -with-rtsopts="-I0 -qg -qb"
+        ghc-options: "-with-rtsopts=-I0 -qg -qb"
     else
         -- -qg/-qb segfaults in GHC 7.2
         ghc-options: -with-rtsopts=-I0
