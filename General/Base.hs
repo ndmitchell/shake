@@ -3,7 +3,8 @@
 module General.Base(
     getProcessorCount,
     randomElem,
-    fastNub, showQuote
+    fastNub,
+    showQuote
     ) where
 
 import Control.Concurrent
