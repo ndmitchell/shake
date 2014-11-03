@@ -6,8 +6,7 @@ module General.Base(
     randomElem,
     showTime,
     liftA2',
-    fastNub, showQuote, word1,
-    withCapabilities
+    fastNub, showQuote, word1
     ) where
 
 import Control.Applicative
@@ -135,19 +134,6 @@ getProcessorCount = let res = unsafePerformIO act in return res
                         _ -> do
                             src <- readFile "/proc/cpuinfo"
                             return $ length [() | x <- lines src, "processor" `isPrefixOf` x]
-
-
----------------------------------------------------------------------
--- System.IO
-
-withCapabilities :: Int -> IO a -> IO a
-#if __GLASGOW_HASKELL__ >= 706
-withCapabilities new act | rtsSupportsBoundThreads = do
-    old <- getNumCapabilities
-    if old == new then act else
-        bracket_ (setNumCapabilities new) (setNumCapabilities old) act
-#endif
-withCapabilities new act = act
 
 
 ---------------------------------------------------------------------

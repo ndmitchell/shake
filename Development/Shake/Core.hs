@@ -359,7 +359,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
         _ <- addCleanup cleanup $ do
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
-        withCapabilities shakeThreads $ do
+        withNumCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
                 tid <- forkIO $ flip finally (signalBarrier wait ()) $
