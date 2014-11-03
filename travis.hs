@@ -28,7 +28,11 @@ main = do
 
         replicateM_ 3 $ do
             (ninjaVer, _) <- duration $ system_ "../nin --version"
+            print "before running shake --version --verbose"
+            (shakeVer, _) <- duration $ system_ "shake --version --verbose"
+            print "before running shake --version"
             (shakeVer, _) <- duration $ system_ "shake --version"
+            print "after running shake --version"
             putStrLn $ "--version for Ninja is " ++ ms ninjaVer ++ ", for Shake is " ++ ms shakeVer
 
         system_ "shake --version; shake -C does_not_exist; echo end" -- check for #22
