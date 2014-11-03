@@ -4,7 +4,7 @@ module Main(main) where
 import Control.Exception
 import Control.Monad
 import Data.Maybe
-import System.Environment
+import System.Environment.Extra
 import General.Timing
 import Development.Shake.FileInfo
 import General.String
