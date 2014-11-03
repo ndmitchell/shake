@@ -3,7 +3,7 @@
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
     isWindows, getProcessorCount,
-    readFileStrict, readFileUCS2, getEnvMaybe, getExePath,
+    readFileStrict, getEnvMaybe, getExePath,
     randomElem,
     showTime,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
@@ -198,11 +198,6 @@ readFileStrict file = withFile file ReadMode $ \h -> do
     src <- hGetContents h
     evaluate $ length src
     return src
-
-readFileUCS2 :: FilePath -> IO String
-readFileUCS2 name = openFile name ReadMode >>= \h -> do
-    hSetEncoding h utf16
-    hGetContents h
 
 getEnvMaybe :: String -> IO (Maybe String)
 getEnvMaybe x = catchJust (\x -> if isDoesNotExistError x then Just x else Nothing) (fmap Just $ getEnv x) (const $ return Nothing)

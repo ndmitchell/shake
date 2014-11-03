@@ -30,7 +30,7 @@ import Foreign.C.Error
 import System.Directory
 import System.Environment
 import System.Exit
-import System.IO
+import System.IO.Extra
 import System.Process
 
 import Development.Shake.Core
@@ -146,7 +146,7 @@ trackerFiles dir = do
     files <- getDirectoryContents dir
     let f typ = do
             files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file -> do
-                xs <- readFileUCS2 $ dir </> file
+                xs <- readFileEncoding utf16 $ dir </> file
                 return $ filter (not . isPrefixOf "." . takeFileName) . mapMaybe (stripPrefix pre) $ lines xs
             fmap nub $ mapMaybeM correctCase $ nub $ concat files
     liftM2 (,) (f "read") (f "write")
