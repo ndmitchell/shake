@@ -8,7 +8,6 @@ module General.Base(
     fastNub, showQuote, word1
     ) where
 
-import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent
 import Control.Exception.Extra
@@ -116,7 +115,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
         act =
 #if __GLASGOW_HASKELL__ >= 704
             if rtsSupportsBoundThreads then
-                fromIntegral <$> getNumberOfProcessors
+                fmap fromIntegral $ getNumberOfProcessors
             else
 #endif
                 handle_ (const $ return 1) $ do
