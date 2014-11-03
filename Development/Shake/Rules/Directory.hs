@@ -16,6 +16,7 @@ import Data.Maybe
 import Data.Binary
 import Data.List
 import qualified System.Directory as IO
+import qualified System.Environment.Extra as IO
 
 import Development.Shake.Core
 import Development.Shake.Classes
@@ -111,7 +112,7 @@ instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
     storedValue _ (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
 
 instance Rule GetEnvQ GetEnvA where
-    storedValue _ (GetEnvQ x) = fmap (Just . GetEnvA) $ getEnvMaybe x
+    storedValue _ (GetEnvQ x) = fmap (Just . GetEnvA) $ IO.lookupEnv x
 
 instance Rule GetDirectoryQ GetDirectoryA where
     storedValue _ x = fmap Just $ getDir x
@@ -127,7 +128,7 @@ defaultRuleDirectory = do
     rule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
     rule $ \(GetEnvQ x) -> Just $
-        liftIO $ fmap GetEnvA $ getEnvMaybe x
+        liftIO $ fmap GetEnvA $ IO.lookupEnv x
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a

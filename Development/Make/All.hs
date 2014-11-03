@@ -2,7 +2,6 @@
 
 module Development.Make.All(runMakefile) where
 
-import System.Environment
 import Development.Shake hiding (addEnv)
 import Development.Shake.FilePath
 import Development.Make.Parse
@@ -10,13 +9,13 @@ import Development.Make.Env
 import Development.Make.Rules
 import Development.Make.Type
 import qualified System.Directory as IO
-import General.Base
 import Data.List
 import Data.Maybe
 import Data.Tuple.Extra
 import Control.Monad
 import System.Process
 import System.Exit
+import System.Environment.Extra
 import Control.Monad.Trans.State.Strict
 
 
@@ -121,7 +120,7 @@ vpath (x:xs) y = do
 
 defaultEnv :: IO Env
 defaultEnv = do
-    exePath <- getExePath
+    exePath <- getExecutablePath
     env <- getEnvironment
     cur <- IO.getCurrentDirectory
     return $ newEnv $

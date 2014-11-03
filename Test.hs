@@ -5,7 +5,6 @@ import Control.Exception
 import Control.Monad
 import Data.Maybe
 import System.Environment
-import General.Base
 import General.Timing
 import Development.Shake.FileInfo
 import General.String
@@ -70,7 +69,7 @@ main :: IO ()
 main = do
     resetTimings
     xs <- getArgs
-    exePath <- getExePath
+    exePath <- getExecutablePath
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
         _ | null xs -> do
             putStrLn "******************************************************************"

@@ -3,7 +3,7 @@
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
     isWindows, getProcessorCount,
-    readFileStrict, getEnvMaybe, getExePath,
+    readFileStrict,
     randomElem,
     showTime,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
@@ -26,7 +26,6 @@ import qualified Data.HashSet as Set
 import Numeric.Extra
 import System.Environment
 import System.IO
-import System.IO.Error
 import System.IO.Unsafe
 import System.Random
 import Development.Shake.Classes
@@ -182,7 +181,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
             else
 #endif
                 handle_ (const $ return 1) $ do
-                    env <- getEnvMaybe "NUMBER_OF_PROCESSORS"
+                    env <- lookupEnv "NUMBER_OF_PROCESSORS"
                     case env of
                         Just s | [(i,"")] <- reads s -> return i
                         _ -> do
@@ -199,8 +198,6 @@ readFileStrict file = withFile file ReadMode $ \h -> do
     evaluate $ length src
     return src
 
-getEnvMaybe :: String -> IO (Maybe String)
-getEnvMaybe x = catchJust (\x -> if isDoesNotExistError x then Just x else Nothing) (fmap Just $ getEnv x) (const $ return Nothing)
 
 withCapabilities :: Int -> IO a -> IO a
 #if __GLASGOW_HASKELL__ >= 706
@@ -210,14 +207,6 @@ withCapabilities new act | rtsSupportsBoundThreads = do
         bracket_ (setNumCapabilities new) (setNumCapabilities old) act
 #endif
 withCapabilities new act = act
-
-
-getExePath :: IO FilePath
-#if __GLASGOW_HASKELL__ >= 706
-getExePath = getExecutablePath
-#else
-getExePath = getProgName
-#endif
 
 
 ---------------------------------------------------------------------
