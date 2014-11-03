@@ -18,6 +18,7 @@ import System.Directory
 import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
 import Data.Tuple.Extra
+import Control.Exception.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
@@ -178,11 +179,10 @@ applyRspfile env act = do
     rspfile_content <- liftIO $ askVar env $ BS.pack "rspfile_content"
     if rspfile == "" then
         act
-     else do
-        liftIO $ BS.writeFile rspfile rspfile_content
-        res <- act
-        liftIO $ removeFile rspfile
-        return res
+     else
+        flip actionFinally (ignore $ removeFile rspfile) $ do
+            liftIO $ BS.writeFile rspfile rspfile_content
+            act
 
 
 parseShowIncludes :: Str -> Str -> [FileStr]

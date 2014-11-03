@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Ensure Ninja response files are always deleted
     Fix incorrect units when showing profile to the console
     Require the extra library
     #178, make --help show the current executable name
