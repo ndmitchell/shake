@@ -4,8 +4,8 @@ module General.Timing(resetTimings, addTiming, printTimings) where
 import Data.IORef
 import Data.Time
 import System.IO.Unsafe
-import General.Base
 import Numeric.Extra
+import System.Time.Extra
 
 
 {-# NOINLINE timings #-}
@@ -44,7 +44,7 @@ showTimings stop times = showGap $
         progress x = let i = floor $ x * 25 // mx in replicate i '=' ++ replicate (25-i) ' '
         mx = maximum $ map snd xs
         sm = sum $ map snd xs
-        xs = [ (name, stop `diffTime` start)
+        xs = [ (name, stop `subtractTime` start)
              | ((start, name), stop) <- zip times $ map fst (drop 1 times) ++ [stop]]
 
 

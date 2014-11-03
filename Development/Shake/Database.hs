@@ -22,7 +22,6 @@ import Development.Shake.Types
 import Development.Shake.Special
 import Development.Shake.Profile
 import Development.Shake.Monad
-import General.Base
 import General.String
 import General.Intern as Intern
 
@@ -37,6 +36,7 @@ import Data.IORef.Extra
 import Data.Maybe
 import Data.List
 import Data.Monoid
+import System.Time.Extra
 
 type Map = Map.HashMap
 
@@ -177,13 +177,13 @@ data Ops = Ops
         -- ^ Given a Key, find the value stored on disk
     ,equal :: Key -> Value -> Value -> EqualCost
         -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Duration, [Trace]))
+    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Seconds, [Trace]))
         -- ^ Given a stack and a key, either raise an exception or successfully build it
     }
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Duration,Depends,[Value]))
+build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool Database{..} Ops{..} stack ks continue = do
     join $ withLock lock $ do
         is <- forM ks $ \k -> do

@@ -3,7 +3,6 @@ module Test.Type(sleep, module Test.Type) where
 
 import Development.Shake hiding (copyFileChanged)
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
-import General.Base
 import General.String
 import Development.Shake.FileInfo
 import Development.Shake.FilePath
@@ -19,6 +18,7 @@ import System.Environment
 import System.Random
 import System.Console.GetOpt
 import System.IO
+import System.Time.Extra
 
 
 shaken

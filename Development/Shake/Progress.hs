@@ -25,11 +25,11 @@ import Data.Monoid
 import Data.Version
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import General.Base
 import Numeric.Extra
 import General.Template
 import System.IO.Unsafe
 import Paths_shake
+import System.Time.Extra
 
 #ifdef mingw32_HOST_OS
 

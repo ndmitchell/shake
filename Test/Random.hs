@@ -14,6 +14,7 @@ import System.Exit
 import System.Random
 import General.Base
 import qualified System.IO.Extra as IO
+import System.Time.Extra
 
 
 inputRange = [1..10]

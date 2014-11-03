@@ -40,7 +40,7 @@ import Data.Monoid
 import Data.IORef
 import System.Directory
 import System.IO.Extra
-import System.Timeout
+import System.Time.Extra
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -266,7 +266,7 @@ data Global = Global
     {globalDatabase :: Database
     ,globalPool :: Pool
     ,globalCleanup :: Cleanup
-    ,globalTimestamp :: IO Time
+    ,globalTimestamp :: IO Seconds
     ,globalRules :: Map.HashMap TypeRep (RuleInfo Action)
     ,globalOutput :: Verbosity -> String -> IO ()
     ,globalOptions  :: ShakeOptions
@@ -286,7 +286,7 @@ data Local = Local
     ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
     -- mutable local variables
     ,localDepends :: [Depends] -- built up in reverse
-    ,localDiscount :: !Duration
+    ,localDiscount :: !Seconds
     ,localTraces :: [Trace] -- in reverse
     ,localTrackAllows :: [Key -> Bool]
     ,localTrackUsed :: [Key]

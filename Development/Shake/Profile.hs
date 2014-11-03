@@ -2,7 +2,6 @@
 
 module Development.Shake.Profile(ProfileEntry(..), ProfileTrace(..), writeProfile) where
 
-import General.Base
 import General.Template
 import Data.Tuple.Extra
 import Data.Function
@@ -11,6 +10,7 @@ import Data.Version
 import System.FilePath
 import Numeric.Extra
 import Paths_shake
+import System.Time.Extra
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
 
@@ -36,15 +36,15 @@ generateSummary xs =
     ["* This database has tracked " ++ show (maximum (0 : map prfChanged xs) + 1) ++ " runs."
     ,let f = show . length in "* There are " ++ f xs ++ " rules (" ++ f ls ++ " rebuilt in the last run)."
     ,let f = show . sum . map (length . prfTraces) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
-    ,"* The total (unparallelised) time is " ++ showTime (sum $ map prfExecution xs) ++
-        " of which " ++ showTime (sum $ map prfTime $ concatMap prfTraces xs) ++ " is traced commands."
-    ,let f xs = if null xs then "0s" else (\(a,b) -> showTime a ++ " (" ++ b ++ ")") $ maximumBy (compare `on` fst) xs in
+    ,"* The total (unparallelised) time is " ++ showDuration (sum $ map prfExecution xs) ++
+        " of which " ++ showDuration (sum $ map prfTime $ concatMap prfTraces xs) ++ " is traced commands."
+    ,let f xs = if null xs then "0s" else (\(a,b) -> showDuration a ++ " (" ++ b ++ ")") $ maximumBy (compare `on` fst) xs in
         "* The longest rule takes " ++ f (map (prfExecution &&& prfName) xs) ++
         ", and the longest traced command takes " ++ f (map (prfTime &&& prfCommand) $ concatMap prfTraces xs) ++ "."
     ,let sumLast = sum $ map prfTime $ concatMap prfTraces ls
          maxStop = maximum $ 0 : map prfStop (concatMap prfTraces ls) in
         "* Last run gave an average parallelism of " ++ showDP 2 (if maxStop == 0 then 0 else sumLast / maxStop) ++
-        " times over " ++ showTime(maxStop) ++ "."
+        " times over " ++ showDuration(maxStop) ++ "."
     ]
     where ls = filter ((==) 0 . prfBuilt) xs
 

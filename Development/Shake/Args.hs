@@ -10,7 +10,6 @@ import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
-import General.Base
 import General.Timing
 
 import Data.Tuple.Extra
@@ -27,6 +26,7 @@ import System.Console.GetOpt
 import System.Directory
 import System.Environment
 import System.Exit
+import System.Time.Extra
 
 
 -- | Run a build system using command line arguments for configuration.

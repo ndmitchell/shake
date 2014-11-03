@@ -2,11 +2,11 @@
 module Test.Throttle(main) where
 
 import Development.Shake
-import General.Base
 import Development.Shake.FilePath
 import Test.Type
 import Control.Exception.Extra hiding (assert)
 import Control.Monad.Extra
+import System.Time.Extra
 
 
 main = shaken test $ \args obj -> do

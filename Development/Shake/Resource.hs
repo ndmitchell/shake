@@ -4,7 +4,6 @@ module Development.Shake.Resource(
     Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
     ) where
 
-import General.Base
 import Data.Function
 import Data.Monoid
 import System.IO.Unsafe
@@ -13,6 +12,7 @@ import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
 import Development.Shake.Pool
+import System.Time.Extra
 
 
 {-# NOINLINE resourceIds #-}
@@ -103,7 +103,7 @@ newResourceIO name mx = do
 
 
 -- call a function after a certain delay
-waiter :: Duration -> IO () -> IO ()
+waiter :: Seconds -> IO () -> IO ()
 waiter period act = void $ forkIO $ do
     sleep period
     act
