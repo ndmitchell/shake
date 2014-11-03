@@ -96,7 +96,7 @@ library
         time,
         random,
         transformers >= 0.2,
-        extra >= 0.6,
+        extra >= 0.7,
         deepseq >= 1.1
 
     if flag(portable)
@@ -179,7 +179,7 @@ executable shake
         time,
         random,
         transformers >= 0.2,
-        extra >= 0.6,
+        extra >= 0.7,
         deepseq >= 1.1
 
     if flag(portable)
@@ -218,7 +218,7 @@ test-suite shake-test
         random,
         transformers >= 0.2,
         deepseq >= 1.1,
-        extra >= 0.6,
+        extra >= 0.7,
         QuickCheck >= 2.0
 
     if flag(portable)
