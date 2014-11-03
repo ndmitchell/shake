@@ -39,7 +39,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.IORef
 import System.Directory
-import System.IO
+import System.IO.Extra
 import System.Timeout
 
 import Development.Shake.Classes
@@ -404,7 +404,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
 
 lineBuffering :: IO a -> IO a
-lineBuffering = withBufferMode stdout LineBuffering . withBufferMode stderr LineBuffering
+lineBuffering = withBuffering stdout LineBuffering . withBuffering stderr LineBuffering
 
 
 abbreviate :: [(String,String)] -> String -> String

@@ -9,7 +9,7 @@ module General.Base(
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
     ifM, notM, (&&^), (||^),
     fastNub, showQuote, word1,
-    withBufferMode, withCapabilities
+    withCapabilities
     ) where
 
 import Control.Applicative
@@ -210,11 +210,6 @@ withCapabilities new act | rtsSupportsBoundThreads = do
         bracket_ (setNumCapabilities new) (setNumCapabilities old) act
 #endif
 withCapabilities new act = act
-
-withBufferMode :: Handle -> BufferMode -> IO a -> IO a
-withBufferMode h b act = bracket (hGetBuffering h) (hSetBuffering h) $ const $ do
-    hSetBuffering h LineBuffering
-    act
 
 
 getExePath :: IO FilePath
