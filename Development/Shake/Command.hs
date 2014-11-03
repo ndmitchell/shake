@@ -32,6 +32,7 @@ import System.Environment
 import System.Exit
 import System.IO.Extra
 import System.Process
+import System.Info.Extra
 
 import Development.Shake.Core
 import Development.Shake.FilePath

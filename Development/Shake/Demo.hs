@@ -4,7 +4,6 @@ module Development.Shake.Demo(demo) where
 
 import Paths_shake
 import Development.Shake.Command
-import General.Base
 
 import Control.Exception.Extra
 import Control.Monad
@@ -17,6 +16,7 @@ import System.Exit
 import System.FilePath
 import Development.Shake.FilePath(exe)
 import System.IO
+import System.Info.Extra
 
 
 demo :: Bool -> IO ()

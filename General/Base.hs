@@ -2,7 +2,7 @@
 
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
-    isWindows, getProcessorCount,
+    getProcessorCount,
     readFileStrict,
     randomElem,
     showTime,
@@ -154,14 +154,6 @@ notM = fmap not
 
 ---------------------------------------------------------------------
 -- System.Info
-
-isWindows :: Bool
-#if defined(mingw32_HOST_OS)
-isWindows = True
-#else
-isWindows = False
-#endif
-
 
 #if __GLASGOW_HASKELL__ >= 704
 -- Use the underlying GHC function

@@ -4,13 +4,13 @@ module Test.FilePath(main) where
 import Development.Shake.FilePath
 import qualified System.FilePath as Native
 import qualified System.FilePath.Posix as Posix
-import General.Base
 import Test.Type
 import Test.QuickCheck
 import Control.Monad
 import Data.List
 import qualified Data.ByteString.Char8 as BS
 import qualified Development.Shake.ByteString as BS
+import System.Info.Extra
 
 
 main = shaken test $ \args obj -> return ()

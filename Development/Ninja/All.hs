@@ -22,6 +22,7 @@ import Data.Tuple.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
+import System.Info.Extra
 
 
 runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))

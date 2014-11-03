@@ -4,7 +4,7 @@ module Test.Manual(main) where
 import Development.Shake hiding (copyFileChanged)
 import Development.Shake.FilePath
 import Test.Type
-import General.Base
+import System.Info.Extra
 
 
 main = shaken test $ \args obj ->
