@@ -3,7 +3,6 @@
 module General.Base(
     Duration, duration, Time, diffTime, offsetTime, offsetTimeIncrease, sleep,
     getProcessorCount,
-    readFileStrict,
     randomElem,
     showTime,
     whenJust, loopM, whileM, partitionM, concatMapM, mapMaybeM, liftA2', retry,
@@ -25,7 +24,6 @@ import Data.Time
 import qualified Data.HashSet as Set
 import Numeric.Extra
 import System.Environment
-import System.IO
 import System.IO.Unsafe
 import System.Random
 import Development.Shake.Classes
@@ -183,13 +181,6 @@ getProcessorCount = let res = unsafePerformIO act in return res
 
 ---------------------------------------------------------------------
 -- System.IO
-
-readFileStrict :: FilePath -> IO String
-readFileStrict file = withFile file ReadMode $ \h -> do
-    src <- hGetContents h
-    evaluate $ length src
-    return src
-
 
 withCapabilities :: Int -> IO a -> IO a
 #if __GLASGOW_HASKELL__ >= 706

@@ -8,6 +8,7 @@ import General.Base
 import Control.Concurrent
 import Control.Exception.Extra hiding (assert)
 import System.Directory as IO
+import qualified System.IO.Extra as IO
 
 
 main = shaken test $ \args obj -> do
@@ -39,7 +40,7 @@ main = shaken test $ \args obj -> do
 
     let catcher out op = obj out *> \out -> do
             writeFile' out "0"
-            op $ do src <- readFileStrict out; writeFile out $ show (read src + 1 :: Int)
+            op $ do src <- IO.readFile' out; writeFile out $ show (read src + 1 :: Int)
     catcher "finally1" $ actionFinally $ fail "die"
     catcher "finally2" $ actionFinally $ return ()
     catcher "finally3" $ actionFinally $ liftIO $ sleep 10

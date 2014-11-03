@@ -13,6 +13,7 @@ import System.Environment
 import System.Exit
 import System.Random
 import General.Base
+import qualified System.IO.Extra as IO
 
 
 inputRange = [1..10]
@@ -43,7 +44,7 @@ main = shaken test $ \args obj -> do
             res <- fmap (show . Multiple) $ forM srcs $ \src -> do
                 randomSleep
                 need $ map toFile src
-                mapM (liftIO . fmap read . readFileStrict . toFile) src
+                mapM (liftIO . fmap read . IO.readFile' . toFile) src
             randomSleep
             writeFileChanged out res
 
@@ -106,7 +107,7 @@ test build obj = do
                             Output i -> value i
                 forM_ (concat wants) $ \i -> do
                     let wanted = value i
-                    got <- fmap read $ readFileStrict $ obj $ "output-" ++ show i ++ ".txt"
+                    got <- fmap read $ IO.readFile' $ obj $ "output-" ++ show i ++ ".txt"
                     when (wanted /= got) $
                         error $ "INCORRECT VALUE for " ++ show i
 
