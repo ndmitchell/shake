@@ -21,7 +21,9 @@ import Data.Data
 import Data.IORef
 import Data.List
 import Data.Maybe
+#if __GLASGOW_HASKELL__ < 709
 import Data.Monoid
+#endif
 import Data.Version
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
