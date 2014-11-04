@@ -7,7 +7,6 @@ module General.Extra(
     showQuote
     ) where
 
-import Control.Concurrent
 import Control.Exception.Extra
 import Data.Char
 import Data.List
@@ -17,6 +16,7 @@ import System.IO.Unsafe
 import System.Random
 import Development.Shake.Classes
 #if __GLASGOW_HASKELL__ >= 704
+import Control.Concurrent
 import Foreign.C.Types
 #endif
 
