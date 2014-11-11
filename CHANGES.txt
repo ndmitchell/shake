@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #188, improve the docs on FilePattern
     #187, removeFiles on a missing directory should do nothing
     #166, add withTempFile and withTempDir in the Action monad
     Ensure Ninja response files are always deleted

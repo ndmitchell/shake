@@ -79,27 +79,20 @@ match _ _ = []
 --
 -- * @\/\/@ matches an arbitrary number of path components.
 --
---   Some examples that match:
+--   Some examples:
 --
--- @
--- \"\/\/*.c\" '?==' \"foo\/bar\/baz.c\"
--- \"*.c\" '?==' \"baz.c\"
--- \"\/\/*.c\" '?==' \"baz.c\"
--- \"test.c\" '?==' \"test.c\"
--- @
+-- * @test.c@ matches @test.c@ and nothing else.
 --
---   Examples that /don't/ match:
+-- * @*.c@ matches all @.c@ files in the current directory, so @file.c@ matches,
+--   but @file.h@ and @dir\/file.c@ don't.
 --
--- @
--- \"*.c\" '?==' \"foo\/bar.c\"
--- \"*\/*.c\" '?==' \"foo\/bar\/baz.c\"
--- @
+-- * @\/\/*.c@ matches all @.c@ files in the current directory or its subdirectories,
+--   so @file.c@, @dir\/file.c@ and @dir1\/dir2\/file.c@ all match, but @file.h@ and
+--   @dir\/file.h@ don't.
 --
---   An example that only matches on Windows:
---
--- @
--- \"foo\/bar\" '?==' \"foo\\\\bar\"
--- @
+-- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
+--   @dir\/two\/file.h@ match, but @file.c@, @one\/dir\/file.c@, @dir\/file.h@
+--   and @dir\/one\/two\/file.c@ don't.
 --
 --   Patterns with constructs such as @foo\/..\/bar@ will never match
 --   normalised 'FilePath' values, so are unlikely to be correct.
