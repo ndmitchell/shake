@@ -2,6 +2,7 @@
 module Test.Errors(main) where
 
 import Development.Shake
+import Development.Shake.FilePath
 import Test.Type
 import Control.Monad
 import Control.Concurrent
@@ -65,6 +66,25 @@ main = shaken test $ \args obj -> do
         if src == "err" then error "err_chain" else writeFileChanged out src
     obj "chain.3" *> \out -> copyFile' (obj "chain.2") out
 
+    obj "tempfile" *> \out -> do
+        file <- withTempFile $ \file -> do
+            liftIO $ assertExists file
+            return file
+        liftIO $ assertMissing file
+        withTempFile $ \file -> do
+            liftIO $ assertExists file
+            writeFile' out file
+            fail "tempfile-died"
+
+    obj "tempdir" *> \out -> do
+        file <- withTempDir $ \dir -> do
+            let file = dir </> "foo.txt"
+            liftIO $ writeFile (dir </> "foo.txt") ""
+                -- will throw if the directory does not exist
+            writeFile' out ""
+            return file
+        liftIO $ assertMissing file
+
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
@@ -117,3 +137,8 @@ test build obj = do
     build ["alternative.foo","alternative.txt"]
     assertContents (obj "alternative.foo") "alternative.*"
     assertContents (obj "alternative.txt") "alternative.txt"
+
+    crash ["tempfile"] ["tempfile-died"]
+    src <- readFile $ obj "tempfile"
+    assertMissing src
+    build ["tempdir"]
