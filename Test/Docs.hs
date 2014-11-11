@@ -199,10 +199,10 @@ italics :: [String]
 italics = words "extension command-name file-name"
 
 whitelist :: String -> Bool
-whitelist x | all (not . isSpace) x && takeExtension x `elem` words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html" = True
+whitelist x | all (not . isSpace) x && takeExtension x `elem` words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html .zip" = True
 whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc ghc " ++
-    ".. /./ /.. ./ // \\ ../ " ++
+    ".. /./ /.. ./ // \\ ../ //* " ++
     "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath main.m run .rot13 " ++
     "NoProgress Error src rot13 .js .json .trace about://tracing " ++
@@ -210,7 +210,7 @@ whitelist x | elem x $ words $
     "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
     "-threaded -rtsopts -I0 Function extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
-    "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat //* [out] manual/examples.zip manual " ++
+    "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja " ++
     "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
     "@ndm_haskell "
