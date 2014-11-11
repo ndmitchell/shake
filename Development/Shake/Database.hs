@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- Monoid required < 7.9
 
 module Development.Shake.Database(
     Trace(..),
