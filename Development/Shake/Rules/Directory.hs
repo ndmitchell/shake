@@ -248,7 +248,9 @@ getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
 --   This function is often useful when writing a @clean@ action for your build system,
 --   often as a 'phony' rule.
 removeFiles :: FilePath -> [FilePattern] -> IO ()
-removeFiles dir pat = void $ f ""
+removeFiles dir pat = do
+    b <- IO.doesDirectoryExist dir
+    when b $ void $ f ""
     where
         -- because it is generate and match anything like ../ will be ignored, since we never generate ..
         -- therefore we can safely know we never escape the containing directory
