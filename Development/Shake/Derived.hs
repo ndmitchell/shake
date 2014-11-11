@@ -3,7 +3,8 @@ module Development.Shake.Derived(
     system', systemCwd, systemOutput,
     copyFile', copyFileChanged,
     readFile', readFileLines,
-    writeFile', writeFileLines, writeFileChanged
+    writeFile', writeFileLines, writeFileChanged,
+    withTempFile, withTempDir
     ) where
 
 import Control.Monad.Extra
@@ -11,7 +12,7 @@ import Control.Monad.IO.Class
 import System.Process
 import System.Directory
 import System.Exit
-import System.IO
+import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
 import Development.Shake.Core
 import Development.Shake.Rules.File
@@ -136,3 +137,21 @@ writeFileChanged name x = liftIO $ do
             src <- hGetContents h
             return $! src /= x
         when b $ writeFile name x
+
+
+-- | Create a temporary file in the temporary directory. The file will be deleted
+--   after the action completes (provided the file is not still open).
+--   The 'FilePath' will not have any file extension, will exist, and will be zero bytes long.
+--   If you require a file with a specific name, use 'withTempDir'.
+withTempFile :: (FilePath -> Action a) -> Action a
+withTempFile act = do
+    (file, del) <- liftIO newTempFile
+    act file `actionFinally` del
+
+
+-- | Create a temporary directory inside the system temporary directory.
+--   The directory will be deleted after the action completes.
+withTempDir :: (FilePath -> Action a) -> Action a
+withTempDir act = do
+    (dir,del) <- liftIO newTempDir
+    act dir `actionFinally` del

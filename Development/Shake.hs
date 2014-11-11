@@ -114,6 +114,7 @@ module Development.Shake(
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,
     removeFiles, removeFilesAfter,
+    withTempFile, withTempDir,
     -- * File rules
     need, want, (*>), (|*>), (?>), phony, (~>),
     (&*>), (&?>),
