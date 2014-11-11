@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- Applicative required < 7.9
 
 module Development.Shake.Monad(
     RAW, Capture, runRAW,
