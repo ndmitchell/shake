@@ -107,3 +107,4 @@ test build obj = do
     removeTest ["//*.txt"] ["more/","more/a.txt/","more/b.txt"] []
     removeTest ["//*.txt"] [] ["more/"]
     removeTest ["a//b"] ["a/c/b"] []
+    removeFiles "non-existing-directory" ["*"]
