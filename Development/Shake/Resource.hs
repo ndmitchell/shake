@@ -1,12 +1,12 @@
 {-# LANGUAGE RecordWildCards, ViewPatterns #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- Monoid required < 7.9
 
 module Development.Shake.Resource(
     Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
     ) where
 
+import Prelude(); import General.Prelude
+
 import Data.Function
-import Data.Monoid
 import System.IO.Unsafe
 import Control.Concurrent.Extra
 import Data.Tuple.Extra

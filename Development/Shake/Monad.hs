@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- Applicative required < 7.9
 
 module Development.Shake.Monad(
     RAW, Capture, runRAW,
@@ -9,7 +8,8 @@ module Development.Shake.Monad(
     unmodifyRW, captureRAW,
     ) where
 
-import Control.Applicative
+import Prelude(); import General.Prelude
+
 import Control.Exception.Extra
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont

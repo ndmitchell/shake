@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- Monoid required < 7.9
 
 module Development.Shake.Database(
     Trace(..),
@@ -12,6 +11,8 @@ module Development.Shake.Database(
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
     ) where
+
+import Prelude(); import General.Prelude
 
 import Development.Shake.Classes
 import General.Binary
@@ -36,7 +37,6 @@ import qualified Data.HashMap.Strict as Map
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List
-import Data.Monoid
 import System.Time.Extra
 
 type Map = Map.HashMap

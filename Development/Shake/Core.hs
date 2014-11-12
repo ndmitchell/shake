@@ -22,6 +22,8 @@ module Development.Shake.Core(
     rulesIO, runAfter
     ) where
 
+import Prelude(); import General.Prelude
+
 import Control.Exception.Extra
 import Control.Applicative
 import Data.Tuple.Extra
@@ -36,7 +38,6 @@ import Numeric.Extra
 import Data.List
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
-import Data.Monoid
 import Data.IORef
 import System.Directory
 import System.IO.Extra

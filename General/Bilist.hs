@@ -1,10 +1,10 @@
-{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- Monoid required < 7.9
 
 module General.Bilist(
     Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
 
-import Data.Monoid
+import Prelude()
+import General.Prelude
 
 
 data Bilist a = Bilist [a] [a]
