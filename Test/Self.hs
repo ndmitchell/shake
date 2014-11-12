@@ -9,7 +9,7 @@ import Test.Type
 
 import Control.Monad
 import Data.Char
-import Data.List
+import Data.List.Extra
 import System.Info
 
 
@@ -74,7 +74,7 @@ main = shaken noTest $ \args obj -> do
 
 hsImports :: String -> [String]
 hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (not . isUpper) x
-               | x <- lines xs, "import " `isPrefixOf` x]
+               | x <- concatMap (wordsBy (== ';')) $ lines xs, "import " `isPrefixOf` trim x]
 
 
 -- FIXME: Should actually parse the list from the contents of the .cabal file
