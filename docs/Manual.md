@@ -17,13 +17,13 @@ Shake is a Haskell library for writing build systems - designed as a replacement
             putNormal "Cleaning files in _build"
             removeFilesAfter "_build" ["//*"]
     
-        "_build/run" <.> exe *> \out -> do
+        "_build/run" <.> exe %> \out -> do
             cs <- getDirectoryFiles "" ["//*.c"]
             let os = ["_build" </> c -<.> "o" | c <- cs]
             need os
             cmd "gcc -o" [out] os
     
-        "_build//*.o" *> \out -> do
+        "_build//*.o" %> \out -> do
             let c = dropDirectory1 $ out -<.> "c"
             let m = out -<.> "m"
             () <- cmd "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
@@ -84,15 +84,15 @@ A rule describes the steps required to build a file. A rule has two components, 
     <i>actions</i>
 </pre>
 
-The <tt><i>pattern</i></tt> is a string saying which files this rule can build. It may be a specific file (e.g.  `"manual/examples.txt" *> ...`) or may use wildcards:
+The <tt><i>pattern</i></tt> is a string saying which files this rule can build. It may be a specific file (e.g.  `"manual/examples.txt" %> ...`) or may use wildcards:
 
 * The `*` wildcard matches anything apart from a directory separator. For example `"manual/*.txt"` would define a rule for any `.txt` file in the `manual` directory, including `manual/examples.txt`, but would not match `manual/examples.zip`, `examples.txt` or `manual/docs/examples.txt`.
 * The `//` wildcard matches any number of complete path components. For example `//*.txt` would define a rule for any `.txt` file, including `manual/examples.txt`. As another example, `manual//examples.txt` would match any file named `examples.txt` inside `manual`, including both `manual/examples.txt` and `manual/docs/examples.txt`.
 
 It is an error for multiple patterns to match a file being built, so you should keep patterns minimal. Looking at the two rules in the initial example:
 
-    "_build/run" <.> exe *> ...
-    "_build//*.o" *> ...
+    "_build/run" <.> exe %> ...
+    "_build//*.o" %> ...
 
 The first matches only the `run` executable, using `<.> exe` to ensure the executable is correctly named on all platforms. The second matches any `.o` file anywhere under `_build`. As examples, `_build/main.o` and `_build/foo/bar.o` both match while `main.o` and `_build/main.txt` do not.
 
@@ -104,7 +104,7 @@ The <tt><i>actions</i></tt> are a list of steps to perform and are listed one pe
 
 Let's look at a simple example of a rule:
 
-    "*.rot13" *> \out -> do
+    "*.rot13" %> \out -> do
         let src = out -<.> "txt"
         need [src]
         cmd "rot13" src "-o" out
@@ -131,7 +131,7 @@ An <tt><i>expression</i></tt> is any combination of variables and function calls
 
 Variables are evaluated by substituting the <tt><i>expression</i></tt> everywhere the <tt><i>variable</i></tt> is used. In the simple example we could have equivalently written: 
 
-    "*.rot13" *> \out -> do
+    "*.rot13" %> \out -> do
         need [out -<.> "txt"]
         cmd "rot13" (out -<.> "txt") "-o" out
 
@@ -231,7 +231,7 @@ That will compile `main.c` to `main.o`, and also produce a file `main.m` contain
 
 Now, if either `main.c` or any headers transitively imported by `main.c` change, the file will be rebuilt. In the initial example the complete rule is:
 
-    "_build//*.o" *> \out -> do
+    "_build//*.o" %> \out -> do
         let c = dropDirectory1 $ out -<.> "c"
         let m = out -<.> "m"
         () <- cmd "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
@@ -251,7 +251,7 @@ You can now use `buildDir` in place of `"_build"` throughout. You can also defin
 
 We can now write:
 
-    buildDir ("run" <.> exe) *> \out -> do
+    buildDir ("run" <.> exe) %> \out -> do
         ...
 
 All top-level variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
@@ -384,7 +384,7 @@ If the `$C_LINK_FLAGS` environment variable changes then this rule will rebuild.
 
 Using Shake we can depend on arbitrary extra information, such as the version of `gcc`, allowing us to automatically rebuild all C files when a different compiler is placed on the path. To track the version, we can define a rule for the file `gcc.version` which changes only when `gcc --version` changes:
 
-    "gcc.version" *> \out -> do
+    "gcc.version" %> \out -> do
         alwaysRerun
         Stdout stdout <- cmd "gcc --version"
         writeFileChanged out stdout
@@ -399,19 +399,19 @@ Resources allow us to limit the number of simultaneous operations more precisely
 
     disk <- newResource "Disk" 4
     want [show i <.> "exe" | i <- [1..100]]
-    "*.exe" *> \out -> do
+    "*.exe" %> \out -> do
         withResource disk 1 $ do
             cmd "ld -o" [out] ...
-    "*.o" *> \out -> do
+    "*.o" %> \out -> do
         cmd "cl -o" [out] ...
 
 Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
 
 #### Multiple outputs
 
-Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `&*>` operator to define rules:
+Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `&%>` operator to define rules:
 
-    ["//*.bison.h","//*.bison.c"] &*> \[outh, outc] -> do
+    ["//*.bison.h","//*.bison.c"] &%> \[outh, outc] -> do
         let src = outc -<.> "y"
         cmd "bison -d -o" [outc] [src]
 
@@ -444,9 +444,9 @@ For defining non-overlapping rules it is sometimes useful to use a more advanced
 
 We first get the extension with `takeExtension`, then use `drop 1` to remove the leading `.` that `takeExtension` includes, then test that all the characters are numeric.
 
-The standard `*>` operator is actually defined as:
+The standard `%>` operator is actually defined as:
 
-    pattern *> actions = (pattern ?==) ?> actions
+    pattern %> actions = (pattern ?==) ?> actions
 
 Where `?==` is a function for matching file patterns. 
 
@@ -481,7 +481,7 @@ This function takes the source code of a C file (`src`) and finds all lines that
 
 Assuming all interesting headers are only included directly by the C file (a restriction we remove in the next section), we can write the build rule as:
 
-    "_build//*.o" *> \out -> do
+    "_build//*.o" %> \out -> do
         let c = dropDirectory1 $ out -<.> "c"
         src <- readFile' c
         need $ usedHeaders src
@@ -494,23 +494,23 @@ This code calls `readFile'` (which automatically calls `need` on the source file
 
 The previous section described how to deal with generated include files, but only coped with headers included directly by the C file. This section describes how to extend that to work with generated headers used either in C or header files, even when used by headers that were themselves generated. We can write:
 
-    ["*.c.dep","*.h.dep"] |*> \out -> do
+    ["*.c.dep","*.h.dep"] |%> \out -> do
         src <- readFile' $ dropExtension out
         writeFileLines out $ usedHeaders src
 
-    "*.deps" *> \out -> do
+    "*.deps" %> \out -> do
         dep <- readFileLines $ out -<.> "dep"
         deps <- mapM (readFileLines . (<.> "deps")) dep
         writeFileLines out $ nub $ dropExtension out : concat deps
 
-    "*.o" *> \out -> do
+    "*.o" %> \out -> do
         deps <- readFileLines $ out -<.> "c.deps"
         need deps
         cmd "gcc -c" [dropExtension out] "-o" out
 
 For simplicity, this code assumes all files are in a single directory and all objects are generated files are placed in the same directory. We define three rules:
 
-* The `*.c.dep` and `*.h.dep` rule uses `|*>`, which defines a single action that matches multiple patterns. The file `foo.h.dep` contains a list of headers directly included by `foo.h`, using `usedHeaders` from the previous section.
+* The `*.c.dep` and `*.h.dep` rule uses `|%>`, which defines a single action that matches multiple patterns. The file `foo.h.dep` contains a list of headers directly included by `foo.h`, using `usedHeaders` from the previous section.
 * The `*.deps` rule takes the transitive closure of dependencies, so `foo.h.deps` contains `foo.h` and all headers that `foo.h` pulls in. The rule takes the target file, and all the `.deps` for anything in the `.dep` file, and combines them. More abstractly, the rule calculates the transitive closure of _a_, namely _a*_, by taking the dependencies of _a_ (say _b_ and _c_) and computing _a\* = union(a, b\*, c\*)_.
 * The `*.o` rule reads the associated `.deps` file (ensuring it is up to date) and then depends on its contents.
 

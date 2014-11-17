@@ -11,13 +11,13 @@ main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
         putNormal "Cleaning files in _build"
         removeFilesAfter "_build" ["//*"]
 
-    "_build/run" <.> exe *> \out -> do
+    "_build/run" <.> exe %> \out -> do
         cs <- getDirectoryFiles "" ["//*.c"]
         let os = ["_build" </> c -<.> "o" | c <- cs]
         need os
         cmd "gcc -o" [out] os
 
-    "_build//*.o" *> \out -> do
+    "_build//*.o" %> \out -> do
         let c = dropDirectory1 $ out -<.> "c"
         let m = out -<.> "m"
         () <- cmd "gcc -c" [c] "-o" [out] "-MMD -MF" [m]

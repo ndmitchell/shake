@@ -2,7 +2,7 @@
 
 In order to understand the behaviour of Shake, it is useful to have a mental model of Shake's internal state. To be a little more concrete, let's talk about `File`s which are stored on disk, which have `ModTime` value's associated with them, where `modtime` gives the `ModTime` of a `FilePath` (Shake is actually generalised over all those things). Let's also imagine we have the rule:
 
-    file *> \out -> do
+    file %> \out -> do
         need [dependency]
         run
 
@@ -166,7 +166,7 @@ discarded.
 
 Given a build system that does:
 
-    "output" *> \out -> do
+    "output" %> \out -> do
         need ["input"]
         cmd "cp input output"
 
