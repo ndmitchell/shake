@@ -12,17 +12,17 @@ main = shaken test $ \args obj -> do
     let rest = delete "@" args
     want $ map obj $ if null rest then ["even.txt","odd.txt"] else rest
 
-    -- Since &?> and &*> are implemented separately we test everything in both modes
-    let deps &?*> act | fun = (\x -> if x `elem` deps then Just deps else Nothing) &?> act
-                      | otherwise = deps &*> act
+    -- Since &?> and &%> are implemented separately we test everything in both modes
+    let deps &?%> act | fun = (\x -> if x `elem` deps then Just deps else Nothing) &?> act
+                      | otherwise = deps &%> act
 
-    map obj ["even.txt","odd.txt"] &?*> \[evens,odds] -> do
+    map obj ["even.txt","odd.txt"] &?%> \[evens,odds] -> do
         src <- readFileLines $ obj "numbers.txt"
         let (es,os) = partition even $ map read src
         writeFileLines evens $ map show es
         writeFileLines odds  $ map show os
 
-    map obj ["dir1/out.txt","dir2/out.txt"] &?*> \[a,b] -> do
+    map obj ["dir1/out.txt","dir2/out.txt"] &?%> \[a,b] -> do
         writeFile' a "a"
         writeFile' b "b"
 

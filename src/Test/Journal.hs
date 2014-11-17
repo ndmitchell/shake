@@ -16,7 +16,7 @@ rebuilt = unsafePerformIO $ newIORef 0
 
 main = shaken test $ \args obj -> do
     want $ map obj ["a.out","b.out","c.out"]
-    obj "*.out" *> \out -> do
+    obj "*.out" %> \out -> do
         liftIO $ atomicModifyIORef rebuilt $ \a -> (a+1,())
         copyFile' (out -<.> "in") out
 

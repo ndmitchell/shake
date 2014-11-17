@@ -38,26 +38,26 @@ main = shaken noTest $ \args obj -> do
             flags <- ghcFlags $ GhcFlags ()
             cmd "ghc" flags args
 
-    obj "Main" <.> exe *> \out -> do
+    obj "Main" <.> exe %> \out -> do
         src <- readFileLines $ obj "Run.deps"
         let os = map (obj . moduleToFile "o") $ "Run" : src
         need os
         ghc $ ["-o",out] ++ os
 
-    obj "/*.deps" *> \out -> do
+    obj "/*.deps" %> \out -> do
         dep <- readFileLines $ out -<.> "dep"
         let xs = map (obj . moduleToFile "deps") dep
         need xs
         ds <- fmap (nub . sort . (++) dep . concat) $ mapM readFileLines xs
         writeFileLines out ds
 
-    obj "/*.dep" *> \out -> do
+    obj "/*.dep" %> \out -> do
         src <- readFile' $ "src" </> fixPaths (unobj $ out -<.> "hs")
         let xs = hsImports src
         xs <- filterM (doesFileExist . ("src" </>) . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
-    [obj "/*.o",obj "/*.hi"] &*> \[out,_] -> do
+    [obj "/*.o",obj "/*.hi"] &%> \[out,_] -> do
         deps <- readFileLines $ out -<.> "deps"
         let hs = "src" </> fixPaths (unobj $ out -<.> "hs")
         need $ hs : map (obj . moduleToFile "hi") deps
@@ -65,7 +65,7 @@ main = shaken noTest $ \args obj -> do
               ,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
               ["-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
-    obj ".pkgs" *> \out -> do
+    obj ".pkgs" %> \out -> do
         src <- readFile' "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
 

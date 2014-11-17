@@ -41,7 +41,7 @@ main = shaken test $ \args obj -> do
 
     forM_ (map read $ filter (isNothing . asDuration) args) $ \x -> case x of
         Want xs -> want $ map (toFile . Output) xs
-        Logic out srcs -> toFile (Output out) *> \out -> do
+        Logic out srcs -> toFile (Output out) %> \out -> do
             res <- fmap (show . Multiple) $ forM srcs $ \src -> do
                 randomSleep
                 need $ map toFile src

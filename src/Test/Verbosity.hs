@@ -8,12 +8,12 @@ import Test.Type
 main = shaken test $ \args obj -> do
     want $ map obj args
 
-    obj "in.txt" *> \out -> do
+    obj "in.txt" %> \out -> do
         a <- getVerbosity
         b <- withVerbosity Normal $ getVerbosity
         writeFile' out $ unwords $ map show [a,b]
 
-    obj "out.txt" *> \out -> do
+    obj "out.txt" %> \out -> do
         x <- getVerbosity
         ys <- withVerbosity Loud $ do
             a <- getVerbosity

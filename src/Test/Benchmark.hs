@@ -15,7 +15,7 @@ main = shaken (\_ _ -> return ()) $ \args obj -> do
         breadth = get "breadth"
 
     want [obj $ "0." ++ show i | i <- [1..breadth]]
-    obj "*" *> \out -> do
+    obj "*" %> \out -> do
         let d = read $ takeBaseName out
         need [obj $ show (d + 1) ++ "." ++ show i | d < depth, i <- [1..breadth]]
         writeFile' out ""

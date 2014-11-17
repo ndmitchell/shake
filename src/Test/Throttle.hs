@@ -12,7 +12,7 @@ import System.Time.Extra
 main = shaken test $ \args obj -> do
     res <- newThrottle "test" 2 0.4
     want $ map obj ["file1.1","file2.1","file3.2","file4.1","file5.2"]
-    obj "*.*" *> \out -> do
+    obj "*.*" %> \out -> do
         withResource res (read $ drop 1 $ takeExtension out) $
             when (takeBaseName out == "file3") $ liftIO $ sleep 0.2
         writeFile' out ""

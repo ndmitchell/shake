@@ -8,12 +8,12 @@ import Test.Type
 main = shaken test $ \args obj -> do
     want $ map obj args
 
-    obj "foo" *> \ out -> do
+    obj "foo" %> \ out -> do
         need [obj "bar"]
         writeFile' out ""
 
-    obj "bar" *> \out -> writeFile' out ""
-    obj "baz" *> \out -> writeFile' out ""
+    obj "bar" %> \out -> writeFile' out ""
+    obj "baz" %> \out -> writeFile' out ""
 
 
 test build obj = do

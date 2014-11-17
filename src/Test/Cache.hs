@@ -13,7 +13,7 @@ main = shaken test $ \args obj -> do
         src <- readFile' file
         liftIO $ appendFile (obj "trace.txt") "1"
         return $ length $ filter isDigit src
-    obj "*.out*" *> \x ->
+    obj "*.out*" %> \x ->
         writeFile' x . show =<< vowels (dropExtension x <.> "txt")
 
 

@@ -9,13 +9,13 @@ main = shaken noTest $ \args obj -> do
     let src = "src/Test/C"
     want [obj "Main.exe"]
 
-    obj "Main.exe" *> \out -> do
+    obj "Main.exe" %> \out -> do
         cs <- getDirectoryFiles src ["*.c"]
         let os = map (obj . (<.> "o")) cs
         need os
         cmd "gcc -o" [out] os
 
-    obj "*.c.o" *> \out -> do
+    obj "*.c.o" %> \out -> do
         let c = src </> takeBaseName out
         need [c]
         headers <- cIncludes c

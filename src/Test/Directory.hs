@@ -26,23 +26,23 @@ showEsc = concatMap f
 
 main = shaken test $ \args obj -> do
     want $ map obj args
-    obj "*.contents" *> \out ->
+    obj "*.contents" %> \out ->
         writeFileLines out =<< getDirectoryContents (obj $ readEsc $ dropExtension $ unobj out)
-    obj "*.dirs" *> \out ->
+    obj "*.dirs" %> \out ->
         writeFileLines out =<< getDirectoryDirs (obj $ readEsc $ dropExtension $ unobj out)
-    obj "*.files" *> \out -> do
+    obj "*.files" %> \out -> do
         let pats = readEsc $ dropExtension $ unobj out
         let (x:xs) = ["" | " " `isPrefixOf` pats] ++ words pats
         writeFileLines out =<< getDirectoryFiles (obj x) xs
 
-    obj "*.exist" *> \out -> do
+    obj "*.exist" %> \out -> do
         let xs = map obj $ words $ readEsc $ dropExtension $ unobj out
         fs <- mapM doesFileExist xs
         ds <- mapM doesDirectoryExist xs
         let bool x = if x then "1" else "0"
         writeFileLines out $ zipWith (\a b -> bool a ++ bool b) fs ds
 
-    obj "dots" *> \out -> do
+    obj "dots" %> \out -> do
         cwd <- liftIO getCurrentDirectory
         liftIO $ setCurrentDirectory $ obj ""
         b1 <- liftM2 (==) (getDirectoryContents ".") (getDirectoryContents "")

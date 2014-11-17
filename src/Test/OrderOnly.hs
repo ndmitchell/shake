@@ -8,17 +8,17 @@ import Test.Type
 main = shaken test $ \args obj -> do
     want $ map obj args
 
-    obj "bar.txt" *> \out -> do
+    obj "bar.txt" %> \out -> do
         alwaysRerun
         writeFile' out =<< liftIO (readFile $ obj "bar.in")
 
-    obj "foo.txt" *> \out -> do
+    obj "foo.txt" %> \out -> do
         let src = obj "bar.txt"
         orderOnly [src]
         writeFile' out =<< liftIO (readFile src)
         need [src]
 
-    obj "baz.txt" *> \out -> do
+    obj "baz.txt" %> \out -> do
         let src = obj "bar.txt"
         orderOnly [src]
         liftIO $ appendFile out "x"

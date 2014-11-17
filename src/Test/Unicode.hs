@@ -22,16 +22,16 @@ main = shaken test $ \xs obj -> do
     let pre:args = map decode xs
     want $ map obj args
 
-    obj (pre ++ "dir/*") *> \out -> do
+    obj (pre ++ "dir/*") %> \out -> do
         let src = takeDirectory (takeDirectory out) </> takeFileName out
         copyFile' src out
 
-    obj (pre ++ ".out") *> \out -> do
+    obj (pre ++ ".out") %> \out -> do
         a <- readFile' $ obj $ pre ++ "dir" </> pre <.> "source"
         b <- readFile' $ obj pre <.> "multi1"
         writeFile' out $ a ++ b
 
-    map obj ["*.multi1","*.multi2"] &*> \[m1,m2] -> do
+    map obj ["*.multi1","*.multi2"] &%> \[m1,m2] -> do
         b <- doesFileExist $ m1 -<.> "exist"
         writeFile' m1 $ show b
         writeFile' m2 $ show b

@@ -9,11 +9,11 @@ import Test.Type
 main = shaken test $ \args obj -> do
     want [obj "Out.txt",obj "Out2.txt"]
 
-    obj "Out.txt" *> \out -> do
+    obj "Out.txt" %> \out -> do
         txt <- readFile' $ obj "In.txt"
         liftIO $ appendFile out txt
 
-    [obj "Out1.txt",obj "Out2.txt"] &*> \[out1,out2] -> do
+    [obj "Out1.txt",obj "Out2.txt"] &%> \[out1,out2] -> do
         txt <- readFile' $ obj "In.txt"
         liftIO $ appendFile out1 txt
         liftIO $ appendFile out2 txt

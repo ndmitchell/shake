@@ -14,7 +14,7 @@ import System.Directory
 main = shaken test $ \args obj -> do
     want $ map obj ["hsflags.var","cflags.var","none.var"]
     usingConfigFile $ obj "config"
-    obj "*.var" *> \out -> do
+    obj "*.var" %> \out -> do
         cfg <- getConfig $ map toUpper $ takeBaseName out
         liftIO $ appendFile (out -<.> "times") "X"
         writeFile' out $ fromMaybe "" cfg

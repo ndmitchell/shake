@@ -23,7 +23,7 @@ main = shaken noTest $ \args obj -> do
 
     let needSource = need =<< getDirectoryFiles "." ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"]
 
-    index *> \_ -> do
+    index %> \_ -> do
         needSource
         need ["shake.cabal"]
         trackAllow ["dist//*"]
@@ -34,10 +34,10 @@ main = shaken noTest $ \args obj -> do
                 () <- cmd "runhaskell Setup.hs configure"
                 cmd "runhaskell Setup.hs haddock"
 
-    obj "Paths_shake.hs" *> \out -> do
+    obj "Paths_shake.hs" %> \out -> do
         copyFile' "src/Paths.hs" out
 
-    obj "Part_*.hs" *> \out -> do
+    obj "Part_*.hs" %> \out -> do
         need ["src/Test/Docs.hs"] -- so much of the generator is in this module
         let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
@@ -98,7 +98,7 @@ main = shaken noTest $ \args obj -> do
             ,"str = \"\""] ++
             rest
 
-    obj "Files.lst" *> \out -> do
+    obj "Files.lst" %> \out -> do
         need ["src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index,obj "Paths_shake.hs"]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
@@ -109,11 +109,11 @@ main = shaken noTest $ \args obj -> do
 
     let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
 
-    obj "Main.hs" *> \out -> do
+    obj "Main.hs" %> \out -> do
         mods <- needModules
         writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m | m <- mods] ++ ["main = return ()"]
 
-    obj "Success.txt" *> \out -> do
+    obj "Success.txt" %> \out -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
@@ -240,7 +240,7 @@ whitelist x = x `elem`
     ,"x <- inputs"
     ,"shakeFiles=\"_build/\""
     ,"#include \""
-    ,"pattern *> actions = (pattern ?==) ?> actions" -- because it overlaps
+    ,"pattern %> actions = (pattern ?==) ?> actions" -- because it overlaps
     ,"buildDir = \"_build\""
     ,"-MMD -MF"
     ,"#!/bin/sh"

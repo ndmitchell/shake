@@ -10,7 +10,7 @@ import Control.Monad
 main = shaken test $ \args obj -> do
     let f name lhs rhs = (,) name $
             (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
-            ,let o = obj name ++ ".txt" in do want [o]; o *> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
+            ,let o = obj name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
     let tbl = [f "str-bool" "" True
               ,f "str-int" "" (0::Int)
               ,f "bool-str" True ""
@@ -20,8 +20,8 @@ main = shaken test $ \args obj -> do
         '+':x | Just (add,_) <- lookup x tbl -> add
         '*':x | Just (_,use) <- lookup x tbl -> use
         '@':key -> do addOracle $ \() -> return key; return ()
-        '%':name -> let o = obj "unit.txt" in do want [o]; o *> \_ -> do {askOracleWith () ""; writeFile' o name}
-        '!':name -> do want [obj "rerun"]; obj "rerun" *> \out -> do alwaysRerun; writeFile' out name
+        '%':name -> let o = obj "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
+        '!':name -> do want [obj "rerun"]; obj "rerun" %> \out -> do alwaysRerun; writeFile' out name
 
 test build obj = do
     build ["clean"]

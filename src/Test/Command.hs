@@ -8,7 +8,7 @@ import Test.Type
 main = shaken test $ \args obj -> do
     want $ map obj args
 
-    let a !> b = obj a *> \out -> do alwaysRerun; res <- b; writeFile' out res
+    let a !> b = obj a %> \out -> do alwaysRerun; res <- b; writeFile' out res
 
     "ghc-version" !> do
         Stdout stdout <- cmd "ghc --version"
@@ -26,7 +26,7 @@ main = shaken test $ \args obj -> do
         (Exit exit, Stdout stdout, Stderr stderr) <- cmd "ghc --random"
         return $ show (exit, stdout, stderr) -- must force all three parts
 
-    obj "pwd space.hs" *> \out -> writeFileLines out ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
+    obj "pwd space.hs" %> \out -> writeFileLines out ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
     "pwd" !> do
         need [obj "pwd space.hs"]
         Stdout out <- cmd (Cwd $ obj "") "runhaskell" ["pwd space.hs"]

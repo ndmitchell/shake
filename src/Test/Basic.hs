@@ -13,18 +13,18 @@ import General.Extra
 main = shaken test $ \args obj -> do
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
-    obj "AB.txt" *> \out -> do
+    obj "AB.txt" %> \out -> do
         need [obj "A.txt", obj "B.txt"]
         text1 <- readFile' $ obj "A.txt"
         text2 <- readFile' $ obj "B.txt"
         writeFile' out $ text1 ++ text2
 
-    obj "twice.txt" *> \out -> do
+    obj "twice.txt" %> \out -> do
         let src = obj "once.txt"
         need [src, src]
         copyFile' src out
 
-    obj "once.txt" *> \out -> do
+    obj "once.txt" %> \out -> do
         src <- readFile' $ obj "zero.txt"
         writeFile' out src
 
@@ -44,14 +44,14 @@ main = shaken test $ \args obj -> do
     phony "dummy" $ do
         liftIO $ appendFile (obj "dummy") "1"
 
-    obj "dummer.txt" *> \out -> do
+    obj "dummer.txt" %> \out -> do
         need ["dummy","dummy"]
         need ["dummy"]
         liftIO $ appendFile out "1"
 
     r <- newResource ".log file" 1
     let trace x = withResource r 1 $ liftIO $ appendFile (obj ".log") x
-    obj "*.par" *> \out -> do
+    obj "*.par" %> \out -> do
         trace "["
         (if "unsafe" `isInfixOf` out then unsafeExtraThread else id) $ liftIO $ sleep 0.1
         trace "]"

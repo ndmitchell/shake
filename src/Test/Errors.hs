@@ -14,31 +14,31 @@ import qualified System.IO.Extra as IO
 main = shaken test $ \args obj -> do
     want $ map obj args
 
-    obj "norule" *> \_ ->
+    obj "norule" %> \_ ->
         need [obj "norule_isavailable"]
 
-    obj "failcreate" *> \_ ->
+    obj "failcreate" %> \_ ->
         return ()
 
-    [obj "failcreates", obj "failcreates2"] &*> \_ ->
+    [obj "failcreates", obj "failcreates2"] &%> \_ ->
         writeFile' (obj "failcreates") ""
 
-    obj "recursive" *> \out ->
+    obj "recursive" %> \out ->
         need [out]
 
-    obj "systemcmd" *> \_ ->
+    obj "systemcmd" %> \_ ->
         cmd "random_missing_command"
 
-    obj "stack1" *> \_ -> need [obj "stack2"]
-    obj "stack2" *> \_ -> need [obj "stack3"]
-    obj "stack3" *> \_ -> error "crash"
+    obj "stack1" %> \_ -> need [obj "stack2"]
+    obj "stack2" %> \_ -> need [obj "stack3"]
+    obj "stack3" %> \_ -> error "crash"
 
-    obj "staunch1" *> \out -> do
+    obj "staunch1" %> \out -> do
         liftIO $ sleep 0.1
         writeFile' out "test"
-    obj "staunch2" *> \_ -> error "crash"
+    obj "staunch2" %> \_ -> error "crash"
 
-    let catcher out op = obj out *> \out -> do
+    let catcher out op = obj out %> \out -> do
             writeFile' out "0"
             op $ do src <- IO.readFile' out; writeFile out $ show (read src + 1 :: Int)
     catcher "finally1" $ actionFinally $ fail "die"
@@ -50,23 +50,23 @@ main = shaken test $ \args obj -> do
     catcher "exception2" $ actionOnException $ return ()
 
     res <- newResource "resource_name" 1
-    obj "resource" *> \out -> do
+    obj "resource" %> \out -> do
         withResource res 1 $
             need ["resource-dep"]
 
-    obj "overlap.txt" *> \out -> writeFile' out "overlap.txt"
-    obj "overlap.t*" *> \out -> writeFile' out "overlap.t*"
-    obj "overlap.*" *> \out -> writeFile' out "overlap.*"
+    obj "overlap.txt" %> \out -> writeFile' out "overlap.txt"
+    obj "overlap.t*" %> \out -> writeFile' out "overlap.t*"
+    obj "overlap.*" %> \out -> writeFile' out "overlap.*"
     alternatives $ do
-        obj "alternative.t*" *> \out -> writeFile' out "alternative.txt"
-        obj "alternative.*" *> \out -> writeFile' out "alternative.*"
+        obj "alternative.t*" %> \out -> writeFile' out "alternative.txt"
+        obj "alternative.*" %> \out -> writeFile' out "alternative.*"
 
-    obj "chain.2" *> \out -> do
+    obj "chain.2" %> \out -> do
         src <- readFile' $ obj "chain.1"
         if src == "err" then error "err_chain" else writeFileChanged out src
-    obj "chain.3" *> \out -> copyFile' (obj "chain.2") out
+    obj "chain.3" %> \out -> copyFile' (obj "chain.2") out
 
-    obj "tempfile" *> \out -> do
+    obj "tempfile" %> \out -> do
         file <- withTempFile $ \file -> do
             liftIO $ assertExists file
             return file
@@ -76,7 +76,7 @@ main = shaken test $ \args obj -> do
             writeFile' out file
             fail "tempfile-died"
 
-    obj "tempdir" *> \out -> do
+    obj "tempdir" %> \out -> do
         file <- withTempDir $ \dir -> do
             let file = dir </> "foo.txt"
             liftIO $ writeFile (dir </> "foo.txt") ""
