@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #182, use js-jquery and js-flot
     #195, add getConfigKeys
     #194, replace *> with %> as the operator for rules
     #188, improve the docs on FilePattern

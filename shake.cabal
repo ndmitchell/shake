@@ -51,13 +51,8 @@ extra-source-files:
     docs/Ninja.md
     docs/Why.md
     docs/shake-progress.png
-    js-src/jquery-1.8.3.js
-    js-src/flot-0.8.0.zip
 
 data-files:
-    html/jquery.flot.js
-    html/jquery.flot.stack.js
-    html/jquery.js
     html/viz.js
     html/profile.html
     html/progress.html
@@ -96,6 +91,8 @@ library
         utf8-string >= 0.3,
         time,
         random,
+        js-jquery,
+        js-flot,
         transformers >= 0.2,
         extra >= 0.7,
         deepseq >= 1.1

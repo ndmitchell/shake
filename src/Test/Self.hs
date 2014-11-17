@@ -84,4 +84,4 @@ cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
 
 packages = words $
     "base transformers binary unordered-containers hashable time old-time bytestring " ++
-    "filepath directory process deepseq random utf8-string extra"
+    "filepath directory process deepseq random utf8-string extra js-jquery js-flot"
