@@ -31,6 +31,8 @@ import General.Template
 import System.IO.Unsafe
 import Paths_shake
 import System.Time.Extra
+import qualified Language.Javascript.Flot as Flot
+import qualified Language.Javascript.JQuery as JQuery
 
 #ifdef mingw32_HOST_OS
 
@@ -271,6 +273,9 @@ generateHTML xs = do
     report <- LBS.readFile $ htmlDir </> "progress.html"
     let f name | name == "progress-data.js" = return $ LBS.pack $ "var shake =\n" ++ generateJSON xs
                | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
+               | name == "jquery.js" = LBS.readFile =<< JQuery.file
+               | name == "jquery.flot.js" = LBS.readFile =<< Flot.file Flot.Flot
+               | name == "jquery.flot.stack.js" = LBS.readFile =<< Flot.file Flot.FlotStack
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 
