@@ -162,6 +162,9 @@ import Development.Shake.Rules.OrderOnly
 import Development.Shake.Rules.Rerun
 
 
+---------------------------------------------------------------------
+-- DEPRECATED SINCE 0.13, MAY 2014
+
 infix 1 **>, ?>>, *>>
 
 -- | /Deprecated:/ Alias for '|*>'.
