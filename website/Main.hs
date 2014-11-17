@@ -68,10 +68,14 @@ readPage mode code file = do
     let pageTitle = innerText $ inside "h1" pageBody
     return Page{..}
     where
-        links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "23" =
-                first (Link{..}:) $ second (\xs -> TagOpen "span" [("class","target"),("id",linkKey)]:TagClose "span":TagOpen linkLevel at:xs) $ links xs
+        links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "234" =
+                first ([Link{..} | i /= '4'] ++) $ second (prefix++) $ links rest
             where linkTitle = innerText $ takeWhile (/= TagClose linkLevel) xs
                   linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words linkTitle
+                  (this,rest) = break (== TagClose linkLevel) xs
+                  prefix = [TagOpen "span" [("class","target"),("id",linkKey)],TagClose "span"
+                           ,TagOpen linkLevel at,TagOpen "a" [("href",'#':linkKey),("class","anchor")]] ++
+                           this ++ [TagClose "a"]
         links (x:xs) = second (x:) $ links xs
         links [] = ([], [])
 
