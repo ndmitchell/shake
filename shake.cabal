@@ -179,6 +179,8 @@ executable shake
         utf8-string >= 0.3,
         time,
         random,
+        js-jquery,
+        js-flot,
         transformers >= 0.2,
         extra >= 0.7,
         deepseq >= 1.1
@@ -219,6 +221,8 @@ test-suite shake-test
         utf8-string >= 0.3,
         time,
         random,
+        js-jquery,
+        js-flot,
         transformers >= 0.2,
         deepseq >= 1.1,
         extra >= 0.7,
