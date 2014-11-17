@@ -5,28 +5,32 @@ module Main(main) where
 import Data.Tuple.Extra
 import Control.Monad
 import Data.Char
-import Data.List
+import Data.List.Extra
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import Text.HTML.TagSoup
 import Text.Markdown
 import Text.Blaze.Html.Renderer.Text
 import System.Directory
+import System.Environment
 import System.FilePath
 import System.IO.Extra
 import Code
 
+data Mode = Debug | Release deriving Eq
 
 main :: IO ()
 main = do
+    args <- getArgs
+    let mode = if null args then Release else Debug
     createDirectoryIfMissing True "output"
     files <- getDirectoryContents "../docs"
     code <- code "../dist/doc/html/shake/shake.txt"
-    skeleton <- skeleton "parts" "output/index.css"
+    skeleton <- skeleton mode "parts" "output/index.css"
     forM_ files $ \file -> do
         when (takeExtension file == ".md") $ do
             putChar '.'
-            p <- readPage code $ "../docs" </> file
+            p <- readPage mode code $ "../docs" </> file
             skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p 
     copyFile "../docs/shake-progress.png" "output/shake-progress.png"
     copyFile "parts/favicon.ico" "output/favicon.ico"
@@ -58,9 +62,9 @@ writeFileTags file = writeFile file . renderTags
 ---------------------------------------------------------------------
 -- READ A PAGE
 
-readPage :: (String -> [Tag String]) -> FilePath -> IO Page
-readPage code file = do
-    (pageTOC, pageBody) <- fmap (links . reformat code) $ readFileMarkdown $ "../docs" </> file
+readPage :: Mode -> (String -> [Tag String]) -> FilePath -> IO Page
+readPage mode code file = do
+    (pageTOC, pageBody) <- fmap (links . reformat mode code) $ readFileMarkdown $ "../docs" </> file
     let pageTitle = innerText $ inside "h1" pageBody
     return Page{..}
     where
@@ -72,36 +76,38 @@ readPage code file = do
         links [] = ([], [])
 
 
-reformat :: (String -> [Tag String]) -> [Tag String] -> [Tag String]
-reformat code (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefixOf` s =
-    reformat code $ drop 1 $ dropWhile (~/= "</p>") xs
-reformat code (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat code xs
+reformat :: Mode -> (String -> [Tag String]) -> [Tag String] -> [Tag String]
+reformat mode code (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefixOf` s =
+    reformat mode code $ drop 1 $ dropWhile (~/= "</p>") xs
+reformat mode code (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat mode code xs
     where f ("href",x) | ".md" `isPrefixOf` takeExtension x =
                 -- watch out for Manual.md#readme
-                ("href", dropFileName x ++ map toLower (takeBaseName x) <.> "html" ++ drop 3 (takeExtension x))
+                ("href", dropFileName x ++ map toLower (takeBaseName x) ++
+                         (if mode == Release then "" else ".html") ++
+                         drop 3 (takeExtension x))
           f x = x
-reformat code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat code $ TagOpen "pre" [] : xs
-reformat code (TagClose "code":TagClose "pre":xs) = reformat code $ TagClose "pre" : xs
-reformat code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat code b
+reformat mode code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat mode code $ TagOpen "pre" [] : xs
+reformat mode code (TagClose "code":TagClose "pre":xs) = reformat mode code $ TagClose "pre" : xs
+reformat mode code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat mode code b
     where (a,b) = break (== TagClose t) xs
           f (TagText x) = code x
           f x = [x]
-reformat code (x:xs) = x : reformat code xs
-reformat code [] = []
+reformat mode code (x:xs) = x : reformat mode code xs
+reformat mode code [] = []
 
 
 ---------------------------------------------------------------------
 -- POPULATE A SKELETON
 
-skeleton :: FilePath -> FilePath -> IO (FilePath -> Page -> IO ())
-skeleton dir cssOut = do
+skeleton :: Mode -> FilePath -> FilePath -> IO (FilePath -> Page -> IO ())
+skeleton mode dir cssOut = do
     common <- readFile' $ dir </> "index.css"
     header <- readFileTags $ dir </> "header.html"
     content <- readFileTags $ dir </> "content.html"
     footer <- readFileTags $ dir </> "footer.html"
     writeFile cssOut $ common ++ style header ++ style content ++ style footer
     return $ \file Page{..} -> writeFileTags file $
-        inject (takeBaseName file) (takeWhile (~/= "<div id=content>") (map (activate $ takeFileName file) $ noStyle header)) ++
+        inject (takeBaseName file) (takeWhile (~/= "<div id=content>") (remode $ map (activate $ takeFileName file) $ noStyle header)) ++
         parseTags "<div id=content>" ++
         (if length pageTOC <= 1 then [] else
             parseTags "<div id=toc>" ++
@@ -112,6 +118,10 @@ skeleton dir cssOut = do
         parseTags "</div>" ++
         dropWhile (~/= "<p id=footer>") footer
     where
+        remode xs = if mode == Debug then xs else map f xs
+            where f (TagOpen "a" at) = TagOpen "a" $ for at $ second $ \v -> if takeExtension v == ".html" then dropExtension v else v
+                  f x = x
+
         style = innerText . inside "style"
         noStyle x = a ++ drop 1 (dropWhile (~/= "</style>") b)
             where (a,b) = break (~== "<style>") x
