@@ -39,8 +39,8 @@ main = shaken noTest $ \args obj -> do
             cmd "ghc" flags args
 
     obj "Main" <.> exe *> \out -> do
-        src <- readFileLines $ out -<.> "deps"
-        let os = map (obj . moduleToFile "o") $ "Main":src
+        src <- readFileLines $ obj "Run.deps"
+        let os = map (obj . moduleToFile "o") $ "Run" : src
         need os
         ghc $ ["-o",out] ++ os
 
@@ -61,7 +61,7 @@ main = shaken noTest $ \args obj -> do
         deps <- readFileLines $ out -<.> "deps"
         let hs = "src" </> fixPaths (unobj $ out -<.> "hs")
         need $ hs : map (obj . moduleToFile "hi") deps
-        ghc $ ["-c",hs,"-isrc"
+        ghc $ ["-c",hs,"-isrc","-main-is","Run.main"
               ,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
               ["-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
