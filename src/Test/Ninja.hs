@@ -11,7 +11,7 @@ import qualified Data.HashMap.Strict as Map
 import Data.List
 import Data.Maybe
 import System.IO.Extra
-import qualified Start
+import qualified Run
 import System.Environment
 
 
@@ -19,7 +19,7 @@ main = shaken test $ \args obj -> do
     let args2 = ("-C" ++ obj "") : map tail (filter ("@" `isPrefixOf`) args)
     let real = "real" `elem` args
     action $
-        if real then cmd "ninja" args2 else liftIO $ withArgs args2 Start.main
+        if real then cmd "ninja" args2 else liftIO $ withArgs args2 Run.main
 
 
 test build obj = do

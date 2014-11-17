@@ -46,7 +46,7 @@ import qualified Test.Unicode as Unicode
 import qualified Test.Util as Util
 import qualified Test.Verbosity as Verbosity
 
-import qualified Start
+import qualified Run
 
 
 fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetime]
@@ -94,7 +94,7 @@ main = do
 makefile :: IO () -> IO ()
 makefile _ = do
     args <- getArgs
-    withArgs (drop 1 args) Start.main
+    withArgs (drop 1 args) Run.main
 
 
 filetime :: IO () -> IO ()

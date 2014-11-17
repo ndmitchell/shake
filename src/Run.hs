@@ -1,5 +1,5 @@
 
-module Start(main) where
+module Run(main) where
 
 import Development.Make.All
 import Development.Ninja.All

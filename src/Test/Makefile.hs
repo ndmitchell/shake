@@ -2,7 +2,7 @@
 module Test.Makefile(main) where
 
 import Development.Shake(action, liftIO)
-import qualified Start as Makefile
+import qualified Run as Makefile
 import System.Environment
 import Test.Type
 import Control.Monad
