@@ -1,5 +1,5 @@
 
-module Main(main) where
+module Test(main) where
 
 import Control.Exception
 import Control.Monad
