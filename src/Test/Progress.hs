@@ -58,6 +58,6 @@ test build obj = do
     xs <- prog [10,9,8,7,6.5,6,5.5,5]
     assert (last xs > 7.1) "Some discounting (factor=0 would give 7)"
 
-    xs <- getDirectoryContents "Test/Progress"
-    build $ ["--progress=replay=Test/Progress/" ++ x | x <- xs, takeExtension x == ".prog"] ++
+    xs <- getDirectoryContents "src/Test/Progress"
+    build $ ["--progress=replay=src/Test/Progress/" ++ x | x <- xs, takeExtension x == ".prog"] ++
             ["--no-report","--report=-","--report=" ++ obj "progress.html"]

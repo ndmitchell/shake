@@ -6,7 +6,7 @@ import Development.Shake.FilePath
 import Test.Type
 
 main = shaken noTest $ \args obj -> do
-    let src = "Test/C"
+    let src = "src/Test/C"
     want [obj "Main.exe"]
 
     obj "Main.exe" *> \out -> do

@@ -52,16 +52,17 @@ main = shaken noTest $ \args obj -> do
         writeFileLines out ds
 
     obj "/*.dep" *> \out -> do
-        src <- readFile' $ fixPaths $ unobj $ out -<.> "hs"
+        src <- readFile' $ "src" </> fixPaths (unobj $ out -<.> "hs")
         let xs = hsImports src
-        xs <- filterM (doesFileExist . fixPaths . moduleToFile "hs") xs
+        xs <- filterM (doesFileExist . ("src" </>) . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
     [obj "/*.o",obj "/*.hi"] &*> \[out,_] -> do
         deps <- readFileLines $ out -<.> "deps"
-        let hs = fixPaths $ unobj $ out -<.> "hs"
+        let hs = "src" </> fixPaths (unobj $ out -<.> "hs")
         need $ hs : map (obj . moduleToFile "hi") deps
-        ghc $ ["-c",hs,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
+        ghc $ ["-c",hs,"-isrc"
+              ,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
               ["-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
     obj ".pkgs" *> \out -> do

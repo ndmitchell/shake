@@ -12,9 +12,9 @@ main = shaken test $ \args obj ->
 
 test build obj = do
     copyDirectoryChanged "docs/manual" $ obj "manual"
-    copyDirectoryChanged "Development" $ obj "manual/Development"
-    copyDirectoryChanged "General" $ obj "manual/General"
-    copyFileChanged "Paths.hs" $ obj "manual/Paths_shake.hs"
+    copyDirectoryChanged "src/Development" $ obj "manual/Development"
+    copyDirectoryChanged "src/General" $ obj "manual/General"
+    copyFileChanged "src/Paths.hs" $ obj "manual/Paths_shake.hs"
     let cmdline = if isWindows then "build.bat" else "/bin/sh build.sh"
     () <- cmd [Cwd $ obj "manual", Shell] cmdline "-j2"
     assertExists $ obj "manual/_build/run" <.> exe

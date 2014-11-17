@@ -1,3 +1,0 @@
-Test/Tar.hs
-Main.hs
-Test/Tar/list.txt

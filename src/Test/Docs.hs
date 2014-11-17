@@ -21,7 +21,7 @@ main = shaken noTest $ \args obj -> do
 
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
-    let needSource = need =<< getDirectoryFiles "." ["Development/Shake.hs","Development/Shake//*.hs","Development/Ninja/*.hs","General//*.hs"]
+    let needSource = need =<< getDirectoryFiles "." ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"]
 
     index *> \_ -> do
         needSource
@@ -35,10 +35,10 @@ main = shaken noTest $ \args obj -> do
                 cmd "runhaskell Setup.hs haddock"
 
     obj "Paths_shake.hs" *> \out -> do
-        copyFile' "Paths.hs" out
+        copyFile' "src/Paths.hs" out
 
     obj "Part_*.hs" *> \out -> do
-        need ["Test/Docs.hs"] -- so much of the generator is in this module
+        need ["src/Test/Docs.hs"] -- so much of the generator is in this module
         let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
             fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
@@ -99,7 +99,7 @@ main = shaken noTest $ \args obj -> do
             rest
 
     obj "Files.lst" *> \out -> do
-        need ["Test/Docs.hs"] -- so much of the generator is in this module
+        need ["src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index,obj "Paths_shake.hs"]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles "docs" ["*.md"]
@@ -117,7 +117,7 @@ main = shaken noTest $ \args obj -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
-        () <- cmd "runhaskell -ignore-package=hashmap " ["-i" ++ obj "", obj "Main.hs"]
+        () <- cmd "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
         writeFile' out ""
 
 

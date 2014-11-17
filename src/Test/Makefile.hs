@@ -18,7 +18,7 @@ main = shaken test $ \args obj ->
 
 
 test build obj = do
-    copyDirectoryChanged "Test/MakeTutor" $ obj "MakeTutor"
+    copyDirectoryChanged "src/Test/MakeTutor" $ obj "MakeTutor"
     build ["@@","--directory=" ++ obj "MakeTutor","--no-report"]
     build ["@@","--directory=" ++ obj "MakeTutor","--no-report"]
     build ["@@","--directory=" ++ obj "MakeTutor","@clean","--no-report"]
