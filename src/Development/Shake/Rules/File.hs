@@ -4,7 +4,7 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (*>), (|*>), (**>), (?>), phony, (~>),
+    (*>), (|*>), (?>), phony, (~>),
     -- * Internal only
     FileQ(..), FileA
     ) where
@@ -33,11 +33,7 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 import System.IO.Unsafe(unsafeInterleaveIO)
 
 
-infix 1 *>, ?>, |*>, **>, ~>
-
--- | /Deprecated:/ Alias for '|*>'.
-(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) = (|*>)
+infix 1 *>, ?>, |*>, ~>
 
 
 newtype FileQ = FileQ {fromFileQ :: BSU}

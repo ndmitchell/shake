@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Rules.Files(
-    (?>>), (*>>), (&?>), (&*>)
+    (&?>), (&*>)
     ) where
 
 import Control.Monad
@@ -20,16 +20,7 @@ import Development.Shake.Types
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
 
-infix 1 ?>>, *>>, &?>, &*>
-
--- | /Deprecated:/ Alias for '&?>'.
-(?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
-(?>>) = (&?>)
-
--- | /Deprecated:/ Alias for '&*>'.
-(*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-(*>>) = (&*>)
-
+infix 1 &?>, &*>
 
 
 newtype FilesQ = FilesQ [FileQ]

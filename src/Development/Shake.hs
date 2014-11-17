@@ -160,3 +160,18 @@ import Development.Shake.Rules.Files
 import Development.Shake.Rules.Oracle
 import Development.Shake.Rules.OrderOnly
 import Development.Shake.Rules.Rerun
+
+
+infix 1 **>, ?>>, *>>
+
+-- | /Deprecated:/ Alias for '|*>'.
+(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(**>) = (|*>)
+
+-- | /Deprecated:/ Alias for '&?>'.
+(?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
+(?>>) = (&?>)
+
+-- | /Deprecated:/ Alias for '&*>'.
+(*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+(*>>) = (&*>)
