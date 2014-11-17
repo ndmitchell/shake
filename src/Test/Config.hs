@@ -12,12 +12,15 @@ import System.Directory
 
 
 main = shaken test $ \args obj -> do
-    want $ map obj ["hsflags.var","cflags.var","none.var"]
+    want $ map obj ["hsflags.var","cflags.var","none.var","keys"]
     usingConfigFile $ obj "config"
     obj "*.var" %> \out -> do
         cfg <- getConfig $ map toUpper $ takeBaseName out
         liftIO $ appendFile (out -<.> "times") "X"
         writeFile' out $ fromMaybe "" cfg
+    obj "keys" %> \out -> do
+        liftIO $ appendFile (obj "keys.times") "X"
+        liftIO . writeFile out . unwords =<< getConfigKeys
 
 
 test build obj = do
@@ -31,6 +34,7 @@ test build obj = do
     assertContents (obj "cflags.var") "-O2 -I/path/to/dir -g"
     assertContents (obj "hsflags.var") "-O2"
     assertContents (obj "none.var") ""
+    assertContents (obj "keys") "CFLAGS HEADERS_DIR HSFLAGS"
 
     appendFile (obj "config") $ unlines
         ["CFLAGS = $CFLAGS -w"]
@@ -39,7 +43,7 @@ test build obj = do
     assertContents (obj "hsflags.var") "-O2"
     assertContents (obj "cflags.times") "XX"
     assertContents (obj "hsflags.times") "X"
-    assertContents (obj "none.times") "X"
+    assertContents (obj "keys.times") "X"
 
     -- Test readConfigFileWithEnv
     writeFile (obj "config") $ unlines
