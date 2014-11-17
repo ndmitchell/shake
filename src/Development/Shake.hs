@@ -116,8 +116,8 @@ module Development.Shake(
     removeFiles, removeFilesAfter,
     withTempFile, withTempDir,
     -- * File rules
-    need, want, (*>), (|*>), (?>), phony, (~>),
-    (&*>), (&?>),
+    need, want, (%>), (|%>), (?>), phony, (~>),
+    (&%>), (&?>),
     orderOnly,
     FilePattern, (?==),
     needed, trackRead, trackWrite, trackAllow,
@@ -136,6 +136,7 @@ module Development.Shake(
     -- * Cache
     newCache, newCacheIO,
     -- * Deprecated
+    (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),
     system', systemCwd, systemOutput
     ) where
@@ -178,3 +179,21 @@ infix 1 **>, ?>>, *>>
 -- | /Deprecated:/ Alias for '&*>'.
 (*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 (*>>) = (&*>)
+
+
+---------------------------------------------------------------------
+-- DEPRECATED SINCE 0.14, MAY 2014
+
+infix 1 *>, |*>, &*>
+
+-- | /Deprecated:/ Alias for '%>'. Note that @*>@ clashes with a Prelude operator in GHC 7.10.
+(*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
+(*>) = (%>)
+
+-- | /Deprecated:/ Alias for '|%>'.
+(|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(|*>) = (|%>)
+
+-- | /Deprecated:/ Alias for '&*>'.
+(&*>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+(&*>) = (&%>)

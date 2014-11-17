@@ -4,12 +4,12 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (*>), (|*>), (?>), phony, (~>),
+    (%>), (|%>), (?>), phony, (~>),
     -- * Internal only
     FileQ(..), FileA
     ) where
 
-import Control.Applicative hiding ((*>))
+import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
 import System.Directory
@@ -33,7 +33,7 @@ import System.FilePath(takeDirectory) -- important that this is the system local
 import System.IO.Unsafe(unsafeInterleaveIO)
 
 
-infix 1 *>, ?>, |*>, ~>
+infix 1 %>, ?>, |%>, ~>
 
 
 newtype FileQ = FileQ {fromFileQ :: BSU}
@@ -222,8 +222,8 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '*>'.
 --   Think of it as the OR (@||@) equivalent of '*>'.
-(|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(|*>) pats act = do
+(|%>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(|%>) pats act = do
     let (simp,other) = partition simple pats
     case simp of
         [] -> return ()
@@ -250,5 +250,5 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --   I.e., the file @foo.cpp@ produces object file @foo.cpp.o@.
 --
 --   Note that matching is case-sensitive, even on Windows.
-(*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) test act = (if simple test then id else priority 0.5) $ root (show test) (test ?==) act
+(%>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
+(%>) test act = (if simple test then id else priority 0.5) $ root (show test) (test ?==) act

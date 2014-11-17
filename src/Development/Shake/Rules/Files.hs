@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Rules.Files(
-    (&?>), (&*>)
+    (&?>), (&%>)
     ) where
 
 import Control.Monad
@@ -20,7 +20,7 @@ import Development.Shake.Types
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
 
-infix 1 &?>, &*>
+infix 1 &?>, &%>
 
 
 newtype FilesQ = FilesQ [FileQ]
@@ -62,14 +62,14 @@ instance Rule FilesQ FilesA where
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
 --   Think of it as the OR (@||@) equivalent of '*>'.
-(&*>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-ps &*> act
+(&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+ps &%> act
     | not $ compatible ps = error $
         "All patterns to &*> must have the same number and position of // and * wildcards\n" ++
         unwords ps
     | otherwise = do
         forM_ ps $ \p ->
-            p *> \file -> do
+            p %> \file -> do
                 _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU . substitute (extract p file)) ps
                 return ()
         (if all simple ps then id else priority 0.5) $
