@@ -20,7 +20,7 @@
 module Development.Shake.Config(
     readConfigFile, readConfigFileWithEnv,
     usingConfigFile, usingConfig,
-    getConfig
+    getConfig, getConfigKeys
     ) where
 
 import Development.Shake
@@ -31,6 +31,7 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.UTF8 as UTF8
 import Control.Applicative
 import Data.Tuple.Extra
+import Data.List
 
 
 -- | Read a config file, returning a list of the variables and their bindings.
@@ -54,12 +55,15 @@ readConfigFileWithEnv vars file = do
 
 newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
+newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+
 
 -- | Specify the file to use with 'getConfig'.
 usingConfigFile :: FilePath -> Rules ()
 usingConfigFile file = do
     mp <- newCache $ \() -> liftIO $ readConfigFile file
     addOracle $ \(Config x) -> Map.lookup x <$> mp ()
+    addOracle $ \(ConfigKeys x) -> sort . Map.keys <$> mp ()
     return ()
 
 
@@ -86,3 +90,18 @@ usingConfig mp = do
 -- @
 getConfig :: String -> Action (Maybe String)
 getConfig = askOracle . Config
+
+
+-- | Obtain the configuration keys.
+--   Any build system using 'getConfigKeys' /must/ call either 'usingConfigFile' or 'usingConfig'.
+--   The 'getConfigKeys' function will introduce a dependency on the configuration keys
+--   (but not the whole configuration file), and if the configuration keys change, the rule will be rerun.
+--   Usually use as part of an action.
+--   As an example:
+--
+-- @
+-- 'usingConfigFile' \"myconfiguration.cfg\"
+-- 'action' $ need =<< getConfigKeys
+-- @
+getConfigKeys :: Action [String]
+getConfigKeys = askOracle $ ConfigKeys ()

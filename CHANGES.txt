@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #195, add getConfigKeys
     #194, replace *> with %> as the operator for rules
     #188, improve the docs on FilePattern
     #187, removeFiles on a missing directory should do nothing
