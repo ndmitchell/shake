@@ -80,7 +80,7 @@ usingConfig mp = do
 --
 -- @
 -- 'usingConfigFile' \"myconfiguration.cfg\"
--- \"*.o\" '*>' \\out -> do
+-- \"*.o\" '%>' \\out -> do
 --     cflags <- 'getConfig' \"CFLAGS\"
 --     'cmd' \"gcc\" [out '-<.>' \"c\"] (fromMaybe \"\" cflags)
 -- @

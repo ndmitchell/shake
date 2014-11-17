@@ -38,7 +38,7 @@ defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
 --   If they turn out to be real dependencies, you should add an explicit dependency afterwards.
 --
 -- @
--- \"source.o\" *> \\out -> do
+-- \"source.o\" %> \\out -> do
 --     'orderOnly' [\"header.h\"]
 --     () <- 'cmd' \"gcc -c source.c -o source.o -MMD -MF source.m\"
 --     'neededMakefileDependencies' \"source.m\"

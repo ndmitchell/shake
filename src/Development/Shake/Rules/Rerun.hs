@@ -25,7 +25,7 @@ instance Rule AlwaysRerunQ AlwaysRerunA where
 --   the environment. For example:
 --
 -- @
--- \"ghcVersion.txt\" 'Development.Shake.*>' \\out -> do
+-- \"ghcVersion.txt\" 'Development.Shake.%>' \\out -> do
 --     'alwaysRerun'
 --     'Development.Shake.Stdout' stdout <- 'Development.Shake.cmd' \"ghc --numeric-version\"
 --     'Development.Shake.writeFileChanged' out stdout

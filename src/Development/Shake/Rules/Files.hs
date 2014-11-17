@@ -47,25 +47,25 @@ instance Rule FilesQ FilesA where
 
 
 -- | Define a rule for building multiple files at the same time.
---   Think of it as the AND (@&&@) equivalent of '*>'.
+--   Think of it as the AND (@&&@) equivalent of '%>'.
 --   As an example, a single invocation of GHC produces both @.hi@ and @.o@ files:
 --
 -- @
--- [\"*.o\",\"*.hi\"] '&*>' \\[o,hi] -> do
+-- [\"*.o\",\"*.hi\"] '&%>' \\[o,hi] -> do
 --     let hs = o 'Development.Shake.FilePath.-<.>' \"hs\"
 --     'Development.Shake.need' ... -- all files the .hs import
 --     'Development.Shake.cmd' \"ghc -c\" [hs]
 -- @
 --
---   However, in practice, it's usually easier to define rules with '*>' and make the @.hi@ depend
+--   However, in practice, it's usually easier to define rules with '%>' and make the @.hi@ depend
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
---   Think of it as the OR (@||@) equivalent of '*>'.
+--   Think of it as the OR (@||@) equivalent of '%>'.
 (&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 ps &%> act
     | not $ compatible ps = error $
-        "All patterns to &*> must have the same number and position of // and * wildcards\n" ++
+        "All patterns to &%> must have the same number and position of // and * wildcards\n" ++
         unwords ps
     | otherwise = do
         forM_ ps $ \p ->
@@ -78,11 +78,11 @@ ps &%> act
                     liftIO $ mapM_ (createDirectoryIfMissing True) $ fastNub $ map takeDirectory xs
                     trackAllow xs
                     act xs
-                    getFileTimes "&*>" xs_
+                    getFileTimes "&%>" xs_
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
---   and more dangerous version of '&*>'. Think of it as the AND (@&&@) equivalent of '?>'.
+--   and more dangerous version of '&%>'. Think of it as the AND (@&&@) equivalent of '?>'.
 --
 --   Given an application @test &?> ...@, @test@ should return @Just@ if the rule applies, and should
 --   return the list of files that will be produced. This list /must/ include the file passed as an argument and should

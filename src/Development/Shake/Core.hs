@@ -107,7 +107,7 @@ ruleValue :: Rule key value => (key -> Maybe (m value)) -> value
 ruleValue = err "ruleValue"
 
 
--- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.*>' or 'action'. Rules are combined
+-- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'. Rules are combined
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation. To define your own
 --   custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
@@ -156,8 +156,8 @@ rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
 --   Excessive use of 'priority' is discouraged. As an example:
 --
 -- @
--- 'priority' 4 $ \"hello.*\" *> \\out -> 'writeFile'' out \"hello.*\"
--- 'priority' 8 $ \"*.txt\" *> \\out -> 'writeFile'' out \"*.txt\"
+-- 'priority' 4 $ \"hello.*\" %> \\out -> 'writeFile'' out \"hello.*\"
+-- 'priority' 8 $ \"*.txt\" %> \\out -> 'writeFile'' out \"*.txt\"
 -- @
 --
 --   In this example @hello.txt@ will match the second rule, instead of raising an error about ambiguity.
@@ -170,8 +170,8 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first
 --
 -- @
 -- 'alternatives' $ do
---     \"hello.*\" *> \\out -> 'writeFile'' out \"hello.*\"
---     \"*.txt\" *> \\out -> 'writeFile'' out \"*.txt\"
+--     \"hello.*\" %> \\out -> 'writeFile'' out \"hello.*\"
+--     \"*.txt\" %> \\out -> 'writeFile'' out \"*.txt\"
 -- @
 --
 --   In this example @hello.txt@ will match the first rule, instead of raising an error about ambiguity.
@@ -671,7 +671,7 @@ trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackA
 -- 'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
 --    'Development.Shake.want' [\"a.xls\",\"b.xls\"]
 --    excel <- 'Development.Shake.newResource' \"Excel\" 1
---    \"*.xls\" 'Development.Shake.*>' \\out ->
+--    \"*.xls\" 'Development.Shake.%>' \\out ->
 --        'Development.Shake.withResource' excel 1 $
 --            'Development.Shake.cmd' \"excel\" out ...
 -- @
@@ -685,10 +685,10 @@ trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackA
 -- @
 -- disk <- 'Development.Shake.newResource' \"Disk\" 4
 -- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
--- \"*.exe\" 'Development.Shake.*>' \\out ->
+-- \"*.exe\" 'Development.Shake.%>' \\out ->
 --     'Development.Shake.withResource' disk 1 $
 --         'Development.Shake.cmd' \"ld -o\" [out] ...
--- \"*.o\" 'Development.Shake.*>' \\out ->
+-- \"*.o\" 'Development.Shake.%>' \\out ->
 --     'Development.Shake.cmd' \"cl -o\" [out] ...
 -- @
 newResource :: String -> Int -> Rules Resource
@@ -702,7 +702,7 @@ newResource name mx = rulesIO $ newResourceIO name mx
 --
 -- @
 -- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
--- \"*.url\" 'Development.Shake.*>' \\out -> do
+-- \"*.url\" 'Development.Shake.%>' \\out -> do
 --     'Development.Shake.withResource' google 1 $
 --         'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
 -- @
@@ -716,7 +716,7 @@ newResource name mx = rulesIO $ newResourceIO name mx
 --
 -- @
 -- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
--- \"*.url\" 'Development.Shake.*>' \\out -> do
+-- \"*.url\" 'Development.Shake.%>' \\out -> do
 --     'Development.Shake.withResource' google 1 $ return ()
 --     'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
 -- @
@@ -807,7 +807,7 @@ newCacheIO act = do
 -- digits \<- 'newCache' $ \\file -> do
 --     src \<- readFile\' file
 --     return $ length $ filter isDigit src
--- \"*.digits\" 'Development.Shake.*>' \\x -> do
+-- \"*.digits\" 'Development.Shake.%>' \\x -> do
 --     v1 \<- digits ('dropExtension' x)
 --     v2 \<- digits ('dropExtension' x)
 --     'Development.Shake.writeFile'' x $ show (v1,v2)

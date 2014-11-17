@@ -95,7 +95,7 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 --   necessary when calling 'Development.Shake.cmd' or 'Development.Shake.command'. As an example:
 --
 -- @
--- \"\/\/*.rot13\" '*>' \\out -> do
+-- \"\/\/*.rot13\" '%>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
 --     'Development.Shake.cmd' \"rot13\" [src] \"-o\" [out]
@@ -207,7 +207,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
---   the second argument will be used to build it. Usually '*>' is sufficient, but '?>' gives
+--   the second argument will be used to build it. Usually '%>' is sufficient, but '?>' gives
 --   additional power. For any file used by the build system, only one rule should return 'True'.
 --   This function will create the directory for the result file, if necessary.
 --
@@ -220,17 +220,17 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 (?>) test act = priority 0.5 $ root "with ?>" test act
 
 
--- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '*>'.
---   Think of it as the OR (@||@) equivalent of '*>'.
+-- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '%>'.
+--   Think of it as the OR (@||@) equivalent of '%>'.
 (|%>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (|%>) pats act = do
     let (simp,other) = partition simple pats
     case simp of
         [] -> return ()
-        [p] -> root "with |*>" (\x -> toStandard x == p) act
-        ps -> let ps = Set.fromList pats in root "with |*>" (flip Set.member ps . toStandard) act
+        [p] -> root "with |%>" (\x -> toStandard x == p) act
+        ps -> let ps = Set.fromList pats in root "with |%>" (flip Set.member ps . toStandard) act
     unless (null other) $
-        let ps = map (?==) other in priority 0.5 $ root "with |*>" (\x -> any ($ x) ps) act
+        let ps = map (?==) other in priority 0.5 $ root "with |%>" (\x -> any ($ x) ps) act
 
 -- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
 --   Patterns with no wildcards have higher priority than those with wildcards, and no file
@@ -239,7 +239,7 @@ phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --   This function will create the directory for the result file, if necessary.
 --
 -- @
--- \"*.asm.o\" '*>' \\out -> do
+-- \"*.asm.o\" '%>' \\out -> do
 --     let src = 'Development.Shake.FilePath.dropExtension' out
 --     'need' [src]
 --     'Development.Shake.cmd' \"as\" [src] \"-o\" [out]

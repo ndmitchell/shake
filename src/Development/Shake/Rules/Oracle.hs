@@ -73,7 +73,7 @@ instance (
 --        pkgs <- getPkgList $ GhcPkgList ()
 --        return $ lookup pkg pkgs
 --    --
---    \"myrule\" *> \\_ -> do
+--    \"myrule\" %> \\_ -> do
 --        getPkgVersion $ GhcPkgVersion \"shake\"
 --        ... rule using the shake version ...
 -- @

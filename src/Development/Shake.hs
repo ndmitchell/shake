@@ -8,7 +8,7 @@
 --
 --main = 'shakeArgs' 'shakeOptions' $ do
 --    'want' [\"result.tar\"]
---    \"*.tar\" '*>' \\out -> do
+--    \"*.tar\" '%>' \\out -> do
 --        contents \<- 'readFileLines' $ out 'Development.Shake.FilePath.-<.>' \"txt\"
 --        'need' contents
 --        'cmd' \"tar -cf\" [out] contents
@@ -17,7 +17,7 @@
 --   We start by importing the modules defining both Shake and routines for manipulating 'FilePath' values.
 --   We define @main@ to call 'shake' with the default 'shakeOptions'. As the second argument to
 --   'shake', we provide a set of rules. There are two common forms of rules, 'want' to specify target files,
---   and '*>' to define a rule which builds a 'FilePattern'. We use 'want' to require that after the build
+--   and '%>' to define a rule which builds a 'FilePattern'. We use 'want' to require that after the build
 --   completes the file @result.tar@ should be ready.
 --
 --   The @*.tar@ rule describes how to build files with the extension @.tar@, including @result.tar@.
@@ -42,7 +42,7 @@
 --   /== WRITING A BUILD SYSTEM ==============================/
 --
 --   When writing a Shake build system, start by defining what you 'want', then write rules
---   with '*>' to produce the results. Before calling 'cmd' you should ensure that any files the command
+--   with '%>' to produce the results. Before calling 'cmd' you should ensure that any files the command
 --   requires are demanded with calls to 'need'. We offer the following advice to Shake users:
 --
 -- * If @ghc --make@ or @cabal@ is capable of building your project, use that instead. Custom build systems are
@@ -168,17 +168,17 @@ import Development.Shake.Rules.Rerun
 
 infix 1 **>, ?>>, *>>
 
--- | /Deprecated:/ Alias for '|*>'.
+-- | /Deprecated:/ Alias for '|%>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) = (|*>)
+(**>) = (|%>)
 
 -- | /Deprecated:/ Alias for '&?>'.
 (?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
 (?>>) = (&?>)
 
--- | /Deprecated:/ Alias for '&*>'.
+-- | /Deprecated:/ Alias for '&%>'.
 (*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-(*>>) = (&*>)
+(*>>) = (&%>)
 
 
 ---------------------------------------------------------------------
@@ -194,6 +194,6 @@ infix 1 *>, |*>, &*>
 (|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (|*>) = (|%>)
 
--- | /Deprecated:/ Alias for '&*>'.
+-- | /Deprecated:/ Alias for '&%>'.
 (&*>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 (&*>) = (&%>)

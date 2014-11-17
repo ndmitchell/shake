@@ -39,7 +39,7 @@ import System.Time.Extra
 -- main = 'shakeArgs' 'shakeOptions'{'shakeFiles' = \"_make/\", 'shakeProgress' = 'progressSimple'} $ do
 --     'phony' \"clean\" $ 'Development.Shake.removeFilesAfter' \"_make\" [\"\/\/*\"]
 --     'want' [\"_make\/neil.txt\",\"_make\/emily.txt\"]
---     \"_make\/*.txt\" '*>' \\out ->
+--     \"_make\/*.txt\" '%>' \\out ->
 --         ... build action here ...
 -- @
 --
@@ -95,7 +95,7 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
 --     if null targets then 'want' [\"result.exe\"] else 'want' targets
 --     let compiler = if DistCC \`elem\` flags then \"distcc\" else \"gcc\"
---     \"*.o\" '*>' \\out -> do
+--     \"*.o\" '%>' \\out -> do
 --         'need' ...
 --         'cmd' compiler ...
 --     ...
