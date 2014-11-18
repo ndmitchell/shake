@@ -22,9 +22,8 @@ import Control.DeepSeq
 import Control.Exception.Extra as C
 import Control.Monad.Extra
 import Control.Monad.IO.Class
-import Data.Char
 import Data.Either
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import Foreign.C.Error
 import System.Directory
@@ -73,7 +72,7 @@ data CmdOption
 addPath :: MonadIO m => [String] -> [String] -> m CmdOption
 addPath pre post = do
     args <- liftIO getEnvironment
-    let (path,other) = partition ((== "PATH") . (if isWindows then map toUpper else id) . fst) args
+    let (path,other) = partition ((== "PATH") . (if isWindows then upper else id) . fst) args
     return $ Env $
         [("PATH",intercalate [searchPathSeparator] $ pre ++ post) | null path] ++
         [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
@@ -142,7 +141,7 @@ commandExplicit funcName copts results exe args = do
 trackerFiles :: FilePath -> IO ([FilePath], [FilePath])
 trackerFiles dir = do
     curdir <- getCurrentDirectory
-    let pre = map toUpper curdir ++ "\\"
+    let pre = upper curdir ++ "\\"
     files <- getDirectoryContents dir
     let f typ = do
             files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file -> do
@@ -159,7 +158,7 @@ correctCase x = f "" x
         f pre x = do
             let (a,b) = (takeDirectory1 x, dropDirectory1 x)
             dir <- getDirectoryContents pre
-            case find ((==) a . map toUpper) dir of
+            case find ((==) a . upper) dir of
                 Nothing -> return Nothing -- if it can't be found it probably doesn't exist, so assume a file that wasn't really read
                 Just v -> f (pre +/+ v) b
 
