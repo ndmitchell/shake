@@ -89,12 +89,11 @@ normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- a
 
 -- | Convert to native path separators, namely @\\@ on Windows. 
 toNative :: FilePath -> FilePath
-toNative = map (\x -> if Native.isPathSeparator x then Native.pathSeparator else x)
+toNative = if isWindows then map (\x -> if x == '/' then '\\' else x) else id
 
 -- | Convert all path separators to @/@, even on Windows.
 toStandard :: FilePath -> FilePath
-toStandard | Native.pathSeparators == [pathSeparator] = id
-           | otherwise = map (\x -> if Native.isPathSeparator x then pathSeparator else x)
+toStandard = if isWindows then map (\x -> if x == '\\' then '/' else x) else id
 
 
 -- | Remove the current extension and add another, an alias for 'replaceExtension'.
