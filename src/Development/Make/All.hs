@@ -125,6 +125,6 @@ defaultEnv = do
     cur <- IO.getCurrentDirectory
     return $ newEnv $
         ("EXE",if null exe then "" else "." ++ exe) :
-        ("MAKE",normalise exePath) :
-        ("CURDIR",normalise cur) :
+        ("MAKE",normaliseEx exePath) :
+        ("CURDIR",normaliseEx cur) :
         env

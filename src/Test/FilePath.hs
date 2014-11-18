@@ -26,7 +26,7 @@ test build obj = do
     let a === b = a Test.Type.=== b -- duplicate definition in QuickCheck 2.7 and above
 
     let norm x =
-            let s = toStandard $ normalise x
+            let s = toStandard $ normaliseEx x
                 b = BS.unpack (BS.filepathNormalise $ BS.pack x)
             in if s == b then s else error $ show ("Normalise functions differ",x,s,b)
     -- basic examples

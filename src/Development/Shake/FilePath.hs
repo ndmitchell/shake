@@ -1,21 +1,14 @@
 
--- | A module for 'FilePath' operations, to be used instead of "System.FilePath"
---   when writing build systems. In build systems, when using the file name
---   as a key for indexing rules, it is important that two different strings do
---   not refer to the same on-disk file. We therefore follow the conventions:
---
--- * Always use @\/@ as the directory separator, even on Windows.
---
--- * The 'normalise' function also squashes @\/..\/@ components.
+-- | A module for 'FilePath' operations exposing "System.FilePath" plus some additional operations.
 module Development.Shake.FilePath(
     module System.FilePath,
-    dropDirectory1, takeDirectory1, normalise,
+    dropDirectory1, takeDirectory1, normaliseEx,
     (-<.>),
     toNative, toStandard,
     exe
     ) where
 
-import System.FilePath hiding (normalise)
+import System.FilePath
 import System.Info.Extra
 import qualified System.FilePath as Native
 
@@ -55,9 +48,9 @@ takeDirectory1 = takeWhile (not . isPathSeparator)
 --
 --   This function is not based on the normalise function from the filepath library, as that function
 --   is quite broken.
-normalise :: FilePath -> FilePath
-normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- account for UNC paths being double //
-             | otherwise = f xs
+normaliseEx :: FilePath -> FilePath
+normaliseEx xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- account for UNC paths being double //
+               | otherwise = f xs
     where
         sep = Native.isPathSeparator
         f o = toNative $ deslash o $ (++"/") $ concatMap ('/':) $ reverse $ g 0 $ reverse $ split o
