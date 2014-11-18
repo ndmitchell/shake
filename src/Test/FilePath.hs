@@ -27,7 +27,7 @@ test build obj = do
     let a === b = a Test.Type.=== b -- duplicate definition in QuickCheck 2.7 and above
 
     let norm x =
-            let s = normalise x
+            let s = toStandard $ normalise x
                 b = BS.unpack (BS.filepathNormalise $ BS.pack x)
             in if s == b then s else error $ show ("Normalise functions differ",x,s,b)
     -- basic examples
@@ -70,7 +70,7 @@ test build obj = do
                  ,not $ "/./" `isInfixOf` y
                  ,not isWindows || '\\' `notElem` y
                  ,not $ "//" `isInfixOf` noDrive y
-                 ,".." `notElem` dropWhile (== "..") (splitDirectories $ dropWhile sep y)
+                 ,".." `notElem` dropWhile (== "..") (dropWhile (\x -> all isPathSeparator x || isDrive x) $ splitDirectories y)
                  ,norm y == y]
         in if and ps then True else error $ show (x, y, ps)
 
