@@ -33,7 +33,7 @@ main = shaken test $ \args obj -> do
     obj "*.files" %> \out -> do
         let pats = readEsc $ dropExtension $ unobj out
         let (x:xs) = ["" | " " `isPrefixOf` pats] ++ words pats
-        writeFileLines out =<< getDirectoryFiles (obj x) xs
+        writeFileLines out . map toStandard =<< getDirectoryFiles (obj x) xs
 
     obj "*.exist" %> \out -> do
         let xs = map obj $ words $ readEsc $ dropExtension $ unobj out
