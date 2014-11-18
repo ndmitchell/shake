@@ -12,8 +12,6 @@ import Numeric.Extra
 import Paths_shake
 import System.Time.Extra
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Language.Javascript.Flot as Flot
-import qualified Language.Javascript.JQuery as JQuery
 
 
 data ProfileEntry = ProfileEntry
@@ -57,9 +55,6 @@ generateHTML xs = do
     report <- LBS.readFile $ htmlDir </> "profile.html"
     let f name | name == "profile-data.js" = return $ LBS.pack $ "var shake =\n" ++ generateJSON xs
                | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
-               | name == "lib/jquery.js" = LBS.readFile =<< JQuery.file
-               | name == "lib/jquery.flot.js" = LBS.readFile =<< Flot.file Flot.Flot
-               | name == "lib/jquery.flot.stack.js" = LBS.readFile =<< Flot.file Flot.FlotStack
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 

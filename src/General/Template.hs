@@ -1,17 +1,28 @@
+{-# LANGUAGE ViewPatterns #-}
 
 module General.Template(runTemplate) where
 
+import System.FilePath.Posix
 import Control.Monad
+import Control.Monad.IO.Class
 import Data.Char
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Language.Javascript.Flot as Flot
+import qualified Language.Javascript.JQuery as JQuery
 
+
+libraries =
+    [("jquery.js", JQuery.file)
+    ,("jquery.flot.js", Flot.file Flot.Flot)
+    ,("jquery.flot.stack.js", Flot.file Flot.FlotStack)
+    ]
 
 -- | Template Engine. Perform the following replacements on a line basis:
 --
 -- * <script src="foo"></script> ==> <script>[[foo]]</script>
 --
 -- * <link href="foo" rel="stylesheet" type="text/css" /> ==> <style type="text/css">[[foo]]</style>
-runTemplate :: Monad m => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
+runTemplate :: MonadIO m => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
 runTemplate ask = liftM LBS.unlines . mapM f . LBS.lines
     where
         link = LBS.pack "<link href=\""
@@ -22,7 +33,12 @@ runTemplate ask = liftM LBS.unlines . mapM f . LBS.lines
             | otherwise = return x
             where
                 y = LBS.dropWhile isSpace x
-                grab = ask . takeWhile (/= '\"') . LBS.unpack
+                grab = asker . takeWhile (/= '\"') . LBS.unpack
+
+        asker o@(splitFileName -> ("lib/",x)) = case lookup x libraries of
+            Just act -> liftIO $ LBS.readFile =<< act
+            Nothing -> error $ "Template library, unknown library: " ++ o
+        asker x = ask x
 
 
 lbs_stripPrefix :: LBS.ByteString -> LBS.ByteString -> Maybe LBS.ByteString
