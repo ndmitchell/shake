@@ -49,7 +49,7 @@ main = shaken test $ \args obj -> do
     "path" !> do
         path <- addPath [obj "bin"] []
         () <- cmd $ obj "bin/myexe"
-        () <- cmd $ obj "bin/myexe" <.> "exe"
+        () <- cmd $ obj "bin/myexe" <.> exe
         () <- cmd path Shell "myexe"
         () <- cmd path "myexe"
         return ""
