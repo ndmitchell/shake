@@ -20,6 +20,7 @@ newtype File = File String deriving Show
 
 instance Arbitrary File where
     arbitrary = fmap File $ listOf $ oneof $ map return "a /\\:."
+    shrink (File x) = map File $ shrink x
 
 
 test build obj = do
