@@ -6,24 +6,23 @@
 --
 -- * Always use @\/@ as the directory separator, even on Windows.
 --
--- * When combining 'FilePath' values with '</>' we squash any @\/.\/@ components.
+-- * The 'normalise' function also squashes @\/..\/@ components.
 module Development.Shake.FilePath(
     module System.FilePath.Posix, -- apart from what I override and search path stuff
     module System.FilePath, -- only search-path stuff
     dropDirectory1, takeDirectory1, normalise,
     (-<.>),
-    toNative, toStandard, (</>), combine,
+    toNative, toStandard,
     exe
     ) where
 
 import System.FilePath.Posix hiding
-    (normalise, (</>), combine
+    (normalise
     ,searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
 import System.FilePath(searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
 import System.Info.Extra
 import qualified System.FilePath as Native
 
-infixr 5  </>
 infixr 7  -<.>
 
 
@@ -98,22 +97,9 @@ toStandard | Native.pathSeparators == [pathSeparator] = id
            | otherwise = map (\x -> if Native.isPathSeparator x then pathSeparator else x)
 
 
--- | Combine two file paths, an alias for 'combine'.
-(</>) :: FilePath -> FilePath -> FilePath
-(</>) = combine
-
 -- | Remove the current extension and add another, an alias for 'replaceExtension'.
 (-<.>) :: FilePath -> String -> FilePath
 (-<.>) = replaceExtension
-
--- | Combine two file paths. Any redundant @.\/@ or @..\/@ components in the
---   resulting path are eliminated - the result will always have 'normalise' applied.
---
--- > combine "aaa/bbb" "ccc" == "aaa/bbb/ccc"
--- > combine "aaa/bbb" "./ccc" == "aaa/bbb/ccc"
--- > combine "aaa/bbb" "../ccc" == "aaa/ccc"
-combine :: FilePath -> FilePath -> FilePath
-combine x y = normalise $ Native.combine (toNative x) (toNative y)
 
 
 -- | The extension of executables, @\"exe\"@ on Windows and @\"\"@ otherwise.
