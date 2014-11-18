@@ -61,7 +61,7 @@ runNinja file args tool = do
         pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
             fmap ((,) name) $ newResource (BS.unpack name) depth
 
-        action $ needBS $ map filepathNormalise $ concatMap (resolvePhony phonys) $
+        action $ needBS $ concatMap (resolvePhony phonys) $
             if not $ null args then map BS.pack args
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
@@ -90,8 +90,8 @@ quote x | BS.any isSpace x = let q = BS.singleton '\"' in BS.concat [q,x,q]
 
 build :: (Build -> [Str] -> Action ()) -> Map.HashMap Str [Str] -> Map.HashMap Str Rule -> Map.HashMap Str Resource -> [Str] -> Build -> Action ()
 build needDeps phonys rules pools out build@Build{..} = do
-    needBS $ map filepathNormalise $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
-    orderOnlyBS $ map filepathNormalise $ concatMap (resolvePhony phonys) depsOrderOnly
+    needBS $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
+    orderOnlyBS $ concatMap (resolvePhony phonys) depsOrderOnly
     case Map.lookup ruleName rules of
         Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
@@ -122,7 +122,7 @@ build needDeps phonys rules pools out build@Build{..} = do
                     Stdout stdout <- withPool $ command cmdOpts cmdProg cmdArgs
                     prefix <- liftIO $ fmap (fromMaybe $ BS.pack "Note: including file: ") $
                                        askEnv env $ BS.pack "msvc_deps_prefix"
-                    needDeps build $ map filepathNormalise $ parseShowIncludes prefix $ BS.pack stdout
+                    needDeps build $ parseShowIncludes prefix $ BS.pack stdout
                  else
                     withPool $ command_ cmdOpts cmdProg cmdArgs
                 when (depfile /= "") $ do
