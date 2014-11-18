@@ -7,7 +7,6 @@ import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Demo
 import Development.Shake.Rules.File
-import Development.Shake.FilePath
 import Development.Shake.Progress
 import Development.Shake.Shake
 import General.Timing
@@ -58,7 +57,7 @@ import System.Time.Extra
 -- * @main _make/henry.txt@ will not build @neil.txt@ or @emily.txt@, but will instead build @henry.txt@.
 shakeArgs :: ShakeOptions -> Rules () -> IO ()
 shakeArgs opts rules = shakeArgsWith opts [] f
-    where f _ files = return $ Just $ if null files then rules else want (map normalise files) >> withoutActions rules
+    where f _ files = return $ Just $ if null files then rules else want files >> withoutActions rules
 
 
 -- | A version of 'shakeArgs' with more flexible handling of command line arguments.
