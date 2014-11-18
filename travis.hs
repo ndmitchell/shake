@@ -21,7 +21,7 @@ main = do
 
     -- grab ninja
     system_ "git clone https://github.com/martine/ninja"
-    system_ "cd ninja && ./bootstrap.py"
+    system_ "cd ninja && ./configure.py --bootstrap"
     copyFile "ninja/ninja" "nin"
 
     withCurrentDirectory "ninja" $ do
