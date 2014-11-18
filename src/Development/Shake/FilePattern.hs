@@ -18,7 +18,7 @@ import General.Extra
 -- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax
 --   and semantics of 'FilePattern' see '?=='.
 --
---   Most 'FilePath' values are suitable as 'FilePattern' values which match
+--   Most 'normalise'd 'FilePath' values are suitable as 'FilePattern' values which match
 --   only that specific file.
 type FilePattern = String
 
