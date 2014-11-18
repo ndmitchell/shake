@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Expose native System.FilePath in Development.Shake.FilePath
     #193, eliminate the custom version of </>
     #193, make need/orderOnly call normalise on their arguments
     #177, use the $PATH variable to resolve cmd

@@ -8,18 +8,14 @@
 --
 -- * The 'normalise' function also squashes @\/..\/@ components.
 module Development.Shake.FilePath(
-    module System.FilePath.Posix, -- apart from what I override and search path stuff
-    module System.FilePath, -- only search-path stuff
+    module System.FilePath,
     dropDirectory1, takeDirectory1, normalise,
     (-<.>),
     toNative, toStandard,
     exe
     ) where
 
-import System.FilePath.Posix hiding
-    (normalise
-    ,searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
-import System.FilePath(searchPathSeparator, isSearchPathSeparator, splitSearchPath, getSearchPath)
+import System.FilePath hiding (normalise)
 import System.Info.Extra
 import qualified System.FilePath as Native
 
@@ -34,7 +30,7 @@ infixr 7  -<.>
 -- > dropDirectory1 "aaa" == ""
 -- > dropDirectory1 "" == ""
 dropDirectory1 :: FilePath -> FilePath
-dropDirectory1 = drop 1 . dropWhile (not . Native.isPathSeparator)
+dropDirectory1 = drop 1 . dropWhile (not . isPathSeparator)
 
 
 -- | Take the first component of a 'FilePath'. Should only be used on
@@ -44,7 +40,7 @@ dropDirectory1 = drop 1 . dropWhile (not . Native.isPathSeparator)
 -- > takeDirectory1 "aaa/" == "aaa"
 -- > takeDirectory1 "aaa" == "aaa"
 takeDirectory1 :: FilePath -> FilePath
-takeDirectory1 = takeWhile (not . Native.isPathSeparator)
+takeDirectory1 = takeWhile (not . isPathSeparator)
 
 
 -- | Normalise a 'FilePath', trying to do:
@@ -64,7 +60,7 @@ normalise xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- a
              | otherwise = f xs
     where
         sep = Native.isPathSeparator
-        f o = deslash o $ (++"/") $ concatMap ('/':) $ reverse $ g 0 $ reverse $ split o
+        f o = toNative $ deslash o $ (++"/") $ concatMap ('/':) $ reverse $ g 0 $ reverse $ split o
 
         deslash o x
             | x == "/" = case (pre,pos) of

@@ -3,7 +3,6 @@ module Test.FilePath(main) where
 
 import Development.Shake.FilePath
 import qualified System.FilePath as Native
-import qualified System.FilePath.Posix as Posix
 import Test.Type
 import Test.QuickCheck
 import Control.Monad
@@ -84,4 +83,4 @@ test build obj = do
     takeDirectory1 "aaa" === "aaa"
 
     searchPathSeparator === Native.searchPathSeparator
-    pathSeparators === Posix.pathSeparators
+    pathSeparators === Native.pathSeparators
