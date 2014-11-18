@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make FilePattern on Windows cope with all path separators
     Rename normalise to normaliseEx
     Expose native System.FilePath in Development.Shake.FilePath
     #193, eliminate the custom version of </>

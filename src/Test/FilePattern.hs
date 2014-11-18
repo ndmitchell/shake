@@ -2,6 +2,9 @@
 module Test.FilePattern(main) where
 
 import Development.Shake.FilePattern
+import Development.Shake.FilePath
+import Data.Tuple.Extra
+import System.Info.Extra
 import Test.Type
 
 main = shaken test $ \args obj -> return ()
@@ -10,6 +13,7 @@ main = shaken test $ \args obj -> return ()
 test build obj = do
     let f b pat file = assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
     f True "//*.c" "foo/bar/baz.c"
+    f isWindows "\\\\*.c" "foo/bar\\baz.c"
     f True "*.c" "baz.c"
     f True "//*.c" "baz.c"
     f True "test.c" "test.c"
@@ -32,7 +36,7 @@ test build obj = do
     directories1 "*.xml" === ("",False)
     directories1 "//*.xml" === ("",True)
     directories1 "foo//*.xml" === ("foo",True)
-    directories1 "foo/bar/*.xml" === ("foo/bar",False)
+    first toStandard (directories1 "foo/bar/*.xml") === ("foo/bar",False)
     directories1 "*/bar/*.xml" === ("",True)
     directories ["*.xml","//*.c"] === [("",True)]
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]

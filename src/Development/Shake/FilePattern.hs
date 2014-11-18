@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, ViewPatterns #-}
 
 module Development.Shake.FilePattern(
     FilePattern, (?==),
@@ -6,7 +6,7 @@ module Development.Shake.FilePattern(
     directories, directories1
     ) where
 
-import System.FilePath(pathSeparators)
+import System.FilePath(isPathSeparator, pathSeparators, pathSeparator)
 import Data.List
 import Data.Tuple.Extra
 import General.Extra
@@ -19,14 +19,14 @@ import General.Extra
 --   and semantics of 'FilePattern' see '?=='.
 --
 --   Most 'normaliseEx'd 'FilePath' values are suitable as 'FilePattern' values which match
---   only that specific file.
+--   only that specific file. On Windows @\\@ is treated as equivalent to @\/@.
 type FilePattern = String
 
 
 data Lexeme = Star | SlashSlash | Char Char deriving (Show, Eq)
 
 isChar (Char _) = True; isChar _ = False
-isDull (Char x) = x /= '/'; isDull _ = False
+isDull (Char x) = not $ isPathSeparator x; isDull _ = False
 fromChar (Char x) = x
 
 
@@ -42,7 +42,7 @@ type SString = (Bool, String) -- fst is True if at the start of the string
 
 lexer :: FilePattern -> [Lexeme]
 lexer ('*':xs) = Star : lexer xs
-lexer ('/':'/':xs) = SlashSlash : lexer xs
+lexer (s1:s2:xs) | isPathSeparator s1 && isPathSeparator s2 = SlashSlash : lexer xs
 lexer (x:xs) = Char x : lexer xs
 lexer [] = []
 
@@ -53,7 +53,7 @@ pattern = Concat Start . foldr Concat End . map f
         f Star = Bracket $ Repeat $ Not pathSeparators
         f SlashSlash = let s = Start `Or` End `Or` Lit pathSeparators in Bracket $
                        Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)
-        f (Char x) = Lit $ if x == '/' then pathSeparators else [x]
+        f (Char x) = Lit $ if isPathSeparator x then pathSeparators else [x]
 
 
 -- | Return is (brackets, matched, rest)
@@ -97,7 +97,7 @@ match _ _ = []
 --   Patterns with constructs such as @foo\/..\/bar@ will never match
 --   normalised 'FilePath' values, so are unlikely to be correct.
 (?==) :: FilePattern -> FilePath -> Bool
-(?==) "//*" = const True
+(?==) [s1,s2,'*'] | isPathSeparator s1 && isPathSeparator s2 = const True
 (?==) p = \x -> not $ null $ match pat (True, x)
     where pat = pattern $ lexer p
 
@@ -114,9 +114,9 @@ match _ _ = []
 -- > directories1 "foo/bar/*.xml" == ("foo/bar",False)
 -- > directories1 "*/bar/*.xml" == ("",True)
 directories1 :: FilePattern -> (FilePath, Bool)
-directories1 = first (intercalate "/") . f . lexer
+directories1 = first (intercalate [pathSeparator]) . f . lexer
     where
-        f xs | (a@(_:_),b:bs) <- span isDull xs, b `elem` [Char '/',SlashSlash] =
+        f xs | (a@(_:_),b:bs) <- span isDull xs, b `elem` (SlashSlash:map Char pathSeparators) =
                 if b == SlashSlash then ([map fromChar a],True) else first (map fromChar a:) $ f bs
              | all (\x -> isDull x || x == Star) xs = ([],False)
              | otherwise = ([], True)
@@ -134,8 +134,11 @@ directories ps = foldl f xs xs
         xs = fastNub $ map directories1 ps
 
         -- Eliminate anything which is a strict subset
-        f xs (x,True) = filter (\y -> not $ (x,False) == y || (x ++ "/") `isPrefixOf` fst y) xs
+        f xs (x,True) = filter (\y -> not $ (x,False) == y || x `isPrefixSlashOf` fst y) xs
         f xs _ = xs
+
+        isPrefixSlashOf x (stripPrefix x -> Just (s1:_)) = isPathSeparator s1
+        isPrefixSlashOf _ _ = False
 
 
 ---------------------------------------------------------------------
