@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #177, use the $PATH variable to resolve cmd
     #182, use js-jquery and js-flot
     #195, add getConfigKeys
     #194, replace *> with %> as the operator for rules

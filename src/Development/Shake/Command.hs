@@ -32,6 +32,7 @@ import System.Exit
 import System.IO.Extra
 import System.Process
 import System.Info.Extra
+import System.IO.Unsafe(unsafeInterleaveIO)
 
 import Development.Shake.Core
 import Development.Shake.FilePath
@@ -166,9 +167,10 @@ correctCase x = f "" x
 
 
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
-commandExplicitIO funcName opts results exe args =
+commandExplicitIO funcName opts results exe args = do
 -- BEGIN COPIED
 -- Originally from readProcessWithExitCode with as few changes as possible
+    cp <- resolvePath cp
     mask $ \restore -> do
       ans <- try_ $ createProcess cp
       (inh, outh, errh, pid) <- case ans of
@@ -279,6 +281,40 @@ commandExplicitIO funcName opts results exe args =
         applyOpt o (Cwd x) = o{cwd = if x == "" then Nothing else Just x}
         applyOpt o (Env x) = o{env = Just x}
         applyOpt o _ = o
+
+
+-- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
+--   Tricky, because on Windows it doesn't look in the $PATH first.
+resolvePath :: CreateProcess -> IO CreateProcess
+resolvePath cp
+    | Just e <- env cp
+    , Just (_, path) <- find ((==) "PATH" . (if isWindows then upper else id) . fst) e
+    , RawCommand prog args <- cmdspec cp
+    = do
+    let progExe = if prog == prog -<.> exe then prog else prog <.> exe
+    -- use unsafeInterleaveIO to allow laziness to skip the queries we don't use
+    pathOld <- unsafeInterleaveIO $ fmap (fromMaybe "") $ lookupEnv "PATH"
+    old <- unsafeInterleaveIO $ findExecutable prog
+    new <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath path) progExe
+    old2 <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath pathOld) progExe
+
+    switch <- return $ case () of
+        _ | path == pathOld -> False -- The state I can see hasn't changed
+          | Nothing <- new -> False -- I have nothing to offer
+          | Nothing <- old -> True -- I failed last time, so this must be an improvement
+          | Just old <- old, Just new <- new, equalFilePath old new -> False -- no different
+          | Just old <- old, Just old2 <- old2, equalFilePath old old2 -> True -- I could predict last time
+          | otherwise -> False
+    return $ case new of
+        Just new | switch -> cp{cmdspec = RawCommand new args}
+        _ -> cp
+resolvePath cp = do
+    return cp
+
+
+findExecutableWith :: [FilePath] -> String -> IO (Maybe FilePath)
+findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
+    ifM (doesFileExist s) (return $ Just s) (return Nothing)
 
 
 -- Copied from System.Process
