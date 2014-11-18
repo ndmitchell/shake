@@ -75,5 +75,5 @@ test build obj = do
 
     build ["triple"]
 
-    crash ["path_"] ["myexe","does not exist"]
+    crash ["path_"] ["myexe"]
     build ["path"]
