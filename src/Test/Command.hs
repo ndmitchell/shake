@@ -2,6 +2,7 @@
 module Test.Command(main) where
 
 import Development.Shake
+import Development.Shake.FilePath
 import Test.Type
 
 
@@ -37,6 +38,22 @@ main = shaken test $ \args obj -> do
         (Exit _, Stdout out2) <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo $FOO"
         return $ unlines [out1, out2]
 
+    obj "bin/myexe" <.> exe %> \out -> do
+        liftIO $ writeFile (obj "myexe.hs") "main = return () :: IO ()"
+        cmd "ghc --make" [obj "myexe.hs"] "-o" [out]
+
+    "path_" !> do
+        need [obj "bin/myexe" <.> exe]
+        fmap fromStdout $ cmd "myexe"
+
+    "path" !> do
+        path <- addPath [obj "bin"] []
+        () <- cmd $ obj "bin/myexe"
+        () <- cmd $ obj "bin/myexe" <.> "exe"
+        () <- cmd path Shell "myexe"
+        () <- cmd path "myexe"
+        return ""
+
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
@@ -57,3 +74,6 @@ test build obj = do
     assertContentsInfix (obj "env") "HELLO SHAKE"
 
     build ["triple"]
+
+    crash ["path_"] ["myexe","does not exist"]
+    build ["path"]
