@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #193, make need/orderOnly call normalise on their arguments
     #177, use the $PATH variable to resolve cmd
     #182, use js-jquery and js-flot
     #195, add getConfigKeys

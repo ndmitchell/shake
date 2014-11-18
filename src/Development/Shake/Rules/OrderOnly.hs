@@ -6,6 +6,7 @@ module Development.Shake.Rules.OrderOnly(
 
 import Development.Shake.Core
 import General.String
+import Development.Shake.ByteString
 import Development.Shake.Classes
 import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS
@@ -48,8 +49,8 @@ defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
 --   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
 --   and you will have lost some opportunity for parallelism.
 orderOnly :: [FilePath] -> Action ()
-orderOnly xs = (apply $ map (OrderOnlyQ . packU) xs :: Action [OrderOnlyA]) >> return ()
+orderOnly xs = (apply $ map (OrderOnlyQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [OrderOnlyA]) >> return ()
 
 
 orderOnlyBS :: [BS.ByteString] -> Action ()
-orderOnlyBS xs = (apply $ map (OrderOnlyQ . packU_) xs :: Action [OrderOnlyA]) >> return ()
+orderOnlyBS xs = (apply $ map (OrderOnlyQ . packU_ . filepathNormalise) xs :: Action [OrderOnlyA]) >> return ()

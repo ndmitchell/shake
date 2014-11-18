@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
@@ -19,6 +20,7 @@ import qualified Data.HashSet as Set
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
 import General.String
+import Development.Shake.ByteString
 import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.FilePattern
@@ -104,10 +106,10 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 --   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
 need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
+need xs = (apply $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
-needBS xs = (apply $ map (FileQ . packU_) xs :: Action [FileA]) >> return ()
+needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [FileA]) >> return ()
 
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
@@ -125,7 +127,7 @@ neededBS xs = do
 
 
 neededCheck :: [BSU] -> Action ()
-neededCheck xs = do
+neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
     pre <- liftIO $ mapM (storedValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
