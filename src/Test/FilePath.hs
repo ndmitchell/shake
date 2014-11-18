@@ -19,7 +19,7 @@ main = shaken test $ \args obj -> return ()
 newtype File = File String deriving Show
 
 instance Arbitrary File where
-    arbitrary = fmap File $ listOf $ oneof $ map return "abc /\\:."
+    arbitrary = fmap File $ listOf $ oneof $ map return "a /\\:."
 
 
 test build obj = do
