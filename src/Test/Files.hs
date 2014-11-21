@@ -2,6 +2,7 @@
 module Test.Files(main) where
 
 import Development.Shake
+import Development.Shake.FilePath
 import Test.Type
 import Control.Monad
 import Data.List
@@ -26,6 +27,10 @@ main = shaken test $ \args obj -> do
         writeFile' a "a"
         writeFile' b "b"
 
+    (\x -> let dir = takeDirectory x in
+           if takeFileName dir /= "pred" then Nothing else Just [dir </> "a.txt",dir </> "b.txt"]) &?> \outs -> do
+        mapM_ (`writeFile'` "") outs
+
 
 test build obj = do
     forM_ [[],["@"]] $ \args -> do
@@ -37,3 +42,5 @@ test build obj = do
         build ["clean"]
         build ["--no-build","--report=-"]
         build ["dir1/out.txt"]
+
+    build ["pred/a.txt"]
