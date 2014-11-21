@@ -64,9 +64,9 @@ instance Rule FilesQ FilesA where
 --   Think of it as the OR (@||@) equivalent of '%>'.
 (&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 ps &%> act
-    | not $ compatible ps = error $
-        "All patterns to &%> must have the same number and position of // and * wildcards\n" ++
-        unwords ps
+    | not $ compatible ps = error $ unlines $
+        ["All patterns to &%> must have the same number and position of // and * wildcards"] ++
+        ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = do
         forM_ ps $ \p ->
             p %> \file -> do
@@ -101,10 +101,21 @@ ps &%> act
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (&?>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
 (&?>) test act = priority 0.5 $ do
-    let checkedTest x = case test x of
+    let norm = toStandard . normaliseEx
+    let inputOutput suf inp out =
+            ["Input" ++ suf ++ ":", "  " ++ inp] ++
+            ["Output" ++ suf ++ ":"] ++ map ("  "++) out
+    let normTest = fmap (map norm) . test
+    let checkedTest x = case normTest x of
             Nothing -> Nothing
-            Just ys | x `elem` ys && all ((== Just ys) . test) ys -> Just ys
-                    | otherwise -> error $ "Invariant broken in &?> when trying on " ++ x
+            Just ys | x `notElem` ys -> error $ unlines $
+                ["Invariant broken in &?>, did not return the input (after normalisation)."] ++
+                inputOutput "" x ys
+            Just ys | bad:_ <- filter ((/= Just ys) . normTest) ys -> error $ unlines $
+                ["Invariant broken in &?>, not equal for all arguments (after normalisation)."] ++
+                inputOutput "1" x ys ++
+                inputOutput "2" bad (fromMaybe ["Nothing"] $ normTest bad)
+            Just ys -> Just ys
 
     isJust . checkedTest ?> \x -> do
         -- FIXME: Could optimise this test by calling rule directly and returning FileA Eq Eq Eq
