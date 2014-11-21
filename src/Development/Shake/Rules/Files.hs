@@ -15,9 +15,9 @@ import General.String
 import Development.Shake.Classes
 import Development.Shake.Rules.File
 import Development.Shake.FilePattern
+import Development.Shake.FilePath
 import Development.Shake.Types
-
-import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
+import Development.Shake.ByteString
 
 
 infix 1 &?>, &%>
@@ -70,7 +70,7 @@ ps &%> act
     | otherwise = do
         forM_ ps $ \p ->
             p %> \file -> do
-                _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU . substitute (extract p file)) ps
+                _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU . substitute (extract p file)) ps
                 return ()
         (if all simple ps then id else priority 0.5) $
             rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
@@ -109,7 +109,7 @@ ps &%> act
     isJust . checkedTest ?> \x -> do
         -- FIXME: Could optimise this test by calling rule directly and returning FileA Eq Eq Eq
         --        But only saves noticable time on uncommon Change modes
-        _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU) $ fromJust $ test x
+        _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) $ fromJust $ test x
         return ()
 
     rule $ \(FilesQ xs_) -> let xs@(x:_) = map (unpackU . fromFileQ) xs_ in
