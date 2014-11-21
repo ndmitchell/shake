@@ -15,7 +15,7 @@ description:
     including an example. Further examples are included in the Cabal tarball,
     under the @Examples@ directory. The homepage contains links to a user
     manual, an academic paper and further information:
-    <https://github.com/ndmitchell/shake>
+    <http://www.shakebuild.com/>
     .
     To use Shake the user writes a Haskell program
     that imports "Development.Shake", defines some build rules, and calls
@@ -29,7 +29,7 @@ description:
     Shake also provides more accurate dependency tracking, including seamless
     support for generated files, and dependencies on system information
     (e.g. compiler version).
-homepage:           https://github.com/ndmitchell/shake#readme
+homepage:           http://www.shakebuild.com/
 bug-reports:        https://github.com/ndmitchell/shake/issues
 tested-with:        GHC==7.8.3, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
 extra-source-files:

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #196, change the links to point at http://www.shakebuild.com/
     Improve the error messages when &%> or &?> go wrong
     Normalise file patterns used by &?>
 0.14

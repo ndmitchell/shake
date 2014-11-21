@@ -30,9 +30,9 @@
 --   To find out more:
 --
 -- * The user manual contains a longer example and background information on how to use Shake
---   <https://github.com/ndmitchell/shake/blob/master/docs/Manual.md#readme>.
+--   <http://www.shakebuild.com/manual>.
 --
--- * The home page has links to additional information <https://github.com/ndmitchell/shake#readme>, including
+-- * The home page has links to additional information <http://www.shakebuild.com/>, including
 --   a mailing list.
 --
 -- * The theory behind Shake is described in an ICFP 2012 paper, /Shake Before Building -- Replacing Make with Haskell/
