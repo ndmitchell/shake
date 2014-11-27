@@ -2,6 +2,7 @@
 module Test.FilePath(main) where
 
 import Development.Shake.FilePath
+import Development.Shake
 import qualified System.FilePath as Native
 import Test.Type
 import Test.QuickCheck
@@ -92,3 +93,5 @@ test build obj = do
 
     -- check common manipulations work
     ("//*" <.> "foo") === "//*.foo"
+    toStandard ("a" </> "b" </> "c" <//> "*" <.> "exe") === "a/b/c//*.exe"
+    ("a" <//> "/b/c") === "a//b/c"
