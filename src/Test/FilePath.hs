@@ -84,3 +84,6 @@ test build obj = do
 
     searchPathSeparator === Native.searchPathSeparator
     pathSeparators === Native.pathSeparators
+
+    -- check common manipulations work
+    ("//*" <.> "foo") === "//*.foo"

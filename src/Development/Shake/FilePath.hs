@@ -1,16 +1,25 @@
 
 -- | A module for 'FilePath' operations exposing "System.FilePath" plus some additional operations.
+--
+--   /Windows note:/ The extension methods ('<.>', 'takeExtension' etc) use the Posix variants since on
+--   Windows @"//*" <.> "txt"@ produces "//*\\.txt" (which is bad for 'Development.Shake.FilePattern' values).
 module Development.Shake.FilePath(
-    module System.FilePath,
+    module System.FilePath, module System.FilePath.Posix,
     dropDirectory1, takeDirectory1, normaliseEx,
     (-<.>),
     toNative, toStandard,
     exe
     ) where
 
-import System.FilePath
 import System.Info.Extra
 import qualified System.FilePath as Native
+
+import System.FilePath hiding
+    (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
+    ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions)
+import System.FilePath.Posix
+    (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
+    ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions)
 
 infixr 7  -<.>
 
