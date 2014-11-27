@@ -123,7 +123,9 @@ skeleton mode dir cssOut = do
         dropWhile (~/= "<p id=footer>") footer
     where
         remode xs = if mode == Debug then xs else map f xs
-            where f (TagOpen "a" at) = TagOpen "a" $ for at $ second $ \v -> if takeExtension v == ".html" then dropExtension v else v
+            where f (TagOpen "a" at) = TagOpen "a" $ for at $ second $ \v ->
+                      if v == "index.html" then "."
+                      else if takeExtension v == ".html" then dropExtension v else v
                   f x = x
 
         style = innerText . inside "style"
