@@ -324,10 +324,10 @@ Progress prediction is likely to be relatively poor during the first build and a
 
 #### Lint
 
-Shake features a built in "lint" features to check the build system is well formed. To run `build --lint`. You are likely to catch more lint violations if you first `build clean`. Sadly, lint does _not_ catch missing dependencies. However, it does catch:
+Shake features a built in "lint" features to check the build system is well formed. To run use `build --lint`. You are likely to catch more lint violations if you first `build clean`. Sadly, lint does _not_ catch missing dependencies. However, it does catch:
 
-* The current directory does not change. You should never change the current directory within the build system as multiple rules running at the same time will share the current directory. You can still run `cmd` calls in different directories using the `Cwd` argument.
-* Dependencies are not modified after they are depended upon. The common reason for violating this check is that you have one rule writing to a file which has a different rule associated with it.
+* Changing the current directory, typically with `setCurrentDirectory`. You should never change the current directory within the build system as multiple rules running at the same time share the current directory. You can still run `cmd` calls in different directories using the `Cwd` argument.
+* Outputs that change after Shake has built them. The usual cause of this error is if the rule for `foo` also writes to the file `bar`, despite `bar` having a different rule producing it.
 
 There is a performance penalty for building with `--lint`, but it is typically small.
 
