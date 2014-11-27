@@ -33,7 +33,7 @@ resolve file = do
                         intercalate "-" (wordsBy (== '.') modu) ++ ".html" ++
                         (if name == "" then "" else "#v:" ++ concatMap g name)
 
-        g x | x `elem` "*-<>/&?=|~" = "-" ++ show (ord x) ++ "-"
+        g x | x `elem` "%*-<>/&?=|~" = "-" ++ show (ord x) ++ "-"
         g x = [x]
 
 
