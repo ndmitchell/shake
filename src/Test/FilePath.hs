@@ -85,5 +85,10 @@ test build obj = do
     searchPathSeparator === Native.searchPathSeparator
     pathSeparators === Native.pathSeparators
 
+    if isWindows then
+        toNative "//this is a///test\\here/" === "\\\\this is a\\\\\\test\\here\\"
+     else
+        toNative "//this is a///test\\here/" === "//this is a///test\\here/"
+
     -- check common manipulations work
     ("//*" <.> "foo") === "//*.foo"
