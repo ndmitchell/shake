@@ -119,7 +119,7 @@ module Development.Shake(
     need, want, (%>), (|%>), (?>), phony, (~>),
     (&%>), (&?>),
     orderOnly,
-    FilePattern, (?==),
+    FilePattern, (?==), (<//>),
     needed, trackRead, trackWrite, trackAllow,
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,

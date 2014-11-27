@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards, ViewPatterns #-}
 
 module Development.Shake.FilePattern(
-    FilePattern, (?==),
+    FilePattern, (?==), (<//>),
     compatible, simple, extract, substitute,
     directories, directories1
     ) where
@@ -100,6 +100,12 @@ match _ _ = []
 (?==) [s1,s2,'*'] | isPathSeparator s1 && isPathSeparator s2 = const True
 (?==) p = \x -> not $ null $ match pat (True, x)
     where pat = pattern $ lexer p
+
+infixr 5 <//>
+
+(<//>) :: FilePattern -> FilePattern -> FilePattern
+a <//> b = dropWhileEnd isPathSeparator a ++ "//" ++ dropWhile isPathSeparator b
+
 
 ---------------------------------------------------------------------
 -- DIRECTORY PATTERNS

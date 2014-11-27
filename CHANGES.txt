@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #198, add <//> operator to join FilePatterns
     #198, fix the <.> and other extension methods to work with //
 0.14.1
     #196, change the links to point at http://www.shakebuild.com/
