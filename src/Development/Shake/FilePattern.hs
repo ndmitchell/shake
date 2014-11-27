@@ -20,6 +20,15 @@ import General.Extra
 --
 --   Most 'normaliseEx'd 'FilePath' values are suitable as 'FilePattern' values which match
 --   only that specific file. On Windows @\\@ is treated as equivalent to @\/@.
+--
+--   You can write 'FilePattern' values as a literal string, or build them
+--   up using the operators 'Development.Shake.FilePath.<.>', 'Development.Shake.FilePath.</>' and 'Development.Shake.FilePath.<//>'. However, beware that:
+--
+-- * On Windows, use 'Development.Shake.FilePath.<.>' from "Development.Shake.FilePath" instead of from
+--   "System.FilePath" - otherwise @\"\/\/*\" \<.\> exe@ results in @\"\/\/*\\\\.exe\"@.
+--
+-- * If the second argument of 'Development.Shake.FilePath.</>' has a leading path separator (namely @\/@)
+--   then the second argument will be returned.
 type FilePattern = String
 
 
@@ -71,8 +80,6 @@ match Empty xs = [([], "", xs)]
 match _ _ = []
 
 
-
-
 -- | Match a 'FilePattern' against a 'FilePath', There are only two special forms:
 --
 -- * @*@ matches an entire path component, excluding any separators.
@@ -96,16 +103,6 @@ match _ _ = []
 --
 --   Patterns with constructs such as @foo\/..\/bar@ will never match
 --   normalised 'FilePath' values, so are unlikely to be correct.
---
---   You can written 'FilePattern' values as a literal string, or build them
---   up using the operators '<.>', '</>' and '<//>'. However, beware that:
---
--- * On Windows, use 'Development.Shake.FilePath.<.>' instead of using the
---   "System.FilePath" module - otherwise @\"\/\/*\" <.> exe@ results in
---   @\"\/\/*\\.exe".
---
--- * If the second argument of '</>' has a leading path separator (namely @\/@)
---   then the second argument will be returned.
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) [s1,s2,'*'] | isPathSeparator s1 && isPathSeparator s2 = const True
 (?==) p = \x -> not $ null $ match pat (True, x)
@@ -113,6 +110,11 @@ match _ _ = []
 
 infixr 5 <//>
 
+-- | Join two 'FilePattern' values by inserting two @\/@ characters between them.
+--   Will first remove any trailing path separators on the first argument, and any leading
+--   separators on the second.
+--
+-- > "dir" <//> "*" == "dir//*"
 (<//>) :: FilePattern -> FilePattern -> FilePattern
 a <//> b = dropWhileEnd isPathSeparator a ++ "//" ++ dropWhile isPathSeparator b
 
