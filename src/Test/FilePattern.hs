@@ -22,6 +22,9 @@ test build obj = do
     f False "foo//bar" "foobar/bar"
     f False "foo//bar" "foo/foobar"
     f True "foo//bar" "foo/bar"
+    f True "foo/bar" (toNative "foo/bar")
+    f True (toNative "foo/bar") "foo/bar"
+    f True (toNative "foo/bar") (toNative "foo/bar")
 
     assert (compatible []) "compatible"
     assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
@@ -29,6 +32,7 @@ test build obj = do
     extract "//*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
     extract "//*a.txt" "testa.txt" === ["","test"]
     extract "//*a*.txt" "testada.txt" === ["","test","da"]
+    extract (toNative "//*a*.txt") "testada.txt" === ["","test","da"]
     substitute ["","test","da"] "//*a*.txt" === "testada.txt"
     substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
 
