@@ -4,7 +4,6 @@ module Test.FilePattern(main) where
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Data.Tuple.Extra
-import System.Info.Extra
 import Test.Type
 
 main = shaken test $ \args obj -> return ()
@@ -13,7 +12,7 @@ main = shaken test $ \args obj -> return ()
 test build obj = do
     let f b pat file = assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
     f True "//*.c" "foo/bar/baz.c"
-    f isWindows "\\\\*.c" "foo/bar\\baz.c"
+    f True (toNative "//*.c") "foo/bar\\baz.c"
     f True "*.c" "baz.c"
     f True "//*.c" "baz.c"
     f True "test.c" "test.c"
