@@ -80,7 +80,7 @@ The `<.>` function adds an extension to a file path, and the built-in `exe` vari
 A rule describes the steps required to build a file. A rule has two components, a <tt><i>pattern</i></tt> and some <tt><i>actions</i></tt>:
 
 <pre>
-<i>pattern</i> *&gt; \out -> do
+<i>pattern</i> %&gt; \out -> do
     <i>actions</i>
 </pre>
 
