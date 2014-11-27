@@ -96,6 +96,16 @@ match _ _ = []
 --
 --   Patterns with constructs such as @foo\/..\/bar@ will never match
 --   normalised 'FilePath' values, so are unlikely to be correct.
+--
+--   You can written 'FilePattern' values as a literal string, or build them
+--   up using the operators '<.>', '</>' and '<//>'. However, beware that:
+--
+-- * On Windows, use 'Development.Shake.FilePath.<.>' instead of using the
+--   "System.FilePath" module - otherwise @\"\/\/*\" <.> exe@ results in
+--   @\"\/\/*\\.exe".
+--
+-- * If the second argument of '</>' has a leading path separator (namely @\/@)
+--   then the second argument will be returned.
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) [s1,s2,'*'] | isPathSeparator s1 && isPathSeparator s2 = const True
 (?==) p = \x -> not $ null $ match pat (True, x)
