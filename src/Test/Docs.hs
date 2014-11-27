@@ -68,6 +68,7 @@ main = shaken noTest $ \args obj -> do
             ,"import Development.Shake.Util"
             ,"import Development.Shake.FilePath"
             ,"import System.Console.GetOpt"
+            ,"import System.Directory(setCurrentDirectory)"
             ,"import System.Exit"
             ,"import System.IO"] ++
             ["import " ++ reps '_' '.' (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
