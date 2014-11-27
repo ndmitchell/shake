@@ -268,6 +268,7 @@ whitelist x = x `elem`
 
 types = words $
     "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
-    "Action Resource Assume FilePattern Lint Verbosity Rules CmdOption Int Double"
+    "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
+    "Lint Verbosity Rules CmdOption Int Double"
 
 dupes = words "main progressSimple rules"
