@@ -7,13 +7,11 @@ import Development.Shake.FilePath
 import Test.Type
 import Control.Monad
 import Data.Char
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import System.Directory
 import System.Exit
 
-
-reps from to = map (\x -> if x == from then to else x)
 
 main = shaken noTest $ \args obj -> do
     let index = "dist/doc/html/shake/index.html"
@@ -43,7 +41,7 @@ main = shaken noTest $ \args obj -> do
         src <- if "_md" `isSuffixOf` takeBaseName out then
             fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ reps '_' '-' (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
         let f i (Stmt x) | whitelist $ head x = []
                          | otherwise = restmt i $ map undefDots $ trims x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
@@ -71,7 +69,7 @@ main = shaken noTest $ \args obj -> do
             ,"import System.Directory(setCurrentDirectory)"
             ,"import System.Exit"
             ,"import System.IO"] ++
-            ["import " ++ reps '_' '.' (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
+            ["import " ++ replace "_" "." (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
             imports ++
             ["(==>) :: Bool -> Bool -> Bool"
             ,"(==>) = undefined"
@@ -105,7 +103,7 @@ main = shaken noTest $ \args obj -> do
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles "docs" ["*.md"]
         writeFileChanged out $ unlines $
-            ["Part_" ++ reps '-' '_' (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
+            ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
             ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd, takeBaseName x `notElem` ["Developing","Model"]]
 
     let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
@@ -147,7 +145,6 @@ findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
         f [] = []
 findCodeMarkdown [] = []
 
-trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 trims = reverse . dropWhile (all isSpace) . reverse . dropWhile (all isSpace)
 
 restmt i ("":xs) = restmt i xs
