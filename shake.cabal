@@ -44,6 +44,11 @@ extra-source-files:
     src/Test/Ninja/*.ninja
     src/Test/Ninja/*.output
     src/Test/Progress/*.prog
+    src/Test/Tup/hello.c
+    src/Test/Tup/root.cfg
+    src/Test/Tup/newmath/root.cfg
+    src/Test/Tup/newmath/square.c
+    src/Test/Tup/newmath/square.h
     src/Paths.hs
     CHANGES.txt
     README.md
@@ -275,6 +280,7 @@ test-suite shake-test
         Test.Self
         Test.Tar
         Test.Throttle
+        Test.Tup
         Test.Unicode
         Test.Util
         Test.Verbosity
