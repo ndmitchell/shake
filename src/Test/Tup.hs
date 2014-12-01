@@ -18,11 +18,11 @@ main = shaken noTest $ \args obj -> do
         need [x -<.> exe | x <- keys, takeExtension x == ".exe"]
 
     let objects dir key = do
-        let f x | takeExtension x == ".c" = obj $ dir </> x -<.> "o"
-                | takeExtension x == ".a" = obj $ takeBaseName x </> "lib" ++ x
-                | otherwise = error $ "Unknown extension, " ++ x
-        x <- fmap (fromMaybe $ error $ "Missing config key, " ++ key) $ getConfig key
-        return $ map f $ words x
+            let f x | takeExtension x == ".c" = obj $ dir </> x -<.> "o"
+                    | takeExtension x == ".a" = obj $ takeBaseName x </> "lib" ++ x
+                    | otherwise = error $ "Unknown extension, " ++ x
+            x <- fmap (fromMaybe $ error $ "Missing config key, " ++ key) $ getConfig key
+            return $ map f $ words x
 
     (\x -> x -<.> exe == x) ?> \out -> do
         os <- objects "" $ takeBaseName out <.> "exe"
