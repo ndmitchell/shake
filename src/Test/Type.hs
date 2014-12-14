@@ -32,12 +32,12 @@ shaken test rules sleeper = do
     putStrLn $ "## BUILD " ++ unwords (name:args)
     args <- return $ delete "--sleep" args
     let out = "output/" ++ name ++ "/"
+    let obj x = if "/" `isPrefixOf` x then init out ++ x else out ++ x
     createDirectoryIfMissing True out
     case args of
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            let obj x = if "/" `isPrefixOf` x then init out ++ x else out ++ x
             test (\args -> withArgs (name:args ++ extra) $ shaken test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
         "clean":_ -> removeDirectoryRecursive out
@@ -66,7 +66,7 @@ shaken test rules sleeper = do
                 shakeWithClean
                     (removeDirectoryRecursive out) 
                     (shakeOptions{shakeFiles=out, shakeReport=["output/" ++ name ++ "/report.html"], shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
-                    (rules files (out++))
+                    (rules files obj)
 
 
 shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()

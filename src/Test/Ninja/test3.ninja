@@ -19,3 +19,5 @@ include test3-inc.ninja
 build out3.2: dump
 
 v1 = g4
+
+include subdir/1.ninja
