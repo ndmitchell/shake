@@ -2,9 +2,9 @@
 
 module Test.Progress(main) where
 
+import Prelude(); import General.Prelude
 import Development.Shake.Progress
 import Test.Type
-import Data.Monoid
 import System.Directory
 import System.FilePath
 
