@@ -10,7 +10,10 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Unsafe as BS
 import Development.Ninja.Type
 import qualified Data.ByteString.Internal as Internal
-import Foreign
+import System.IO.Unsafe
+import Data.Word
+import Foreign.Ptr
+import Foreign.Storable
 import GHC.Exts
 
 ---------------------------------------------------------------------
@@ -21,7 +24,7 @@ newtype Str0 = Str0 Str -- null terminated
 type S = Ptr Word8
 
 chr :: S -> Char
-chr x = Internal.w2c $ Internal.inlinePerformIO $ peek x
+chr x = Internal.w2c $ unsafePerformIO $ peek x
 
 inc :: S -> S
 inc x = x `plusPtr` 1
@@ -38,7 +41,7 @@ span0 f x = break0 (not . f) x
 break0 :: (Char -> Bool) -> Str0 -> (Str, Str0)
 break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
     where
-        i = Internal.inlinePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
+        i = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
             let start = castPtr ptr :: S
             let end = go start
             return $! Ptr end `minusPtr` start
@@ -52,7 +55,7 @@ break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
 break00 :: (Char -> Bool) -> Str0 -> (Str, Str0)
 break00 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
     where
-        i = Internal.inlinePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
+        i = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
             let start = castPtr ptr :: S
             let end = go start
             return $! Ptr end `minusPtr` start
