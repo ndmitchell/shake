@@ -6,6 +6,7 @@ import Data.Version
 import System.IO.Unsafe
 import System.Directory
 import Control.Exception
+import Text.ParserCombinators.ReadP
 
 
 -- We want getDataFileName to be relative to the current directory even if
@@ -19,4 +20,5 @@ getDataFileName x = do
     return $ curdir ++ "/" ++ x
 
 version :: Version
-version = Version {versionBranch = [0,0], versionTags = []}
+-- can't write a literal Version value since in GHC 7.10 the versionsTag field is deprecated
+version = head $ [v | (v,"") <- readP_to_S parseVersion "0.0"] ++ error "version, failed to parse"
