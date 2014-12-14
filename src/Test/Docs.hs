@@ -211,7 +211,8 @@ whitelist x | elem x $ words $
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja " ++
     "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
-    "@ndm_haskell "
+    "@ndm_haskell " ++
+    "*> "
     = True
 whitelist x
     | "foo/" `isPrefixOf` x -- path examples
