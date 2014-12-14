@@ -141,9 +141,10 @@ module Development.Shake(
     system', systemCwd, systemOutput
     ) where
 
+import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
+
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
-
 import Control.Monad.IO.Class
 import Development.Shake.Types
 import Development.Shake.Core hiding (trackAllow)
