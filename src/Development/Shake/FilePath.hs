@@ -2,7 +2,7 @@
 -- | A module for 'FilePath' operations exposing "System.FilePath" plus some additional operations.
 --
 --   /Windows note:/ The extension methods ('<.>', 'takeExtension' etc) use the Posix variants since on
---   Windows @\"\/\/*\" '<.>' \"txt\"@ produces @\"\/\/*\\\\.txt\"@
+--   Windows @\"\/\/\*\" '<.>' \"txt\"@ produces @\"\/\/\*\\\\.txt\"@
 --   (which is bad for 'Development.Shake.FilePattern' values).
 module Development.Shake.FilePath(
     module System.FilePath, module System.FilePath.Posix,
