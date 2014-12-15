@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 -- | A module for 'FilePath' operations exposing "System.FilePath" plus some additional operations.
 --
@@ -17,7 +18,11 @@ import qualified System.FilePath as Native
 
 import System.FilePath hiding
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
-    ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions)
+    ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
+#if __GLASGOW_HASKELL__ >= 709
+    ,(-<.>)
+#endif
+    )
 import System.FilePath.Posix
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
     ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions)
