@@ -78,7 +78,7 @@ main = do
         system_ "shake --demo --keep-going"
 
     ghcver <- lookupEnv "GHCVER"
-    when (ghcver >= Just "7.6") $ do
+    when (ghcver >= Just "7.6" && ghcver /= Just "head") $ do
         ver <- do
             src <- readFile "shake.cabal"
             return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
