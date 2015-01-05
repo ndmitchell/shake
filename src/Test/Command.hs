@@ -3,6 +3,8 @@ module Test.Command(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import System.Time.Extra
+import Control.Monad
 import Test.Type
 
 
@@ -32,6 +34,14 @@ main = shaken test $ \args obj -> do
         need [obj "pwd space.hs"]
         Stdout out <- cmd (Cwd $ obj "") "runhaskell" ["pwd space.hs"]
         return out
+
+    "timeout" !> do
+        offset <- liftIO offsetTime
+        Exit exit <- cmd (Timeout 2) "ghc -ignore-dot-ghci -e" ["last [1..]"]
+        t <- liftIO offset
+        putNormal $ "Timed out in " ++ showDuration t
+        when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
+        return $ show t
 
     "env" !> do
         (Exit _, Stdout out1) <- cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo %FOO%"
@@ -77,3 +87,5 @@ test build obj = do
 
     crash ["path_"] ["myexe"]
     build ["path"]
+
+    build ["timeout"]
