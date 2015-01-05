@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add Timeout option to command
 0.14.2
     #198, add <//> operator to join FilePatterns
     #198, fix the <.> and other extension methods to work with //

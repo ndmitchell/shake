@@ -31,6 +31,7 @@ import System.Environment.Extra
 import System.Exit
 import System.IO.Extra
 import System.Process
+import System.Time.Extra
 import System.Info.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
 
@@ -54,6 +55,7 @@ data CmdOption
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default streams use text encoding.
     | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
+    | Timeout Double -- ^ Abort the computation after N seconds, will raise a failure exit code.
     | WithStderr Bool -- ^ Should I include the @stderr@ in the exception if the command fails? Defaults to 'True'.
     | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required.
     | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required.
@@ -209,6 +211,14 @@ commandExplicitIO funcName opts results exe args = do
                                  else return (return ())
                 return (err,waitErr,waitErrEcho)
 
+        stopTimeout <- case timeout of
+            Nothing -> return $ return ()
+            Just t -> do
+                thread <- forkIO $ do
+                    sleep t
+                    interruptProcessGroupOf pid
+                return $ killThread thread
+
         -- now write and flush any input
         let writeInput = do
               case inh of
@@ -237,6 +247,7 @@ commandExplicitIO funcName opts results exe args = do
         -- wait on the process
         ex <- waitForProcess pid
 -- END COPIED
+        stopTimeout
 
         when (ResultCode ExitSuccess `notElem` results && ex /= ExitSuccess) $ do
             failure $
@@ -270,6 +281,7 @@ commandExplicitIO funcName opts results exe args = do
         stderrEcho = last $ (ResultStderr "" `notElem` results) : [b | EchoStderr b <- opts]
         stderrThrow = last $ True : [b | WithStderr b <- opts]
         stderrCapture = ResultStderr "" `elem` results || (stderrThrow && ResultCode ExitSuccess `notElem` results)
+        timeout = last $ Nothing : [Just x | Timeout x <- opts]
 
         cp0 = (if Shell `elem` opts then shell $ unwords $ exe:args else proc exe args)
             {std_out = if binary || stdoutCapture || not stdoutEcho then CreatePipe else Inherit
@@ -280,6 +292,7 @@ commandExplicitIO funcName opts results exe args = do
         applyOpt :: CreateProcess -> CmdOption -> CreateProcess
         applyOpt o (Cwd x) = o{cwd = if x == "" then Nothing else Just x}
         applyOpt o (Env x) = o{env = Just x}
+        applyOpt o Timeout{} = o{create_group = True}
         applyOpt o _ = o
 
 
