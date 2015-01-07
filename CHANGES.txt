@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Support for the filepath shipped with GHC 7.10
     Add Timeout option to command
 0.14.2
     #198, add <//> operator to join FilePatterns
