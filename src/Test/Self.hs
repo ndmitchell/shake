@@ -63,7 +63,7 @@ main = shaken noTest $ \args obj -> do
         need $ hs : map (obj . moduleToFile "hi") deps
         ghc $ ["-c",hs,"-isrc","-main-is","Run.main"
               ,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
-              ["-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
+              ["-DPORTABLE","-fwarn-unused-imports"] -- to test one CPP branch
 
     obj ".pkgs" %> \out -> do
         src <- readFile' "shake.cabal"
