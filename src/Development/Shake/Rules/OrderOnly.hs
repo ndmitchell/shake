@@ -1,36 +1,12 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Development.Shake.Rules.OrderOnly(
-     defaultRuleOrderOnly, orderOnly, orderOnlyBS
+     orderOnly, orderOnlyBS
     ) where
 
 import Development.Shake.Core
-import General.String
-import Development.Shake.ByteString
-import Development.Shake.Classes
 import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS
-
-
-newtype OrderOnlyQ = OrderOnlyQ BSU
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
-
-instance Show OrderOnlyQ where show (OrderOnlyQ x) = unpackU x
-
-newtype OrderOnlyA = OrderOnlyA ()
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
-
-instance Show OrderOnlyA where show (OrderOnlyA ()) = "OrderOnly"
-
-
-instance Rule OrderOnlyQ OrderOnlyA where
-    storedValue _ (OrderOnlyQ _) = return $ Just $ OrderOnlyA ()
-
-
-defaultRuleOrderOnly :: Rules ()
-defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
-    needBS [unpackU_ x]
-    return $ OrderOnlyA ()
 
 
 -- | Define order-only dependencies, these are dependencies that will always
@@ -49,8 +25,8 @@ defaultRuleOrderOnly = rule $ \(OrderOnlyQ x) -> Just $ do
 --   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
 --   and you will have lost some opportunity for parallelism.
 orderOnly :: [FilePath] -> Action ()
-orderOnly xs = (apply $ map (OrderOnlyQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [OrderOnlyA]) >> return ()
+orderOnly = unsafeIgnoreDependencies . need
 
 
 orderOnlyBS :: [BS.ByteString] -> Action ()
-orderOnlyBS xs = (apply $ map (OrderOnlyQ . packU_ . filepathNormalise) xs :: Action [OrderOnlyA]) >> return ()
+orderOnlyBS = unsafeIgnoreDependencies . needBS

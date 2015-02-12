@@ -8,7 +8,6 @@ import Development.Shake.Core
 
 import Development.Shake.Rules.Directory
 import Development.Shake.Rules.File
-import Development.Shake.Rules.OrderOnly
 import Development.Shake.Rules.Rerun
 
 
@@ -24,6 +23,5 @@ shake opts r = do
         r
         defaultRuleFile
         defaultRuleDirectory
-        defaultRuleOrderOnly
         defaultRuleRerun
     return ()
