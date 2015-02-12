@@ -28,9 +28,11 @@ main = shaken test $ \args obj -> do
     obj "primary.txt" %> \out -> do
         need [obj "source.txt"]
         orderOnly [obj "intermediate.txt"]
+        liftIO $ putStrLn "WRITING PRIMARY"
         writeFile' out =<< liftIO (readFile $ obj "intermediate.txt")
 
     obj "intermediate.txt" %> \out -> do
+        liftIO $ putStrLn "WRITING INTERMEDIATE"
         copyFile' (obj "source.txt") out
 
 
@@ -58,5 +60,7 @@ test build obj = do
     build ["primary.txt"]
     assertMissing $ obj "intermediate.txt"
     writeFile (obj "source.txt") "y"
+    sleep 5
     build ["primary.txt"]
+    sleep 5
     assertContents (obj "intermediate.txt") "y"
