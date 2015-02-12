@@ -3,6 +3,8 @@ module Test.OrderOnly(main) where
 
 import Development.Shake
 import Test.Type
+import System.Directory(removeFile)
+import Control.Exception.Extra
 
 
 main = shaken test $ \args obj -> do
@@ -23,6 +25,14 @@ main = shaken test $ \args obj -> do
         orderOnly [src]
         liftIO $ appendFile out "x"
 
+    obj "primary.txt" %> \out -> do
+        need [obj "source.txt"]
+        orderOnly [obj "intermediate.txt"]
+        writeFile' out =<< liftIO (readFile $ obj "intermediate.txt")
+
+    obj "intermediate.txt" %> \out -> do
+        copyFile' (obj "source.txt") out
+
 
 test build obj = do
     writeFile (obj "bar.in") "in"
@@ -39,3 +49,14 @@ test build obj = do
     writeFile (obj "bar.in") "out"
     build ["baz.txt"]
     assertContents (obj "baz.txt") "x"
+
+    ignore $ removeFile $ obj "intermediate.txt"
+    writeFile (obj "source.txt") "x"
+    build ["primary.txt"]
+    assertContents (obj "intermediate.txt") "x"
+    removeFile $ obj "intermediate.txt"
+    build ["primary.txt"]
+    assertMissing $ obj "intermediate.txt"
+    writeFile (obj "source.txt") "y"
+    build ["primary.txt"]
+    assertContents (obj "intermediate.txt") "y"
