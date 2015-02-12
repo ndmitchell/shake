@@ -2,11 +2,12 @@
 
 module Test.Progress(main) where
 
-import Prelude(); import General.Prelude
 import Development.Shake.Progress
 import Test.Type
 import System.Directory
 import System.FilePath
+import Data.Monoid
+import Prelude
 
 
 main = shaken test $ \args obj -> return ()

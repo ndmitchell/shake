@@ -22,8 +22,6 @@ module Development.Shake.Core(
     rulesIO, runAfter, unsafeIgnoreDependencies,
     ) where
 
-import Prelude(); import General.Prelude
-
 import Control.Exception.Extra
 import Control.Applicative
 import Data.Tuple.Extra
@@ -42,6 +40,7 @@ import Data.IORef
 import System.Directory
 import System.IO.Extra
 import System.Time.Extra
+import Data.Monoid
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -58,6 +57,7 @@ import General.Extra
 import General.Concurrent
 import General.Cleanup
 import General.String
+import Prelude
 
 
 ---------------------------------------------------------------------

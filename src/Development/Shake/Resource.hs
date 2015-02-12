@@ -4,8 +4,6 @@ module Development.Shake.Resource(
     Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
     ) where
 
-import Prelude(); import General.Prelude
-
 import Data.Function
 import System.IO.Unsafe
 import Control.Concurrent.Extra
@@ -14,6 +12,8 @@ import Control.Monad
 import General.Bilist
 import Development.Shake.Pool
 import System.Time.Extra
+import Data.Monoid
+import Prelude
 
 
 {-# NOINLINE resourceIds #-}

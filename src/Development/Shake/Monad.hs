@@ -8,13 +8,13 @@ module Development.Shake.Monad(
     unmodifyRW, captureRAW,
     ) where
 
-import Prelude(); import General.Prelude
-
 import Control.Exception.Extra
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Reader
 import Data.IORef
+import Control.Applicative
+import Prelude
 
 
 data S ro rw = S

@@ -3,8 +3,8 @@ module General.Bilist(
     Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
 
-import Prelude()
-import General.Prelude
+import Data.Monoid
+import Prelude
 
 
 data Bilist a = Bilist [a] [a]

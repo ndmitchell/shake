@@ -12,8 +12,6 @@ module Development.Shake.Database(
     toReport, checkValid, listLive
     ) where
 
-import Prelude(); import General.Prelude
-
 import Development.Shake.Classes
 import General.Binary
 import Development.Shake.Pool
@@ -38,6 +36,8 @@ import Data.IORef.Extra
 import Data.Maybe
 import Data.List
 import System.Time.Extra
+import Data.Monoid
+import Prelude
 
 type Map = Map.HashMap
 

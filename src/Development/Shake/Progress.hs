@@ -8,8 +8,6 @@ module Development.Shake.Progress(
     ProgressEntry(..), progressReplay, writeProgressReport -- INTERNAL USE ONLY
     ) where
 
-import Prelude(); import General.Prelude
-
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Exception.Extra
@@ -31,6 +29,8 @@ import General.Template
 import System.IO.Unsafe
 import Paths_shake
 import System.Time.Extra
+import Data.Monoid
+import Prelude
 
 #ifdef mingw32_HOST_OS
 
