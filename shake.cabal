@@ -154,7 +154,6 @@ library
         General.Concurrent
         General.Extra
         General.Intern
-        General.Prelude
         General.String
         General.Template
         General.Timing
