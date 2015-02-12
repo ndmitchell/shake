@@ -28,11 +28,9 @@ main = shaken test $ \args obj -> do
     obj "primary.txt" %> \out -> do
         need [obj "source.txt"]
         orderOnly [obj "intermediate.txt"]
-        liftIO $ putStrLn "WRITING PRIMARY"
         writeFile' out =<< liftIO (readFile $ obj "intermediate.txt")
 
     obj "intermediate.txt" %> \out -> do
-        liftIO $ putStrLn "WRITING INTERMEDIATE"
         copyFile' (obj "source.txt") out
 
 
