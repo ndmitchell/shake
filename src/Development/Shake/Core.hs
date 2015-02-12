@@ -19,7 +19,7 @@ module Development.Shake.Core(
     newCache, newCacheIO,
     unsafeExtraThread,
     -- Internal stuff
-    rulesIO, runAfter
+    rulesIO, runAfter, unsafeIgnoreDependencies,
     ) where
 
 import Prelude(); import General.Prelude
@@ -831,3 +831,12 @@ unsafeExtraThread act = Action $ do
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
     captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
+
+
+-- | Ignore any dependencies added by an action.
+unsafeIgnoreDependencies :: Action a -> Action a
+unsafeIgnoreDependencies act = Action $ do
+    pre <- getsRW localDepends
+    res <- fromAction act
+    modifyRW $ \s -> s{localDepends=pre}
+    return res
