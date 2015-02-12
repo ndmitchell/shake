@@ -54,13 +54,11 @@ test build obj = do
 
     ignore $ removeFile $ obj "intermediate.txt"
     writeFile (obj "source.txt") "x"
-    build ["primary.txt"]
+    build ["primary.txt","--sleep"]
     assertContents (obj "intermediate.txt") "x"
     removeFile $ obj "intermediate.txt"
-    build ["primary.txt"]
+    build ["primary.txt","--sleep"]
     assertMissing $ obj "intermediate.txt"
     writeFile (obj "source.txt") "y"
-    sleep 5
-    build ["primary.txt"]
-    sleep 5
+    build ["primary.txt","--sleep"]
     assertContents (obj "intermediate.txt") "y"
