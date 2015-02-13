@@ -23,7 +23,7 @@ test build obj = do
         -- therefore we rerun the test three times, and only fail if it fails on all of them
         retry 3 $ do
             build ["clean"]
-            (s, _) <- duration $ build []
+            (s, _) <- duration $ build ["--no-report"]
             -- the 0.1s cap is a guess at an upper bound for how long everything else should take
             -- and should be raised on slower machines
             assert (s >= 1.4 && s < 1.6) $
