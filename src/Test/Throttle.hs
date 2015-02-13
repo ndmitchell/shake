@@ -27,4 +27,4 @@ test build obj = do
             -- the 0.1s cap is a guess at an upper bound for how long everything else should take
             -- and should be raised on slower machines
             assert (s >= 1.4 && s < 1.6) $
-                "Bad throttling, expected to take 0.7s + computation time (cap of 0.1s), took " ++ show s ++ "s"
+                "Bad throttling, expected to take 1.4s + computation time (cap of 0.2s), took " ++ show s ++ "s"
