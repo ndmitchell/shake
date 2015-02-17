@@ -50,7 +50,7 @@ main = shaken noTest $ \args obj -> do
             code = concat $ zipWith f [1..] (nub src)
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
-            ["{-# LANGUAGE DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}"
+            ["{-# LANGUAGE DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction, ScopedTypeVariables #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Concurrent"
