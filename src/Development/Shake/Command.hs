@@ -10,7 +10,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd, CmdArguments,
+    command, command_, cmd, unit, CmdArguments,
     Stdout(..), Stderr(..), Exit(..),
     CmdResult, CmdOption(..),
     addPath, addEnv,
@@ -452,6 +452,7 @@ type a :-> t = a
 --
 -- @
 -- () <- 'cmd' \"gcc -c myfile.c\"                                  -- compile a file, throwing an exception on failure
+-- 'unit' $ 'cmd' \"gcc -c myfile.c\"                                 -- alternative to () <- binding.
 -- 'Exit' c <- 'cmd' \"gcc -c\" [myfile]                              -- run a command, recording the exit code
 -- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"                -- run a command, recording the exit code and error output
 -- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"                         -- run a command, recording the output
@@ -461,7 +462,8 @@ type a :-> t = a
 --   When passing file arguments we use @[myfile]@ so that if the @myfile@ variable contains spaces they are properly escaped.
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
---   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature.
+--   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature, or use
+--   the 'unit' function.
 --
 --   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
 cmd :: CmdArguments args => args :-> Action r
