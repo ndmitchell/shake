@@ -484,7 +484,6 @@ instance CmdResult r => CmdArguments (IO r) where
 class Arg a where arg :: a -> [Either CmdOption String]
 instance Arg String where arg = map Right . words
 instance Arg [String] where arg = map Right
-instance Arg (Maybe String) where arg = map Right . maybe [] words
 instance Arg CmdOption where arg = return . Left
 instance Arg [CmdOption] where arg = map Left
-instance Arg (Maybe CmdOption) where arg = map Left . maybeToList
+instance Arg a => Arg (Maybe a) where arg = maybe [] arg
