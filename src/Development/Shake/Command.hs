@@ -106,38 +106,38 @@ data Result
 
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
 commandExplicit funcName copts results exe args = do
-        opts <- getShakeOptions
-        verb <- getVerbosity
+    opts <- getShakeOptions
+    verb <- getVerbosity
 
-        let skipper act = if null results && not (shakeRunCommands opts) then return [] else act
+    let skipper act = if null results && not (shakeRunCommands opts) then return [] else act
 
-        let verboser act = do
-                let cwd = listToMaybe $ reverse [x | Cwd x <- copts]
-                putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ saneCommandForUser exe args
-                (if verb >= Loud then quietly else id) act
+    let verboser act = do
+            let cwd = listToMaybe $ reverse [x | Cwd x <- copts]
+            putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ saneCommandForUser exe args
+            (if verb >= Loud then quietly else id) act
 
-        let tracer = case reverse [x | Traced x <- copts] of
-                "":_ -> liftIO
-                msg:_ -> traced msg
-                [] -> traced (takeFileName exe)
+    let tracer = case reverse [x | Traced x <- copts] of
+            "":_ -> liftIO
+            msg:_ -> traced msg
+            [] -> traced (takeFileName exe)
 
-        let tracker act = case shakeLint opts of
-                Just LintTracker -> do
-                    dir <- liftIO $ getTemporaryDirectory
-                    (file, handle) <- liftIO $ openTempFile dir "shake.lint"
-                    liftIO $ hClose handle
-                    dir <- return $ file <.> "dir"
-                    liftIO $ createDirectory dir
-                    let cleanup = removeDirectoryRecursive dir >> removeFile file
-                    flip actionFinally cleanup $ do
-                        res <- act "tracker" $ "/if":dir:"/c":exe:args
-                        (read,write) <- liftIO $ trackerFiles dir
-                        trackRead read
-                        trackWrite write
-                        return res
-                _ -> act exe args
+    let tracker act = case shakeLint opts of
+            Just LintTracker -> do
+                dir <- liftIO $ getTemporaryDirectory
+                (file, handle) <- liftIO $ openTempFile dir "shake.lint"
+                liftIO $ hClose handle
+                dir <- return $ file <.> "dir"
+                liftIO $ createDirectory dir
+                let cleanup = removeDirectoryRecursive dir >> removeFile file
+                flip actionFinally cleanup $ do
+                    res <- act "tracker" $ "/if":dir:"/c":exe:args
+                    (read,write) <- liftIO $ trackerFiles dir
+                    trackRead read
+                    trackWrite write
+                    return res
+            _ -> act exe args
 
-        skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
+    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
 
 
 -- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
