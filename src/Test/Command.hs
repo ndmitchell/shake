@@ -27,7 +27,7 @@ main = shaken test $ \args obj -> do
 
     "triple" !> do
         (Exit exit, Stdout stdout, Stderr stderr) <- cmd "ghc --random"
-        return $ show (exit, stdout, stderr) -- must force all three parts
+        return $ show (exit, stdout :: String, stderr :: String) -- must force all three parts
 
     obj "pwd space.hs" %> \out -> writeFileLines out ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
     "pwd" !> do
