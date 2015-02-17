@@ -357,12 +357,14 @@ saneCommandForUser cmd args = unwords $ map f $ cmd:args
 -- FIXED ARGUMENT WRAPPER
 
 -- | Collect the @stdout@ of the process.
---   If you are collecting the @stdout@, it will not be echoed to the terminal, unless you include 'EchoStdout'.
-newtype Stdout = Stdout {fromStdout :: String}
+--   If used, the @stdout@ will not be echoed to the terminal, unless you include 'EchoStdout'.
+--   The value type may be either 'String', or either lazy or strict 'ByteString'.
+newtype Stdout a = Stdout {fromStdout :: a}
 
 -- | Collect the @stderr@ of the process.
---   If you are collecting the @stderr@, it will not be echoed to the terminal, unless you include 'EchoStderr'.
-newtype Stderr = Stderr {fromStderr :: String}
+--   If used, the @stderr@ will not be echoed to the terminal, unless you include 'EchoStderr'.
+--   The value type may be either 'String', or either lazy or strict 'ByteString'.
+newtype Stderr a = Stderr {fromStderr :: a}
 
 -- | Collect the 'ExitCode' of the process.
 --   If you do not collect the exit code, any 'ExitFailure' will cause an exception.
