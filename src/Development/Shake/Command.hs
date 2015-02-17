@@ -104,6 +104,9 @@ data Result
       deriving Eq
 
 
+---------------------------------------------------------------------
+-- ACTION EXPLICIT OPERATION
+
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
 commandExplicit funcName copts results exe args = do
     opts <- getShakeOptions
@@ -167,6 +170,9 @@ correctCase x = f "" x
 
         a +/+ b = if null a then b else a ++ "/" ++ b
 
+
+---------------------------------------------------------------------
+-- IO EXPLICIT OPERATION
 
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
 commandExplicitIO funcName opts results exe args = do
