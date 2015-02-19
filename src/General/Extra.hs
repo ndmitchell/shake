@@ -3,18 +3,15 @@
 module General.Extra(
     getProcessorCount,
     randomElem,
-    fastNub,
     showQuote
     ) where
 
 import Control.Exception.Extra
 import Data.Char
 import Data.List
-import qualified Data.HashSet as Set
 import System.Environment.Extra
 import System.IO.Unsafe
 import System.Random
-import Development.Shake.Classes
 #if __GLASGOW_HASKELL__ >= 704
 import Control.Concurrent
 import Foreign.C.Types
@@ -23,14 +20,6 @@ import Foreign.C.Types
 
 ---------------------------------------------------------------------
 -- Data.List
-
--- | Like 'nub', but the results may be in any order.
-fastNub :: (Eq a, Hashable a) => [a] -> [a]
-fastNub = f Set.empty
-    where f seen [] = []
-          f seen (x:xs) | x `Set.member` seen = f seen xs
-                        | otherwise = x : f (Set.insert x seen) xs
-
 
 showQuote :: String -> String
 showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
