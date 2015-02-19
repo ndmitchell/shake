@@ -1,5 +1,9 @@
 Changelog for Shake
 
+    #205, add WithStdout, like WithStderr
+    #27, add support for capturing Stdout/Stderr with bytestrings
+    Add FileStdout/FileStderr to write a stream direct to a file
+    #211, add Stdouterr to capture both Stdout and Stderr streams
     Require extra-1.1 (to use nubOrd)
     Generalise cmd to work with Maybe [String]
     Add unit for use with cmd

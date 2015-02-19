@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables #-}
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
@@ -17,6 +17,7 @@ module Development.Shake.Command(
     ) where
 
 import Data.Tuple.Extra
+import Control.Applicative
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception.Extra as C
@@ -34,6 +35,9 @@ import System.Process
 import System.Time.Extra
 import System.Info.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import General.Process
 
 import Development.Shake.Core
 import Development.Shake.FilePath
@@ -56,9 +60,12 @@ data CmdOption
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default streams use text encoding.
     | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
     | Timeout Double -- ^ Abort the computation after N seconds, will raise a failure exit code.
+    | WithStdout Bool -- ^ Should I include the @stdout@ in the exception if the command fails? Defaults to 'False'.
     | WithStderr Bool -- ^ Should I include the @stderr@ in the exception if the command fails? Defaults to 'True'.
     | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required.
     | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required.
+    | FileStdout FilePath -- ^ Should I put the @stdout@ to a file.
+    | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
       deriving (Eq,Ord,Show)
 
 
@@ -96,10 +103,12 @@ addEnv extra = do
     args <- liftIO getEnvironment
     return $ Env $ extra ++ filter (\(a,b) -> a `notElem` map fst extra) args
 
+data Str = Str String | BS BS.ByteString | LBS LBS.ByteString deriving Eq
 
 data Result
-    = ResultStdout String
-    | ResultStderr String
+    = ResultStdout Str
+    | ResultStderr Str
+    | ResultStdouterr Str
     | ResultCode ExitCode
       deriving Eq
 
@@ -176,99 +185,45 @@ correctCase x = f "" x
 
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
 commandExplicitIO funcName opts results exe args = do
--- BEGIN COPIED
--- Originally from readProcessWithExitCode with as few changes as possible
-    cp <- resolvePath cp
-    mask $ \restore -> do
-      ans <- try_ $ createProcess cp
-      (inh, outh, errh, pid) <- case ans of
-          Right a -> return a
-          Left err -> failure $ show err
+    let (grabStdout, grabStderr) = both or $ unzip $ for results $ \r -> case r of
+            ResultStdout{} -> (True, False); ResultStderr{} -> (False, True)
+            ResultStdouterr{} -> (True, True); ResultCode{} -> (False, False)
 
-      let close = maybe (return ()) hClose
-      flip onException
-        (do close inh; close outh; close errh
-            terminateProcess pid; waitForProcess pid) $ restore $ do
+    let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
+    let optEnv = let x = [x | Env x <- opts] in if null x then Nothing else Just $ concat x
+    let optStdin = concat [x | Stdin x <- opts]
+    let optShell = Shell `elem` opts
+    let optBinary = BinaryPipes `elem` opts
+    let optTimeout = listToMaybe $ reverse [x | Timeout x <- opts]
+    let optWithStdout = last $ False : [x | WithStdout x <- opts]
+    let optWithStderr = last $ True : [x | WithStderr x <- opts]
+    let optEchoStdout = last $ not grabStdout : [x | EchoStdout x <- opts]
+    let optEchoStderr = last $ not grabStderr : [x | EchoStderr x <- opts]
+    let optFileStdout = [x | FileStdout x <- opts]
+    let optFileStderr = [x | FileStderr x <- opts]
 
-        -- set pipes to binary if appropriate
-        when (BinaryPipes `elem` opts) $ do
-            let bin = maybe (return ()) (`hSetBinaryMode` True)
-            bin inh; bin outh; bin errh
+    let buf Str{} = do x <- newBuffer; return (DestString x, Str . concat <$> readBuffer x)
+        buf LBS{} = do x <- newBuffer; return (DestBytes x, LBS . LBS.fromChunks <$> readBuffer x)
+        buf BS {} = do x <- newBuffer; return (DestBytes x, BS . BS.concat <$> readBuffer x)
+    (dStdout, dStderr, resultBuild) :: ([Maybe Destination], [Maybe Destination], [ExitCode -> IO Result]) <-
+        fmap unzip3 $ forM results $ \r -> case r of
+            ResultCode _ -> return (Nothing, Nothing, return . ResultCode)
+            ResultStdout    s -> do (a,b) <- buf s; return (Just a , Nothing, const $ fmap ResultStdout b)
+            ResultStderr    s -> do (a,b) <- buf s; return (Nothing, Just a , const $ fmap ResultStderr b)
+            ResultStdouterr s -> do (a,b) <- buf s; return (Just a , Just a , const $ fmap ResultStdouterr b)
 
-        -- fork off a thread to start consuming stdout
-        (out,waitOut,waitOutEcho) <- case outh of
-            Nothing -> return ("", return (), return ())
-            Just outh -> do
-                out <- hGetContents outh
-                waitOut <- forkWait $ C.evaluate $ rnf out
-                waitOutEcho <- if stdoutEcho
-                                 then forkWait (hPutStr stdout out)
-                                 else return (return ())
-                return (out,waitOut,waitOutEcho)
+    exceptionBuffer <- newBuffer
+    po <- resolvePath $ ProcessOpts
+        {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
+        ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
+        ,poStdin = if optBinary then Right $ LBS.pack optStdin else Left optStdin
+        ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ catMaybes dStdout
+        ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ catMaybes dStderr
+        }
+    res <- try_ $ process po
 
-        -- fork off a thread to start consuming stderr
-        (err,waitErr,waitErrEcho) <- case errh of
-            Nothing -> return ("", return (), return ())
-            Just errh -> do
-                err <- hGetContents errh
-                waitErr <- forkWait $ C.evaluate $ rnf err
-                waitErrEcho <- if stderrEcho
-                                 then forkWait (hPutStr stderr err)
-                                 else return (return ())
-                return (err,waitErr,waitErrEcho)
-
-        stopTimeout <- case timeout of
-            Nothing -> return $ return ()
-            Just t -> do
-                thread <- forkIO $ do
-                    sleep t
-                    interruptProcessGroupOf pid
-                return $ killThread thread
-
-        -- now write and flush any input
-        let writeInput = do
-              case inh of
-                  Nothing -> return ()
-                  Just inh -> do
-                      hPutStr inh input
-                      hFlush inh
-                      hClose inh
-
-        C.catch writeInput $ \e -> case e of
-          IOError { ioe_type = ResourceVanished
-                  , ioe_errno = Just ioe }
-            | Errno ioe == ePIPE -> return ()
-          _ -> throwIO e
-
-        -- wait on the output
-        waitOut
-        waitErr
-
-        waitOutEcho
-        waitErrEcho
-
-        close outh
-        close errh
-
-        -- wait on the process
-        ex <- waitForProcess pid
--- END COPIED
-        stopTimeout
-
-        when (ResultCode ExitSuccess `notElem` results && ex /= ExitSuccess) $ do
-            failure $
-                "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-                (if not stderrThrow then "Stderr not captured because ErrorsWithoutStderr was used"
-                else if null err then "Stderr was empty"
-                else "Stderr:\n" ++ unlines (dropWhile null $ lines err))
-
-        return $ flip map results $ \x -> case x of
-            ResultStdout _ -> ResultStdout out
-            ResultStderr _ -> ResultStderr err
-            ResultCode   _ -> ResultCode ex
-    where
-        failure extra = do
-            cwd <- case cwd cp of
+    let failure extra = do
+            cwd <- case optCwd of
                 Nothing -> return ""
                 Just v -> do
                     v <- canonicalizePath v `catch_` const (return v)
@@ -277,38 +232,26 @@ commandExplicitIO funcName opts results exe args = do
                 "Development.Shake." ++ funcName ++ ", system command failed\n" ++
                 "Command: " ++ saneCommandForUser exe args ++ "\n" ++
                 cwd ++ extra
-
-        input = last $ "" : [x | Stdin x <- opts]
-
-        -- what should I do with these handles
-        binary = BinaryPipes `elem` opts
-        stdoutEcho = last $ (ResultStdout "" `notElem` results) : [b | EchoStdout b <- opts]
-        stdoutCapture = ResultStdout "" `elem` results
-        stderrEcho = last $ (ResultStderr "" `notElem` results) : [b | EchoStderr b <- opts]
-        stderrThrow = last $ True : [b | WithStderr b <- opts]
-        stderrCapture = ResultStderr "" `elem` results || (stderrThrow && ResultCode ExitSuccess `notElem` results)
-        timeout = last $ Nothing : [Just x | Timeout x <- opts]
-
-        cp0 = (if Shell `elem` opts then shell $ unwords $ exe:args else proc exe args)
-            {std_out = if binary || stdoutCapture || not stdoutEcho then CreatePipe else Inherit
-            ,std_err = if binary || stderrCapture || not stderrEcho then CreatePipe else Inherit
-            ,std_in  = if null input then Inherit else CreatePipe
-            }
-        cp = foldl applyOpt cp0{std_out = CreatePipe, std_err = CreatePipe} opts
-        applyOpt :: CreateProcess -> CmdOption -> CreateProcess
-        applyOpt o (Cwd x) = o{cwd = if x == "" then Nothing else Just x}
-        applyOpt o (Env x) = o{env = Just x}
-        applyOpt o Timeout{} = o{create_group = True}
-        applyOpt o _ = o
+    case res of
+        Left err -> failure $ show err
+        Right ex | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
+            exceptionBuffer <- readBuffer exceptionBuffer
+            let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
+            failure $
+                "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
+                if null captured then "Stderr not captured because WithStderr False was used\n"
+                else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
+                else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
+        Right ex -> mapM ($ ex) resultBuild
 
 
 -- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
 --   Tricky, because on Windows it doesn't look in the $PATH first.
-resolvePath :: CreateProcess -> IO CreateProcess
-resolvePath cp
-    | Just e <- env cp
+resolvePath :: ProcessOpts -> IO ProcessOpts
+resolvePath po
+    | Just e <- poEnv po
     , Just (_, path) <- find ((==) "PATH" . (if isWindows then upper else id) . fst) e
-    , RawCommand prog args <- cmdspec cp
+    , RawCommand prog args <- poCommand po
     = do
     let progExe = if prog == prog -<.> exe then prog else prog <.> exe
     -- use unsafeInterleaveIO to allow laziness to skip the queries we don't use
@@ -325,10 +268,9 @@ resolvePath cp
           | Just old <- old, Just old2 <- old2, equalFilePath old old2 -> True -- I could predict last time
           | otherwise -> False
     return $ case new of
-        Just new | switch -> cp{cmdspec = RawCommand new args}
-        _ -> cp
-resolvePath cp = do
-    return cp
+        Just new | switch -> po{poCommand = RawCommand new args}
+        _ -> po
+resolvePath po = return po
 
 
 findExecutableWith :: [FilePath] -> String -> IO (Maybe FilePath)
@@ -366,9 +308,19 @@ newtype Stdout a = Stdout {fromStdout :: a}
 --   The value type may be either 'String', or either lazy or strict 'ByteString'.
 newtype Stderr a = Stderr {fromStderr :: a}
 
+-- | Collect the @stdout@ and @stderr@ of the process.
+--   If used, the @stderr@ and @stdout@ will not be echoed to the terminal, unless you include 'EchoStdout' and 'EchoStderr'.
+--   The value type may be either 'String', or either lazy or strict 'ByteString'.
+newtype Stdouterr a = Stdouterr {fromStdouterr :: a}
+
 -- | Collect the 'ExitCode' of the process.
 --   If you do not collect the exit code, any 'ExitFailure' will cause an exception.
 newtype Exit = Exit {fromExit :: ExitCode}
+
+class CmdString a where cmdString :: (Str, Str -> a)
+instance CmdString String where cmdString = (Str "", \(Str x) -> x)
+instance CmdString BS.ByteString where cmdString = (BS BS.empty, \(BS x) -> x)
+instance CmdString LBS.ByteString where cmdString = (LBS LBS.empty, \(LBS x) -> x)
 
 -- | A class for specifying what results you want to collect from a process.
 --   Values are formed of 'Stdout', 'Stderr', 'Exit' and tuples of those.
@@ -383,11 +335,11 @@ instance CmdResult Exit where
 instance CmdResult ExitCode where
     cmdResult = ([ResultCode ExitSuccess], \[ResultCode x] -> x)
 
-instance CmdResult Stdout where
-    cmdResult = ([ResultStdout ""], \[ResultStdout x] -> Stdout x)
+instance CmdString a => CmdResult (Stdout a) where
+    cmdResult = let (a,b) = cmdString in ([ResultStdout a], \[ResultStdout x] -> Stdout $ b x)
 
-instance CmdResult Stderr where
-    cmdResult = ([ResultStderr ""], \[ResultStderr x] -> Stderr x)
+instance CmdString a => CmdResult (Stderr a) where
+    cmdResult = let (a,b) = cmdString in ([ResultStderr a], \[ResultStderr x] -> Stderr $ b x)
 
 instance CmdResult () where
     cmdResult = ([], \[] -> ())

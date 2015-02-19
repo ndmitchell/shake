@@ -154,6 +154,7 @@ library
         General.Concurrent
         General.Extra
         General.Intern
+        General.Process
         General.String
         General.Template
         General.Timing
