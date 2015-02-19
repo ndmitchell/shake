@@ -9,7 +9,6 @@ module Development.Shake.FilePattern(
 import System.FilePath(isPathSeparator, pathSeparators, pathSeparator)
 import Data.List.Extra
 import Data.Tuple.Extra
-import General.Extra
 
 
 ---------------------------------------------------------------------
@@ -150,7 +149,7 @@ directories1 = first (intercalate [pathSeparator]) . f . lexer
 directories :: [FilePattern] -> [(FilePath,Bool)]
 directories ps = foldl f xs xs
     where
-        xs = fastNub $ map directories1 ps
+        xs = nubOrd $ map directories1 ps
 
         -- Eliminate anything which is a strict subset
         f xs (x,True) = filter (\y -> not $ (x,False) == y || x `isPrefixSlashOf` fst y) xs

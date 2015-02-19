@@ -48,7 +48,7 @@ main = shaken noTest $ \args obj -> do
         dep <- readFileLines $ out -<.> "dep"
         let xs = map (obj . moduleToFile "deps") dep
         need xs
-        ds <- fmap (nub . sort . (++) dep . concat) $ mapM readFileLines xs
+        ds <- fmap (nubOrd . sort . (++) dep . concat) $ mapM readFileLines xs
         writeFileLines out ds
 
     obj "//*.dep" %> \out -> do

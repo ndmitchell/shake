@@ -47,7 +47,7 @@ main = shaken noTest $ \args obj -> do
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                          | "import " `isPrefixOf` x = [x]
                          | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
-            code = concat $ zipWith f [1..] (nub src)
+            code = concat $ zipWith f [1..] (nubOrd src)
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
             ["{-# LANGUAGE DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction, ScopedTypeVariables #-}"
@@ -120,7 +120,7 @@ main = shaken noTest $ \args obj -> do
         writeFile' out ""
 
 
-data Code = Stmt [String] | Expr String deriving (Show,Eq)
+data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
 
 findCodeHaddock :: String -> [Code]
 findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . shift . lines . strip) "</pre>" x
