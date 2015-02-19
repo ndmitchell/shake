@@ -42,7 +42,7 @@ main = shaken noTest $ \args obj -> do
             fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
             fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
-        let f i (Stmt x) | whitelist $ head x = []
+        let f i (Stmt x) | any whitelist x = []
                          | otherwise = restmt i $ map undefDots $ trims x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                          | "import " `isPrefixOf` x = [x]
@@ -209,11 +209,12 @@ whitelist x | elem x $ words $
     "-threaded -rtsopts -I0 Function extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
-    "docs/manual _build _build/run ninja depfile build.ninja " ++
+    "docs/manual _build _build/run ninja depfile build.ninja ByteString " ++
     "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
     "@ndm_haskell " ++
     "*> "
     = True
+whitelist x | "Stdout out" `isInfixOf` x || "Stderr err" `isInfixOf` x = True
 whitelist x
     | "foo/" `isPrefixOf` x -- path examples
     = True
