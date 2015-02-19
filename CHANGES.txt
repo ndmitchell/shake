@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Require extra-1.1 (to use nubOrd)
     Generalise cmd to work with Maybe [String]
     Add unit for use with cmd
     IMPORTANT: Incompatible on disk format change
