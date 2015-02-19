@@ -3,7 +3,8 @@
 module General.Extra(
     getProcessorCount,
     randomElem,
-    showQuote
+    showQuote,
+    withs
     ) where
 
 import Control.Exception.Extra
@@ -62,3 +63,11 @@ randomElem :: [a] -> IO a
 randomElem xs = do
     i <- randomRIO (0, length xs - 1)
     return $ xs !! i
+
+
+---------------------------------------------------------------------
+-- Control.Monad
+
+withs :: [(a -> r) -> r] -> ([a] -> r) -> r
+withs [] act = act []
+withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
