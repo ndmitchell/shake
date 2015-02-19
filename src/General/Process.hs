@@ -135,7 +135,7 @@ process po = do
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh]] ++ [(errh, stderr, poStderr) | Just errh <- [errh]]
                 wait <- forM streams $ \(h, hh, dest) -> do
                     let isTied = not $ poStdout `disjoint` poStderr
-                    let isBinary = any isDestString dest && not (any isDestBytes dest)
+                    let isBinary = not $ any isDestString dest && not (any isDestBytes dest)
                     when isTied $ hSetBuffering h LineBuffering
                     when (DestEcho `elem` dest) $ do
                         buf <- hGetBuffering hh
@@ -147,7 +147,7 @@ process po = do
                         dest <- return $ for dest $ \d -> case d of
                             DestEcho -> BS.hPut hh
                             DestFile x -> BS.hPut (fileHandle x)
-                            DestString x -> addBuffer x . (if isWindows then replace "\n" "\r\n" else id) . BS.unpack
+                            DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
                             DestBytes x -> addBuffer x
                         forkWait $ whileM $ do
                             src <- BS.hGetSome h 4096

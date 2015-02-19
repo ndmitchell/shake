@@ -11,28 +11,24 @@
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd, unit, CmdArguments,
-    Stdout(..), Stderr(..), Exit(..),
+    Stdout(..), Stderr(..), Stdouterr(..), Exit(..),
     CmdResult, CmdOption(..),
     addPath, addEnv,
     ) where
 
 import Data.Tuple.Extra
 import Control.Applicative
-import Control.Concurrent
-import Control.DeepSeq
-import Control.Exception.Extra as C
+import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Either
 import Data.List.Extra
 import Data.Maybe
-import Foreign.C.Error
 import System.Directory
 import System.Environment.Extra
 import System.Exit
 import System.IO.Extra
 import System.Process
-import System.Time.Extra
 import System.Info.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
@@ -43,8 +39,6 @@ import Development.Shake.Core
 import Development.Shake.FilePath
 import Development.Shake.Types
 import Development.Shake.Rules.File
-
-import GHC.IO.Exception (IOErrorType(..), IOException(..))
 
 
 ---------------------------------------------------------------------
@@ -278,14 +272,6 @@ findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
     ifM (doesFileExist s) (return $ Just s) (return Nothing)
 
 
--- Copied from System.Process
-forkWait :: IO a -> IO (IO a)
-forkWait a = do
-    res <- newEmptyMVar
-    _ <- mask $ \restore -> forkIO $ try_ (restore a) >>= putMVar res
-    return (takeMVar res >>= either throwIO return)
-
-
 -- Like System.Process, but tweaked to show less escaping,
 -- Relies on relatively detailed internals of showCommandForUser.
 saneCommandForUser :: FilePath -> [String] -> String
@@ -341,6 +327,9 @@ instance CmdString a => CmdResult (Stdout a) where
 instance CmdString a => CmdResult (Stderr a) where
     cmdResult = let (a,b) = cmdString in ([ResultStderr a], \[ResultStderr x] -> Stderr $ b x)
 
+instance CmdString a => CmdResult (Stdouterr a) where
+    cmdResult = let (a,b) = cmdString in ([ResultStdouterr a], \[ResultStdouterr x] -> Stdouterr $ b x)
+
 instance CmdResult () where
     cmdResult = ([], \[] -> ())
 
@@ -353,6 +342,9 @@ cmdResultWith f = second (f .) cmdResult
 
 instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) where
     cmdResult = cmdResultWith $ \(a,(b,c)) -> (a,b,c)
+
+instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4) => CmdResult (x1,x2,x3,x4) where
+    cmdResult = cmdResultWith $ \(a,(b,c,d)) -> (a,b,c,d)
 
 
 -- | Execute a system command. Before running 'command' make sure you 'Development.Shake.need' any files
