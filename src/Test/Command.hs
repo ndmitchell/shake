@@ -76,6 +76,14 @@ main = shaken test $ \args obj -> do
         unit $ cmd path Shell "shake_helper"
         unit $ cmd path "shake_helper"
 
+    "file" !> do
+        let file = obj "file.txt"
+        unit $ cmd helper (FileStdout file) (FileStderr file) (EchoStdout False) (EchoStderr False) (WithStderr False) "ofoo ebar obaz"
+        liftIO $ assertContents file "foo\nbar\nbaz\n"
+        Stderr err <- cmd helper (FileStdout file) (FileStderr file) "ofoo w0.1 ebar w0.1 obaz"
+        liftIO $ err === "bar\n"
+        liftIO $ assertContents file "foo\nbar\nbaz\n"
+
 
 test build obj = do
     -- reduce the overhead by running all the tests in parallel
