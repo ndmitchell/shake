@@ -117,8 +117,11 @@ withCreateProcess cp act = mask $ \restore -> do
     ans@(inh, outh, errh, pid) <- createProcess cp
     onException (restore $ act ans) $ do
         mapM_ (`whenJust` hClose) [inh, outh, errh]
-        terminateProcess pid
-        waitForProcess pid
+        ignore $ do
+            -- sometimes we fail before the process is valid
+            -- therefore if terminate process fails, skip waiting on the process
+            terminateProcess pid
+            void $ waitForProcess pid
 
 
 -- General approach taken from readProcessWithExitCode
