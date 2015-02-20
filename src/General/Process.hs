@@ -76,10 +76,10 @@ data ProcessOpts = ProcessOpts
 optimiseBuffers :: ProcessOpts -> IO (ProcessOpts, IO ())
 optimiseBuffers po@ProcessOpts{..} = return (po{poStdout = nubOrd poStdout, poStderr = nubOrd poStderr}, return ())
 
-stdStream :: (FilePath -> Handle) -> [Destination] -> StdStream
-stdStream file [DestEcho] = Inherit
-stdStream file [DestFile x] = UseHandle $ file x
-stdStream file _ = CreatePipe
+stdStream :: (FilePath -> Handle) -> [Destination] -> [Destination] -> StdStream
+stdStream file [DestEcho] other = Inherit
+stdStream file [DestFile x] other | other == [DestFile x] || DestFile x `notElem` other = UseHandle $ file x
+stdStream file _ _ = CreatePipe
 
 
 stdIn :: Either String LBS.ByteString -> (StdStream, Handle -> IO ())
@@ -132,11 +132,13 @@ process po = do
     withs (map (`withFile` WriteMode) files) $ \handles -> do
         let fileHandle x = fromJust $ lookup x $ zip files handles
         let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout
-                 ,std_in = fst $ stdIn poStdin, std_out = stdStream fileHandle poStdout, std_err = stdStream fileHandle poStderr}
+                 ,std_in = fst $ stdIn poStdin
+                 ,std_out = stdStream fileHandle poStdout poStderr, std_err = stdStream fileHandle poStderr poStdout}
         withCreateProcess cp $ \(inh, outh, errh, pid) -> do
             withTimeout poTimeout (interruptProcessGroupOf pid) $ do
 
-                let streams = [(outh, stdout, poStdout) | Just outh <- [outh]] ++ [(errh, stderr, poStderr) | Just errh <- [errh]]
+                let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++
+                              [(errh, stderr, poStderr) | Just errh <- [errh], CreatePipe <- [std_err cp]]
                 wait <- forM streams $ \(h, hh, dest) -> do
                     let isTied = not $ poStdout `disjoint` poStderr
                     let isBinary = not $ any isDestString dest && not (any isDestBytes dest)
@@ -158,18 +160,23 @@ process po = do
                             src <- bs_hGetSome h 4096
                             mapM_ ($ src) dest
                             notM $ hIsEOF h
+                     else if isTied then do
+                        dest <- return $ for dest $ \d -> case d of
+                            DestEcho -> hPutStrLn hh
+                            DestFile x -> hPutStrLn (fileHandle x)
+                            DestString x -> addBuffer x . (++ "\n")
+                        forkWait $ whileM $
+                            ifM (hIsEOF h) (return False) $ do
+                                src <- hGetLine h
+                                mapM_ ($ src) dest
+                                return True
                      else do
                         src <- hGetContents h
                         wait1 <- forkWait $ C.evaluate $ rnf src
                         waits <- forM dest $ \d -> case d of
                             DestEcho -> forkWait $ hPutStr hh src
                             DestFile x -> forkWait $ hPutStr (fileHandle x) src
-                            DestString x ->
-                                if all (DestString x `elem`) [poStdout, poStderr] then
-                                    forkWait $ mapM_ (addBuffer x . return) src
-                                else do
-                                    addBuffer x src
-                                    return $ return ()
+                            DestString x -> do addBuffer x src; return $ return ()
                         return $ sequence_ $ wait1 : waits
 
                 whenJust inh $ snd $ stdIn poStdin
