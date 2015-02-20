@@ -4,88 +4,77 @@ module Test.Command(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import System.Time.Extra
-import Control.Monad
+import Control.Monad.Extra
+import System.Directory
 import Test.Type
+import System.Exit
+import Data.List.Extra
 
 
 main = shaken test $ \args obj -> do
-    want $ map obj args
+    let helper = [toNative $ obj "shake_helper" <.> exe]
+    let name !> test = do want [name | null args || name `elem` args]
+                          name ~> do need [obj "shake_helper" <.> exe]; test
 
-    let a !> b = obj a %> \out -> do alwaysRerun; res <- b; writeFile' out res
+    let helper_source = unlines
+            ["import Control.Concurrent"
+            ,"import Control.Monad"
+            ,"import System.Directory"
+            ,"import System.Environment"
+            ,"import System.Exit"
+            ,"import System.IO"
+            ,"main = do"
+            ,"    args <- getArgs"
+            ,"    forM_ args $ \\(a:rg) -> case a of"
+            ,"        'o' -> putStrLn rg"
+            ,"        'e' -> hPutStrLn stderr rg"
+            ,"        'f' -> do hFlush stdout; hFlush stderr"
+            ,"        'x' -> exitFailure"
+            ,"        'c' -> putStrLn =<< getCurrentDirectory"
+            ,"        'v' -> putStrLn =<< getEnv rg"
+            ,"        'w' -> threadDelay $ floor $ 1000000 * (read rg :: Double)"
+            ]
 
-    "ghc-version" !> do
-        Stdout stdout <- cmd "ghc --version"
-        return stdout
+    obj "shake_helper.hs" %> \out -> do need ["src/Test/Command.hs"]; writeFileChanged out helper_source
+    obj "shake_helper" <.> exe %> \out -> do need [obj "shake_helper.hs"]; cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o shake_helper"
 
-    "ghc-random" !> do
-        (Stderr stderr, Exit _) <- cmd "ghc --random"
-        return stderr
+    "capture" !> do
+        (Stderr err, Stdout out) <- cmd helper ["ostuff goes here","eother stuff here"]
+        liftIO $ out === "stuff goes here\n"
+        liftIO $ err === "other stuff here\n"
+        Stdouterr out <- cmd helper Shell "o1 f w0.5 e2 o3"
+        liftIO $ out === "1\n2\n3\n"
 
-    "ghc-random2" !> do
-        () <- cmd (EchoStderr False) (Cwd $ obj "") "ghc --random"
-        return ""
+    "failure" !> do
+        (Exit e, Stdout (), Stderr ()) <- cmd helper "oo ee x"
+        when (e == ExitSuccess) $ error "/= ExitSuccess"
+        liftIO $ assertException ["BAD"] $ cmd helper "oo eBAD x" (EchoStdout False) (EchoStderr False)
 
-    "triple" !> do
-        (Exit exit, Stdout stdout, Stderr stderr) <- cmd "ghc --random"
-        return $ show (exit, stdout :: String, stderr :: String) -- must force all three parts
-
-    obj "pwd space.hs" %> \out -> writeFileLines out ["import System.Directory","main = putStrLn =<< getCurrentDirectory"]
-    "pwd" !> do
-        need [obj "pwd space.hs"]
-        Stdout out <- cmd (Cwd $ obj "") "runhaskell" ["pwd space.hs"]
-        return out
+    "cwd" !> do
+        Stdout out <- cmd (Cwd $ obj "") helper "c"
+        liftIO $ (===) (trim out) =<< canonicalizePath (dropTrailingPathSeparator $ obj "")
 
     "timeout" !> do
         offset <- liftIO offsetTime
-        Exit exit <- cmd (Timeout 2) "ghc -ignore-dot-ghci -e" ["last [1..]"]
+        Exit exit <- cmd (Timeout 2) helper "w20"
         t <- liftIO offset
         putNormal $ "Timed out in " ++ showDuration t
+        when (exit == ExitSuccess) $ error "== ExitSuccess"
         when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
-        return $ show t
 
     "env" !> do
-        (Exit _, Stdout out1) <- cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo %FOO%"
-        (Exit _, Stdout out2) <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell "echo $FOO"
-        return $ unlines [out1, out2]
-
-    obj "bin/myexe" <.> exe %> \out -> do
-        liftIO $ writeFile (obj "myexe.hs") "main = return () :: IO ()"
-        cmd "ghc --make" [obj "myexe.hs"] "-o" [out]
-
-    "path_" !> do
-        need [obj "bin/myexe" <.> exe]
-        fmap fromStdout $ cmd "myexe"
+        -- use liftIO since it blows away PATH which makes lint-tracker stop working
+        Stdout out <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell helper "vFOO"
+        liftIO $ out === "HELLO SHAKE\n"
 
     "path" !> do
-        path <- addPath [obj "bin"] []
-        () <- cmd $ obj "bin/myexe"
-        () <- cmd $ obj "bin/myexe" <.> exe
-        () <- cmd path Shell "myexe"
-        () <- cmd path "myexe"
-        return ""
+        path <- addPath [dropTrailingPathSeparator $ obj ""] []
+        unit $ cmd $ obj "shake_helper"
+        unit $ cmd $ obj "shake_helper" <.> exe
+        unit $ cmd path Shell "shake_helper"
+        unit $ cmd path "shake_helper"
 
 
 test build obj = do
-    let crash args parts = assertException parts (build $ "--quiet" : args)
-
-    build ["ghc-version"]
-    assertContentsInfix (obj "ghc-version") "The Glorious Glasgow Haskell Compilation System"
-
-    build ["ghc-random"]
-    assertContentsInfix (obj "ghc-random") "unrecognised flag"
-    assertContentsInfix (obj "ghc-random") "--random"
-
-    crash ["ghc-random2"] [obj "","unrecognised flag","--random"]
-
-    build ["pwd"]
-    assertContentsInfix (obj "pwd") "command"
-
-    build ["env","--no-lint"] -- since it blows away the $PATH, which is necessary for lint-tracker
-    assertContentsInfix (obj "env") "HELLO SHAKE"
-
-    build ["triple"]
-
-    crash ["path_"] ["myexe"]
-    build ["path"]
-
-    build ["timeout"]
+    -- reduce the overhead by running all the tests in parallel
+    build ["-j4"]
