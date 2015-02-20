@@ -97,7 +97,7 @@ addEnv extra = do
     args <- liftIO getEnvironment
     return $ Env $ extra ++ filter (\(a,b) -> a `notElem` map fst extra) args
 
-data Str = Str String | BS BS.ByteString | LBS LBS.ByteString deriving Eq
+data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
 
 data Result
     = ResultStdout Str
@@ -196,23 +196,24 @@ commandExplicitIO funcName opts results exe args = do
     let optFileStdout = [x | FileStdout x <- opts]
     let optFileStderr = [x | FileStderr x <- opts]
 
-    let buf Str{} = do x <- newBuffer; return (DestString x, Str . concat <$> readBuffer x)
-        buf LBS{} = do x <- newBuffer; return (DestBytes x, LBS . LBS.fromChunks <$> readBuffer x)
-        buf BS {} = do x <- newBuffer; return (DestBytes x, BS . BS.concat <$> readBuffer x)
-    (dStdout, dStderr, resultBuild) :: ([Maybe Destination], [Maybe Destination], [ExitCode -> IO Result]) <-
+    let buf Str{} = do x <- newBuffer; return ([DestString x], Str . concat <$> readBuffer x)
+        buf LBS{} = do x <- newBuffer; return ([DestBytes x], LBS . LBS.fromChunks <$> readBuffer x)
+        buf BS {} = do x <- newBuffer; return ([DestBytes x], BS . BS.concat <$> readBuffer x)
+        buf Unit  = return ([], return Unit)
+    (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
-            ResultCode _ -> return (Nothing, Nothing, return . ResultCode)
-            ResultStdout    s -> do (a,b) <- buf s; return (Just a , Nothing, const $ fmap ResultStdout b)
-            ResultStderr    s -> do (a,b) <- buf s; return (Nothing, Just a , const $ fmap ResultStderr b)
-            ResultStdouterr s -> do (a,b) <- buf s; return (Just a , Just a , const $ fmap ResultStdouterr b)
+            ResultCode _ -> return ([], [], return . ResultCode)
+            ResultStdout    s -> do (a,b) <- buf s; return (a , [], const $ fmap ResultStdout b)
+            ResultStderr    s -> do (a,b) <- buf s; return ([], a , const $ fmap ResultStderr b)
+            ResultStdouterr s -> do (a,b) <- buf s; return (a , a , const $ fmap ResultStdouterr b)
 
     exceptionBuffer <- newBuffer
     po <- resolvePath $ ProcessOpts
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
         ,poStdin = if optBinary then Right $ LBS.pack optStdin else Left optStdin
-        ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ catMaybes dStdout
-        ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ catMaybes dStderr
+        ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ concat dStdout
+        ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ concat dStderr
         }
     res <- try_ $ process po
 
@@ -304,6 +305,7 @@ newtype Stdouterr a = Stdouterr {fromStdouterr :: a}
 newtype Exit = Exit {fromExit :: ExitCode}
 
 class CmdString a where cmdString :: (Str, Str -> a)
+instance CmdString () where cmdString = (Unit, \Unit -> ())
 instance CmdString String where cmdString = (Str "", \(Str x) -> x)
 instance CmdString BS.ByteString where cmdString = (BS BS.empty, \(BS x) -> x)
 instance CmdString LBS.ByteString where cmdString = (LBS LBS.empty, \(LBS x) -> x)
