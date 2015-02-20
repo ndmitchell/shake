@@ -25,14 +25,16 @@ main = shaken test $ \args obj -> do
             ,"import System.IO"
             ,"main = do"
             ,"    args <- getArgs"
-            ,"    forM_ args $ \\(a:rg) -> case a of"
-            ,"        'o' -> putStrLn rg"
-            ,"        'e' -> hPutStrLn stderr rg"
-            ,"        'f' -> do hFlush stdout; hFlush stderr"
-            ,"        'x' -> exitFailure"
-            ,"        'c' -> putStrLn =<< getCurrentDirectory"
-            ,"        'v' -> putStrLn =<< getEnv rg"
-            ,"        'w' -> threadDelay $ floor $ 1000000 * (read rg :: Double)"
+            ,"    forM_ args $ \\(a:rg) -> do"
+            ,"        case a of"
+            ,"            'o' -> putStrLn rg"
+            ,"            'e' -> hPutStrLn stderr rg"
+            ,"            'x' -> exitFailure"
+            ,"            'c' -> putStrLn =<< getCurrentDirectory"
+            ,"            'v' -> putStrLn =<< getEnv rg"
+            ,"            'w' -> threadDelay $ floor $ 1000000 * (read rg :: Double)"
+            ,"        hFlush stdout"
+            ,"        hFlush stderr"
             ]
 
     obj "shake_helper.hs" %> \out -> do need ["src/Test/Command.hs"]; writeFileChanged out helper_source
@@ -42,7 +44,7 @@ main = shaken test $ \args obj -> do
         (Stderr err, Stdout out) <- cmd helper ["ostuff goes here","eother stuff here"]
         liftIO $ out === "stuff goes here\n"
         liftIO $ err === "other stuff here\n"
-        Stdouterr out <- cmd helper Shell "o1 f w0.5 e2 o3"
+        Stdouterr out <- cmd helper Shell "o1 w0.2 e2 w0.2 o3"
         liftIO $ out === "1\n2\n3\n"
 
     "failure" !> do
