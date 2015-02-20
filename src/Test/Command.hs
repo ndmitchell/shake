@@ -53,6 +53,8 @@ main = shaken test $ \args obj -> do
         liftIO $ assertException ["BAD"] $ cmd helper "oo eBAD x" (EchoStdout False) (EchoStderr False)
 
     "cwd" !> do
+        -- FIXME: Linux searches the Cwd argument for the file, Windows searches getCurrentDirectory
+        helper <- liftIO $ canonicalizePath $ obj "shake_helper" <.> exe
         Stdout out <- cmd (Cwd $ obj "") helper "c"
         liftIO $ (===) (trim out) =<< canonicalizePath (dropTrailingPathSeparator $ obj "")
 
