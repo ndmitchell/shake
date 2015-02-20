@@ -144,6 +144,7 @@ process po = do
                             _ -> hSetBuffering h buf
 
                     if isBinary then do
+                        hSetBinaryMode h True
                         dest <- return $ for dest $ \d -> case d of
                             DestEcho -> BS.hPut hh
                             DestFile x -> BS.hPut (fileHandle x)
