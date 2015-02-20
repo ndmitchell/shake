@@ -15,7 +15,7 @@ wordsMakefile :: BS.ByteString -> [BS.ByteString]
 wordsMakefile = f . BS.splitWith isSpace
     where
         f (x:xs) | BS.null x = f xs
-        f (x:y:xs) | endsSlash x = BS.concat [BS.init x, BS.singleton ' ', y] : f xs
+        f (x:y:xs) | endsSlash x = f $ BS.concat [BS.init x, BS.singleton ' ', y] : xs
         f (x:xs) = x : f xs
         f [] = []
 
