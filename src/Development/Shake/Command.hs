@@ -202,9 +202,11 @@ commandExplicitIO funcName opts results exe args = do
     let optFileStderr = [x | FileStderr x <- opts]
 
     let cmdline = saneCommandForUser exe args
-    let buf Str{} = do x <- newBuffer; return ([DestString x], Str . concat <$> readBuffer x)
+    let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
+        buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
+        buf Str{} = do x <- newBuffer; return ([DestString x], Str . concat <$> readBuffer x)
         buf LBS{} = do x <- newBuffer; return ([DestBytes x], LBS . LBS.fromChunks <$> readBuffer x)
-        buf BS {} = do x <- newBuffer; return ([DestBytes x], BS . BS.concat <$> readBuffer x)
+        buf BS {} = bufLBS (BS . BS.concat . LBS.toChunks)
         buf Unit  = return ([], return Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
