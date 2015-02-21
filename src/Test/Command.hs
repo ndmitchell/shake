@@ -11,6 +11,7 @@ import Test.Type
 import System.Exit
 import Data.List.Extra
 import Control.Monad.IO.Class
+import System.Info.Extra
 
 
 main = shaken test $ \args obj -> do
@@ -91,6 +92,10 @@ main = shaken test $ \args obj -> do
 
     "timer" !> do
         timer $ cmd helper
+
+    "binary" !> do
+        Stdout out <- cmd BinaryPipes helper "ofoo"
+        liftIO $ out === if isWindows then "foo\r\n" else "foo\n"
 
 test build obj = do
     -- reduce the overhead by running all the tests in parallel
