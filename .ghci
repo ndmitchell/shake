@@ -19,7 +19,7 @@ let _ghci_make name flags =
         ":!" ++
         "(if not exist .hpc mkdir .hpc) && " ++
         "(if not exist .hpc\\" ++ name ++ " mkdir .hpc\\" ++ name ++ ") && " ++
-        "ghc " ++ flags ++ " -rtsopts -ignore-package hashmap -package transformers --make -isrc src/Test.hs src/Paths.hs -w -odir .hpc/" ++ name ++ " -hidir .hpc/" ++ name ++ " -o .hpc/" ++ name ++ "/shake.exe"
+        "ghc " ++ flags ++ " -rtsopts -ignore-package hashmap -package transformers --make -isrc src/Test.hs src/Paths.hs -w -odir .hpc/" ++ name ++ " -hidir .hpc/" ++ name ++ " -o .hpc/" ++ name ++ "/shake.exe -main-is Test.main"
 :}
 
 :{
