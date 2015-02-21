@@ -52,7 +52,7 @@ data CmdOption
                             --   Use 'addPath' to modify the @$PATH@ variable, or 'addEnv' to modify other variables.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
-    | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default streams use text encoding.
+    | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default 'String' results use text encoding and 'ByteString' results use binary encoding.
     | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
     | Timeout Double -- ^ Abort the computation after N seconds, will raise a failure exit code.
     | WithStdout Bool -- ^ Should I include the @stdout@ in the exception if the command fails? Defaults to 'False'.
