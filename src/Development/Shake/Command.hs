@@ -381,6 +381,9 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) wher
 instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4) => CmdResult (x1,x2,x3,x4) where
     cmdResult = cmdResultWith $ \(a,(b,c,d)) -> (a,b,c,d)
 
+instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) => CmdResult (x1,x2,x3,x4,x5) where
+    cmdResult = cmdResultWith $ \(a,(b,c,d,e)) -> (a,b,c,d,e)
+
 
 -- | Execute a system command. Before running 'command' make sure you 'Development.Shake.need' any files
 --   that are used by the command.
