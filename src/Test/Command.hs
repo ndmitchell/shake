@@ -1,7 +1,8 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types, ScopedTypeVariables #-}
 
 module Test.Command(main) where
 
+import Control.Applicative
 import Development.Shake
 import Development.Shake.FilePath
 import System.Time.Extra
@@ -14,6 +15,7 @@ import Data.List.Extra
 import Control.Monad.IO.Class
 import System.Info.Extra
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 
 
 main = shaken test $ \args obj -> do
@@ -28,6 +30,7 @@ main = shaken test $ \args obj -> do
             ,"import System.Environment"
             ,"import System.Exit"
             ,"import System.IO"
+            ,"import qualified Data.ByteString.Lazy.Char8 as LBS"
             ,"main = do"
             ,"    args <- getArgs"
             ,"    forM_ args $ \\(a:rg) -> do"
@@ -38,6 +41,7 @@ main = shaken test $ \args obj -> do
             ,"            'c' -> putStrLn =<< getCurrentDirectory"
             ,"            'v' -> putStrLn =<< getEnv rg"
             ,"            'w' -> threadDelay $ floor $ 1000000 * (read rg :: Double)"
+            ,"            'r' -> LBS.putStr $ LBS.replicate (read rg) 'x'"
             ,"        hFlush stdout"
             ,"        hFlush stderr"
             ]
@@ -101,6 +105,13 @@ main = shaken test $ \args obj -> do
         (Stdout str, Stdout bs) <- cmd helper "ofoo"
         liftIO $ (str, bs) === ("foo\n", BS.pack $ if isWindows then "foo\r\n" else "foo\n")
         return ()
+
+    "large" !> do
+        (Stdout (_ :: String), CmdTime t1) <- cmd helper "r10000000"
+        (Stdout (_ :: LBS.ByteString), CmdTime t2) <- cmd helper "r10000000"
+        t3 <- withTempFile $ \file -> fromCmdTime <$> cmd helper "r10000000" (FileStdout file)
+        liftIO $ putStrLn $ "Capturing 10Mb takes: " ++ intercalate ","
+            [s ++ " = " ++ showDuration d | (s,d) <- [("String",t1),("ByteString",t2),("File",t3)]]
 
 
 test build obj = do
