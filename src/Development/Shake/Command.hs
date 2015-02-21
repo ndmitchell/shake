@@ -321,11 +321,11 @@ newtype Exit = Exit {fromExit :: ExitCode}
 --timer :: ('CmdResult' r, MonadIO m) => (forall r . 'CmdResult' r => m r) -> m r
 --timer act = do
 --    ('CmdTime' t, 'CmdLine' x, r) <- act
---    liftIO $ putStrLn $ "Command " ++ x ++ " took " ++ show t ++ " seconds"
+--    liftIO $ putStrLn $ \"Command \" ++ x ++ \" took \" ++ show t ++ \" seconds\"
 --    return r
 --
 --run :: IO ()
---run = timer $ 'cmd' "ghc --version"
+--run = timer $ 'cmd' \"ghc --version\"
 -- @
 newtype CmdTime = CmdTime {fromCmdTime :: Double}
 
