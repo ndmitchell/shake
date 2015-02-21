@@ -9,9 +9,11 @@ import Control.Monad.Extra
 import System.Directory
 import Test.Type
 import System.Exit
+import Data.Tuple.Extra
 import Data.List.Extra
 import Control.Monad.IO.Class
 import System.Info.Extra
+import qualified Data.ByteString.Char8 as BS
 
 
 main = shaken test $ \args obj -> do
@@ -94,8 +96,12 @@ main = shaken test $ \args obj -> do
         timer $ cmd helper
 
     "binary" !> do
-        Stdout out <- cmd BinaryPipes helper "ofoo"
-        liftIO $ out === if isWindows then "foo\r\n" else "foo\n"
+        (Stdout str, Stdout bs) <- cmd BinaryPipes helper "ofoo"
+        liftIO $ (===) (str, bs) $ second BS.pack $ dupe $ if isWindows then "foo\r\n" else "foo\n"
+        (Stdout str, Stdout bs) <- cmd helper "ofoo"
+        liftIO $ (str, bs) === ("foo\n", BS.pack $ if isWindows then "foo\r\n" else "foo\n")
+        return ()
+
 
 test build obj = do
     -- reduce the overhead by running all the tests in parallel
