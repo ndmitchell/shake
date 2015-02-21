@@ -11,8 +11,8 @@
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd, unit, CmdArguments,
-    Stdout(..), Stderr(..), Stdouterr(..), Exit(..),
-    CmdResult, CmdOption(..),
+    Stdout(..), Stderr(..), Stdouterr(..), Exit(..), CmdTime(..), CmdLine(..),
+    CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
     ) where
 
@@ -30,6 +30,7 @@ import System.Exit
 import System.IO.Extra
 import System.Process
 import System.Info.Extra
+import System.Time.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -104,6 +105,8 @@ data Result
     | ResultStderr Str
     | ResultStdouterr Str
     | ResultCode ExitCode
+    | ResultTime Double
+    | ResultLine String
       deriving Eq
 
 
@@ -180,8 +183,10 @@ correctCase x = f "" x
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
 commandExplicitIO funcName opts results exe args = do
     let (grabStdout, grabStderr) = both or $ unzip $ for results $ \r -> case r of
-            ResultStdout{} -> (True, False); ResultStderr{} -> (False, True)
-            ResultStdouterr{} -> (True, True); ResultCode{} -> (False, False)
+            ResultStdout{} -> (True, False)
+            ResultStderr{} -> (False, True)
+            ResultStdouterr{} -> (True, True)
+            _ -> (False, False)
 
     let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
     let optEnv = let x = [x | Env x <- opts] in if null x then Nothing else Just $ concat x
@@ -196,16 +201,19 @@ commandExplicitIO funcName opts results exe args = do
     let optFileStdout = [x | FileStdout x <- opts]
     let optFileStderr = [x | FileStderr x <- opts]
 
+    let cmdline = saneCommandForUser exe args
     let buf Str{} = do x <- newBuffer; return ([DestString x], Str . concat <$> readBuffer x)
         buf LBS{} = do x <- newBuffer; return ([DestBytes x], LBS . LBS.fromChunks <$> readBuffer x)
         buf BS {} = do x <- newBuffer; return ([DestBytes x], BS . BS.concat <$> readBuffer x)
         buf Unit  = return ([], return Unit)
-    (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [ExitCode -> IO Result]) <-
+    (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
-            ResultCode _ -> return ([], [], return . ResultCode)
-            ResultStdout    s -> do (a,b) <- buf s; return (a , [], const $ fmap ResultStdout b)
-            ResultStderr    s -> do (a,b) <- buf s; return ([], a , const $ fmap ResultStderr b)
-            ResultStdouterr s -> do (a,b) <- buf s; return (a , a , const $ fmap ResultStdouterr b)
+            ResultCode _ -> return ([], [], \dur ex -> return $ ResultCode ex)
+            ResultTime _ -> return ([], [], \dur ex -> return $ ResultTime dur)
+            ResultLine _ -> return ([], [], \dur ex -> return $ ResultLine cmdline)
+            ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ -> fmap ResultStdout b)
+            ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ -> fmap ResultStderr b)
+            ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ -> fmap ResultStdouterr b)
 
     exceptionBuffer <- newBuffer
     po <- resolvePath $ ProcessOpts
@@ -215,7 +223,7 @@ commandExplicitIO funcName opts results exe args = do
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ concat dStderr
         }
-    res <- try_ $ process po
+    res <- try_ $ duration $ process po
 
     let failure extra = do
             cwd <- case optCwd of
@@ -225,11 +233,11 @@ commandExplicitIO funcName opts results exe args = do
                     return $ "Current directory: " ++ v ++ "\n"
             fail $
                 "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-                "Command: " ++ saneCommandForUser exe args ++ "\n" ++
+                "Command: " ++ cmdline ++ "\n" ++
                 cwd ++ extra
     case res of
         Left err -> failure $ show err
-        Right ex | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
+        Right (dur,ex) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
             exceptionBuffer <- readBuffer exceptionBuffer
             let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
             failure $
@@ -237,7 +245,7 @@ commandExplicitIO funcName opts results exe args = do
                 if null captured then "Stderr not captured because WithStderr False was used\n"
                 else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
                 else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
-        Right ex -> mapM ($ ex) resultBuild
+        Right (dur,ex) -> mapM (\f -> f dur ex) resultBuild
 
 
 -- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
@@ -304,6 +312,25 @@ newtype Stdouterr a = Stdouterr {fromStdouterr :: a}
 --   If you do not collect the exit code, any 'ExitFailure' will cause an exception.
 newtype Exit = Exit {fromExit :: ExitCode}
 
+-- | Collect the time taken to execute the process. Can be used in conjunction with 'CmdLine' to
+--   write helper functions that print out the time of a result.
+--
+-- @
+-- timer :: ('CmdResult' r, MonadIO m) => (forall r . 'CmdResult' r => m r) -> m r
+-- timer act = do
+--     ('CmdTime' t, 'CmdLine' x, r) <- act
+--     liftIO $ putStrLn $ "Command " ++ x ++ " took " ++ show t ++ " seconds"
+--     return r
+--
+-- run :: IO ()
+-- run = timer $ 'cmd' "ghc --version"
+-- @
+newtype CmdTime = CmdTime {fromCmdTime :: Double}
+
+-- | Collect the command line used for the process. This command line will be approximate -
+--   suitable for user diagnostics, but not for direct execution.
+newtype CmdLine = CmdLine {fromCmdLine :: String}
+
 class CmdString a where cmdString :: (Str, Str -> a)
 instance CmdString () where cmdString = (Unit, \Unit -> ())
 instance CmdString String where cmdString = (Str "", \(Str x) -> x)
@@ -322,6 +349,12 @@ instance CmdResult Exit where
 
 instance CmdResult ExitCode where
     cmdResult = ([ResultCode ExitSuccess], \[ResultCode x] -> x)
+
+instance CmdResult CmdLine where
+    cmdResult = ([ResultLine ""], \[ResultLine x] -> CmdLine x)
+
+instance CmdResult CmdTime where
+    cmdResult = ([ResultTime 0], \[ResultTime x] -> CmdTime x)
 
 instance CmdString a => CmdResult (Stdout a) where
     cmdResult = let (a,b) = cmdString in ([ResultStdout a], \[ResultStdout x] -> Stdout $ b x)

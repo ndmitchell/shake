@@ -106,8 +106,8 @@ module Development.Shake(
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     -- * Running commands
     command, command_, cmd, unit,
-    Stdout(..), Stderr(..), Stdouterr(..), Exit(..),
-    CmdResult, CmdOption(..),
+    Stdout(..), Stderr(..), Stdouterr(..), Exit(..), CmdTime(..), CmdLine(..),
+    CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
     -- * Utility functions
     copyFile', copyFileChanged,

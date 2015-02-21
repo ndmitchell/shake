@@ -50,7 +50,7 @@ main = shaken noTest $ \args obj -> do
             code = concat $ zipWith f [1..] (nubOrd src)
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
-            ["{-# LANGUAGE DeriveDataTypeable, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction, ScopedTypeVariables #-}"
+            ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction, ScopedTypeVariables #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Concurrent"
@@ -68,6 +68,7 @@ main = shaken noTest $ \args obj -> do
             ,"import System.Console.GetOpt"
             ,"import System.Directory(setCurrentDirectory)"
             ,"import System.Exit"
+            ,"import Control.Monad.IO.Class"
             ,"import System.IO"] ++
             ["import " ++ replace "_" "." (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
             imports ++
@@ -151,7 +152,7 @@ restmt i ("":xs) = restmt i xs
 restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
     zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
 restmt i (x:xs) |
-    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x) ||
+    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x || " :: " `isInfixOf` x) ||
     "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
     where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
 restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++

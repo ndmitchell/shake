@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add CmdTime and CmdLine results to cmd/command
     Fix parseMakefile for words with multiple escapes in them
     #205, add WithStdout, like WithStderr
     #27, add support for capturing Stdout/Stderr with bytestrings

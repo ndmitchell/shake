@@ -1,3 +1,4 @@
+{-# LANGUAGE Rank2Types #-}
 
 module Test.Command(main) where
 
@@ -9,6 +10,7 @@ import System.Directory
 import Test.Type
 import System.Exit
 import Data.List.Extra
+import Control.Monad.IO.Class
 
 
 main = shaken test $ \args obj -> do
@@ -86,7 +88,16 @@ main = shaken test $ \args obj -> do
         liftIO $ err === "bar\n"
         liftIO $ assertContents file "foo\nbar\nbaz\n"
 
+    "timer" !> do
+        timer $ cmd helper
 
 test build obj = do
     -- reduce the overhead by running all the tests in parallel
     build ["-j4"]
+
+
+timer :: (CmdResult r, MonadIO m) => (forall r . CmdResult r => m r) -> m r
+timer act = do
+    (CmdTime t, CmdLine x, r) <- act
+    liftIO $ putStrLn $ "Command " ++ x ++ " took " ++ show t ++ " seconds"
+    return r
