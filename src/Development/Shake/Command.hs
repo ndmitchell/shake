@@ -57,8 +57,8 @@ data CmdOption
     | Timeout Double -- ^ Abort the computation after N seconds, will raise a failure exit code.
     | WithStdout Bool -- ^ Should I include the @stdout@ in the exception if the command fails? Defaults to 'False'.
     | WithStderr Bool -- ^ Should I include the @stderr@ in the exception if the command fails? Defaults to 'True'.
-    | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required.
-    | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required.
+    | EchoStdout Bool -- ^ Should I echo the @stdout@? Defaults to 'True' unless a 'Stdout' result is required or you use 'FileStdout'.
+    | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required or you use 'FileStderr'.
     | FileStdout FilePath -- ^ Should I put the @stdout@ to a file.
     | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
       deriving (Eq,Ord,Show)
@@ -196,10 +196,10 @@ commandExplicitIO funcName opts results exe args = do
     let optTimeout = listToMaybe $ reverse [x | Timeout x <- opts]
     let optWithStdout = last $ False : [x | WithStdout x <- opts]
     let optWithStderr = last $ True : [x | WithStderr x <- opts]
-    let optEchoStdout = last $ not grabStdout : [x | EchoStdout x <- opts]
-    let optEchoStderr = last $ not grabStderr : [x | EchoStderr x <- opts]
     let optFileStdout = [x | FileStdout x <- opts]
     let optFileStderr = [x | FileStderr x <- opts]
+    let optEchoStdout = last $ (not grabStdout && null optFileStdout) : [x | EchoStdout x <- opts]
+    let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
 
     let cmdline = saneCommandForUser exe args
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
