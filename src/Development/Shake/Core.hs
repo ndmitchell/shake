@@ -91,15 +91,12 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --  existing artifact identified by a @key@.
 --
 --  Checking if an artifact needs to be built consists of comparing two @value@s
---  of the same @key@ with "equalValue". The first value is obtained by applying
---  "storedValue" to the @key@ and the other is the value stored in the build
+--  of the same @key@ with 'equalValue'. The first value is obtained by applying
+--  'storedValue' to the @key@ and the other is the value stored in the build
 --  database after the last successful build.
 --
---  As an example assume the
---  requirement of compiling /foo/ files only when they don't exist, or when the
---  existing file has a different modification timestamp;
---
---  For example, assume this instance:
+--  As an example assume the requirement of compiling /foo/ files when they
+--  don't exist or have been externally modified after being built:
 --
 --  @
 --  instance Rule FooFile FooFileTimestamp where
