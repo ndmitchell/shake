@@ -77,6 +77,85 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 
 -- | Define a pair of types that can be used by Shake rules.
 --   To import all the type classes required see "Development.Shake.Classes".
+--
+--  A 'Rule' instance describes for a class of artifacts - e.g. /files/ - how to
+--  identify individual artifacts (e.g. with file names) and how to determine if
+--  an artifact needs to be built, i.e. 'equalValue' returns 'NotEqual'. The
+--  members of such a class of artifacts share the same mechanisms to query the
+--  state of a artifacts.
+--
+--  A @key@ (e.g. /file names/) identifies an artifact (e.g. a /file/), while
+--  @value@s, e.g. /md5 hashes/, describe the /state/ of an artifact.
+--
+--  The function 'storedValue' is a query that may return a @value@ for some
+--  existing artifact identified by a @key@.
+--
+--  Checking if an artifact needs to be built consists of comparing two @value@s
+--  of the same @key@ with "equalValue". The first value is obtained by applying
+--  "storedValue" to the @key@ and the other is the value stored in the build
+--  database after the last successful build.
+--
+--  As an example assume the
+--  requirement of compiling /foo/ files only when they don't exist, or when the
+--  existing file has a different modification timestamp;
+--
+--  For example, assume this instance:
+--
+--  @
+--  instance Rule FooFile FooFileTimestamp where
+--
+--    storedValue _opts (FooFile f) = do
+--      exists <- doesFileExist f
+--      if exists
+--         then Just \<$\> getFileTimestamp f
+--         else return Nothing
+--
+--    equalValue _opts _key t1 t2 =
+--       if t1 == t2
+--          then EqualCheap
+--          else NotEqual
+--  @
+--
+--  This example instance means:
+--
+--  * A value of type @FooFile@ uniquely identifies a generated foo file.
+--  * A value of type @FooFileTimestamp@ will be used to check if a foo
+--    file is up-to-date.
+--
+--  A 'Rule' instance __is not__ a rule. It defines that two types together
+--  with the methods of the "Rule" class can be used to /create/ rules.
+--
+--  To build /rules/ use 'rule' to specify 'Action's that build artifacts
+--  identified by @key@s. Shake then uses the appropriate instance of the
+--  'Rule' class to decide if and which 'Action's to invoke to create required
+--  artifacts.
+--
+--  Refering to the example above, this is how an actual /rule/ could be
+--  created:
+--
+--  @
+--      -- Compile @foo@ files; for every @foo@ output file there must be a
+--      -- single input file name "filename.foo".
+--      compileFoo :: Rules ()
+--      compileFoo = rule (Just . compile)
+--        where
+--          compile :: FooFile -> Action FooFileTimestamp
+--          compile (FooFile outputFile) = do
+--
+--            -- heavy lifting to create the output file:
+--            let inputFile = outputFile \<.\> "foo"
+--            cmd "fooCC" inputFile outputFile
+--
+--            -- read the (new) file timestamp of the output file:
+--            Just timestamp <- liftIO (storedValue (FooFile outputFile))
+--            return timestamp
+--  @
+--
+--  In this example, the timestamps of the input files are not compared to the
+--  timestamps of the ouput files; the dependency of out- to input file is not
+--  what 'Rule' instances describe. Dependencies are created by monadic
+--  composition of 'Actions', e.g. created by functions like 'apply' or 'need'.
+--
 class (
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue key, ShakeValue value
@@ -238,7 +317,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
                rs -> errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-            where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs] 
+            where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs]
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
