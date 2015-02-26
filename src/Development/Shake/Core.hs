@@ -122,11 +122,10 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --  It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
 --  instances are however necessary, for the creation rules.
 --
---  To add build rules use the 'rule' function to specify the 'Action' that
---  builds an artifacts identified by a @key@.
+--  Actual /rules/ are functions from a @key@ to an 'Action'; they are
+--  culminated into a 'Rules' monad using the 'rule' function.
 --
---  Refering to the example above, this is how an actual /rule/ could be
---  created:
+--  Refering to the example above, this is how a rule can be created:
 --
 --  @
 --      -- Compile @foo@ files; for every @foo@ output file there must be a
@@ -146,9 +145,9 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --            return timestamp
 --  @
 --
---  __NOTE:__ In this example, the timestamps of the input files are never regarded,
---  let alone compared to the timestamps of the ouput files. Dependencies
---  between output and input files are expressed by 'Rule'
+--  __NOTE:__ In this example, the timestamps of the input files are never
+--  regarded, let alone compared to the timestamps of the ouput
+--  files. Dependencies between output and input files are expressed by 'Rule'
 --  instances. Dependencies are created by monadic composition of 'Actions',
 --  e.g. created by functions like 'apply' or 'need'.
 --
