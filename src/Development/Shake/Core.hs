@@ -109,7 +109,6 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --        if exists
 --            then Just \<$\> getFooTimestamp f
 --            else return Nothing
---
 --    equalValue _opts _key t1 t2 =
 --        if t1 == t2 then EqualCheap else NotEqual
 -- @
