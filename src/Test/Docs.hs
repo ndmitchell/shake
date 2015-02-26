@@ -50,9 +50,11 @@ main = shaken noTest $ \args obj -> do
             code = concat $ zipWith f [1..] (nubOrd src)
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
-            ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, ExtendedDefaultRules, GeneralizedNewtypeDeriving, NoMonomorphismRestriction, ScopedTypeVariables #-}"
+            ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, MultiParamTypeClasses, ExtendedDefaultRules, GeneralizedNewtypeDeriving #-}"
+            ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
+            ,"import Control.Applicative"
             ,"import Control.Concurrent"
             ,"import Control.Monad"
             ,"import Data.Char"
@@ -67,6 +69,7 @@ main = shaken noTest $ \args obj -> do
             ,"import Development.Shake.FilePath"
             ,"import System.Console.GetOpt"
             ,"import System.Directory(setCurrentDirectory)"
+            ,"import qualified System.Directory"
             ,"import System.Exit"
             ,"import Control.Monad.IO.Class"
             ,"import System.IO"] ++
@@ -117,7 +120,6 @@ main = shaken noTest $ \args obj -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
-        liftIO $ putStrLn =<< readFile (obj "Part_Development_Shake_Rule.hs")
         () <- cmd "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
         writeFile' out ""
 
@@ -150,6 +152,7 @@ findCodeMarkdown [] = []
 trims = reverse . dropWhile (all isSpace) . reverse . dropWhile (all isSpace)
 
 restmt i ("":xs) = restmt i xs
+restmt i (('-':'-':_):xs) = restmt i xs
 restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
     zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
 restmt i (x:xs) |
