@@ -78,79 +78,79 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 -- | Define a pair of types that can be used by Shake rules.
 --   To import all the type classes required see "Development.Shake.Classes".
 --
---  A 'Rule' instance describes for a class of artifacts - e.g. /files/ - how to
---  identify individual artifacts (e.g. with file names) and how to determine if
---  an artifact needs to be built, i.e. 'equalValue' returns 'NotEqual'. The
---  members of such a class of artifacts share the same mechanisms to query the
---  state of artifacts.
+--   A 'Rule' instance describes for a class of artifacts - e.g. /files/ - how to
+--   identify individual artifacts (e.g. with file names) and how to determine if
+--   an artifact needs to be built, i.e. 'equalValue' returns 'NotEqual'. The
+--   members of such a class of artifacts share the same mechanisms to query the
+--   state of artifacts.
 --
---  A @key@ (e.g. /file names/) identifies an artifact (e.g. a /file/), while
---  @value@s, e.g. /md5 hashes/, describe the /state/ of an artifact.
+--   A @key@ (e.g. /file names/) identifies an artifact (e.g. a /file/), while
+--   @value@s, e.g. /md5 hashes/, describe the /state/ of an artifact.
 --
---  The function 'storedValue' is a query that may return a @value@ for some
---  existing artifact identified by a @key@.
+--   The function 'storedValue' is a query that may return a @value@ for some
+--   existing artifact identified by a @key@.
 --
---  Checking if an artifact needs to be built consists of comparing two @value@s
---  of the same @key@ with 'equalValue'. The first value is obtained by applying
---  'storedValue' to the @key@ and the other is the value stored in the build
---  database after the last successful build.
+--   Checking if an artifact needs to be built consists of comparing two @value@s
+--   of the same @key@ with 'equalValue'. The first value is obtained by applying
+--   'storedValue' to the @key@ and the other is the value stored in the build
+--   database after the last successful build.
 --
---  As an example assume the requirement of compiling /foo/ files when they
---  don't exist or have been externally modified after being built:
+--   As an example assume the requirement of compiling /foo/ files when they
+--   don't exist or have been externally modified after being built:
 --
---  @
---  instance Rule FooFile FooFileTimestamp where
+-- @
+--newtype FooFile = FooFile FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+--newtype FooTimestamp = FooTimestamp Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+--getFooTimestamp file = ...
 --
---    storedValue _opts (FooFile f) = do
---      exists <- doesFileExist f
---      if exists
---         then Just \<$\> getFileTimestamp f
---         else return Nothing
+--instance Rule FooFile FooTimestamp where
+--    storedValue _ (FooFile f) = do
+--        exists <- System.Directory.doesFileExist f
+--        if exists
+--            then Just \<$\> getFooTimestamp f
+--            else return Nothing
 --
 --    equalValue _opts _key t1 t2 =
---       if t1 == t2
---          then EqualCheap
---          else NotEqual
---  @
+--        if t1 == t2 then EqualCheap else NotEqual
+-- @
 --
---  This example instance means:
+--   This example instance means:
 --
---  * A value of type @FooFile@ uniquely identifies a generated foo file.
---  * A value of type @FooFileTimestamp@ will be used to check if a foo
---    file is up-to-date.
+-- * A value of type @FooFile@ uniquely identifies a generated foo file.
 --
---  It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
---  instances are however necessary, for the creation rules.
+-- * A value of type @FooTimestamp@ will be used to check if a foo
+--   file is up-to-date.
 --
---  Actual /rules/ are functions from a @key@ to an 'Action'; they are
---  culminated into a 'Rules' monad using the 'rule' function.
+--   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
+--   instances are however necessary, for the creation rules.
 --
---  Refering to the example above, this is how a rule can be created:
+--   Actual /rules/ are functions from a @key@ to an 'Action'; they are
+--   culminated into a 'Rules' monad using the 'rule' function.
 --
---  @
---      -- Compile @foo@ files; for every @foo@ output file there must be a
---      -- single input file named "filename.foo".
---      compileFoo :: Rules ()
---      compileFoo = rule (Just . compile)
---        where
---          compile :: FooFile -> Action FooFileTimestamp
---          compile (FooFile outputFile) = do
+--   Refering to the example above, this is how a rule can be created:
 --
---            -- heavy lifting to create the output file:
---            let inputFile = outputFile \<.\> "foo"
---            cmd "fooCC" inputFile outputFile
+-- @
+-- -- Compile @foo@ files; for every @foo@ output file there must be a
+-- -- single input file named "filename.foo".
+-- compileFoo :: Rules ()
+-- compileFoo = rule (Just . compile)
+--     where
+--         compile :: FooFile -> Action FooTimestamp
+--         compile (FooFile outputFile) = do
+--         -- heavy lifting to create the output file:
+--         let inputFile = outputFile \<.\> "foo"
+--         unit $ cmd "fooCC" inputFile outputFile
+--         -- read the (new) file timestamp of the output file:
+--         opts <- getShakeOptions
+--         Just timestamp <- liftIO $ storedValue opts (FooFile outputFile)
+--         return timestamp
+-- @
 --
---            -- read the (new) file timestamp of the output file:
---            Just timestamp <- liftIO (storedValue (FooFile outputFile))
---            return timestamp
---  @
---
---  __NOTE:__ In this example, the timestamps of the input files are never
---  regarded, let alone compared to the timestamps of the ouput
+--  /Note:/ In this example, the timestamps of the input files are never
+--  used, let alone compared to the timestamps of the ouput
 --  files. Dependencies between output and input files are expressed by 'Rule'
---  instances. Dependencies are created by monadic composition of 'Actions',
+--  instances. Dependencies are created by monadic composition of 'Action',
 --  e.g. created by functions like 'apply' or 'need'.
---
 class (
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue key, ShakeValue value
