@@ -120,10 +120,10 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --    file is up-to-date.
 --
 --  It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
---  instances are however necessary, for the creation rules.
+--  instances are one component required for the creation of rules.
 --
 --  Actual /rules/ are functions from a @key@ to an 'Action'; they are
---  culminated into a 'Rules' monad using the 'rule' function.
+--  culminated into 'Rules' using the 'rule' function.
 --
 --  Refering to the example above, this is how a rule can be created:
 --
@@ -147,9 +147,9 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --
 --  __NOTE:__ In this example, the timestamps of the input files are never
 --  regarded, let alone compared to the timestamps of the ouput
---  files. Dependencies between output and input files are expressed by 'Rule'
---  instances. Dependencies are created by monadic composition of 'Actions',
---  e.g. created by functions like 'apply' or 'need'.
+--  files. Dependencies between output and input files are __NOT__ expressed by
+--  'Rule' instances. Dependencies are created by monadic composition of
+--  'Actions', e.g. created by functions like 'apply' or 'need'.
 --
 class (
 #if __GLASGOW_HASKELL__ >= 704
