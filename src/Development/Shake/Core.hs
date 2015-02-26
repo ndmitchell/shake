@@ -119,8 +119,8 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --  * A value of type @FooFileTimestamp@ will be used to check if a foo
 --    file is up-to-date.
 --
---  A 'Rule' instance __is not__ a rule. It defines that two types together
---  with the methods of the "Rule" class can be used to /create/ rules.
+--  It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
+--  instances are however necessary, for the creation rules.
 --
 --  To add build rules use the 'rule' function to specify the 'Action' that
 --  builds an artifacts identified by a @key@.
@@ -146,10 +146,11 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --            return timestamp
 --  @
 --
---  In this example, the timestamps of the input files are not compared to the
---  timestamps of the ouput files; the dependency of out- to input file is not
---  what 'Rule' instances describe. Dependencies are created by monadic
---  composition of 'Actions', e.g. created by functions like 'apply' or 'need'.
+--  __NOTE:__ In this example, the timestamps of the input files are never regarded,
+--  let alone compared to the timestamps of the ouput files. Dependencies
+--  between output and input files are expressed by 'Rule'
+--  instances. Dependencies are created by monadic composition of 'Actions',
+--  e.g. created by functions like 'apply' or 'need'.
 --
 class (
 #if __GLASGOW_HASKELL__ >= 704
