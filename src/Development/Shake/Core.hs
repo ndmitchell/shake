@@ -129,8 +129,8 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --   Refering to the example above, this is how a rule can be created:
 --
 -- @
--- -- Compile @foo@ files; for every @foo@ output file there must be a
--- -- single input file named "filename.foo".
+-- -- Compile foo files; for every foo output file there must be a
+-- -- single input file named \"filename.foo\".
 -- compileFoo :: Rules ()
 -- compileFoo = rule (Just . compile)
 --     where
