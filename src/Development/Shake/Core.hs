@@ -82,7 +82,7 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --  identify individual artifacts (e.g. with file names) and how to determine if
 --  an artifact needs to be built, i.e. 'equalValue' returns 'NotEqual'. The
 --  members of such a class of artifacts share the same mechanisms to query the
---  state of a artifacts.
+--  state of artifacts.
 --
 --  A @key@ (e.g. /file names/) identifies an artifact (e.g. a /file/), while
 --  @value@s, e.g. /md5 hashes/, describe the /state/ of an artifact.
@@ -122,17 +122,15 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --  A 'Rule' instance __is not__ a rule. It defines that two types together
 --  with the methods of the "Rule" class can be used to /create/ rules.
 --
---  To build /rules/ use 'rule' to specify 'Action's that build artifacts
---  identified by @key@s. Shake then uses the appropriate instance of the
---  'Rule' class to decide if and which 'Action's to invoke to create required
---  artifacts.
+--  To add build rules use the 'rule' function to specify the 'Action' that
+--  builds an artifacts identified by a @key@.
 --
 --  Refering to the example above, this is how an actual /rule/ could be
 --  created:
 --
 --  @
 --      -- Compile @foo@ files; for every @foo@ output file there must be a
---      -- single input file name "filename.foo".
+--      -- single input file named "filename.foo".
 --      compileFoo :: Rules ()
 --      compileFoo = rule (Just . compile)
 --        where
