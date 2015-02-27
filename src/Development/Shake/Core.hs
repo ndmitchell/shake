@@ -137,8 +137,8 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --         compile :: FooFile -> Action FooTimestamp
 --         compile (FooFile outputFile) = do
 --         -- heavy lifting to create the output file:
---         let inputFile = outputFile \<.\> "foo"
---         unit $ cmd "fooCC" inputFile outputFile
+--         let inputFile = outputFile \<.\> \"foo\"
+--         unit $ cmd \"fooCC\" inputFile outputFile
 --         -- read the (new) file timestamp of the output file:
 --         opts <- getShakeOptions
 --         Just timestamp <- liftIO $ storedValue opts (FooFile outputFile)
