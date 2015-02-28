@@ -78,79 +78,77 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 -- | Define a pair of types that can be used by Shake rules.
 --   To import all the type classes required see "Development.Shake.Classes".
 --
---   A 'Rule' instance describes for a class of artifacts - e.g. /files/ - how to
---   identify individual artifacts (e.g. with file names) and how to determine if
---   an artifact needs to be built, i.e. 'equalValue' returns 'NotEqual'. The
---   members of such a class of artifacts share the same mechanisms to query the
---   state of artifacts.
+--   A 'Rule' instance for a class of artifacts (e.g. /files/) provides:
 --
---   A @key@ (e.g. /file names/) identifies an artifact (e.g. a /file/), while
---   @value@s, e.g. /md5 hashes/, describe the /state/ of an artifact.
+-- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
 --
---   The function 'storedValue' is a query that may return a @value@ for some
---   existing artifact identified by a @key@.
+-- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
+--
+-- * A way to compare two states of the same individual artifact, with 'equalValue' returning either
+--   'EqualCheap' or 'NotEqual'.
+--
+-- * A way to query the current state of an artifact, with 'storedValue' returning the current state,
+--   or 'Nothing' if there is no current state (e.g. the file does not exist).
 --
 --   Checking if an artifact needs to be built consists of comparing two @value@s
 --   of the same @key@ with 'equalValue'. The first value is obtained by applying
---   'storedValue' to the @key@ and the other is the value stored in the build
+--   'storedValue' to the @key@ and the second is the value stored in the build
 --   database after the last successful build.
 --
---   As an example assume the requirement of compiling /foo/ files when they
---   don't exist or have been externally modified after being built:
+--   As an example, below is a simplified rule for building files, where files are identified
+--   by a 'FilePath' and their state is identified by a hash of their contents
+--   (the builtin functions 'Development.Shake.need' and 'Development.Shake.%>'
+--   provide a similar rule).
 --
 -- @
---newtype FooFile = FooFile FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
---newtype FooTimestamp = FooTimestamp Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
---getFooTimestamp file = ...
+--newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+--newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+--getFileModtime file = ...
 --
---instance Rule FooFile FooTimestamp where
---    storedValue _ (FooFile f) = do
---        exists <- System.Directory.doesFileExist f
---        if exists
---            then Just \<$\> getFooTimestamp f
---            else return Nothing
---    equalValue _opts _key t1 t2 =
+--instance Rule File Modtime where
+--    storedValue _ (File x) = do
+--        exists <- System.Directory.doesFileExist x
+--        if exists then Just \<$\> getFileModtime x else return Nothing
+--    equalValue _ _ t1 t2 =
 --        if t1 == t2 then EqualCheap else NotEqual
 -- @
 --
 --   This example instance means:
 --
--- * A value of type @FooFile@ uniquely identifies a generated foo file.
+-- * A value of type @File@ uniquely identifies a generated file.
 --
--- * A value of type @FooTimestamp@ will be used to check if a foo
---   file is up-to-date.
+-- * A value of type @Modtime@ will be used to check if a file is up-to-date.
 --
 --   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
 --   instances are one component required for the creation of rules.
---
 --   Actual /rules/ are functions from a @key@ to an 'Action'; they are
---   culminated into 'Rules' using the 'rule' function.
+--   added to 'Rules' using the 'rule' function.
 --
---   Refering to the example above, this is how a rule can be created:
+--   A rule can be created for the instance above with:
 --
 -- @
 -- -- Compile foo files; for every foo output file there must be a
 -- -- single input file named \"filename.foo\".
--- compileFoo :: Rules ()
--- compileFoo = rule (Just . compile)
+-- compileFoo :: 'Rules' ()
+-- compileFoo = 'rule' (Just . compile)
 --     where
---         compile :: FooFile -> Action FooTimestamp
---         compile (FooFile outputFile) = do
---         -- heavy lifting to create the output file:
---         let inputFile = outputFile \<.\> \"foo\"
---         unit $ cmd \"fooCC\" inputFile outputFile
---         -- read the (new) file timestamp of the output file:
---         opts <- getShakeOptions
---         Just timestamp <- liftIO $ storedValue opts (FooFile outputFile)
---         return timestamp
+--         compile :: File -> 'Action' Modtime
+--         compile (File outputFile) = do
+--             -- figure out the name of the input file
+--             let inputFile = outputFile '<.>' \"foo\"
+--             'unit' $ 'Development.Shake.cmd' \"fooCC\" inputFile outputFile
+--             -- return the (new) file modtime of the output file:
+--             getFileModtime outputFile
 -- @
 --
---  /Note:/ In this example, the timestamps of the input files are never
---  used, let alone compared to the timestamps of the ouput
---  regarded, let alone compared to the timestamps of the ouput
---  files. Dependencies between output and input files are /not/ expressed by
---  'Rule' instances. Dependencies are created by monadic composition of
---  'Action', e.g. created by functions like 'apply' or 'need'.
+--   /Note:/ In this example, the timestamps of the input files are never
+--   used, let alone compared to the timestamps of the ouput files.
+--   Dependencies between output and input files are /not/ expressed by
+--   'Rule' instances. Dependencies are created automatically by 'apply'.
+--
+--   For rules whose values are not stored externally,
+--   'storedValue' should return 'Just' with a sentinel value
+--   and 'equalValue' should always return 'EqualCheap' for that sentinel.
 class (
 #if __GLASGOW_HASKELL__ >= 704
     ShakeValue key, ShakeValue value
@@ -163,8 +161,7 @@ class (
     -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
     --
     --   As an example for filenames/timestamps, if the file exists you should return 'Just'
-    --   the timestamp, but otherwise return 'Nothing'. For rules whose values are not
-    --   stored externally, 'storedValue' should return 'Nothing'.
+    --   the timestamp, but otherwise return 'Nothing'.
     storedValue :: ShakeOptions -> key -> IO (Maybe value)
 
     -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
