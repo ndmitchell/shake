@@ -65,6 +65,9 @@ test build obj = do
     appendFile (obj "A.txt") "aaa"
     build ["AB.txt"]
     assertContents (obj "AB.txt") "AAAaaaBBB"
+    removeFile $ obj "AB.txt"
+    build ["AB.txt"]
+    assertContents (obj "AB.txt") "AAAaaaBBB"
 
     writeFile (obj "zero.txt") "xxx"
     build ["twice.txt","--sleep"]
