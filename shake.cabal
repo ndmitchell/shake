@@ -4,7 +4,7 @@ name:               shake
 version:            0.14.3
 license:            BSD3
 license-file:       LICENSE
-category:           Development
+category:           Development, Shake
 author:             Neil Mitchell <ndmitchell@gmail.com>
 maintainer:         Neil Mitchell <ndmitchell@gmail.com>
 copyright:          Neil Mitchell 2011-2015
