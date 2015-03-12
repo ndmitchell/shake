@@ -5,7 +5,7 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (%>), (|%>), (?>), phony, (~>),
+    (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
     FileQ(..), FileA
     ) where
@@ -199,6 +199,14 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 phony :: String -> Action () -> Rules ()
 phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
     if name /= x then Nothing else Just $ do
+        act
+        return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
+
+-- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
+phonys :: (String -> Maybe (Action ())) -> Rules ()
+phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
+    Nothing -> Nothing
+    Just act -> Just $ do
         act
         return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
 

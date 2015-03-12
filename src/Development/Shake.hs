@@ -116,7 +116,7 @@ module Development.Shake(
     removeFiles, removeFilesAfter,
     withTempFile, withTempDir,
     -- * File rules
-    need, want, (%>), (|%>), (?>), phony, (~>),
+    need, want, (%>), (|%>), (?>), phony, (~>), phonys,
     (&%>), (&?>),
     orderOnly,
     FilePattern, (?==), (<//>),
