@@ -25,6 +25,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Internal as BS(createAndTrim)
 import qualified Data.ByteString.Lazy as LBS
 import General.Extra
+import Prelude
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 

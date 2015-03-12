@@ -6,6 +6,7 @@ module General.Concurrent(
 import Control.Applicative
 import Control.Monad
 import Data.IORef
+import Prelude
 
 
 ---------------------------------------------------------------------
