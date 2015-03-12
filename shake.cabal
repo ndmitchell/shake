@@ -31,7 +31,7 @@ description:
     (e.g. compiler version).
 homepage:           http://www.shakebuild.com/
 bug-reports:        https://github.com/ndmitchell/shake/issues
-tested-with:        GHC==7.10.1, GHC==7.8.3, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
+tested-with:        GHC==7.10.1, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
 extra-source-files:
     src/Test/C/constants.c
     src/Test/C/constants.h
