@@ -197,10 +197,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --   in a rule then every execution where that rule is required will rerun both the rule and the phony
 --   action.
 phony :: String -> Action () -> Rules ()
-phony name act = rule $ \(FileQ x_) -> let x = unpackU x_ in
-    if name /= x then Nothing else Just $ do
-        act
-        return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
+phony name act = phonys $ \s -> if s == name then Just act else Nothing
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
