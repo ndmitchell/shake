@@ -28,7 +28,7 @@ main = shaken test $ \args obj -> do
         src <- readFile' $ obj "zero.txt"
         writeFile' out src
 
-    phony "halfclean" $ do
+    phonys $ \x -> if x /= "halfclean" then Nothing else Just $ do
         removeFilesAfter (obj "") ["//*e.txt"]
 
     phony "cleaner" $ do
