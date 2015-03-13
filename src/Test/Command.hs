@@ -16,6 +16,7 @@ import Control.Monad.IO.Class
 import System.Info.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import Prelude
 
 
 main = shaken test $ \args obj -> do
