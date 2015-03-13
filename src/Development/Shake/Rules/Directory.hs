@@ -23,6 +23,7 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import General.Extra
+import Prelude
 
 
 newtype DoesFileExistQ = DoesFileExistQ FilePath
