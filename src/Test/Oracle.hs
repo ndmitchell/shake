@@ -26,6 +26,7 @@ main = shaken test $ \args obj -> do
 test build obj = do
     build ["clean"]
 
+    {-
     -- check it rebuilds when it should
     build ["@key","%name"]
     assertContents (obj "unit.txt") "name"
@@ -47,17 +48,20 @@ test build obj = do
     assertContents (obj "rerun") "foo"
     build ["!bar"]
     assertContents (obj "rerun") "bar"
+    -}
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
 
-    build ["+str-int","*str-int"]
-    errors ["*str-int"] -- Building with an an Oracle that has been removed
-        "missing a call to addOracle"
-
     errors ["*str-bool"] -- Building with an Oracle that I know nothing about
         "missing a call to addOracle"
 
+    build ["+str-int","*str-int"]
+    errors ["*str-int"] -- Building with an an Oracle that has been removed
+        "missing a call to addOracle"
+    putStrLn "success"
+
+    {-
     build ["+str-int","*str-int"]
     errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
         "askOracle is used at the wrong type"
@@ -74,3 +78,4 @@ test build obj = do
 
     errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
         "Only one call to addOracle is allowed"
+    -}
