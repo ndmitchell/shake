@@ -524,6 +524,7 @@ apply = f -- Don't short-circuit [] as we still want error messages
             Global{..} <- Action getRO
             block <- Action $ getsRW localBlockApply
             whenJust block $ errorNoApply tk (fmap show $ listToMaybe ks)
+            liftIO $ print ("looking up key", tk)
             case Map.lookup tk globalRules of
                 Nothing -> do
                     liftIO $ print ("Failed apply", tk, fmap show $ listToMaybe ks, Just tv)
