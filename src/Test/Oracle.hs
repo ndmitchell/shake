@@ -9,7 +9,7 @@ import Control.Monad
 
 main = shaken test $ \args obj -> do
     let f name lhs rhs = (,) name $
-            (do addOracle $ \k -> let _ = k `asTypeOf` lhs in (do liftIO $ print ("inOracle",k); return rhs); return ()
+            (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
             ,let o = obj name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
     let tbl = [f "str-bool" "" True
               ,f "str-int" "" (0::Int)
@@ -24,13 +24,8 @@ main = shaken test $ \args obj -> do
         '!':name -> do want [obj "rerun"]; obj "rerun" %> \out -> do alwaysRerun; writeFile' out name
 
 test build obj = do
-    build ["clean","--sleep"]
-    build ["+str-int","*str-int","-VVV","--sleep"]
-    build ["*str-int","-VVV","--sleep"] -- Building with an an Oracle that has been removed
-    putStrLn "should have failed before here"
-    error "stop"
+    build ["clean"]
 
-    {-
     -- check it rebuilds when it should
     build ["@key","%name"]
     assertContents (obj "unit.txt") "name"
@@ -52,20 +47,17 @@ test build obj = do
     assertContents (obj "rerun") "foo"
     build ["!bar"]
     assertContents (obj "rerun") "bar"
-    -}
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
 
-    errors ["*str-bool"] -- Building with an Oracle that I know nothing about
-        "missing a call to addOracle"
-
     build ["+str-int","*str-int"]
     errors ["*str-int"] -- Building with an an Oracle that has been removed
         "missing a call to addOracle"
-    putStrLn "success"
 
-    {-
+    errors ["*str-bool"] -- Building with an Oracle that I know nothing about
+        "missing a call to addOracle"
+
     build ["+str-int","*str-int"]
     errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
         "askOracle is used at the wrong type"
@@ -82,4 +74,3 @@ test build obj = do
 
     errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
         "Only one call to addOracle is allowed"
-    -}
