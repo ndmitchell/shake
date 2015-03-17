@@ -525,7 +525,9 @@ apply = f -- Don't short-circuit [] as we still want error messages
             block <- Action $ getsRW localBlockApply
             whenJust block $ errorNoApply tk (fmap show $ listToMaybe ks)
             case Map.lookup tk globalRules of
-                Nothing -> errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
+                Nothing -> do
+                    liftIO $ print ("Failed apply", tk, fmap show $ listToMaybe ks, Just tv)
+                    errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
                 Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
                 _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 

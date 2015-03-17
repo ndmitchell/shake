@@ -9,7 +9,7 @@ import Control.Monad
 
 main = shaken test $ \args obj -> do
     let f name lhs rhs = (,) name $
-            (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
+            (do addOracle $ \k -> let _ = k `asTypeOf` lhs in (do liftIO $ print ("inOracle",k); return rhs); return ()
             ,let o = obj name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
     let tbl = [f "str-bool" "" True
               ,f "str-int" "" (0::Int)
