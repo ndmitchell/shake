@@ -24,7 +24,11 @@ main = shaken test $ \args obj -> do
         '!':name -> do want [obj "rerun"]; obj "rerun" %> \out -> do alwaysRerun; writeFile' out name
 
 test build obj = do
-    build ["clean"]
+    build ["clean","--sleep"]
+    build ["+str-int","*str-int","-VVV","--sleep"]
+    build ["*str-int","-VVV","--sleep"] -- Building with an an Oracle that has been removed
+    putStrLn "should have failed before here"
+    error "stop"
 
     {-
     -- check it rebuilds when it should
