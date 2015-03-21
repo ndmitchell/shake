@@ -49,3 +49,8 @@ let _ghci_make name flags =
         ,":!timer .hpc\\benchmark\\shake " ++ x
         ,"putStrLn \"\""]
 :}
+
+:{
+:def core \x -> return $ unlines
+        [_ghci_make "core" "-O1 -threaded -ddump-simpl" ++ " > core.txt"]
+:}
