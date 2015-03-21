@@ -41,6 +41,7 @@ import System.Directory
 import System.IO.Extra
 import System.Time.Extra
 import Data.Monoid
+import System.IO.Unsafe
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -207,7 +208,7 @@ instance Monoid (SRules m) where
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
         where f (k, v1, xs) (_, v2, ys)
                 | v1 == v2 = (k, v1, xs ++ ys)
-                | otherwise = errorIncompatibleRules k v1 v2
+                | otherwise = unsafePerformIO $ errorIncompatibleRules k v1 v2
 
 instance Monoid a => Monoid (Rules a) where
     mempty = return mempty
@@ -308,7 +309,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
-               rs -> errorMultipleRulesMatch (typeKey k) (show k) (length rs)
+               rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
             where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs]
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
@@ -324,9 +325,9 @@ runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
     Nothing -> NotEqual
     Just RuleInfo{..} -> equal k v1 v2
 
-runExecute :: Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
+runExecute :: MonadIO m => Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing -- Not sure if this is even possible, but best be safe
+    Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
     Just RuleInfo{..} -> execute k
 
 
@@ -523,10 +524,10 @@ apply = f -- Don't short-circuit [] as we still want error messages
                 tv = typeOf (err "apply type" :: value)
             Global{..} <- Action getRO
             block <- Action $ getsRW localBlockApply
-            whenJust block $ errorNoApply tk (fmap show $ listToMaybe ks)
+            whenJust block $ liftIO . errorNoApply tk (fmap show $ listToMaybe ks)
             case Map.lookup tk globalRules of
-                Nothing -> errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
-                Just RuleInfo{resultType=tv2} | tv /= tv2 -> errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
+                Nothing -> liftIO $ errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
+                Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
                 _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 

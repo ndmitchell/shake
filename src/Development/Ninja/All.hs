@@ -145,7 +145,7 @@ needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
         let bad = xs `difference` allDependencies build
         case bad of
             [] -> return ()
-            x:_ -> errorStructured
+            x:_ -> liftIO $ errorStructured
                 "Lint checking error - file in deps is generated and not a pre-dependency"
                 [("File", Just $ BS.unpack x)]
                 ""

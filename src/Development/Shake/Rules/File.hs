@@ -135,7 +135,7 @@ neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
               | (x, a, b) <- zip3 xs pre post, Just b /= a]
     case bad of
         [] -> return ()
-        (file,msg):_ -> errorStructured
+        (file,msg):_ -> liftIO $ errorStructured
             "Lint checking error - 'needed' file required rebuilding"
             [("File", Just $ unpackU file)
             ,("Error",Just msg)]

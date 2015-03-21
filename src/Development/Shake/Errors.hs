@@ -28,7 +28,7 @@ alternatives = let (*) = (,) in
     ,"_apply_" * "askOracle"]
 
 
-errorStructured :: String -> [(String, Maybe String)] -> String -> a
+errorStructured :: String -> [(String, Maybe String)] -> String -> IO a
 errorStructured msg args hint = error $ unlines $
         [msg ++ ":"] ++
         ["  " ++ a ++ [':' | a /= ""] ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
@@ -39,7 +39,7 @@ errorStructured msg args hint = error $ unlines $
 
 
 
-structured :: Bool -> String -> [(String, Maybe String)] -> String -> a
+structured :: Bool -> String -> [(String, Maybe String)] -> String -> IO a
 structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f hint)
     where
         f = filter (/= '_') . (if alt then g else id)
@@ -48,7 +48,7 @@ structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f h
         g [] = []
 
 
-errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> a
+errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> IO a
 errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     "Build system error - no _rule_ matches the _key_ type"
     [("_Key_ type", Just $ show tk)
@@ -56,7 +56,7 @@ errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     ,("_Result_ type", fmap show tv)]
     "Either you are missing a call to _rule/defaultRule_, or your call to _apply_ has the wrong _key_ type"
 
-errorRuleTypeMismatch :: TypeRep -> Maybe String -> TypeRep -> TypeRep -> a
+errorRuleTypeMismatch :: TypeRep -> Maybe String -> TypeRep -> TypeRep -> IO a
 errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     "Build system error - _rule_ used at the wrong _result_ type"
     [("_Key_ type", Just $ show tk)
@@ -65,7 +65,7 @@ errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     ,("Requested _result_ type", Just $ show tvWant)]
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
 
-errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> a
+errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> IO a
 errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else errorStructured
     "Build system error - rule has multiple result types"
     [("Key type", Just $ show tk)
@@ -73,7 +73,7 @@ errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicate
     ,("Second result type", Just $ show tv2)]
     "A function passed to rule/defaultRule has the wrong result type"
 
-errorMultipleRulesMatch :: TypeRep -> String -> Int -> a
+errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
 errorMultipleRulesMatch tk k count
     | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk (Just k) []
     | otherwise = errorStructured
@@ -84,14 +84,14 @@ errorMultipleRulesMatch tk k count
     (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
      else "Modify your rules/defaultRules so only one can produce the above key")
 
-errorRuleRecursion :: Maybe TypeRep -> Maybe String -> a
+errorRuleRecursion :: Maybe TypeRep -> Maybe String -> IO a
 errorRuleRecursion tk k = errorStructured -- may involve both rules and oracle, so report as a rule
     "Build system error - recursion detected"
     [("Key type",fmap show tk)
     ,("Key value",k)]
     "Rules may not be recursive"
 
-errorDuplicateOracle :: TypeRep -> Maybe String -> [TypeRep] -> a
+errorDuplicateOracle :: TypeRep -> Maybe String -> [TypeRep] -> IO a
 errorDuplicateOracle tk k tvs = errorStructured
     "Build system error - duplicate oracles for the same question type"
     ([("Question type",Just $ show tk)
@@ -99,7 +99,7 @@ errorDuplicateOracle tk k tvs = errorStructured
      [("Answer type " ++ show i, Just $ show tv) | (i,tv) <- zip [1..] tvs])
     "Only one call to addOracle is allowed per question type"
 
-errorNoApply :: TypeRep -> Maybe String -> String -> a
+errorNoApply :: TypeRep -> Maybe String -> String -> IO a
 errorNoApply tk k msg = structured (specialIsOracleKey tk)
     "Build system error - cannot currently call _apply_"
     [("Reason", Just msg)
