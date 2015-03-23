@@ -287,7 +287,7 @@ build pool Database{..} Ops{..} stack ks continue = do
                         reply $ case res of
                             Left err -> Error err
                             Right (v,deps,(doubleToFloat -> execution),traces) ->
-                                let c | Just r <- r, result r == v = changed r
+                                let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
                                       | otherwise = step
                                 in Ready Result{result=v,changed=c,built=step,depends=map fromDepends deps,..}
 
