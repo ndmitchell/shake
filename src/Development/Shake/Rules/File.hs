@@ -64,10 +64,10 @@ instance Rule FileQ FileA where
         res <- getFileInfo x
         case res of
             Nothing -> return Nothing
-            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoVal
+            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
             Just (time,size) -> do
                 hash <- unsafeInterleaveIO $ getFileHash x
-                return $ Just $ FileA (if c == ChangeDigest then fileInfoVal else time) size hash
+                return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
 
     equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
         ChangeModtime -> bool $ x1 == y1

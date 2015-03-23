@@ -82,7 +82,7 @@ test build obj = do
     assertOut "YXZZQ"
 
     -- test for #218
-    forM_ [("--digest",1),("--digest-and",1),("--digest-or",2),("--digest-and-input",1),("",2)] $ \(flag,count) -> do
+    forM_ [("--digest",1),("--digest-and",1),("--digest-or",2),("--digest-and-input",2),("",2)] $ \(flag,count) -> do
         writeFile (obj "node2.txt") "y"
         replicateM_ 2 $ build $ ["node2.txt","--sleep"] ++ [flag | flag /= ""]
         assertContents (obj "node2.txt") $ 'y' : replicate count 'x'
