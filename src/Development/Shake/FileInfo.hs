@@ -40,6 +40,14 @@ import System.Posix.Files.ByteString
 newtype FileInfo a = FileInfo Word32
     deriving (Typeable,Hashable,Binary,NFData)
 
+fileInfoEq, fileInfoNeq, fileInfoVal :: FileInfo a
+fileInfoEq  = FileInfo 0   -- Equal to everything
+fileInfoNeq = FileInfo 1   -- Equal to nothing
+fileInfoVal = FileInfo 2   -- Only equal to itself
+
+fileInfo :: Word32 -> FileInfo a
+fileInfo a = FileInfo $ if a > maxBound - 3 then a else a + 3
+
 instance Show (FileInfo a) where
     show (FileInfo x)
         | x == 0 = "EQ"
@@ -52,14 +60,6 @@ instance Eq (FileInfo a) where
         | a == 0 || b == 0 = True
         | a == 1 || b == 1 = False
         | otherwise = a == b
-
-fileInfoEq, fileInfoNeq, fileInfoVal :: FileInfo a
-fileInfoEq = FileInfo 0
-fileInfoNeq = FileInfo 1
-fileInfoVal = FileInfo 2
-
-fileInfo :: Word32 -> FileInfo a
-fileInfo a = FileInfo $ if a > maxBound - 3 then a else a + 3
 
 data FileInfoHash; type FileHash = FileInfo FileInfoHash
 data FileInfoMod ; type ModTime  = FileInfo FileInfoMod
