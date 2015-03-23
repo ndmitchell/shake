@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #218, fix issues with incorrect unchanging with no digests
     #218, fix issue with ChangeModtimeAndDigest on unchanging files
     #216, work around GHC 7.10 RC3 bug 10176
     #213, add phonys, a predicate phony rule
