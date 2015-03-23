@@ -7,7 +7,7 @@ import Test.Type
 
 
 main = shaken test $ \args obj -> do
-    want [obj "Out.txt",obj "Out2.txt"]
+    if null args then want [obj "Out.txt",obj "Out2.txt"] else want $ map obj args
 
     obj "Out.txt" %> \out -> do
         txt <- readFile' $ obj "In.txt"
@@ -17,6 +17,10 @@ main = shaken test $ \args obj -> do
         txt <- readFile' $ obj "In.txt"
         liftIO $ appendFile out1 txt
         liftIO $ appendFile out2 txt
+
+    "leaf" ~> return ()
+    obj "node1.txt" %> \file -> do need ["leaf"]; writeFile' file "x"
+    obj "node2.txt" %> \file -> do need [obj "node1.txt"]; liftIO $ appendFile file "x"
 
 
 test build obj = do
@@ -76,3 +80,9 @@ test build obj = do
     writeIn "Q"
     build ["--sleep","--digest-and-input"]
     assertOut "YXZZQ"
+
+    -- test for #218
+    forM_ [("--digest",1),("--digest-and",1),("--digest-or",2),("--digest-and-input",1),("",2)] $ \(flag,count) -> do
+        writeFile (obj "node2.txt") "y"
+        replicateM_ 2 $ build $ ["node2.txt","--sleep"] ++ [flag | flag /= ""]
+        assertContents (obj "node2.txt") $ 'y' : replicate count 'x'
