@@ -277,7 +277,8 @@ build pool Database{..} Ops{..} stack ks continue = do
                             return ans
                         case ans of
                             Ready r -> do
-                                diagnostic $ "result " ++ atom k ++ " = " ++ atom (result r)
+                                diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
+                                             " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                                 journal i (k, Loaded r) -- leave the DB lock before appending
                             Error _ -> do
                                 diagnostic $ "result " ++ atom k ++ " = error"
