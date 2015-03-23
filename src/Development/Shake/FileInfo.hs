@@ -36,7 +36,7 @@ import System.IO.Error
 import System.Posix.Files.ByteString
 #endif
 
--- A piece of file information, where 0 = Eq to everything, 1 = Eq to nothing, 2+ = normal values
+-- A piece of file information, where 0..2 are special (see fileInfo* functions)
 newtype FileInfo a = FileInfo Word32
     deriving (Typeable,Hashable,Binary,NFData)
 
@@ -53,7 +53,7 @@ instance Show (FileInfo a) where
         | x == 0 = "EQ"
         | x == 1 = "NEQ"
         | x == 2 = "VAL"
-        | otherwise = "0x" ++ map toUpper (showHex (x-2) "")
+        | otherwise = "0x" ++ map toUpper (showHex (x-3) "")
 
 instance Eq (FileInfo a) where
     FileInfo a == FileInfo b
