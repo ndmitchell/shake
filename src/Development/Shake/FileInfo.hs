@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.FileInfo(
-    FileInfo, fileInfoEq, fileInfoNeq, fileInfoVal,
+    FileInfo, fileInfoEq, fileInfoNeq,
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
     ) where
@@ -36,24 +36,22 @@ import System.IO.Error
 import System.Posix.Files.ByteString
 #endif
 
--- A piece of file information, where 0..2 are special (see fileInfo* functions)
+-- A piece of file information, where 0 and 1 are special (see fileInfo* functions)
 newtype FileInfo a = FileInfo Word32
     deriving (Typeable,Hashable,Binary,NFData)
 
-fileInfoEq, fileInfoNeq, fileInfoVal :: FileInfo a
+fileInfoEq, fileInfoNeq :: FileInfo a
 fileInfoEq  = FileInfo 0   -- Equal to everything
 fileInfoNeq = FileInfo 1   -- Equal to nothing
-fileInfoVal = FileInfo 2   -- Only equal to itself
 
 fileInfo :: Word32 -> FileInfo a
-fileInfo a = FileInfo $ if a > maxBound - 3 then a else a + 3
+fileInfo a = FileInfo $ if a > maxBound - 2 then a else a + 2
 
 instance Show (FileInfo a) where
     show (FileInfo x)
         | x == 0 = "EQ"
         | x == 1 = "NEQ"
-        | x == 2 = "VAL"
-        | otherwise = "0x" ++ map toUpper (showHex (x-3) "")
+        | otherwise = "0x" ++ map toUpper (showHex (x-2) "")
 
 instance Eq (FileInfo a) where
     FileInfo a == FileInfo b
