@@ -132,7 +132,7 @@ neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     pre <- liftIO $ mapM (storedValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, b) <- zip3 xs pre post, Just b /= a]
+              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> equalValue opts (FileQ x) a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
