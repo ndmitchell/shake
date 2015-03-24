@@ -21,4 +21,3 @@ test build obj = do
     () <- cmd [Cwd $ obj "manual", Shell] cmdline
     () <- cmd [Cwd $ obj "manual", Shell] [cmdline,"clean"]
     assertMissing $ obj "manual/_build/run" <.> exe
-    return ()
