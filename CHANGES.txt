@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #203, make shakeFiles a directory rather than a file prefix
     #220, add getHashedShakeVersion helper
     #220, add shakeVersionIgnore to ignore version numbers
     #219, run Shakefile.hs from the shake binary

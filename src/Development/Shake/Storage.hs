@@ -62,9 +62,9 @@ withStorage
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgnore,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
-    let dbfile = shakeFiles <.> "database"
-        bupfile = shakeFiles <.> "bup"
-    createDirectoryIfMissing True $ takeDirectory shakeFiles
+    let dbfile = shakeFiles </> ".shake.database"
+        bupfile = shakeFiles </> ".shake.backup"
+    createDirectoryIfMissing True shakeFiles
 
     -- complete a partially failed compress
     b <- doesFileExist bupfile
@@ -104,7 +104,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgn
                     hSeek h AbsoluteSeek 0
                     i <- hFileSize h
                     bs <- LBS.hGet h $ fromInteger i
-                    let cor = shakeFiles <.> "corrupt"
+                    let cor = shakeFiles </> ".shake.corrupt"
                     LBS.writeFile cor bs
                     unexpected $ "Backup of corrupted file stored at " ++ cor ++ ", " ++ show i ++ " bytes\n"
 
@@ -164,7 +164,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgn
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime
-            appendFile (shakeFiles <.> "storage") $ "\n[" ++ show t ++ "]: " ++ x
+            appendFile (shakeFiles </> ".shake.storage.log") $ "\n[" ++ show t ++ "]: " ++ x
         outputErr x = do
             when (shakeVerbosity >= Quiet) $ shakeOutput Quiet x
             unexpected x

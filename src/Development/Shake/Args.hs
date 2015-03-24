@@ -35,7 +35,7 @@ import System.Time.Extra
 --   are 'want'ed (after calling 'withoutActions'). As an example:
 --
 -- @
--- main = 'shakeArgs' 'shakeOptions'{'shakeFiles' = \"_make/\", 'shakeProgress' = 'progressSimple'} $ do
+-- main = 'shakeArgs' 'shakeOptions'{'shakeFiles' = \"_make\", 'shakeProgress' = 'progressSimple'} $ do
 --     'phony' \"clean\" $ 'Development.Shake.removeFilesAfter' \"_make\" [\"\/\/*\"]
 --     'want' [\"_make\/neil.txt\",\"_make\/emily.txt\"]
 --     \"_make\/*.txt\" '%>' \\out ->

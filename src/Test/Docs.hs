@@ -243,7 +243,7 @@ whitelist x = x `elem`
     ,"<i>actions</i>"
     ,"() <- cmd ..."
     ,"x <- inputs"
-    ,"shakeFiles=\"_build/\""
+    ,"shakeFiles=\"_build\""
     ,"#include \""
     ,"pattern %> actions = (pattern ?==) ?> actions" -- because it overlaps
     ,"buildDir = \"_build\""

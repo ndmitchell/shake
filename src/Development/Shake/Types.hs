@@ -78,8 +78,8 @@ data Change
 --   because 'Data' cannot be defined for functions.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
-        -- ^ Defaults to @.shake@. The prefix of the filename used for storing Shake metadata files.
-        --   All metadata files will be named @'shakeFiles'./extension/@, for some @/extension/@.
+        -- ^ Defaults to @.shake@. The directory used for storing Shake metadata files.
+        --   All metadata files will be named @'shakeFiles'\/.shake./name/@, for some @/name/@.
         --   If the 'shakeFiles' directory does not exist it will be created.
     ,shakeThreads :: Int
         -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.
@@ -114,7 +114,7 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to @[]@. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation.
         --   Commonly used to replace the long paths (e.g. @.make\/i586-linux-gcc\/output@) with an abbreviation (e.g. @$OUT@).
     ,shakeStorageLog :: Bool
-        -- ^ Defaults to 'False'. Write a message to @'shakeFiles'.storage@ whenever a storage event happens which may impact
+        -- ^ Defaults to 'False'. Write a message to @'shakeFiles'\/.shake.storage.log@ whenever a storage event happens which may impact
         --   on the current stored progress. Examples include database version number changes, database compaction or corrupt files.
     ,shakeLineBuffering :: Bool
         -- ^ Defaults to 'True'. Change 'stdout' and 'stderr' to line buffering while running Shake.
