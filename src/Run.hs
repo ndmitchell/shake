@@ -19,15 +19,13 @@ main = do
     withArgs ("--no-time":args) $
         shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
             let tool = listToMaybe [x | Tool x <- opts]
-            makefile <- case reverse [x | UseMakefile x <- opts] of
-                x:_ -> return x
-                _ -> findMakefile
-            if takeExtension makefile == ".ninja" then
-                runNinja makefile targets tool
-             else if isJust tool then
-                error "--tool flag is not supported without a .ninja Makefile"
-             else
-                fmap Just $ runMakefile makefile targets
+            (mode, makefile) <- case reverse [x | UseMakefile x <- opts] of
+                x:_ -> return (modeMakefile x, x)
+                _ -> do x <- findMakefile; return (modeMakefile x, x)
+            case mode of
+                Ninja -> runNinja makefile targets tool
+                _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
+                _ -> fmap Just $ runMakefile makefile targets
 
 
 data Flag = UseMakefile FilePath
@@ -36,6 +34,11 @@ data Flag = UseMakefile FilePath
 flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "Read FILE as a makefile."
         ,Option "t" ["tool"] (ReqArg (Right . Tool) "TOOL") "Ninja-compatible tools."
         ]
+
+data Mode = Make | Ninja
+
+modeMakefile :: FilePath -> Mode
+modeMakefile x = if takeExtension x == ".ninja" then Ninja else Make
 
 
 findMakefile :: IO FilePath
