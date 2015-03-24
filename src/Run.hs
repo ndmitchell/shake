@@ -31,9 +31,12 @@ main = do
             case mode of
                 Ninja -> runNinja makefile targets tool
                 _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
-                Exe -> exitWith =<< rawSystem (toNative makefile) args
-                Haskell -> exitWith =<< rawSystem "runhaskell" (makefile:args)
+                Exe -> do exitOnFailure =<< rawSystem (toNative makefile) args; return Nothing
+                Haskell -> do exitOnFailure =<< rawSystem "runhaskell" (makefile:args); return Nothing
                 Make -> fmap Just $ runMakefile makefile targets
+
+exitOnFailure :: ExitCode -> IO ()
+exitOnFailure x = when (x /= ExitSuccess) $ exitWith x
 
 
 data Flag = UseMakefile FilePath
