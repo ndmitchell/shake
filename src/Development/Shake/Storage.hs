@@ -139,7 +139,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgn
                         diagnostic $ "Found " ++ show (Map.size mp) ++ " real entries"
 
                         -- if mp is null, continue will reset it, so no need to clean up
-                        if verEqual && (Map.null mp || verEqual || (ws == witness && Map.size mp * 2 > length xs - 2)) then do
+                        if verEqual && (Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2)) then do
                             -- make sure we reset to before the slop
                             when (not (Map.null mp) && slop /= 0) $ do
                                 diagnostic $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
