@@ -61,7 +61,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
+withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgnore,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
     let dbfile = shakeFiles <.> "database"
         bupfile = shakeFiles <.> "bup"
     createDirectoryIfMissing True $ takeDirectory shakeFiles
@@ -80,7 +80,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
         diagnostic $ "Reading file of size " ++ show n
         (oldVer,src) <- fmap splitVersion $ LBS.hGet h $ fromInteger n
 
-        if ver /= oldVer then do
+        if not shakeVersionIgnore && ver /= oldVer then do
             unless (n == 0) $ do
                 let limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
                 let disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
