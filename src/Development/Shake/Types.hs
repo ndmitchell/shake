@@ -79,7 +79,7 @@ data Change
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
         -- ^ Defaults to @.shake@. The directory used for storing Shake metadata files.
-        --   All metadata files will be named @'shakeFiles'\/.shake./name/@, for some @/name/@.
+        --   All metadata files will be named @'shakeFiles'\/.shake./file-name/@, for some @/file-name/@.
         --   If the 'shakeFiles' directory does not exist it will be created.
     ,shakeThreads :: Int
         -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.

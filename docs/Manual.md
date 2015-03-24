@@ -55,7 +55,7 @@ import Development.Shake.FilePath
 import Development.Shake.Util
 &#32;
 main :: IO ()
-main = shakeArgs shakeOptions{shakeFiles="_build/"} $ do
+main = shakeArgs shakeOptions{shakeFiles="_build"} $ do
     <i>build rules</i>
 </pre>
 
@@ -303,7 +303,7 @@ The initial example build system supports a number of command line flags, includ
 * `build --help` will list out all flags supported by the build system, currently 36 flags. Most flags supported by `make` are also supported by Shake based build systems.
 * `build -j8` will compile up to 8 rules simultaneously, by default Shake uses 1 processor.
 
-Most flags can also be set within the program by modifying the `shakeOptions` value. As an example, `build --metadata=_metadata/` causes all Shake metadata files to be stored with names such as `_metadata/.database`. Alternatively we can write `shakeOptions{shakeFiles="_metadata/"}` instead of our existing `shakeFiles="_build/"`. Values passed on the command line take preference over those given by `shakeOptions`. Multiple overrides can be given to `shakeOptions` by separating them with a comma, for example `shakeOptions{shakeFiles="_build/",shakeThreads=8}`.
+Most flags can also be set within the program by modifying the `shakeOptions` value. As an example, `build --metadata=_metadata` causes all Shake metadata files to be stored with names such as `_metadata/.shake.database`. Alternatively we can write `shakeOptions{shakeFiles="_metadata"}` instead of our existing `shakeFiles="_build"`. Values passed on the command line take preference over those given by `shakeOptions`. Multiple overrides can be given to `shakeOptions` by separating them with a comma, for example `shakeOptions{shakeFiles="_build",shakeThreads=8}`.
 
 <span class="target" id="progress"></span>
 

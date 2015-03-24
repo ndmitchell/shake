@@ -213,10 +213,10 @@ whitelist x | elem x $ words $
     "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
     "-threaded -rtsopts -I0 Function extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
-    "_metadata/.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
+    "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja ByteString " ++
     "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
-    "@ndm_haskell " ++
+    "@ndm_haskell file-name " ++
     "*> "
     = True
 whitelist x | "Stdout out" `isInfixOf` x || "Stderr err" `isInfixOf` x = True
