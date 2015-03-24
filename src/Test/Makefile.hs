@@ -22,3 +22,7 @@ test build obj = do
     build ["@@","--directory=" ++ obj "MakeTutor","--no-report"]
     build ["@@","--directory=" ++ obj "MakeTutor","--no-report"]
     build ["@@","--directory=" ++ obj "MakeTutor","@clean","--no-report"]
+    writeFile (obj "output.txt") "goodbye"
+    writeFile (obj "Shakefile.hs") "main = writeFile \"output.txt\" \"hello\""
+    build ["@@","--directory=" ++ obj ""]
+    assertContents (obj "output.txt") "hello"
