@@ -107,7 +107,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgn
                     let cor = shakeFiles <.> "corrupt"
                     LBS.writeFile cor bs
                     unexpected $ "Backup of corrupted file stored at " ++ cor ++ ", " ++ show i ++ " bytes\n"
-                    
+
                 -- exitFailure -- should never happen without external corruption
                                -- add back to check during random testing
                 return $ continue h Map.empty) $
