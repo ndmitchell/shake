@@ -285,3 +285,4 @@ test-suite shake-test
         Test.Unicode
         Test.Util
         Test.Verbosity
+        Test.Version
