@@ -7,11 +7,15 @@ import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
 import General.Timing
+import Data.List.Extra
+import Control.Monad.Extra
+import Control.Exception.Extra
 import Data.Maybe
 import qualified System.Directory as IO
 import System.Console.GetOpt
 import System.Process
 import System.Exit
+import General.Extra
 
 
 main :: IO ()
@@ -23,7 +27,7 @@ main = do
             let tool = listToMaybe [x | Tool x <- opts]
             (mode, makefile) <- case reverse [x | UseMakefile x <- opts] of
                 x:_ -> return (modeMakefile x, x)
-                _ -> do x <- findMakefile; return (modeMakefile x, x)
+                _ -> findMakefile
             case mode of
                 Ninja -> runNinja makefile targets tool
                 _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
@@ -47,12 +51,12 @@ modeMakefile x | takeExtension x == ".ninja" = Ninja
                | otherwise = Make
 
 
-findMakefile :: IO FilePath
+findMakefile :: IO (Mode, FilePath)
 findMakefile = do
-    b <- IO.doesFileExist "makefile"
-    if b then return "makefile" else do
-        b <- IO.doesFileExist "Makefile"
-        if b then return "Makefile" else do
-            b <- IO.doesFileExist "build.ninja"
-            if b then return "build.ninja" else
-                error "Could not find `makefile', `Makefile' or `build.ninja'"
+    let files = [(Make,"makefile"),(Make,"Makefile"),(Ninja,"build.ninja")]
+    res <- findM (fmap (either (const False) id) . try_ . IO.doesFileExist . snd) files
+    case res of
+        Just x -> return x
+        Nothing -> do
+            let Just (p1,p2) = unsnoc ["`" ++ x ++ "'" | (_,x) <- files]
+            errorIO $ "Could not find " ++ intercalate ", " p1 ++ " or " ++ p2
