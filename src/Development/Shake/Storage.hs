@@ -46,6 +46,12 @@ databaseVersion x = "SHAKE-DATABASE-11-" ++ s ++ "\r\n"
     where s = tail $ init $ show x -- call show, then take off the leading/trailing quotes
                                    -- ensures we do not get \r or \n in the user portion
 
+-- Split the version off a file
+splitVersion :: LBS.ByteString -> (LBS.ByteString, LBS.ByteString)
+splitVersion abc = (a `LBS.append` b, c)
+    where (a,bc) = LBS.break (== '\r') abc
+          (b,c) = LBS.splitAt 2 bc
+
 
 withStorage
     :: (Show w, Show k, Show v, Eq w, Eq k, Hashable k
@@ -72,17 +78,17 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
     withBinaryFile dbfile ReadWriteMode $ \h -> do
         n <- hFileSize h
         diagnostic $ "Reading file of size " ++ show n
-        src <- LBS.hGet h $ fromInteger n
+        (oldVer,src) <- fmap splitVersion $ LBS.hGet h $ fromInteger n
 
-        if not $ ver `LBS.isPrefixOf` src then do
-            unless (LBS.null src) $ do
+        if ver /= oldVer then do
+            unless (n == 0) $ do
                 let limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
                 let disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
                 outputErr $ unlines
                     ["Error when reading Shake database - invalid version stamp detected:"
                     ,"  File:      " ++ dbfile
                     ,"  Expected:  " ++ disp (LBS.unpack ver)
-                    ,"  Found:     " ++ disp (limit $ LBS.unpack src)
+                    ,"  Found:     " ++ disp (limit $ LBS.unpack oldVer)
                     ,"All rules will be rebuilt"]
             continue h Map.empty
          else
@@ -104,7 +110,7 @@ withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeFlush,shak
                 -- exitFailure -- should never happen without external corruption
                                -- add back to check during random testing
                 return $ continue h Map.empty) $
-                case readChunks $ LBS.drop (LBS.length ver) src of
+                case readChunks src of
                     ([], slop) -> do
                         when (LBS.length slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         diagnostic $ "Read 0 chunks, plus " ++ show slop ++ " slop"
