@@ -53,7 +53,10 @@ modeMakefile x | takeExtension x == ".ninja" = Ninja
 
 findMakefile :: IO (Mode, FilePath)
 findMakefile = do
-    let files = [(Make,"makefile"),(Make,"Makefile"),(Ninja,"build.ninja")]
+    let files = [(Exe,".shake" </> "shake" <.> exe)
+                ,(Haskell,"Shakefile.hs"),(Haskell,"Shakefile.lhs")
+                ,(Make,"makefile"),(Make,"Makefile")
+                ,(Ninja,"build.ninja")]
     res <- findM (fmap (either (const False) id) . try_ . IO.doesFileExist . snd) files
     case res of
         Just x -> return x
