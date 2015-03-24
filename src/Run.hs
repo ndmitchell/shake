@@ -10,6 +10,8 @@ import General.Timing
 import Data.Maybe
 import qualified System.Directory as IO
 import System.Console.GetOpt
+import System.Process
+import System.Exit
 
 
 main :: IO ()
@@ -25,7 +27,9 @@ main = do
             case mode of
                 Ninja -> runNinja makefile targets tool
                 _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
-                _ -> fmap Just $ runMakefile makefile targets
+                Exe -> exitWith =<< rawSystem makefile args
+                Haskell -> exitWith =<< rawSystem "runhaskell" (makefile:args)
+                Make -> fmap Just $ runMakefile makefile targets
 
 
 data Flag = UseMakefile FilePath
@@ -35,10 +39,12 @@ flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "R
         ,Option "t" ["tool"] (ReqArg (Right . Tool) "TOOL") "Ninja-compatible tools."
         ]
 
-data Mode = Make | Ninja
+data Mode = Make | Ninja | Haskell | Exe
 
 modeMakefile :: FilePath -> Mode
-modeMakefile x = if takeExtension x == ".ninja" then Ninja else Make
+modeMakefile x | takeExtension x == ".ninja" = Ninja
+               | takeExtension x `elem` [".hs",".lhs"] = Haskell
+               | otherwise = Make
 
 
 findMakefile :: IO FilePath
