@@ -12,6 +12,7 @@ import Data.Tuple.Extra
 import Control.Exception
 import Data.Typeable
 import Data.List
+import General.Extra
 
 
 err :: String -> a
@@ -29,7 +30,7 @@ alternatives = let (*) = (,) in
 
 
 errorStructured :: String -> [(String, Maybe String)] -> String -> IO a
-errorStructured msg args hint = throwIO $ ErrorCall $ unlines $
+errorStructured msg args hint = errorIO $ unlines $
         [msg ++ ":"] ++
         ["  " ++ a ++ [':' | a /= ""] ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
         [hint | hint /= ""]
