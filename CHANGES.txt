@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #220, add getHashedShakeVersion helper
     #220, add shakeVersionIgnore to ignore version numbers
     #219, run Shakefile.hs from the shake binary
     #218, fix issues with incorrect unchanging with no digests

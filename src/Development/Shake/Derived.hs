@@ -4,7 +4,8 @@ module Development.Shake.Derived(
     copyFile', copyFileChanged,
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,
-    withTempFile, withTempDir
+    withTempFile, withTempDir,
+    getHashedShakeVersion
     ) where
 
 import Control.Monad.Extra
@@ -19,6 +20,28 @@ import Development.Shake.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Types
 import qualified Data.ByteString as BS
+import Data.Hashable
+
+
+-- | Get a checksum of a list of files, suitable for using as `shakeVersion`.
+--   This will trigger a rebuild when the Shake rules defined in any of the files are changed.
+--   For example:
+--
+-- @
+-- main = do
+--     ver <- 'getHashedShakeVersion' [\"Shakefile.hs\"]
+--     'shakeArgs' 'shakeOptions'{'shakeVersion' = ver} ...
+-- @
+--
+--   To automatically detect the name of the current file, turn on the @TemplateHaskell@
+--   extension and write @$(LitE . StringL . loc_filename \<$\> location)@.
+--
+--   This feature can be turned off during development by passing
+--   the flag @--no-rule-version@ or setting 'shakeVersionIgnore' to 'True'.
+getHashedShakeVersion :: [FilePath] -> IO String
+getHashedShakeVersion files = do
+    hashes <- mapM (fmap (hashWithSalt 0) . BS.readFile) files
+    return $ "hash-" ++ show (hashWithSalt 0 hashes)
 
 
 checkExitCode :: String -> ExitCode -> Action ()

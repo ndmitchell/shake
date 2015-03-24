@@ -206,7 +206,7 @@ whitelist x | all (not . isSpace) x && takeExtension x `elem` words ".txt .hi .h
 whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc ghc " ++
     ".. /./ /.. /../ ./ // \\ ../ //*.c //*.txt //* dir/*/* dir " ++
-    "ConstraintKinds GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
+    "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath main.m run .rot13 " ++
     "NoProgress Error src rot13 .js .json .trace about://tracing " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out build " ++
@@ -268,6 +268,7 @@ whitelist x = x `elem`
     ,"cabal install shake"
     ,"shake -j4"
     ,"cmd \"gcc -o _make/run _build/main.o _build/constants.o\""
+    ,"$(LitE . StringL . loc_filename <$> location)"
     ]
 
 types = words $
