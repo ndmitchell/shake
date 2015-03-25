@@ -12,6 +12,7 @@ import Control.Exception.Extra
 import Data.Char
 import Data.List
 import System.Environment.Extra
+import System.IO.Extra
 import System.IO.Unsafe
 import System.Random
 #if __GLASGOW_HASKELL__ >= 704
@@ -56,8 +57,8 @@ getProcessorCount = let res = unsafePerformIO act in return res
                     case env of
                         Just s | [(i,"")] <- reads s -> return i
                         _ -> do
-                            src <- readFile "/proc/cpuinfo"
-                            return $ length [() | x <- lines src, "processor" `isPrefixOf` x]
+                            src <- readFile' "/proc/cpuinfo"
+                            return $! length [() | x <- lines src, "processor" `isPrefixOf` x]
 
 
 ---------------------------------------------------------------------
