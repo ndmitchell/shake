@@ -78,11 +78,11 @@
 --     commands the program appears \"idle\" very often, triggering regular unnecessary garbage collection, stealing
 --     resources from the program doing actual work.
 --
---   * Omit @-threaded@: In GHC 7.6 and earlier bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
+--   * With GHC 7.6 and before, omit @-threaded@: A GHC bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
 --     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
 --     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
 --
---   * If you do compile with @-threaded@, pass the options @-qg -qb@ to @-with-rtsopts@
+--   * With GHC 7.8 and later you may add @-threaded@, and pass the options @-qg -qb@ to @-with-rtsopts@
 --     to disable parallel garbage collection. Parallel garbage collection in Shake
 --     programs typically goes slower than sequential garbage collection, while occupying many cores that
 --     could be used for running system commands.
