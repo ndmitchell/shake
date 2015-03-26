@@ -36,12 +36,14 @@ Shake is used by lots of companies, but only a few have declared so publicly.
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872), producing several [open-source projects](https://github.com/samplecount) for working with Shake.
 * [CovenantEyes](http://samplecount.com/) use Shake to build their Windows client, as mentioned in their [tweet](https://twitter.com/eacameron88/status/543219899599163392).
 
+_Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link._
+
 There are several libraries providing pre-made rules for Shake:
 
 * [shake-language-c](http://hackage.haskell.org/package/shake-language-c) allows cross-compiling C, C++ and Objective-C code to various target platforms.
 * [shake-cpp](https://github.com/jfeltz/shake-cpp) is an abstraction layer for Shake, providing simple C++ rules.
 * [shake-cabal-build](http://hackage.haskell.org/package/shake-cabal-build) is a small script that uses Cabal sandboxes for initialising and updating build systems which use Shake.
-* [Kansas Lava build rules](http://hackage.haskell.org/package/kansas-lava-shake) provide a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](http://www.xilinx.com/).
+* [kansas-lava-shake](http://hackage.haskell.org/package/kansas-lava-shake) provides a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](http://www.xilinx.com/).
 * [avr-shake](https://hackage.haskell.org/package/avr-shake) provides rules for building things with [AVR Crosspack](http://www.obdev.at/products/crosspack/index.html).
 
 Several open-source projects make key use of Shake:
@@ -50,6 +52,7 @@ Several open-source projects make key use of Shake:
 * [ghc-make](https://github.com/ndmitchell/ghc-make) uses Shake to build programs with GHC, speeding up checking if the build is clean.
 * [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) is in the process of migrating to a Shake-based build system.
 * [shake-install](https://github.com/alphaHeavy/shake-install) helps build a set of cabal packages in the correct order.
+* [shake-cabal-build](http://hackage.haskell.org/package/shake-cabal-build) is a small script that uses Cabal sandboxes for initialising and updating build systems based on Shake.
 
 And finally, here are a few tutorials and blog posts:
 
