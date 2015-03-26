@@ -101,10 +101,10 @@ demo auto = do
 
     putStrLn "\n% Demo complete - all the examples can be run from:"
     putStrLn $ "%     " ++ dir
-    putStrLn "% For more info see http://www.shakebuild.com/"
+    putStrLn "% For more info see http://shakebuild.com"
     when (isJust ninja) $ do
         putStrLn "\n% PS. Shake can also execute Ninja build files"
-        putStrLn "% For more info see http://www.shakebuild.com/ninja"
+        putStrLn "% For more info see http://shakebuild.com/ninja"
 
 
 

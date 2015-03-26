@@ -64,8 +64,8 @@ Build completed in 0:03m
 &#32;
 % Demo complete - all the examples can be run from:
 %     C:\Users\Neil\shake-demo
-% For more info see <a href="http://www.shakebuild.com/">http://www.shakebuild.com/</a>
+% For more info see <a href="http://www.shakebuild.com/">http://shakebuild.com</a>
 &#32;
 % PS. Shake can also execute Ninja build files
-% For more info see <a href="http://www.shakebuild.com/ninja/">http://www.shakebuild.com/ninja/</a></b>
+% For more info see <a href="http://www.shakebuild.com/ninja/">http://shakebuild.com/ninja</a></b>
 </pre>
