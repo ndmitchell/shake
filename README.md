@@ -1,6 +1,6 @@
 # Shake [![Hackage version](https://img.shields.io/hackage/v/shake.svg?style=flat)](https://hackage.haskell.org/package/shake) [![Build Status](https://img.shields.io/travis/ndmitchell/shake.svg?style=flat)](https://travis-ci.org/ndmitchell/shake)
 
-Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day.
+Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day. The website for Shake users is at [shakebuild.com](http://shakebuild.com).
 
 #### Documentation
 
@@ -22,18 +22,4 @@ Shake is a tool for writing build systems - an alternative to make, Scons, Ant e
 * [Source code](http://github.com/ndmitchell/shake) in a git repo, stored at GitHub.
 * Continuous integration with [Travis](https://travis-ci.org/ndmitchell/shake) and [Hydra](http://hydra.cryp.to/jobset/shake/master).
 
-#### Companies using Shake
-
-* [Standard Chartered](http://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
-* [factis research GmbH](http://www.factisresearch.com/), as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
-* [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872).
-* [CovenantEyes](http://samplecount.com/) use Shake to build their Windows client, as mentioned in their [tweet](https://twitter.com/eacameron88/status/543219899599163392).
-* At least 10 other companies are using Shake internally.
-
-Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link.
-
-#### Projects using Shake
-
-* [Kansas Lava build rules](https://github.com/gergoerdi/kansas-lava-shake).
-* [shake-language-c](http://hackage.haskell.org/package/shake-language-c) is a small library on top of Shake that allows cross-compiling C, C++ and Objective-C code to various target platforms.
-* [shake-cabal-build](http://hackage.haskell.org/package/shake-cabal-build) is a small script that uses Cabal sandboxes for initialising and updating build systems based on Shake.
+Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link at [on the website](http://shakebuild.com/#who-uses-shake).
