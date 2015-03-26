@@ -29,14 +29,12 @@ Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](htt
 
 ## Who uses Shake?
 
-Shake is used by lots of companies, but only a few have declared so publicly.
+Shake is used by lots of companies, but only a few have declared so publicly. Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link.
  
 * [Standard Chartered](http://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
 * [factis research GmbH](http://www.factisresearch.com/) use Shake to compile their [Checkpad MED](http://www.checkpad.de/) application, as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872), producing several [open-source projects](https://github.com/samplecount) for working with Shake.
 * [CovenantEyes](http://samplecount.com/) use Shake to build their Windows client, as mentioned in their [tweet](https://twitter.com/eacameron88/status/543219899599163392).
-
-_Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link._
 
 There are several libraries providing pre-made rules for Shake:
 
