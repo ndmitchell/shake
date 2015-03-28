@@ -113,6 +113,13 @@ forkWait a = do
     return $ takeMVar res >>= either throwIO return
 
 
+abort :: ProcessHandle -> IO ()
+abort pid = do
+    interruptProcessGroupOf pid
+    sleep 5 -- give the process a few seconds grace period to die nicely
+    -- seems to happen with some GHC 7.2 compiled binaries with FFI etc
+    terminateProcess pid
+
 withCreateProcess :: CreateProcess -> ((Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO a) -> IO a
 withCreateProcess cp act = mask $ \restore -> do
     ans@(inh, outh, errh, pid) <- createProcess cp
@@ -136,7 +143,7 @@ process po = do
                  ,std_in = fst $ stdIn poStdin
                  ,std_out = stdStream fileHandle poStdout poStderr, std_err = stdStream fileHandle poStderr poStdout}
         withCreateProcess cp $ \(inh, outh, errh, pid) -> do
-            withTimeout poTimeout (interruptProcessGroupOf pid) $ do
+            withTimeout poTimeout (abort pid) $ do
 
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++
                               [(errh, stderr, poStderr) | Just errh <- [errh], CreatePipe <- [std_err cp]]

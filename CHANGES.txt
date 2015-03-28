@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make cmd Timeout call terminateProcess as well
 0.15
     #203, make shakeFiles a directory rather than a file prefix
     #220, add getHashedShakeVersion helper
