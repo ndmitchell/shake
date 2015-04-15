@@ -260,7 +260,7 @@ function runReport()
                 res += "edge[penwidth=0.5,arrowsize=0.5];";
                 for (var i = 0; i < xs.length; i++)
                 {
-                    res += "a" + i + "[label=\"" + xs[i].name + "\"";
+                    res += "a" + i + "[label=\"" + xs[i].name.split("\\").join("\\\\").split("\"").join("\\\"") + "\"";
                     if (xs[i].back) res += ",style=filled,color=\"" + xs[i].back + "\"";
                     if (xs[i].text) res += ",fontcolor=\"" + xs[i].text + "\"";
                     res += "];";
