@@ -43,6 +43,7 @@ main = shaken test $ \args obj -> do
             ,"            'v' -> putStrLn =<< getEnv rg"
             ,"            'w' -> threadDelay $ floor $ 1000000 * (read rg :: Double)"
             ,"            'r' -> LBS.putStr $ LBS.replicate (read rg) 'x'"
+            ,"            'i' -> putStr =<< getContents"
             ,"        hFlush stdout"
             ,"        hFlush stderr"
             ]
@@ -113,6 +114,10 @@ main = shaken test $ \args obj -> do
         t3 <- withTempFile $ \file -> fromCmdTime <$> cmd helper "r10000000" (FileStdout file)
         liftIO $ putStrLn $ "Capturing 10Mb takes: " ++ intercalate ","
             [s ++ " = " ++ showDuration d | (s,d) <- [("String",t1),("ByteString",t2),("File",t3)]]
+
+    "stdin" !> do
+        Stdout (x :: String) <- cmd helper "i" (Stdin "hello ") (StdinBS $ LBS.pack "world")
+        liftIO $ x === "hello world"
 
 
 test build obj = do
