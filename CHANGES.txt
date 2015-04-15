@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #227, add StdinBS for passing a bytestring as Stdin
     Make cmd Timeout call terminateProcess as well
 0.15
     #203, make shakeFiles a directory rather than a file prefix

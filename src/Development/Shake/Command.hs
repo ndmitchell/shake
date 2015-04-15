@@ -21,7 +21,7 @@ import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
-import Data.Either
+import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Directory
@@ -52,6 +52,7 @@ data CmdOption
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
                             --   Use 'addPath' to modify the @$PATH@ variable, or 'addEnv' to modify other variables.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
+    | StdinBS LBS.ByteString -- ^ Given as the @stdin@ of the spawned process.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default 'String' results use text encoding and 'ByteString' results use binary encoding.
     | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
@@ -191,7 +192,7 @@ commandExplicitIO funcName opts results exe args = do
 
     let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
     let optEnv = let x = [x | Env x <- opts] in if null x then Nothing else Just $ concat x
-    let optStdin = concat [x | Stdin x <- opts]
+    let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ Left x; StdinBS x -> Just $ Right x; _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
     let optTimeout = listToMaybe $ reverse [x | Timeout x <- opts]
@@ -222,7 +223,7 @@ commandExplicitIO funcName opts results exe args = do
     po <- resolvePath $ ProcessOpts
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
-        ,poStdin = if optBinary then Right $ LBS.pack optStdin else Left optStdin
+        ,poStdin = if optBinary || any isRight optStdin then Right $ LBS.concat $ map (either LBS.pack id) optStdin else Left $ concatMap fromLeft optStdin
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ concat dStderr
         }
