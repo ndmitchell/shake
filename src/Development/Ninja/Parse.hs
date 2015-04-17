@@ -35,7 +35,7 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
         let (normal,implicit,orderOnly) = splitDeps deps
         let build = Build rule env normal implicit orderOnly binds
         return $
-            if rule == BS.pack "phony" then ninja{phonys = [(x, normal) | x <- outputs] ++ phonys}
+            if rule == BS.pack "phony" then ninja{phonys = [(x, normal ++ implicit ++ orderOnly) | x <- outputs] ++ phonys}
             else if length outputs == 1 then ninja{singles = (head outputs, build) : singles}
             else ninja{multiples = (outputs, build) : multiples}
     LexRule name ->

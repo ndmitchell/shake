@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #232, don't ignore phony order-only dependencies in Ninja
     #226, add escaping for GraphViz labels
     #227, add StdinBS for passing a bytestring as Stdin
     Make cmd Timeout call terminateProcess as well
