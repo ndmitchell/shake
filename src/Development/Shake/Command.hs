@@ -411,6 +411,10 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --
 --   If you use 'command' inside a @do@ block and do not use the result, you may get a compile-time error about being
 --   unable to deduce 'CmdResult'. To avoid this error, use 'command_'.
+--
+--   By default the @stderr@ stream will be captured for use in error messages, and also echoed. To only echo
+--   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
+--   to detect they are running in a terminal.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
 command opts x xs = fmap b $ commandExplicit "command" opts a x xs
     where (a,b) = cmdResult
