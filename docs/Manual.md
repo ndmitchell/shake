@@ -38,7 +38,7 @@ To run the example above:
 1. Install the [Haskell Platform](http://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
 2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
 3. Type `cabal install shake`, to build and install Shake and all its dependencies.
-4. Type `shake --demo`, which will create a directory containing a sample project, the above Shake script, and execute it. For more details see a [trace of `shake --demo`](Demo.md).
+4. Type `shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
 
 ## Basic syntax
 
