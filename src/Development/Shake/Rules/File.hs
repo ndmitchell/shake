@@ -177,7 +177,8 @@ trackAllow ps = do
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
 want :: [FilePath] -> Rules ()
-want = action . need
+want [] = return ()
+want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
