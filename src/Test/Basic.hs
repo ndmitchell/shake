@@ -133,3 +133,5 @@ test build obj = do
     writeFile (obj ".log") ""
     build ["unsafe1.par","unsafe2.par","-j2"]
     assertContents (obj ".log") "[[]]"
+
+    build [] -- should say "no want/action statements, nothing to do" (checked manually)
