@@ -44,7 +44,7 @@ data Ninja = Ninja
     {rules :: [(Str,Rule)]
     ,singles :: [(FileStr,Build)]
     ,multiples :: [([FileStr], Build)]
-    ,phonys :: ([(Str, [FileStr])])
+    ,phonys :: [(Str, [FileStr])]
     ,defaults :: [FileStr]
     ,pools :: [(Str, Int)]
     }
