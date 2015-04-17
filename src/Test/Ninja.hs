@@ -88,3 +88,5 @@ test build obj = do
     config <- Config.readConfigFileWithEnv [("v1", test6)] $ test6 ++ ".ninja"
     -- The file included by subninja should have a separate variable scope
     Map.lookup "v2" config === Just "g2"
+
+    run "-f../../src/Test/Ninja/phonyorder.ninja bar.txt"
