@@ -264,7 +264,7 @@ A standard clean command is defined as:
         putNormal "Cleaning files in _build"
         removeFilesAfter "_build" ["//*"]
 
-Running the build system with the `clean` argument, e.g. `runhaskell _build/run clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
+Running the build system with the `clean` argument, e.g. `runhaskell Build.hs clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
 
 <pre>
 phony "<i>name</i>" $ do
@@ -273,7 +273,7 @@ phony "<i>name</i>" $ do
 
 Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are simply run afresh each time they are requested.
 
-The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell _build/run clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
+The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell Build.hs clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
 
 ## Running
 
@@ -281,7 +281,7 @@ This section covers how to run the build system you have written.
 
 #### Compiling the build system
 
-As shown before, we can use `runhaskell _build/run` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
+As shown before, we can use `runhaskell Build.hs` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
 
     #!/bin/sh
     mkdir -p _shake
