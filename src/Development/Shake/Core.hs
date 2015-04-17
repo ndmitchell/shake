@@ -452,6 +452,9 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     forM_ (actions rs) $ \act -> do
                         addPool pool $ runAction s0 s1 act $ \x -> staunch $ either throwIO return x
 
+                when (null $ actions rs) $ do
+                    when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
+
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent

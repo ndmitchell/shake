@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #225, warn if there are no want/action statements
     #232, don't ignore phony order-only dependencies in Ninja
     #226, add escaping for GraphViz labels
     #227, add StdinBS for passing a bytestring as Stdin
