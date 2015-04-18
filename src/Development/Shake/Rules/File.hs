@@ -224,6 +224,9 @@ phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
 --     let src = 'Development.Shake.FilePath.replaceBaseName' out $ map toLower $ takeBaseName out
 --     'Development.Shake.writeFile'' out . map toUpper =<< 'Development.Shake.readFile'' src
 -- @
+--
+--   If the 'Action' completes successfully the file is considered up-to-date, even if the file
+--   has not changed.
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 (?>) test act = priority 0.5 $ root "with ?>" test act
 
@@ -258,5 +261,8 @@ phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
 --   I.e., the file @foo.cpp@ produces object file @foo.cpp.o@.
 --
 --   Note that matching is case-sensitive, even on Windows.
+--
+--   If the 'Action' completes successfully the file is considered up-to-date, even if the file
+--   has not changed.
 (%>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
 (%>) test act = (if simple test then id else priority 0.5) $ root (show test) (test ?==) act
