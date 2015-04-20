@@ -44,6 +44,10 @@ main = shaken test $ \args obj -> do
     phony "dummy" $ do
         liftIO $ appendFile (obj "dummy") "1"
 
+    phony "threads" $ do
+        x <- getShakeOptions
+        writeFile' (obj "threads.txt") $ show $ shakeThreads x
+
     obj "dummer.txt" %> \out -> do
         need ["dummy","dummy"]
         need ["dummy"]
@@ -133,5 +137,10 @@ test build obj = do
     writeFile (obj ".log") ""
     build ["unsafe1.par","unsafe2.par","-j2"]
     assertContents (obj ".log") "[[]]"
+
+    build ["!threads","-j3"]
+    assertContents (obj "threads.txt") "3"
+    build ["!threads","-j0"]
+    assertContents (obj "threads.txt") (show processors)
 
     build [] -- should say "no want/action statements, nothing to do" (checked manually)
