@@ -84,7 +84,8 @@ data ShakeOptions = ShakeOptions
     ,shakeThreads :: Int
         -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.
         --   For many build systems, a number equal to or slightly less than the number of physical processors
-        --   works well. Use @0@ to match the detected number of processors.
+        --   works well. Use @0@ to match the detected number of processors (when @0@, 'getShakeOptions' will
+        --   return the number of threads used).
     ,shakeVersion :: String
         -- ^ Defaults to @"1"@. The version number of your build rules.
         --   Change the version number to force a complete rebuild, such as when making
