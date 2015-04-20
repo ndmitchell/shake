@@ -391,6 +391,8 @@ actionFinally = actionBoom True
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
+    opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
+
     start <- offsetTime
     rs <- getRules rs
     registerWitnesses rs
@@ -427,7 +429,6 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     after <- newIORef []
     absent <- newIORef []
-    shakeThreads <- if shakeThreads == 0 then getProcessorCount else return shakeThreads
     withCleanup $ \cleanup -> do
         _ <- addCleanup cleanup $ do
             when shakeTimings printTimings
