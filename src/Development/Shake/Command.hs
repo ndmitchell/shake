@@ -199,6 +199,7 @@ commandExplicitIO funcName opts results exe args = do
     let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ Left x; StdinBS x -> Just $ Right x; _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
+    let optAsync = ResultProcess Pid0 `elem` results
     let optTimeout = listToMaybe $ reverse [x | Timeout x <- opts]
     let optWithStdout = last $ False : [x | WithStdout x <- opts]
     let optWithStderr = last $ True : [x | WithStderr x <- opts]
@@ -210,8 +211,8 @@ commandExplicitIO funcName opts results exe args = do
     let cmdline = saneCommandForUser exe args
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
-        buf Str{} = do x <- newBuffer; return ([DestString x], Str . concat <$> readBuffer x)
-        buf LBS{} = do x <- newBuffer; return ([DestBytes x], LBS . LBS.fromChunks <$> readBuffer x)
+        buf Str{} = do x <- newBuffer; return ([DestString x | not optAsync], Str . concat <$> readBuffer x)
+        buf LBS{} = do x <- newBuffer; return ([DestBytes x | not optAsync], LBS . LBS.fromChunks <$> readBuffer x)
         buf BS {} = bufLBS (BS . BS.concat . LBS.toChunks)
         buf Unit  = return ([], return Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
@@ -229,9 +230,9 @@ commandExplicitIO funcName opts results exe args = do
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
         ,poStdin = if optBinary || any isRight optStdin then Right $ LBS.concat $ map (either LBS.pack id) optStdin else Left $ concatMap fromLeft optStdin
-        ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ concat dStdout
-        ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ concat dStderr
-        ,poAsync = False
+        ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout && not optAsync] ++ concat dStdout
+        ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
+        ,poAsync = optAsync
         }
     res <- try_ $ duration $ process po
 
@@ -323,6 +324,8 @@ newtype Stdouterr a = Stdouterr {fromStdouterr :: a}
 newtype Exit = Exit {fromExit :: ExitCode}
 
 -- | Collect the 'ProcessHandle' of the process.
+--   If you do collect the process handle, the command will run asyncronously and the call to 'cmd'/'command'
+--   will return as soon as the process is spawned. Any 'Stdout'\/'Stderr' captures will return empty strings.
 newtype Process = Process {fromProcess :: ProcessHandle}
 
 -- | Collect the time taken to execute the process. Can be used in conjunction with 'CmdLine' to
