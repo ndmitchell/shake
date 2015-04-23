@@ -10,6 +10,7 @@ import Control.Monad.Extra
 import System.Directory
 import Test.Type
 import System.Exit
+import System.Process
 import Data.Tuple.Extra
 import Data.List.Extra
 import Control.Monad.IO.Class
@@ -118,6 +119,13 @@ main = shaken test $ \args obj -> do
     "stdin" !> do
         Stdout (x :: String) <- cmd helper "i" (Stdin "hello ") (StdinBS $ LBS.pack "world")
         liftIO $ x === "hello world"
+
+    "async" !> do
+        let file = obj "async.txt"
+        pid <- cmd helper (FileStdout file) "w2" "ohello"
+        Nothing <- liftIO $ getProcessExitCode pid
+        ExitSuccess <- liftIO $ waitForProcess pid
+        liftIO $ assertContents file "hello\n"
 
 
 test build obj = do
