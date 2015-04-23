@@ -11,7 +11,7 @@
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd, unit, CmdArguments,
-    Stdout(..), Stderr(..), Stdouterr(..), Exit(..), CmdTime(..), CmdLine(..),
+    Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
     ) where
@@ -109,7 +109,11 @@ data Result
     | ResultCode ExitCode
     | ResultTime Double
     | ResultLine String
+    | ResultProcess Pid
       deriving Eq
+
+data Pid = Pid0 | Pid ProcessHandle
+instance Eq Pid where _ == _ = True
 
 
 ---------------------------------------------------------------------
@@ -215,6 +219,7 @@ commandExplicitIO funcName opts results exe args = do
             ResultCode _ -> return ([], [], \dur pid ex -> return $ ResultCode ex)
             ResultTime _ -> return ([], [], \dur pid ex -> return $ ResultTime dur)
             ResultLine _ -> return ([], [], \dur pid ex -> return $ ResultLine cmdline)
+            ResultProcess _ -> return ([], [], \dur pid ex -> return $ ResultProcess $ Pid pid)
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
@@ -316,6 +321,9 @@ newtype Stdouterr a = Stdouterr {fromStdouterr :: a}
 --   If you do not collect the exit code, any 'ExitFailure' will cause an exception.
 newtype Exit = Exit {fromExit :: ExitCode}
 
+-- | Collect the 'ProcessHandle' of the process.
+newtype Process = Process {fromProcess :: ProcessHandle}
+
 -- | Collect the time taken to execute the process. Can be used in conjunction with 'CmdLine' to
 --   write helper functions that print out the time of a result.
 --
@@ -353,6 +361,12 @@ instance CmdResult Exit where
 
 instance CmdResult ExitCode where
     cmdResult = ([ResultCode ExitSuccess], \[ResultCode x] -> x)
+
+instance CmdResult Process where
+    cmdResult = ([ResultProcess Pid0], \[ResultProcess (Pid x)] -> Process x)
+
+instance CmdResult ProcessHandle where
+    cmdResult = ([ResultProcess Pid0], \[ResultProcess (Pid x)] -> x)
 
 instance CmdResult CmdLine where
     cmdResult = ([ResultLine ""], \[ResultLine x] -> CmdLine x)
