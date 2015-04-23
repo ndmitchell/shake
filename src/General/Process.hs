@@ -67,6 +67,7 @@ data ProcessOpts = ProcessOpts
     ,poStdin :: Either String LBS.ByteString
     ,poStdout :: [Destination]
     ,poStderr :: [Destination]
+    ,poAsync :: Bool
     }
 
 
@@ -188,12 +189,16 @@ process po = do
                         return $ sequence_ $ wait1 : waits
 
                 whenJust inh $ snd $ stdIn poStdin
-                sequence_ wait
-                flushBuffers
-                res <- waitForProcess pid
-                whenJust outh hClose
-                whenJust errh hClose
-                return (pid, res)
+                if poAsync then
+                    return (pid, ExitSuccess)
+                 else do
+                    sequence_ wait
+                    flushBuffers
+                    res <- waitForProcess pid
+                    whenJust outh hClose
+                    whenJust errh hClose
+                    return (pid, res)
+
 
 ---------------------------------------------------------------------
 -- COMPATIBILITY

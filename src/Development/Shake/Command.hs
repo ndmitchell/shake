@@ -231,6 +231,7 @@ commandExplicitIO funcName opts results exe args = do
         ,poStdin = if optBinary || any isRight optStdin then Right $ LBS.concat $ map (either LBS.pack id) optStdin else Left $ concatMap fromLeft optStdin
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr] ++ concat dStderr
+        ,poAsync = False
         }
     res <- try_ $ duration $ process po
 
