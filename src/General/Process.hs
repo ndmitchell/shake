@@ -133,7 +133,7 @@ withCreateProcess cp act = mask $ \restore -> do
 
 
 -- General approach taken from readProcessWithExitCode
-process :: ProcessOpts -> IO ExitCode
+process :: ProcessOpts -> IO (ProcessHandle, ExitCode)
 process po = do
     (ProcessOpts{..}, flushBuffers) <- optimiseBuffers po
     let files = nubOrd [x | DestFile x <- poStdout ++ poStderr]
@@ -193,7 +193,7 @@ process po = do
                 res <- waitForProcess pid
                 whenJust outh hClose
                 whenJust errh hClose
-                return res
+                return (pid, res)
 
 ---------------------------------------------------------------------
 -- COMPATIBILITY

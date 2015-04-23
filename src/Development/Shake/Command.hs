@@ -241,7 +241,7 @@ commandExplicitIO funcName opts results exe args = do
                 cwd ++ extra
     case res of
         Left err -> failure $ show err
-        Right (dur,ex) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
+        Right (dur,(pid,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
             exceptionBuffer <- readBuffer exceptionBuffer
             let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
             failure $
@@ -249,7 +249,7 @@ commandExplicitIO funcName opts results exe args = do
                 if null captured then "Stderr not captured because WithStderr False was used\n"
                 else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
                 else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
-        Right (dur,ex) -> mapM (\f -> f dur ex) resultBuild
+        Right (dur,(pid,ex)) -> mapM (\f -> f dur ex) resultBuild
 
 
 -- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
