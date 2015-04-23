@@ -210,14 +210,14 @@ commandExplicitIO funcName opts results exe args = do
         buf LBS{} = do x <- newBuffer; return ([DestBytes x], LBS . LBS.fromChunks <$> readBuffer x)
         buf BS {} = bufLBS (BS . BS.concat . LBS.toChunks)
         buf Unit  = return ([], return Unit)
-    (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ExitCode -> IO Result]) <-
+    (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
-            ResultCode _ -> return ([], [], \dur ex -> return $ ResultCode ex)
-            ResultTime _ -> return ([], [], \dur ex -> return $ ResultTime dur)
-            ResultLine _ -> return ([], [], \dur ex -> return $ ResultLine cmdline)
-            ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ -> fmap ResultStdout b)
-            ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ -> fmap ResultStderr b)
-            ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ -> fmap ResultStdouterr b)
+            ResultCode _ -> return ([], [], \dur pid ex -> return $ ResultCode ex)
+            ResultTime _ -> return ([], [], \dur pid ex -> return $ ResultTime dur)
+            ResultLine _ -> return ([], [], \dur pid ex -> return $ ResultLine cmdline)
+            ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
+            ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
+            ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
 
     exceptionBuffer <- newBuffer
     po <- resolvePath $ ProcessOpts
@@ -249,7 +249,7 @@ commandExplicitIO funcName opts results exe args = do
                 if null captured then "Stderr not captured because WithStderr False was used\n"
                 else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
                 else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
-        Right (dur,(pid,ex)) -> mapM (\f -> f dur ex) resultBuild
+        Right (dur,(pid,ex)) -> mapM (\f -> f dur pid ex) resultBuild
 
 
 -- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
