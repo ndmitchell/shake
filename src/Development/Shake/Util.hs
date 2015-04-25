@@ -2,7 +2,7 @@
 -- | A module for useful utility functions for Shake build systems.
 module Development.Shake.Util(
     parseMakefile, needMakefileDependencies, neededMakefileDependencies,
-    shakeArgsAccumulate
+    shakeArgsAccumulate, shakeArgsPrune, shakeArgsPruneWith,
     ) where
 
 import Development.Shake
@@ -10,8 +10,14 @@ import Development.Shake.Rules.File
 import qualified Data.ByteString.Char8 as BS
 import qualified Development.Shake.ByteString as BS
 import Data.Tuple.Extra
+import Control.Applicative
 import Data.List
 import System.Console.GetOpt
+import Data.IORef
+import Data.Maybe
+import Control.Monad.Extra
+import Prelude
+import System.IO.Extra as IO
 
 
 -- | Given the text of a Makefile, extract the list of targets and dependencies. Assumes a
@@ -58,3 +64,29 @@ neededMakefileDependencies file = neededBS . concatMap snd . BS.parseMakefile =<
 --   Now you can pass @--distcc@ to use the @distcc@ compiler.
 shakeArgsAccumulate :: ShakeOptions -> [OptDescr (Either String (a -> a))] -> a -> (a -> [String] -> IO (Maybe (Rules ()))) -> IO ()
 shakeArgsAccumulate opts flags def f = shakeArgsWith opts flags $ \flags targets -> f (foldl' (flip ($)) def flags) targets
+
+
+-- | Like 'shakeArgs' but also takes a pruning function. If @--prune@ is passed, then after the build has completed,
+--   the second argument is called with a list of the files that the build checked were up-to-date.
+shakeArgsPrune :: ShakeOptions -> ([FilePath] -> IO ()) -> Rules () -> IO ()
+shakeArgsPrune opts prune rules = shakeArgsPruneWith opts prune [] f
+    where f _ files = return $ Just $ if null files then rules else want files >> withoutActions rules
+
+
+-- | A version of 'shakeArgsPrune' that also takes a list of extra options to use.
+shakeArgsPruneWith :: ShakeOptions -> ([FilePath] -> IO ()) -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
+shakeArgsPruneWith opts prune flags act = do
+    let flags2 = Option "P" ["prune"] (NoArg $ Right Nothing) "Remove stale files" : map (fmap $ fmap Just) flags
+    pruning <- newIORef False
+    shakeArgsWith opts flags2 $ \opts args ->
+        if any isNothing opts then do
+            writeIORef pruning True
+            return Nothing
+        else
+            act (map fromJust opts) args
+    whenM (readIORef pruning) $ do
+        IO.withTempFile $ \file -> do
+            shakeArgsWith opts{shakeLiveFiles=file : shakeLiveFiles opts} flags2 $ \opts args ->
+                act (catMaybes opts) args
+            src <- lines <$> IO.readFile' file
+            prune src
