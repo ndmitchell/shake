@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    If you have Shakefile.hs, pass it all arguments without interp
     Add shakeArgsPrune and shakeArgsPruneWith
     #228, allow running cmd async by collecting the ProcessHandle
     Make getShakeOptions/processorCount of 0 return the used value

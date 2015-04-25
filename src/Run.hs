@@ -7,7 +7,6 @@ import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
 import General.Timing
-import Data.List.Extra
 import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
@@ -22,21 +21,30 @@ main :: IO ()
 main = do
     resetTimings
     args <- getArgs
-    withArgs ("--no-time":args) $
-        shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
-            let tool = listToMaybe [x | Tool x <- opts]
-            (mode, makefile) <- case reverse [x | UseMakefile x <- opts] of
-                x:_ -> return (modeMakefile x, x)
-                _ -> findMakefile
-            case mode of
-                Ninja -> runNinja makefile targets tool
-                _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
-                Exe -> do exitOnFailure =<< rawSystem (toNative makefile) args; return Nothing
-                Haskell -> do exitOnFailure =<< rawSystem "runhaskell" (makefile:args); return Nothing
-                Make -> fmap Just $ runMakefile makefile targets
-
-exitOnFailure :: ExitCode -> IO ()
-exitOnFailure x = when (x /= ExitSuccess) $ exitWith x
+    hsExe <- findFile
+        [".shake" </> "shake" <.> exe
+        ,"Shakefile.hs","Shakefile.lhs"]
+    case hsExe of
+        Just file -> do
+            (prog,args) <- return $
+                if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
+            e <- rawSystem prog args
+            when (e /= ExitSuccess) $ exitWith e
+        Nothing -> do
+            withArgs ("--no-time":args) $
+                shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
+                    let tool = listToMaybe [x | Tool x <- opts]
+                    makefile <- case reverse [x | UseMakefile x <- opts] of
+                        x:_ -> return x
+                        _ -> do
+                            res <- findFile ["makefile","Makefile","build.ninja"]
+                            case res of
+                                Just x -> return x
+                                Nothing -> errorIO "Could not find `makefile', `Makefile' or `build.ninja'"
+                    case () of
+                        _ | takeExtension makefile == ".ninja" -> runNinja makefile targets tool
+                        _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
+                        _ -> fmap Just $ runMakefile makefile targets
 
 
 data Flag = UseMakefile FilePath
@@ -46,23 +54,5 @@ flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "R
         ,Option "t" ["tool"] (ReqArg (Right . Tool) "TOOL") "Ninja-compatible tools."
         ]
 
-data Mode = Make | Ninja | Haskell | Exe
-
-modeMakefile :: FilePath -> Mode
-modeMakefile x | takeExtension x == ".ninja" = Ninja
-               | takeExtension x `elem` [".hs",".lhs"] = Haskell
-               | otherwise = Make
-
-
-findMakefile :: IO (Mode, FilePath)
-findMakefile = do
-    let files = [(Exe,".shake" </> "shake" <.> exe)
-                ,(Haskell,"Shakefile.hs"),(Haskell,"Shakefile.lhs")
-                ,(Make,"makefile"),(Make,"Makefile")
-                ,(Ninja,"build.ninja")]
-    res <- findM (fmap (either (const False) id) . try_ . IO.doesFileExist . snd) files
-    case res of
-        Just x -> return x
-        Nothing -> do
-            let Just (p1,p2) = unsnoc ["`" ++ x ++ "'" | (_,x) <- files]
-            errorIO $ "Could not find " ++ intercalate ", " p1 ++ " or " ++ p2
+findFile :: [FilePath] -> IO (Maybe FilePath)
+findFile = findM (fmap (either (const False) id) . try_ . IO.doesFileExist)
