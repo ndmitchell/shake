@@ -76,7 +76,7 @@ shakeArgsPrune opts prune rules = shakeArgsPruneWith opts prune [] f
 -- | A version of 'shakeArgsPrune' that also takes a list of extra options to use.
 shakeArgsPruneWith :: ShakeOptions -> ([FilePath] -> IO ()) -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
 shakeArgsPruneWith opts prune flags act = do
-    let flags2 = Option "P" ["prune"] (NoArg $ Right Nothing) "Remove stale files" : map (fmap $ fmap Just) flags
+    let flags2 = Option "P" ["prune"] (NoArg $ Right Nothing) "Remove stale files" : map (fmapOptDescr $ fmap Just) flags
     pruning <- newIORef False
     shakeArgsWith opts flags2 $ \opts args ->
         if any isNothing opts then do
@@ -90,3 +90,12 @@ shakeArgsPruneWith opts prune flags act = do
                 act (catMaybes opts) args
             src <- lines <$> IO.readFile' file
             prune src
+
+-- fmap is only an instance in later GHC versions, so fake our own version
+fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
+fmapOptDescr f (Option a b argDescr c) = Option a b (fmapArgDescr f argDescr) c
+
+fmapArgDescr :: (a -> b) -> ArgDescr a -> ArgDescr b
+fmapArgDescr f (NoArg a)    = NoArg (f a)
+fmapArgDescr f (ReqArg g s) = ReqArg (f . g) s
+fmapArgDescr f (OptArg g s) = OptArg (f . g) s
