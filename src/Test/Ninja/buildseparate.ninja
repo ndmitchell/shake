@@ -1,0 +1,9 @@
+
+rule record
+    # produces XX
+    command = echo $vBar > $out
+
+build output: record
+    vFoo = foo
+    vBar = bar
+    vBar = X${vFoo}${vBar}X

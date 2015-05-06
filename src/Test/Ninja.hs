@@ -90,3 +90,9 @@ test build obj = do
     Map.lookup "v2" config === Just "g2"
 
     run "-f../../src/Test/Ninja/phonyorder.ninja bar.txt"
+
+    -- tests from ninjasmith: https://github.com/ndmitchell/ninjasmith/
+    -- run "-f../../src/Test/Ninja/redefine.ninja"
+    -- assertContents (obj "output") "version3 version2"
+    -- run "-f../../src/Test/Ninja/buildseparate.ninja"
+    -- assertContents (obj "output") "XX"
