@@ -64,7 +64,7 @@ test build obj = do
     assertNonSpace (obj "nocreate.log") "x"
     run "-f../../src/Test/Ninja/nocreate.ninja"
     run "-f../../src/Test/Ninja/nocreate.ninja"
-    assertNonSpace (obj "nocreate.log") "xxx"
+    assertNonSpace (obj "nocreate.log") "x x x"
 
     writeFile (obj "input") ""
     runFail "-f../../src/Test/Ninja/lint.ninja bad --lint" "'needed' file required rebuilding"
