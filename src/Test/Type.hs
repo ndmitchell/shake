@@ -115,6 +115,9 @@ assertContentsOn f file want = do
     assert (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got ++
                                "\nWANT (transformed): " ++ f want ++ "\nGOT (transformed): " ++ f got
 
+assertContentsWords :: FilePath -> String -> IO ()
+assertContentsWords = assertContentsOn (unwords . words)
+
 assertNonSpace :: FilePath -> String -> IO ()
 assertNonSpace = assertContentsOn $ filter (not . isSpace)
 
