@@ -7,7 +7,7 @@ rule record
 
 vGlobal = version2
 
-build output: record
+build redefine.txt: record
     vBuild = $vGlobal
 
 vGlobal = version3

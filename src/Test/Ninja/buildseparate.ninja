@@ -1,9 +1,10 @@
 
 rule record
     # produces XX
-    command = echo $vBar > $out
+    command = hello
+    command = echo $vBar $command > $out
 
-build output: record
+build buildseparate.txt: record
     vFoo = foo
     vBar = bar
     vBar = X${vFoo}${vBar}X
