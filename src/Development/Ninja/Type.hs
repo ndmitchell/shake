@@ -8,9 +8,11 @@ module Development.Ninja.Type(
     Ninja(..), newNinja, Build(..), Rule(..),
     ) where
 
+import Control.Applicative
 import Development.Ninja.Env
 import qualified Data.ByteString.Char8 as BS
 import Data.Maybe
+import Prelude
 
 
 type Str = BS.ByteString
