@@ -9,7 +9,6 @@ import Development.Shake.FilePath
 
 import Control.Exception.Extra hiding (assert)
 import Control.Monad.Extra
-import Data.Char
 import Data.List
 import Data.Maybe
 import qualified Data.ByteString as BS
@@ -118,8 +117,6 @@ assertContentsOn f file want = do
 assertContentsWords :: FilePath -> String -> IO ()
 assertContentsWords = assertContentsOn (unwords . words)
 
-assertNonSpace :: FilePath -> String -> IO ()
-assertNonSpace = assertContentsOn $ filter (not . isSpace)
 
 assertContentsInfix :: FilePath -> String -> IO ()
 assertContentsInfix file want = do
