@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 
 -- | The IO in this module is only to evaluate an envrionment variable,
 --   the 'Env' itself it passed around purely.
@@ -34,7 +35,9 @@ addBind :: Env Str Str -> Str -> Expr -> IO ()
 addBind e k v = addEnv e k =<< askExpr e v
 
 addBinds :: Env Str Str -> [(Str, Expr)] -> IO ()
-addBinds e = mapM_ (uncurry $ addBind e)
+addBinds e bs = do
+    bs <- mapM (\(a,b) -> (a,) <$> askExpr e b) bs
+    mapM_ (uncurry $ addEnv e) bs
 
 
 ---------------------------------------------------------------------
