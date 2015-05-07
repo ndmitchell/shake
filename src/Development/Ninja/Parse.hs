@@ -6,7 +6,9 @@ import qualified Data.ByteString.Char8 as BS
 import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Lexer
+import Control.Applicative
 import Control.Monad
+import Prelude
 
 
 parse :: FilePath -> Env Str Str -> IO Ninja
