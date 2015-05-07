@@ -40,7 +40,7 @@ runNinja file args (Just "compdb") = do
         addEnv env (BS.pack "out") (BS.unwords $ map quote out)
         addEnv env (BS.pack "in") (BS.unwords $ map quote depsNormal)
         addEnv env (BS.pack "in_newline") (BS.unlines depsNormal)
-        addBinds env buildBind
+        forM_ buildBind $ \(a,b) -> addEnv env a b
         addBinds env ruleBind
         commandline <- fmap BS.unpack $ askVar env $ BS.pack "command"
         return $ CompDb dir commandline $ BS.unpack $ head depsNormal
@@ -101,7 +101,7 @@ build needDeps phonys rules pools out build@Build{..} = do
                 addEnv env (BS.pack "out") (BS.unwords $ map quote out)
                 addEnv env (BS.pack "in") (BS.unwords $ map quote depsNormal)
                 addEnv env (BS.pack "in_newline") (BS.unlines depsNormal)
-                addBinds env buildBind
+                forM_ buildBind $ \(a,b) -> addEnv env a b
                 addBinds env ruleBind
 
             applyRspfile env $ do

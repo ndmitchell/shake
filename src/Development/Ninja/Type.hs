@@ -62,7 +62,7 @@ data Build = Build
     ,depsNormal :: [FileStr]
     ,depsImplicit :: [FileStr]
     ,depsOrderOnly :: [FileStr]
-    ,buildBind :: [(Str,Expr)]
+    ,buildBind :: [(Str,Str)]
     } deriving Show
 
 data Rule = Rule

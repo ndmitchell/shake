@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Ninja.Parse(parse) where
 
@@ -32,6 +32,7 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
     LexBuild outputs rule deps -> do
         outputs <- mapM (askExpr env) outputs
         deps <- mapM (askExpr env) deps
+        binds <- mapM (\(a,b) -> (a,) <$> askExpr env b) binds
         let (normal,implicit,orderOnly) = splitDeps deps
         let build = Build rule env normal implicit orderOnly binds
         return $
