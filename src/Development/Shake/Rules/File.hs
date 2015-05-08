@@ -11,7 +11,7 @@ module Development.Shake.Rules.File(
     ) where
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
 import qualified Data.ByteString.Char8 as BS
@@ -79,6 +79,10 @@ instance Rule FileQ FileA where
         where bool b = if b then EqualCheap else NotEqual
 
 storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
+storedValueError opts False msg x | not $ shakeOutputCheck opts = do
+    when (shakeCreationCheck opts) $ do
+        whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
+    return $ FileA fileInfoEq fileInfoEq fileInfoEq
 storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
     where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
           err = msg ++ "\n  " ++ unpackU (fromFileQ x)
