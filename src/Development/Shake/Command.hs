@@ -138,12 +138,7 @@ commandExplicit funcName copts results exe args = do
 
     let tracker act = case shakeLint opts of
             Just LintTracker -> do
-                dir <- liftIO $ getTemporaryDirectory
-                (file, handle) <- liftIO $ openTempFile dir "shake.lint"
-                liftIO $ hClose handle
-                dir <- return $ file <.> "dir"
-                liftIO $ createDirectory dir
-                let cleanup = removeDirectoryRecursive dir >> removeFile file
+                (dir, cleanup) <- liftIO newTempDir
                 flip actionFinally cleanup $ do
                     res <- act "tracker" $ "/if":dir:"/c":exe:args
                     (read,write) <- liftIO $ trackerFiles dir
