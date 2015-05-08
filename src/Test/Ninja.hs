@@ -2,7 +2,6 @@
 module Test.Ninja(main) where
 
 import Development.Shake
-import Development.Shake.FilePath
 import qualified Development.Shake.Config as Config
 import System.Directory(copyFile, createDirectoryIfMissing)
 import Control.Monad
@@ -41,7 +40,6 @@ test build obj = do
 
     copyFile "src/Test/Ninja/test3-sub.ninja" $ obj "test3-sub.ninja"
     copyFile "src/Test/Ninja/test3-inc.ninja" $ obj "test3-inc.ninja"
-    copyFile ("src/Test/Ninja/" ++ if null exe then "test3-unix.ninja" else "test3-win.ninja") $ obj "test3-platform.ninja"
     createDirectoryIfMissing True $ obj "subdir"
     copyFile "src/Test/Ninja/subdir/1.ninja" $ obj "subdir/1.ninja"
     copyFile "src/Test/Ninja/subdir/2.ninja" $ obj "subdir/2.ninja"
