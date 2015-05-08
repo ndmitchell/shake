@@ -92,5 +92,6 @@ test build obj = do
     -- tests from ninjasmith: https://github.com/ndmitchell/ninjasmith/
     run "-f../../src/Test/Ninja/redefine.ninja"
     assertContentsWords (obj "redefine.txt") "version3 version2"
+
     run "-f../../src/Test/Ninja/buildseparate.ninja"
     assertContentsWords (obj "buildseparate.txt") "XX"
