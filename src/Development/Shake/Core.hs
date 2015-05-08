@@ -676,7 +676,7 @@ trackCheckUsed = do
         unless (null bad) $ do
             let n = length bad
             errorStructured
-                ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
                 [("Used", Just $ show x) | x <- bad]
                 ""
 
@@ -685,7 +685,7 @@ trackCheckUsed = do
         unless (null bad) $ do
             let n = length bad
             errorStructured
-                ("Link checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
                 [("Used", Just $ show x) | x <- bad]
                 ""
 
