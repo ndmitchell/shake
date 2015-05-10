@@ -79,7 +79,7 @@ instance Rule FileQ FileA where
         where bool b = if b then EqualCheap else NotEqual
 
 storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
-storedValueError opts False msg x | not $ shakeOutputCheck opts = do
+storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
     when (shakeCreationCheck opts) $ do
         whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
     return $ FileA fileInfoEq fileInfoEq fileInfoEq

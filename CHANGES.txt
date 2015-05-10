@@ -1,6 +1,5 @@
 Changelog for Shake
 
-    Add shakeOutputCheck option
     Make Ninja variable handling more accurate
 0.15.1
     If you have Shakefile.hs, pass it all arguments without interp
