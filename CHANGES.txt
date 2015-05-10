@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #243, close fds in child processes when spawning commands
     Make Ninja variable handling more accurate
 0.15.1
     If you have Shakefile.hs, pass it all arguments without interp

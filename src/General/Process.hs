@@ -140,7 +140,7 @@ process po = do
     let files = nubOrd [x | DestFile x <- poStdout ++ poStderr]
     withs (map (`withFile` WriteMode) files) $ \handles -> do
         let fileHandle x = fromJust $ lookup x $ zip files handles
-        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout
+        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
                  ,std_in = fst $ stdIn poStdin
                  ,std_out = stdStream fileHandle poStdout poStderr, std_err = stdStream fileHandle poStderr poStdout}
         withCreateProcess cp $ \(inh, outh, errh, pid) -> do
