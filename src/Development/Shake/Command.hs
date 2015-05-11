@@ -453,7 +453,17 @@ type a :-> t = a
 --
 -- * 'CmdOption' arguments are used as options.
 --
---   To take the examples from 'command':
+--   Example arguments and the resulting command string:
+--
+-- @
+-- 'cmd' \"git log --pretty=\" \"oneline\"        -> \"git log --pretty= oneline\"
+-- 'cmd' \"git log --pretty=\" [\"oneline\"]      -> \"git log --pretty= oneline\"
+-- 'cmd' \"git log\" (\"--pretty=\" ++ \"oneline\") -> \"git log --pretty=oneline\"
+-- 'cmd' \"git log\" (\"--pretty=\" ++ \"one line\") -> \"git log --pretty=one line\"
+-- 'cmd' \"git log\" [\"--pretty=\" ++ \"one line\"] -> \"git log --pretty=one\ line\"
+-- @
+--
+--   More examples, including return values, see this translation of the examples given for the 'command' function:
 --
 -- @
 -- () <- 'cmd' \"gcc -c myfile.c\"                                  -- compile a file, throwing an exception on failure
