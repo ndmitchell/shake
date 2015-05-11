@@ -453,14 +453,14 @@ type a :-> t = a
 --
 -- * 'CmdOption' arguments are used as options.
 --
---   Example arguments and the resulting command string:
+--   As some examples, here are some calls, and the resulting command string:
 --
 -- @
--- 'cmd' \"git log --pretty=\" \"oneline\"        -> \"git log --pretty= oneline\"
--- 'cmd' \"git log --pretty=\" [\"oneline\"]      -> \"git log --pretty= oneline\"
--- 'cmd' \"git log\" (\"--pretty=\" ++ \"oneline\") -> \"git log --pretty=oneline\"
--- 'cmd' \"git log\" (\"--pretty=\" ++ \"one line\") -> \"git log --pretty=one line\"
--- 'cmd' \"git log\" [\"--pretty=\" ++ \"one line\"] -> \"git log --pretty=one\ line\"
+-- 'unit' $ 'cmd' \"git log --pretty=\" \"oneline\"           -- git log --pretty= oneline
+-- 'unit' $ 'cmd' \"git log --pretty=\" [\"oneline\"]         -- git log --pretty= oneline
+-- 'unit' $ 'cmd' \"git log\" (\"--pretty=\" ++ \"oneline\")    -- git log --pretty=oneline
+-- 'unit' $ 'cmd' \"git log\" (\"--pretty=\" ++ \"one line\")   -- git log --pretty=one line
+-- 'unit' $ 'cmd' \"git log\" [\"--pretty=\" ++ \"one line\"]   -- git log "--pretty=one line"
 -- @
 --
 --   More examples, including return values, see this translation of the examples given for the 'command' function:
