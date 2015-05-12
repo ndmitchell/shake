@@ -6,6 +6,8 @@ import Development.Shake.FilePath
 import Test.Type
 import Control.Exception hiding (assert)
 import System.Directory as IO
+import System.Environment (lookupEnv, getExecutablePath)
+import System.Info.Extra (isWindows)
 import Control.Monad
 import Data.Maybe
 
@@ -69,26 +71,43 @@ main = shaken test $ \args obj -> do
         writeFile' out ""
 
     obj "tracker-write1" %> \out -> do
-        () <- cmd "cmd /c" ["echo x > " ++ out <.> "txt"]
+        gen "x" $ out <.> "txt"
         need [out <.> "txt"]
         writeFile' out ""
 
     obj "tracker-write2" %> \out -> do
-        () <- cmd "cmd /c" ["echo x > " ++ out <.> "txt"]
+        gen "x" $ out <.> "txt"
         writeFile' out ""
 
     obj "tracker-source2" %> \out -> copyFile' (obj "tracker-source1") out
     obj "tracker-read1" %> \out -> do
-        () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source1") ++ " > nul"]
+        access $ toNative (obj "tracker-source1")
         writeFile' out ""
     obj "tracker-read2" %> \out -> do
-        () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source1") ++ " > nul"]
+        access $ toNative (obj "tracker-source1")
         need [obj "tracker-source1"]
         writeFile' out ""
     obj "tracker-read3" %> \out -> do
-        () <- cmd "cmd /c" ["type " ++ toNative (obj "tracker-source2") ++ " > nul"]
+        access $ toNative (obj "tracker-source2")
         need [obj "tracker-source2"]
         writeFile' out ""
+
+    when (not isWindows) $ do
+        obj "tracker-compile.o" %> \out -> do
+            need [obj "tracker-source.c", obj "tracker-source.h"]
+            cmd "cc" ["-c", obj "tracker-source.c", "-o", out]
+
+    return ()
+    where gen t f = do
+              () <- if isWindows
+                    then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
+                    else cmd Shell "echo" ["x", ">", f]
+              return ()
+          access f = do
+              () <- if isWindows
+                    then cmd "cmd /c" ["type " ++ f ++ " > nul"]
+                    else cmd Shell "cat" [f, ">/dev/null"]
+              return ()
 
 
 test build obj = do
@@ -108,12 +127,20 @@ test build obj = do
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
 
-    tracker <- findExecutable "tracker.exe"
+    bin <- getExecutablePath
+    putStrLn bin
+    tracker <- if isWindows
+               then findExecutable "tracker.exe"
+               else lookupEnv "FSAT"
+    
     when (isJust tracker) $ do
         writeFile (obj "tracker-source1") ""
         writeFile (obj "tracker-source2") ""
+        writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
+        writeFile (obj "tracker-source.h") ""        
         crash ["tracker-write1"] ["not have its creation tracked","lint/tracker-write1","lint/tracker-write1.txt"]
         build ["tracker-write2"]
         crash ["tracker-read1"] ["used but not depended upon","lint/tracker-source1"]
         build ["tracker-read2"]
         crash ["tracker-read3"] ["depended upon after being used","lint/tracker-source2"]
+        build ["tracker-compile.o"]
