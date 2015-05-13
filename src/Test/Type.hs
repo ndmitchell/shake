@@ -18,6 +18,7 @@ import System.Random
 import System.Console.GetOpt
 import System.IO
 import System.Time.Extra
+import System.Info.Extra(isWindows)
 
 
 shaken
@@ -60,11 +61,16 @@ shaken test rules sleeper = do
 
         args -> do
             let (_,files,_) = getOpt Permute [] args
-            tracker <- findExecutable "tracker.exe"
+            tracker <- if isWindows
+                       then findExecutable "tracker.exe"
+                       else lookupEnv "FSAT"
             withArgs (args \\ files) $
                 shakeWithClean
-                    (removeDirectoryRecursive out) 
-                    (shakeOptions{shakeFiles=out, shakeReport=["output/" ++ name ++ "/report.html"], shakeLint=Just $ if isJust tracker then LintTracker else LintBasic})
+                    (removeDirectoryRecursive out)
+                    (shakeOptions{ shakeFiles=out
+                                 , shakeReport=["output/" ++ name ++ "/report.html"]
+                                 , shakeLint= Just $ if isJust tracker then LintTracker else LintBasic
+                                 })
                     (rules files obj)
 
 
