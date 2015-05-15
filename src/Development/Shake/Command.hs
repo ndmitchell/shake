@@ -158,17 +158,10 @@ commandExplicit funcName copts results exe args = do
                 liftIO $ setEnv "FSAT_OUT" file
                 res <- act exe args
                 (rs, ws) <- liftIO $ fsatraceFiles file
-                home <- liftIO $ getEnv "HOME"
-                Development.Shake.Rules.File.trackAllow [ home ++ "/.ghc//*"
-                                                        , home ++ "/Library/Haskell//*"
-                                                        , "/Applications//*"
-                                                        , "/var/folders//*"
-                                                        , "/usr//*"
-                                                        , "/Library//*"
-                                                        , "/System//*"
-                                                        ]
-                trackRead $ nubOrd rs
-                trackWrite $ nubOrd ws
+                whitelist <- liftIO unixWhitelist
+                let whitelisted x = any (\w -> (w ++ "/") `isPrefixOf` x) whitelist
+                trackRead $ filter (not . whitelisted) $ nubOrd rs
+                trackWrite $ filter (not . whitelisted) $ nubOrd ws
                 return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
@@ -219,6 +212,20 @@ fsatraceFiles file = do
     frs <- liftIO $ filterM doesFileExist $ rs lxs
     fws <- liftIO $ filterM doesFileExist $ ws lxs
     return (frs, fws)
+
+
+unixWhitelist :: IO [FilePath]
+unixWhitelist = do
+    home <- getEnv "HOME"
+    return [home ++ "/.ghc"
+           ,home ++ "/Library/Haskell"
+           ,"/Applications"
+           ,"/var/folders"
+           ,"/usr"
+           ,"/Library"
+           ,"/System"
+           ]
+
 
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION
