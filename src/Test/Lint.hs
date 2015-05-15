@@ -6,10 +6,8 @@ import Development.Shake.FilePath
 import Test.Type
 import Control.Exception hiding (assert)
 import System.Directory as IO
-import System.Environment (lookupEnv, getExecutablePath)
-import System.Info.Extra (isWindows)
-import Control.Monad
-import Data.Maybe
+import System.Info.Extra
+import Control.Monad.Extra
 
 
 main = shaken test $ \args obj -> do
@@ -127,13 +125,7 @@ test build obj = do
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
 
-    bin <- getExecutablePath
-    putStrLn bin
-    tracker <- if isWindows
-               then findExecutable "tracker.exe"
-               else lookupEnv "FSAT"
-    
-    when (isJust tracker) $ do
+    whenM hasTracker $ do
         writeFile (obj "tracker-source1") ""
         writeFile (obj "tracker-source2") ""
         writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
