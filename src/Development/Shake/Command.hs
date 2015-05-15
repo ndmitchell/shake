@@ -25,7 +25,7 @@ import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Directory
-import System.Environment.Extra
+import System.Environment(getEnv, setEnv, lookupEnv, getEnvironment)
 import System.Exit
 import System.IO.Extra
 import System.Process
@@ -41,7 +41,6 @@ import Development.Shake.Core
 import Development.Shake.FilePath
 import Development.Shake.Types
 import Development.Shake.Rules.File
-
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -137,15 +136,50 @@ commandExplicit funcName copts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act = case shakeLint opts of
-            Just LintTracker -> do
-                (dir, cleanup) <- liftIO newTempDir
-                flip actionFinally cleanup $ do
-                    res <- act "tracker" $ "/if":dir:"/c":exe:args
-                    (read,write) <- liftIO $ trackerFiles dir
-                    trackRead read
-                    trackWrite write
-                    return res
+            Just LintTracker ->
+                (if isWindows then wintracker else unixtracker) act
             _ -> act exe args
+
+        wintracker act = do
+            (dir, cleanup) <- liftIO newTempDir
+            flip actionFinally cleanup $ do
+                res <- act "tracker" $ "/if":dir:"/c":exe:args
+                (rs, ws) <- liftIO $ trackerFiles dir
+                trackRead rs
+                trackWrite ws
+                return res
+
+        unixtracker act = do
+            (file, cleanup) <- liftIO newTempFile
+            flip actionFinally cleanup $ do
+                liftIO $ setEnv "FSAT_OUT" file
+                res <- act exe args
+                xs <- liftIO $ readFileEncoding utf8 file
+                let lxs = lines xs
+                    rs = foldl step []
+                        where step sofar x | head x == 'r' = drop 2 x : sofar
+                                           | otherwise = sofar
+                    ws = foldl step []
+                        where step sofar x | hx == 'w' = drop 2 x : sofar
+                                           | hx == 'm' = takeWhile (/= ':')
+                                                         (drop 2 x)
+                                                         : sofar
+                                           | otherwise = sofar
+                                  where hx = head x
+                frs <- liftIO $ filterM doesFileExist $ rs lxs
+                fws <- liftIO $ filterM doesFileExist $ ws lxs
+                home <- liftIO $ getEnv "HOME"
+                Development.Shake.Rules.File.trackAllow [ home ++ "/.ghc//*"
+                                                        , home ++ "/Library/Haskell//*"
+                                                        , "/Applications//*"
+                                                        , "/var/folders//*"
+                                                        , "/usr//*"
+                                                        , "/Library//*"
+                                                        , "/System//*"
+                                                        ]
+                trackRead $ nubOrd frs
+                trackWrite $ nubOrd fws
+                return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
 
