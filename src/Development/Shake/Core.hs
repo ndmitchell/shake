@@ -42,8 +42,6 @@ import System.IO.Extra
 import System.Time.Extra
 import Data.Monoid
 import System.IO.Unsafe
-import System.Info.Extra(isWindows)
-import System.Environment(getEnv, setEnv)
 
 import Development.Shake.Classes
 import Development.Shake.Pool
@@ -394,14 +392,6 @@ actionFinally = actionBoom True
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
-
-
-    when ((not isWindows) && (shakeLint == Just LintTracker)) $ do
-        ut <- getEnv "FSAT"
-        setEnv "DYLD_INSERT_LIBRARIES" ut
-        setEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
-        
-
 
     start <- offsetTime
     rs <- getRules rs

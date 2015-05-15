@@ -152,6 +152,9 @@ commandExplicit funcName copts results exe args = do
         unixtracker act = do
             (file, cleanup) <- liftIO newTempFile
             flip actionFinally cleanup $ do
+                ut <- liftIO $ getEnv "FSAT"
+                liftIO $ setEnv "DYLD_INSERT_LIBRARIES" ut
+                liftIO $ setEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
                 liftIO $ setEnv "FSAT_OUT" file
                 res <- act exe args
                 xs <- liftIO $ readFileEncoding utf8 file
