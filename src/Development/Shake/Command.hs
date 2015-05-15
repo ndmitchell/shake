@@ -160,8 +160,8 @@ commandExplicit funcName copts results exe args = do
                 (rs, ws) <- liftIO $ fsatraceFiles file
                 whitelist <- liftIO unixWhitelist
                 let whitelisted x = any (\w -> (w ++ "/") `isPrefixOf` x) whitelist
-                trackRead $ filter (not . whitelisted) $ nubOrd rs
-                trackWrite $ filter (not . whitelisted) $ nubOrd ws
+                trackRead $ filter (not . whitelisted) rs
+                trackWrite $ filter (not . whitelisted) ws
                 return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
@@ -197,21 +197,23 @@ correctCase x = f "" x
 
 fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
 fsatraceFiles file = do
-    xs <- liftIO $ readFileEncoding utf8 file
-    let lxs = lines xs
-        rs = foldl step []
-            where step sofar x | head x == 'r' = drop 2 x : sofar
-                               | otherwise = sofar
-        ws = foldl step []
-            where step sofar x | hx == 'w' = drop 2 x : sofar
-                               | hx == 'm' = takeWhile (/= ':')
-                                             (drop 2 x)
-                                             : sofar
-                               | otherwise = sofar
-                      where hx = head x
-    frs <- liftIO $ filterM doesFileExist $ rs lxs
-    fws <- liftIO $ filterM doesFileExist $ ws lxs
+    xs <- parseFSAT <$> readFileUTF8 file
+    let reader (FSATRead x) = Just x; reader _ = Nothing
+        writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
+    frs <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe reader xs
+    fws <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe writer xs
     return (frs, fws)
+
+
+data FSAT = FSATWrite FilePath | FSATRead FilePath | FSATMove FilePath FilePath | FSATDelete FilePath
+
+parseFSAT :: String -> [FSAT] -- any parse errors are skipped
+parseFSAT = mapMaybe (f . wordsBy (== ':')) . lines
+    where f ["w",x] = Just $ FSATWrite x
+          f ["r",x] = Just $ FSATRead x
+          f ["m",x,y] = Just $ FSATMove x y
+          f ["d",x] = Just $ FSATDelete x
+          f _ = Nothing
 
 
 unixWhitelist :: IO [FilePath]
