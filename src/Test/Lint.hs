@@ -90,12 +90,9 @@ main = shaken test $ \args obj -> do
         need [obj "tracker-source2"]
         writeFile' out ""
 
-    when (not isWindows) $ do
-        obj "tracker-compile.o" %> \out -> do
-            need [obj "tracker-source.c", obj "tracker-source.h"]
-            cmd "cc" ["-c", obj "tracker-source.c", "-o", out]
-
-    return ()
+    obj "tracker-compile.o" %> \out -> do
+        need [obj "tracker-source.c", obj "tracker-source.h"]
+        cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
     where gen t f = unit $ if isWindows
                            then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
                            else cmd Shell "echo" ["x", ">", f]
