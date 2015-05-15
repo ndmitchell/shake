@@ -157,20 +157,7 @@ commandExplicit funcName copts results exe args = do
                 liftIO $ setEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
                 liftIO $ setEnv "FSAT_OUT" file
                 res <- act exe args
-                xs <- liftIO $ readFileEncoding utf8 file
-                let lxs = lines xs
-                    rs = foldl step []
-                        where step sofar x | head x == 'r' = drop 2 x : sofar
-                                           | otherwise = sofar
-                    ws = foldl step []
-                        where step sofar x | hx == 'w' = drop 2 x : sofar
-                                           | hx == 'm' = takeWhile (/= ':')
-                                                         (drop 2 x)
-                                                         : sofar
-                                           | otherwise = sofar
-                                  where hx = head x
-                frs <- liftIO $ filterM doesFileExist $ rs lxs
-                fws <- liftIO $ filterM doesFileExist $ ws lxs
+                (rs, ws) <- liftIO $ fsatraceFiles file
                 home <- liftIO $ getEnv "HOME"
                 Development.Shake.Rules.File.trackAllow [ home ++ "/.ghc//*"
                                                         , home ++ "/Library/Haskell//*"
@@ -180,8 +167,8 @@ commandExplicit funcName copts results exe args = do
                                                         , "/Library//*"
                                                         , "/System//*"
                                                         ]
-                trackRead $ nubOrd frs
-                trackWrite $ nubOrd fws
+                trackRead $ nubOrd rs
+                trackWrite $ nubOrd ws
                 return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
@@ -214,6 +201,24 @@ correctCase x = f "" x
 
         a +/+ b = if null a then b else a ++ "/" ++ b
 
+
+fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
+fsatraceFiles file = do
+    xs <- liftIO $ readFileEncoding utf8 file
+    let lxs = lines xs
+        rs = foldl step []
+            where step sofar x | head x == 'r' = drop 2 x : sofar
+                               | otherwise = sofar
+        ws = foldl step []
+            where step sofar x | hx == 'w' = drop 2 x : sofar
+                               | hx == 'm' = takeWhile (/= ':')
+                                             (drop 2 x)
+                                             : sofar
+                               | otherwise = sofar
+                      where hx = head x
+    frs <- liftIO $ filterM doesFileExist $ rs lxs
+    fws <- liftIO $ filterM doesFileExist $ ws lxs
+    return (frs, fws)
 
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION
