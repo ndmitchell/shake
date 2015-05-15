@@ -96,16 +96,12 @@ main = shaken test $ \args obj -> do
             cmd "cc" ["-c", obj "tracker-source.c", "-o", out]
 
     return ()
-    where gen t f = do
-              () <- if isWindows
-                    then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
-                    else cmd Shell "echo" ["x", ">", f]
-              return ()
-          access f = do
-              () <- if isWindows
-                    then cmd "cmd /c" ["type " ++ f ++ " > nul"]
-                    else cmd Shell "cat" [f, ">/dev/null"]
-              return ()
+    where gen t f = unit $ if isWindows
+                           then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
+                           else cmd Shell "echo" ["x", ">", f]
+          access f = unit $ if isWindows
+                            then cmd "cmd /c" ["type " ++ f ++ " > nul"]
+                            else cmd Shell "cat" [f, ">/dev/null"]
 
 
 test build obj = do
