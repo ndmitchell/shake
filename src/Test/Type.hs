@@ -19,7 +19,7 @@ import System.Random
 import System.Console.GetOpt
 import System.IO
 import System.Time.Extra
-import System.Info.Extra(isWindows)
+import System.Info.Extra
 import Prelude
 
 
@@ -67,9 +67,9 @@ shaken test rules sleeper = do
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out)
-                    (shakeOptions{ shakeFiles=out
-                                 , shakeReport=["output/" ++ name ++ "/report.html"]
-                                 , shakeLint= Just $ if tracker then LintTracker else LintBasic
+                    (shakeOptions{shakeFiles = out
+                                 ,shakeReport = ["output/" ++ name ++ "/report.html"]
+                                 ,shakeLint = Just $ if tracker then LintTracker else LintBasic
                                  })
                     (rules files obj)
 
