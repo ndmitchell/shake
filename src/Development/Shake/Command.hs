@@ -136,11 +136,10 @@ commandExplicit funcName copts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act = case shakeLint opts of
-            Just LintTracker ->
-                (if isWindows then wintracker else unixtracker) act
+            Just LintTracker -> (if isWindows then winTracker else unixTracker) act
             _ -> act exe args
 
-        wintracker act = do
+        winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
             flip actionFinally cleanup $ do
                 res <- act "tracker" $ "/if":dir:"/c":exe:args
@@ -149,7 +148,7 @@ commandExplicit funcName copts results exe args = do
                 trackWrite ws
                 return res
 
-        unixtracker act = do
+        unixTracker act = do
             (file, cleanup) <- liftIO newTempFile
             flip actionFinally cleanup $ do
                 ut <- liftIO $ getEnv "FSAT"
