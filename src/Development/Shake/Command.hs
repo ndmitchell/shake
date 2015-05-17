@@ -141,12 +141,12 @@ commandExplicit funcName copts results exe args = do
 
     let tracker act = case shakeLint opts of
             Just LintTracker -> (if isWindows then winTracker else unixTracker) act
-            _ -> act exe args
+            _ -> act [] exe args
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
             flip actionFinally cleanup $ do
-                res <- act "tracker" $ "/if":dir:"/c":exe:args
+                res <- act [] "tracker" $ "/if":dir:"/c":exe:args
                 (rs, ws) <- liftIO $ trackerFiles dir
                 trackRead rs
                 trackWrite ws
@@ -156,10 +156,10 @@ commandExplicit funcName copts results exe args = do
             (file, cleanup) <- liftIO newTempFile
             flip actionFinally cleanup $ do
                 fsat <- liftIO $ getEnv "FSAT"
-                liftIO $ setEnv "DYLD_INSERT_LIBRARIES" fsat
-                liftIO $ setEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
-                liftIO $ setEnv "FSAT_OUT" file
-                res <- act exe args
+                let vars = [AddEnv "DYLD_INSERT_LIBRARIES" fsat
+                           ,AddEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
+                           ,AddEnv "FSAT_OUT" file]
+                res <- act vars exe args
                 (rs, ws) <- liftIO $ fsatraceFiles file
                 whitelist <- liftIO unixWhitelist
                 let whitelisted x = any (\w -> (w ++ "/") `isPrefixOf` x) whitelist
@@ -167,7 +167,7 @@ commandExplicit funcName copts results exe args = do
                 trackWrite $ filter (not . whitelisted) ws
                 return res
 
-    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
+    skipper $ tracker $ \opts exe args -> verboser $ tracer $ commandExplicitIO funcName (opts++copts) results exe args
 
 
 -- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
