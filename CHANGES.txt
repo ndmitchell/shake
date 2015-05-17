@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add AddEnv and AddPath command options
     #243, close fds in child processes when spawning commands
     Make Ninja variable handling more accurate
 0.15.1

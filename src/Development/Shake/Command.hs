@@ -49,7 +49,8 @@ import Development.Shake.Rules.File
 data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
-                            --   Use 'addPath' to modify the @$PATH@ variable, or 'addEnv' to modify other variables.
+    | AddEnv String String -- ^ Add an environment variable in the child process.
+    | AddPath [String] [String] -- ^ Add some items to the prefix and suffix of the @$PATH@ variable.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
     | StdinBS LBS.ByteString -- ^ Given as the @stdin@ of the spawned process.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
@@ -240,8 +241,8 @@ commandExplicitIO funcName opts results exe args = do
             ResultStdouterr{} -> (True, True)
             _ -> (False, False)
 
+    optEnv <- resolveEnv opts
     let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
-    let optEnv = let x = [x | Env x <- opts] in if null x then Nothing else Just $ concat x
     let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ Left x; StdinBS x -> Just $ Right x; _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
@@ -303,6 +304,25 @@ commandExplicitIO funcName opts results exe args = do
                 else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
                 else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
         Right (dur,(pid,ex)) -> mapM (\f -> f dur pid ex) resultBuild
+
+
+resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])
+resolveEnv opts
+    | null env, null addEnv, null addPath = return Nothing
+    | otherwise = Just . unique . tweakPath . (++ addEnv) <$>
+                  if null env then getEnvironment else return (concat env)
+    where
+        env = [x | Env x <- opts]
+        addEnv = [(x,y) | AddEnv x y <- opts]
+        addPath = [(x,y) | AddPath x y <- opts]
+
+        newPath mid = intercalate [searchPathSeparator] $
+            concat (reverse $ map fst addPath) ++ [mid | mid /= ""] ++ concatMap snd addPath
+        isPath x = (if isWindows then upper else id) x == "PATH"
+        tweakPath xs | not $ any (isPath . fst) xs = ("PATH", newPath "") : xs
+                     | otherwise = map (\(a,b) -> (a, if isPath a then newPath b else b)) xs
+
+        unique = reverse . nubOrdOn (if isWindows then upper . fst else fst) . reverse
 
 
 -- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
