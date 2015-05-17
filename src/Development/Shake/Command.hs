@@ -25,7 +25,7 @@ import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Directory
-import System.Environment
+import System.Environment.Extra
 import System.Exit
 import System.IO.Extra
 import System.Process
