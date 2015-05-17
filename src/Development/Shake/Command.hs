@@ -66,8 +66,9 @@ data CmdOption
       deriving (Eq,Ord,Show)
 
 
--- | Produce a 'CmdOption' of value 'Env' that is the current environment, plus a
---   prefix and suffix to the @$PATH@ environment variable. For example:
+-- | /Deprecated:/ Use 'AddPath'. This function will be removed in a future version.
+--
+--   Add a prefix and suffix to the @$PATH@ environment variable. For example:
 --
 -- @
 -- opt <- 'addPath' [\"\/usr\/special\"] []
@@ -85,8 +86,9 @@ addPath pre post = do
         [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
         other
 
--- | Produce a 'CmdOption' of value 'Env' that is the current environment, plus the argument
---   environment variables. For example:
+-- | /Deprecated:/ Use 'AddEnv'. This function will be removed in a future version.
+--
+--   Add a single variable to the environment. For example:
 --
 -- @
 -- opt <- 'addEnv' [(\"CFLAGS\",\"-O2\")]
