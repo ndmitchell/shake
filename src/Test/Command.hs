@@ -85,7 +85,7 @@ main = shaken test $ \args obj -> do
         liftIO $ out === "HELLO SHAKE\n"
 
     "path" !> do
-        path <- addPath [dropTrailingPathSeparator $ obj ""] []
+        let path = AddPath [dropTrailingPathSeparator $ obj ""] []
         unit $ cmd $ obj "shake_helper"
         unit $ cmd $ obj "shake_helper" <.> exe
         unit $ cmd path Shell "shake_helper"
