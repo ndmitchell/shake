@@ -25,7 +25,7 @@ import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Directory
-import System.Environment(getEnv, setEnv, lookupEnv, getEnvironment)
+import System.Environment.Extra
 import System.Exit
 import System.IO.Extra
 import System.Process
@@ -49,7 +49,8 @@ import Development.Shake.Rules.File
 data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
-                            --   Use 'addPath' to modify the @$PATH@ variable, or 'addEnv' to modify other variables.
+    | AddEnv String String -- ^ Add an environment variable in the child process.
+    | AddPath [String] [String] -- ^ Add some items to the prefix and suffix of the @$PATH@ variable.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
     | StdinBS LBS.ByteString -- ^ Given as the @stdin@ of the spawned process.
     | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
@@ -65,8 +66,9 @@ data CmdOption
       deriving (Eq,Ord,Show)
 
 
--- | Produce a 'CmdOption' of value 'Env' that is the current environment, plus a
---   prefix and suffix to the @$PATH@ environment variable. For example:
+-- | /Deprecated:/ Use 'AddPath'. This function will be removed in a future version.
+--
+--   Add a prefix and suffix to the @$PATH@ environment variable. For example:
 --
 -- @
 -- opt <- 'addPath' [\"\/usr\/special\"] []
@@ -84,8 +86,9 @@ addPath pre post = do
         [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
         other
 
--- | Produce a 'CmdOption' of value 'Env' that is the current environment, plus the argument
---   environment variables. For example:
+-- | /Deprecated:/ Use 'AddEnv'. This function will be removed in a future version.
+--
+--   Add a single variable to the environment. For example:
 --
 -- @
 -- opt <- 'addEnv' [(\"CFLAGS\",\"-O2\")]
@@ -98,6 +101,7 @@ addEnv :: MonadIO m => [(String, String)] -> m CmdOption
 addEnv extra = do
     args <- liftIO getEnvironment
     return $ Env $ extra ++ filter (\(a,b) -> a `notElem` map fst extra) args
+
 
 data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
 
@@ -136,52 +140,34 @@ commandExplicit funcName copts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act = case shakeLint opts of
-            Just LintTracker ->
-                (if isWindows then wintracker else unixtracker) act
-            _ -> act exe args
+            Just LintTracker -> (if isWindows then winTracker else unixTracker) act
+            _ -> act [] exe args
 
-        wintracker act = do
+        winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
             flip actionFinally cleanup $ do
-                res <- act "tracker" $ "/if":dir:"/c":exe:args
+                res <- act [] "tracker" $ "/if":dir:"/c":exe:args
                 (rs, ws) <- liftIO $ trackerFiles dir
                 trackRead rs
                 trackWrite ws
                 return res
 
-        unixtracker act = do
+        unixTracker act = do
             (file, cleanup) <- liftIO newTempFile
             flip actionFinally cleanup $ do
-                liftIO $ setEnv "FSAT_OUT" file
-                res <- act exe args
-                xs <- liftIO $ readFileEncoding utf8 file
-                let lxs = lines xs
-                    rs = foldl step []
-                        where step sofar x | head x == 'r' = drop 2 x : sofar
-                                           | otherwise = sofar
-                    ws = foldl step []
-                        where step sofar x | hx == 'w' = drop 2 x : sofar
-                                           | hx == 'm' = takeWhile (/= ':')
-                                                         (drop 2 x)
-                                                         : sofar
-                                           | otherwise = sofar
-                                  where hx = head x
-                frs <- liftIO $ filterM doesFileExist $ rs lxs
-                fws <- liftIO $ filterM doesFileExist $ ws lxs
-                home <- liftIO $ getEnv "HOME"
-                Development.Shake.Rules.File.trackAllow [ home ++ "/.ghc//*"
-                                                        , home ++ "/Library/Haskell//*"
-                                                        , "/Applications//*"
-                                                        , "/var/folders//*"
-                                                        , "/usr//*"
-                                                        , "/Library//*"
-                                                        , "/System//*"
-                                                        ]
-                trackRead $ nubOrd frs
-                trackWrite $ nubOrd fws
+                fsat <- liftIO $ getEnv "FSAT"
+                let vars = [AddEnv "DYLD_INSERT_LIBRARIES" fsat
+                           ,AddEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
+                           ,AddEnv "FSAT_OUT" file]
+                res <- act vars exe args
+                (rs, ws) <- liftIO $ fsatraceFiles file
+                whitelist <- liftIO unixWhitelist
+                let whitelisted x = any (\w -> (w ++ "/") `isPrefixOf` x) whitelist
+                trackRead $ filter (not . whitelisted) rs
+                trackWrite $ filter (not . whitelisted) ws
                 return res
 
-    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
+    skipper $ tracker $ \opts exe args -> verboser $ tracer $ commandExplicitIO funcName (opts++copts) results exe args
 
 
 -- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
@@ -212,6 +198,40 @@ correctCase x = f "" x
         a +/+ b = if null a then b else a ++ "/" ++ b
 
 
+fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
+fsatraceFiles file = do
+    xs <- parseFSAT <$> readFileUTF8 file
+    let reader (FSATRead x) = Just x; reader _ = Nothing
+        writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
+    frs <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe reader xs
+    fws <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe writer xs
+    return (frs, fws)
+
+
+data FSAT = FSATWrite FilePath | FSATRead FilePath | FSATMove FilePath FilePath | FSATDelete FilePath
+
+parseFSAT :: String -> [FSAT] -- any parse errors are skipped
+parseFSAT = mapMaybe (f . wordsBy (== ':')) . lines
+    where f ["w",x] = Just $ FSATWrite x
+          f ["r",x] = Just $ FSATRead x
+          f ["m",x,y] = Just $ FSATMove x y
+          f ["d",x] = Just $ FSATDelete x
+          f _ = Nothing
+
+
+unixWhitelist :: IO [FilePath]
+unixWhitelist = do
+    home <- getEnv "HOME"
+    return [home ++ "/.ghc"
+           ,home ++ "/Library/Haskell"
+           ,"/Applications"
+           ,"/var/folders"
+           ,"/usr"
+           ,"/Library"
+           ,"/System"
+           ]
+
+
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION
 
@@ -223,8 +243,8 @@ commandExplicitIO funcName opts results exe args = do
             ResultStdouterr{} -> (True, True)
             _ -> (False, False)
 
+    optEnv <- resolveEnv opts
     let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
-    let optEnv = let x = [x | Env x <- opts] in if null x then Nothing else Just $ concat x
     let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ Left x; StdinBS x -> Just $ Right x; _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
@@ -286,6 +306,25 @@ commandExplicitIO funcName opts results exe args = do
                 else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
                 else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
         Right (dur,(pid,ex)) -> mapM (\f -> f dur pid ex) resultBuild
+
+
+resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])
+resolveEnv opts
+    | null env, null addEnv, null addPath = return Nothing
+    | otherwise = Just . unique . tweakPath . (++ addEnv) <$>
+                  if null env then getEnvironment else return (concat env)
+    where
+        env = [x | Env x <- opts]
+        addEnv = [(x,y) | AddEnv x y <- opts]
+        addPath = [(x,y) | AddPath x y <- opts]
+
+        newPath mid = intercalate [searchPathSeparator] $
+            concat (reverse $ map fst addPath) ++ [mid | mid /= ""] ++ concatMap snd addPath
+        isPath x = (if isWindows then upper else id) x == "PATH"
+        tweakPath xs | not $ any (isPath . fst) xs = ("PATH", newPath "") : xs
+                     | otherwise = map (\(a,b) -> (a, if isPath a then newPath b else b)) xs
+
+        unique = reverse . nubOrdOn (if isWindows then upper . fst else fst) . reverse
 
 
 -- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.

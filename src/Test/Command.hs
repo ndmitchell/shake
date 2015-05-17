@@ -83,9 +83,11 @@ main = shaken test $ \args obj -> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
         Stdout out <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell helper "vFOO"
         liftIO $ out === "HELLO SHAKE\n"
+        Stdout out <- cmd (AddEnv "FOO" "GOODBYE SHAKE") Shell helper "vFOO"
+        liftIO $ out === "GOODBYE SHAKE\n"
 
     "path" !> do
-        path <- addPath [dropTrailingPathSeparator $ obj ""] []
+        let path = AddPath [dropTrailingPathSeparator $ obj ""] []
         unit $ cmd $ obj "shake_helper"
         unit $ cmd $ obj "shake_helper" <.> exe
         unit $ cmd path Shell "shake_helper"

@@ -6,10 +6,8 @@ import Development.Shake.FilePath
 import Test.Type
 import Control.Exception hiding (assert)
 import System.Directory as IO
-import System.Environment (lookupEnv, getExecutablePath)
-import System.Info.Extra (isWindows)
-import Control.Monad
-import Data.Maybe
+import System.Info.Extra
+import Control.Monad.Extra
 
 
 main = shaken test $ \args obj -> do
@@ -92,22 +90,15 @@ main = shaken test $ \args obj -> do
         need [obj "tracker-source2"]
         writeFile' out ""
 
-    when (not isWindows) $ do
-        obj "tracker-compile.o" %> \out -> do
-            need [obj "tracker-source.c", obj "tracker-source.h"]
-            cmd "cc" ["-c", obj "tracker-source.c", "-o", out]
-
-    return ()
-    where gen t f = do
-              () <- if isWindows
-                    then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
-                    else cmd Shell "echo" ["x", ">", f]
-              return ()
-          access f = do
-              () <- if isWindows
-                    then cmd "cmd /c" ["type " ++ f ++ " > nul"]
-                    else cmd Shell "cat" [f, ">/dev/null"]
-              return ()
+    obj "tracker-compile.o" %> \out -> do
+        need [obj "tracker-source.c", obj "tracker-source.h"]
+        cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
+    where gen t f = unit $ if isWindows
+                           then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
+                           else cmd Shell "echo" ["x", ">", f]
+          access f = unit $ if isWindows
+                            then cmd "cmd /c" ["type " ++ f ++ " > nul"]
+                            else cmd Shell "cat" [f, ">/dev/null"]
 
 
 test build obj = do
@@ -127,13 +118,7 @@ test build obj = do
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
 
-    bin <- getExecutablePath
-    putStrLn bin
-    tracker <- if isWindows
-               then findExecutable "tracker.exe"
-               else lookupEnv "FSAT"
-    
-    when (isJust tracker) $ do
+    whenM hasTracker $ do
         writeFile (obj "tracker-source1") ""
         writeFile (obj "tracker-source2") ""
         writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
