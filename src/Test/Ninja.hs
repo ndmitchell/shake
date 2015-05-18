@@ -3,7 +3,7 @@ module Test.Ninja(main) where
 
 import Development.Shake
 import qualified Development.Shake.Config as Config
-import System.Directory(copyFile, createDirectoryIfMissing)
+import System.Directory(copyFile, createDirectoryIfMissing, removeFile)
 import Control.Monad
 import Test.Type
 import qualified Data.HashMap.Strict as Map
@@ -95,3 +95,14 @@ test build obj = do
 
     run "-f../../src/Test/Ninja/buildseparate.ninja"
     assertContentsWords (obj "buildseparate.txt") "XX"
+
+    when False $ do
+        -- currently fails because Shake doesn't match Ninja here
+        run "-f../../src/Test/Ninja/outputtouch.ninja"
+        assertContentsWords (obj "outputtouch.txt") "hello"
+        writeFile (obj "outputtouch.txt") "goodbye"
+        run "-f../../src/Test/Ninja/outputtouch.ninja"
+        assertContentsWords (obj "outputtouch.txt") "goodbye"
+        removeFile (obj "outputtouch.txt")
+        run "-f../../src/Test/Ninja/outputtouch.ninja"
+        assertContentsWords (obj "outputtouch.txt") "hello"
