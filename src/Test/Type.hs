@@ -14,7 +14,7 @@ import Data.List
 import Data.Maybe
 import qualified Data.ByteString as BS
 import System.Directory as IO
-import System.Environment
+import System.Environment.Extra
 import System.Random
 import System.Console.GetOpt
 import System.IO
