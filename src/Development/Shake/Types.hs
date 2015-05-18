@@ -163,14 +163,14 @@ fieldsShakeOptions =
     ,"shakeOutputCheck", "shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 (fromFunction x20) (fromFunction x21)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 y1 y2 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 (fromFunction y1) (fromFunction y2)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 y1 y2) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
         x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k`
-        Function x20 `k` Function x21
+        Function y1 `k` Function y2
     gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
