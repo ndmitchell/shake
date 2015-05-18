@@ -32,7 +32,7 @@ main = do
             when (e /= ExitSuccess) $ exitWith e
         Nothing -> do
             withArgs ("--no-time":args) $
-                shakeArgsWith shakeOptions{shakeCreationCheck=False,shakeOutputCheck=False} flags $ \opts targets -> do
+                shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
                     let tool = listToMaybe [x | Tool x <- opts]
                     makefile <- case reverse [x | UseMakefile x <- opts] of
                         x:_ -> return x
