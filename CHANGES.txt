@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #245, initial support for fsatrace lint checking
     Reexport -<.> from filepath where available
     Hoogle #106, trigger on filepath version, not GHC version
     Add AddEnv and AddPath command options
