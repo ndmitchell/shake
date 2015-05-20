@@ -28,15 +28,22 @@ import qualified System.FilePath as Native
 import System.FilePath hiding
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
     ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
+    )
+import System.FilePath.Posix
+    (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
+    ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
 #if MIN_VERSION_filepath(1,4,0)
     ,(-<.>)
 #endif
     )
-import System.FilePath.Posix
-    (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
-    ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions)
 
+#if !MIN_VERSION_filepath(1,4,0)
 infixr 7  -<.>
+
+-- | Remove the current extension and add another, an alias for 'replaceExtension'.
+(-<.>) :: FilePath -> String -> FilePath
+(-<.>) = replaceExtension
+#endif
 
 
 -- | Drop the first directory from a 'FilePath'. Should only be used on
@@ -107,11 +114,6 @@ toNative = if isWindows then map (\x -> if x == '/' then '\\' else x) else id
 -- | Convert all path separators to @/@, even on Windows.
 toStandard :: FilePath -> FilePath
 toStandard = if isWindows then map (\x -> if x == '\\' then '/' else x) else id
-
-
--- | Remove the current extension and add another, an alias for 'replaceExtension'.
-(-<.>) :: FilePath -> String -> FilePath
-(-<.>) = replaceExtension
 
 
 -- | The extension of executables, @\"exe\"@ on Windows and @\"\"@ otherwise.

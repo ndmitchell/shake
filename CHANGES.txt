@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Reexport -<.> from filepath where available
     Hoogle #106, trigger on filepath version, not GHC version
     Add AddEnv and AddPath command options
     #243, close fds in child processes when spawning commands
