@@ -1,5 +1,13 @@
 {-# LANGUAGE CPP #-}
 
+#ifndef MIN_VERSION_filepath
+#if __GLASGOW_HASKELL__ >= 709
+#define MIN_VERSION_filepath(a,b,c) 1
+#else
+#define MIN_VERSION_filepath(a,b,c) 0
+#endif
+#endif
+
 -- | A module for 'FilePath' operations exposing "System.FilePath" plus some additional operations.
 --
 --   /Windows note:/ The extension methods ('<.>', 'takeExtension' etc) use the Posix variants since on
@@ -17,15 +25,6 @@ module Development.Shake.FilePath(
 
 import System.Info.Extra
 import qualified System.FilePath as Native
-
-#ifndef MIN_VERSION_filepath
-#if __GLASGOW_HASKELL__ >= 709
-#define MIN_VERSION_filepath(a,b,c) 1
-#else
-#define MIN_VERSION_filepath(a,b,c) 0
-#endif
-#endif
-
 
 import System.FilePath hiding
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
