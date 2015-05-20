@@ -16,10 +16,19 @@ module Development.Shake.FilePath(
 import System.Info.Extra
 import qualified System.FilePath as Native
 
+#ifndef MIN_VERSION_filepath
+#if __GLASGOW_HASKELL__ >= 709
+#define MIN_VERSION_filepath(a,b,c) 1
+#else
+#define MIN_VERSION_filepath(a,b,c) 0
+#endif
+#endif
+
+
 import System.FilePath hiding
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
     ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
-#if __GLASGOW_HASKELL__ >= 709
+#if MIN_VERSION_filepath(1,4,0)
     ,(-<.>)
 #endif
     )
