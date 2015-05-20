@@ -8,7 +8,9 @@
 module Development.Shake.FilePath(
     module System.FilePath, module System.FilePath.Posix,
     dropDirectory1, takeDirectory1, normaliseEx,
+#if !MIN_VERSION_filepath(1,4,0)
     (-<.>),
+#endif
     toNative, toStandard,
     exe
     ) where
