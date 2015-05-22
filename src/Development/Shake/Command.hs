@@ -555,7 +555,12 @@ type a :-> t = a
 --   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature, or use
 --   the 'unit' function.
 --
---   The 'cmd' command can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
+--   The 'cmd' function can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
+--   As an example:
+--
+-- @
+-- 'cmd' ('Cwd' \"generated\") 'Shell' "gcc -c myfile.c" :: IO ()
+-- @
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
 

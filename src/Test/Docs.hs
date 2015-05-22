@@ -156,7 +156,7 @@ restmt i (('-':'-':_):xs) = restmt i xs
 restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
     zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
 restmt i (x:xs) |
-    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x || " :: " `isInfixOf` x) ||
+    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && not ("cmd " `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x || " :: " `isInfixOf` x) ||
     "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
     where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
 restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
