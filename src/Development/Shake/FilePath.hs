@@ -29,6 +29,9 @@ import qualified System.FilePath as Native
 import System.FilePath hiding
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
     ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
+#if MIN_VERSION_filepath(1,4,0)
+    ,(-<.>)
+#endif
     )
 import System.FilePath.Posix
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
