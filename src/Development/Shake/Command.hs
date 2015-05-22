@@ -559,7 +559,7 @@ type a :-> t = a
 --   As an example:
 --
 -- @
--- 'cmd' ('Cwd' \"generated\") 'Shell' "gcc -c myfile.c" :: IO ()
+-- 'cmd' ('Cwd' \"generated\") 'Shell' \"gcc -c myfile.c\" :: IO ()
 -- @
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
