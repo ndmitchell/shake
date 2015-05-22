@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.15.2
     #248, add another example of using cmd
     #245, initial support for fsatrace lint checking
     Reexport -<.> from filepath where available
