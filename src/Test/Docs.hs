@@ -5,32 +5,31 @@ module Test.Docs(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
-import Control.Monad
 import Data.Char
 import Data.List.Extra
 import Data.Maybe
-import System.Directory
-import System.Exit
 
 
 main = shaken noTest $ \args obj -> do
-    let index = "dist/doc/html/shake/index.html"
+    let index = obj "dist/doc/html/shake/index.html"
+    let config = obj "dist/setup-config"
     want [obj "Success.txt"]
 
     want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
 
     let needSource = need =<< getDirectoryFiles "." ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"]
 
+    config %> \_ -> do
+        need ["shake.cabal"]
+        unit $ cmd "runhaskell Setup.hs configure" ["--builddir=" ++ obj "dist","--user"]
+        trackAllow [obj "dist//*"]
+
     index %> \_ -> do
+        need [config,"shake.cabal"]
         needSource
         need ["shake.cabal"]
-        trackAllow ["dist//*"]
-        res <- liftIO $ findExecutable "cabal"
-        if isJust res then cmd "cabal haddock" else do
-            Exit exit <- cmd "runhaskell Setup.hs haddock"
-            when (exit /= ExitSuccess) $ do
-                () <- cmd "runhaskell Setup.hs configure"
-                cmd "runhaskell Setup.hs haddock"
+        trackAllow [obj "dist//*"]
+        cmd "runhaskell Setup.hs haddock" ["--builddir=" ++ obj "dist"]
 
     obj "Paths_shake.hs" %> \out -> do
         copyFile' "src/Paths.hs" out
