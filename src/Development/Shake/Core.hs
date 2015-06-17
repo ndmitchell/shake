@@ -557,8 +557,8 @@ applyKeyValue ks = do
 
 
 wrapStack :: IO [String] -> SomeException -> IO SomeException
-wrapStack stk e = case cast e of
-    Just s@ShakeException{} -> return e
+wrapStack stk e@(SomeException inner) = case cast inner of
+    Just ShakeException{} -> return e
     Nothing -> do
         stk <- stk
         return $ if null stk then e else toException $ ShakeException (last stk) stk e
