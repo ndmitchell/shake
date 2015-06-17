@@ -496,15 +496,6 @@ abbreviate abbrev = f
         f (x:xs) = x : f xs
 
 
-wrapStack :: IO [String] -> IO a -> IO a
-wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
-    Just s@ShakeException{} -> throwIO s
-    Nothing -> do
-        stk <- stk
-        if null stk then throwIO e
-         else throwIO $ ShakeException (last stk) stk $ SomeException e
-
-
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
 runAction g l (Action x) k = runRAW g l x k
 
@@ -563,6 +554,15 @@ applyKeyValue ks = do
     (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
+
+
+wrapStack :: IO [String] -> IO a -> IO a
+wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
+    Just s@ShakeException{} -> throwIO s
+    Nothing -> do
+        stk <- stk
+        if null stk then throwIO e
+         else throwIO $ ShakeException (last stk) stk $ SomeException e
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
