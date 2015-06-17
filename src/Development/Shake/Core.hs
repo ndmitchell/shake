@@ -543,7 +543,7 @@ applyKeyValue ks = do
                 when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> (continue =<<) $ wrapStackFull (showStack globalDatabase stack) e
+                    Left e -> continue . Left =<< wrapStack (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
@@ -556,16 +556,12 @@ applyKeyValue ks = do
     return vs
 
 
-wrapStackFull :: IO [String] -> SomeException -> IO (Either SomeException a)
-wrapStackFull stack e = try $ wrapStack stack $ throwIO e
-
-wrapStack :: IO [String] -> IO a -> IO a
-wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
-    Just s@ShakeException{} -> throwIO s
+wrapStack :: IO [String] -> SomeException -> IO SomeException
+wrapStack stk e = case cast e of
+    Just s@ShakeException{} -> return e
     Nothing -> do
         stk <- stk
-        if null stk then throwIO e
-         else throwIO $ ShakeException (last stk) stk e
+        return $ if null stk then e else toException $ ShakeException (last stk) stk e
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
