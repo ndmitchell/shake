@@ -543,7 +543,7 @@ applyKeyValue ks = do
                 when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> (continue =<<) $ try $ wrapStack (showStack globalDatabase stack) $ throwIO e
+                    Left e -> (continue =<<) $ wrapStackFull (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
@@ -555,6 +555,9 @@ applyKeyValue ks = do
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
+
+wrapStackFull :: IO [String] -> SomeException -> IO (Either SomeException a)
+wrapStackFull stack e = try $ wrapStack stack $ throwIO e
 
 wrapStack :: IO [String] -> IO a -> IO a
 wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
