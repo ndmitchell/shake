@@ -565,7 +565,7 @@ wrapStack stk act = catch_ act $ \(SomeException e) -> case cast e of
     Nothing -> do
         stk <- stk
         if null stk then throwIO e
-         else throwIO $ ShakeException (last stk) stk $ SomeException e
+         else throwIO $ ShakeException (last stk) stk e
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
