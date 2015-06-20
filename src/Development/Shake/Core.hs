@@ -410,8 +410,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             | otherwise = do
                 let named = maybe "" (abbreviate shakeAbbreviations . shakeExceptionTarget) . fromException
                 atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
-                let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
-                when (shakeVerbosity >= Quiet) $ output Quiet msg
+                -- no need to print exceptions here, they get printed when they are wrapped
 
     lint <- if isNothing shakeLint then return $ const $ return () else do
         dir <- getCurrentDirectory
@@ -449,7 +448,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
-                            Left e -> raiseError =<< wrapStack (return ["Top-level action/want"]) e
+                            Left e -> raiseError =<< wrapStack s0 (return ["Top-level action/want"]) e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
 
@@ -542,7 +541,7 @@ applyKeyValue ks = do
                 when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left =<< wrapStack (showStack globalDatabase stack) e
+                    Left e -> continue . Left =<< wrapStack global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
@@ -555,12 +554,15 @@ applyKeyValue ks = do
     return vs
 
 
-wrapStack :: IO [String] -> SomeException -> IO SomeException
-wrapStack stk e@(SomeException inner) = case cast inner of
+wrapStack :: Global -> IO [String] -> SomeException -> IO SomeException
+wrapStack Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
     Just ShakeException{} -> return e
     Nothing -> do
         stk <- stk
-        return $ toException $ ShakeException (last $ "Unknown call stack" : stk) stk e
+        e <- return $ toException $ ShakeException (last $ "Unknown call stack" : stk) stk e
+        when (shakeStaunch && shakeVerbosity >= Quiet) $
+            globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
+        return e
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
