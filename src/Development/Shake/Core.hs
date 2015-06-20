@@ -452,6 +452,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
                         addPool pool $ runAction s0 s1 act $ \x -> staunch $ either throwIO return x
+                maybe (return ()) (throwIO . snd) =<< readIORef except
 
                 when (null $ actions rs) $ do
                     when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
@@ -476,7 +477,6 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         when (shakeVerbosity >= Normal) $
                             output Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
-            maybe (return ()) (throwIO . snd) =<< readIORef except
             sequence_ . reverse =<< readIORef after
 
 
