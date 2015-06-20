@@ -172,10 +172,10 @@ class (
 
 data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
 
-ruleKey :: Rule key value => (key -> Maybe (m value)) -> key
+ruleKey :: (key -> Maybe (m value)) -> key
 ruleKey = err "ruleKey"
 
-ruleValue :: Rule key value => (key -> Maybe (m value)) -> value
+ruleValue :: (key -> Maybe (m value)) -> value
 ruleValue = err "ruleValue"
 
 

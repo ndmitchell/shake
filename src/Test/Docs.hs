@@ -40,7 +40,7 @@ main = shaken noTest $ \args obj -> do
         src <- if "_md" `isSuffixOf` takeBaseName out then
             fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . noR) $ readFile' $ obj $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
         let f i (Stmt x) | any whitelist x = []
                          | otherwise = restmt i $ map undefDots $ trims x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
@@ -103,7 +103,7 @@ main = shaken noTest $ \args obj -> do
     obj "Files.lst" %> \out -> do
         need ["src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index,obj "Paths_shake.hs"]
-        filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
+        filesHs <- getDirectoryFiles (obj "dist/doc/html/shake") ["Development-*.html"]
         filesMd <- getDirectoryFiles "docs" ["*.md"]
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
