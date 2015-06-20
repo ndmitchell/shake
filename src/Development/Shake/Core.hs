@@ -554,6 +554,9 @@ applyKeyValue ks = do
     return vs
 
 
+-- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
+--   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
+--   then do nothing with it.
 wrapStack :: Global -> IO [String] -> SomeException -> IO SomeException
 wrapStack Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
     Just ShakeException{} -> return e
