@@ -1,5 +1,7 @@
 Changelog for Shake
 
+0.15.4
+    Undo a locally modified file
 0.15.3
     #254, in staunch mode, print out all exceptions
     Require extra-1.3
