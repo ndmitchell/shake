@@ -558,7 +558,7 @@ wrapStack stk e@(SomeException inner) = case cast inner of
     Just ShakeException{} -> return e
     Nothing -> do
         stk <- stk
-        return $ if null stk then e else toException $ ShakeException (last stk) stk e
+        return $ toException $ ShakeException (last $ "Unknown call stack" : stk) stk e
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
