@@ -73,6 +73,21 @@ shaken test rules sleeper = do
                                  })
                     (rules files obj)
 
+
+shaken2
+    :: (([String] -> IO ()) -> (String -> String) -> IO ())
+    -> ([String] -> (String -> String) -> Rules ())
+    -> IO ()
+    -> IO ()
+shaken2 test rules sleeper = shaken test rules2 sleeper
+    where
+        rules2 args obj = do
+            (objd,args) <- return $ partition ("$" `isPrefixOf`) args
+            (spec,phon) <- return $ partition ("!" `isPrefixOf`) args
+            want $ phon ++ map (obj . tail) objd
+            rules (map tail spec) obj
+
+
 hasTracker :: IO Bool
 hasTracker = isJust <$> if isWindows then findExecutable "tracker.exe" else lookupEnv "FSAT"
 
