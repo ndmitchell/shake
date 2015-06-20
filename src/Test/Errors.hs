@@ -83,6 +83,8 @@ main = shaken2 test $ \args obj -> do
             return file
         liftIO $ assertMissing file
 
+    when ("die" `elem` args) $ action $ error "death error"
+
 
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
@@ -140,3 +142,5 @@ test build obj = do
     src <- readFile $ obj "tempfile"
     assertMissing src
     build ["$tempdir"]
+
+    crash ["!die"] ["Shake","action","death error"]
