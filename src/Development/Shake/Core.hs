@@ -388,6 +388,12 @@ actionFinally :: Action a -> IO b -> Action a
 actionFinally = actionBoom True
 
 
+-- | Switch to a different thread, so that I can guarantee Ctrl-C exceptions
+--   won't arise.
+ctrlC :: IO a -> IO a
+ctrlC = join . onceFork
+
+
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
@@ -426,7 +432,9 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     after <- newIORef []
     absent <- newIORef []
-    withCleanup $ \cleanup -> do
+    -- switch to a different ctrlC safe thread _after_ withCleanup
+    -- so I can guarantee cleanup events all get executed
+    withCleanup $ \cleanup -> ctrlC $ do
         _ <- addCleanup cleanup $ do
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
