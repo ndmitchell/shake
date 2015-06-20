@@ -84,6 +84,9 @@ main = shaken2 test $ \args obj -> do
             return file
         liftIO $ assertMissing file
 
+    phony "fail1" $ fail "die1"
+    phony "fail2" $ fail "die2"
+
     when ("die" `elem` args) $ action $ error "death error"
 
 
@@ -149,3 +152,7 @@ test build obj = do
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []
     assert ("nothing to do" `isInfixOf` out) $ "Expected 'nothing to do', but got: " ++ out
+
+    putStrLn "## BUILD errors fail1 fail2 -k -j2"
+    (out,_) <- IO.captureOutput $ try_ $ build ["fail1","fail2","-k","-j2",""]
+    assert ("die1" `isInfixOf` out && "die2" `isInfixOf` out) $ "Expected 'die1' and 'die2', but got: " ++ out
