@@ -405,16 +405,13 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let output v = outputLocked v . abbreviate shakeAbbreviations
 
     except <- newIORef (Nothing :: Maybe (String, SomeException))
-    let staunch act | not shakeStaunch = void act
-                    | otherwise = do
-            res <- try act
-            case res of
-                Left err -> do
-                    let named = maybe "" (abbreviate shakeAbbreviations . shakeExceptionTarget) . fromException
-                    atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
-                    let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
-                    when (shakeVerbosity >= Quiet) $ output Quiet msg
-                Right _ -> return ()
+    let raiseError err
+            | not shakeStaunch = throwIO err
+            | otherwise = do
+                let named = maybe "" (abbreviate shakeAbbreviations . shakeExceptionTarget) . fromException
+                atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
+                let msg = show err ++ "Continuing due to staunch mode, this error will be repeated later"
+                when (shakeVerbosity >= Quiet) $ output Quiet msg
 
     lint <- if isNothing shakeLint then return $ const $ return () else do
         dir <- getCurrentDirectory
@@ -451,7 +448,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
-                        addPool pool $ runAction s0 s1 act $ \x -> staunch $ either throwIO return x
+                        addPool pool $ runAction s0 s1 act $ \x -> either raiseError return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
 
                 when (null $ actions rs) $ do
