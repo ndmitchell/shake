@@ -4,6 +4,7 @@ module Test.Errors(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
+import Data.List
 import Control.Monad
 import Control.Concurrent
 import Control.Exception.Extra hiding (assert)
@@ -144,3 +145,7 @@ test build obj = do
     build ["$tempdir"]
 
     crash ["!die"] ["Shake","action","death error"]
+
+    putStrLn "## BUILD errors"
+    (out,_) <- IO.captureOutput $ build []
+    assert ("nothing to do" `isInfixOf` out) $ "Expected 'nothing to do', but got: " ++ out
