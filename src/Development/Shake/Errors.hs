@@ -9,10 +9,9 @@ module Development.Shake.Errors(
     ) where
 
 import Data.Tuple.Extra
-import Control.Exception
+import Control.Exception.Extra
 import Data.Typeable
 import Data.List
-import General.Extra
 
 
 err :: String -> a

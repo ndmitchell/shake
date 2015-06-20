@@ -14,7 +14,6 @@ import qualified System.Directory as IO
 import System.Console.GetOpt
 import System.Process
 import System.Exit
-import General.Extra
 
 
 main :: IO ()

@@ -5,7 +5,6 @@ module General.Extra(
     randomElem,
     showQuote,
     withs,
-    errorIO,
     ) where
 
 import Control.Exception.Extra
@@ -20,9 +19,6 @@ import Control.Concurrent
 import Foreign.C.Types
 #endif
 
-
-errorIO :: String -> IO a
-errorIO = throwIO . ErrorCall
 
 ---------------------------------------------------------------------
 -- Data.List
