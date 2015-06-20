@@ -404,11 +404,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     let diagnostic = if shakeVerbosity >= Diagnostic then outputLocked Diagnostic . ("% "++) else const $ return ()
     let output v = outputLocked v . abbreviate shakeAbbreviations
 
-    except <- newIORef (Nothing :: Maybe (String, SomeException))
+    except <- newIORef (Nothing :: Maybe (String, ShakeException))
     let raiseError err
             | not shakeStaunch = throwIO err
             | otherwise = do
-                let named = maybe "" (abbreviate shakeAbbreviations . shakeExceptionTarget) . fromException
+                let named = abbreviate shakeAbbreviations . shakeExceptionTarget
                 atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                 -- no need to print exceptions here, they get printed when they are wrapped
 
@@ -541,7 +541,7 @@ applyKeyValue ks = do
                 when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left =<< shakeException global (showStack globalDatabase stack) e
+                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
@@ -557,12 +557,12 @@ applyKeyValue ks = do
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
 --   then do nothing with it.
-shakeException :: Global -> IO [String] -> SomeException -> IO SomeException
+shakeException :: Global -> IO [String] -> SomeException -> IO ShakeException
 shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
-    Just ShakeException{} -> return e
+    Just e@ShakeException{} -> return e
     Nothing -> do
         stk <- stk
-        e <- return $ toException $ ShakeException (last $ "Unknown call stack" : stk) stk e
+        e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
         when (shakeStaunch && shakeVerbosity >= Quiet) $
             globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
         return e
