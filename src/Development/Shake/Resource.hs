@@ -46,8 +46,7 @@ data Resource = Resource
     ,resourceShow :: String
         -- ^ String used for Show
     ,acquireResource :: Pool -> Int -> IO () -> IO ()
-        -- ^ Acquire the resource and call the function. Passes 'False' to indicate you have acquired with no blocking,
-        --   or 'True' to say there was waiting and you must not do significant computation on that thread.
+        -- ^ Acquire the resource and call the function.
     ,releaseResource :: Pool -> Int -> IO ()
         -- ^ You should only ever releaseResource that you obtained with acquireResource.
     }
