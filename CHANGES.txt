@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #259, discount time waiting for a resource in profiles
     #252, have the docs test configure not in dist
 0.15.2
     #248, add another example of using cmd
