@@ -448,7 +448,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
-                            Left e -> raiseError =<< wrapStack s0 (return ["Top-level action/want"]) e
+                            Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
 
@@ -541,7 +541,7 @@ applyKeyValue ks = do
                 when (shakeLint globalOptions == Just LintTracker)
                     trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left =<< wrapStack global (showStack globalDatabase stack) e
+                    Left e -> continue . Left =<< shakeException global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
@@ -557,8 +557,8 @@ applyKeyValue ks = do
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
 --   then do nothing with it.
-wrapStack :: Global -> IO [String] -> SomeException -> IO SomeException
-wrapStack Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
+shakeException :: Global -> IO [String] -> SomeException -> IO SomeException
+shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
     Just ShakeException{} -> return e
     Nothing -> do
         stk <- stk
