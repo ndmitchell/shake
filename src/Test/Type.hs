@@ -71,7 +71,8 @@ shaken test rules sleeper = do
                                  ,shakeReport = ["output/" ++ name ++ "/report.html"]
                                  ,shakeLint = Just $ if tracker then LintTracker else LintBasic
                                  })
-                    (rules files obj)
+                    -- if you have passed sleep, supress the "no errors" warning
+                    (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
 
 
 shaken2
