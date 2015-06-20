@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.15.3
     #254, in staunch mode, print out all exceptions
     Require extra-1.3
     #259, discount time waiting for a resource in profiles
