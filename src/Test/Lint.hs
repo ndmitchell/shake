@@ -118,7 +118,7 @@ test build obj = do
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
 
-    whenM hasTracker $ do
+    when False $ whenM hasTracker $ do
         writeFile (obj "tracker-source1") ""
         writeFile (obj "tracker-source2") ""
         writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
