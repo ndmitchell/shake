@@ -5,6 +5,7 @@ module Test.Command(main) where
 import Control.Applicative
 import Development.Shake
 import Development.Shake.FilePath
+import Control.Exception.Extra
 import System.Time.Extra
 import Control.Monad.Extra
 import System.Directory
@@ -56,8 +57,9 @@ main = shaken test $ \args obj -> do
         (Stderr err, Stdout out) <- cmd helper ["ostuff goes here","eother stuff here"]
         liftIO $ out === "stuff goes here\n"
         liftIO $ err === "other stuff here\n"
-        Stdouterr out <- cmd helper Shell "o1 w0.2 e2 w0.2 o3"
-        liftIO $ out === "1\n2\n3\n"
+        liftIO $ waits $ \w -> do
+            Stdouterr out <- cmd helper Shell ["o1",w,"e2",w,"o3"]
+            out === "1\n2\n3\n"
 
     "failure" !> do
         (Exit e, Stdout (), Stderr ()) <- cmd helper "oo ee x"
@@ -97,9 +99,10 @@ main = shaken test $ \args obj -> do
         let file = obj "file.txt"
         unit $ cmd helper (FileStdout file) (FileStderr file) (EchoStdout False) (EchoStderr False) (WithStderr False) "ofoo ebar obaz"
         liftIO $ assertContents file "foo\nbar\nbaz\n"
-        Stderr err <- cmd helper (FileStdout file) (FileStderr file) "ofoo w0.1 ebar w0.1 obaz"
-        liftIO $ err === "bar\n"
-        liftIO $ assertContents file "foo\nbar\nbaz\n"
+        liftIO $ waits $ \w -> do
+            Stderr err <- cmd helper (FileStdout file) (FileStderr file) ["ofoo",w,"ebar",w,"obaz"]
+            err === "bar\n"
+            assertContents file "foo\nbar\nbaz\n"
 
     "timer" !> do
         timer $ cmd helper
@@ -140,3 +143,8 @@ timer act = do
     (CmdTime t, CmdLine x, r) <- act
     liftIO $ putStrLn $ "Command " ++ x ++ " took " ++ show t ++ " seconds"
     return r
+
+waits :: (String -> IO ()) -> IO ()
+waits op = f 0
+    where f w | w > 1 = op "w10"
+              | otherwise = catch_ (op $ "w" ++ show w) $ const $ f $ w + 0.1
