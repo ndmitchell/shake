@@ -17,7 +17,7 @@ import System.Directory as IO
 import System.Environment.Extra
 import System.Random
 import System.Console.GetOpt
-import System.IO
+import System.IO.Extra as IO
 import System.Time.Extra
 import System.Info.Extra
 import Prelude
@@ -130,12 +130,12 @@ assertMissing file = do
 
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
-    got <- readFile file
+    got <- IO.readFile' file
     assert (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
 
 assertContentsOn :: (String -> String) -> FilePath -> String -> IO ()
 assertContentsOn f file want = do
-    got <- readFile file
+    got <- IO.readFile' file
     assert (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got ++
                                "\nWANT (transformed): " ++ f want ++ "\nGOT (transformed): " ++ f got
 
@@ -145,7 +145,7 @@ assertContentsWords = assertContentsOn (unwords . words)
 
 assertContentsInfix :: FilePath -> String -> IO ()
 assertContentsInfix file want = do
-    got <- readFile file
+    got <- IO.readFile' file
     assert (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
 
 assertContentsUnordered :: FilePath -> [String] -> IO ()
