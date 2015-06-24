@@ -120,7 +120,7 @@ iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
 
 -- decay'd division, compute a/b, with a decay of f
 -- r' is the new result, r is the last result
--- r ~= a / b
+-- r' ~= a' / b'
 -- r' = r*b + f*(a'-a)
 --      -------------
 --      b + f*(b'-b)
