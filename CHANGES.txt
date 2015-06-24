@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Fix a bug where predicted progress could sometimes be ??
     #264, make the the suite more less non-deterministic
 0.15.4
     Undo a locally modified file
