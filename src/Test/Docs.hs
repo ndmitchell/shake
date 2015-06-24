@@ -69,6 +69,7 @@ main = shaken noTest $ \args obj -> do
             ,"import System.Console.GetOpt"
             ,"import System.Directory(setCurrentDirectory)"
             ,"import qualified System.Directory"
+            ,"import System.Process"
             ,"import System.Exit"
             ,"import Control.Monad.IO.Class"
             ,"import System.IO"] ++
