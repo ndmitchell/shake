@@ -236,6 +236,10 @@ data ProgressEntry = ProgressEntry
     ,actualSecs :: Double, actualPerc :: Double
     }
 
+isInvalid :: ProgressEntry -> Bool
+isInvalid ProgressEntry{..} = isNaN actualSecs || isNaN actualPerc
+
+
 -- | Given a list of progress inputs, what would you have suggested (seconds, percentage)
 progressReplay :: [(Double, Progress)] -> [ProgressEntry]
 progressReplay [] = []
@@ -249,6 +253,7 @@ progressReplay ps = snd $ mapAccumL f (message echoMealy) ps
 -- | Given a trace, display information about how well we did
 writeProgressReport :: FilePath -> [(FilePath, [(Double, Progress)])] -> IO ()
 writeProgressReport out (map (second progressReplay) -> xs)
+    | (bad,_):_ <- filter (any isInvalid . snd) xs = errorIO $ "Progress generates NaN for " ++ bad
     | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ generateJSON xs
     | takeExtension out == ".json" = writeFile out $ generateJSON xs
     | out == "-" = putStr $ unlines $ generateSummary xs
