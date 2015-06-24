@@ -129,7 +129,7 @@ iff c t f = (\c t f -> if c then t else f) <$> c <*> t <*> f
 -- both streams must only ever increase
 decay :: Double -> Mealy i Double -> Mealy i Double -> Mealy i Double
 decay f a b = scanMealy step 0 $ (,) <$> oldMealy 0 a <*> oldMealy 0 b
-    where step r ((a,a'),(b,b')) =((r*b) + f*(a'-a)) / (b + f*(b'-b))
+    where step r ((a,a'),(b,b')) = if isNaN r then a' / b' else ((r*b) + f*(a'-a)) / (b + f*(b'-b))
 
 
 ---------------------------------------------------------------------
