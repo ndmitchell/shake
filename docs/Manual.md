@@ -177,7 +177,7 @@ As a wart, if the `cmd` call is _not_ the last line of a rule, you must precede 
 
 #### Filepath manipulation functions
 
-Shake provides a complete library of filepath manipulation functions (see the manual docs for `Development.Shake.FilePath`), but the most common are:
+Shake provides a complete library of filepath manipulation functions (see the [manual docs](http://hackage.haskell.org/package/shake/docs/Development-Shake-FilePath.html) for `Development.Shake.FilePath`), but the most common are:
 
 * `str1 </> str2` - add the path components together with a slash, e.g. `"_build" </> "main.o"` equals `"_build/main.o"`.
 * `str1 <.> str2` - add an extension, e.g. `"main" <.> "o"` equals `"main.o"`.
