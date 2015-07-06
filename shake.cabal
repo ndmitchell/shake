@@ -32,6 +32,9 @@ description:
 homepage:           http://shakebuild.com
 bug-reports:        https://github.com/ndmitchell/shake/issues
 tested-with:        GHC==7.10.1, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2
+extra-doc-files:
+    CHANGES.txt
+    README.md
 extra-source-files:
     src/Test/C/constants.c
     src/Test/C/constants.h
@@ -51,8 +54,6 @@ extra-source-files:
     src/Test/Tup/newmath/square.c
     src/Test/Tup/newmath/square.h
     src/Paths.hs
-    CHANGES.txt
-    README.md
     docs/Manual.md
     docs/Ninja.md
     docs/Why.md
