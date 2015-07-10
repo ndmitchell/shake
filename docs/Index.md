@@ -25,7 +25,7 @@ You can ask questions on [StackOverflow](http://stackoverflow.com/questions/tagg
 
 ## What else?
 
-Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](http://www.cmake.org/) and [Meson](https://jpakkane.github.io/meson/). Shake can [predict completion time](Manual.md#progress), [profile build systems](Manual.md#profiling) and [sanity check builds](Manual.md#lint). Shake is based on a robust underlying theory from [this academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf). Shake is an open source project under the [BSD license](https://github.com/ndmitchell/shake/blob/master/LICENSE) hosted on [GitHub](https://github.com/ndmitchell/shake/).
+Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](http://www.cmake.org/) and [Meson](http://mesonbuild.com/). Shake can [predict completion time](Manual.md#progress), [profile build systems](Manual.md#profiling) and [sanity check builds](Manual.md#lint). Shake is based on a robust underlying theory from [this academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf). Shake is an open source project under the [BSD license](https://github.com/ndmitchell/shake/blob/master/LICENSE) hosted on [GitHub](https://github.com/ndmitchell/shake/).
 
 ## Who uses Shake?
 
