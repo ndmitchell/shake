@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #279, make usingConfigFile do a need on the config file
     Fix a bug where predicted progress could sometimes be ??
     #264, make the the suite more less non-deterministic
 0.15.4
