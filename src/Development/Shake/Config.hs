@@ -62,7 +62,9 @@ newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,NF
 -- | Specify the file to use with 'getConfig'.
 usingConfigFile :: FilePath -> Rules ()
 usingConfigFile file = do
-    mp <- newCache $ \() -> liftIO $ readConfigFile file
+    mp <- newCache $ \() -> do
+        need [file]
+        liftIO $ readConfigFile file
     addOracle $ \(Config x) -> Map.lookup x <$> mp ()
     addOracle $ \(ConfigKeys x) -> sort . Map.keys <$> mp ()
     return ()
