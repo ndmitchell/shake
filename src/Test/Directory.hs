@@ -8,6 +8,7 @@ import Data.List
 import Control.Monad
 import System.Directory(getCurrentDirectory, setCurrentDirectory, createDirectory, createDirectoryIfMissing)
 import qualified System.Directory as IO
+import qualified System.IO.Extra as IO
 
 
 -- Use escape characters, _o=* _l=/ __=<space>
@@ -78,7 +79,7 @@ test build obj = do
     assertContents (obj "dots") $ unlines $ words "True True True True True"
 
     let removeTest pat del keep = do
-            withTemporaryDirectory $ \dir -> do
+            IO.withTempDir $ \dir -> do
                 forM_ (del ++ keep) $ \s -> do
                     createDirectoryIfMissing True $ dir </> takeDirectory s
                     when (not $ hasTrailingPathSeparator s) $
