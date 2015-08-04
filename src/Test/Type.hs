@@ -219,18 +219,3 @@ copyFileChanged old new = do
     good <- IO.doesFileExist new
     good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
     when (not good) $ copyFile old new
-
-
-withTemporaryDirectory :: (FilePath -> IO ()) -> IO ()
-withTemporaryDirectory act = do
-    tdir <- getTemporaryDirectory
-    bracket
-        (openTempFile tdir "shake.hs")
-        (removeFile . fst)
-        $ \(file,h) -> do
-            hClose h
-            let dir = file ++ "_"
-            bracket_ (createDirectory dir) (removeDirectoryRecursive dir) (act dir)
-
-skip :: Monad m => a -> m ()
-skip x = return ()
