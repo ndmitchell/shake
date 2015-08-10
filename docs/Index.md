@@ -36,6 +36,7 @@ Shake is used by lots of companies, but only a few have declared so publicly.
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872), producing several [open-source projects](https://github.com/samplecount) for working with Shake.
 * [CovenantEyes](http://samplecount.com/) use Shake to build their Windows client, as mentioned in their [tweet](https://twitter.com/eacameron88/status/543219899599163392).
 * [Keystone Tower Systems](http://keystonetowersystems.com/) has a robotic welder with a Shake build system plus Haskell code running in the control system, as mentioned in their [tweet](https://twitter.com/eric_oconnor/status/581576757062434816).
+* [FP Complete](https://www.fpcomplete.com/) use Shake to [create Docker images](https://www.fpcomplete.com/blog/2015/08/stack-docker#images).
 
 There are several libraries providing pre-made rules for Shake:
 
