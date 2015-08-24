@@ -5,7 +5,7 @@ import Development.Shake
 import Control.Concurrent.Extra
 import Control.Exception.Extra
 import Control.Monad
-import Data.Either
+import Data.Either.Extra
 import Test.Type
 
 
