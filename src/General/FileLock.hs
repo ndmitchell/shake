@@ -4,6 +4,7 @@ module General.FileLock(withLockFile) where
 
 import Control.Exception.Extra
 #ifdef mingw32_HOST_OS
+import Data.Bits
 import Data.Word
 import Foreign.Ptr
 import Foreign.C.Types
@@ -18,7 +19,8 @@ foreign import stdcall unsafe "Windows.h CreateFileW" c_CreateFileW :: Ptr CWcha
 foreign import stdcall unsafe "Windows.h CloseHandle" c_CloseHandle :: Ptr () -> IO Bool
 foreign import stdcall unsafe "Windows.h GetLastError" c_GetLastError :: IO Word32
 
-c_GENERIC_READ = 0x80000000 :: Word32
+c_GENERIC_WRITE = 0x40000000 :: Word32
+c_GENERIC_READ  = 0x80000000 :: Word32
 c_FILE_SHARE_NONE = 0 :: Word32
 c_OPEN_ALWAYS = 4 :: Word32
 c_FILE_ATTRIBUTE_NORMAL = 0x80 :: Word32
@@ -31,7 +33,7 @@ withLockFile :: FilePath -> IO a -> IO a
 #ifdef mingw32_HOST_OS
 
 withLockFile file act = withCWString file $ \cfile -> do
-    let open = c_CreateFileW cfile c_GENERIC_READ c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
+    let open = c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
     bracket open c_CloseHandle $ \h ->
         if h == c_INVALID_HANDLE_VALUE then do
             err <- c_GetLastError
