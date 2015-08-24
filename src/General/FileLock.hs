@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, ScopedTypeVariables #-}
 
 module General.FileLock(withLockFile) where
 
@@ -47,13 +47,13 @@ withLockFile file act = withCWString file $ \cfile -> do
 withLockFile file act = do
     try $ writeFile file :: IO (Either IOException ())
 
-    bracket (openFd file ReadWrite Nothing IO.defaultFileFlags) closeFd $ \fd -> do
+    bracket (openFd file ReadWrite Nothing defaultFileFlags) closeFd $ \fd -> do
         let lock = (WriteLock, AbsoluteSeek, 0, 0)
         res <- try $ setLock fd lock
         case res of
             Right () -> act
             Left (e :: IOException) -> do
-                res <- IO.getLock fd lock
+                res <- getLock fd lock
                 errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
                           (case res of
                                Nothing -> ""
