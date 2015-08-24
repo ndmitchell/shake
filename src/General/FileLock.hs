@@ -47,6 +47,7 @@ withLockFile file act = withCWString file $ \cfile -> do
 #else
 
 withLockFile file act = do
+    createDirectoryIfMissing True $ takeDirectory file
     try $ writeFile file "" :: IO (Either IOException ())
 
     bracket (openFd file ReadWrite Nothing defaultFileFlags) closeFd $ \fd -> do
