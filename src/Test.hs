@@ -23,6 +23,7 @@ import qualified Test.Digest as Digest
 import qualified Test.Directory as Directory
 import qualified Test.Docs as Docs
 import qualified Test.Errors as Errors
+import qualified Test.FileLock as FileLock
 import qualified Test.Files as Files
 import qualified Test.FilePath as FilePath
 import qualified Test.FilePattern as FilePattern
@@ -58,7 +59,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main
         ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
-        ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main
+        ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
         ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "makefile" * Makefile.main, "manual" * Manual.main
         ,"monad" * Monad.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main

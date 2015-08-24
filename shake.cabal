@@ -264,6 +264,7 @@ test-suite shake-test
         Test.Directory
         Test.Docs
         Test.Errors
+        Test.FileLock
         Test.FilePath
         Test.FilePattern
         Test.Files
