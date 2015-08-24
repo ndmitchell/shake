@@ -109,6 +109,8 @@ library
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
+    if !os(windows)
+        build-depends: unix
 
     exposed-modules:
         Development.Shake
@@ -198,6 +200,8 @@ executable shake
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
+    if !os(windows)
+        build-depends: unix
 
     other-modules:
         Development.Make.All
@@ -241,6 +245,8 @@ test-suite shake-test
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
+    if !os(windows)
+        build-depends: unix
 
     other-modules:
         Development.Make.All
