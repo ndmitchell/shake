@@ -2,14 +2,15 @@
 
 module General.FileLock(withLockFile) where
 
+import Control.Exception.Extra
 #ifdef mingw32_HOST_OS
 import Data.Word
 import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
-import Control.Exception.Extra
 #else
-import qualified System.Posix.IO as IO
+import System.IO
+import System.Posix.IO
 #endif
 
 #ifdef mingw32_HOST_OS
@@ -46,9 +47,9 @@ withLockFile file act = withCWString file $ \cfile -> do
 withLockFile file act = do
     try $ writeFile file :: IO (Either IOException ())
 
-    bracket (IO.openFd fn IO.ReadWrite Nothing IO.defaultFileFlags) IO.closeFd $ \fd -> do
-        let lock = (IO.WriteLock, IO.AbsoluteSeek, 0, 0)
-        res <- try $ IO.setLock fd lock
+    bracket (openFd file ReadWrite Nothing IO.defaultFileFlags) closeFd $ \fd -> do
+        let lock = (WriteLock, AbsoluteSeek, 0, 0)
+        res <- try $ setLock fd lock
         case res of
             Right () -> act
             Left (e :: IOException) -> do
