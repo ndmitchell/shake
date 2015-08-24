@@ -92,18 +92,18 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 -- Directly against the Win32 API, twice as fast as the portable version
 getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
-        res <- c_getFileAttributesExA file 0 fad
+        res <- c_GetFileAttributesExA file 0 fad
         let peek = do mt <- peekLastWriteTimeLow fad; sz <- peekFileSizeLow fad; return $ Just (fileInfo mt, fileInfo sz)
         if res then
             peek
          else if requireU x then withCWString (unpackU x) $ \file -> do
-            res <- c_getFileAttributesExW file 0 fad
+            res <- c_GetFileAttributesExW file 0 fad
             if res then peek else return Nothing
          else
             return Nothing
 
-foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_getFileAttributesExA :: Ptr CChar  -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
-foreign import stdcall unsafe "Windows.h GetFileAttributesExW" c_getFileAttributesExW :: Ptr CWchar -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import stdcall unsafe "Windows.h GetFileAttributesExA" c_GetFileAttributesExA :: Ptr CChar  -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import stdcall unsafe "Windows.h GetFileAttributesExW" c_GetFileAttributesExW :: Ptr CWchar -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
 
 data WIN32_FILE_ATTRIBUTE_DATA
 
