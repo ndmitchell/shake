@@ -54,8 +54,9 @@ withLockFile file act = do
             Left (e :: IOException) -> do
                 res <- IO.getLock fd lock
                 errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
-                          (case res of Nothing -> ""; Just (pid, _) ->
-                              "Shake appears to be using this lock with process ID " ++ show pid ++ "\n") ++
+                          (case res of
+                               Nothing -> ""
+                               Just (pid, _) -> "Shake process ID " ++ show pid ++ " is using this lock.\n") ++
                           show e
 
 #endif
