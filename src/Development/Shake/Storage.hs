@@ -12,6 +12,7 @@ module Development.Shake.Storage(
 import General.Binary
 import Development.Shake.Types
 import General.Timing
+import General.FileLock
 
 import Data.Tuple.Extra
 import Control.Exception.Extra
@@ -61,7 +62,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{..} diagnostic witness act = do
+withStorage ShakeOptions{..} diagnostic witness act = withLockFile (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
         bupfile = shakeFiles </> ".shake.backup"
     createDirectoryIfMissing True shakeFiles
