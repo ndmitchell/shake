@@ -11,6 +11,7 @@ import Foreign.C.Types
 import Foreign.C.String
 #else
 import System.Directory
+import System.FilePath
 import System.IO
 import System.Posix.IO
 #endif
