@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #4, add a lock file to stop corrupting databases
 0.15.5
     #279, make usingConfigFile do a need on the config file
     Fix a bug where predicted progress could sometimes be ??
