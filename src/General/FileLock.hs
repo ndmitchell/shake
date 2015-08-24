@@ -45,7 +45,7 @@ withLockFile file act = withCWString file $ \cfile -> do
 #else
 
 withLockFile file act = do
-    try $ writeFile file :: IO (Either IOException ())
+    try $ writeFile file "" :: IO (Either IOException ())
 
     bracket (openFd file ReadWrite Nothing defaultFileFlags) closeFd $ \fd -> do
         let lock = (WriteLock, AbsoluteSeek, 0, 0)
