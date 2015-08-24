@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, PatternGuards, NamedFieldPuns, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards, RecordWildCards, FlexibleInstances, MultiParamTypeClasses #-}
 {-
 This module stores the meta-data so its very important its always accurate
 We can't rely on getting any exceptions or termination at the end, so we'd better write out a journal
@@ -61,7 +61,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{shakeVerbosity,shakeOutput,shakeVersion,shakeVersionIgnore,shakeFlush,shakeFiles,shakeStorageLog} diagnostic witness act = do
+withStorage ShakeOptions{..} diagnostic witness act = do
     let dbfile = shakeFiles </> ".shake.database"
         bupfile = shakeFiles </> ".shake.backup"
     createDirectoryIfMissing True shakeFiles
