@@ -27,6 +27,7 @@ import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra
 import Control.Monad.Extra
+import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
 import Data.Typeable
@@ -183,7 +184,7 @@ ruleValue = err "ruleValue"
 --   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation. To define your own
 --   custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
-    deriving (Monad, Functor, Applicative)
+    deriving (Monad, Functor, Applicative, MonadFix)
 
 rulesIO :: IO a -> Rules a
 rulesIO = Rules . liftIO

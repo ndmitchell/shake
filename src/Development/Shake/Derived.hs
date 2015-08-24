@@ -115,7 +115,7 @@ copyFile' old new = do
     liftIO $ copyFile old new
 
 
--- | @copyFile' old new@ copies the existing file from @old@ to @new@, if the contents have changed.
+-- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
