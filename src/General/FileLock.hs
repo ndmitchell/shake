@@ -35,6 +35,7 @@ withLockFile :: FilePath -> IO a -> IO a
 #ifdef mingw32_HOST_OS
 
 withLockFile file act = withCWString file $ \cfile -> do
+    createDirectoryIfMissing True $ takeDirectory file
     let open = c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
     bracket open c_CloseHandle $ \h ->
         if h == c_INVALID_HANDLE_VALUE then do
