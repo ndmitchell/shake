@@ -90,6 +90,10 @@ main = shaken2 test $ \args obj -> do
     when ("die" `elem` args) $ action $ error "death error"
 
 
+    -- not tested by default since only causes an error when idle GC is turned on
+    phony "block" $ do
+        liftIO $ putStrLn $ let x = x in x
+
 test build obj = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
     build ["clean"]
