@@ -180,7 +180,7 @@ shakeArgsWith baseOpts userOptions rules = do
             in case res of
                 Left err ->
                     if Exception `elem` flagsExtra then
-                        throw err
+                        throwIO err
                     else do
                         putStrLn $ esc "31" $ show err
                         exitFailure

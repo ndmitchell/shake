@@ -160,5 +160,5 @@ runPool deterministic n act = do
         addPool pool $ act pool
         res <- waitBarrier res
         case res of
-            Left e -> throw e
+            Left e -> throwIO e
             Right s -> addTiming $ "Pool finished (" ++ show (threadsSum s) ++ " threads, " ++ show (threadsMax s) ++ " max)"
