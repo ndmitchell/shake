@@ -7,6 +7,7 @@ module Development.Shake.Pool(
     ) where
 
 import Control.Concurrent.Extra
+import System.Time.Extra
 import Control.Exception
 import Control.Monad
 import General.Timing
@@ -148,14 +149,26 @@ increasePool pool = do
 runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool deterministic n act = do
     s <- newVar $ Just $ emptyS n deterministic
+    done <- newBarrier
+
     let cleanup = modifyVar_ s $ \s -> do
             -- if someone kills our thread, make sure we kill our child threads
             case s of
                 Just s -> mapM_ killThread $ Set.toList $ threads s
                 Nothing -> return ()
             return Nothing
-    flip onException cleanup $ do
-        done <- newBarrier
+
+    let ghc10793 = do
+            -- if this thread dies because it is blocked on an MVar there's a chance we have
+            -- a better error in the done barrier, and GHC raised the exception wrongly, see:
+            -- https://ghc.haskell.org/trac/ghc/ticket/10793
+            sleep 1 -- give it a little bit of time for the finally to run
+                    -- no big deal, since the blocked indefinitely takes a while to fire anyway
+            res <- waitBarrierMaybe done
+            case res of
+                Just (Left e) -> throwIO e
+                _ -> throwIO BlockedIndefinitelyOnMVar
+    handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip onException cleanup $ do
         let pool = Pool s done
         addPool pool $ act pool
         res <- waitBarrier done
