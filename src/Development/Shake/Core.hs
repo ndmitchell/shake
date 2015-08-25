@@ -819,7 +819,7 @@ withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     Global{..} <- Action getRO
     liftIO $ globalDiagnostic $ show r ++ " waiting to acquire " ++ show i
-    offset <- liftIO $ offsetTime
+    offset <- liftIO offsetTime
     Action $ captureRAW $ \continue -> acquireResource r globalPool i $ continue $ Right ()
     res <- Action $ tryRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) $ do
         offset <- liftIO offset
