@@ -55,7 +55,7 @@ test build obj = do
         thread <- newEmptyMVar
         done <- newEmptyMVar
         res <- newMVar True
-        t <- forkIO $ finally (putMVar done ()) $ runPool deterministic 1 $ \pool ->
+        t <- forkIO $ flip finally (putMVar done ()) $ runPool deterministic 1 $ \pool ->
             addPool pool $ do
                 t <- takeMVar thread
                 killThread t
