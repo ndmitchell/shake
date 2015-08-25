@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #293, add getProgress
     #270, support MonadFix for Rules, allows recursive cache
     #295, discount time spent waiting for a cache
     #294, give better error messages if you hit GHC bug #10793

@@ -12,7 +12,7 @@ module Development.Shake.Core(
     ShakeValue,
 #endif
     Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
-    Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions,
+    Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
@@ -348,6 +348,7 @@ data Global = Global
     ,globalLint :: String -> IO ()
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
+    ,globalProgress :: IO Progress
     }
 
 
@@ -446,7 +447,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent
+                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act -> do
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
@@ -579,6 +580,12 @@ apply1 = fmap head . apply . return
 -- | Get the initial 'ShakeOptions', these will not change during the build process.
 getShakeOptions :: Action ShakeOptions
 getShakeOptions = Action $ getsRO globalOptions
+
+-- | Get the current 'Progress' structure, as would be returned by 'shakeProgress'.
+getProgress :: Action Progress
+getProgress = do
+    res <- Action $ getsRO globalProgress
+    liftIO res
 
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
