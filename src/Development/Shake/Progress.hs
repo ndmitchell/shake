@@ -45,9 +45,10 @@ foreign import stdcall "Windows.h SetConsoleTitleW" c_setConsoleTitle :: Ptr CCh
 ---------------------------------------------------------------------
 -- PROGRESS TYPES - exposed to the user
 
--- | Information about the current state of the build, obtained by passing a callback function
---   to 'Development.Shake.shakeProgress'. Typically a program will use 'progressDisplay' to poll this value and produce
---   status messages, which is implemented using this data type.
+-- | Information about the current state of the build, obtained by either passing a callback function
+--   to 'Development.Shake.shakeProgress' (asynchronous output) or 'Development.Shake.getProgress'
+--   (synchronous output). Typically a build system will pass 'progressDisplay' to 'Development.Shake.shakeProgress',
+--   which will poll this value and produce status messages.
 data Progress = Progress
     {isFailure :: !(Maybe String) -- ^ Starts out 'Nothing', becomes 'Just' a target name if a rule fails.
     ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
