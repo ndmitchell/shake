@@ -155,10 +155,10 @@ runPool deterministic n act = do
                 Nothing -> return ()
             return Nothing
     flip onException cleanup $ do
-        res <- newBarrier
-        let pool = Pool s res
+        done <- newBarrier
+        let pool = Pool s done
         addPool pool $ act pool
-        res <- waitBarrier res
+        res <- waitBarrier done
         case res of
             Left e -> throwIO e
             Right s -> addTiming $ "Pool finished (" ++ show (threadsSum s) ++ " threads, " ++ show (threadsMax s) ++ " max)"
