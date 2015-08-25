@@ -433,7 +433,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
         withNumCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
-                tid <- forkIO $ flip finally (signalBarrier wait ()) $
+                tid <- flip forkFinally (const $ signalBarrier wait ()) $
                     shakeProgress $ do
                         failure <- fmap (fmap fst) $ readIORef except
                         stats <- progress database
