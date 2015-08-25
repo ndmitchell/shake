@@ -3,6 +3,8 @@
 module General.FileLock(withLockFile) where
 
 import Control.Exception.Extra
+import System.Directory
+import System.FilePath
 #ifdef mingw32_HOST_OS
 import Data.Bits
 import Data.Word
@@ -10,8 +12,6 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 #else
-import System.Directory
-import System.FilePath
 import System.IO
 import System.Posix.IO
 #endif
