@@ -852,16 +852,17 @@ newCacheIO act = do
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
                 res <- liftIO $ testFence bar
-                res <- case res of
-                    Just res -> return res
+                (res,offset) <- case res of
+                    Just res -> return (res, 0)
                     Nothing -> do
                         pool <- Action $ getsRO globalPool
+                        offset <- liftIO offsetTime
                         Action $ captureRAW $ \k -> waitFence bar $ \v ->
-                            addPool pool $ k $ Right v
+                            addPool pool $ do offset <- liftIO offset; k $ Right (v,offset)
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
-                        Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s}
+                        Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s, localDiscount = localDiscount s + offset}
                         return v
             Nothing -> do
                 bar <- newFence

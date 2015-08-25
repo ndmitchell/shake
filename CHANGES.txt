@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #295, discount time spent waiting for a cache
     #294, give better error messages if you hit GHC bug #10793
     #4, add a lock file to stop corrupting databases
 0.15.5
