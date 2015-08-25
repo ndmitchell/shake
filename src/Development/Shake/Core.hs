@@ -433,11 +433,12 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
         withNumCapabilities shakeThreads $ do
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
-                tid <- flip forkFinally (const $ signalBarrier wait ()) $
-                    shakeProgress $ do
+                let getProgress = do
                         failure <- fmap (fmap fst) $ readIORef except
                         stats <- progress database
                         return stats{isFailure=failure}
+                tid <- flip forkFinally (const $ signalBarrier wait ()) $
+                    shakeProgress getProgress
                 addCleanup cleanup $ do
                     killThread tid
                     void $ timeout 1000000 $ waitBarrier wait
