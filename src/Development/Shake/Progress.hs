@@ -37,9 +37,7 @@ import Prelude
 import Foreign
 import Foreign.C.Types
 
-type LPCSTR = Ptr CChar
-
-foreign import stdcall "Windows.h SetConsoleTitleA" c_setConsoleTitle :: LPCSTR -> IO Bool
+foreign import stdcall "Windows.h SetConsoleTitleW" c_setConsoleTitle :: Ptr CChar -> IO Bool
 
 #endif
 
