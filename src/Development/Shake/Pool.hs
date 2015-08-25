@@ -103,15 +103,15 @@ step pool@(Pool var done) op = do
         case res of
             Just (now, todo2) | Set.size (threads s) < threadsLimit s -> do
                 -- spawn a new worker
-                t <- forkIO $ do
-                    t <- myThreadId
-                    res <- try now
-                    case res of
-                        Left e -> onVar $ \s -> do
-                            mapM_ killThread $ Set.toList $ Set.delete t $ threads s
-                            signalBarrier done $ Left e
-                            return Nothing
-                        Right _ -> step pool $ \s -> return s{threads = Set.delete t $ threads s}
+                t <- forkFinally now $ \res -> case res of
+                    Left e -> onVar $ \s -> do
+                        t <- myThreadId
+                        mapM_ killThread $ Set.toList $ Set.delete t $ threads s
+                        signalBarrier done $ Left e
+                        return Nothing
+                    Right _ -> do
+                        t <- myThreadId
+                        step pool $ \s -> return s{threads = Set.delete t $ threads s}
                 let threads2 = Set.insert t $ threads s
                 return $ Just s{todo = todo2, threads = threads2
                                ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` Set.size threads2}
