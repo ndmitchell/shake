@@ -138,7 +138,7 @@ defaultRuleDirectory = do
 --   You should not call 'doesFileExist' on files which can be created by the build system.
 doesFileExist :: FilePath -> Action Bool
 doesFileExist file = do
-    DoesFileExistA res <- apply1 $ DoesFileExistQ file
+    DoesFileExistA res <- apply1 $ DoesFileExistQ $ toStandard file
     return res
 
 -- | Returns 'True' if the directory exists. The existence of the directory is tracked as a
@@ -147,7 +147,7 @@ doesFileExist file = do
 --   You should not call 'doesDirectoryExist' on directories which can be created by the build system.
 doesDirectoryExist :: FilePath -> Action Bool
 doesDirectoryExist file = do
-    DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ file
+    DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ $ toStandard file
     return res
 
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
