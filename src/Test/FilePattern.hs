@@ -25,6 +25,11 @@ test build obj = do
     f True "foo/bar" (toNative "foo/bar")
     f True (toNative "foo/bar") "foo/bar"
     f True (toNative "foo/bar") (toNative "foo/bar")
+    f True "//*" "/bar"
+    f True "/bob//foo" "/bob/this/test/foo"
+    f False "/bob//foo" "bob/this/test/foo"
+    f True "bob//foo/" "bob/this/test/foo/"
+    f False "bob//foo/" "bob/this/test/foo"
 
     assert (compatible []) "compatible"
     assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
