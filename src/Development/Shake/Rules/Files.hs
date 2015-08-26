@@ -137,7 +137,8 @@ ps &%> act
 getFileTimes :: String -> [FileQ] -> Action FilesA
 getFileTimes name xs = do
     opts <- getShakeOptions
-    ys <- liftIO $ mapM (storedValue opts) xs
+    let opts2 = if shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
+    ys <- liftIO $ mapM (storedValue opts2) xs
     case sequence ys of
         Just ys -> return $ FilesA ys
         Nothing | not $ shakeCreationCheck opts -> return $ FilesA []
