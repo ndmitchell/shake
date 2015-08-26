@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #285, improve the documentation for phony/alwaysRerun
     #284, fix the documentation for normaliseEx
     #293, add getProgress
     #270, support MonadFix for Rules, allows recursive cache

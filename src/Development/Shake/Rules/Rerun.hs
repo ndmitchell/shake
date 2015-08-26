@@ -30,6 +30,8 @@ instance Rule AlwaysRerunQ AlwaysRerunA where
 --     'Development.Shake.Stdout' stdout <- 'Development.Shake.cmd' \"ghc --numeric-version\"
 --     'Development.Shake.writeFileChanged' out stdout
 -- @
+--
+--   In make, the @.PHONY@ attribute on file-producing rules has a similar effect.
 alwaysRerun :: Action ()
 alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
