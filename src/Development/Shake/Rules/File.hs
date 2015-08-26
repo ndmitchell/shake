@@ -202,7 +202,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --
 --   Phony actions are intended to define command-line abbreviations. If you 'need' a phony action
 --   in a rule then every execution where that rule is required will rerun both the rule and the phony
---   action.
+--   action. A phony action will run at most once per build.
 phony :: String -> Action () -> Rules ()
 phony name act = phonys $ \s -> if s == name then Just act else Nothing
 

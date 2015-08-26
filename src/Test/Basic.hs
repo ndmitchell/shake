@@ -41,6 +41,10 @@ main = shaken test $ \args obj -> do
         need [obj "configure",obj "once.txt"]
         liftIO $ appendFile (obj "install") "1"
 
+    phony "duplicate1" $ need ["duplicate2","duplicate3"]
+    phony "duplicate2" $ need ["duplicate3"]
+    phony "duplicate3" $ liftIO $ appendFile (obj "duplicate") "1"
+
     phony "dummy" $ do
         liftIO $ appendFile (obj "dummy") "1"
 
@@ -142,5 +146,9 @@ test build obj = do
     assertContents (obj "threads.txt") "3"
     build ["!threads","-j0"]
     assertContents (obj "threads.txt") (show processors)
+
+    writeFile (obj "duplicate") ""
+    build ["!duplicate1","!duplicate3"]
+    assertContents (obj "duplicate") "1"
 
     build [] -- should say "no want/action statements, nothing to do" (checked manually)
