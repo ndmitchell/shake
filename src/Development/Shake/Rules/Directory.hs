@@ -160,7 +160,7 @@ getEnv var = do
     GetEnvA res <- apply1 $ GetEnvQ var
     return res
 
--- | Return the value of the environment variable, or the default value if it
+-- | Return the value of the environment variable, or the default value if it is
 --   not set. Similar to 'getEnv'.
 getEnvWithDefault :: String -> String -> Action String
 getEnvWithDefault def var = fromMaybe def <$> getEnv var
