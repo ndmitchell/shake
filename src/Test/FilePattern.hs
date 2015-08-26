@@ -5,8 +5,23 @@ import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Data.Tuple.Extra
 import Test.Type
+import Test.QuickCheck hiding ((===))
 
 main = shaken test $ \args obj -> return ()
+
+
+newtype Pattern = Pattern FilePattern deriving (Show,Eq)
+newtype Path    = Path    FilePath    deriving (Show,Eq)
+
+-- Since / and * are the only "interesting" elements, just add ab to round out the set
+
+instance Arbitrary Pattern where
+    arbitrary = fmap Pattern $ listOf $ elements "\\/*ab"
+    shrink (Pattern x) = map Pattern $ shrinkList (const []) x
+
+instance Arbitrary Path where
+    arbitrary = fmap Path $ listOf $ elements "\\/ab"
+    shrink (Path x) = map Path $ shrinkList (const []) x
 
 
 test build obj = do
@@ -50,24 +65,6 @@ test build obj = do
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
 
-
----------------------------------------------------------------------
--- LAZY SMALLCHECK PROPERTIES
-
-{-
-newtype Pattern = Pattern FilePattern deriving (Show,Eq)
-newtype Path    = Path    FilePath    deriving (Show,Eq)
-
--- Since / and * are the only "interesting" elements, just add ab to round out the set
-
-instance Serial Pattern where
-    series = cons Pattern >< f
-        where f = cons [] \/ cons (:) >< const (drawnFrom "/*ab") >< f
-
-instance Serial Path where
-    series = cons Path >< f
-        where f = cons [] \/ cons (:) >< const (drawnFrom "/ab") >< f
-
-testSmallCheck = do
-    smallCheck 10 $ \(Pattern p) (Path x) -> p ?== x ==> substitute (extract p x) p == x
--}
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(Pattern p) (Path x) ->
+        if p ?== x then property $ toStandard (substitute (extract p x) p) == toStandard x else label "Trivial" True
+    return ()
