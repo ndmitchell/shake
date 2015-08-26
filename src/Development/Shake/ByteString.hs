@@ -43,6 +43,7 @@ linesCR x = case BS.split '\n' x of
                  | otherwise = Just (BS.last x, BS.init x)
 
 
+-- | Equivalent to @toStandard . normaliseEx@ from "Development.Shake.FilePath".
 filepathNormalise :: BS.ByteString -> BS.ByteString
 filepathNormalise xs
     | isWindows, Just (a,xs) <- BS.uncons xs, sep a, Just (b,_) <- BS.uncons xs, sep b = '/' `BS.cons` f xs
