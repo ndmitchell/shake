@@ -81,7 +81,7 @@ generateJSON = jsonListLines . map showEntry
             ,("built", show prfBuilt)
             ,("changed", show prfChanged)
             ,("depends", show prfDepends)
-            ,("execution", show prfExecution)] ++
+            ,("execution", showDP 4 prfExecution)] ++
             [("traces", jsonList $ map showTrace prfTraces) | not $ null prfTraces]
         showTrace ProfileTrace{..} = jsonObject
             [("command",show prfCommand), ("start",show prfStart), ("stop",show prfStop)]
