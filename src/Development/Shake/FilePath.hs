@@ -75,7 +75,7 @@ takeDirectory1 = takeWhile (not . isPathSeparator)
 --
 -- * All 'pathSeparators' become 'pathSeparator' (@\/@ on Linux, @\\@ on Windows)
 --
--- * @foo\/bar\/..\/baz@ becomes @foo\/baz@
+-- * @foo\/bar\/..\/baz@ becomes @foo\/baz@ (not universally true in the presence of symlinks)
 --
 -- * @foo\/.\/bar@ becomes @foo\/bar@
 --
