@@ -78,6 +78,8 @@ instance Rule FileQ FileA where
              else NotEqual
         where bool b = if b then EqualCheap else NotEqual
 
+
+-- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
 storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
 {-
 storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
