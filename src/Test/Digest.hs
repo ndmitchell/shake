@@ -18,6 +18,11 @@ main = shaken test $ \args obj -> do
         liftIO $ appendFile out1 txt
         liftIO $ appendFile out2 txt
 
+    [obj "Bug1.txt",obj "Bug2.txt"] &%> \[out1,out2] -> do
+        need [obj "Bug3.txt"]
+        writeFile' out1 "X"
+        writeFile' out2 "Y"
+
     "leaf" ~> return ()
     obj "node1.txt" %> \file -> do need ["leaf"]; writeFile' file "x"
     obj "node2.txt" %> \file -> do need [obj "node1.txt"]; liftIO $ appendFile file "x"
@@ -86,3 +91,9 @@ test build obj = do
         writeFile (obj "node2.txt") "y"
         replicateM_ 2 $ build $ ["node2.txt","--sleep"] ++ [flag | flag /= ""]
         assertContents (obj "node2.txt") $ 'y' : replicate count 'x'
+
+    -- test for #296
+    writeFile (obj "Bug3.txt") "X"
+    build ["--digest-and-input","Bug1.txt","--sleep"]
+    writeFile (obj "Bug3.txt") "Y"
+    build ["--digest-and-input","Bug1.txt","--lint"]
