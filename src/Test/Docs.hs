@@ -216,7 +216,7 @@ whitelist x | elem x $ words $
     "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja ByteString ProcessHandle " ++
     "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
-    "@ndm_haskell file-name " ++
+    "@ndm_haskell file-name .PHONY filepath " ++
     "*> "
     = True
 whitelist x | "Stdout out" `isInfixOf` x || "Stderr err" `isInfixOf` x = True
