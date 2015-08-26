@@ -491,9 +491,12 @@ function /* export */ leaf()
     return queryVal.depends.length === 0;
 }
 
-function /* export */ run()
+function /* export */ run(i)
 {
-    return queryVal.built;
+    if (i === undefined)
+        return queryVal.built;
+    else
+        return queryVal.built === i;
 }
 
 function /* export */ unchanged()
