@@ -71,7 +71,7 @@ takeDirectory1 :: FilePath -> FilePath
 takeDirectory1 = takeWhile (not . isPathSeparator)
 
 
--- | Normalise a 'FilePath', trying to do:
+-- | Normalise a 'FilePath', applying the rules:
 --
 -- * All 'pathSeparators' become 'pathSeparator' (@\/@ on Linux, @\\@ on Windows)
 --
@@ -81,7 +81,7 @@ takeDirectory1 = takeWhile (not . isPathSeparator)
 --
 -- * @foo\/\/bar@ becomes @foo\/bar@
 --
---   This function is not based on the normalise function from the filepath library, as that function
+--   This function is not based on the 'normalise' function from the @filepath@ library, as that function
 --   is quite broken.
 normaliseEx :: FilePath -> FilePath
 normaliseEx xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) -- account for UNC paths being double //
