@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #284, fix the documentation for normaliseEx
     #293, add getProgress
     #270, support MonadFix for Rules, allows recursive cache
     #295, discount time spent waiting for a cache

@@ -73,7 +73,7 @@ takeDirectory1 = takeWhile (not . isPathSeparator)
 
 -- | Normalise a 'FilePath', trying to do:
 --
--- * All 'pathSeparators' become @\/@
+-- * All 'pathSeparators' become 'pathSeparator' (@\/@ on Linux, @\\@ on Windows)
 --
 -- * @foo\/bar\/..\/baz@ becomes @foo\/baz@
 --
