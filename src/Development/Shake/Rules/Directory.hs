@@ -153,6 +153,8 @@ doesDirectoryExist file = do
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
 --   if the variable is not set. The environment variable is tracked as a
 --   dependency, and if it changes the rule will rerun in subsequent builds.
+--
+--   This function is a tracked version of 'getEnv'/'lookupEnv' from the base library.
 getEnv :: String -> Action (Maybe String)
 getEnv var = do
     GetEnvA res <- apply1 $ GetEnvQ var
