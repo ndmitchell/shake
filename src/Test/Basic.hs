@@ -2,6 +2,7 @@
 module Test.Basic(main) where
 
 import Development.Shake
+import System.FilePath
 import Test.Type
 import System.Directory as IO
 import Data.List
@@ -64,6 +65,11 @@ main = shaken test $ \args obj -> do
         (if "unsafe" `isInfixOf` out then unsafeExtraThread else id) $ liftIO $ sleep 0.1
         trace "]"
         writeFile' out out
+
+    obj "sep" </> "1.txt" %> \out -> writeFile' out ""
+    obj "sep/2.txt" %> \out -> writeFile' out ""
+    [obj "sep" </> "3.txt", obj "sep" </> "4.txt", obj "sep" </> "5.*", obj "sep/6.txt"] |%> \out -> writeFile' out ""
+    [obj "sep" </> "7.txt"] |%> \out -> writeFile' out ""
 
 test build obj = do
     writeFile (obj "A.txt") "AAA"
@@ -150,5 +156,7 @@ test build obj = do
     writeFile (obj "duplicate") ""
     build ["!duplicate1","!duplicate3"]
     assertContents (obj "duplicate") "1"
+
+    build $ concat [["sep/" ++ show i ++ ".txt", "sep" </> show i ++ ".txt"] | i <- [1..7]]
 
     build [] -- should say "no want/action statements, nothing to do" (checked manually)
