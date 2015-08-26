@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Make sure Windows separators work in |%> FilePattern rules
     #296, fix multifile rules when using --digest-and-input
     #286, document the relationship between getEnv and lookupEnv
     #285, improve the documentation for phony/alwaysRerun

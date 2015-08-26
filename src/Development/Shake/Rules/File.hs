@@ -249,8 +249,8 @@ phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
     let (simp,other) = partition simple pats
     case simp of
         [] -> return ()
-        [p] -> root "with |%>" (\x -> toStandard x == p) act
-        ps -> let ps = Set.fromList pats in root "with |%>" (flip Set.member ps . toStandard) act
+        [p] -> let pp = toStandard p in root "with |%>" (\x -> toStandard x == pp) act
+        ps -> let ps = Set.fromList $ map toStandard pats in root "with |%>" (flip Set.member ps . toStandard) act
     unless (null other) $
         let ps = map (?==) other in priority 0.5 $ root "with |%>" (\x -> any ($ x) ps) act
 
