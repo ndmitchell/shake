@@ -1,9 +1,16 @@
 {-# LANGUAGE PatternGuards, ViewPatterns #-}
 
 module Development.Shake.FilePattern(
+    -- * Primitive API, as exposed
     FilePattern, (?==), (<//>),
-    compatible, simple, extract, substitute,
-    directories, directories1
+    -- * Optimisation opportunities
+    simple,
+    -- * Multipattern file rules
+    compatible, extract, substitute,
+    -- * Accelerated searching
+    directories,
+    -- * Testing only
+    directories1
     ) where
 
 import System.FilePath(isPathSeparator, pathSeparators, pathSeparator)
