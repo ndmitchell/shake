@@ -88,4 +88,4 @@ generateJSON = jsonListLines . map showEntry
 
 jsonListLines xs = "[" ++ intercalate "\n," xs ++ "\n]"
 jsonList xs = "[" ++ intercalate "," xs ++ "]"
-jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}"
+jsonObject xs = "{" ++ intercalate "," [show a ++ ":" ++ b | (a,b) <- xs] ++ "}"
