@@ -72,6 +72,8 @@ test build obj = do
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(Pattern p) (Path x) ->
         if p ?== x then property $ toStandard (substitute (extract p x) p) == toStandard x else label "Trivial" True
+
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) -> eval p x == (p ?== x)
     return ()
 
 
