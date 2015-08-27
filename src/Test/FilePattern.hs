@@ -25,7 +25,9 @@ instance Arbitrary Path where
 
 
 test build obj = do
-    let f b pat file = assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+    let f b pat file = do
+        assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+        assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
     f True "//*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
     f True "*.c" "baz.c"
@@ -68,3 +70,18 @@ test build obj = do
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(Pattern p) (Path x) ->
         if p ?== x then property $ toStandard (substitute (extract p x) p) == toStandard x else label "Trivial" True
     return ()
+
+
+eval :: FilePattern -> FilePath -> Bool
+eval a b = f True (toStandard a) (toStandard b)
+    where
+        f start ('*':xs) (y:ys) = (y /= '/' && f False ('*':xs) ys) || f start xs (y:ys)
+        f start ('*':xs) [] = f start xs []
+        f start o@('/':'/':xs) ys
+            | null ys = f start xs ys -- at the end, it's all fine
+            | '/':ys <- ys = (start && f start xs ('/':ys)) || f False xs ys || f False o (dropWhile (/= '/') ys)
+            | start = f start xs ys || f False o (dropWhile (/= '/') ys)
+            | otherwise = False
+        f start (x:xs) (y:ys) | x == y = f False xs ys
+        f start [] [] = True
+        f _ _ _ = False
