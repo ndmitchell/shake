@@ -50,6 +50,9 @@ test build obj = do
     f True "a//" "a"
     f True "/a//" "/a"
     f True "///a//" "/a"
+    f False "///" ""
+    f True "///" "/"
+    f True "////" ""
 
     simple "a*b" === False
     simple "a//b" === False
