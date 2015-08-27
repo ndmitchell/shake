@@ -41,7 +41,6 @@ type FilePattern = String
 
 data Lexeme = Star | SlashSlash | Char Char deriving (Show, Eq)
 
-isChar (Char _) = True; isChar _ = False
 isDull (Char x) = not $ isPathSeparator x; isDull _ = False
 fromChar (Char x) = x
 
@@ -169,16 +168,20 @@ directories ps = foldl f xs xs
 ---------------------------------------------------------------------
 -- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
 
+specials :: FilePattern -> String
+specials ('*':xs) = '*' : specials xs
+specials ('/':'/':xs) = '/':'/': specials xs
+specials (x:xs) = specials xs
+specials [] = []
+
 -- | Is the pattern free from any * and //.
 simple :: FilePattern -> Bool
-simple = all isChar . lexer
-
+simple = null . specials
 
 -- | Do they have the same * and // counts in the same order
 compatible :: [FilePattern] -> Bool
 compatible [] = True
-compatible (x:xs) = all ((==) (f x) . f) xs
-    where f = filter (not . isChar) . lexer
+compatible (x:xs) = all ((==) (specials x) . specials) xs
 
 
 -- | Extract the items that match the wildcards. The pair must match with '?=='.
