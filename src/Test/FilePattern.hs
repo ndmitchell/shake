@@ -51,6 +51,11 @@ test build obj = do
     f True "/a//" "/a"
     f True "///a//" "/a"
 
+    simple "a*b" === False
+    simple "a//b" === False
+    simple "/a/b/cccc_" === True
+    simple "a///b" === False
+
     assert (compatible []) "compatible"
     assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
     assert (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
