@@ -17,11 +17,11 @@ newtype Path    = Path    FilePath    deriving (Show,Eq)
 
 instance Arbitrary Pattern where
     arbitrary = fmap Pattern $ listOf $ elements "\\/*ab"
-    shrink (Pattern x) = map Pattern $ shrinkList (const []) x
+    shrink (Pattern x) = map Pattern $ shrinkList (\x -> ['/' | x == '\\']) x
 
 instance Arbitrary Path where
     arbitrary = fmap Path $ listOf $ elements "\\/ab"
-    shrink (Path x) = map Path $ shrinkList (const []) x
+    shrink (Path x) = map Path $ shrinkList (\x -> ['/' | x == '\\']) x
 
 
 test build obj = do
