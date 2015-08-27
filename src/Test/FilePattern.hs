@@ -26,8 +26,8 @@ instance Arbitrary Path where
 
 test build obj = do
     let f b pat file = do
-        assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
-        assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
+            assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+            assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
     f True "//*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
     f True "*.c" "baz.c"
