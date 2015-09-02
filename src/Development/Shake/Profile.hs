@@ -44,7 +44,7 @@ generateSummary xs =
     ,let sumLast = sum $ map prfTime $ concatMap prfTraces ls
          maxStop = maximum $ 0 : map prfStop (concatMap prfTraces ls) in
         "* Last run gave an average parallelism of " ++ showDP 2 (if maxStop == 0 then 0 else sumLast / maxStop) ++
-        " times over " ++ showDuration(maxStop) ++ "."
+        " times over " ++ showDuration maxStop ++ "."
     ]
     where ls = filter ((==) 0 . prfBuilt) xs
 
