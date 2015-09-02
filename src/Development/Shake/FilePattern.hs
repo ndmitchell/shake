@@ -63,12 +63,13 @@ lexer [] = []
 
 
 pattern :: [Lexeme] -> Regex
-pattern = Concat Start . foldr Concat End . map f
+pattern = Concat Start . foldr Concat End . f
     where
-        f Star = Bracket $ Repeat $ Not pathSeparators
-        f SlashSlash = let s = Start `Or` End `Or` Lit pathSeparators in Bracket $
-                       Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)
-        f (Char x) = Lit $ if isPathSeparator x then pathSeparators else [x]
+        f (Star:xs) = Bracket (Repeat $ Not pathSeparators) : f xs
+        f (SlashSlash:xs) = Bracket (Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)) : f xs
+            where s = Start `Or` End `Or` Lit pathSeparators
+        f (Char x:xs) = Lit (if isPathSeparator x then pathSeparators else [x]) : f xs
+        f [] = []
 
 
 -- | Return is (brackets, matched, rest)
