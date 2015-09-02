@@ -88,10 +88,9 @@ test build obj = do
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
 
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(Pattern p) (Path x) ->
-        if p ?== x then property $ toStandard (substitute (extract p x) p) == toStandard x else label "Trivial" True
-
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) -> eval p x == (p ?== x)
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
+        if not $ eval p x then label "No match" $ not $ p ?== x
+        else property $ p ?== x && toStandard (substitute (extract p x) p) == toStandard x
     return ()
 
 
