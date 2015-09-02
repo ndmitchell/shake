@@ -38,7 +38,7 @@ generateSummary xs =
     ,let f = show . sum . map (length . prfTraces) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
     ,"* The total (unparallelised) time is " ++ showDuration (sum $ map prfExecution xs) ++
         " of which " ++ showDuration (sum $ map prfTime $ concatMap prfTraces xs) ++ " is traced commands."
-    ,let f xs = if null xs then "0s" else (\(a,b) -> showDuration a ++ " (" ++ b ++ ")") $ maximumBy (compare `on` fst) xs in
+    ,let f xs = if null xs then "0s" else (\(a,b) -> showDuration a ++ " (" ++ b ++ ")") $ maximumBy' (compare `on` fst) xs in
         "* The longest rule takes " ++ f (map (prfExecution &&& prfName) xs) ++
         ", and the longest traced command takes " ++ f (map (prfTime &&& prfCommand) $ concatMap prfTraces xs) ++ "."
     ,let sumLast = sum $ map prfTime $ concatMap prfTraces ls
@@ -46,7 +46,10 @@ generateSummary xs =
         "* Last run gave an average parallelism of " ++ showDP 2 (if maxStop == 0 then 0 else sumLast / maxStop) ++
         " times over " ++ showDuration maxStop ++ "."
     ]
-    where ls = filter ((==) 0 . prfBuilt) xs
+    where
+        -- See https://ghc.haskell.org/trac/ghc/ticket/10830 - they broke maximumBy
+        maximumBy' cmp = foldl1' $ \x y -> if cmp x y == GT then x else y
+        ls = filter ((==) 0 . prfBuilt) xs
 
 
 generateHTML :: [ProfileEntry] -> IO LBS.ByteString
