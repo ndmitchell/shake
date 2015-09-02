@@ -170,7 +170,7 @@ directories ps = foldl f xs xs
 
 specials :: FilePattern -> String
 specials ('*':xs) = '*' : specials xs
-specials ('/':'/':xs) = '/':'/': specials xs
+specials (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = '/':'/': specials xs
 specials (x:xs) = specials xs
 specials [] = []
 
