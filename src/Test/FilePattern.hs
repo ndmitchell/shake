@@ -4,6 +4,7 @@ module Test.FilePattern(main) where
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Data.Tuple.Extra
+import Control.Monad
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
@@ -28,6 +29,8 @@ test build obj = do
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $ show pat ++ " " ++ show file ++ "\nFAILED substitute/extract property"
+
     f True "//*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
     f True "*.c" "baz.c"
