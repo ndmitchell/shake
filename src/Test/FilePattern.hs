@@ -95,7 +95,7 @@ eval a b = f True (toStandard a) (toStandard b)
         f start ('*':xs) [] = f start xs []
         f start o@('/':'/':xs) ys
             | null ys = f start xs ys -- at the end, it's all fine
-            | '/':ys <- ys = (start && f start xs ('/':ys)) || f False xs ys || f False o (dropWhile (/= '/') ys)
+            | '/':ys <- ys = f start xs ('/':ys) || f False xs ys || f False o (dropWhile (/= '/') ys)
             | start = f start xs ys || f False o (dropWhile (/= '/') ys)
             | otherwise = False
         f start (x:xs) (y:ys) | x == y = f False xs ys

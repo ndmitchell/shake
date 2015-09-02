@@ -66,6 +66,8 @@ pattern :: [Lexeme] -> Regex
 pattern = Concat Start . foldr Concat End . f
     where
         f (Star:xs) = Bracket (Repeat $ Not pathSeparators) : f xs
+        f (SlashSlash:Char x:xs) | isPathSeparator x =
+            Bracket (((Start `Or` Lit pathSeparators) `Concat` Repeat Any) `Or` Empty) `Concat` Lit pathSeparators : f xs
         f (SlashSlash:xs) = Bracket (Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)) : f xs
             where s = Start `Or` End `Or` Lit pathSeparators
         f (Char x:xs) = Lit (if isPathSeparator x then pathSeparators else [x]) : f xs
