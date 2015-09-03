@@ -2,7 +2,6 @@
 module Test.FilePattern(main) where
 
 import Development.Shake.FilePattern
-import Development.Shake.FilePattern2()
 import Development.Shake.FilePath
 import Data.Tuple.Extra
 import Control.Monad
