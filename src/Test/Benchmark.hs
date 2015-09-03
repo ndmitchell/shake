@@ -8,7 +8,7 @@ import Development.Shake.FilePath
 
 
 -- | Given a breadth and depth come up with a set of build files
-main = shaken (\_ _ -> return ()) $ \args obj -> do
+main = shaken test $ \args obj -> do
     let get ty = head $ [read $ drop (length ty + 1) a | a <- args, (ty ++ "=") `isPrefixOf` a] ++
                         error ("Could not find argument, expected " ++ ty ++ "=Number")
         depth = get "depth"
@@ -19,3 +19,9 @@ main = shaken (\_ _ -> return ()) $ \args obj -> do
         let d = read $ takeBaseName out
         need [obj $ show (d + 1) ++ "." ++ show i | d < depth, i <- [1..breadth]]
         writeFile' out ""
+
+test build obj = do
+    -- these help to test the stack limit
+    build ["clean"]
+    build ["breadth=75","depth=75"]
+    build ["breadth=75","depth=75"]
