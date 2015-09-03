@@ -139,7 +139,7 @@ lexBind c_x | (c,x) <- list0 c_x = case c of
 
 lexBuild x
     | (outputs,x) <- lexxExprs True x
-    , (rule,x) <- span0 isVar $ dropSpace x
+    , (rule,x) <- span0 isVarDot $ dropSpace x
     , (deps,x) <- lexxExprs False $ dropSpace x
     = LexBuild outputs rule deps : lexerLoop x
 
