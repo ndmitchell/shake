@@ -2,6 +2,7 @@
 module Test.FilePattern(main) where
 
 import Development.Shake.FilePattern
+import Development.Shake.FilePattern2()
 import Development.Shake.FilePath
 import Data.Tuple.Extra
 import Control.Monad
@@ -27,6 +28,7 @@ instance Arbitrary Path where
 
 
 test build obj = do
+    -- internalTest
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
@@ -56,6 +58,7 @@ test build obj = do
     f True "///a//" "/a"
     f False "///" ""
     f True "///" "/"
+    f True "///" "a/"
     f True "////" ""
     f True "x///y" "x/y"
     f True "x///" "x/"
@@ -64,6 +67,22 @@ test build obj = do
     f True "x///" "x/foo/bar/"
     f False "x///" "x/foo/bar"
     f True "x///y" "x/z/y"
+    f True "" ""
+    f False "" "y"
+    f False "" "/"
+
+    f True "*/*" "x/y"
+    f False "*/*" "x"
+    f True "//*" "x"
+    f True "//*" ""
+    f True "*//" "x"
+    f True "*//" ""
+    f True "*//*" "x/y"
+    f False "*//*" ""
+    f False "*//*" "x"
+    f False "*//*//*" "x/y"
+    f True "//*/" "/"
+    f True "*/////" "/"
 
     simple "a*b" === False
     simple "a//b" === False
