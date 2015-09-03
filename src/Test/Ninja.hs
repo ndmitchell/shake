@@ -96,6 +96,9 @@ test build obj = do
     run "-f../../src/Test/Ninja/buildseparate.ninja"
     assertContentsWords (obj "buildseparate.txt") "XX"
 
+    run "-f../../src/Test/Ninja/lexical.ninja"
+    assertContentsWords (obj "lexical.txt") "XFoo_BarXXFooX.bar"
+
     when False $ do
         -- currently fails because Shake doesn't match Ninja here
         run "-f../../src/Test/Ninja/outputtouch.ninja"
