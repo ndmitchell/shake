@@ -9,6 +9,7 @@ import Data.List
 import Data.Version
 import System.FilePath
 import Numeric.Extra
+import General.Extra
 import Paths_shake
 import System.Time.Extra
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -46,10 +47,7 @@ generateSummary xs =
         "* Last run gave an average parallelism of " ++ showDP 2 (if maxStop == 0 then 0 else sumLast / maxStop) ++
         " times over " ++ showDuration maxStop ++ "."
     ]
-    where
-        -- See https://ghc.haskell.org/trac/ghc/ticket/10830 - they broke maximumBy
-        maximumBy' cmp = foldl1' $ \x y -> if cmp x y == GT then x else y
-        ls = filter ((==) 0 . prfBuilt) xs
+    where ls = filter ((==) 0 . prfBuilt) xs
 
 
 generateHTML :: [ProfileEntry] -> IO LBS.ByteString
