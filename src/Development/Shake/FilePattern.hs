@@ -63,12 +63,15 @@ lexer [] = []
 
 
 pattern :: [Lexeme] -> Regex
-pattern = Concat Start . foldr Concat End . map f
+pattern = Concat Start . foldr Concat End . f
     where
-        f Star = Bracket $ Repeat $ Not pathSeparators
-        f SlashSlash = let s = Start `Or` End `Or` Lit pathSeparators in Bracket $
-                       Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)
-        f (Char x) = Lit $ if isPathSeparator x then pathSeparators else [x]
+        f (Star:xs) = Bracket (Repeat $ Not pathSeparators) : f xs
+        f (SlashSlash:Char x:xs) | isPathSeparator x =
+            Bracket (((Start `Or` Lit pathSeparators) `Concat` Repeat Any) `Or` Empty) `Concat` Lit pathSeparators : f xs
+        f (SlashSlash:xs) = Bracket (Or (s `Concat` Repeat Any `Concat` s) (Lit pathSeparators)) : f xs
+            where s = Start `Or` End `Or` Lit pathSeparators
+        f (Char x:xs) = Lit (if isPathSeparator x then pathSeparators else [x]) : f xs
+        f [] = []
 
 
 -- | Return is (brackets, matched, rest)
@@ -170,7 +173,7 @@ directories ps = foldl f xs xs
 
 specials :: FilePattern -> String
 specials ('*':xs) = '*' : specials xs
-specials ('/':'/':xs) = '/':'/': specials xs
+specials (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = '/':'/': specials xs
 specials (x:xs) = specials xs
 specials [] = []
 

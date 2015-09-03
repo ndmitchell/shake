@@ -4,6 +4,7 @@ module Test.FilePattern(main) where
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Data.Tuple.Extra
+import Control.Monad
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
@@ -26,8 +27,10 @@ instance Arbitrary Path where
 
 test build obj = do
     let f b pat file = do
-            assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
+            assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $ show pat ++ " " ++ show file ++ "\nFAILED substitute/extract property"
+
     f True "//*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
     f True "*.c" "baz.c"
@@ -53,6 +56,13 @@ test build obj = do
     f False "///" ""
     f True "///" "/"
     f True "////" ""
+    f True "x///y" "x/y"
+    f True "x///" "x/"
+    f True "x///" "x/foo/"
+    f False "x///" "x"
+    f True "x///" "x/foo/bar/"
+    f False "x///" "x/foo/bar"
+    f True "x///y" "x/z/y"
 
     simple "a*b" === False
     simple "a//b" === False
@@ -78,10 +88,9 @@ test build obj = do
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
 
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=200} $ \(Pattern p) (Path x) ->
-        if p ?== x then property $ toStandard (substitute (extract p x) p) == toStandard x else label "Trivial" True
-
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) -> eval p x == (p ?== x)
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
+        if not $ eval p x then label "No match" $ not $ p ?== x
+        else property $ p ?== x && toStandard (substitute (extract p x) p) == toStandard x
     return ()
 
 
@@ -92,7 +101,7 @@ eval a b = f True (toStandard a) (toStandard b)
         f start ('*':xs) [] = f start xs []
         f start o@('/':'/':xs) ys
             | null ys = f start xs ys -- at the end, it's all fine
-            | '/':ys <- ys = (start && f start xs ('/':ys)) || f False xs ys || f False o (dropWhile (/= '/') ys)
+            | '/':ys <- ys = f start xs ('/':ys) || f False xs ys || f False o (dropWhile (/= '/') ys)
             | start = f start xs ys || f False o (dropWhile (/= '/') ys)
             | otherwise = False
         f start (x:xs) (y:ys) | x == y = f False xs ys

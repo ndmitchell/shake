@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Properly handle /// in file pattern (a wildcard then /)
     Make sure Windows separators work in |%> FilePattern rules
     #296, fix multifile rules when using --digest-and-input
     #286, document the relationship between getEnv and lookupEnv
