@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Properly handle *//* in file pattern (at least one directory)
     #303, allow ninja rule names to have dots in them
     Properly handle /// in file pattern (a wildcard then /)
     Make sure Windows separators work in |%> FilePattern rules

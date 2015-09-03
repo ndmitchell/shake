@@ -5,6 +5,7 @@ import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Data.Tuple.Extra
 import Control.Monad
+import Data.List
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
@@ -95,13 +96,19 @@ test build obj = do
 
 
 eval :: FilePattern -> FilePath -> Bool
-eval a b = f True (toStandard a) (toStandard b)
+eval a b = f True (simp $ toStandard a) (toStandard b)
     where
-        f start ('*':xs) (y:ys) = (y /= '/' && f False ('*':xs) ys) || f start xs (y:ys)
-        f start ('*':xs) [] = f start xs []
+        simp ('/':'/':'/':'/':xs) = simp ('/':'/':xs)
+        simp ('*':'*':xs) = simp ('*':xs)
+        simp (x:xs) = x : simp xs
+        simp [] = []
+
+        -- start = am I at the beginning of the pattern, not the matcher
+        f start ('*':xs) (y:ys) = (y /= '/' && f False ('*':xs) ys) || f False xs (y:ys)
+        f start ('*':xs) [] = f False xs []
         f start o@('/':'/':xs) ys
-            | null ys = f start xs ys -- at the end, it's all fine
-            | '/':ys <- ys = f start xs ('/':ys) || f False xs ys || f False o (dropWhile (/= '/') ys)
+            | null xs && null ys = True -- at the end, it's all fine
+            | '/':ys <- ys = ((start || "/" `isPrefixOf` xs) && f start xs ('/':ys)) || f False xs ys || f False o (dropWhile (/= '/') ys)
             | start = f start xs ys || f False o (dropWhile (/= '/') ys)
             | otherwise = False
         f start (x:xs) (y:ys) | x == y = f False xs ys
