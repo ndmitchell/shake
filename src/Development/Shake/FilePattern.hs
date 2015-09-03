@@ -49,7 +49,7 @@ data Regex = Lit [Char] | Not [Char] | Any
            | Start | End
            | Bracket Regex
            | Or Regex Regex | Concat Regex Regex
-           | Repeat Regex | Empty
+           | Repeat Regex | Empty | None
              deriving Show
 
 type SString = (Bool, String) -- fst is True if at the start of the string
