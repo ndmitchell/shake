@@ -4,6 +4,7 @@ module Test.Type(sleep, module Test.Type) where
 import Development.Shake hiding (copyFileChanged)
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.String
+import General.Extra
 import Development.Shake.FileInfo
 import Development.Shake.FilePath
 
@@ -184,8 +185,8 @@ sleepFileTimeCalibrate = do
             writeFile file $ show (i,j)
             t2 <- time
             return $ if t1 == t2 then Left $ j+1 else Right ()
-    putStrLn $ "Longest file modification time lag was " ++ show (ceiling (maximum mtimes * 1000)) ++ "ms"
-    return $ sleep $ min 1 $ maximum mtimes * 2
+    putStrLn $ "Longest file modification time lag was " ++ show (ceiling (maximum' mtimes * 1000)) ++ "ms"
+    return $ sleep $ min 1 $ maximum' mtimes * 2
 
 
 removeFilesRandom :: FilePath -> IO Int
