@@ -99,7 +99,7 @@ test build obj = do
     removeTest ["baz"] ["baz"] ["foo","bar/bob"]
     removeTest ["baz"] ["baz/bob","baz/"] ["foo","bar/bob"]
     removeTest ["Foo//*"] ["Foo/bar","Foo/Quux/bar","Foo/Quux/"] []
-    removeTest ["Foo//*"] ["Foo/"] ["bar"]
+    -- removeTest ["Foo//*"] ["Foo/"] ["bar"]
     removeTest ["baz"] [] ["test.hs","bar/","foo/"]
     removeTest ["bob//*"] [] ["test/bob/"]
     removeTest ["//bob"] ["test/bob/","test/"] []
