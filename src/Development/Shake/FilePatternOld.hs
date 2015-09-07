@@ -184,9 +184,14 @@ extract p x = case match (pattern $ lexer p) (True,x) of
 --
 -- > p '?==' x ==> substitute (extract p x) p == x
 substitute :: [String] -> FilePattern -> FilePath
-substitute ms p = f ms (lexer p)
+substitute oms oxs = f oms oxs
     where
-        f ms (Char p:ps) = p : f ms ps
-        f (m:ms) (_:ps) = m ++ f ms ps
+        f ms ('*':xs) = one ms xs
+        f ms (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = one ms xs
+        f ms (x:xs) = x : f ms xs
         f [] [] = []
-        f _ _ = error $ "Substitution failed into pattern " ++ show p ++ " with " ++ show (length ms) ++ " matches, namely " ++ show ms
+        f ms [] = failure
+
+        one (m:ms) xs = m ++ f ms xs
+        one [] xs = failure
+        failure = error $ "Substitution failed into pattern " ++ show oxs ++ " with " ++ show (length oms) ++ " matches, namely " ++ show oms
