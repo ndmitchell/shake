@@ -13,6 +13,7 @@ module Development.Shake.FilePatternOld(
     directories1
     ) where
 
+import Development.Shake.Errors
 import System.FilePath(isPathSeparator, pathSeparators, pathSeparator)
 import Data.List.Extra
 import Data.Tuple.Extra
@@ -190,8 +191,10 @@ compatible (x:xs) = all ((==) (specials x) . specials) xs
 
 -- | Extract the items that match the wildcards. The pair must match with '?=='.
 extract :: FilePattern -> FilePath -> [String]
-extract p x = ms
-    where (ms,_,_):_ = match (pattern $ lexer p) (True,x)
+extract p x = case match (pattern $ lexer p) (True,x) of
+    [] | p ?== x -> err $ "extract with " ++ show p ++ " and " ++ show x
+       | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
+    (ms,_,_):_ -> ms
 
 
 -- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.
