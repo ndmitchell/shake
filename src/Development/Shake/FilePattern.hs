@@ -95,7 +95,7 @@ optimise [] =[]
 match :: [Pat] -> [String] -> [[String]]
 match (Skip:xs) (y:ys) = map ([]:) (match xs (y:ys)) ++ [(if null r then y else y ++ "/" ++ r):rs | r:rs <- match (Skip:xs) ys]
 match (Skip1:xs) (y:ys) = [(if null r then y else y ++ "/" ++ r):rs | r:rs <- match (Skip:xs) ys]
-match (Skip:xs) [] = map ([]:) $ match xs []
+match (Skip:xs) [] = map ("":) $ match xs []
 match (Star:xs) (y:ys) = map (y:) $ match xs ys
 match (Lit x:xs) (y:ys) | x == y = match xs ys
 match (x@Stars{}:xs) (y:ys) | Just rs <- matchStars x y = map (rs++) $ match xs ys
