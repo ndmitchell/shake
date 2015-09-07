@@ -27,7 +27,7 @@ instance Arbitrary Path where
 
 
 test build obj = do
-    -- internalTest
+    internalTest
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
