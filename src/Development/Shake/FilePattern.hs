@@ -120,3 +120,22 @@ matchStars (Stars pre mid post) x = do
     [Skip] -> const True
     [Skip1] -> const True
     p -> not . null . match p . split isPathSeparator
+
+
+---------------------------------------------------------------------
+-- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
+
+specials :: FilePattern -> String
+specials ('*':xs) = '*' : specials xs
+specials (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = '/':'/': specials xs
+specials (x:xs) = specials xs
+specials [] = []
+
+-- | Is the pattern free from any * and //.
+simple :: FilePattern -> Bool
+simple = null . specials
+
+-- | Do they have the same * and // counts in the same order
+compatible :: [FilePattern] -> Bool
+compatible [] = True
+compatible (x:xs) = all ((==) (specials x) . specials) xs

@@ -4,9 +4,8 @@ module Development.Shake.FilePatternOld(
     -- * Primitive API, as exposed
     FilePattern, (?==), (<//>),
     -- * Optimisation opportunities
-    simple,
     -- * Multipattern file rules
-    compatible, extract, substitute,
+    extract, substitute,
     -- * Accelerated searching
     directories,
     -- * Testing only
@@ -172,22 +171,6 @@ directories ps = foldl f xs xs
 
 ---------------------------------------------------------------------
 -- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
-
-specials :: FilePattern -> String
-specials ('*':xs) = '*' : specials xs
-specials (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = '/':'/': specials xs
-specials (x:xs) = specials xs
-specials [] = []
-
--- | Is the pattern free from any * and //.
-simple :: FilePattern -> Bool
-simple = null . specials
-
--- | Do they have the same * and // counts in the same order
-compatible :: [FilePattern] -> Bool
-compatible [] = True
-compatible (x:xs) = all ((==) (specials x) . specials) xs
-
 
 -- | Extract the items that match the wildcards. The pair must match with '?=='.
 extract :: FilePattern -> FilePath -> [String]
