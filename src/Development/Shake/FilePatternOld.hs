@@ -3,7 +3,6 @@
 module Development.Shake.FilePatternOld(
     -- * Primitive API, as exposed
     FilePattern, (?==), (<//>),
-    -- * Optimisation opportunities
     -- * Multipattern file rules
     extract, substitute,
     -- * Accelerated searching
