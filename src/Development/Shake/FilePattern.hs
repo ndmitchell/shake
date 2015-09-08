@@ -22,11 +22,11 @@ import Control.Monad
 import Prelude
 
 
-data Pat = Lit String -- foo
-         | Star   -- /*/
-         | Skip -- //
-         | Skip1 -- //, but must be at least 1 element
-         | Stars String [String] String -- *foo*, prefix (fixed), infix floaters, suffix
+data Pat = Lit String -- ^ foo
+         | Star   -- ^ /*/
+         | Skip -- ^ //
+         | Skip1 -- ^ //, but must be at least 1 element
+         | Stars String [String] String -- ^ *foo*, prefix (fixed), infix floaters, suffix
                                         -- e.g. *foo*bar = Stars "" ["foo"] "bar"
             deriving (Show,Eq)
 
