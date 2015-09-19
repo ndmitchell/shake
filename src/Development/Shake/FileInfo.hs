@@ -26,6 +26,7 @@ import Data.Time
 import System.Time
 
 #elif defined(mingw32_HOST_OS)
+import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Foreign
 import Foreign.C.Types
@@ -71,6 +72,15 @@ getFileHash x = withFile (unpackU x) ReadMode $ \h -> do
     evaluate res
     return res
 
+-- If the result isn't strict then we are referencing a much bigger structure,
+-- and it causes a space leak I don't really understand on Linux when running
+-- the 'tar' test, followed by the 'benchmark' test.
+result :: Word32 -> Word32 -> IO (Maybe (ModTime, FileSize))
+result x y = do
+    x <- evaluate $ fileInfo x
+    y <- evaluate $ fileInfo y
+    return $! Just $! (x, y)
+
 
 getFileInfo :: BSU -> IO (Maybe (ModTime, FileSize))
 
@@ -80,7 +90,7 @@ getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Not
     let file = unpackU x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
-    return $ Just (fileInfo $ extractFileTime time, fileInfo $ fromIntegral size)
+    result (extractFileTime time) (fromIntegral size)
 
 -- deal with difference in return type of getModificationTime between directory versions
 class ExtractFileTime a where extractFileTime :: a -> Word32
@@ -93,7 +103,7 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
-        let peek = do mt <- peekLastWriteTimeLow fad; sz <- peekFileSizeLow fad; return $ Just (fileInfo mt, fileInfo sz)
+        let peek = join $ result <$> peekLastWriteTimeLow fad <*> peekFileSizeLow fad
         if res then
             peek
          else if requireU x then withCWString (unpackU x) $ \file -> do
@@ -124,7 +134,7 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 -- Unix version
 getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
-    return $ Just (fileInfo $ extractFileTime s, fileInfo $ fromIntegral $ fileSize s)
+    result (extractFileTime s) (fromIntegral $ fileSize s)
 
 extractFileTime :: FileStatus -> Word32
 #ifndef MIN_VERSION_unix
