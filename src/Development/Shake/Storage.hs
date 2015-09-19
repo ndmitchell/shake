@@ -219,7 +219,7 @@ flushThread flush h act = do
         whileM $ join $ readChan chan
 
     (act $ \s -> do
-            evaluate $ LBS.length s -- ensure exceptions occur on this thread
+            evaluate $ rnf s -- ensure exceptions occur on this thread
             writeChan chan $ LBS.hPut h s >> tryPutMVar kick () >> return True)
         `finally` do
             maybe (return ()) killThread flusher
