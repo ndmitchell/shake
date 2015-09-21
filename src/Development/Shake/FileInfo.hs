@@ -6,7 +6,7 @@ module Development.Shake.FileInfo(
     getFileHash, getFileInfo
     ) where
 
-import Control.Exception
+import Control.Exception.Extra
 import Development.Shake.Classes
 import General.String
 import qualified Data.ByteString.Lazy as LBS
