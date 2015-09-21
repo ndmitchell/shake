@@ -86,7 +86,7 @@ getFileInfo :: BSU -> IO (Maybe (ModTime, FileSize))
 
 #if defined(PORTABLE)
 -- Portable fallback
-getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     let file = unpackU x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
@@ -132,7 +132,7 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 
 #else
 -- Unix version
-getFileInfo x = handleJust (\e -> if isDoesNotExistError e then Just () else Nothing) (const $ return Nothing) $ do
+getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
     result (extractFileTime s) (fromIntegral $ fileSize s)
 

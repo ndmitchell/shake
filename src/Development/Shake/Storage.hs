@@ -95,7 +95,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFile (shakeFiles <
             continue h Map.empty
          else
             -- make sure you are not handling exceptions from inside
-            join $ handleJust (\e -> if asyncException e then Nothing else Just e) (\err -> do
+            join $ handleBool (not . asyncException) (\err -> do
                 msg <- showException err
                 outputErr $ unlines $
                     ("Error when reading Shake database " ++ dbfile) :
