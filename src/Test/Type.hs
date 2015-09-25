@@ -64,13 +64,13 @@ shaken test rules sleeper = do
 
         args -> do
             let (_,files,_) = getOpt Permute [] args
-            tracker <- hasTracker
+            t <- tracker
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out)
                     (shakeOptions{shakeFiles = out
                                  ,shakeReport = ["output/" ++ name ++ "/report.html"]
-                                 ,shakeLint = Just $ if tracker then LintTracker else LintBasic
+                                 ,shakeLint = Just t
                                  })
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
@@ -90,8 +90,20 @@ shaken2 test rules sleeper = shaken test rules2 sleeper
             rules (map tail spec) obj
 
 
+tracker :: IO Lint
+tracker = do
+  fsatrace <- lookupEnv "FSAT"
+  trackerExe <- findExecutable "tracker.exe"
+  return $ if isJust fsatrace
+           then LintFSATrace
+           else if isJust trackerExe
+                then LintTracker
+                else LintBasic
+
 hasTracker :: IO Bool
-hasTracker = isJust <$> if isWindows then findExecutable "tracker.exe" else lookupEnv "FSAT"
+hasTracker = do
+  t <- tracker
+  return $ t == LintFSATrace || t == LintTracker
 
 
 shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
