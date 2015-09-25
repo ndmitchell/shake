@@ -231,13 +231,14 @@ unixWhitelist = unsafePerformIO $ do
                     ,home ++ "/.cabal/"
                     ,home ++ "/.ghc/"
                     ,"/Applications/"
-                    ,"/var/folders/"
+                    ,"/var/"
                     ,"/usr/"
                     ,"/Library/"
                     ,"/System/"
                     ,"/private/var/"
                     ,"/etc/"
                     ,"/opt/"
+                    ,"/lib/"
                     ]
         sandbox = case sbcPath of
           Nothing -> []
