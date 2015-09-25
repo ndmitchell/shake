@@ -140,7 +140,7 @@ commandExplicit funcName copts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act = case shakeLint opts of
-            Just LintTracker -> tracker act
+            Just LintTracker -> winTracker act
             Just LintFSATrace -> fsatrace act
             _ -> act exe args
 
