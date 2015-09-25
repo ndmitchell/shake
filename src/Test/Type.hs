@@ -8,7 +8,6 @@ import General.Extra
 import Development.Shake.FileInfo
 import Development.Shake.FilePath
 
-import Control.Applicative
 import Control.Exception.Extra hiding (assert)
 import Control.Monad.Extra
 import Data.List
@@ -20,7 +19,6 @@ import System.Random
 import System.Console.GetOpt
 import System.IO.Extra as IO
 import System.Time.Extra
-import System.Info.Extra
 import Prelude
 
 
