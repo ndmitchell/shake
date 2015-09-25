@@ -237,6 +237,7 @@ unixWhitelist = unsafePerformIO $ do
                     ,"/System/"
                     ,"/private/var/"
                     ,"/etc/"
+                    ,"/opt/"
                     ]
         sandbox = case sbcPath of
           Nothing -> []
