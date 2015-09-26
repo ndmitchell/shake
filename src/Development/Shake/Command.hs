@@ -226,7 +226,8 @@ unixWhitelist = unsafePerformIO $ do
     ghcPath <- lookupEnv "GHC_PACKAGE_PATH"
     sbcPath <- lookupEnv "CABAL_SANDBOX_CONFIG"
     cabPath <- lookupEnv "CABAL_SANDBOX_PACKAGE_PATH"
-    let splitted = map dropFileName . wordsBy (== ':') . fromMaybe ""
+    let sep = if isWindows then ';' else ':'
+        splitted = map dropFileName . wordsBy (== sep) . fromMaybe ""
         hardcoded = [home ++ "/Applications/"
                     ,home ++ "/.cabal/"
                     ,home ++ "/.ghc/"
