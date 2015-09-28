@@ -159,11 +159,12 @@ commandExplicit funcName copts results exe args = do
                 fsat <- liftIO $ getEnv "FSAT"
                 res <- act fsat $ file:"--":exe:args
                 (rs, ws) <- liftIO $ fsatraceFiles file
-                let whitelisted x = any (`isPrefixOf` x) unixWhitelist
+                cwd <- liftIO $ getCurrentDirectory
+                let whitelisted x = any (`isPrefixOf` x) whitelist
                     ham = filter (not . whitelisted)
-                    rel = mapM (liftIO . makeRelativeToCurrentDirectory)
-                rrs <- rel $ ham rs
-                rws <- rel $ ham ws
+                    rel = map (makeRelative cwd)
+                    rrs = rel $ ham rs
+                    rws = rel $ ham ws
                 trackRead rrs
                 trackWrite rws
                 return res
@@ -220,14 +221,13 @@ parseFSAT = mapMaybe (f . wordsBy (== '|')) . lines
           f _ = Nothing
 
 
-unixWhitelist :: [FilePath]
-unixWhitelist = unsafePerformIO $ do
-    home <- getEnv "HOME"
+whitelist :: [FilePath]
+whitelist = unsafePerformIO $ do
+    home <- getHomeDirectory
     ghcPath <- lookupEnv "GHC_PACKAGE_PATH"
     sbcPath <- lookupEnv "CABAL_SANDBOX_CONFIG"
     cabPath <- lookupEnv "CABAL_SANDBOX_PACKAGE_PATH"
-    let sep = if isWindows then ';' else ':'
-        splitted = map dropFileName . wordsBy (== sep) . fromMaybe ""
+    let splitted = map dropFileName . splitSearchPath . fromMaybe ""
         hardcoded = [home ++ "/Applications/"
                     ,home ++ "/.cabal/"
                     ,home ++ "/.ghc/"
@@ -241,10 +241,7 @@ unixWhitelist = unsafePerformIO $ do
                     ,"/opt/"
                     ,"/lib/"
                     ]
-        sandbox = case sbcPath of
-          Nothing -> []
-          Just x -> [x]
-    return $ sandbox ++ hardcoded ++ splitted ghcPath ++ splitted cabPath
+    return $ hardcoded ++ maybeToList sbcPath ++ splitted ghcPath ++ splitted cabPath
 
 
 ---------------------------------------------------------------------

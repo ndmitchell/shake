@@ -542,9 +542,9 @@ applyKeyValue ks = do
                 putWhen Chatty $ "# " ++ show k
                 res <- runExecute globalRules k
                 case shakeLint globalOptions of
-                  Just LintTracker -> trackCheckUsed
-                  Just LintFSATrace -> trackCheckUsed
-                  _ -> return ()
+                    Just LintTracker -> trackCheckUsed
+                    Just LintFSATrace -> trackCheckUsed
+                    _ -> return ()
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
