@@ -31,7 +31,9 @@ test build obj = do
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
-            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $ show pat ++ " " ++ show file ++ "\nFAILED substitute/extract property"
+            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
+                "FAILED substitute/extract property\nPattern: " ++ show pat ++ "\nFile: " ++ show file ++ "\n" ++
+                "Extracted: " ++ show (extract pat file) ++ "\nSubstitute: " ++ show (substitute (extract pat file) pat)
 
     f True "//*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
