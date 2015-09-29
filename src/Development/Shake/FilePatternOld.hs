@@ -3,15 +3,12 @@
 module Development.Shake.FilePatternOld(
     -- * Primitive API, as exposed
     FilePattern, (?==), (<//>),
-    -- * Multipattern file rules
-    extract, substitute,
     -- * Accelerated searching
     directories,
     -- * Testing only
     directories1
     ) where
 
-import Development.Shake.Errors
 import System.FilePath(isPathSeparator, pathSeparators, pathSeparator)
 import Data.List.Extra
 import Data.Tuple.Extra
@@ -166,31 +163,3 @@ directories ps = foldl f xs xs
 
         isPrefixSlashOf x (stripPrefix x -> Just (s1:_)) = isPathSeparator s1
         isPrefixSlashOf _ _ = False
-
-
----------------------------------------------------------------------
--- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
-
--- | Extract the items that match the wildcards. The pair must match with '?=='.
-extract :: FilePattern -> FilePath -> [String]
-extract p x = case match (pattern $ lexer p) (True,x) of
-    [] | p ?== x -> err $ "extract with " ++ show p ++ " and " ++ show x
-       | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
-    (ms,_,_):_ -> ms
-
-
--- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.
---
--- > p '?==' x ==> substitute (extract p x) p == x
-substitute :: [String] -> FilePattern -> FilePath
-substitute oms oxs = f oms oxs
-    where
-        f ms ('*':xs) = one ms xs
-        f ms (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = one ms xs
-        f ms (x:xs) = x : f ms xs
-        f [] [] = []
-        f ms [] = failure
-
-        one (m:ms) xs = m ++ f ms xs
-        one [] xs = failure
-        failure = error $ "Substitution failed into pattern " ++ show oxs ++ " with " ++ show (length oms) ++ " matches, namely " ++ show oms
