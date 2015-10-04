@@ -11,7 +11,10 @@ import Test.Type
 
 
 main = shaken test $ \args obj -> do
-    action $ liftIO $ sleep 5
+    action $ do
+        putNormal "Starting sleep"
+        liftIO $ sleep 5
+        putNormal "Finished sleep"
 
 
 test build obj = do
@@ -20,8 +23,8 @@ test build obj = do
     lock <- newLock
     let out msg = do t <- time; withLock lock $ print (t, msg)
     out "before onceFork"
-    a <- onceFork $ do out "a1"; build []; out "a2"
-    b <- onceFork $ do out "b1"; build []; out "b2"
+    a <- onceFork $ do out "a1"; build ["-VVV"]; out "a2"
+    b <- onceFork $ do out "b1"; build ["-VVV"]; out "b2"
     out "after onceFork"
     a <- try_ a
     out "after try a"
