@@ -21,15 +21,14 @@ main = shaken noTest $ \args obj -> do
 
     config %> \_ -> do
         need ["shake.cabal"]
-        unit $ cmd "runhaskell Setup.hs configure" ["--builddir=" ++ obj "dist","--user"]
+        unit $ cmd "cabal configure" ["--builddir=" ++ obj "dist","--user"]
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
-        need [config,"shake.cabal"]
+        need [config,"shake.cabal","README.md","CHANGES.txt"]
         needSource
-        need ["shake.cabal"]
         trackAllow [obj "dist//*"]
-        cmd "runhaskell Setup.hs haddock" ["--builddir=" ++ obj "dist"]
+        cmd "cabal haddock" ["--builddir=" ++ obj "dist"]
 
     obj "Paths_shake.hs" %> \out -> do
         copyFile' "src/Paths.hs" out

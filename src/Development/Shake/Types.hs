@@ -45,6 +45,9 @@ data Lint
         -- ^ Track which files are accessed by command line programs run by 'command' or 'cmd', using @tracker.exe@ as supplied
         --   with the Microsoft .NET 4.5 SDK (Windows only). Also performs all checks from 'LintBasic'. Note that some programs are not
         --   tracked properly, particularly cygwin programs (it seems).
+    | LintFSATrace
+        -- ^ Track which files are accessed by command line programs
+        -- using <https://github.com/jacereda/fsatrace fsatrace>.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
 

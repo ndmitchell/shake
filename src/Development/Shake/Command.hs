@@ -31,7 +31,7 @@ import System.IO.Extra
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
-import System.IO.Unsafe(unsafeInterleaveIO)
+import System.IO.Unsafe(unsafeInterleaveIO, unsafePerformIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Process
@@ -140,34 +140,36 @@ commandExplicit funcName copts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act = case shakeLint opts of
-            Just LintTracker -> (if isWindows then winTracker else unixTracker) act
-            _ -> act [] exe args
+            Just LintTracker -> winTracker act
+            Just LintFSATrace -> fsatrace act
+            _ -> act exe args
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
             flip actionFinally cleanup $ do
-                res <- act [] "tracker" $ "/if":dir:"/c":exe:args
+                res <- act "tracker" $ "/if":dir:"/c":exe:args
                 (rs, ws) <- liftIO $ trackerFiles dir
                 trackRead rs
                 trackWrite ws
                 return res
 
-        unixTracker act = do
+        fsatrace act = do
             (file, cleanup) <- liftIO newTempFile
             flip actionFinally cleanup $ do
                 fsat <- liftIO $ getEnv "FSAT"
-                let vars = [AddEnv "DYLD_INSERT_LIBRARIES" fsat
-                           ,AddEnv "DYLD_FORCE_FLAT_NAMESPACE" "1"
-                           ,AddEnv "FSAT_OUT" file]
-                res <- act vars exe args
+                res <- act fsat $ file:"--":exe:args
                 (rs, ws) <- liftIO $ fsatraceFiles file
-                whitelist <- liftIO unixWhitelist
-                let whitelisted x = any (\w -> (w ++ "/") `isPrefixOf` x) whitelist
-                trackRead $ filter (not . whitelisted) rs
-                trackWrite $ filter (not . whitelisted) ws
+                cwd <- liftIO $ getCurrentDirectory
+                let whitelisted x = any (`isPrefixOf` x) whitelist
+                    ham = filter (not . whitelisted)
+                    rel = map (makeRelative cwd)
+                    rrs = rel $ ham rs
+                    rws = rel $ ham ws
+                trackRead rrs
+                trackWrite rws
                 return res
 
-    skipper $ tracker $ \opts exe args -> verboser $ tracer $ commandExplicitIO funcName (opts++copts) results exe args
+    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
 
 
 -- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
@@ -211,7 +213,7 @@ fsatraceFiles file = do
 data FSAT = FSATWrite FilePath | FSATRead FilePath | FSATMove FilePath FilePath | FSATDelete FilePath
 
 parseFSAT :: String -> [FSAT] -- any parse errors are skipped
-parseFSAT = mapMaybe (f . wordsBy (== ':')) . lines
+parseFSAT = mapMaybe (f . wordsBy (== '|')) . lines
     where f ["w",x] = Just $ FSATWrite x
           f ["r",x] = Just $ FSATRead x
           f ["m",x,y] = Just $ FSATMove x y
@@ -219,19 +221,27 @@ parseFSAT = mapMaybe (f . wordsBy (== ':')) . lines
           f _ = Nothing
 
 
-unixWhitelist :: IO [FilePath]
-unixWhitelist = do
-    home <- getEnv "HOME"
-    return [home ++ "/.ghc"
-           ,home ++ "/Library/Haskell"
-           ,home ++ "/Applications"
-           ,home ++ "/.cabal"
-           ,"/Applications"
-           ,"/var/folders"
-           ,"/usr"
-           ,"/Library"
-           ,"/System"
-           ]
+whitelist :: [FilePath]
+whitelist = unsafePerformIO $ do
+    home <- getHomeDirectory
+    ghcPath <- lookupEnv "GHC_PACKAGE_PATH"
+    sbcPath <- lookupEnv "CABAL_SANDBOX_CONFIG"
+    cabPath <- lookupEnv "CABAL_SANDBOX_PACKAGE_PATH"
+    let splitted = map dropFileName . splitSearchPath . fromMaybe ""
+        hardcoded = [home ++ "/Applications/"
+                    ,home ++ "/.cabal/"
+                    ,home ++ "/.ghc/"
+                    ,"/Applications/"
+                    ,"/var/"
+                    ,"/usr/"
+                    ,"/Library/"
+                    ,"/System/"
+                    ,"/private/var/"
+                    ,"/etc/"
+                    ,"/opt/"
+                    ,"/lib/"
+                    ]
+    return $ hardcoded ++ maybeToList sbcPath ++ splitted ghcPath ++ splitted cabPath
 
 
 ---------------------------------------------------------------------

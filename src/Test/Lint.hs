@@ -94,11 +94,11 @@ main = shaken test $ \args obj -> do
         need [obj "tracker-source.c", obj "tracker-source.h"]
         cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
     where gen t f = unit $ if isWindows
-                           then cmd "cmd /c" ["echo" ++ t ++ " > " ++ f]
-                           else cmd Shell "echo" ["x", ">", f]
+                           then cmd "cmd /c" ["echo " ++ t ++ " >" ++ f]
+                           else cmd "sh -c" ["echo " ++ t ++ " >" ++ f]
           access f = unit $ if isWindows
-                            then cmd "cmd /c" ["type " ++ f ++ " > nul"]
-                            else cmd Shell "cat" [f, ">/dev/null"]
+                            then cmd "cmd /c" ["type " ++ f ++ " >nul"]
+                            else cmd "sh -c" ["cat " ++ f ++ ">/dev/null"]
 
 
 test build obj = do
@@ -117,8 +117,7 @@ test build obj = do
     crash ["--clean","listing","existance"] ["changed since being depended upon"]
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
-
-    when False $ whenM hasTracker $ do
+    whenM hasTracker $ do
         writeFile (obj "tracker-source1") ""
         writeFile (obj "tracker-source2") ""
         writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"

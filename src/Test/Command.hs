@@ -51,7 +51,8 @@ main = shaken test $ \args obj -> do
             ]
 
     obj "shake_helper.hs" %> \out -> do need ["src/Test/Command.hs"]; writeFileChanged out helper_source
-    obj "shake_helper" <.> exe %> \out -> do need [obj "shake_helper.hs"]; cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o shake_helper"
+    [obj "shake_helper" <.> exe, obj "shake_helper.o", obj "shake_helper.hi"] &%> \_ -> do
+      need [obj "shake_helper.hs"]; cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o shake_helper"
 
     "capture" !> do
         (Stderr err, Stdout out) <- cmd helper ["ostuff goes here","eother stuff here"]
