@@ -31,7 +31,9 @@ test build obj = do
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
-            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $ show pat ++ " " ++ show file ++ "\nFAILED substitute/extract property"
+            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
+                "FAILED substitute/extract property\nPattern: " ++ show pat ++ "\nFile: " ++ show file ++ "\n" ++
+                "Extracted: " ++ show (extract pat file) ++ "\nSubstitute: " ++ show (substitute (extract pat file) pat)
 
     f True "//*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
@@ -94,6 +96,12 @@ test build obj = do
     assert (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
     extract "//*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
     extract "//*a.txt" "testa.txt" === ["","test"]
+    extract "//a.txt" "a.txt" === [""]
+    extract "//a.txt" "/a.txt" === ["/"]
+    extract "a//b" "a/b" === [""]
+    extract "a//b" "a/x/b" === ["x/"]
+    extract "a//b" "a/x/y/b" === ["x/y/"]
+    extract "a///b" "a/x/y/b" === ["x/y/"]
     extract "//*a*.txt" "testada.txt" === ["","test","da"]
     extract (toNative "//*a*.txt") "testada.txt" === ["","test","da"]
     substitute ["","test","da"] "//*a*.txt" === "testada.txt"

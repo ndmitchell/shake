@@ -13,6 +13,6 @@ matrix:
 script:
  - git clone https://github.com/jacereda/fsatrace.git
  - (cd fsatrace/unix && make)
- - export FSAT=`pwd`/fsatrace/unix/fsatrace.so
+ - export FSAT=`pwd`/fsatrace/unix/fsatrace
  - echo $FSAT
  - wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --quiet | sh

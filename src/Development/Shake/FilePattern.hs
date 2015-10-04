@@ -14,7 +14,8 @@ module Development.Shake.FilePattern(
     internalTest
     ) where
 
-import Development.Shake.FilePatternOld hiding ((?==))
+import Development.Shake.Errors
+import Development.Shake.FilePatternOld(FilePattern, (<//>), directories1, directories)
 import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative
@@ -94,11 +95,11 @@ optimise [] =[]
 
 match :: [Pat] -> [String] -> [[String]]
 match (Skip:xs) (y:ys) = map ("":) (match xs (y:ys)) ++ match (Skip1:xs) (y:ys)
-match (Skip1:xs) (y:ys) = [(if null r then y else y ++ "/" ++ r):rs | r:rs <- match (Skip:xs) ys]
+match (Skip1:xs) (y:ys) = [(y++"/"++r):rs | r:rs <- match (Skip:xs) ys]
 match (Skip:xs) [] = map ("":) $ match xs []
 match (Star:xs) (y:ys) = map (y:) $ match xs ys
 match (Lit x:xs) (y:ys) | x == y = match xs ys
-match (x@Stars{}:xs) (y:ys) | Just rs <- matchStars x y = map (rs++) $ match xs ys
+match (x@Stars{}:xs) (y:ys) | Just rs <- matchStars x y = map (rs ++) $ match xs ys
 match [] [] = [[]]
 match _ _ = []
 
@@ -139,3 +140,27 @@ simple = null . specials
 compatible :: [FilePattern] -> Bool
 compatible [] = True
 compatible (x:xs) = all ((==) (specials x) . specials) xs
+
+-- | Extract the items that match the wildcards. The pair must match with '?=='.
+extract :: FilePattern -> FilePath -> [String]
+extract p@(parse -> pat) = \x -> case match pat (split isPathSeparator x) of
+    [] | p ?== x -> err $ "extract with " ++ show p ++ " and " ++ show x
+       | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
+    ms:_ -> ms
+
+
+-- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.
+--
+-- > p '?==' x ==> substitute (extract p x) p == x
+substitute :: [String] -> FilePattern -> FilePath
+substitute oms oxs = intercalate "/" $ concat $ snd $ mapAccumL f oms (parse oxs)
+    where
+        f ms (Lit x) = (ms, [x])
+        f (m:ms) Star = (ms, [m])
+        f (m:ms) Skip = (ms, split m)
+        f (m:ms) Skip1 = (ms, split m)
+        f ms (Stars pre mid post) = (ms2, [concat $ pre : zipWith (\x y -> x ++ y) ms1 (mid++[post])])
+            where (ms1,ms2) = splitAt (length mid + 1) ms
+        f _ _ = error $ "Substitution failed into pattern " ++ show oxs ++ " with " ++ show (length oms) ++ " matches, namely " ++ show oms
+
+        split = linesBy (== '/')
