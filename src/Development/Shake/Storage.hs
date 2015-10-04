@@ -62,7 +62,10 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{..} diagnostic witness act = withLockFile (shakeFiles </> ".shake.lock") $ do
+withStorage ShakeOptions{..} diagnostic witness act = do
+  diagnostic $ "Before fileLock on " ++ shakeFiles </> ".shake.lock"
+  withLockFile (shakeFiles </> ".shake.lock") $ do
+    diagnostic "After fileLock"
     let dbfile = shakeFiles </> ".shake.database"
         bupfile = shakeFiles </> ".shake.backup"
     createDirectoryIfMissing True shakeFiles
