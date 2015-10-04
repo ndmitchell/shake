@@ -11,7 +11,7 @@ import Test.Type
 
 
 main = shaken test $ \args obj -> do
-    action $ liftIO $ sleep 2
+    action $ liftIO $ sleep 5
 
 
 test build obj = do
