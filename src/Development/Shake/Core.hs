@@ -405,6 +405,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     let diagnostic = if shakeVerbosity >= Diagnostic then outputLocked Diagnostic . ("% "++) else const $ return ()
     let output v = outputLocked v . abbreviate shakeAbbreviations
+    diagnostic "Starting run"
 
     except <- newIORef (Nothing :: Maybe (String, ShakeException))
     let raiseError err
@@ -424,6 +425,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Wanted",Just dir)
                 ,("Got",Just now)]
                 ""
+    diagnostic "Starting run 2"
 
     after <- newIORef []
     absent <- newIORef []
@@ -432,6 +434,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
+            diagnostic "Starting run 3"
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
                 let getProgress = do
