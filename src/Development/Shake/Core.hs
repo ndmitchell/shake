@@ -433,8 +433,9 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
         _ <- addCleanup cleanup $ do
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
-        withNumCapabilities shakeThreads $ do
-            diagnostic "Starting run 3"
+        diagnostic "Starting run 3"
+        withNumCapabilities2 diagnostic shakeThreads $ do
+            diagnostic "Starting run 4"
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
                 let getProgress = do
@@ -482,6 +483,15 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                             output Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             sequence_ . reverse =<< readIORef after
+
+
+withNumCapabilities2 :: (String -> IO ()) -> Int -> IO a -> IO a
+withNumCapabilities2 diagnostic new act | rtsSupportsBoundThreads = do
+    old <- getNumCapabilities
+    diagnostic $ "withNumCapabilities2, " ++ show old ++ " to " ++ show new
+    if old == new then act else
+        bracket_ (setNumCapabilities new) (setNumCapabilities old) act
+withNumCapabilities2 _ _ act = act
 
 
 lineBuffering :: IO a -> IO a
