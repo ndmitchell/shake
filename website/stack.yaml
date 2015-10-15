@@ -1,8 +1,5 @@
-
+# Run:
+# stack build extra tagsoup markdown
+# stack ghci
 resolver: lts-3.9
 packages: []
-
-extra-deps:
- - extra-1.4.2
- - tagsoup-0.13.3
- - markdown-0.1.13.2
