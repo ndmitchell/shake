@@ -149,6 +149,10 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to writing using 'putStrLn'. A function called to output messages from Shake, along with the 'Verbosity' at
         --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
+    ,shakeLintFilter :: (FilePath -> Bool)
+        -- ^ Defaults to 'const True'. A function used to filter paths
+        --   reported by the Lint tool. Returns False if the file in
+        --   question should be ignored.
     }
     deriving Typeable
 
@@ -159,23 +163,24 @@ shakeOptions = ShakeOptions
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
+    (const True)
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
-    ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput"]
+    ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeLintFilter"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 y1 y2 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 (fromFunction y1) (fromFunction y2)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 y1 y2 y3 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 (fromFunction y1) (fromFunction y2) (fromFunction y3)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 y1 y2) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 y1 y2 y3) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
         x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k`
-        Function y1 `k` Function y2
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+        Function y1 `k` Function y2 `k` Function y3
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -196,6 +201,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Function (IO Progress -> IO ()))
                 | Just x <- cast x = show (x :: Function (Verbosity -> String -> IO ()))
+                | Just x <- cast x = show (x :: Function (FilePath -> Bool))
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
 
