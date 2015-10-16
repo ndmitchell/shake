@@ -31,7 +31,7 @@ import System.IO.Extra
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
-import System.IO.Unsafe(unsafeInterleaveIO, unsafePerformIO)
+import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Process
