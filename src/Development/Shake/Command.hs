@@ -147,7 +147,7 @@ commandExplicit funcName copts results exe args = do
           cwd <- liftIO $ getCurrentDirectory
           let blacklisted = shakeLintFilter opts
               ham = filter blacklisted
-              rel = map (makeRelative cwd)
+              rel = map (toStandard . makeRelative cwd)
           trackRead $ rel $ ham rs
           trackWrite $ rel $ ham ws
 
