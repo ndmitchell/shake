@@ -145,9 +145,14 @@ commandExplicit funcName copts results exe args = do
             _ -> act exe args
         track (rs,ws) = do
           cwd <- liftIO $ getCurrentDirectory
-          let blacklisted = shakeLintFilter opts
-              ham = filter blacklisted
-              rel = map (toStandard . makeRelative cwd)
+          let ignored = shakeLintIgnore opts
+              inside = shakeLintInside opts
+              hangingFrom :: FilePath -> [FilePath] -> Bool
+              hangingFrom f = any (isJust . flip stripPrefix f)
+              ham = filter (not . (`hangingFrom` ignored))
+                    . filter (`hangingFrom` inside)
+                    . map toStandard
+              rel = map (makeRelative cwd)
           trackRead $ rel $ ham rs
           trackWrite $ rel $ ham ws
 

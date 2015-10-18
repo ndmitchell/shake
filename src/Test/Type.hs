@@ -64,9 +64,6 @@ shaken test rules sleeper = do
             cwd <- getCurrentDirectory
             t <- tracker
             let (_,files,_) = getOpt Permute [] args
-                sandboxdir = cwd </> ".cabal-sandbox"
-                blacklisted x = (isJust $ stripPrefix cwd x)
-                                && (isNothing $ stripPrefix sandboxdir x)
 
             withArgs (args \\ files) $
                 shakeWithClean
@@ -74,7 +71,11 @@ shaken test rules sleeper = do
                     (shakeOptions{shakeFiles = out
                                  ,shakeReport = ["output/" ++ name ++ "/report.html"]
                                  ,shakeLint = Just t
-                                 ,shakeLintFilter = blacklisted
+                                 ,shakeLintInside = [cwd]
+                                 ,shakeLintIgnore = [ cwd </> ".cabal-sandbox"
+                                                    , cwd </> ".stack-work"
+                                                    , cwd </> "stack.yaml"
+                                                    ]
                                  })
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
