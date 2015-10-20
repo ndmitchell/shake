@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add RemEnv cmd option
     Fix a small space leak on Linux
     Fix a space leak in profile summary information
     Properly handle *//* in file pattern (at least one directory)

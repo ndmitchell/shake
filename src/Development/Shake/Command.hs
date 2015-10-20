@@ -50,6 +50,7 @@ data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
     | AddEnv String String -- ^ Add an environment variable in the child process.
+    | RemEnv String -- ^ Remove an environment variable from the child process.
     | AddPath [String] [String] -- ^ Add some items to the prefix and suffix of the @$PATH@ variable.
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
     | StdinBS LBS.ByteString -- ^ Given as the @stdin@ of the spawned process.
@@ -322,12 +323,13 @@ commandExplicitIO funcName opts results exe args = do
 
 resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])
 resolveEnv opts
-    | null env, null addEnv, null addPath = return Nothing
-    | otherwise = Just . unique . tweakPath . (++ addEnv) <$>
+    | null env, null addEnv, null addPath, null remEnv = return Nothing
+    | otherwise = Just . unique . tweakPath . (++ addEnv) . filter (flip notElem remEnv . fst) <$>
                   if null env then getEnvironment else return (concat env)
     where
         env = [x | Env x <- opts]
         addEnv = [(x,y) | AddEnv x y <- opts]
+        remEnv = [x | RemEnv x <- opts]
         addPath = [(x,y) | AddPath x y <- opts]
 
         newPath mid = intercalate [searchPathSeparator] $
