@@ -21,7 +21,11 @@ main = shaken noTest $ \args obj -> do
 
     config %> \_ -> do
         need ["shake.cabal"]
-        unit $ cmd "cabal configure" ["--builddir=" ++ obj "dist","--user"]
+        -- Make Cabal and Stack play nicely
+        path <- getEnv "GHC_PACKAGE_PATH"
+        unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "cabal configure"
+            ["--builddir=" ++ obj "dist","--user"]
+            ["--package-db=" ++ x | x <- splitSearchPath $ fromMaybe "" path]
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
