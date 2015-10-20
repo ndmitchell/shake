@@ -8,3 +8,5 @@
 /docs/manual/_build/
 /website/output/
 /website/.stack-work/
+/.stack-work/
+/stack.yaml
