@@ -31,7 +31,7 @@ import System.IO.Extra
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
-import System.IO.Unsafe(unsafeInterleaveIO, unsafePerformIO)
+import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Process
@@ -144,14 +144,24 @@ commandExplicit funcName copts results exe args = do
             Just LintTracker -> winTracker act
             Just LintFSATrace -> fsatrace act
             _ -> act exe args
+        track (rs,ws) = do
+          cwd <- liftIO $ getCurrentDirectory
+          let ignored = shakeLintIgnore opts
+              inside = shakeLintInside opts
+              hangingFrom :: FilePath -> [FilePath] -> Bool
+              hangingFrom f = any (isJust . flip stripPrefix f)
+              ham = filter (not . (`hangingFrom` ignored))
+                    . filter (`hangingFrom` inside)
+                    . map toStandard
+              rel = map (makeRelative cwd)
+          trackRead $ rel $ ham rs
+          trackWrite $ rel $ ham ws
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
             flip actionFinally cleanup $ do
                 res <- act "tracker" $ "/if":dir:"/c":exe:args
-                (rs, ws) <- liftIO $ trackerFiles dir
-                trackRead rs
-                trackWrite ws
+                liftIO (trackerFiles dir) >>= track
                 return res
 
         fsatrace act = do
@@ -159,15 +169,7 @@ commandExplicit funcName copts results exe args = do
             flip actionFinally cleanup $ do
                 fsat <- liftIO $ getEnv "FSAT"
                 res <- act fsat $ file:"--":exe:args
-                (rs, ws) <- liftIO $ fsatraceFiles file
-                cwd <- liftIO $ getCurrentDirectory
-                let whitelisted x = any (`isPrefixOf` x) whitelist
-                    ham = filter (not . whitelisted)
-                    rel = map (makeRelative cwd)
-                    rrs = rel $ ham rs
-                    rws = rel $ ham ws
-                trackRead rrs
-                trackWrite rws
+                liftIO (fsatraceFiles file) >>= track
                 return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
@@ -220,30 +222,6 @@ parseFSAT = mapMaybe (f . wordsBy (== '|')) . lines
           f ["m",x,y] = Just $ FSATMove x y
           f ["d",x] = Just $ FSATDelete x
           f _ = Nothing
-
-
-whitelist :: [FilePath]
-whitelist = unsafePerformIO $ do
-    home <- getHomeDirectory
-    ghcPath <- lookupEnv "GHC_PACKAGE_PATH"
-    sbcPath <- lookupEnv "CABAL_SANDBOX_CONFIG"
-    cabPath <- lookupEnv "CABAL_SANDBOX_PACKAGE_PATH"
-    let splitted = map dropFileName . splitSearchPath . fromMaybe ""
-        hardcoded = [home ++ "/Applications/"
-                    ,home ++ "/.cabal/"
-                    ,home ++ "/.ghc/"
-                    ,"/Applications/"
-                    ,"/var/"
-                    ,"/usr/"
-                    ,"/Library/"
-                    ,"/System/"
-                    ,"/private/var/"
-                    ,"/etc/"
-                    ,"/opt/"
-                    ,"/lib/"
-                    ]
-    return $ hardcoded ++ maybeToList sbcPath ++ splitted ghcPath ++ splitted cabPath
-
 
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION

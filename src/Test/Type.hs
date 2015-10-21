@@ -61,14 +61,21 @@ shaken test rules sleeper = do
             shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules args (out++)
 
         args -> do
-            let (_,files,_) = getOpt Permute [] args
+            cwd <- getCurrentDirectory
             t <- tracker
+            let (_,files,_) = getOpt Permute [] args
+
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out)
                     (shakeOptions{shakeFiles = out
                                  ,shakeReport = ["output/" ++ name ++ "/report.html"]
                                  ,shakeLint = Just t
+                                 ,shakeLintInside = [cwd]
+                                 ,shakeLintIgnore = [ cwd </> ".cabal-sandbox"
+                                                    , cwd </> ".stack-work"
+                                                    , cwd </> "stack.yaml"
+                                                    ]
                                  })
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
