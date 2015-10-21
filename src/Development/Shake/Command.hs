@@ -39,6 +39,7 @@ import Prelude
 
 import Development.Shake.Core
 import Development.Shake.FilePath
+import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
 
@@ -146,13 +147,11 @@ commandExplicit funcName copts results exe args = do
             _ -> act exe args
         track (rs,ws) = do
           cwd <- liftIO $ getCurrentDirectory
-          let ignored = shakeLintIgnore opts
-              inside = shakeLintInside opts
-              hangingFrom :: FilePath -> [FilePath] -> Bool
-              hangingFrom f = any (isJust . flip stripPrefix f)
-              ham = filter (not . (`hangingFrom` ignored))
-                    . filter (`hangingFrom` inside)
-                    . map toStandard
+          let inside = map (toStandard . addTrailingPathSeparator) $ shakeLintInside opts
+              ignore = map (?==) $ shakeLintIgnore opts
+              ham xs = [x | x <- map toStandard xs
+                          , any (x `isPrefixOf`) inside
+                          , not $ any ($ x) ignore]
               rel = map (makeRelative cwd)
           trackRead $ rel $ ham rs
           trackWrite $ rel $ ham ws

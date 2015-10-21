@@ -9,6 +9,7 @@ module Development.Shake.Types(
 import Data.Data
 import Data.List
 import Development.Shake.Progress
+import Development.Shake.FilePattern
 import qualified Data.ByteString.Char8 as BS
 
 
@@ -108,9 +109,9 @@ data ShakeOptions = ShakeOptions
     ,shakeLint :: Maybe Lint
         -- ^ Defaults to 'Nothing'. Perform sanity checks during building, see 'Lint' for details.
     ,shakeLintInside :: [FilePath]
-        -- ^ List of prefixes for paths that should be covered by the linter.
-    ,shakeLintIgnore :: [FilePath]
-        -- ^ List of prefixes for paths that should be ignored by the linter.
+        -- ^ Directories in which the files will be tracked by the linter.
+    ,shakeLintIgnore :: [FilePattern]
+        -- ^ File patterns which are ignored from linter tracking, a bit like calling 'trackAllow' in every rule.
     ,shakeFlush :: Maybe Double
         -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
         --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
