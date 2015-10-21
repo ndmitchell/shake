@@ -25,7 +25,6 @@ main = shaken noTest $ \args obj -> do
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
 
     ghcPkg <- addOracle $ \GhcPkg{} -> do
-        trackAllow [".stack-work//*"]
         Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
         return $ words out
 
