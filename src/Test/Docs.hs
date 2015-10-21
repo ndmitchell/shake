@@ -26,7 +26,7 @@ main = shaken noTest $ \args obj -> do
         liftIO $ print ("docs configure", path)
         unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "cabal configure"
             ["--builddir=" ++ obj "dist","--user"]
-            ["--package-db=" ++ x | x <- splitSearchPath $ fromMaybe "" path]
+            ["--package-db=" ++ x | x <- maybe [] splitSearchPath path]
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
