@@ -98,7 +98,7 @@ tracker = do
   trackerExe <- findExecutable "tracker.exe"
   return $ if isJust fsatrace
            then LintFSATrace
-           else if isJust trackerExe
+           else if False && isJust trackerExe
                 then LintTracker
                 else LintBasic
 
