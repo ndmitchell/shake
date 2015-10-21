@@ -66,7 +66,7 @@ main = shaken noTest $ \args obj -> do
             ,"import Data.Monoid"
             ,"import Development.Shake"
             ,"import Development.Shake.Classes"
-            ,"import Development.Shake.Rule"
+            ,"import Development.Shake.Rule hiding (trackAllow)"
             ,"import Development.Shake.Util"
             ,"import Development.Shake.FilePath"
             ,"import System.Console.GetOpt"
