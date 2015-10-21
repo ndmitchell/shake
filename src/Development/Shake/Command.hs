@@ -150,7 +150,7 @@ commandExplicit funcName copts results exe args = do
           let inside = map (toStandard . addTrailingPathSeparator) $ shakeLintInside opts
               ignore = map (?==) $ shakeLintIgnore opts
               ham xs = [x | x <- map toStandard xs
-                          , any (x `isPrefixOf`) inside
+                          , any (`isPrefixOf` x) inside
                           , not $ any ($ x) ignore]
               rel = map (makeRelative cwd)
           trackRead $ rel $ ham rs
