@@ -96,7 +96,7 @@ tracker :: IO Lint
 tracker = do
   fsatrace <- lookupEnv "FSAT"
   trackerExe <- findExecutable "tracker.exe"
-  return $ if False && isJust fsatrace
+  return $ if isJust fsatrace
            then LintFSATrace
            else if False && isJust trackerExe
                 then LintTracker
