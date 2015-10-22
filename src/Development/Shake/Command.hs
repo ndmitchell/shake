@@ -147,7 +147,7 @@ commandExplicit funcName copts results exe args = do
             _ -> act exe args
         track (rs,ws) = do
           cwd <- liftIO $ getCurrentDirectory
-          let inside = map (toStandard . addTrailingPathSeparator) $ shakeLintInside opts
+          let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
               ignore = map (?==) $ shakeLintIgnore opts
               ham xs = [x | x <- map toStandard xs
                           , any (`isPrefixOf` x) inside
@@ -207,8 +207,9 @@ fsatraceFiles file = do
     xs <- parseFSAT <$> readFileUTF8 file
     let reader (FSATRead x) = Just x; reader _ = Nothing
         writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
-    frs <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe reader xs
-    fws <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe writer xs
+        existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
+    frs <- existing reader xs
+    fws <- existing writer xs
     return (frs, fws)
 
 

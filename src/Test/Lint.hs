@@ -94,12 +94,11 @@ main = shaken test $ \args obj -> do
         need [obj "tracker-source.c", obj "tracker-source.h"]
         cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
     where gen t f = unit $ if isWindows
-                           then cmd Shell "cmd" ["/S", "/C", quoted $ "echo " ++ t ++ ">" ++ toNative f]
+                           then cmd "cmd.exe" ["/C echo " ++ t ++ ">" ++ toNative f]
                            else cmd "sh -c" ["echo " ++ t ++ " >" ++ f]
           access f = unit $ if isWindows
-                            then cmd Shell "cmd" ["/S", "/C", quoted $ "type " ++ toNative f ++ " >nul"]
+                            then cmd "cmd.exe" ["/C type " ++ toNative f ++ ">nul"]
                             else cmd "sh -c" ["cat " ++ f ++ ">/dev/null"]
-          quoted x = "\"" ++ x ++ "\""
 
 
 test build obj = do
