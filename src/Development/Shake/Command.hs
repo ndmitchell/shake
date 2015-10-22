@@ -207,8 +207,8 @@ fsatraceFiles file = do
     xs <- parseFSAT <$> readFileUTF8 file
     let reader (FSATRead x) = Just x; reader _ = Nothing
         writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
-    frs <- liftIO $ filterM doesFileExist $ nubOrd $ map normalise $ mapMaybe reader xs
-    fws <- liftIO $ filterM doesFileExist $ nubOrd $ map normalise $ mapMaybe writer xs
+    frs <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe reader xs
+    fws <- liftIO $ filterM doesFileExist $ nubOrd $ mapMaybe writer xs
     return (frs, fws)
 
 

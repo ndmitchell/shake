@@ -79,14 +79,14 @@ main = shaken test $ \args obj -> do
 
     obj "tracker-source2" %> \out -> copyFile' (obj "tracker-source1") out
     obj "tracker-read1" %> \out -> do
-        access $ toNative (obj "tracker-source1")
+        access $ obj "tracker-source1"
         writeFile' out ""
     obj "tracker-read2" %> \out -> do
-        access $ toNative (obj "tracker-source1")
+        access $ obj "tracker-source1"
         need [obj "tracker-source1"]
         writeFile' out ""
     obj "tracker-read3" %> \out -> do
-        access $ toNative (obj "tracker-source2")
+        access $ obj "tracker-source2"
         need [obj "tracker-source2"]
         writeFile' out ""
 
@@ -94,11 +94,12 @@ main = shaken test $ \args obj -> do
         need [obj "tracker-source.c", obj "tracker-source.h"]
         cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
     where gen t f = unit $ if isWindows
-                           then cmd "cmd /c" ["echo " ++ t ++ " >" ++ f]
+                           then cmd Shell "cmd" ["/S", "/C", quoted $ "echo " ++ t ++ ">" ++ toNative f]
                            else cmd "sh -c" ["echo " ++ t ++ " >" ++ f]
           access f = unit $ if isWindows
-                            then cmd "cmd /c" ["type " ++ f ++ " >nul"]
+                            then cmd Shell "cmd" ["/S", "/C", quoted $ "type " ++ toNative f ++ " >nul"]
                             else cmd "sh -c" ["cat " ++ f ++ ">/dev/null"]
+          quoted x = "\"" ++ x ++ "\""
 
 
 test build obj = do
@@ -121,7 +122,7 @@ test build obj = do
         writeFile (obj "tracker-source1") ""
         writeFile (obj "tracker-source2") ""
         writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
-        writeFile (obj "tracker-source.h") ""        
+        writeFile (obj "tracker-source.h") ""
         crash ["tracker-write1"] ["not have its creation tracked","lint/tracker-write1","lint/tracker-write1.txt"]
         build ["tracker-write2"]
         crash ["tracker-read1"] ["used but not depended upon","lint/tracker-source1"]
