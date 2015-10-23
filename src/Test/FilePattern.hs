@@ -5,6 +5,7 @@ import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Data.Tuple.Extra
 import Control.Monad
+import System.IO.Unsafe
 import Data.List
 import Test.Type
 import Test.QuickCheck hiding ((===))
@@ -117,8 +118,7 @@ test build obj = do
     directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
-        if not $ eval p x then label "No match" $ not $ p ?== x
-        else property $ p ?== x && toStandard (substitute (extract p x) p) == toStandard x
+        let b = eval p x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
     return ()
 
 
