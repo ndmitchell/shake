@@ -6,7 +6,7 @@ import Development.Shake.FilePath
 import Data.Tuple.Extra
 import Control.Monad
 import System.IO.Unsafe
-import Data.List
+import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
@@ -32,6 +32,7 @@ test build obj = do
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+            assert (b == (pat `walker` file)) $ show pat ++ " `walker` " ++ show file ++ "\nEXPECTED: " ++ show b
             when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
                 "FAILED substitute/extract property\nPattern: " ++ show pat ++ "\nFile: " ++ show file ++ "\n" ++
                 "Extracted: " ++ show (extract pat file) ++ "\nSubstitute: " ++ show (substitute (extract pat file) pat)
@@ -120,6 +121,15 @@ test build obj = do
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
         let b = eval p x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
     return ()
+
+
+walker :: FilePattern -> FilePath -> Bool
+walker a b = f (split isPathSeparator b) $ walk [a]
+    where
+        f (x:xs) (Walk op) = f (x:xs) $ WalkTo $ op [x]
+        f [x]    (WalkTo (file, dir)) = x `elem` file
+        f (x:xs) (WalkTo (file, dir)) | Just w <- lookup x dir = f xs w
+        f _ _ = False
 
 
 eval :: FilePattern -> FilePath -> Bool
