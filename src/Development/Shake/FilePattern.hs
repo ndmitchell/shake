@@ -14,7 +14,6 @@ module Development.Shake.FilePattern(
     ) where
 
 import Development.Shake.Errors
-import Development.Shake.FilePatternOld(FilePattern, (<//>))
 import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative
@@ -23,6 +22,37 @@ import Data.Tuple.Extra
 import Data.Maybe
 import Prelude
 
+
+-- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax
+--   and semantics of 'FilePattern' see '?=='.
+--
+--   Most 'normaliseEx'd 'FilePath' values are suitable as 'FilePattern' values which match
+--   only that specific file. On Windows @\\@ is treated as equivalent to @\/@.
+--
+--   You can write 'FilePattern' values as a literal string, or build them
+--   up using the operators 'Development.Shake.FilePath.<.>', 'Development.Shake.FilePath.</>'
+--   and 'Development.Shake.<//>'. However, beware that:
+--
+-- * On Windows, use 'Development.Shake.FilePath.<.>' from "Development.Shake.FilePath" instead of from
+--   "System.FilePath" - otherwise @\"\/\/*\" \<.\> exe@ results in @\"\/\/*\\\\.exe\"@.
+--
+-- * If the second argument of 'Development.Shake.FilePath.</>' has a leading path separator (namely @\/@)
+--   then the second argument will be returned.
+type FilePattern = String
+
+infixr 5 <//>
+
+-- | Join two 'FilePattern' values by inserting two @\/@ characters between them.
+--   Will first remove any trailing path separators on the first argument, and any leading
+--   separators on the second.
+--
+-- > "dir" <//> "*" == "dir//*"
+(<//>) :: FilePattern -> FilePattern -> FilePattern
+a <//> b = dropWhileEnd isPathSeparator a ++ "//" ++ dropWhile isPathSeparator b
+
+
+---------------------------------------------------------------------
+-- PATTERNS
 
 data Pat = Lit String -- ^ foo
          | Star   -- ^ /*/
