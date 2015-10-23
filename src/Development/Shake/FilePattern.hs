@@ -8,15 +8,13 @@ module Development.Shake.FilePattern(
     -- * Multipattern file rules
     compatible, extract, substitute,
     -- * Accelerated searching
-    directories,
     Walk(..), walk,
     -- * Testing only
-    directories1,
     internalTest
     ) where
 
 import Development.Shake.Errors
-import Development.Shake.FilePatternOld(FilePattern, (<//>), directories1, directories)
+import Development.Shake.FilePatternOld(FilePattern, (<//>))
 import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative
