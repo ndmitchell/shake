@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Speed up getDirectoryFiles
     Work with stack test
     Add RemEnv cmd option
     Fix a small space leak on Linux
