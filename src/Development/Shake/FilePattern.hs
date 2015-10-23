@@ -205,7 +205,7 @@ walk = f . map (optimise . parse)
 next :: [Pat] -> [(Pat, [Pat])]
 next (Skip1:xs) = [(Star,Skip:xs)]
 next (Skip:xs) = (Star,Skip:xs) : next xs
-next (x:xs) = [(x,xs)]
+next (x:xs) = [(x,xs) | not $ null xs]
 next [] = []
 
 final :: [Pat] -> Maybe Pat
