@@ -1,6 +1,6 @@
 Changelog for Shake
 
-    Speed up getDirectoryFiles
+    #283, speed up getDirectoryFiles on patterns involving literals
     Work with stack test
     Add RemEnv cmd option
     Fix a small space leak on Linux
