@@ -227,14 +227,14 @@ getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
 getDir GetDirFiles{..} = fmap answer $ f "" $ walk pat
     where
         root = dir
-        f dir (WalkTo (files, dirs)) = do
-            files <- filterM (IO.doesFileExist . (root </>)) $ map (dir </>) files
-            dirs <- concatMapM (uncurry f) =<< filterM (IO.doesDirectoryExist . (root </>) . fst) (map (first (dir </>)) dirs)
-            return $ files ++ dirs
 
         -- Even after we know they are there because we called contents, we still have to check they are directories/files
         -- as required
         f dir (Walk op) = f dir . WalkTo . op =<< contents (root </> dir)
+        f dir (WalkTo (files, dirs)) = do
+            files <- filterM (IO.doesFileExist . (root </>)) $ map (dir </>) files
+            dirs <- concatMapM (uncurry f) =<< filterM (IO.doesDirectoryExist . (root </>) . fst) (map (first (dir </>)) dirs)
+            return $ files ++ dirs
 
 
 -- | Remove all files and directories that match any of the patterns within a directory.
