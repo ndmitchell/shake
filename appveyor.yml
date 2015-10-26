@@ -1,6 +1,5 @@
 cache:
 - "c:\\sr" # stack root, short paths == less problems
-- "%LOCALAPPDATA%\\Programs\\stack"
 
 build: off
 
@@ -19,5 +18,6 @@ environment:
 
 test_script:
 - stack init
-- echo "" | stack --arch i386 --no-terminal --install-ghc build
-- echo "" | stack --arch i386 --no-terminal --install-ghc test
+- stack setup > nul
+- echo "" | stack --no-terminal build
+- stack test
