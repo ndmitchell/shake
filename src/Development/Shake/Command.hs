@@ -146,15 +146,15 @@ commandExplicit funcName copts results exe args = do
             Just LintFSATrace -> fsatrace act
             _ -> act exe args
         track (rs,ws) = do
-          cwd <- liftIO $ getCurrentDirectory
-          let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
-              ignore = map (?==) $ shakeLintIgnore opts
-              ham xs = [x | x <- map toStandard xs
-                          , any (`isPrefixOf` x) inside
-                          , not $ any ($ x) ignore]
-              rel = map (makeRelative cwd)
-          trackRead $ rel $ ham rs
-          trackWrite $ rel $ ham ws
+            cwd <- liftIO $ getCurrentDirectory
+            let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
+                ignore = map (?==) $ shakeLintIgnore opts
+                ham xs = [x | x <- map toStandard xs
+                            , any (`isPrefixOf` x) inside
+                            , not $ any ($ x) ignore]
+                rel = map (makeRelative cwd)
+            trackRead $ rel $ ham rs
+            trackWrite $ rel $ ham ws
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
