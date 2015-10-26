@@ -75,12 +75,14 @@ main = shaken test $ \args obj -> do
         liftIO $ (===) (trim out) =<< canonicalizePath (dropTrailingPathSeparator $ obj "")
 
     "timeout" !> do
-        offset <- liftIO offsetTime
-        Exit exit <- cmd (Timeout 2) helper "w20"
-        t <- liftIO offset
-        putNormal $ "Timed out in " ++ showDuration t
-        when (exit == ExitSuccess) $ error "== ExitSuccess"
-        when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
+        opts <- getShakeOptions
+        when (shakeLint opts /= Just LintTracker) $ do
+            offset <- liftIO offsetTime
+            Exit exit <- cmd (Timeout 2) helper "w20"
+            t <- liftIO offset
+            putNormal $ "Timed out in " ++ showDuration t
+            when (exit == ExitSuccess) $ error "== ExitSuccess"
+            when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
 
     "env" !> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
