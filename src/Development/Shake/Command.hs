@@ -31,7 +31,7 @@ import System.IO.Extra
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
-import System.IO.Unsafe(unsafeInterleaveIO, unsafePerformIO)
+import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Process
@@ -39,6 +39,7 @@ import Prelude
 
 import Development.Shake.Core
 import Development.Shake.FilePath
+import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
 
@@ -144,14 +145,22 @@ commandExplicit funcName copts results exe args = do
             Just LintTracker -> winTracker act
             Just LintFSATrace -> fsatrace act
             _ -> act exe args
+        track (rs,ws) = do
+          cwd <- liftIO $ getCurrentDirectory
+          let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
+              ignore = map (?==) $ shakeLintIgnore opts
+              ham xs = [x | x <- map toStandard xs
+                          , any (`isPrefixOf` x) inside
+                          , not $ any ($ x) ignore]
+              rel = map (makeRelative cwd)
+          trackRead $ rel $ ham rs
+          trackWrite $ rel $ ham ws
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
             flip actionFinally cleanup $ do
                 res <- act "tracker" $ "/if":dir:"/c":exe:args
-                (rs, ws) <- liftIO $ trackerFiles dir
-                trackRead rs
-                trackWrite ws
+                liftIO (trackerFiles dir) >>= track
                 return res
 
         fsatrace act = do
@@ -159,15 +168,7 @@ commandExplicit funcName copts results exe args = do
             flip actionFinally cleanup $ do
                 fsat <- liftIO $ getEnv "FSAT"
                 res <- act fsat $ file:"--":exe:args
-                (rs, ws) <- liftIO $ fsatraceFiles file
-                cwd <- liftIO $ getCurrentDirectory
-                let whitelisted x = any (`isPrefixOf` x) whitelist
-                    ham = filter (not . whitelisted)
-                    rel = map (makeRelative cwd)
-                    rrs = rel $ ham rs
-                    rws = rel $ ham ws
-                trackRead rrs
-                trackWrite rws
+                liftIO (fsatraceFiles file) >>= track
                 return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
@@ -206,8 +207,9 @@ fsatraceFiles file = do
     xs <- parseFSAT <$> readFileUTF8 file
     let reader (FSATRead x) = Just x; reader _ = Nothing
         writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
-    frs <- liftIO $ filterM doesFileExist $ nubOrd $ map normalise $ mapMaybe reader xs
-    fws <- liftIO $ filterM doesFileExist $ nubOrd $ map normalise $ mapMaybe writer xs
+        existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
+    frs <- existing reader xs
+    fws <- existing writer xs
     return (frs, fws)
 
 
@@ -220,30 +222,6 @@ parseFSAT = mapMaybe (f . wordsBy (== '|')) . lines
           f ["m",x,y] = Just $ FSATMove x y
           f ["d",x] = Just $ FSATDelete x
           f _ = Nothing
-
-
-whitelist :: [FilePath]
-whitelist = unsafePerformIO $ do
-    home <- getHomeDirectory
-    ghcPath <- lookupEnv "GHC_PACKAGE_PATH"
-    sbcPath <- lookupEnv "CABAL_SANDBOX_CONFIG"
-    cabPath <- lookupEnv "CABAL_SANDBOX_PACKAGE_PATH"
-    let splitted = map dropFileName . splitSearchPath . fromMaybe ""
-        hardcoded = [home ++ "/Applications/"
-                    ,home ++ "/.cabal/"
-                    ,home ++ "/.ghc/"
-                    ,"/Applications/"
-                    ,"/var/"
-                    ,"/usr/"
-                    ,"/Library/"
-                    ,"/System/"
-                    ,"/private/var/"
-                    ,"/etc/"
-                    ,"/opt/"
-                    ,"/lib/"
-                    ]
-    return $ hardcoded ++ maybeToList sbcPath ++ splitted ghcPath ++ splitted cabPath
-
 
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION

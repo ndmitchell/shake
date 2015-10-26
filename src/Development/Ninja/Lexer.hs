@@ -1,5 +1,5 @@
 {-# LANGUAGE PatternGuards #-}
-{-# OPTIONS_GHC -O2 #-}
+-- {-# OPTIONS_GHC -O2 #-} -- fails with GHC 7.10
 -- {-# OPTIONS_GHC -ddump-simpl #-}
 
 -- | Lexing is a slow point, the code below is optimised

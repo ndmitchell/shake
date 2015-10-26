@@ -8,20 +8,51 @@ module Development.Shake.FilePattern(
     -- * Multipattern file rules
     compatible, extract, substitute,
     -- * Accelerated searching
-    directories,
+    Walk(..), walk,
     -- * Testing only
-    directories1,
     internalTest
     ) where
 
 import Development.Shake.Errors
-import Development.Shake.FilePatternOld(FilePattern, (<//>), directories1, directories)
 import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative
 import Control.Monad
+import Data.Tuple.Extra
+import Data.Maybe
 import Prelude
 
+
+-- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax
+--   and semantics of 'FilePattern' see '?=='.
+--
+--   Most 'normaliseEx'd 'FilePath' values are suitable as 'FilePattern' values which match
+--   only that specific file. On Windows @\\@ is treated as equivalent to @\/@.
+--
+--   You can write 'FilePattern' values as a literal string, or build them
+--   up using the operators 'Development.Shake.FilePath.<.>', 'Development.Shake.FilePath.</>'
+--   and 'Development.Shake.<//>'. However, beware that:
+--
+-- * On Windows, use 'Development.Shake.FilePath.<.>' from "Development.Shake.FilePath" instead of from
+--   "System.FilePath" - otherwise @\"\/\/*\" \<.\> exe@ results in @\"\/\/*\\\\.exe\"@.
+--
+-- * If the second argument of 'Development.Shake.FilePath.</>' has a leading path separator (namely @\/@)
+--   then the second argument will be returned.
+type FilePattern = String
+
+infixr 5 <//>
+
+-- | Join two 'FilePattern' values by inserting two @\/@ characters between them.
+--   Will first remove any trailing path separators on the first argument, and any leading
+--   separators on the second.
+--
+-- > "dir" <//> "*" == "dir//*"
+(<//>) :: FilePattern -> FilePattern -> FilePattern
+a <//> b = dropWhileEnd isPathSeparator a ++ "//" ++ dropWhile isPathSeparator b
+
+
+---------------------------------------------------------------------
+-- PATTERNS
 
 data Pat = Lit String -- ^ foo
          | Star   -- ^ /*/
@@ -29,7 +60,10 @@ data Pat = Lit String -- ^ foo
          | Skip1 -- ^ //, but must be at least 1 element
          | Stars String [String] String -- ^ *foo*, prefix (fixed), infix floaters, suffix
                                         -- e.g. *foo*bar = Stars "" ["foo"] "bar"
-            deriving (Show,Eq)
+            deriving (Show,Eq,Ord)
+
+isLit Lit{} = True; isLit _ = False
+fromLit (Lit x) = x
 
 
 data Lexeme = Str String | Slash | SlashSlash
@@ -103,6 +137,13 @@ match (x@Stars{}:xs) (y:ys) | Just rs <- matchStars x y = map (rs ++) $ match xs
 match [] [] = [[]]
 match _ _ = []
 
+
+matchOne :: Pat -> String -> Bool
+matchOne (Lit x) y = x == y
+matchOne x@Stars{} y = isJust $ matchStars x y
+matchOne Star _ = True
+
+
 -- Only return the first (all patterns left-most) valid star matching
 matchStars :: Pat -> String -> Maybe [String]
 matchStars (Stars pre mid post) x = do
@@ -164,3 +205,41 @@ substitute oms oxs = intercalate "/" $ concat $ snd $ mapAccumL f oms (parse oxs
         f _ _ = error $ "Substitution failed into pattern " ++ show oxs ++ " with " ++ show (length oms) ++ " matches, namely " ++ show oms
 
         split = linesBy (== '/')
+
+
+---------------------------------------------------------------------
+-- EFFICIENT PATH WALKING
+
+-- | Given a list of files, return a list of things I can match in this directory
+--   plus a list of subdirectories and walks that apply to them.
+--   Use WalkTo when the list can be predicted in advance
+data Walk = Walk ([String] -> ([String],[(String,Walk)]))
+          | WalkTo            ([String],[(String,Walk)])
+
+walk :: [FilePattern] -> Walk
+walk = f . map (optimise . parse)
+    where
+        f (nubOrd -> ps)
+            | all isLit fin, all (isLit . fst) nxt = WalkTo (map fromLit fin, map (fromLit *** f) nxt)
+            | otherwise = Walk $ \xs ->
+                (if finStar then xs else filter (\x -> any (`matchOne` x) fin) xs
+                ,[(x, f ys) | x <- xs, let ys = concat [b | (a,b) <- nxt, matchOne a x], not $ null ys])
+            where
+                finStar = Star `elem` fin
+                fin = nubOrd $ mapMaybe final ps
+                nxt = groupSort $ concatMap next ps
+
+
+next :: [Pat] -> [(Pat, [Pat])]
+next (Skip1:xs) = [(Star,Skip:xs)]
+next (Skip:xs) = (Star,Skip:xs) : next xs
+next (x:xs) = [(x,xs) | not $ null xs]
+next [] = []
+
+final :: [Pat] -> Maybe Pat
+final (Skip:xs) = if isEmpty xs then Just Star else final xs
+final (Skip1:xs) = if isEmpty xs then Just Star else Nothing
+final (x:xs) = if isEmpty xs then Just x else Nothing
+final [] = Nothing
+
+isEmpty = all (== Skip)

@@ -3,9 +3,9 @@ module Test.FilePattern(main) where
 
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
-import Data.Tuple.Extra
 import Control.Monad
-import Data.List
+import System.IO.Unsafe
+import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
@@ -31,6 +31,7 @@ test build obj = do
     let f b pat file = do
             assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+            assert (b == (pat `walker` file)) $ show pat ++ " `walker` " ++ show file ++ "\nEXPECTED: " ++ show b
             when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
                 "FAILED substitute/extract property\nPattern: " ++ show pat ++ "\nFile: " ++ show file ++ "\n" ++
                 "Extracted: " ++ show (extract pat file) ++ "\nSubstitute: " ++ show (substitute (extract pat file) pat)
@@ -107,19 +108,26 @@ test build obj = do
     substitute ["","test","da"] "//*a*.txt" === "testada.txt"
     substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
 
-    directories1 "*.xml" === ("",False)
-    directories1 "//*.xml" === ("",True)
-    directories1 "foo//*.xml" === ("foo",True)
-    first toStandard (directories1 "foo/bar/*.xml") === ("foo/bar",False)
-    directories1 "*/bar/*.xml" === ("",True)
-    directories ["*.xml","//*.c"] === [("",True)]
-    directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
-    directories ["bar/*.xml","baz//*.c"] === [("bar",False),("baz",True)]
+    Walk _ <- return $ walk ["*.xml"]
+    Walk _ <- return $ walk ["//*.xml"]
+    WalkTo ([], [("foo",Walk _)]) <- return $ walk ["foo//*.xml"]
+    WalkTo ([], [("foo",WalkTo ([],[("bar",Walk _)]))]) <- return $ walk ["foo/bar/*.xml"]
+    WalkTo (["a"],[("b",WalkTo (["c"],[]))]) <- return $ walk ["a","b/c"]
+    ([], [("foo",WalkTo ([],[("bar",Walk _)]))]) <- let Walk f = walk ["*/bar/*.xml"] in return $ f ["foo"]
+    WalkTo ([],[("bar",Walk _),("baz",Walk _)]) <- return $ walk ["bar/*.xml","baz//*.c"]
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
-        if not $ eval p x then label "No match" $ not $ p ?== x
-        else property $ p ?== x && toStandard (substitute (extract p x) p) == toStandard x
+        let b = eval p x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
     return ()
+
+
+walker :: FilePattern -> FilePath -> Bool
+walker a b = f (split isPathSeparator b) $ walk [a]
+    where
+        f (x:xs) (Walk op) = f (x:xs) $ WalkTo $ op [x]
+        f [x]    (WalkTo (file, dir)) = x `elem` file
+        f (x:xs) (WalkTo (file, dir)) | Just w <- lookup x dir = f xs w
+        f _ _ = False
 
 
 eval :: FilePattern -> FilePath -> Bool

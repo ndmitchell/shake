@@ -135,7 +135,6 @@ library
         Development.Shake.Errors
         Development.Shake.FileInfo
         Development.Shake.FilePattern
-        Development.Shake.FilePatternOld
         Development.Shake.Monad
         Development.Shake.Pool
         Development.Shake.Profile

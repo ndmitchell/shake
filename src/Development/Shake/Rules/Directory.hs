@@ -15,6 +15,7 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Binary
 import Data.List
+import Data.Tuple.Extra
 import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
@@ -223,19 +224,20 @@ getDir GetDir{..} = fmap answer $ contents dir
 getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
     where f x = IO.doesDirectoryExist $ dir </> x
 
-getDir GetDirFiles{..} = fmap answer $ concatMapM f $ directories pat
+-- Known infelicity: on Windows, if you search for "foo", but have the file "FOO",
+-- it will match if on its own, or not if it is paired with "*", since that forces
+-- a full directory scan, and then it uses Haskell equality (case sensitive)
+getDir GetDirFiles{..} = fmap answer $ f "" $ walk pat
     where
-        test = let ps = map (?==) pat in \x -> any ($ x) ps
+        root = dir
 
-        f (dir2,False) = do
-            xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
-            flip filterM xs $ \x -> if not $ test x then return False else fmap not $ IO.doesDirectoryExist $ dir </> x
-
-        f (dir2,True) = do
-            xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
-            (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
-            rest <- concatMapM (\d -> f (d, True)) dirs
-            return $ filter test files ++ rest
+        -- Even after we know they are there because we called contents, we still have to check they are directories/files
+        -- as required
+        f dir (Walk op) = f dir . WalkTo . op =<< contents (root </> dir)
+        f dir (WalkTo (files, dirs)) = do
+            files <- filterM (IO.doesFileExist . (root </>)) $ map (dir </>) files
+            dirs <- concatMapM (uncurry f) =<< filterM (IO.doesDirectoryExist . (root </>) . fst) (map (first (dir </>)) dirs)
+            return $ files ++ dirs
 
 
 -- | Remove all files and directories that match any of the patterns within a directory.
