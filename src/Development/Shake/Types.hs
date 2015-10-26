@@ -51,6 +51,8 @@ data Lint
         -- using <https://github.com/jacereda/fsatrace fsatrace>.
     deriving (Eq,Ord,Show,Data,Typeable,Bounded,Enum)
 
+-- LintTracker can be obtained from https://github.com/Zomega/fabricate/issues/3
+
 
 -- | How should you determine if a file has changed, used by 'shakeChange'. The most common values are
 --   'ChangeModtime' (very fast, @touch@ causes files to rebuild) and 'ChangeModtimeAndDigestInput'
