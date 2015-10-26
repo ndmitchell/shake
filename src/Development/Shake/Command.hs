@@ -177,19 +177,16 @@ commandExplicit funcName copts results exe args = do
 -- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
 trackerFiles :: FilePath -> IO ([FilePath], [FilePath])
 trackerFiles dir = do
-    curdir <- getCurrentDirectory
-    let pre = upper curdir ++ "\\"
     files <- getDirectoryContents dir
     let f typ = do
-            files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file -> do
-                xs <- readFileEncoding utf16 $ dir </> file
-                return $ filter (not . isPrefixOf "." . takeFileName) . mapMaybe (stripPrefix pre) $ lines xs
+            files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file ->
+                fmap lines $ readFileEncoding utf16 $ dir </> file
             fmap nubOrd $ mapMaybeM correctCase $ nubOrd $ concat files
     liftM2 (,) (f "read") (f "write")
 
 
 correctCase :: FilePath -> IO (Maybe FilePath)
-correctCase x = f "" x
+correctCase = uncurry f . splitDrive
     where
         f pre "" = return $ Just pre
         f pre x = do
@@ -197,9 +194,7 @@ correctCase x = f "" x
             dir <- getDirectoryContents pre
             case find ((==) a . upper) dir of
                 Nothing -> return Nothing -- if it can't be found it probably doesn't exist, so assume a file that wasn't really read
-                Just v -> f (pre +/+ v) b
-
-        a +/+ b = if null a then b else a ++ "/" ++ b
+                Just v -> f (pre </> v) b
 
 
 fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
