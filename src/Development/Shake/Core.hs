@@ -708,7 +708,7 @@ trackCheckUsed = do
                 ""
 
         -- check 3b
-        bad <- flip filterM localTrackUsed $ \k -> fmap (not . null) $ lookupDependencies globalDatabase k
+        bad <- flip filterM localTrackUsed $ \k -> (not . null) <$> lookupDependencies globalDatabase k
         unless (null bad) $ do
             let n = length bad
             errorStructured
