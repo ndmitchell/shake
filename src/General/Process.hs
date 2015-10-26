@@ -143,7 +143,7 @@ process po = do
         let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
                  ,std_in = fst $ stdIn poStdin
                  ,std_out = stdStream fileHandle poStdout poStderr, std_err = stdStream fileHandle poStderr poStdout}
-        withCreateProcess cp $ \(inh, outh, errh, pid) -> do
+        withCreateProcess cp $ \(inh, outh, errh, pid) ->
             withTimeout poTimeout (abort pid) $ do
 
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++

@@ -29,13 +29,13 @@ main = shaken test $ \args obj -> do
         src <- readFile' $ obj "zero.txt"
         writeFile' out src
 
-    phonys $ \x -> if x /= "halfclean" then Nothing else Just $ do
+    phonys $ \x -> if x /= "halfclean" then Nothing else Just $
         removeFilesAfter (obj "") ["//*e.txt"]
 
-    phony "cleaner" $ do
+    phony "cleaner" $
         removeFilesAfter (obj "") ["//*"]
 
-    phony (obj "configure") $ do
+    phony (obj "configure") $
         liftIO $ appendFile (obj "configure") "1"
 
     phony "install" $ do
@@ -46,7 +46,7 @@ main = shaken test $ \args obj -> do
     phony "duplicate2" $ need ["duplicate3"]
     phony "duplicate3" $ liftIO $ appendFile (obj "duplicate") "1"
 
-    phony "dummy" $ do
+    phony "dummy" $
         liftIO $ appendFile (obj "dummy") "1"
 
     phony "threads" $ do

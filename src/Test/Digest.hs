@@ -31,7 +31,7 @@ main = shaken test $ \args obj -> do
 test build obj = do
     let outs = take 1 $ map obj ["Out.txt","Out1.txt","Out2.txt"]
     let writeOut x = forM_ outs $ \out -> writeFile out x
-    let writeIn x = writeFile (obj "In.txt") x
+    let writeIn = writeFile (obj "In.txt")
     let assertOut x = forM_ outs $ \out -> assertContents out x
 
     writeOut ""

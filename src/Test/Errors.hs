@@ -49,7 +49,7 @@ main = shaken2 test $ \args obj -> do
     catcher "exception2" $ actionOnException $ return ()
 
     res <- newResource "resource_name" 1
-    obj "resource" %> \out -> do
+    obj "resource" %> \out ->
         withResource res 1 $
             need ["resource-dep"]
 
@@ -91,7 +91,7 @@ main = shaken2 test $ \args obj -> do
 
 
     -- not tested by default since only causes an error when idle GC is turned on
-    phony "block" $ do
+    phony "block" $
         liftIO $ putStrLn $ let x = x in x
 
 test build obj = do

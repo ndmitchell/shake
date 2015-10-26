@@ -1,5 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ForeignFunctionInterface #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ViewPatterns #-}
 
 -- | Progress tracking
 module Development.Shake.Progress(
@@ -299,7 +298,7 @@ jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}
 xterm :: Bool
 xterm = unsafePerformIO $
     -- Terminal.app uses "xterm-256color" as its env variable
-    catch_ (fmap ("xterm" `isPrefixOf`) $ getEnv "TERM") $
+    catch_ (("xterm" `isPrefixOf`) <$> getEnv "TERM") $
     \e -> return False
 
 
@@ -343,7 +342,9 @@ progressProgram = do
                            in if null b then "" else reverse $ takeWhile isDigit $ reverse a
                 let key = (failure, perc)
                 same <- atomicModifyIORef ref $ \old -> (Just key, old == Just key)
-                let state = if perc == "" then "NoProgress" else if failure then "Error" else "Normal"
+                let state | perc == "" = "NoProgress"
+                          | failure = "Error"
+                          | otherwise = "Normal"
                 rawSystem exe $ ["--title=" ++ msg, "--state=" ++ state] ++ ["--value=" ++ perc | perc /= ""]
                 return ()
 

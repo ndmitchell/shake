@@ -184,7 +184,7 @@ compatible (x:xs) = all ((==) (specials x) . specials) xs
 
 -- | Extract the items that match the wildcards. The pair must match with '?=='.
 extract :: FilePattern -> FilePath -> [String]
-extract p@(parse -> pat) = \x -> case match pat (split isPathSeparator x) of
+extract p@(parse -> pat) x = case match pat (split isPathSeparator x) of
     [] | p ?== x -> err $ "extract with " ++ show p ++ " and " ++ show x
        | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
     ms:_ -> ms
@@ -200,7 +200,7 @@ substitute oms oxs = intercalate "/" $ concat $ snd $ mapAccumL f oms (parse oxs
         f (m:ms) Star = (ms, [m])
         f (m:ms) Skip = (ms, split m)
         f (m:ms) Skip1 = (ms, split m)
-        f ms (Stars pre mid post) = (ms2, [concat $ pre : zipWith (\x y -> x ++ y) ms1 (mid++[post])])
+        f ms (Stars pre mid post) = (ms2, [concat $ pre : zipWith (++) ms1 (mid++[post])])
             where (ms1,ms2) = splitAt (length mid + 1) ms
         f _ _ = error $ "Substitution failed into pattern " ++ show oxs ++ " with " ++ show (length oms) ++ " matches, namely " ++ show oms
 

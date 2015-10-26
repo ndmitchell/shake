@@ -213,7 +213,7 @@ newtype Function a = Function {fromFunction :: a}
 instance Show (Function a) where show _ = "<function>"
 
 instance Typeable a => Data (Function a) where
-    gfoldl k z x = z x
+    gfoldl k z = z
     gunfold k z c = error "Development.Shake.Types.ShakeProgress: gunfold not implemented - data type has no constructors"
     toConstr _ = error "Development.Shake.Types.ShakeProgress: toConstr not implemented - data type has no constructors"
     dataTypeOf _ = tyFunction

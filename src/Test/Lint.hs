@@ -36,7 +36,7 @@ main = shaken test $ \args obj -> do
         liftIO $ setCurrentDirectory pwd
         writeFile' out ""
 
-    obj "createonce" %> \out -> do
+    obj "createonce" %> \out ->
         writeFile' out "X"
 
     obj "createtwice" %> \out -> do
@@ -56,7 +56,7 @@ main = shaken test $ \args obj -> do
         writeFile' (obj "exists") ""
         writeFile' out ""
 
-    obj "gen*" %> \out -> do
+    obj "gen*" %> \out ->
         writeFile' out out
 
     obj "needed1" %> \out -> do
@@ -103,7 +103,7 @@ main = shaken test $ \args obj -> do
 
 test build obj = do
     dir <- getCurrentDirectory
-    let crash args parts = do
+    let crash args parts =
             assertException parts (build $ "--quiet" : args)
                 `finally` setCurrentDirectory dir
 

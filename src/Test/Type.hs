@@ -84,7 +84,7 @@ shaken2
     -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shaken2 test rules sleeper = shaken test rules2 sleeper
+shaken2 test rules = shaken test rules2
     where
         rules2 args obj = do
             (objd,args) <- return $ partition ("$" `isPrefixOf`) args
@@ -234,4 +234,4 @@ copyFileChanged :: FilePath -> FilePath -> IO ()
 copyFileChanged old new = do
     good <- IO.doesFileExist new
     good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
-    when (not good) $ copyFile old new
+    unless good $ copyFile old new

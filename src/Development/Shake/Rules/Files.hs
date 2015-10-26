@@ -38,7 +38,7 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) x
 
 
 instance Rule FilesQ FilesA where
-    storedValue opts (FilesQ xs) = fmap (fmap FilesA . sequence) $ mapM (storedValue opts) xs
+    storedValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (storedValue opts) xs
     equalValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
         | let n = length qs in n /= length xs || n /= length ys = NotEqual
         | otherwise = foldr and_ EqualCheap (zipWith3 (equalValue opts) qs xs ys)
@@ -66,7 +66,7 @@ instance Rule FilesQ FilesA where
 (&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 ps &%> act
     | not $ compatible ps = error $ unlines $
-        ["All patterns to &%> must have the same number and position of // and * wildcards"] ++
+        "All patterns to &%> must have the same number and position of // and * wildcards" :
         ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = do
         forM_ ps $ \p ->
@@ -110,7 +110,7 @@ ps &%> act
     let checkedTest x = case normTest x of
             Nothing -> Nothing
             Just ys | x `notElem` ys -> error $ unlines $
-                ["Invariant broken in &?>, did not return the input (after normalisation)."] ++
+                "Invariant broken in &?>, did not return the input (after normalisation)." :
                 inputOutput "" x ys
             Just ys | bad:_ <- filter ((/= Just ys) . normTest) ys -> error $ unlines $
                 ["Invariant broken in &?>, not equal for all arguments (after normalisation)."] ++

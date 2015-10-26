@@ -28,7 +28,7 @@ main = shaken test $ \args obj -> do
         writeFile' b "b"
 
     (\x -> let dir = takeDirectory x in
-           if takeFileName dir /= "pred" then Nothing else Just [dir </> "a.txt",dir </> "b.txt"]) &?> \outs -> do
+           if takeFileName dir /= "pred" then Nothing else Just [dir </> "a.txt",dir </> "b.txt"]) &?> \outs ->
         mapM_ (`writeFile'` "") outs
 
 

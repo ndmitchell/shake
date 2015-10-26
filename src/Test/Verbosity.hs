@@ -10,7 +10,7 @@ main = shaken test $ \args obj -> do
 
     obj "in.txt" %> \out -> do
         a <- getVerbosity
-        b <- withVerbosity Normal $ getVerbosity
+        b <- withVerbosity Normal getVerbosity
         writeFile' out $ unwords $ map show [a,b]
 
     obj "out.txt" %> \out -> do

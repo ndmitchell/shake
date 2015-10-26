@@ -18,7 +18,7 @@ parse file = do
 
 
 parseMakefile :: String -> Makefile
-parseMakefile xs = Makefile $ rejoin $ concatMap parse $ map comments $ continuations $ lines xs
+parseMakefile xs = Makefile $ rejoin $ concatMap (parse . comments) $ continuations $ lines xs
     where
         continuations (x:y:xs) | "\\" `isSuffixOf` x = continuations $ (init x ++ dropWhile isSpace y):xs
         continuations (x:xs) = x : continuations xs
@@ -65,7 +65,7 @@ parseExpr x = simplifyExpr $ Concat $ f x
 
 
 parseVar :: String -> Expr
-parseVar x = Var x
+parseVar = Var
 
 
 parseCommand :: String -> Command

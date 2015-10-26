@@ -139,7 +139,7 @@ main = shaken test $ \args obj -> do
         liftIO $ assertContents file "hello\n"
 
 
-test build obj = do
+test build obj =
     -- reduce the overhead by running all the tests in parallel
     build ["-j4"]
 

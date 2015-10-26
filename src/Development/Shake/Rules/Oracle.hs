@@ -89,7 +89,7 @@ addOracle :: (
 #endif
     ) => (q -> Action a) -> Rules (q -> Action a)
 addOracle act = do
-    rule $ \(OracleQ q) -> Just $ fmap OracleA $ act q
+    rule $ \(OracleQ q) -> Just $ OracleA <$> act q
     return askOracle
 
 

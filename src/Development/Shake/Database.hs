@@ -185,7 +185,7 @@ data Ops = Ops
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool Database{..} Ops{..} stack ks continue = do
+build pool Database{..} Ops{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ \k -> do
             is <- readIORef intern
@@ -378,7 +378,7 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
                     "Internal invariant broken, database seems to be cyclic" :
                     map ("    " ++) bad ++
                     ["... plus " ++ show (length badOverflow) ++ " more ..." | not $ null badOverflow]
-            where (bad,badOverflow) = splitAt 10 $ [shw i | (i, Just _) <- Map.toList mp]
+            where (bad,badOverflow) = splitAt 10 [shw i | (i, Just _) <- Map.toList mp]
 
         f (x:xs) mp = x : f (now++xs) later
             where Just free = Map.lookupDefault (Just []) x mp
@@ -400,7 +400,7 @@ removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
-    status <- fmap (removeStep . resultsOnly) $ readIORef status
+    status <- (removeStep . resultsOnly) <$> readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]
@@ -468,7 +468,7 @@ listDepends Database{..} (Depends xs) =
         return $ map (fst . fromJust . flip Map.lookup status) xs
 
 lookupDependencies :: Database -> Key -> IO [Key]
-lookupDependencies Database{..} k = do
+lookupDependencies Database{..} k =
     withLock lock $ do
         intern <- readIORef intern
         status <- readIORef status
@@ -531,4 +531,4 @@ instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0
     putWith ctx (Loaded x) = putWord8 1 >> putWith ctx x
     putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ statusType x
-    getWith ctx = do i <- getWord8; if i == 0 then return Missing else fmap Loaded $ getWith ctx
+    getWith ctx = do i <- getWord8; if i == 0 then return Missing else Loaded <$> getWith ctx

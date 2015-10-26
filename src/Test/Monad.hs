@@ -32,7 +32,7 @@ test build obj = do
         dump 1 "more"
         res <- tryRAW $ withRO (+3) $ do
             dump 4 "more"
-            withRW (++ "x") $ do
+            withRW (++ "x") $
                 dump 4 "morex"
             dump 4 "more"
             return 100

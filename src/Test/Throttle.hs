@@ -17,8 +17,8 @@ main = shaken test $ \args obj -> do
             when (takeBaseName out == "file3") $ liftIO $ sleep 0.2
         writeFile' out ""
 
-test build obj = do
-    forM_ [[],["-j8"]] $ \flags -> do
+test build obj =
+    forM_ [[],["-j8"]] $ \flags ->
         -- we are sometimes over the window if the machine is "a bit loaded" at some particular time
         -- therefore we rerun the test three times, and only fail if it fails on all of them
         retry 3 $ do

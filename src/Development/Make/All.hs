@@ -12,11 +12,13 @@ import qualified System.Directory as IO
 import Data.List
 import Data.Maybe
 import Data.Tuple.Extra
+import Control.Applicative
 import Control.Monad
 import System.Process
 import System.Exit
 import System.Environment.Extra
 import Control.Monad.Trans.State.Strict
+import Prelude
 
 
 runMakefile :: FilePath -> [String] -> IO (Rules ())
@@ -42,7 +44,7 @@ data Ruler = Ruler
 
 eval :: Env -> Makefile -> IO [Ruler]
 eval env (Makefile xs) = do
-    (rs, env) <- runStateT (fmap concat $ mapM f xs) env
+    (rs, env) <- runStateT (concat <$> mapM f xs) env
     return [r{cmds=(env,snd $ cmds r)} | r <- rs]
     where
         f :: Stmt -> StateT Env IO [Ruler]
@@ -54,7 +56,7 @@ eval env (Makefile xs) = do
 
         f Rule{..} = do
             e <- get
-            target <- liftIO $ fmap words $ askEnv e targets
+            target <- liftIO $ words <$> askEnv e targets
             return $ map (\t -> Ruler t (e, prerequisites) (undefined, commands)) target
 
 
@@ -108,7 +110,7 @@ makePattern pat v = case break (== '%') pat of
                       else Nothing
         where rest = length v - (length pre + length post)
               subs = take rest $ drop (length pre) v
-    otherwise -> if pat == v then Just id else Nothing
+    _ -> if pat == v then Just id else Nothing
 
 
 vpath :: [FilePath] -> FilePath -> Action FilePath

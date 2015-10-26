@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-
 module Test.Progress(main) where
 
 import Development.Shake.Progress
@@ -48,7 +46,7 @@ test build obj = do
     -- desirable properties, could be weakened
     xs <- progEx 2 $ 100:map (*2) [10,9..1]
     drop 5 xs === [6,5..1]
-    xs <- progEx 1 $ [10,9,100,8,7,6,5,4,3,2,1]
+    xs <- progEx 1 [10,9,100,8,7,6,5,4,3,2,1]
     assert (all (<= 1.5) $ map abs $ zipWith (-) (drop 5 xs) [6,5..1]) "Close"
 
     -- if no progress is made, don't keep the time going up

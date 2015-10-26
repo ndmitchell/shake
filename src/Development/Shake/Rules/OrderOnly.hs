@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Development.Shake.Rules.OrderOnly(
      orderOnly, orderOnlyBS

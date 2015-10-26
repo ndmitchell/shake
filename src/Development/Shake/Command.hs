@@ -17,7 +17,6 @@ module Development.Shake.Command(
     ) where
 
 import Data.Tuple.Extra
-import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
@@ -146,7 +145,7 @@ commandExplicit funcName copts results exe args = do
             Just LintFSATrace -> fsatrace act
             _ -> act exe args
         track (rs,ws) = do
-            cwd <- liftIO $ getCurrentDirectory
+            cwd <- liftIO getCurrentDirectory
             let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
                 ignore = map (?==) $ shakeLintIgnore opts
                 ham xs = [x | x <- map toStandard xs
@@ -189,7 +188,7 @@ trackerFiles dir = do
 
 
 correctCase :: FilePath -> IO (Maybe FilePath)
-correctCase x = f "" x
+correctCase = f ""
     where
         f pre "" = return $ Just pre
         f pre x = do
@@ -266,7 +265,7 @@ commandExplicitIO funcName opts results exe args = do
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
 
     exceptionBuffer <- newBuffer
-    po <- resolvePath $ ProcessOpts
+    po <- resolvePath ProcessOpts
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
         ,poStdin = if optBinary || any isRight optStdin then Right $ LBS.concat $ map (either LBS.pack id) optStdin else Left $ concatMap fromLeft optStdin
@@ -329,7 +328,7 @@ resolvePath po
     = do
     let progExe = if prog == prog -<.> exe then prog else prog <.> exe
     -- use unsafeInterleaveIO to allow laziness to skip the queries we don't use
-    pathOld <- unsafeInterleaveIO $ fmap (fromMaybe "") $ lookupEnv "PATH"
+    pathOld <- unsafeInterleaveIO $ fromMaybe "" <$> lookupEnv "PATH"
     old <- unsafeInterleaveIO $ findExecutable prog
     new <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath path) progExe
     old2 <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath pathOld) progExe
@@ -494,7 +493,7 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
-command opts x xs = fmap b $ commandExplicit "command" opts a x xs
+command opts x xs = b <$> commandExplicit "command" opts a x xs
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
@@ -559,11 +558,11 @@ instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs ++ arg x
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments x = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicit "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicit "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdResult r => CmdArguments (IO r) where
     cmdArguments x = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicitIO "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 
 class Arg a where arg :: a -> [Either CmdOption String]

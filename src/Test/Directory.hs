@@ -5,6 +5,7 @@ import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
 import Data.List
+import Data.Function
 import Control.Monad
 import System.Directory(getCurrentDirectory, setCurrentDirectory, createDirectory, createDirectoryIfMissing)
 import qualified System.Directory as IO
@@ -41,7 +42,7 @@ main = shaken test $ \args obj -> do
         fs <- mapM doesFileExist xs
         ds <- mapM doesDirectoryExist xs
         let bool x = if x then "1" else "0"
-        writeFileLines out $ zipWith (\a b -> bool a ++ bool b) fs ds
+        writeFileLines out $ zipWith ((++) `on` bool) fs ds
 
     obj "dots" %> \out -> do
         cwd <- liftIO getCurrentDirectory
@@ -78,11 +79,11 @@ test build obj = do
     build ["dots","--no-lint"]
     assertContents (obj "dots") $ unlines $ words "True True True True True"
 
-    let removeTest pat del keep = do
+    let removeTest pat del keep =
             IO.withTempDir $ \dir -> do
                 forM_ (del ++ keep) $ \s -> do
                     createDirectoryIfMissing True $ dir </> takeDirectory s
-                    when (not $ hasTrailingPathSeparator s) $
+                    unless (hasTrailingPathSeparator s) $
                         writeFile (dir </> s) ""
                 removeFiles dir pat
                 createDirectoryIfMissing True dir

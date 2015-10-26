@@ -32,7 +32,7 @@ withCleanup act = do
 --   run the action, 'False' to say ignore the action (and never run it).
 addCleanup :: Cleanup -> IO () -> IO (Bool -> IO ())
 addCleanup (Cleanup ref) act = atomicModifyIORef ref $ \s -> let i = unique s in
-    (,) (S (unique s + 1) (Map.insert i act $ items s)) $ \b -> do
+    (,) (S (unique s + 1) (Map.insert i act $ items s)) $ \b ->
         join $ atomicModifyIORef ref $ \s -> case Map.lookup i $ items s of
             Nothing -> (s, return ())
             Just act -> (s{items = Map.delete i $ items s}, when b act)
