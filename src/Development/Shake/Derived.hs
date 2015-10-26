@@ -45,7 +45,7 @@ getHashedShakeVersion files = do
 
 
 checkExitCode :: String -> ExitCode -> Action ()
-checkExitCode cmd ExitSuccess = return ()
+checkExitCode _ ExitSuccess = return ()
 checkExitCode cmd (ExitFailure i) = error $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
 
 {-# DEPRECATED system' "Use 'command' or 'cmd'" #-}

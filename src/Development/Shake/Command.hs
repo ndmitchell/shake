@@ -101,7 +101,7 @@ addPath pre post = do
 addEnv :: MonadIO m => [(String, String)] -> m CmdOption
 addEnv extra = do
     args <- liftIO getEnvironment
-    return $ Env $ extra ++ filter (\(a,b) -> a `notElem` map fst extra) args
+    return $ Env $ extra ++ filter (\(a,_) -> a `notElem` map fst extra) args
 
 
 data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
@@ -205,7 +205,7 @@ fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
 fsatraceFiles file = do
     xs <- parseFSAT <$> readFileUTF8 file
     let reader (FSATRead x) = Just x; reader _ = Nothing
-        writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
+        writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
         existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
     frs <- existing reader xs
     fws <- existing writer xs
@@ -256,10 +256,10 @@ commandExplicitIO funcName opts results exe args = do
         buf Unit  = return ([], return Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
-            ResultCode _ -> return ([], [], \dur pid ex -> return $ ResultCode ex)
-            ResultTime _ -> return ([], [], \dur pid ex -> return $ ResultTime dur)
-            ResultLine _ -> return ([], [], \dur pid ex -> return $ ResultLine cmdline)
-            ResultProcess _ -> return ([], [], \dur pid ex -> return $ ResultProcess $ Pid pid)
+            ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
+            ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
+            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine cmdline)
+            ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ Pid pid)
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
@@ -287,7 +287,7 @@ commandExplicitIO funcName opts results exe args = do
                 cwd ++ extra
     case res of
         Left err -> failure $ show err
-        Right (dur,(pid,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
+        Right (_,(_,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
             exceptionBuffer <- readBuffer exceptionBuffer
             let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
             failure $
@@ -454,6 +454,7 @@ instance (CmdResult x1, CmdResult x2) => CmdResult (x1,x2) where
         where (a1,b1) = cmdResult
               (a2,b2) = cmdResult
 
+cmdResultWith :: forall b c. CmdResult b => (b -> c) -> ([Result], [Result] -> c)
 cmdResultWith f = second (f .) cmdResult
 
 instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) where

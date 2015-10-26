@@ -444,7 +444,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         return stats{isFailure=failure}
                 tid <- flip forkFinally (const $ signalBarrier wait ()) $
                     shakeProgress getProgress
-                addCleanup cleanup $ do
+                _ <- addCleanup cleanup $ do
                     killThread tid
                     void $ timeout 1000000 $ waitBarrier wait
 
@@ -933,7 +933,7 @@ newCache = rulesIO . newCacheIO
 --   Only really suitable for calling 'cmd'/'command'.
 unsafeExtraThread :: Action a -> Action a
 unsafeExtraThread act = Action $ do
-    global@Global{..} <- getRO
+    Global{..} <- getRO
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
