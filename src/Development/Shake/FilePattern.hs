@@ -217,8 +217,8 @@ substitute oms oxs = intercalate "/" $ concat $ snd $ mapAccumL f oms (parse oxs
 data Walk = Walk ([String] -> ([String],[(String,Walk)]))
           | WalkTo            ([String],[(String,Walk)])
 
-walk :: [FilePattern] -> Walk
-walk = f . map (optimise . parse)
+walk :: [FilePattern] -> (Bool, Walk)
+walk ps = let ps2 = map (optimise . parse) ps in (any (\p -> isEmpty p || not (null $ match p [""])) ps2, f ps2)
     where
         f (nubOrd -> ps)
             | all isLit fin, all (isLit . fst) nxt = WalkTo (map fromLit fin, map (fromLit *** f) nxt)
