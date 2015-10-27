@@ -10,7 +10,7 @@ module Development.Shake.Rules.Directory(
     ) where
 
 import Control.Applicative
-import Control.Exception
+import Control.Exception as C
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
@@ -270,7 +270,7 @@ removeFiles dir pat =
                 whenM (IO.doesDirectoryExist dir2) $ f dir2 w
 
         removeItem :: FilePath -> IO ()
-        removeItem x = IO.removeFile x `catch` \(_ :: IOException) -> removeDir x
+        removeItem x = IO.removeFile x `C.catch` \(_ :: IOException) -> removeDir x
 
         -- In newer GHC's removeDirectoryRecursive is probably better, but doesn't follow
         -- symlinks, so it's got different behaviour
