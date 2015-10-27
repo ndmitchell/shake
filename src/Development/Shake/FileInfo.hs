@@ -15,10 +15,6 @@ import Data.Word
 import Numeric
 import System.IO
 
-#if __GLASGOW_HASKELL__ < 704
-#define PORTABLE 1
-#endif
-
 #if defined(PORTABLE)
 import System.IO.Error
 import System.Directory

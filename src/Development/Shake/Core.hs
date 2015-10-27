@@ -1,16 +1,9 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses #-}
-
-{-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ >= 704
-{-# LANGUAGE ConstraintKinds #-}
-#endif
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Core(
     run,
-#if __GLASGOW_HASKELL__ >= 704
     ShakeValue,
-#endif
     Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
@@ -65,7 +58,6 @@ import Prelude
 ---------------------------------------------------------------------
 -- RULES
 
-#if __GLASGOW_HASKELL__ >= 704
 -- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
 --   This alias is only available in GHC 7.4 and above, and requires the @ConstraintKinds@ extension.
 --
@@ -74,7 +66,6 @@ import Prelude
 --
 -- > newtype MyType = MyType (String, Bool) deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
-#endif
 
 
 -- | Define a pair of types that can be used by Shake rules.
@@ -151,14 +142,7 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --   For rules whose values are not stored externally,
 --   'storedValue' should return 'Just' with a sentinel value
 --   and 'equalValue' should always return 'EqualCheap' for that sentinel.
-class (
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key, ShakeValue value
-#else
-    Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key,
-    Show value, Typeable value, Eq value, Hashable value, Binary value, NFData value
-#endif
-    ) => Rule key value where
+class (ShakeValue key, ShakeValue value) => Rule key value where
 
     -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
     --
@@ -663,13 +647,7 @@ quietly = withVerbosity Quiet
 -- TRACKING
 
 -- | Track that a key has been used by the action preceeding it.
-trackUse ::
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key
-#else
-    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
-#endif
-    => key -> Action ()
+trackUse :: ShakeValue key => key -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
 -- 2) you have already been used by apply, and are on the dependency list
@@ -718,13 +696,7 @@ trackCheckUsed = do
 
 
 -- | Track that a key has been changed by the action preceeding it.
-trackChange ::
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key
-#else
-    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
-#endif
-    => key -> Action ()
+trackChange :: ShakeValue key => key -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
 -- 2) someone explicitly gave you permission with trackAllow
@@ -745,13 +717,7 @@ trackChange key = do
 
 
 -- | Allow any matching key to violate the tracking rules.
-trackAllow ::
-#if __GLASGOW_HASKELL__ >= 704
-    ShakeValue key
-#else
-    (Show key, Typeable key, Eq key, Hashable key, Binary key, NFData key)
-#endif
-    => (key -> Bool) -> Action ()
+trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
 trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
         -- We don't want the forall in the Haddock docs

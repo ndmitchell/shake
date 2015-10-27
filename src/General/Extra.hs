@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns, CPP #-}
 
 module General.Extra(
     getProcessorCount,
@@ -15,10 +14,8 @@ import System.Environment.Extra
 import System.IO.Extra
 import System.IO.Unsafe
 import System.Random
-#if __GLASGOW_HASKELL__ >= 704
 import Control.Concurrent
 import Foreign.C.Types
-#endif
 
 
 ---------------------------------------------------------------------
@@ -32,10 +29,8 @@ showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"
 ---------------------------------------------------------------------
 -- System.Info
 
-#if __GLASGOW_HASKELL__ >= 704
 -- Use the underlying GHC function
 foreign import ccall getNumberOfProcessors :: IO CInt
-#endif
 
 
 {-# NOINLINE getProcessorCount #-}
@@ -44,11 +39,9 @@ getProcessorCount :: IO Int
 getProcessorCount = let res = unsafePerformIO act in return res
     where
         act =
-#if __GLASGOW_HASKELL__ >= 704
             if rtsSupportsBoundThreads then
                 fmap fromIntegral $ getNumberOfProcessors
             else
-#endif
                 handle_ (const $ return 1) $ do
                     env <- lookupEnv "NUMBER_OF_PROCESSORS"
                     case env of
