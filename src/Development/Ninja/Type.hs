@@ -26,12 +26,12 @@ data Expr = Exprs [Expr] | Lit Str | Var Str deriving (Show,Eq)
 
 askExpr :: Env Str Str -> Expr -> IO Str
 askExpr e = f
-    where f (Exprs xs) = fmap BS.concat $ mapM f xs
+    where f (Exprs xs) = BS.concat <$> mapM f xs
           f (Lit x) = return x
           f (Var x) = askVar e x
 
 askVar :: Env Str Str -> Str -> IO Str
-askVar e x = fmap (fromMaybe BS.empty) $ askEnv e x
+askVar e x = fromMaybe BS.empty <$> askEnv e x
 
 addBind :: Env Str Str -> Str -> Expr -> IO ()
 addBind e k v = addEnv e k =<< askExpr e v

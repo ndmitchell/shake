@@ -30,7 +30,7 @@ main = shaken test $ \args obj -> do
         orderOnly [obj "intermediate.txt"]
         writeFile' out =<< liftIO (readFile $ obj "intermediate.txt")
 
-    obj "intermediate.txt" %> \out -> do
+    obj "intermediate.txt" %> \out ->
         copyFile' (obj "source.txt") out
 
 

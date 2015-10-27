@@ -9,7 +9,6 @@ module Development.Shake.Rules.Directory(
     defaultRuleDirectory
     ) where
 
-import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
@@ -108,29 +107,29 @@ instance Binary GetDirectoryQ where
 
 
 instance Rule DoesFileExistQ DoesFileExistA where
-    storedValue _ (DoesFileExistQ x) = fmap (Just . DoesFileExistA) $ IO.doesFileExist x
+    storedValue _ (DoesFileExistQ x) = (Just . DoesFileExistA) <$> IO.doesFileExist x
 
 instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
-    storedValue _ (DoesDirectoryExistQ x) = fmap (Just . DoesDirectoryExistA) $ IO.doesDirectoryExist x
+    storedValue _ (DoesDirectoryExistQ x) = (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
 
 instance Rule GetEnvQ GetEnvA where
-    storedValue _ (GetEnvQ x) = fmap (Just . GetEnvA) $ IO.lookupEnv x
+    storedValue _ (GetEnvQ x) = (Just . GetEnvA) <$> IO.lookupEnv x
 
 instance Rule GetDirectoryQ GetDirectoryA where
-    storedValue _ x = fmap Just $ getDir x
+    storedValue _ x = Just <$> getDir x
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     rule $ \(DoesFileExistQ x) -> Just $
-        liftIO $ fmap DoesFileExistA $ IO.doesFileExist x
+        liftIO $ DoesFileExistA <$> IO.doesFileExist x
     rule $ \(DoesDirectoryExistQ x) -> Just $
-        liftIO $ fmap DoesDirectoryExistA $ IO.doesDirectoryExist x
+        liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x
     rule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
     rule $ \(GetEnvQ x) -> Just $
-        liftIO $ fmap GetEnvA $ IO.lookupEnv x
+        liftIO $ GetEnvA <$> IO.lookupEnv x
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
@@ -219,7 +218,7 @@ answer :: [FilePath] -> GetDirectoryA
 answer = GetDirectoryA . sort
 
 getDir :: GetDirectoryQ -> IO GetDirectoryA
-getDir GetDir{..} = fmap answer $ contents dir
+getDir GetDir{..} = answer <$> contents dir
 
 getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
     where f x = IO.doesDirectoryExist $ dir </> x
@@ -267,9 +266,9 @@ removeFiles dir pat = do
         f dir2 = do
             xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
             (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
-            noDirs <- fmap and $ mapM f dirs
+            noDirs <- and <$> mapM f dirs
             let (del,keep) = partition test files
-            forM del $ \d -> IO.removeFile $ dir </> d
+            forM_ del $ \d -> IO.removeFile $ dir </> d
             let die = noDirs && null keep && not (null xs)
             when die $ IO.removeDirectory $ dir </> dir2
             return die

@@ -7,6 +7,7 @@ import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
 import General.Timing
+import Control.Applicative
 import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
@@ -14,6 +15,7 @@ import qualified System.Directory as IO
 import System.Console.GetOpt
 import System.Process
 import System.Exit
+import Prelude
 
 
 main :: IO ()
@@ -29,7 +31,7 @@ main = do
                 if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
-        Nothing -> do
+        Nothing -> 
             withArgs ("--no-time":args) $
                 shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
                     let tool = listToMaybe [x | Tool x <- opts]
@@ -43,7 +45,7 @@ main = do
                     case () of
                         _ | takeExtension makefile == ".ninja" -> runNinja makefile targets tool
                         _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
-                        _ -> fmap Just $ runMakefile makefile targets
+                        _ -> Just <$> runMakefile makefile targets
 
 
 data Flag = UseMakefile FilePath

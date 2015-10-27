@@ -50,7 +50,7 @@ filepathNormalise xs
     | otherwise = f xs
     where
         sep = Native.isPathSeparator
-        f o = deslash o $ BS.concat $ (slash:) $ intersperse slash $ reverse $ (BS.empty:) $ g 0 $ reverse $ split $ o
+        f o = deslash o $ BS.concat $ (slash:) $ intersperse slash $ reverse $ (BS.empty:) $ g 0 $ reverse $ split o
 
         deslash o x
             | x == slash = case (pre,pos) of
@@ -69,7 +69,7 @@ filepathNormalise xs
         g 0 (x:xs) = x : g 0 xs
         g i (x:xs) = g (i-1) xs
 
-        split xs = BS.splitWith sep xs
+        split = BS.splitWith sep
 
 dotDot = BS.pack ".."
 dot = BS.singleton '.'

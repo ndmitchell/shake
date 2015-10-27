@@ -17,7 +17,6 @@ module Development.Shake.Command(
     ) where
 
 import Data.Tuple.Extra
-import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
@@ -102,7 +101,7 @@ addPath pre post = do
 addEnv :: MonadIO m => [(String, String)] -> m CmdOption
 addEnv extra = do
     args <- liftIO getEnvironment
-    return $ Env $ extra ++ filter (\(a,b) -> a `notElem` map fst extra) args
+    return $ Env $ extra ++ filter (\(a,_) -> a `notElem` map fst extra) args
 
 
 data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
@@ -146,7 +145,7 @@ commandExplicit funcName copts results exe args = do
             Just LintFSATrace -> fsatrace act
             _ -> act exe args
         track (rs,ws) = do
-            cwd <- liftIO $ getCurrentDirectory
+            cwd <- liftIO getCurrentDirectory
             let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
                 ignore = map (?==) $ shakeLintIgnore opts
                 ham xs = [x | x <- map toStandard xs
@@ -201,7 +200,7 @@ fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
 fsatraceFiles file = do
     xs <- parseFSAT <$> readFileUTF8 file
     let reader (FSATRead x) = Just x; reader _ = Nothing
-        writer (FSATWrite x) = Just x; writer (FSATMove x y) = Just x; writer _ = Nothing
+        writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
         existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
     frs <- existing reader xs
     fws <- existing writer xs
@@ -252,16 +251,16 @@ commandExplicitIO funcName opts results exe args = do
         buf Unit  = return ([], return Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
-            ResultCode _ -> return ([], [], \dur pid ex -> return $ ResultCode ex)
-            ResultTime _ -> return ([], [], \dur pid ex -> return $ ResultTime dur)
-            ResultLine _ -> return ([], [], \dur pid ex -> return $ ResultLine cmdline)
-            ResultProcess _ -> return ([], [], \dur pid ex -> return $ ResultProcess $ Pid pid)
+            ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
+            ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
+            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine cmdline)
+            ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ Pid pid)
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
 
     exceptionBuffer <- newBuffer
-    po <- resolvePath $ ProcessOpts
+    po <- resolvePath ProcessOpts
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
         ,poStdin = if optBinary || any isRight optStdin then Right $ LBS.concat $ map (either LBS.pack id) optStdin else Left $ concatMap fromLeft optStdin
@@ -283,7 +282,7 @@ commandExplicitIO funcName opts results exe args = do
                 cwd ++ extra
     case res of
         Left err -> failure $ show err
-        Right (dur,(pid,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
+        Right (_,(_,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
             exceptionBuffer <- readBuffer exceptionBuffer
             let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
             failure $
@@ -324,7 +323,7 @@ resolvePath po
     = do
     let progExe = if prog == prog -<.> exe then prog else prog <.> exe
     -- use unsafeInterleaveIO to allow laziness to skip the queries we don't use
-    pathOld <- unsafeInterleaveIO $ fmap (fromMaybe "") $ lookupEnv "PATH"
+    pathOld <- unsafeInterleaveIO $ fromMaybe "" <$> lookupEnv "PATH"
     old <- unsafeInterleaveIO $ findExecutable prog
     new <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath path) progExe
     old2 <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath pathOld) progExe
@@ -450,6 +449,7 @@ instance (CmdResult x1, CmdResult x2) => CmdResult (x1,x2) where
         where (a1,b1) = cmdResult
               (a2,b2) = cmdResult
 
+cmdResultWith :: forall b c. CmdResult b => (b -> c) -> ([Result], [Result] -> c)
 cmdResultWith f = second (f .) cmdResult
 
 instance (CmdResult x1, CmdResult x2, CmdResult x3) => CmdResult (x1,x2,x3) where
@@ -489,7 +489,7 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
-command opts x xs = fmap b $ commandExplicit "command" opts a x xs
+command opts x xs = b <$> commandExplicit "command" opts a x xs
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
@@ -554,11 +554,11 @@ instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs ++ arg x
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments x = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicit "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicit "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdResult r => CmdArguments (IO r) where
     cmdArguments x = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in fmap b $ commandExplicitIO "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 
 class Arg a where arg :: a -> [Either CmdOption String]

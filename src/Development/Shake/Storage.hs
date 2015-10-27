@@ -74,7 +74,7 @@ withStorage ShakeOptions{..} diagnostic witness act = do
     b <- doesFileExist bupfile
     when b $ do
         unexpected "Backup file exists, restoring over the previous file\n"
-        diagnostic $ "Backup file move to original"
+        diagnostic "Backup file move to original"
         ignore $ removeFile dbfile
         renameFile bupfile dbfile
 
@@ -151,7 +151,7 @@ withStorage ShakeOptions{..} diagnostic witness act = do
                                 hSetFileSize h $ now - slop
                                 hSeek h AbsoluteSeek $ now - slop
                                 hFlush h
-                                diagnostic $ "Drop complete"
+                                diagnostic "Drop complete"
                             return $ continue h mp
                          else do
                             addTiming "Database compression"

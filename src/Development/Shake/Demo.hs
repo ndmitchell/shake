@@ -5,6 +5,7 @@ module Development.Shake.Demo(demo) where
 import Paths_shake
 import Development.Shake.Command
 
+import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
 import Data.Char
@@ -17,13 +18,14 @@ import System.FilePath
 import Development.Shake.FilePath(exe)
 import System.IO
 import System.Info.Extra
+import Prelude
 
 
 demo :: Bool -> IO ()
 demo auto = do
     hSetBuffering stdout NoBuffering
     putStrLn $ "% Welcome to the Shake v" ++ showVersion version ++ " demo mode!"
-    putStr $ "% Detecting machine configuration... "
+    putStr "% Detecting machine configuration... "
 
     -- CONFIGURE
 
@@ -48,13 +50,13 @@ demo auto = do
     require shakeLib "% You don't have the 'shake' library installed with GHC, which is required to run the demo."
     require hasManual "% You don't have the Shake data files installed, which are required to run the demo."
 
-    empty <- fmap (null . filter (not . all (== '.'))) $ getDirectoryContents "."
+    empty <- (not . any (not . all (== '.'))) <$> getDirectoryContents "."
     dir <- if empty then getCurrentDirectory else do
         home <- getHomeDirectory
         dir <- getDirectoryContents home
         return $ home </> head (map ("shake-demo" ++) ("":map show [2..]) \\ dir)
 
-    putStrLn $ "% The Shake demo uses an empty directory, OK to use:"
+    putStrLn "% The Shake demo uses an empty directory, OK to use:"
     putStrLn $ "%     " ++ dir
     b <- yesNo auto
     require b "% Please create an empty directory to run the demo from, then run 'shake --demo' again."
@@ -63,7 +65,7 @@ demo auto = do
     createDirectoryIfMissing True dir
     forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
         copyFile (manual </> file) (dir </> file)
-    when (not isWindows) $ do
+    unless isWindows $ do
          p <- getPermissions $ dir </> "build.sh"
          setPermissions (dir </> "build.sh") p{executable=True}
     putStrLn "done"
@@ -111,7 +113,7 @@ demo auto = do
 -- | Require the user to press @y@ before continuing.
 yesNo :: Bool -> IO Bool
 yesNo auto = do
-    putStr $ "% [Y/N] (then ENTER): "
+    putStr "% [Y/N] (then ENTER): "
     x <- if auto then putLine "y" else fmap (map toLower) getLine
     if "y" `isPrefixOf` x then
         return True

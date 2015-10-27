@@ -295,7 +295,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
                rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-            where rs2 = sets [(i, \k -> fmap (fmap newValue) $ r (fromKey k)) | (i,ARule r) <- rs]
+            where rs2 = sets [(i, \k -> fmap newValue <$> r (fromKey k)) | (i,ARule r) <- rs]
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
@@ -423,12 +423,12 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
                 let getProgress = do
-                        failure <- fmap (fmap fst) $ readIORef except
+                        failure <- fmap fst <$> readIORef except
                         stats <- progress database
                         return stats{isFailure=failure}
                 tid <- flip forkFinally (const $ signalBarrier wait ()) $
                     shakeProgress getProgress
-                addCleanup cleanup $ do
+                _ <- addCleanup cleanup $ do
                     killThread tid
                     void $ timeout 1000000 $ waitBarrier wait
 
@@ -437,13 +437,13 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
-                    forM_ (actions rs) $ \act -> do
+                    forM_ (actions rs) $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
                             Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
 
-                when (null $ actions rs) $ do
+                when (null $ actions rs) $
                     when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
 
                 when (isJust shakeLint) $ do
@@ -487,7 +487,7 @@ abbreviate [] = id
 abbreviate abbrev = f
     where
         -- order so longer appreviations are preferred
-        ordAbbrev = sortBy (flip (compare `on` length . fst)) abbrev
+        ordAbbrev = sortBy (flip compare `on` (length . fst)) abbrev
 
         f [] = []
         f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
@@ -495,7 +495,7 @@ abbreviate abbrev = f
 
 
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
-runAction g l (Action x) k = runRAW g l x k
+runAction g l (Action x) = runRAW g l x
 
 
 runAfter :: IO () -> Action ()
@@ -517,10 +517,10 @@ apply = f -- Don't short-circuit [] as we still want error messages
                 tv = typeOf (err "apply type" :: value)
             Global{..} <- Action getRO
             block <- Action $ getsRW localBlockApply
-            whenJust block $ liftIO . errorNoApply tk (fmap show $ listToMaybe ks)
+            whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
             case Map.lookup tk globalRules of
-                Nothing -> liftIO $ errorNoRuleToBuildType tk (fmap show $ listToMaybe ks) (Just tv)
-                Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (fmap show $ listToMaybe ks) tv2 tv
+                Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
+                Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
                 _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
@@ -686,7 +686,7 @@ trackCheckUsed = do
                 ""
 
         -- check 3b
-        bad <- flip filterM localTrackUsed $ \k -> fmap (not . null) $ lookupDependencies globalDatabase k
+        bad <- flip filterM localTrackUsed $ \k -> (not . null) <$> lookupDependencies globalDatabase k
         unless (null bad) $ do
             let n = length bad
             errorStructured
@@ -837,7 +837,7 @@ withResources res act
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
 newCacheIO act = do
     var {- :: Var (Map k (Fence (Either SomeException ([Depends],v)))) -} <- newVar Map.empty
-    return $ \key -> do
+    return $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
                 res <- liftIO $ testFence bar
@@ -899,7 +899,7 @@ newCache = rulesIO . newCacheIO
 --   Only really suitable for calling 'cmd'/'command'.
 unsafeExtraThread :: Action a -> Action a
 unsafeExtraThread act = Action $ do
-    global@Global{..} <- getRO
+    Global{..} <- getRO
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop

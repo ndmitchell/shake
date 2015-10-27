@@ -5,6 +5,8 @@
 -- | Lexing is a slow point, the code below is optimised
 module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
 
+import Control.Applicative
+import Data.Char(isAsciiLower, isAsciiUpper, isDigit)
 import Data.Tuple.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Unsafe as BS
@@ -15,6 +17,7 @@ import Data.Word
 import Foreign.Ptr
 import Foreign.Storable
 import GHC.Exts
+import Prelude
 
 ---------------------------------------------------------------------
 -- LIBRARY BITS
@@ -35,7 +38,7 @@ dropWhile0 f x = snd $ span0 f x
 
 {-# INLINE span0 #-}
 span0 :: (Char -> Bool) -> Str0 -> (Str, Str0)
-span0 f x = break0 (not . f) x
+span0 f = break0 (not . f)
 
 {-# INLINE break0 #-}
 break0 :: (Char -> Bool) -> Str0 -> (Str, Str0)
@@ -97,17 +100,17 @@ isVar x = x == '-' || x == '_' || (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z
 isVarDot x = x == '.' || isVar x
 
 endsDollar :: Str -> Bool
-endsDollar x = BS.isSuffixOf (BS.singleton '$') x
+endsDollar = BS.isSuffixOf (BS.singleton '$')
 
 dropN :: Str0 -> Str0
 dropN x = if head0 x == '\n' then tail0 x else x
 
 dropSpace :: Str0 -> Str0
-dropSpace x = dropWhile0 (== ' ') x
+dropSpace = dropWhile0 (== ' ')
 
 
 lexerFile :: Maybe FilePath -> IO [Lexeme]
-lexerFile file = fmap lexer $ maybe BS.getContents BS.readFile file
+lexerFile file = lexer <$> maybe BS.getContents BS.readFile file
 
 lexer :: Str -> [Lexeme]
 lexer x = lexerLoop $ Str0 $ x `BS.append` BS.pack "\n\n\0"
@@ -130,6 +133,7 @@ lexerLoop c_x | (c,x) <- list0 c_x = case c of
         strip str (Str0 x) = if b `BS.isPrefixOf` x then Just $ Str0 $ BS.drop (BS.length b) x else Nothing
             where b = BS.pack str
 
+lexBind :: Str0 -> [Lexeme]
 lexBind c_x | (c,x) <- list0 c_x = case c of
     '\r' -> lexerLoop x
     '\n' -> lexerLoop x
@@ -137,22 +141,30 @@ lexBind c_x | (c,x) <- list0 c_x = case c of
     '\0' -> []
     _ -> lexxBind LexBind c_x
 
+lexBuild :: Str0 -> [Lexeme]
 lexBuild x
     | (outputs,x) <- lexxExprs True x
     , (rule,x) <- span0 isVarDot $ dropSpace x
     , (deps,x) <- lexxExprs False $ dropSpace x
     = LexBuild outputs rule deps : lexerLoop x
 
+lexDefault :: Str0 -> [Lexeme]
 lexDefault x
     | (files,x) <- lexxExprs False x
     = LexDefault files : lexerLoop x
 
-lexRule x = lexxName LexRule x
-lexPool x = lexxName LexPool x
-lexInclude x = lexxFile LexInclude x
-lexSubninja x = lexxFile LexSubninja x
-lexDefine x = lexxBind LexDefine x
+lexRule :: Str0 -> [Lexeme]
+lexRule = lexxName LexRule
+lexPool :: Str0 -> [Lexeme]
+lexPool = lexxName LexPool
+lexInclude :: Str0 -> [Lexeme]
+lexInclude = lexxFile LexInclude
+lexSubninja :: Str0 -> [Lexeme]
+lexSubninja = lexxFile LexSubninja
+lexDefine :: Str0 -> [Lexeme]
+lexDefine = lexxBind LexDefine
 
+lexxBind :: (Str -> Expr -> Lexeme) -> Str0 -> [Lexeme]
 lexxBind ctor x
     | (var,x) <- span0 isVarDot x
     , ('=',x) <- list0 $ dropSpace x
@@ -160,10 +172,12 @@ lexxBind ctor x
     = ctor var exp : lexerLoop x
 lexxBind _ x = error $ show ("parse failed when parsing binding", take0 100 x)
 
+lexxFile :: (Expr -> Lexeme) -> Str0 -> [Lexeme]
 lexxFile ctor x
     | (exp,rest) <- lexxExpr False False $ dropSpace x
     = ctor exp : lexerLoop rest
 
+lexxName :: (Str -> Lexeme) -> Str0 -> [Lexeme]
 lexxName ctor x
     | (name,rest) <- splitLineCont x
     = ctor name : lexerLoop rest
@@ -208,7 +222,7 @@ lexxExpr stopColon stopSpace = first exprs . f
             '\r' -> f $ dropSpace $ dropN x
             '{' | (name,x) <- span0 isVarDot x, not $ BS.null name, ('}',x) <- list0 x -> Var name $: f x
             _ | (name,x) <- span0 isVar c_x, not $ BS.null name -> Var name $: f x
-            _ -> error $ "Unexpect $ followed by unexpected stuff"
+            _ -> error "Unexpect $ followed by unexpected stuff"
 
 
 splitLineCont :: Str0 -> (Str, Str0)

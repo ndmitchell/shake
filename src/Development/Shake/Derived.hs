@@ -45,7 +45,7 @@ getHashedShakeVersion files = do
 
 
 checkExitCode :: String -> ExitCode -> Action ()
-checkExitCode cmd ExitSuccess = return ()
+checkExitCode _ ExitSuccess = return ()
 checkExitCode cmd (ExitFailure i) = error $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
 
 {-# DEPRECATED system' "Use 'command' or 'cmd'" #-}
@@ -124,7 +124,7 @@ copyFileChanged old new = do
         withBinaryFile old ReadMode $ \h1 -> withBinaryFile new ReadMode $ \h2 ->
             liftM2 (==) (hFileSize h1) (hFileSize h2) &&^
                 liftM2 (==) (BS.hGetContents h1) (BS.hGetContents h2)
-    when (not eq) $ do
+    unless eq $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
         liftIO $ copyFile old new

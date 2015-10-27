@@ -126,7 +126,7 @@ shakeArgsWith baseOpts userOptions rules = do
         showHelp
         exitFailure
 
-    if Help `elem` flagsExtra then do
+    if Help `elem` flagsExtra then
         showHelp
      else if Version `elem` flagsExtra then
         putStrLn $ "Shake build system, version " ++ showVersion version
@@ -152,14 +152,14 @@ shakeArgsWith baseOpts userOptions rules = do
                 Just d -> bracket_ (getDataFileName "html" >> setCurrentDirectory d) (setCurrentDirectory curdir)
         shakeOpts <- if null progressRecords then return shakeOpts else do
             t <- offsetTime
-            return shakeOpts{shakeProgress = \p -> do
+            return shakeOpts{shakeProgress = \p ->
                 bracket
                     (forkIO $ shakeProgress shakeOpts p)
                     killThread
                     $ const $ progressDisplay 1 (const $ return ()) $ do
                         p <- p
                         t <- t
-                        forM_ progressRecords $ \file -> do
+                        forM_ progressRecords $ \file ->
                             appendFile file $ show (t,p) ++ "\n"
                         return p
             }
@@ -197,7 +197,7 @@ shakeArgsWith baseOpts userOptions rules = do
             putStr $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
 
         wrap :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
-        wrap f = fmapOptDescr (either Left (Right . f))
+        wrap = fmapOptDescr . fmap
 
 
 showOptDescr :: [OptDescr a] -> [String]
@@ -227,7 +227,7 @@ fmapOptDescr f (Option a b c d) = Option a b (g c) d
 --   in 'ShakeOptions'. The command line flags are @make@ compatible where possbile, but additional
 --   flags have been added for the extra options Shake supports.
 shakeOptDescrs :: [OptDescr (Either String (ShakeOptions -> ShakeOptions))]
-shakeOptDescrs = [fmapOptDescr (either Left (Right . snd)) o | (True, o) <- shakeOptsEx]
+shakeOptDescrs = [fmapOptDescr (fmap snd) o | (True, o) <- shakeOptsEx]
 
 data Extra = ChangeDirectory FilePath
            | Version

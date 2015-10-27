@@ -18,12 +18,14 @@ import System.Directory
 import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
 import Data.Tuple.Extra
+import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
 import Data.List.Extra
 import System.Info.Extra
+import Prelude
 
 
 runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))
@@ -59,14 +61,14 @@ runNinja file args tool = do
         multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map filepathNormalise) multiples, x <- xs]
         rules <- return $ Map.fromList rules
         pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
-            fmap ((,) name) $ newResource (BS.unpack name) depth
+            (,) name <$> newResource (BS.unpack name) depth
 
         action $ needBS $ concatMap (resolvePhony phonys) $
             if not $ null args then map BS.pack args
             else if not $ null defaults then defaults
             else Map.keys singles ++ Map.keys multiples
 
-        (\x -> fmap (map BS.unpack . fst) $ Map.lookup (BS.pack x) multiples) &?> \out -> let out2 = map BS.pack out in
+        (\x -> (map BS.unpack . fst) <$> Map.lookup (BS.pack x) multiples) &?> \out -> let out2 = map BS.pack out in
             build needDeps phonys rules pools out2 $ snd $ multiples Map.! head out2
 
         (flip Map.member singles . BS.pack) ?> \out -> let out2 = BS.pack out in
@@ -264,10 +266,10 @@ splitArgs = f Gap
                     | otherwise -> add (replicate ((a+1) `div` 2) '\\') $ f s ('\"':xs)
             xs -> add (replicate (a+1) '\\') $ f s xs
         f s (x:xs) = add [x] $ f s xs
-        f s [] = [] : []
+        f s [] = [[]]
 
         add a (b:c) = (a++b):c
-        add a [] = a:[]
+        add a [] = [a]
 
 {-
 translate (cmd,args) = unwords $ f cmd : map f args

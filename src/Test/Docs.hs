@@ -34,7 +34,7 @@ main = shaken noTest $ \args obj -> do
         trackAllow [obj "dist//*"]
         cmd "cabal haddock" ["--builddir=" ++ obj "dist"]
 
-    obj "Paths_shake.hs" %> \out -> do
+    obj "Paths_shake.hs" %> \out ->
         copyFile' "src/Paths.hs" out
 
     obj "Part_*.hs" %> \out -> do
@@ -144,7 +144,7 @@ findCodeMarkdown (x:xs) | indented x && not (blank x) =
     in Stmt (map (drop 4) a) : findCodeMarkdown b
     where
         indented x = length (takeWhile isSpace x) >= 4
-        blank x = all isSpace x
+        blank = all isSpace
 findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
     where
         f ('`':xs) = let (a,b) = break (== '`') xs in Expr a : f (drop 1 b)
@@ -163,7 +163,7 @@ restmt i (x:xs) |
     "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
     where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
 restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
-              ["  undefined" | length xs == 1 && ("let" `isPrefixOf` (head xs) || "<-" `isInfixOf` (head xs))]
+              ["  undefined" | length xs == 1 && ("let" `isPrefixOf` head xs || "<-" `isInfixOf` head xs)]
 
 
 shift :: [String] -> [String]

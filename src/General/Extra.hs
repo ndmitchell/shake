@@ -73,4 +73,4 @@ maximumBy' :: (a -> a -> Ordering) -> [a] -> a
 maximumBy' cmp = foldl1' $ \x y -> if cmp x y == GT then x else y
 
 maximum' :: Ord a => [a] -> a
-maximum' xs = maximumBy' compare xs
+maximum' = maximumBy' compare

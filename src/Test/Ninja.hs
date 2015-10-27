@@ -4,6 +4,7 @@ module Test.Ninja(main) where
 import Development.Shake
 import qualified Development.Shake.Config as Config
 import System.Directory(copyFile, createDirectoryIfMissing, removeFile)
+import Control.Applicative
 import Control.Monad
 import Test.Type
 import qualified Data.HashMap.Strict as Map
@@ -12,6 +13,7 @@ import Data.Maybe
 import System.IO.Extra
 import qualified Run
 import System.Environment
+import Prelude
 
 
 main = shaken test $ \args obj -> do
@@ -70,7 +72,7 @@ test build obj = do
     runFail "-f../../src/Test/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
     res <- fmap (drop 1 . lines . fst) $ captureOutput $ run "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx @--no-report @--quiet"
-    want <- fmap lines $ readFile "src/Test/Ninja/compdb.output"
+    want <- lines <$> readFile "src/Test/Ninja/compdb.output"
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b
     length want === length res

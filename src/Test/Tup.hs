@@ -6,7 +6,9 @@ import Development.Shake.Config
 import Development.Shake.FilePath
 import Development.Shake.Util
 import Test.Type
+import Control.Applicative
 import Data.Maybe
+import Prelude
 
 
 main = shaken noTest $ \args obj -> do
@@ -21,7 +23,7 @@ main = shaken noTest $ \args obj -> do
             let f x | takeExtension x == ".c" = obj $ dir </> x -<.> "o"
                     | takeExtension x == ".a" = obj $ takeBaseName x </> "lib" ++ x
                     | otherwise = error $ "Unknown extension, " ++ x
-            x <- fmap (fromMaybe $ error $ "Missing config key, " ++ key) $ getConfig key
+            x <- fromMaybe (error $ "Missing config key, " ++ key) <$> getConfig key
             return $ map f $ words x
 
     (\x -> x -<.> exe == x) ?> \out -> do

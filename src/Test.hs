@@ -1,6 +1,7 @@
 
 module Test(main) where
 
+import Control.Applicative
 import Control.Exception
 import Control.Monad
 import Data.Maybe
@@ -11,6 +12,7 @@ import General.String
 import qualified Data.ByteString.Char8 as BS
 import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent
+import Prelude
 
 import qualified Test.Assume as Assume
 import qualified Test.Basic as Basic
@@ -105,7 +107,7 @@ filetime _ = do
     args <- getArgs
     addTiming "Reading files"
     files <- fmap concat $ forM (drop 1 args) $ \file ->
-        fmap (BS.lines . BS.filter (/= '\r')) $ BS.readFile file
+        (BS.lines . BS.filter (/= '\r')) <$> BS.readFile file
     let n = length files
     evaluate n
     addTiming "Modtime"

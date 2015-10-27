@@ -73,7 +73,7 @@ test build obj = do
                  ,not $ "//" `isInfixOf` noDrive y
                  ,".." `notElem` dropWhile (== "..") (dropWhile (\x -> all isPathSeparator x || isDrive x) $ splitDirectories y)
                  ,norm y == y]
-        in if and ps then True else error $ show (x, y, ps)
+        in and ps || error (show (x, y, ps))
 
     dropDirectory1 "aaa/bbb" === "bbb"
     dropDirectory1 "aaa/" === ""

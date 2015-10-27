@@ -84,7 +84,7 @@ shakeArgsPruneWith opts prune flags act = do
             return Nothing
         else
             act (map fromJust opts) args
-    whenM (readIORef pruning) $ do
+    whenM (readIORef pruning) $
         IO.withTempFile $ \file -> do
             shakeArgsWith opts{shakeLiveFiles=file : shakeLiveFiles opts} flags2 $ \opts args ->
                 act (catMaybes opts) args

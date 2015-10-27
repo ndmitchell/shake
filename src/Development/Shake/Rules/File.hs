@@ -73,9 +73,9 @@ instance Rule FileQ FileA where
         ChangeModtime -> bool $ x1 == y1
         ChangeDigest -> bool $ x2 == y2 && x3 == y3
         ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
-        _ -> if x1 == y1 then EqualCheap
-             else if x2 == y2 && x3 == y3 then EqualExpensive
-             else NotEqual
+        _ | x1 == y1 -> EqualCheap
+          | x2 == y2 && x3 == y3 -> EqualExpensive
+          | otherwise -> NotEqual
         where bool b = if b then EqualCheap else NotEqual
 
 
