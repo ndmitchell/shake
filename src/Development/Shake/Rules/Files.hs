@@ -9,6 +9,8 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import Data.List.Extra
 import System.Directory
+import Control.Applicative
+import Prelude
 
 import Development.Shake.Core hiding (trackAllow)
 import General.Extra
