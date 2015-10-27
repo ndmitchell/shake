@@ -227,10 +227,8 @@ getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
 -- Known infelicity: on Windows, if you search for "foo", but have the file "FOO",
 -- it will match if on its own, or not if it is paired with "*", since that forces
 -- a full directory scan, and then it uses Haskell equality (case sensitive)
-getDir GetDirFiles{..} = fmap answer $ f "" $ walk pat
+getDir GetDirFiles{dir=root,..} = fmap answer $ f "" $ walk pat
     where
-        root = dir
-
         -- Even after we know they are there because we called contents, we still have to check they are directories/files
         -- as required
         f dir (Walk op) = f dir . WalkTo . op =<< contents (root </> dir)
