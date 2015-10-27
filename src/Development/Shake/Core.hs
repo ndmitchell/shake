@@ -27,7 +27,7 @@ import Data.Typeable
 import Data.Function
 import Data.Either.Extra
 import Numeric.Extra
-import Data.List
+import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.IORef
@@ -298,7 +298,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
             where rs2 = sets [(i, \k -> fmap newValue <$> r (fromKey k)) | (i,ARule r) <- rs]
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
-        sets = map (map snd) . reverse . groupBy ((==) `on` fst) . sortBy (compare `on` fst)
+        sets = map snd . reverse . groupSort
 
 runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
@@ -486,8 +486,8 @@ abbreviate :: [(String,String)] -> String -> String
 abbreviate [] = id
 abbreviate abbrev = f
     where
-        -- order so longer appreviations are preferred
-        ordAbbrev = sortBy (flip compare `on` (length . fst)) abbrev
+        -- order so longer abbreviations are preferred
+        ordAbbrev = sortOn (negate . length . fst) abbrev
 
         f [] = []
         f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest

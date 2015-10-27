@@ -13,7 +13,7 @@ import Data.List
 import Data.Maybe
 import Data.Tuple.Extra
 import Control.Applicative
-import Control.Monad
+import Control.Monad.Extra
 import System.Process
 import System.Exit
 import System.Environment.Extra
@@ -44,7 +44,7 @@ data Ruler = Ruler
 
 eval :: Env -> Makefile -> IO [Ruler]
 eval env (Makefile xs) = do
-    (rs, env) <- runStateT (concat <$> mapM f xs) env
+    (rs, env) <- runStateT (concatMapM f xs) env
     return [r{cmds=(env,snd $ cmds r)} | r <- rs]
     where
         f :: Stmt -> StateT Env IO [Ruler]

@@ -8,7 +8,7 @@ import Development.Shake.FilePath
 import Test.Type
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad.Extra
 import Data.Char
 import Data.List.Extra
 import System.Info
@@ -50,7 +50,7 @@ main = shaken noTest $ \args obj -> do
         dep <- readFileLines $ out -<.> "dep"
         let xs = map (obj . moduleToFile "deps") dep
         need xs
-        ds <- (nubOrd . sort . (++) dep . concat) <$> mapM readFileLines xs
+        ds <- nubOrd . sort . (++) dep <$> concatMapM readFileLines xs
         writeFileLines out ds
 
     obj "//*.dep" %> \out -> do

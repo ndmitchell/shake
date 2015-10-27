@@ -152,15 +152,11 @@ lexDefault x
     | (files,x) <- lexxExprs False x
     = LexDefault files : lexerLoop x
 
-lexRule :: Str0 -> [Lexeme]
+lexRule, lexPool, lexInclude, lexSubninja, lexDefine :: Str0 -> [Lexeme]
 lexRule = lexxName LexRule
-lexPool :: Str0 -> [Lexeme]
 lexPool = lexxName LexPool
-lexInclude :: Str0 -> [Lexeme]
 lexInclude = lexxFile LexInclude
-lexSubninja :: Str0 -> [Lexeme]
 lexSubninja = lexxFile LexSubninja
-lexDefine :: Str0 -> [Lexeme]
 lexDefine = lexxBind LexDefine
 
 lexxBind :: (Str -> Expr -> Lexeme) -> Str0 -> [Lexeme]
