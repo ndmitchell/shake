@@ -7,6 +7,8 @@ module Development.Shake.Rules.Oracle(
 
 import Development.Shake.Core
 import Development.Shake.Classes
+import Control.Applicative
+import Prelude
 
 
 -- Use should type names, since the names appear in the Haddock, and are too long if they are in full

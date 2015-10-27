@@ -9,6 +9,8 @@ module Development.Make.Rules(
 
 import Control.Monad.IO.Class
 import System.Directory
+import Control.Applicative
+import Prelude
 
 import Development.Shake.Core
 import General.String

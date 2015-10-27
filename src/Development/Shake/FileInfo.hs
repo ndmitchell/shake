@@ -14,6 +14,8 @@ import Data.Char
 import Data.Word
 import Numeric
 import System.IO
+import Control.Applicative
+import Prelude
 
 #if defined(PORTABLE)
 import System.IO.Error
