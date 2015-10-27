@@ -23,7 +23,6 @@ main = shaken noTest $ \args obj -> do
         need ["shake.cabal"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
-        liftIO $ print ("docs configure", path)
         unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "cabal configure"
             ["--builddir=" ++ obj "dist","--user"]
             ["--package-db=" ++ x | x <- maybe [] splitSearchPath path]
