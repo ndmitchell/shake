@@ -34,6 +34,7 @@ import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Process
+import Control.Applicative
 import Prelude
 
 import Development.Shake.Core
