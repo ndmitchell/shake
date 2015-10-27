@@ -6,7 +6,6 @@
 module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
 
 import Control.Applicative
-import Data.Char(isAsciiLower, isAsciiUpper, isDigit)
 import Data.Tuple.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Unsafe as BS
