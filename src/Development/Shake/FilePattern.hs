@@ -100,6 +100,7 @@ internalTest :: IO ()
 internalTest = do
     let x # y = when (parse x /= y) $ fail $ show ("FilePattern.internalTest",x,parse x,y)
     "" # [Lit ""]
+    "x" # [Lit "x"]
     "/" # [Lit "",Lit ""]
     "x/" # [Lit "x",Lit ""]
     "/x" # [Lit "",Lit "x"]
