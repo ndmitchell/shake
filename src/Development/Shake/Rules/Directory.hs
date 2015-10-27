@@ -272,8 +272,8 @@ removeFiles dir pat =
         removeItem :: FilePath -> IO ()
         removeItem x = IO.removeFile x `catch` \(_ :: IOException) -> removeDir x
 
-        -- Like removeDirectoryRecursive but faster (avoids a redundant doesDirectoryExist)
-        -- and safer (doesn't have a race condition where it swallows async exceptions)
+        -- In newer GHC's removeDirectoryRecursive is probably better, but doesn't follow
+        -- symlinks, so it's got different behaviour
         removeDir :: FilePath -> IO ()
         removeDir x = do
             mapM_ (removeItem . (x </>)) =<< contents x
