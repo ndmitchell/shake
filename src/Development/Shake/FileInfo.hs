@@ -14,8 +14,6 @@ import Data.Char
 import Data.Word
 import Numeric
 import System.IO
-import Control.Applicative
-import Prelude
 
 #if defined(PORTABLE)
 import System.IO.Error
@@ -101,7 +99,7 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
-        let peek = join $ result <$> peekLastWriteTimeLow fad <*> peekFileSizeLow fad
+        let peek = join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then
             peek
          else if requireU x then withCWString (unpackU x) $ \file -> do
