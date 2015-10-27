@@ -1,6 +1,4 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, ConstraintKinds #-}
--- Allows the user to violate the functional dependency, but it has a runtime check so still safe
-{-# LANGUAGE UndecidableInstances #-}
 
 module Development.Shake.Rules.Oracle(
     addOracle, askOracle, askOracleWith
