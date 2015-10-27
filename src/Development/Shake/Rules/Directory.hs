@@ -10,12 +10,14 @@ module Development.Shake.Rules.Directory(
     ) where
 
 import Control.Applicative
+import Control.Exception
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Binary
 import Data.List
 import Data.Tuple.Extra
+import qualified Data.HashSet as Set
 import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
@@ -242,37 +244,40 @@ getDir GetDirFiles{dir=root,..} = fmap answer $ f "" $ snd $ walk pat
 --   Some examples:
 --
 -- @
--- 'removeFiles' \"output\" [\"\/\/*\"]
--- 'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"]
+-- 'removeFiles' \"output\" [\"\/\/*\"]        -- delete everything inside \'output\'
+-- 'removeFiles' \"output\" [\"\/\/\"]         -- delete \'output\' itself
+-- 'removeFiles' \".\" [\"\/\/*.hi\",\"\/\/*.o\"] -- delete all \'.hi\' and \'.o\' files
 -- @
 --
---   Any directories that become empty after deleting items from within them will themselves be deleted,
---   up to (and including) the containing directory.
+--   If the argument directory is missing no error is raised.
+--   This function will follow symlinks, so should be used with care.
+--
 --   This function is often useful when writing a @clean@ action for your build system,
 --   often as a 'phony' rule.
 removeFiles :: FilePath -> [FilePattern] -> IO ()
-removeFiles dir pat = do
-    b <- IO.doesDirectoryExist dir
-    when b $ void $ f ""
+removeFiles dir pat =
+    whenM (IO.doesDirectoryExist dir) $ do
+        let (b,w) = walk pat
+        if b then removeDir dir else f dir w
     where
-        -- because it is generate and match anything like ../ will be ignored, since we never generate ..
-        -- therefore we can safely know we never escape the containing directory
-        test = let ps = map (?==) pat in \x -> any ($ x) ps
+        f dir (Walk op) = f dir . WalkTo . op =<< contents dir
+        f dir (WalkTo (files, dirs)) = do
+            forM_ files $ \fil ->
+                try $ removeItem $ dir </> fil :: IO (Either IOException ())
+            let done = Set.fromList files
+            forM_ (filter (not . flip Set.member done . fst) dirs) $ \(d,w) -> do
+                let dir2 = dir </> d
+                whenM (IO.doesDirectoryExist dir2) $ f dir2 w
 
-        -- dir </> dir2 is the part to operate on, return True if you deleted the directory
-        f :: FilePath -> IO Bool
-        f dir2 | test dir2 = do
-            IO.removeDirectoryRecursive $ dir </> dir2
-            return True
-        f dir2 = do
-            xs <- fmap (map (dir2 </>)) $ contents $ dir </> dir2
-            (dirs,files) <- partitionM (\x -> IO.doesDirectoryExist $ dir </> x) xs
-            noDirs <- and <$> mapM f dirs
-            let (del,keep) = partition test files
-            forM_ del $ \d -> IO.removeFile $ dir </> d
-            let die = noDirs && null keep && not (null xs)
-            when die $ IO.removeDirectory $ dir </> dir2
-            return die
+        removeItem :: FilePath -> IO ()
+        removeItem x = IO.removeFile x `catch` \(_ :: IOException) -> removeDir x
+
+        -- Like removeDirectoryRecursive but faster (avoids a redundant doesDirectoryExist)
+        -- and safer (doesn't have a race condition where it swallows async exceptions)
+        removeDir :: FilePath -> IO ()
+        removeDir x = do
+            mapM_ (removeItem . (x </>)) =<< contents x
+            IO.removeDirectory x
 
 
 -- | Remove files, like 'removeFiles', but executed after the build completes successfully.
