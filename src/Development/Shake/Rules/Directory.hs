@@ -9,6 +9,7 @@ module Development.Shake.Rules.Directory(
     defaultRuleDirectory
     ) where
 
+import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
