@@ -185,10 +185,11 @@ compatible (x:xs) = all ((==) (specials x) . specials) xs
 
 -- | Extract the items that match the wildcards. The pair must match with '?=='.
 extract :: FilePattern -> FilePath -> [String]
-extract p@(parse -> pat) = \x -> case match pat (split isPathSeparator x) of
-    [] | p ?== x -> err $ "extract with " ++ show p ++ " and " ++ show x
-       | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
-    ms:_ -> ms
+extract p = let pat = parse p in \x ->
+    case match pat (split isPathSeparator x) of
+        [] | p ?== x -> err $ "extract with " ++ show p ++ " and " ++ show x
+           | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
+        ms:_ -> ms
 
 
 -- | Given the result of 'extract', substitute it back in to a 'compatible' pattern.
