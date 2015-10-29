@@ -95,7 +95,9 @@ stdIn src = (,) CreatePipe $ \h ->
     void $ tryBool isPipeGone $ do
         case src of
             SrcString x -> hPutStr h x
-            SrcBytes x -> LBS.hPutStr h x
+            SrcBytes x -> do
+                hSetBinaryMode h True
+                LBS.hPutStr h x
         hFlush h
         hClose h
     where

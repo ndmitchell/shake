@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Put stdin into binary mode if appropriate
     Make an empty Stdin different from no Stdin (inherit) in cmd
     #320, add ** as an alternative to // in patterns
     #283, change the semantics of removeFiles, no implicit deletes
