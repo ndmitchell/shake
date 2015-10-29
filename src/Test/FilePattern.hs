@@ -29,7 +29,7 @@ instance Arbitrary Path where
 test build obj = do
     internalTest
     let f b pat file = do
-            assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
+            -- assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat `walker` file)) $ show pat ++ " `walker` " ++ show file ++ "\nEXPECTED: " ++ show b
             when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
@@ -120,7 +120,7 @@ test build obj = do
     (True, WalkTo _) <- return $ walk [""]
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
-        let b = eval p x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
+        let b = eval p x in (if b then property else label "No match") $ unsafePerformIO $ do f (p ?== x) p x; return True
     return ()
 
 
