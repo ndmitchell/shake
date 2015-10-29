@@ -29,7 +29,6 @@ instance Arbitrary Path where
 test build obj = do
     internalTest
     let f b pat file = do
-            -- assert (b == (pat `eval` file)) $ show pat ++ " `eval` " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
             assert (b == (pat `walker` file)) $ show pat ++ " `walker` " ++ show file ++ "\nEXPECTED: " ++ show b
             when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
@@ -176,8 +175,8 @@ test build obj = do
     (True, Walk _) <- return $ walk ["**"]
     (True, WalkTo _) <- return $ walk [""]
 
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
-        let b = eval p x in (if b then property else label "No match") $ unsafePerformIO $ do f (p ?== x) p x; return True
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=100000} $ \(Pattern p) (Path x) ->
+        let b = p ?== x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
     return ()
 
 
@@ -188,24 +187,3 @@ walker a b = f (split isPathSeparator b) $ snd $ walk [a]
         f [x]    (WalkTo (file, dir)) = x `elem` file
         f (x:xs) (WalkTo (file, dir)) | Just w <- lookup x dir = f xs w
         f _ _ = False
-
-
-eval :: FilePattern -> FilePath -> Bool
-eval a b = f True (simp $ toStandard a) (toStandard b)
-    where
-        simp ('/':'/':'/':'/':xs) = simp ('/':'/':xs)
-        simp ('*':'*':xs) = simp ('*':xs)
-        simp (x:xs) = x : simp xs
-        simp [] = []
-
-        -- start = am I at the beginning of the pattern, not the matcher
-        f start ('*':xs) (y:ys) = (y /= '/' && f False ('*':xs) ys) || f False xs (y:ys)
-        f start ('*':xs) [] = f False xs []
-        f start o@('/':'/':xs) ys
-            | null xs && null ys = True -- at the end, it's all fine
-            | '/':ys <- ys = ((start || "/" `isPrefixOf` xs) && f start xs ('/':ys)) || f False xs ys || f False o (dropWhile (/= '/') ys)
-            | start = f start xs ys || f False o (dropWhile (/= '/') ys)
-            | otherwise = False
-        f start (x:xs) (y:ys) | x == y = f False xs ys
-        f start [] [] = True
-        f _ _ _ = False
