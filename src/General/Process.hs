@@ -50,8 +50,7 @@ readBuffer (Buffer _ ref) = reverse <$> readIORef ref
 -- OPTIONS
 
 data Source
-    = SrcNone
-    | SrcString String
+    = SrcString String
     | SrcBytes LBS.ByteString
 
 data Destination
@@ -69,7 +68,7 @@ data ProcessOpts = ProcessOpts
     ,poCwd :: Maybe FilePath
     ,poEnv :: Maybe [(String, String)]
     ,poTimeout :: Maybe Double
-    ,poStdin :: Source
+    ,poStdin :: [Source]
     ,poStdout :: [Destination]
     ,poStderr :: [Destination]
     ,poAsync :: Bool
@@ -89,15 +88,13 @@ stdStream file [DestFile x] other | other == [DestFile x] || DestFile x `notElem
 stdStream file _ _ = CreatePipe
 
 
-stdIn :: Source -> (StdStream, Handle -> IO ())
-stdIn SrcNone = (Inherit, const $ return ())
+stdIn :: [Source] -> (StdStream, Handle -> IO ())
+stdIn [] = (Inherit, const $ return ())
 stdIn src = (,) CreatePipe $ \h ->
     void $ tryBool isPipeGone $ do
-        case src of
+        forM_ src $ \x -> case x of
             SrcString x -> hPutStr h x
-            SrcBytes x -> do
-                hSetBinaryMode h True
-                LBS.hPutStr h x
+            SrcBytes x -> LBS.hPutStr h x
         hFlush h
         hClose h
     where

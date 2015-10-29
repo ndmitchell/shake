@@ -231,7 +231,7 @@ commandExplicitIO funcName opts results exe args = do
 
     optEnv <- resolveEnv opts
     let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
-    let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ Left x; StdinBS x -> Just $ Right x; _ -> Nothing
+    let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ SrcString x; StdinBS x -> Just $ SrcBytes x; _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
     let optAsync = ResultProcess Pid0 `elem` results
@@ -264,9 +264,7 @@ commandExplicitIO funcName opts results exe args = do
     po <- resolvePath ProcessOpts
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
-        ,poStdin = if null optStdin then SrcNone else
-                   if optBinary || any isRight optStdin then SrcBytes $ LBS.concat $ map (either LBS.pack id) optStdin
-                   else SrcString $ concatMap fromLeft optStdin
+        ,poStdin = [SrcBytes LBS.empty | optBinary && not (null optStdin)] ++ optStdin
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout && not optAsync] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
         ,poAsync = optAsync
