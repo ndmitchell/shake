@@ -142,13 +142,17 @@ withCreateProcess cp act = mask $ \restore -> do
             void $ waitForProcess pid
 
 
+withFiles :: IOMode -> [FilePath] -> ((FilePath -> Handle) -> IO a) -> IO a
+withFiles mode files act = withs (map (`withFile` mode) files) $ \handles ->
+    act $ \x -> fromJust $ lookup x $ zip files handles
+
+
 -- General approach taken from readProcessWithExitCode
 process :: ProcessOpts -> IO (ProcessHandle, ExitCode)
 process po = do
     (ProcessOpts{..}, flushBuffers) <- optimiseBuffers po
     let files = nubOrd [x | DestFile x <- poStdout ++ poStderr]
-    withs (map (`withFile` WriteMode) files) $ \handles -> do
-        let fileHandle x = fromJust $ lookup x $ zip files handles
+    withFiles WriteMode files $ \fileHandle -> do
         let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
                  ,std_in = fst $ stdIn poStdin
                  ,std_out = stdStream fileHandle poStdout poStderr, std_err = stdStream fileHandle poStderr poStdout}
