@@ -170,11 +170,14 @@ matchStars (Stars pre mid post) x = do
             (a:) <$> stripInfixes ms x
 
 
---- | Match a 'FilePattern' against a 'FilePath', There are only two special forms:
+--- | Match a 'FilePattern' against a 'FilePath', There are three special forms:
 ---
 --- * @*@ matches an entire path component, excluding any separators.
 ---
 --- * @\/\/@ matches an arbitrary number of path components.
+--
+--  * @**@ as a path component matches an arbitrary number of path components.
+--    Currently considered experimental.
 ---
 ---   Some examples:
 ---
