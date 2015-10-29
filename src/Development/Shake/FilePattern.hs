@@ -83,6 +83,7 @@ parse = f False True . lexer
         -- str = I have ever seen a Str go past (equivalent to "can I be satisfied by no paths")
         -- slash = I am either at the start, or my previous character was Slash
         f str slash [] = [Lit "" | slash]
+        f str slash (Str "**":xs) = Skip : f True False xs
         f str slash (Str x:xs) = parseLit x : f True False xs
         f str slash (SlashSlash:Slash:xs) | not str = Skip1 : f str True xs
         f str slash (SlashSlash:xs) = Skip : f str False xs
@@ -106,14 +107,24 @@ internalTest = do
     "/x" # [Lit "",Lit "x"]
     "x/y" # [Lit "x",Lit "y"]
     "//" # [Skip]
+    "**" # [Skip]
     "//x" # [Skip, Lit "x"]
+    "**/x" # [Skip, Lit "x"]
     "x//" # [Lit "x", Skip]
+    "x/**" # [Lit "x", Skip]
     "x//y" # [Lit "x",Skip, Lit "y"]
+    "x/**/y" # [Lit "x",Skip, Lit "y"]
     "///" # [Skip1, Lit ""]
+    "**/**" # [Skip,Skip]
+    "**/**/" # [Skip, Skip, Lit ""]
     "///x" # [Skip1, Lit "x"]
+    "**/x" # [Skip, Lit "x"]
     "x///" # [Lit "x", Skip, Lit ""]
+    "x/**/" # [Lit "x", Skip, Lit ""]
     "x///y" # [Lit "x",Skip, Lit "y"]
+    "x/**/y" # [Lit "x",Skip, Lit "y"]
     "////" # [Skip, Skip]
+    "**/**/**" # [Skip, Skip, Skip]
     "////x" # [Skip, Skip, Lit "x"]
     "x////" # [Lit "x", Skip, Skip]
     "x////y" # [Lit "x",Skip, Skip, Lit "y"]
