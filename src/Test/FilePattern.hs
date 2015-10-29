@@ -37,38 +37,63 @@ test build obj = do
                 "Extracted: " ++ show (extract pat file) ++ "\nSubstitute: " ++ show (substitute (extract pat file) pat)
 
     f True "//*.c" "foo/bar/baz.c"
+    f True "**/*.c" "foo/bar/baz.c"
     f True (toNative "//*.c") "foo/bar\\baz.c"
+    f True (toNative "**/*.c") "foo/bar\\baz.c"
     f True "*.c" "baz.c"
     f True "//*.c" "baz.c"
+    f True "**/*.c" "baz.c"
     f True "test.c" "test.c"
     f False "*.c" "foor/bar.c"
     f False "*/*.c" "foo/bar/baz.c"
     f False "foo//bar" "foobar"
+    f False "foo/**/bar" "foobar"
     f False "foo//bar" "foobar/bar"
+    f False "foo/**/bar" "foobar/bar"
     f False "foo//bar" "foo/foobar"
+    f False "foo/**/bar" "foo/foobar"
     f True "foo//bar" "foo/bar"
+    f True "foo/**/bar" "foo/bar"
     f True "foo/bar" (toNative "foo/bar")
     f True (toNative "foo/bar") "foo/bar"
     f True (toNative "foo/bar") (toNative "foo/bar")
     f True "//*" "/bar"
+    f True "**/*" "/bar"
     f True "/bob//foo" "/bob/this/test/foo"
+    f True "/bob/**/foo" "/bob/this/test/foo"
     f False "/bob//foo" "bob/this/test/foo"
+    f False "/bob/**/foo" "bob/this/test/foo"
     f True "bob//foo/" "bob/this/test/foo/"
+    f True "bob/**/foo/" "bob/this/test/foo/"
     f False "bob//foo/" "bob/this/test/foo"
+    f False "bob/**/foo/" "bob/this/test/foo"
     f True "a//" "a"
+    f True "a/**" "a"
     f True "/a//" "/a"
+    f True "/a/**" "/a"
     f True "///a//" "/a"
+    f True "**/a/**" "/a"
     f False "///" ""
     f True "///" "/"
+    f True "/**" "/"
     f True "///" "a/"
+    f True "**/" "a/"
     f True "////" ""
+    f True "**/**" ""
     f True "x///y" "x/y"
+    f True "x/**/y" "x/y"
     f True "x///" "x/"
+    f True "x/**/" "x/"
     f True "x///" "x/foo/"
+    f True "x/**/" "x/foo/"
     f False "x///" "x"
+    f False "x/**/" "x"
     f True "x///" "x/foo/bar/"
+    f True "x/**/" "x/foo/bar/"
     f False "x///" "x/foo/bar"
+    f False "x/**/" "x/foo/bar"
     f True "x///y" "x/z/y"
+    f True "x/**/*/y" "x/z/y"
     f True "" ""
     f False "" "y"
     f False "" "/"
@@ -76,47 +101,79 @@ test build obj = do
     f True "*/*" "x/y"
     f False "*/*" "x"
     f True "//*" "x"
+    f True "**/*" "x"
     f True "//*" ""
+    f True "**/*" ""
     f True "*//" "x"
+    f True "*/**" "x"
     f True "*//" ""
+    f True "*/**" ""
     f True "*//*" "x/y"
+    f True "*/**/*" "x/y"
     f False "*//*" ""
+    f False "*/**/*" ""
     f False "*//*" "x"
+    f False "*/**/*" "x"
     f False "*//*//*" "x/y"
+    f False "*/**/*/**/*" "x/y"
     f True "//*/" "/"
+    f True "**/*/" "/"
     f True "*/////" "/"
+    f True "*/**/**/" "/"
     f False "b*b*b*//" "bb"
+    f False "b*b*b*/**" "bb"
 
     simple "a*b" === False
     simple "a//b" === False
+    simple "a/**/b" === False
     simple "/a/b/cccc_" === True
     simple "a///b" === False
+    simple "a/**/b" === False
 
     assert (compatible []) "compatible"
     assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
+    assert (compatible ["**/*a.txt","foo/**/a*.txt"]) "compatible"
+    assert (compatible ["//*a.txt","foo/**/a*.txt"]) "compatible"
     assert (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
+    assert (not $ compatible ["**/*a.txt","foo/**/a*.*txt"]) "compatible"
     extract "//*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
+    extract "**/*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
     extract "//*a.txt" "testa.txt" === ["","test"]
+    extract "**/*a.txt" "testa.txt" === ["","test"]
     extract "//a.txt" "a.txt" === [""]
+    extract "**/a.txt" "a.txt" === [""]
     extract "//a.txt" "/a.txt" === ["/"]
+    extract "**/a.txt" "/a.txt" === ["/"]
     extract "a//b" "a/b" === [""]
+    extract "a/**/b" "a/b" === [""]
     extract "a//b" "a/x/b" === ["x/"]
+    extract "a/**/b" "a/x/b" === ["x/"]
     extract "a//b" "a/x/y/b" === ["x/y/"]
+    extract "a/**/b" "a/x/y/b" === ["x/y/"]
     extract "a///b" "a/x/y/b" === ["x/y/"]
+    extract "a/**/**/b" "a/x/y/b" === ["","x/y/"]
     extract "//*a*.txt" "testada.txt" === ["","test","da"]
+    extract "**/*a*.txt" "testada.txt" === ["","test","da"]
     extract (toNative "//*a*.txt") "testada.txt" === ["","test","da"]
+    extract (toNative "**/*a*.txt") "testada.txt" === ["","test","da"]
     substitute ["","test","da"] "//*a*.txt" === "testada.txt"
+    substitute ["","test","da"] "**/*a*.txt" === "testada.txt"
     substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
+    substitute  ["foo/bar/","test"] "**/*a.txt" === "foo/bar/testa.txt"
 
     (False, Walk _) <- return $ walk ["*.xml"]
     (False, Walk _) <- return $ walk ["//*.xml"]
+    (False, Walk _) <- return $ walk ["**/*.xml"]
     (False, WalkTo ([], [("foo",Walk _)])) <- return $ walk ["foo//*.xml"]
+    (False, WalkTo ([], [("foo",Walk _)])) <- return $ walk ["foo/**/*.xml"]
     (False, WalkTo ([], [("foo",WalkTo ([],[("bar",Walk _)]))])) <- return $ walk ["foo/bar/*.xml"]
     (False, WalkTo (["a"],[("b",WalkTo (["c"],[]))])) <- return $ walk ["a","b/c"]
     ([], [("foo",WalkTo ([],[("bar",Walk _)]))]) <- let (False, Walk f) = walk ["*/bar/*.xml"] in return $ f ["foo"]
     (False, WalkTo ([],[("bar",Walk _),("baz",Walk _)])) <- return $ walk ["bar/*.xml","baz//*.c"]
+    (False, WalkTo ([],[("bar",Walk _),("baz",Walk _)])) <- return $ walk ["bar/*.xml","baz/**/*.c"]
     (False, WalkTo ([], [])) <- return $ walk []
     (True, Walk _) <- return $ walk ["//"]
+    (True, Walk _) <- return $ walk ["**"]
     (True, WalkTo _) <- return $ walk [""]
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
