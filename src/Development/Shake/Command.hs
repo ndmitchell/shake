@@ -231,7 +231,10 @@ commandExplicitIO funcName opts results exe args = do
 
     optEnv <- resolveEnv opts
     let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
-    let optStdin = flip mapMaybe opts $ \x -> case x of Stdin x -> Just $ SrcString x; StdinBS x -> Just $ SrcBytes x; _ -> Nothing
+    let optStdin = flip mapMaybe opts $ \x -> case x of
+            Stdin x -> Just $ SrcString x
+            StdinBS x -> Just $ SrcBytes x
+            _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
     let optAsync = ResultProcess Pid0 `elem` results
