@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #320, add ** as an alternative to // in patterns
     #283, change the semantics of removeFiles, no implicit deletes
     #283, speed up getDirectoryFiles on patterns involving literals
     Work with stack test
