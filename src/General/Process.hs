@@ -3,7 +3,7 @@
 -- | A wrapping of createProcess to provide a more flexible interface.
 module General.Process(
     Buffer, newBuffer, readBuffer,
-    process, ProcessOpts(..), Destination(..)
+    process, ProcessOpts(..), Source(..), Destination(..)
     ) where
 
 import Control.Applicative
@@ -49,6 +49,11 @@ readBuffer (Buffer _ ref) = reverse <$> readIORef ref
 ---------------------------------------------------------------------
 -- OPTIONS
 
+data Source
+    = SrcNone
+    | SrcString String
+    | SrcBytes LBS.ByteString
+
 data Destination
     = DestEcho
     | DestFile FilePath
@@ -64,7 +69,7 @@ data ProcessOpts = ProcessOpts
     ,poCwd :: Maybe FilePath
     ,poEnv :: Maybe [(String, String)]
     ,poTimeout :: Maybe Double
-    ,poStdin :: Either String LBS.ByteString
+    ,poStdin :: Source
     ,poStdout :: [Destination]
     ,poStderr :: [Destination]
     ,poAsync :: Bool
@@ -84,11 +89,13 @@ stdStream file [DestFile x] other | other == [DestFile x] || DestFile x `notElem
 stdStream file _ _ = CreatePipe
 
 
-stdIn :: Either String LBS.ByteString -> (StdStream, Handle -> IO ())
-stdIn inp | either null LBS.null inp = (Inherit, const $ return ())
-          | otherwise = (,) CreatePipe $ \h ->
+stdIn :: Source -> (StdStream, Handle -> IO ())
+stdIn SrcNone = (Inherit, const $ return ())
+stdIn src = (,) CreatePipe $ \h ->
     void $ tryBool isPipeGone $ do
-        either (hPutStr h) (LBS.hPutStr h) inp
+        case src of
+            SrcString x -> hPutStr h x
+            SrcBytes x -> LBS.hPutStr h x
         hFlush h
         hClose h
     where

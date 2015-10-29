@@ -264,7 +264,9 @@ commandExplicitIO funcName opts results exe args = do
     po <- resolvePath ProcessOpts
         {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
-        ,poStdin = if optBinary || any isRight optStdin then Right $ LBS.concat $ map (either LBS.pack id) optStdin else Left $ concatMap fromLeft optStdin
+        ,poStdin = if null optStdin then SrcNone else
+                   if optBinary || any isRight optStdin then SrcBytes $ LBS.concat $ map (either LBS.pack id) optStdin
+                   else SrcString $ concatMap fromLeft optStdin
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout && not optAsync] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
         ,poAsync = optAsync
