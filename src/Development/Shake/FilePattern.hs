@@ -168,11 +168,14 @@ matchStars (Stars pre mid post) x = do
 ---------------------------------------------------------------------
 -- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
 
-specials :: FilePattern -> String
-specials ('*':xs) = '*' : specials xs
-specials (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = '/':'/': specials xs
-specials (x:xs) = specials xs
-specials [] = []
+specials :: FilePattern -> [Pat]
+specials = concatMap f . parse
+    where
+        f Lit{} = []
+        f Star = [Star]
+        f Skip = [Skip]
+        f Skip1 = [Skip]
+        f (Stars _ xs _) = replicate (length xs + 1) Star
 
 -- | Is the pattern free from any * and //.
 simple :: FilePattern -> Bool
