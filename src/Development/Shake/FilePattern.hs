@@ -128,6 +128,7 @@ internalTest = do
     "////x" # [Skip, Skip, Lit "x"]
     "x////" # [Lit "x", Skip, Skip]
     "x////y" # [Lit "x",Skip, Skip, Lit "y"]
+    "**//x" # [Skip, Skip, Lit "x"]
 
 
 -- | Optimisations that may change the matched expressions
