@@ -175,7 +175,7 @@ test build obj = do
     (True, Walk _) <- return $ walk ["**"]
     (True, WalkTo _) <- return $ walk [""]
 
-    Success{} <- quickCheckWithResult stdArgs{maxSuccess=100000} $ \(Pattern p) (Path x) ->
+    Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
         let b = p ?== x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
     return ()
 
