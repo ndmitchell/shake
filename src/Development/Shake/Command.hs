@@ -134,10 +134,12 @@ commandExplicit funcName icopts results exe args = do
                             , any (`isPrefixOf` x) inside
                             , not $ any ($ x) ignore]
                 rel = map (makeRelative cwd)
+                reads = rel $ ham rs
+                writes = rel $ ham ws
             when (Autodeps `elem` copts) $
-                needed $ rel $ ham rs
-            trackRead $ rel $ ham rs
-            trackWrite $ rel $ ham ws
+                needed reads
+            trackRead reads
+            trackWrite writes
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
