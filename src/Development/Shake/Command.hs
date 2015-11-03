@@ -135,7 +135,7 @@ commandExplicit funcName icopts results exe args = do
                             , not $ any ($ x) ignore]
                 rel = map (makeRelative cwd)
             when (Autodeps `elem` copts) $
-              needed $ rel $ ham rs
+                needed $ rel $ ham rs
             trackRead $ rel $ ham rs
             trackWrite $ rel $ ham ws
 

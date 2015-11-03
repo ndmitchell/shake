@@ -25,4 +25,4 @@ data CmdOption
     | FileStdout FilePath -- ^ Should I put the @stdout@ to a file.
     | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
     | Autodeps -- ^ Compute dependencies automatically. Requires either 'LintFSATrace' or 'LintTracker'.
-      deriving (Eq,Ord,Show,Data)
+      deriving (Eq,Ord,Show,Data,Typeable)
