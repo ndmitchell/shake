@@ -1,11 +1,15 @@
 /*jsl:option explicit*/
 "use strict";
 
-type key = string | number | symbol;
+type key = string | number;
 
 type seconds = number
 
 type int = number
+
+type color = string
+
+type MapString<T> = { [key: string]: T }
 
 
 /////////////////////////////////////////////////////////////////////
@@ -22,10 +26,10 @@ jQuery.fn.enable = function (x : boolean)
     });
 };
 
-var getParameters = function()
+function getParameters(): MapString<string>
 {
     // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
-    var params = {};
+    var params: MapString<string> = {};
     var a = /\+/g;  // Regex for replacing addition symbol with a space
     var r = /([^&=]+)=?([^&]*)/g;
     var d = function (s) { return decodeURIComponent(s.replace(a, " ")); };
@@ -111,20 +115,27 @@ function listEq<T>(xs : T[], ys : T[]) : boolean
     return true;
 }
 
-function cache<K,V>(key : (k:K) => key, op : (k:K) => V) : (k:K) => V
+function cache<K, V>(key: (k: K) => string, op: (k: K) => V): (k: K) => V
 {
-    var cache = {};
+    var store: MapString<V> = {};
     return function(k){
         var s = key(k);
-        if (!(s in cache))
-            cache[s] = op(k);
-        return cache[s];
+        if (!(s in store))
+            store[s] = op(k);
+        return store[s];
     };
 }
 
-function recordEq<T extends {}>(xs: T, ys: T) : boolean
+function recordCopy<T extends {}>(xs: T): T {
+    var res = {};
+    for (var s in xs)
+        res[s] = xs[s];
+    return <T>res;
+}
+
+function mapEq<V>(xs: MapString<V>, ys: MapString<V>) : boolean
 {
-    function f(a : T, b : T)
+    function f(a: MapString<V>, b: MapString<V>)
     {
         for (var s in a)
         {
@@ -135,20 +146,17 @@ function recordEq<T extends {}>(xs: T, ys: T) : boolean
     return f(xs,ys) && f(ys,xs);
 }
 
-function recordCopy<T extends {}>(xs: T): T
+function mapCopy<V>(xs: MapString<V>): MapString<V>
 {
-    var res = {};
-    for (var s in xs)
-        res[s] = xs[s];
-    return <T>res;
+    return recordCopy(xs);
 }
 
-function recordUnion<T,U>(xs : T,ys : U) : T&U
+function mapUnion<V>(xs: MapString<V>, ys: MapString<V>): MapString<V>
 {
-    var res = recordCopy(ys);
+    var res = mapCopy(ys);
     for (var s in xs)
         res[s] = xs[s];
-    return <T&U>res;
+    return res;
 }
 
 function concatNub<T extends key>(xs : T[][]) : T[]
