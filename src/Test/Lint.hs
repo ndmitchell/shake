@@ -96,7 +96,7 @@ main = shaken test $ \args obj -> do
 
     obj "tracker-compile-auto.o" %> \out -> do
         need [obj "tracker-source.c"]
-        cmd Autodeps "gcc" ["-c", obj "tracker-source.c", "-o", out]
+        cmd AutoDeps "gcc" ["-c", obj "tracker-source.c", "-o", out]
 
     where gen t f = unit $ if isWindows
                            then cmd "cmd.exe" ["/C echo " ++ t ++ ">" ++ toNative f]
