@@ -1,22 +1,3 @@
-type Timestamp = number
-
-type Trace =
-    {
-        command: string,
-        start: number,
-        stop: Seconds
-    }
-
-type Entry =
-    {
-        name: string, // Name of the thing I built
-        built: Timestamp, // Timestamp at which I was built
-        changed: Timestamp, // Timestamp at which I last changed
-        depends: number[], // Which 0-based indexes I depended on (always lower than my index)
-        execution: Seconds, // Seconds I took to execute
-        traces?: Trace[] // List of traces
-    }
-
 var shake: Entry[] =
 [{"name":"src/clean.cc", "built":0, "changed":0, "depends":[], "execution":0.0}
 ,{"name":"src/timestamp.h", "built":0, "changed":0, "depends":[], "execution":0.0}

@@ -1,9 +1,11 @@
 /*jsl:option explicit*/
 "use strict";
 
-type Key = string | number | symbol;
+type key = string | number | symbol;
 
-type Seconds = number
+type seconds = number
+
+type int = number
 
 
 /////////////////////////////////////////////////////////////////////
@@ -42,7 +44,7 @@ var getParameters = function()
 /////////////////////////////////////////////////////////////////////
 // STRING FORMATTING
 
-function showTime(x : Seconds) : string
+function showTime(x : seconds) : string
 {
     function digits(x){var s = String(x); return s.length === 1 ? "0" + s : s;}
 
@@ -65,7 +67,7 @@ function showPerc(x : number) : string
     return (x*100).toFixed(2) + "%";
 }
 
-function plural(n: number, not1 = "s", is1 = ""): string
+function plural(n: int, not1 = "s", is1 = ""): string
 {
     return n === 1 ? is1 : not1;
 }
@@ -109,7 +111,7 @@ function listEq<T>(xs : T[], ys : T[]) : boolean
     return true;
 }
 
-function cache<K,V>(key : (k:K) => Key, op : (k:K) => V) : (k:K) => V
+function cache<K,V>(key : (k:K) => key, op : (k:K) => V) : (k:K) => V
 {
     var cache = {};
     return function(k){
@@ -149,7 +151,7 @@ function recordUnion<T,U>(xs : T,ys : U) : T&U
     return <T&U>res;
 }
 
-function concatNub<T extends Key>(xs : T[][]) : T[]
+function concatNub<T extends key>(xs : T[][]) : T[]
 {
     var res : T[] = [];
     var seen = {};
@@ -159,7 +161,7 @@ function concatNub<T extends Key>(xs : T[][]) : T[]
         for (var j = 0; j < x.length; j++)
         {
             var e = x[j];
-            var ee: Key = e;
+            var ee: key = e;
             if (!(ee in seen))
             {
                 seen[ee] = null;
