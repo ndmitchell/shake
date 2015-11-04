@@ -3,6 +3,8 @@
 
 type Key = string | number | symbol;
 
+type Seconds = number
+
 
 /////////////////////////////////////////////////////////////////////
 // JQUERY EXTENSIONS
@@ -40,7 +42,7 @@ var getParameters = function()
 /////////////////////////////////////////////////////////////////////
 // STRING FORMATTING
 
-function showTime(x : number) : string
+function showTime(x : Seconds) : string
 {
     function digits(x){var s = String(x); return s.length === 1 ? "0" + s : s;}
 
