@@ -104,13 +104,13 @@ class Prepare
 function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 {
     // find the reverse dependencies
-    var rdeps: MapInt<boolean>[] = [];
+    var rdeps: MapInt<void>[] = [];
     for (var i = 0; i < dat.length; i++)
         rdeps[i] = {};
     for (var i = 0; i < dat.length; i++) {
         var deps = dat[i].depends;
         for (var j = 0, n = deps.length; j < n; j++)
-            rdeps[deps[j]][i] = true;
+            rdeps[deps[j]][i] = null;
     }
 
     var res: (Entry & { rdeps?: int[] })[] = dat;
@@ -128,11 +128,11 @@ function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 // You must call addRdeps and addCost first
 function calcRebuildCosts(dat: EntryEx[], xs : int[]) : seconds
 {
-    var seen: MapInt<boolean> = {};
+    var seen: MapInt<void> = {};
     var tot : seconds = 0;
     function f(i : int) {
-        if (seen[i]) return;
-        seen[i] = true;
+        if (i in seen) return;
+        seen[i] = null;
         tot += dat[i].execution;
         var deps = dat[i].rdeps;
         for (var j = 0, n = deps.length; j < n; j++)
@@ -169,12 +169,12 @@ function prepare(sum: Summary, dat_: Entry[]): Prepare
 
     function findDirect(key : string) : (from : int, match : string | RegExp) => boolean {
         var c = cache(toHash, function (r) {
-            var want: MapInt<boolean> = {};
+            var want: MapInt<void> = {};
             for (var i = 0; i < dat.length; i++) {
                 if (testRegExp(r, dat[i].name)) {
                     var deps : int[] = (<any>(dat[i]))[key];
                     for (var j = 0; j < deps.length; j++)
-                        want[deps[j]] = true;
+                        want[deps[j]] = null;
                 }
             }
             return want;
@@ -189,14 +189,14 @@ function prepare(sum: Summary, dat_: Entry[]): Prepare
 
     function findTransitive(key: string, dirFwd: boolean): (from: int, match: string | RegExp) => boolean {
         var c = cache(toHash, function (r) {
-            var want: MapInt<boolean> = {};
+            var want: MapInt<void> = {};
             for (var i = 0; i < dat.length; i++) {
                 var j = dirFwd ? i : dat.length - 1 - i;
                 if ((j in want) || testRegExp(r, dat[j].name)) {
-                    want[j] = true;
+                    want[j] = null;
                     const deps: int[] = (<any>(dat[j]))[key];
                     for (var k = 0; k < deps.length; k++)
-                        want[deps[k]] = true;
+                        want[deps[k]] = null;
                 }
             }
             return want;
