@@ -83,6 +83,7 @@ parse = f False True . lexer
         -- str = I have ever seen a Str go past (equivalent to "can I be satisfied by no paths")
         -- slash = I am either at the start, or my previous character was Slash
         f str slash [] = [Lit "" | slash]
+        f str slash (Str "**":xs) = Skip : f True False xs
         f str slash (Str x:xs) = parseLit x : f True False xs
         f str slash (SlashSlash:Slash:xs) | not str = Skip1 : f str True xs
         f str slash (SlashSlash:xs) = Skip : f str False xs
@@ -106,17 +107,28 @@ internalTest = do
     "/x" # [Lit "",Lit "x"]
     "x/y" # [Lit "x",Lit "y"]
     "//" # [Skip]
+    "**" # [Skip]
     "//x" # [Skip, Lit "x"]
+    "**/x" # [Skip, Lit "x"]
     "x//" # [Lit "x", Skip]
+    "x/**" # [Lit "x", Skip]
     "x//y" # [Lit "x",Skip, Lit "y"]
+    "x/**/y" # [Lit "x",Skip, Lit "y"]
     "///" # [Skip1, Lit ""]
+    "**/**" # [Skip,Skip]
+    "**/**/" # [Skip, Skip, Lit ""]
     "///x" # [Skip1, Lit "x"]
+    "**/x" # [Skip, Lit "x"]
     "x///" # [Lit "x", Skip, Lit ""]
+    "x/**/" # [Lit "x", Skip, Lit ""]
     "x///y" # [Lit "x",Skip, Lit "y"]
+    "x/**/y" # [Lit "x",Skip, Lit "y"]
     "////" # [Skip, Skip]
+    "**/**/**" # [Skip, Skip, Skip]
     "////x" # [Skip, Skip, Lit "x"]
     "x////" # [Lit "x", Skip, Skip]
     "x////y" # [Lit "x",Skip, Skip, Lit "y"]
+    "**//x" # [Skip, Skip, Lit "x"]
 
 
 -- | Optimisations that may change the matched expressions
@@ -158,6 +170,32 @@ matchStars (Stars pre mid post) x = do
             (a:) <$> stripInfixes ms x
 
 
+--- | Match a 'FilePattern' against a 'FilePath', There are three special forms:
+---
+--- * @*@ matches an entire path component, excluding any separators.
+---
+--- * @\/\/@ matches an arbitrary number of path components.
+--
+--  * @**@ as a path component matches an arbitrary number of path components.
+--    Currently considered experimental.
+---
+---   Some examples:
+---
+--- * @test.c@ matches @test.c@ and nothing else.
+---
+--- * @*.c@ matches all @.c@ files in the current directory, so @file.c@ matches,
+---   but @file.h@ and @dir\/file.c@ don't.
+---
+--- * @\/\/*.c@ matches all @.c@ files in the current directory or its subdirectories,
+---   so @file.c@, @dir\/file.c@ and @dir1\/dir2\/file.c@ all match, but @file.h@ and
+---   @dir\/file.h@ don't.
+---
+--- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
+---   @dir\/two\/file.h@ match, but @file.c@, @one\/dir\/file.c@, @dir\/file.h@
+---   and @dir\/one\/two\/file.c@ don't.
+---
+---   Patterns with constructs such as @foo\/..\/bar@ will never match
+---   normalised 'FilePath' values, so are unlikely to be correct.
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) p = case optimise $ parse p of
     [Skip] -> const True
@@ -168,11 +206,14 @@ matchStars (Stars pre mid post) x = do
 ---------------------------------------------------------------------
 -- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
 
-specials :: FilePattern -> String
-specials ('*':xs) = '*' : specials xs
-specials (x1:x2:xs) | isPathSeparator x1, isPathSeparator x2 = '/':'/': specials xs
-specials (x:xs) = specials xs
-specials [] = []
+specials :: FilePattern -> [Pat]
+specials = concatMap f . parse
+    where
+        f Lit{} = []
+        f Star = [Star]
+        f Skip = [Skip]
+        f Skip1 = [Skip]
+        f (Stars _ xs _) = replicate (length xs + 1) Star
 
 -- | Is the pattern free from any * and //.
 simple :: FilePattern -> Bool

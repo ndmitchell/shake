@@ -1,4 +1,4 @@
-# Shake [![Hackage version](https://img.shields.io/hackage/v/shake.svg?label=Hackage)](https://hackage.haskell.org/package/shake) [![Linux Build Status](https://img.shields.io/travis/ndmitchell/shake.svg?label=Linux%20build)](https://travis-ci.org/ndmitchell/shake) [![Windows Build Status](https://img.shields.io/appveyor/ci/ndmitchell/shake.svg?label=Windows%20build)](https://ci.appveyor.com/project/ndmitchell/shake)
+# Shake [![Hackage version](https://img.shields.io/hackage/v/shake.svg?label=Hackage)](https://hackage.haskell.org/package/shake) [![Stackage version](https://www.stackage.org/package/shake/badge/lts?label=Stackage)](https://www.stackage.org/package/shake) [![Linux Build Status](https://img.shields.io/travis/ndmitchell/shake.svg?label=Linux%20build)](https://travis-ci.org/ndmitchell/shake) [![Windows Build Status](https://img.shields.io/appveyor/ci/ndmitchell/shake.svg?label=Windows%20build)](https://ci.appveyor.com/project/ndmitchell/shake)
 
 Shake is a tool for writing build systems - an alternative to make, Scons, Ant etc. Shake has been used commercially for over five years, running thousands of builds per day. The website for Shake users is at [shakebuild.com](http://shakebuild.com).
 
@@ -22,4 +22,4 @@ Shake is a tool for writing build systems - an alternative to make, Scons, Ant e
 * [Source code](http://github.com/ndmitchell/shake) in a git repo, stored at GitHub.
 * Continuous integration with [Travis](https://travis-ci.org/ndmitchell/shake) and [Hydra](http://hydra.cryp.to/jobset/shake/master).
 
-Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link at [on the website](http://shakebuild.com/#who-uses-shake).
+Is your company using Shake? Write something public (even just a [tweet  to `@ndm_haskell`](https://twitter.com/ndm_haskell)) and I'll include a link [on the website](http://shakebuild.com/#who-uses-shake).

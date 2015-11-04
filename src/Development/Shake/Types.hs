@@ -11,6 +11,7 @@ import Data.List
 import Development.Shake.Progress
 import Development.Shake.FilePattern
 import qualified Data.ByteString.Char8 as BS
+import Development.Shake.CmdOption
 
 
 -- | The current assumptions made by the build system, used by 'shakeAssume'. These options
@@ -114,6 +115,8 @@ data ShakeOptions = ShakeOptions
         -- ^ Directories in which the files will be tracked by the linter.
     ,shakeLintIgnore :: [FilePattern]
         -- ^ File patterns which are ignored from linter tracking, a bit like calling 'trackAllow' in every rule.
+    ,shakeCommandOptions :: [CmdOption]
+        -- ^ Defaults to @[]@. Additional options to be passed to all command invocations.
     ,shakeFlush :: Maybe Double
         -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
         --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
@@ -162,27 +165,28 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] Nothing [] [] (Just 10) Nothing [] False True False
+    ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) Nothing [] False True False
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
-    ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
+    ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
+    ,"shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
     ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 y1 y2 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 (fromFunction y1) (fromFunction y2)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromFunction y1) (fromFunction y2)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 y1 y2) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
-        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k`
         Function y1 `k` Function y2
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -203,6 +207,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Function (IO Progress -> IO ()))
                 | Just x <- cast x = show (x :: Function (Verbosity -> String -> IO ()))
+                | Just x <- cast x = show (x :: [CmdOption])
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
 

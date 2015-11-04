@@ -93,6 +93,11 @@ main = shaken test $ \args obj -> do
     obj "tracker-compile.o" %> \out -> do
         need [obj "tracker-source.c", obj "tracker-source.h"]
         cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
+
+    obj "tracker-compile-auto.o" %> \out -> do
+        need [obj "tracker-source.c"]
+        cmd Autodeps "gcc" ["-c", obj "tracker-source.c", "-o", out]
+
     where gen t f = unit $ if isWindows
                            then cmd "cmd.exe" ["/C echo " ++ t ++ ">" ++ toNative f]
                            else cmd "sh -c" ["echo " ++ t ++ " >" ++ f]
@@ -128,3 +133,4 @@ test build obj = do
         build ["tracker-read2"]
         crash ["tracker-read3"] ["depended upon after being used","lint/tracker-source2"]
         build ["tracker-compile.o"]
+        build ["tracker-compile-auto.o"]

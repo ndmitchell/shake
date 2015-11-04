@@ -3,7 +3,7 @@
 -- | A wrapping of createProcess to provide a more flexible interface.
 module General.Process(
     Buffer, newBuffer, readBuffer,
-    process, ProcessOpts(..), Destination(..)
+    process, ProcessOpts(..), Source(..), Destination(..)
     ) where
 
 import Control.Applicative
@@ -49,6 +49,11 @@ readBuffer (Buffer _ ref) = reverse <$> readIORef ref
 ---------------------------------------------------------------------
 -- OPTIONS
 
+data Source
+    = SrcFile FilePath
+    | SrcString String
+    | SrcBytes LBS.ByteString
+
 data Destination
     = DestEcho
     | DestFile FilePath
@@ -64,7 +69,7 @@ data ProcessOpts = ProcessOpts
     ,poCwd :: Maybe FilePath
     ,poEnv :: Maybe [(String, String)]
     ,poTimeout :: Maybe Double
-    ,poStdin :: Either String LBS.ByteString
+    ,poStdin :: [Source]
     ,poStdout :: [Destination]
     ,poStderr :: [Destination]
     ,poAsync :: Bool
@@ -84,11 +89,15 @@ stdStream file [DestFile x] other | other == [DestFile x] || DestFile x `notElem
 stdStream file _ _ = CreatePipe
 
 
-stdIn :: Either String LBS.ByteString -> (StdStream, Handle -> IO ())
-stdIn inp | either null LBS.null inp = (Inherit, const $ return ())
-          | otherwise = (,) CreatePipe $ \h ->
+stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
+stdIn file [] = (Inherit, const $ return ())
+stdIn file [SrcFile x] = (UseHandle $ file x, const $ return ())
+stdIn file src = (,) CreatePipe $ \h ->
     void $ tryBool isPipeGone $ do
-        either (hPutStr h) (LBS.hPutStr h) inp
+        forM_ src $ \x -> case x of
+            SrcString x -> hPutStr h x
+            SrcBytes x -> LBS.hPutStr h x
+            SrcFile x -> LBS.hPutStr h =<< LBS.hGetContents (file x)
         hFlush h
         hClose h
     where
@@ -133,16 +142,21 @@ withCreateProcess cp act = mask $ \restore -> do
             void $ waitForProcess pid
 
 
+withFiles :: IOMode -> [FilePath] -> ((FilePath -> Handle) -> IO a) -> IO a
+withFiles mode files act = withs (map (`withFile` mode) files) $ \handles ->
+    act $ \x -> fromJust $ lookup x $ zip files handles
+
+
 -- General approach taken from readProcessWithExitCode
 process :: ProcessOpts -> IO (ProcessHandle, ExitCode)
 process po = do
     (ProcessOpts{..}, flushBuffers) <- optimiseBuffers po
-    let files = nubOrd [x | DestFile x <- poStdout ++ poStderr]
-    withs (map (`withFile` WriteMode) files) $ \handles -> do
-        let fileHandle x = fromJust $ lookup x $ zip files handles
+    let outFiles = nubOrd [x | DestFile x <- poStdout ++ poStderr]
+    let inFiles = nubOrd [x | SrcFile x <- poStdin]
+    withFiles WriteMode outFiles $ \outHandle -> withFiles ReadMode inFiles $ \inHandle -> do
         let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
-                 ,std_in = fst $ stdIn poStdin
-                 ,std_out = stdStream fileHandle poStdout poStderr, std_err = stdStream fileHandle poStderr poStdout}
+                 ,std_in = fst $ stdIn inHandle poStdin
+                 ,std_out = stdStream outHandle poStdout poStderr, std_err = stdStream outHandle poStderr poStdout}
         withCreateProcess cp $ \(inh, outh, errh, pid) ->
             withTimeout poTimeout (abort pid) $ do
 
@@ -162,7 +176,7 @@ process po = do
                         hSetBinaryMode h True
                         dest <- return $ for dest $ \d -> case d of
                             DestEcho -> BS.hPut hh
-                            DestFile x -> BS.hPut (fileHandle x)
+                            DestFile x -> BS.hPut (outHandle x)
                             DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
                             DestBytes x -> addBuffer x
                         forkWait $ whileM $ do
@@ -172,7 +186,7 @@ process po = do
                      else if isTied then do
                         dest <- return $ for dest $ \d -> case d of
                             DestEcho -> hPutStrLn hh
-                            DestFile x -> hPutStrLn (fileHandle x)
+                            DestFile x -> hPutStrLn (outHandle x)
                             DestString x -> addBuffer x . (++ "\n")
                         forkWait $ whileM $
                             ifM (hIsEOF h) (return False) $ do
@@ -184,11 +198,11 @@ process po = do
                         wait1 <- forkWait $ C.evaluate $ rnf src
                         waits <- forM dest $ \d -> case d of
                             DestEcho -> forkWait $ hPutStr hh src
-                            DestFile x -> forkWait $ hPutStr (fileHandle x) src
+                            DestFile x -> forkWait $ hPutStr (outHandle x) src
                             DestString x -> do addBuffer x src; return $ return ()
                         return $ sequence_ $ wait1 : waits
 
-                whenJust inh $ snd $ stdIn poStdin
+                whenJust inh $ snd $ stdIn inHandle poStdin
                 if poAsync then
                     return (pid, ExitSuccess)
                  else do

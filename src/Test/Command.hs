@@ -128,8 +128,10 @@ main = shaken test $ \args obj -> do
             [s ++ " = " ++ showDuration d | (s,d) <- [("String",t1),("ByteString",t2),("File",t3)]]
 
     "stdin" !> do
-        Stdout (x :: String) <- cmd helper "i" (Stdin "hello ") (StdinBS $ LBS.pack "world")
-        liftIO $ x === "hello world"
+        withTempFile $ \file -> do
+            liftIO $ writeFile file " "
+            Stdout (x :: String) <- cmd helper "i" (Stdin "hello") (FileStdin file) (StdinBS $ LBS.pack "world")
+            liftIO $ x === "hello world"
 
     "async" !> do
         let file = obj "async.txt"

@@ -1,5 +1,9 @@
 Changelog for Shake
 
+    #327, Add AutoDeps feature
+    #325, add FileStdin to specify the stdin comes from a file
+    Make an empty Stdin different from no Stdin (inherit) in cmd
+    #320, add ** as an alternative to // in patterns
     #283, change the semantics of removeFiles, no implicit deletes
     #283, speed up getDirectoryFiles on patterns involving literals
     Work with stack test
