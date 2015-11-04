@@ -5,11 +5,13 @@ type key = string | number;
 
 type seconds = number
 
-type int = number
-
 type color = string
 
 type MapString<T> = { [key: string]: T }
+type MapNumber<T> = { [key: number]: T }
+
+type int = number
+type MapInt<T> = MapNumber<T>
 
 
 /////////////////////////////////////////////////////////////////////
@@ -29,11 +31,11 @@ jQuery.fn.enable = function (x : boolean)
 function getParameters(): MapString<string>
 {
     // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
-    var params: MapString<string> = {};
-    var a = /\+/g;  // Regex for replacing addition symbol with a space
-    var r = /([^&=]+)=?([^&]*)/g;
-    var d = function (s) { return decodeURIComponent(s.replace(a, " ")); };
-    var q = window.location.search.substring(1);
+    const params: MapString<string> = {};
+    const a = /\+/g;  // Regex for replacing addition symbol with a space
+    const r = /([^&=]+)=?([^&]*)/g;
+    const d = function (s: string) { return decodeURIComponent(s.replace(a, " ")); };
+    const q = window.location.search.substring(1);
 
     while (true)
     {
@@ -50,7 +52,7 @@ function getParameters(): MapString<string>
 
 function showTime(x : seconds) : string
 {
-    function digits(x){var s = String(x); return s.length === 1 ? "0" + s : s;}
+    function digits(x:seconds){var s = String(x); return s.length === 1 ? "0" + s : s;}
 
     if (x >= 3600)
     {
@@ -82,7 +84,7 @@ function plural(n: int, not1 = "s", is1 = ""): string
 
 function sum(xs : number[]) : number
 {
-    var res = 0;
+    let res = 0;
     for (var i = 0; i < xs.length; i++)
         res += xs[i];
     return res;
@@ -107,7 +109,7 @@ function execRegExp(r : string | RegExp, s : string) : string[]
 function listEq<T>(xs : T[], ys : T[]) : boolean
 {
     if (xs.length !== ys.length) return false;
-    for (var i = 0; i < xs.length; i++)
+    for (let i = 0; i < xs.length; i++)
     {
         if (xs[i] !== ys[i])
             return false;
@@ -117,20 +119,13 @@ function listEq<T>(xs : T[], ys : T[]) : boolean
 
 function cache<K, V>(key: (k: K) => string, op: (k: K) => V): (k: K) => V
 {
-    var store: MapString<V> = {};
+    const store: MapString<V> = {};
     return function(k){
         var s = key(k);
         if (!(s in store))
             store[s] = op(k);
         return store[s];
     };
-}
-
-function recordCopy<T extends {}>(xs: T): T {
-    var res = {};
-    for (var s in xs)
-        res[s] = xs[s];
-    return <T>res;
 }
 
 function mapEq<V>(xs: MapString<V>, ys: MapString<V>) : boolean
@@ -146,14 +141,21 @@ function mapEq<V>(xs: MapString<V>, ys: MapString<V>) : boolean
     return f(xs,ys) && f(ys,xs);
 }
 
+function recordCopy<T extends {}>(xs: T): T {
+    return <T>mapCopy(<MapString<any>>xs);
+}
+
 function mapCopy<V>(xs: MapString<V>): MapString<V>
 {
-    return recordCopy(xs);
+    const res: MapString<any> = {};
+    for (var s in xs)
+        res[s] = xs[s];
+    return res;
 }
 
 function mapUnion<V>(xs: MapString<V>, ys: MapString<V>): MapString<V>
 {
-    var res = mapCopy(ys);
+    const res = mapCopy(ys);
     for (var s in xs)
         res[s] = xs[s];
     return res;
@@ -161,18 +163,18 @@ function mapUnion<V>(xs: MapString<V>, ys: MapString<V>): MapString<V>
 
 function concatNub<T extends key>(xs : T[][]) : T[]
 {
-    var res : T[] = [];
-    var seen = {};
+    const res : T[] = [];
+    const seen: {} = {};
     for (var i = 0; i < xs.length; i++)
     {
-        var x = xs[i];
-        for (var j = 0; j < x.length; j++)
+        const x = xs[i];
+        for (let j = 0; j < x.length; j++)
         {
-            var e = x[j];
-            var ee: key = e;
+            const e = x[j];
+            const ee: key = e;
             if (!(ee in seen))
             {
-                seen[ee] = null;
+                (<any>seen)[ee] = null;
                 res.push(e);
             }
         }

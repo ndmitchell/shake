@@ -7,12 +7,11 @@
 
 type timestamp = int
 
-type Trace =
-    {
-        command: string,
-        start: seconds,
-        stop: seconds
-    }
+class Trace {
+    command: string;
+    start: seconds;
+    stop: seconds;
+}
 
 type Entry =
     {
@@ -91,21 +90,21 @@ type EntryEx = Entry &
         cost: seconds // cost if this item rebuilds
     }
 
-type Prepare =
-    {
-        original: EntryEx[],
-        summary: Summary,
-        dependsOnThis: any, // FIXME: Refine
-        thisDependsOn: any, // FIXME: Refine
-        dependsOnThisTransitive: any, // FIXME: Refine
-        thisDependsOnTransitive: any // FIXME: Refine
-    }
+class Prepare
+{
+    original: EntryEx[];
+    summary: Summary;
+    dependsOnThis: (from: int, match: string | RegExp) => boolean;
+    thisDependsOn: (from: int, match: string | RegExp) => boolean;
+    dependsOnThisTransitive: (from: int, match: string | RegExp) => boolean;
+    thisDependsOnTransitive: (from: int, match: string | RegExp) => boolean;
+}
 
 // Mutate the input data, adding in rdeps, being the 1-level reverse dependencies
 function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 {
     // find the reverse dependencies
-    var rdeps: {}[] = [];
+    var rdeps: MapInt<boolean>[] = [];
     for (var i = 0; i < dat.length; i++)
         rdeps[i] = {};
     for (var i = 0; i < dat.length; i++) {
@@ -116,7 +115,7 @@ function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 
     var res: (Entry & { rdeps?: int[] })[] = dat;
     for (var i = 0; i < rdeps.length; i++) {
-        var ans = [];
+        var ans : number[] = [];
         for (var jj in rdeps[i])
             ans.push(Number(jj));
         res[i].rdeps = ans;
@@ -129,7 +128,7 @@ function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 // You must call addRdeps and addCost first
 function calcRebuildCosts(dat: EntryEx[], xs : int[]) : seconds
 {
-    var seen = {};
+    var seen: MapInt<boolean> = {};
     var tot : seconds = 0;
     function f(i : int) {
         if (seen[i]) return;
@@ -164,14 +163,16 @@ function prepare(sum: Summary, dat_: Entry[]): Prepare
 {
     var dat = addCost(addRdeps(dat_));
 
-    function toHash(r) { return typeof r === "string" ? "$" + r : "/" + r.source; }
+    function toHash(r: RegExp | string): string {
+        return typeof r === "string" ? "$" + r : "/" + r.source;
+    }
 
-    function findDirect(key) {
+    function findDirect(key : string) : (from : int, match : string | RegExp) => boolean {
         var c = cache(toHash, function (r) {
-            var want = {};
+            var want: MapInt<boolean> = {};
             for (var i = 0; i < dat.length; i++) {
                 if (testRegExp(r, dat[i].name)) {
-                    var deps = dat[i][key];
+                    var deps : int[] = (<any>(dat[i]))[key];
                     for (var j = 0; j < deps.length; j++)
                         want[deps[j]] = true;
                 }
@@ -186,14 +187,14 @@ function prepare(sum: Summary, dat_: Entry[]): Prepare
         };
     }
 
-    function findTransitive(key, dirFwd) {
+    function findTransitive(key: string, dirFwd: boolean): (from: int, match: string | RegExp) => boolean {
         var c = cache(toHash, function (r) {
-            var want = {};
+            var want: MapInt<boolean> = {};
             for (var i = 0; i < dat.length; i++) {
                 var j = dirFwd ? i : dat.length - 1 - i;
                 if ((j in want) || testRegExp(r, dat[j].name)) {
                     want[j] = true;
-                    var deps = dat[j][key];
+                    const deps: int[] = (<any>(dat[j]))[key];
                     for (var k = 0; k < deps.length; k++)
                         want[deps[k]] = true;
                 }
@@ -217,7 +218,7 @@ function prepare(sum: Summary, dat_: Entry[]): Prepare
 /////////////////////////////////////////////////////////////////////
 // RULES
 
-function colorAnd(c1, c2) {
+function colorAnd(c1: color, c2: color) {
     return c1 === null ? c2 : c1 === c2 ? c1 : undefined;
 }
 
@@ -254,19 +255,31 @@ function ruleFilter(dat: Prepare, query: string): MapString<Result>
     return res;
 }
 
-function ruleTable(dat, query) // DataEx -> Query -> [Record]
+class ResultTable {
+    name: string;
+    count: int;
+    time: seconds;
+    back: color;
+    text: color;
+    cost: seconds;
+    leaf: string | boolean; // true, false, "" (none), "both" (both)
+    run: timestamp;
+    unchanged: string | boolean;
+}
+
+function ruleTable(dat: Prepare, query: string): ResultTable[]
 {
-    function bools(x, y) {
+    function bools(x : string | boolean, y : boolean) : string | boolean {
         return x === "" ? y : x === y ? x : "both";
     }
 
     var res = ruleFilter(dat, query);
-    var ans = [];
+    var ans : ResultTable[] = [];
     for (var s in res) {
         var xs = res[s].items;
         var time = 0;
-        var leaf = "";
-        var unchanged = "";
+        var leaf: string | boolean = "";
+        var unchanged: string | boolean = "";
         var run = 100000;
         for (var i = 0; i < xs.length; i++) {
             var x = dat.original[xs[i]];
@@ -280,15 +293,24 @@ function ruleTable(dat, query) // DataEx -> Query -> [Record]
     return ans;
 }
 
-function ruleGraph(dat, query) // DataEx -> Query -> [Record]
+class ResultGraph
+{
+    name: string;
+    text: color;
+    back: color;
+    parents: int[];
+    ancestors: int[];
+}
+
+function ruleGraph(dat : Prepare, query : string) : ResultGraph[]
 {
     var res = ruleFilter(dat, query);
 
-    var map = {}; // :: Dict Int [Int] -- which nodes a node lives at
+    var map : MapInt<int[]> = {}; // which nodes a node lives at
 
     // loop through each value in res, putting it into map (these are parents)
     // for any not present, descend through the dat.original list, if you aren't included, add, if you are included, skip
-    var direct = {};
+    var direct: MapInt<int> = {};
     var ind = -1;
     for (var s in res) {
         ind++;
@@ -296,30 +318,30 @@ function ruleGraph(dat, query) // DataEx -> Query -> [Record]
         for (var i = 0; i < xs.length; i++)
             direct[xs[i]] = ind;
     }
-    function getDirect(key) {
+    function getDirect(key : int) : int[] {
         return key in direct ? [direct[key]] : [];
     }
 
-    var indirect = {};
-    function getIndirect(key) {
+    var indirect: MapInt<int[]> = {};
+    function getIndirect(key : int) : int[] {
         if (key in indirect) return indirect[key];
         if (key in direct) return [];
         var ds = dat.original[key].depends;
-        var res = [];
+        const res: int[][] = [];
         for (var j = 0; j < ds.length; j++) {
             res.push(getIndirect(ds[j]));
             res.push(getDirect(ds[j]));
         }
-        res = concatNub(res);
-        indirect[key] = res;
-        return res;
+        const res2: int[] = concatNub(res);
+        indirect[key] = res2;
+        return res2;
     }
 
-    var ans = [];
+    var ans : ResultGraph[] = [];
     for (var s in res) {
         var xs = res[s].items;
-        var ds = [];
-        var is = [];
+        var ds : int[][] = [];
+        var is : int[][] = [];
         for (var i = 0; i < xs.length; i++) {
             var depends = dat.original[xs[i]].depends;
             for (var j = 0; j < depends.length; j++) {
@@ -327,9 +349,7 @@ function ruleGraph(dat, query) // DataEx -> Query -> [Record]
                 is.push(getIndirect(depends[j]));
             }
         }
-        ds = concatNub(ds);
-        is = concatNub(is);
-        ans.push({ name: s, text: res[s].text, back: res[s].back, parents: ds, ancestors: is });
+        ans.push({ name: s, text: res[s].text, back: res[s].back, parents: concatNub(ds), ancestors: concatNub(is) });
     }
     return ans;
 }
@@ -338,11 +358,11 @@ function ruleGraph(dat, query) // DataEx -> Query -> [Record]
 /////////////////////////////////////////////////////////////////////
 // COMMANDS
 
-function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trace]
+function commandFilter(last: boolean, dat: Prepare, query: string): MapString<{ items: Trace[], text: color, back: color }>
 {
     queryData = dat;
     var f = readQuery(query);
-    var res = {};
+    var res: MapString<{ items: Trace[], text: color, back: color }> = {};
 
     for (queryKey = 0; queryKey < dat.original.length; queryKey++) {
         queryVal = dat.original[queryKey];
@@ -373,10 +393,18 @@ function commandFilter(last, dat, query) // DataEx -> Query -> Dict String [Trac
     return res;
 }
 
-function commandTable(dat, query) // DataEx -> Query -> [Record]
+class CommandTable {
+    name: string;
+    count: int;
+    text: color;
+    back: color;
+    time: seconds;
+}
+
+function commandTable(dat: Prepare, query : string) : CommandTable[]
 {
     var res = commandFilter(false, dat, query);
-    var ans = [];
+    var ans : CommandTable[] = [];
     for (var s in res) {
         var xs = res[s].items;
         var time = 0;
@@ -387,14 +415,14 @@ function commandTable(dat, query) // DataEx -> Query -> [Record]
     return ans;
 }
 
-function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict String [Double]
+function commandPlot(dat: Prepare, query: string, buckets: int): MapString<{ items: number[], back: color }>
 {
     var end = dat.summary.maxTraceStopLast;
     var res = commandFilter(true, dat, query);
-    var ans = {};
+    var ans: MapString<{ items: number[], back: color }> = {};
     for (var s in res) {
         var ts = res[s].items;
-        var xs = [];
+        var xs : number[] = [];
         for (var i = 0; i <= buckets; i++)
             xs.push(0); // fill with 1 more element, but the last bucket will always be 0
 
@@ -420,10 +448,11 @@ function commandPlot(dat, query, buckets) // DataEx -> Query -> Int -> Dict Stri
 /////////////////////////////////////////////////////////////////////
 // ENVIRONMENT
 
-function readQuery(query) {
-    var f;
+function readQuery(query: string): () => boolean {
+    if (query === "") return () => true;
+    var f: () => boolean;
     try {
-        f = new Function("return " + (query === "" ? "true" : query));
+        f = <() => boolean>(new Function("return " + query));
     } catch (e) {
         throw { user: true, name: "parse", query: query, message: e.toString() };
     }
@@ -439,32 +468,32 @@ function readQuery(query) {
 
 // These are global variables mutated/queried by query execution
 var queryData: Prepare = <Prepare>{};
-var queryKey = 0;
+var queryKey: int = 0;
 var queryVal: EntryEx = <EntryEx>{};
-var queryName = "";
-var queryGroup = null;
-var queryBackColor = null;
-var queryTextColor = null;
+var queryName: string = "";
+var queryGroup: string = null;
+var queryBackColor: color = null;
+var queryTextColor: color = null;
 
-function childOf(r) { return queryData.dependsOnThis(queryKey, r); }
-function parentOf(r) { return queryData.thisDependsOn(queryKey, r); }
-function ancestorOf(r) { return queryData.dependsOnThisTransitive(queryKey, r); }
-function descendantOf(r) { return queryData.thisDependsOnTransitive(queryKey, r); }
-function descendentOf(r) { return descendantOf(r); }
+function childOf(r : string | RegExp) { return queryData.dependsOnThis(queryKey, r); }
+function parentOf(r: string | RegExp) { return queryData.thisDependsOn(queryKey, r); }
+function ancestorOf(r: string | RegExp) { return queryData.dependsOnThisTransitive(queryKey, r); }
+function descendantOf(r: string | RegExp) { return queryData.thisDependsOnTransitive(queryKey, r); }
+function descendentOf(r: string | RegExp) { return descendantOf(r); }
 
-function /* export */ group(x) {
+function /* export */ group(x: string): boolean {
     if (queryGroup === null) queryGroup = "";
     queryGroup += (queryGroup === "" ? "" : " ") + x;
     return true;
 }
 
-function backColor(c, b) {
-    if (b === undefined || b)
+function backColor(c: color, b = true) : boolean {
+    if (b)
         queryBackColor = c;
     return true;
 }
 
-function textColor(c, b) {
+function textColor(c: color, b = true): boolean{
     if (b === undefined || b)
         queryTextColor = c;
     return true;
@@ -479,13 +508,13 @@ function slowestRule(): string {
     return queryData.summary.maxExecutionName;
 }
 
-function /* export */ leaf() {
+function /* export */ leaf(): boolean {
     return queryVal.depends.length === 0;
 }
 
 function run(): number;
 function run(i: timestamp): boolean;
-function run(i?): any {
+function run(i? : any): any {
     if (i === undefined)
         return queryVal.built;
     else
@@ -498,7 +527,7 @@ function /* export */ unchanged(): boolean {
 
 function name_(): string;
 function name_(r: string | RegExp, groupName?: string): boolean
-function /* export */ name_(r?, groupName?): any {
+function /* export */ name_(r?:any, groupName?:any): any {
     if (r === undefined)
         return queryName;
 
@@ -520,7 +549,7 @@ function /* export */ name_(r?, groupName?): any {
 
 function command(): string;
 function command(r: string | RegExp, groupName?: string): boolean;
-function /* export */ command(r?, groupName?) : any {
+function /* export */ command(r?:any, groupName?:any) : any {
     var n = (queryVal.traces || []).length;
     if (r === undefined)
         return n === 0 ? "" : queryVal.traces[0].command;
