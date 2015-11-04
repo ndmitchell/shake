@@ -525,9 +525,9 @@ function /* export */ unchanged(): boolean {
     return queryVal.changed !== queryVal.built;
 }
 
-function name_(): string;
-function name_(r: string | RegExp, groupName?: string): boolean
-function /* export */ name_(r?:any, groupName?:any): any {
+function named(): string;
+function named(r: string | RegExp, groupName?: string): boolean
+function /* export */ named(r?:any, groupName?:any): any {
     if (r === undefined)
         return queryName;
 
