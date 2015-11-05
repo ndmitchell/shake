@@ -7,21 +7,20 @@
 
 type timestamp = int
 
-class Trace {
+interface Trace {
     command: string;
     start: seconds;
     stop: seconds;
 }
 
-type Entry =
-    {
-        name: string, // Name of the thing I built
-        built: timestamp, // Timestamp at which I was built
-        changed: timestamp, // Timestamp at which I last changed
-        depends: int[], // Which 0-based indexes I depended on (always lower than my index)
-        execution: seconds, // Seconds I took to execute
-        traces?: Trace[] // List of traces
-    }
+interface Entry {
+    name: string; // Name of the thing I built
+    built: timestamp; // Timestamp at which I was built
+    changed: timestamp; // Timestamp at which I last changed
+    depends: int[]; // Which 0-based indexes I depended on (always lower than my index)
+    execution: seconds; // Seconds I took to execute
+    traces?: Trace[]; // List of traces
+}
 
 //////////////////////////////////////////////////////////////////////
 // SUMMARY
@@ -42,34 +41,34 @@ class Summary {
 
 function /* export */ summary(dat : Entry[]) : Summary
 {
-    var res = new Summary();
+    const res = new Summary();
 
     // Fold over dat to produce the summary
     res.count = dat.length;
-    for (var i = 0; i < dat.length; i++) {
-        var isLast = dat[i].built === 0;
+    for (const e of dat) {
+        var isLast = e.built === 0;
         res.countLast += isLast ? 1 : 0;
-        res.sumExecution += dat[i].execution;
-        res.maxExecution = Math.max(res.maxExecution, dat[i].execution);
-        if (res.maxExecution === dat[i].execution) res.maxExecutionName = dat[i].name;
-        res.highestRun = Math.max(res.highestRun, dat[i].changed); // changed is always greater or equal to built
-        var traces = dat[i].traces;
+        res.sumExecution += e.execution;
+        res.maxExecution = Math.max(res.maxExecution, e.execution);
+        if (res.maxExecution === e.execution) res.maxExecutionName = e.name;
+        res.highestRun = Math.max(res.highestRun, e.changed); // changed is always greater or equal to built
+        var traces = e.traces;
         if (!traces) continue;
-        for (var j = 0; j < traces.length; j++) {
-            var time = traces[j].stop - traces[j].start;
+        for (const t of traces) {
+            var time = t.stop - t.start;
             res.countTrace += 1;
             res.countTraceLast += isLast ? 1 : 0;
             res.sumTrace += time;
             res.sumTraceLast += isLast ? time : 0;
             res.maxTrace = Math.max(res.maxTrace, time);
-            if (res.maxTrace == time) res.maxTraceName = traces[j].command;
-            res.maxTraceStopLast = Math.max(res.maxTraceStopLast, isLast ? traces[j].stop : 0);
+            if (res.maxTrace == time) res.maxTraceName = t.command;
+            res.maxTraceStopLast = Math.max(res.maxTraceStopLast, isLast ? t.stop : 0);
         }
     }
     return res;
 }
 
-function /* export */ showSummary(sum : Summary) : string[]
+function showSummary(sum : Summary) : string[]
 {
     return ["This database has tracked " + (sum.highestRun + 1) + " run" + plural(sum.highestRun + 1) + "."
         , "There are " + sum.count + " rules (" + sum.countLast + " rebuilt in the last run)."
@@ -84,14 +83,12 @@ function /* export */ showSummary(sum : Summary) : string[]
 /////////////////////////////////////////////////////////////////////
 // PREPARATION
 
-type EntryEx = Entry &
-    {
-        rdeps: int[], // the 1-level reverse dependencies, index into Entry
-        cost: seconds // cost if this item rebuilds
-    }
+interface EntryEx extends Entry {
+    rdeps: int[]; // the 1-level reverse dependencies, index into Entry
+    cost: seconds; // cost if this item rebuilds
+}
 
-class Prepare
-{
+class Prepare {
     original: EntryEx[];
     summary: Summary;
     dependsOnThis: (from: int, match: string | RegExp) => boolean;
@@ -105,19 +102,18 @@ function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 {
     // find the reverse dependencies
     var rdeps: MapInt<void>[] = [];
-    for (var i = 0; i < dat.length; i++)
+    for (let i = 0; i < dat.length; i++)
         rdeps[i] = {};
-    for (var i = 0; i < dat.length; i++) {
-        var deps = dat[i].depends;
-        for (var j = 0, n = deps.length; j < n; j++)
-            rdeps[deps[j]][i] = null;
+    for (let i = 0; i < dat.length; i++) {
+        for (const j of dat[i].depends)
+            rdeps[j][i] = null;
     }
 
     var res: (Entry & { rdeps?: int[] })[] = dat;
-    for (var i = 0; i < rdeps.length; i++) {
+    for (let i = 0; i < rdeps.length; i++) {
         var ans : number[] = [];
-        for (var jj in rdeps[i])
-            ans.push(Number(jj));
+        for (const j in rdeps[i])
+            ans.push(Number(j));
         res[i].rdeps = ans;
     }
     return <(Entry & { rdeps: int[] })[]>res;
@@ -128,21 +124,20 @@ function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
 // You must call addRdeps and addCost first
 function calcRebuildCosts(dat: EntryEx[], xs : int[]) : seconds
 {
-    var seen: MapInt<void> = {};
-    var tot : seconds = 0;
+    const seen: MapInt<void> = {};
+    let tot : seconds = 0;
     function f(i : int) {
         if (i in seen) return;
         seen[i] = null;
         tot += dat[i].execution;
-        var deps = dat[i].rdeps;
-        for (var j = 0, n = deps.length; j < n; j++)
-            f(deps[j]);
+        for (const j of dat[i].rdeps)
+            f(j);
     }
     if (xs.length === 1 && dat[xs[0]].depends.length === 1)
         tot = dat[dat[xs[0]].depends[0]].cost + dat[xs[0]].execution;
     else {
-        for (var i = 0, n = xs.length; i < n; i++)
-            f(xs[i]);
+        for (const x of xs)
+            f(x);
     }
     return tot;
 }
@@ -150,8 +145,8 @@ function calcRebuildCosts(dat: EntryEx[], xs : int[]) : seconds
 // Mutate the dat data, adding in cost, being the cost to rebuild if this item changes
 function addCost(dat: (Entry & { rdeps: int[] })[]): EntryEx[]
 {
-    var res: (Entry & { rdeps: int[], cost?: seconds })[] = dat;
-    for(var i = 0; i < dat.length; i++){
+    const res: (Entry & { rdeps: int[], cost?: seconds })[] = dat;
+    for(let i = 0; i < dat.length; i++){
         // This call is type safe because calcRebuildCosts only ever looks at earlier items,
         // and those earlier items all have their cost filled in
         res[i].cost = calcRebuildCosts(<EntryEx[]>res, [i]);
@@ -161,30 +156,25 @@ function addCost(dat: (Entry & { rdeps: int[] })[]): EntryEx[]
 
 function prepare(sum: Summary, dat_: Entry[]): Prepare
 {
-    var dat = addCost(addRdeps(dat_));
+    const dat = addCost(addRdeps(dat_));
 
     function toHash(r: RegExp | string): string {
         return typeof r === "string" ? "$" + r : "/" + r.source;
     }
 
-    function findDirect(key : string) : (from : int, match : string | RegExp) => boolean {
-        var c = cache(toHash, function (r) {
-            var want: MapInt<void> = {};
-            for (var i = 0; i < dat.length; i++) {
-                if (testRegExp(r, dat[i].name)) {
-                    var deps : int[] = (<any>(dat[i]))[key];
-                    for (var j = 0; j < deps.length; j++)
-                        want[deps[j]] = null;
+    function findDirect(key: string): (from: int, match: string | RegExp) => boolean {
+        const c = cache(toHash, function (r) {
+            const want: MapInt<void> = {};
+            for (const e of dat) {
+                if (testRegExp(r, e.name)) {
+                    const deps : int[] = (<any>(e))[key];
+                    for (const j of deps)
+                        want[j] = null;
                 }
             }
             return want;
         });
-        return function (i, r) {
-            if (i in c(r))
-                return true;
-            else
-                return false;
-        };
+        return (i, r) => i in c(r);
     }
 
     function findTransitive(key: string, dirFwd: boolean): (from: int, match: string | RegExp) => boolean {
@@ -195,13 +185,13 @@ function prepare(sum: Summary, dat_: Entry[]): Prepare
                 if ((j in want) || testRegExp(r, dat[j].name)) {
                     want[j] = null;
                     const deps: int[] = (<any>(dat[j]))[key];
-                    for (var k = 0; k < deps.length; k++)
-                        want[deps[k]] = null;
+                    for (const k of deps)
+                        want[k] = null;
                 }
             }
             return want;
         });
-        return function (i, r) { return i in c(r); };
+        return (i, r) => i in c(r);
     }
 
     return {
@@ -408,8 +398,8 @@ function commandTable(dat: Prepare, query : string) : CommandTable[]
     for (var s in res) {
         var xs = res[s].items;
         var time = 0;
-        for (var i = 0; i < xs.length; i++)
-            time += xs[i].stop - xs[i].start;
+        for (const t of xs)
+            time += t.stop - t.start;
         ans.push({ name: s, count: xs.length, text: res[s].text, back: res[s].back, time: time });
     }
     return ans;
@@ -426,9 +416,9 @@ function commandPlot(dat: Prepare, query: string, buckets: int): MapString<{ ite
         for (var i = 0; i <= buckets; i++)
             xs.push(0); // fill with 1 more element, but the last bucket will always be 0
 
-        for (var i = 0; i < ts.length; i++) {
-            var start = ts[i].start * buckets / end;
-            var stop = ts[i].stop * buckets / end;
+        for (const t of ts) {
+            var start = t.start * buckets / end;
+            var stop = t.stop * buckets / end;
 
             if (Math.floor(start) === Math.floor(stop))
                 xs[Math.floor(start)] += stop - start;
@@ -456,7 +446,7 @@ function readQuery(query: string): () => boolean {
     } catch (e) {
         throw { user: true, name: "parse", query: query, message: e.toString() };
     }
-    return function () {
+    return () => {
         try {
             return f();
         } catch (e) {
@@ -554,8 +544,8 @@ function /* export */ command(r?:any, groupName?:any) : any {
     if (r === undefined)
         return n === 0 ? "" : queryVal.traces[0].command;
 
-    for (var i = 0; i < n; i++) {
-        var res = execRegExp(r, queryVal.traces[i].command);
+    for (const t of queryVal.traces) {
+        var res = execRegExp(r, t.command);
         if (res === null)
             continue;
         if (res.length !== 1) {
