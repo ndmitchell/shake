@@ -28,7 +28,11 @@ jQuery.fn.enable = function (x : boolean)
     });
 };
 
-function getParameters(): MapString<string>
+interface JQueryStatic {
+    getParameters() : MapString<string>
+}
+
+$.getParameters = () =>
 {
     // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
     const params: MapString<string> = {};
