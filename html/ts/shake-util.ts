@@ -85,8 +85,8 @@ function plural(n: int, not1 = "s", is1 = ""): string
 function sum(xs : number[]) : number
 {
     let res = 0;
-    for (var i = 0; i < xs.length; i++)
-        res += xs[i];
+    for (const x of xs)
+        res += x;
     return res;
 }
 
@@ -120,8 +120,8 @@ function listEq<T>(xs : T[], ys : T[]) : boolean
 function cache<K, V>(key: (k: K) => string, op: (k: K) => V): (k: K) => V
 {
     const store: MapString<V> = {};
-    return function(k){
-        var s = key(k);
+    return function (k) {
+        const s = key(k);
         if (!(s in store))
             store[s] = op(k);
         return store[s];
@@ -132,7 +132,7 @@ function mapEq<V>(xs: MapString<V>, ys: MapString<V>) : boolean
 {
     function f(a: MapString<V>, b: MapString<V>)
     {
-        for (var s in a)
+        for (const s in a)
         {
             if (a[s] !== b[s]) return false;
         }
@@ -156,26 +156,24 @@ function mapCopy<V>(xs: MapString<V>): MapString<V>
 function mapUnion<V>(xs: MapString<V>, ys: MapString<V>): MapString<V>
 {
     const res = mapCopy(ys);
-    for (var s in xs)
+    for (const s in xs)
         res[s] = xs[s];
     return res;
 }
 
-function concatNub<T extends key>(xs : T[][]) : T[]
+function concatNub<T extends key>(xss : T[][]) : T[]
 {
     const res : T[] = [];
     const seen: {} = {};
-    for (var i = 0; i < xs.length; i++)
+    for (const xs of xss)
     {
-        const x = xs[i];
-        for (let j = 0; j < x.length; j++)
+        for (const x of xs)
         {
-            const e = x[j];
-            const ee: key = e;
-            if (!(ee in seen))
+            const v: key = x;
+            if (!(v in seen))
             {
-                (<any>seen)[ee] = null;
-                res.push(e);
+                (<any>seen)[v] = null;
+                res.push(x);
             }
         }
     }
