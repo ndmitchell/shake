@@ -17,6 +17,10 @@ type MapInt<T> = MapNumber<T>
 /////////////////////////////////////////////////////////////////////
 // JQUERY EXTENSIONS
 
+interface JQuery {
+    enable(x: boolean): JQuery
+}
+
 jQuery.fn.enable = function (x : boolean)
 {
     // Set the values to enabled/disabled
@@ -28,18 +32,18 @@ jQuery.fn.enable = function (x : boolean)
     });
 };
 
-interface JQueryStatic {
-    getParameters() : MapString<string>
-}
 
-$.getParameters = () =>
-{
+/////////////////////////////////////////////////////////////////////
+// BROWSER HELPER METHODS
+
+// Given "?foo=bar&baz=1" returns {foo:"bar",baz:"1"}
+function uriQueryParameters(s : string) : MapString<string> {
     // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
     const params: MapString<string> = {};
     const a = /\+/g;  // Regex for replacing addition symbol with a space
     const r = /([^&=]+)=?([^&]*)/g;
     const d = function (s: string) { return decodeURIComponent(s.replace(a, " ")); };
-    const q = window.location.search.substring(1);
+    const q = s.substring(1);
 
     while (true)
     {
