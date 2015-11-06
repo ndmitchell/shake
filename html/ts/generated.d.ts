@@ -24,3 +24,16 @@ interface Profile {
     execution: seconds; // Seconds I took to execute
     traces?: Trace[]; // List of traces
 }
+
+
+/////////////////////////////////////////////////////////////////////
+// PROGRESS DATA
+
+declare const progress: MapString<Progress[]>
+
+interface Progress {
+    idealSecs: number;
+    idealPerc: number;
+    actualSecs: number;
+    actualPerc: number;
+}
