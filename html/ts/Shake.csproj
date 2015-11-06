@@ -22,9 +22,9 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="generated.d.ts" />
     <TypeScriptCompile Include="jquery.d.ts" />
     <TypeScriptCompile Include="jquery.flot.d.ts" />
-    <TypeScriptCompile Include="profile-data.ts" />
     <TypeScriptCompile Include="shake-logic.ts" />
     <TypeScriptCompile Include="shake-test.ts" />
     <TypeScriptCompile Include="shake-ui.ts" />
