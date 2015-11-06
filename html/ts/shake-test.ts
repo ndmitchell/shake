@@ -4,7 +4,7 @@
 
 function t(a: seconds, b: seconds, c: string): Trace { return { start: a, stop: b, command: c }; }
 
-var dat1 : Entry[] =
+var dat1 : Profile[] =
     // Haskell depends on Functional, C and Cpp depend on Imperative
     // Exe depends on Haskell/C/Cpp
     [{name:"Functional", built:0, changed:3, depends:[], execution:1, traces:[t(0,1,"gen")]}

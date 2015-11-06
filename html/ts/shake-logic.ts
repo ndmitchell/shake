@@ -3,26 +3,6 @@
 "use strict";
 
 //////////////////////////////////////////////////////////////////////
-// TYPES
-
-type timestamp = int
-
-interface Trace {
-    command: string;
-    start: seconds;
-    stop: seconds;
-}
-
-interface Entry {
-    name: string; // Name of the thing I built
-    built: timestamp; // Timestamp at which I was built
-    changed: timestamp; // Timestamp at which I last changed
-    depends: int[]; // Which 0-based indexes I depended on (always lower than my index)
-    execution: seconds; // Seconds I took to execute
-    traces?: Trace[]; // List of traces
-}
-
-//////////////////////////////////////////////////////////////////////
 // SUMMARY
 
 class Summary {
@@ -39,7 +19,7 @@ class Summary {
     maxTraceStopLast: seconds = 0 // time the last traced command stopped
 }
 
-function /* export */ summary(dat : Entry[]) : Summary
+function /* export */ summary(dat: Profile[]): Summary
 {
     const res = new Summary();
 
@@ -83,13 +63,13 @@ function showSummary(sum : Summary) : string[]
 /////////////////////////////////////////////////////////////////////
 // PREPARATION
 
-interface EntryEx extends Entry {
+interface ProfileEx extends Profile {
     rdeps: int[]; // the 1-level reverse dependencies, index into Entry
     cost: seconds; // cost if this item rebuilds
 }
 
 class Prepare {
-    original: EntryEx[];
+    original: ProfileEx[];
     summary: Summary;
     dependsOnThis: (from: int, match: string | RegExp) => boolean;
     thisDependsOn: (from: int, match: string | RegExp) => boolean;
@@ -98,7 +78,7 @@ class Prepare {
 }
 
 // Mutate the input data, adding in rdeps, being the 1-level reverse dependencies
-function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
+function addRdeps(dat: Profile[]): (Profile & { rdeps: int[] })[]
 {
     // find the reverse dependencies
     var rdeps: MapInt<void>[] = [];
@@ -109,20 +89,20 @@ function addRdeps(dat: Entry[]): (Entry & { rdeps: int[] })[]
             rdeps[j][i] = null;
     }
 
-    var res: (Entry & { rdeps?: int[] })[] = dat;
+    var res: (Profile & { rdeps?: int[] })[] = dat;
     for (let i = 0; i < rdeps.length; i++) {
         var ans : number[] = [];
         for (const j in rdeps[i])
             ans.push(Number(j));
         res[i].rdeps = ans;
     }
-    return <(Entry & { rdeps: int[] })[]>res;
+    return <(Profile & { rdeps: int[] })[]>res;
 }
 
 
 // Given an array of indices, calculate the cost to rebuild if all of them change
 // You must call addRdeps and addCost first
-function calcRebuildCosts(dat: EntryEx[], xs : int[]) : seconds
+function calcRebuildCosts(dat: ProfileEx[], xs : int[]) : seconds
 {
     const seen: MapInt<void> = {};
     let tot : seconds = 0;
@@ -143,18 +123,18 @@ function calcRebuildCosts(dat: EntryEx[], xs : int[]) : seconds
 }
 
 // Mutate the dat data, adding in cost, being the cost to rebuild if this item changes
-function addCost(dat: (Entry & { rdeps: int[] })[]): EntryEx[]
+function addCost(dat: (Profile & { rdeps: int[] })[]): ProfileEx[]
 {
-    const res: (Entry & { rdeps: int[], cost?: seconds })[] = dat;
+    const res: (Profile & { rdeps: int[], cost?: seconds })[] = dat;
     for(let i = 0; i < dat.length; i++){
         // This call is type safe because calcRebuildCosts only ever looks at earlier items,
         // and those earlier items all have their cost filled in
-        res[i].cost = calcRebuildCosts(<EntryEx[]>res, [i]);
+        res[i].cost = calcRebuildCosts(<ProfileEx[]>res, [i]);
     }
-    return <EntryEx[]>res;
+    return <ProfileEx[]>res;
 }
 
-function prepare(sum: Summary, dat_: Entry[]): Prepare
+function prepare(sum: Summary, dat_: Profile[]): Prepare
 {
     const dat = addCost(addRdeps(dat_));
 
@@ -459,7 +439,7 @@ function readQuery(query: string): () => boolean {
 // These are global variables mutated/queried by query execution
 var queryData: Prepare = <Prepare>{};
 var queryKey: int = 0;
-var queryVal: EntryEx = <EntryEx>{};
+var queryVal: ProfileEx = <ProfileEx>{};
 var queryName: string = "";
 var queryGroup: string = null;
 var queryBackColor: color = null;

@@ -2,8 +2,8 @@
 /*jsl:import shake-logic.js*/
 "use strict";
 
-var shakeSummary = summary(shake);
-var shakeEx = prepare(summary(shake), shake);
+var shakeSummary = summary(profile);
+var shakeEx = prepare(summary(profile), profile);
 var currentTable: MapString<any>[] = null;
 
 /////////////////////////////////////////////////////////////////////
