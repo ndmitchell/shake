@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #305, make profiling work with newer Chrome
     #327, Add AutoDeps feature
     #325, add FileStdin to specify the stdin comes from a file
     Make an empty Stdin different from no Stdin (inherit) in cmd

@@ -74,10 +74,14 @@ function setReport(r, replace, run)
     {
         var title = report.mode + (report.query === "" ? "" : ": " + report.query);
         var url = reportURL(report);
-        if (replace)
-            window.history.replaceState(report, title, url);
-        else
-            window.history.pushState(report, title, url);
+        try {
+            if (replace)
+                window.history.replaceState(report, title, url);
+            else
+                window.history.pushState(report, title, url);
+        } catch (e) {
+            // Chrome disallows replaceState from origin null
+        }
     }
     $("#link").attr("href", reportURL(report));
 
