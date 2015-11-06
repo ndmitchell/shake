@@ -81,6 +81,7 @@ declare module jquery.flot {
         hoverable?: boolean;
         shadowSize?: number;
         highlightColor?: any;
+        stack?: boolean; // NEIL: Since we use the Stack plugin
     }
 
     interface dataSeries extends seriesOptions {
