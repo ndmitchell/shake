@@ -1,4 +1,4 @@
-var shake =
+var progress =
 [{"name":"self-zero-j2.prog", "values":
   [{"idealSecs":76.7, "idealPerc":1.3, "actualSecs":195.6, "actualPerc":0.5}
   ,{"idealSecs":74.0, "idealPerc":4.8, "actualSecs":563.2, "actualPerc":0.7}

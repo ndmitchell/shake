@@ -63,10 +63,7 @@ data-files:
     html/viz.js
     html/profile.html
     html/progress.html
-    html/shake-logic.js
-    html/shake-progress.js
-    html/shake-ui.js
-    html/shake-util.js
+    html/shake.js
     docs/manual/build.bat
     docs/manual/Build.hs
     docs/manual/build.sh

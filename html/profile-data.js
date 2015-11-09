@@ -1,4 +1,4 @@
-var shake =
+var profile =
 [{"name":"src/clean.cc", "built":0, "changed":0, "depends":[], "execution":0.0}
 ,{"name":"src/timestamp.h", "built":0, "changed":0, "depends":[], "execution":0.0}
 ,{"name":"src/line_printer.cc", "built":0, "changed":0, "depends":[], "execution":1.0e-3}
