@@ -26,6 +26,7 @@
     <TypeScriptCompile Include="jquery.d.ts" />
     <TypeScriptCompile Include="jquery.flot.d.ts" />
     <TypeScriptCompile Include="shake-logic.ts" />
+    <TypeScriptCompile Include="shake-progress.ts" />
     <TypeScriptCompile Include="shake-test.ts" />
     <TypeScriptCompile Include="shake-ui.ts" />
     <TypeScriptCompile Include="shake-util.ts" />
@@ -80,8 +81,8 @@
     <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
     <TypeScriptModuleKind>None</TypeScriptModuleKind>
-    <TypeScriptOutFile>single.js</TypeScriptOutFile>
-    <TypeScriptOutDir>output</TypeScriptOutDir>
+    <TypeScriptOutFile>shake.js</TypeScriptOutFile>
+    <TypeScriptOutDir>..</TypeScriptOutDir>
     <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
     <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
     <TypeScriptMapRoot />
