@@ -326,6 +326,9 @@ function initProfile() {
         $("#run").click(function () {
             setReport(_ => reportFromUser(), false, true);
         });
+        $("#query").keypress(function (e) {
+            if (e.which == 13) $("#run").click();
+        });
 
         window.onpopstate = function (e) {
             setReport(_ => reportFromUser(), true, true);

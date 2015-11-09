@@ -829,6 +829,10 @@ function initProfile() {
         $("#run").click(function () {
             setReport(function (_) { return reportFromUser(); }, false, true);
         });
+        $("#query").keypress(function (e) {
+            if (e.which == 13)
+                $("#run").click();
+        });
         window.onpopstate = function (e) {
             setReport(function (_) { return reportFromUser(); }, true, true);
         };
