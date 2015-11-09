@@ -151,8 +151,7 @@ commandExplicit funcName icopts results exe args = do
         fsatrace act = do
             (file, cleanup) <- liftIO newTempFile
             flip actionFinally cleanup $ do
-                fsat <- liftIO $ getEnv "FSAT"
-                res <- act fsat $ file:"--":exe:args
+                res <- act "fsatrace" $ file:"--":exe:args
                 liftIO (fsatraceFiles file) >>= track
                 return res
 
