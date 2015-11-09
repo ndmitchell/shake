@@ -81,8 +81,9 @@
     <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
     <TypeScriptModuleKind>None</TypeScriptModuleKind>
-    <TypeScriptOutFile>shake.js</TypeScriptOutFile>
-    <TypeScriptOutDir>..</TypeScriptOutDir>
+    <TypeScriptOutFile>..\shake.js</TypeScriptOutFile>
+    <TypeScriptOutDir>
+    </TypeScriptOutDir>
     <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
     <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
     <TypeScriptMapRoot />
