@@ -312,42 +312,39 @@ function example(mode: string, query: string): boolean
     return false;
 }
 
-$(function () {
-    setReport(_ => reportFromURL(), true, true);
+function initProfile() {
+    $(function () {
+        setReport(_ => reportFromURL(), true, true);
 
-    $("#mode,#query").bind("input change",function(){
-        var mode = $("#mode").val();
-        var query = $("#query").val();
-        var enable = mode !== report.mode || query !== report.query;
-        $("#run").enable(enable).attr("title", enable ? "" : "The current query is displayed");
-        $("#link").attr("href", reportToURL(reportFromUser()));
+        $("#mode,#query").bind("input change", function () {
+            var mode = $("#mode").val();
+            var query = $("#query").val();
+            var enable = mode !== report.mode || query !== report.query;
+            $("#run").enable(enable).attr("title", enable ? "" : "The current query is displayed");
+            $("#link").attr("href", reportToURL(reportFromUser()));
+        });
+
+        $("#run").click(function () {
+            setReport(_ => reportFromUser(), false, true);
+        });
+
+        window.onpopstate = function (e) {
+            setReport(_ => reportFromUser(), true, true);
+        };
+
+        $("a.example").each(function () {
+            var mode = $(this).attr("data-mode");
+            var query = $(this).attr("data-query");
+            if (query === undefined) query = $(this).text();
+            var href = reportToURL(new Report(mode, query));
+            var onclick = "return example(decodeURI('" + encodeURI(mode) + "'),decodeURI('" + encodeURI(query) + "'));";
+            $(this).attr("href", href).attr("target", "_blank")[0].setAttribute("onclick", onclick);
+        });
+
+        $("a.shake").each(function () {
+            var href = "http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html#v:" +
+                $(this).text().replace("'", "-39-");
+            $(this).attr("href", href).attr("target", "_blank");
+        });
     });
-
-    $("#run").click(function(){
-        setReport(_ => reportFromUser(), false, true);
-    });
-
-    window.onpopstate = function (e){
-        setReport(_ => reportFromUser(), true, true);
-    };
-});
-
-/////////////////////////////////////////////////////////////////////
-// TEMPLATES
-
-$(function(){
-    $("a.example").each(function(){
-        var mode = $(this).attr("data-mode");
-        var query = $(this).attr("data-query");
-        if (query === undefined) query = $(this).text();
-        var href = reportToURL(new Report(mode, query));
-        var onclick = "return example(decodeURI('" + encodeURI(mode) + "'),decodeURI('" + encodeURI(query) + "'));";
-        $(this).attr("href", href).attr("target","_blank")[0].setAttribute("onclick",onclick);
-    });
-
-    $("a.shake").each(function(){
-        var href = "http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html#v:" +
-                   $(this).text().replace("'","-39-");
-        $(this).attr("href", href).attr("target","_blank");
-    });
-});
+}
