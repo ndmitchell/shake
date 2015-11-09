@@ -29,7 +29,7 @@ interface Profile {
 /////////////////////////////////////////////////////////////////////
 // PROGRESS DATA
 
-declare const progress: MapString<Progress[]>
+declare const progress: { name: String, values: Progress[] }[];
 
 interface Progress {
     idealSecs: number;
