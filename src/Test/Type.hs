@@ -96,7 +96,7 @@ shaken2 test rules = shaken test rules2
 tracker :: IO Lint
 tracker = do
   fsatrace <- lookupEnv "FSAT"
-  trackerExe <- findExecutable "tracker.exe"
+  trackerExe <- return Nothing -- findExecutable "tracker.exe"
   return $ if isJust fsatrace
            then LintFSATrace
            else if isJust trackerExe
