@@ -2,8 +2,7 @@
 /*jsl:import shake-logic.js*/
 "use strict";
 
-var shakeSummary = summary(profile);
-var shakeEx = prepare(summary(profile), profile);
+var prepared = prepare(profile);
 var currentTable: MapString<any>[] = null;
 
 /////////////////////////////////////////////////////////////////////
@@ -141,7 +140,7 @@ function showTable(xs: MapString<any>[]): void
             if (s === "count")
                 res += x[s] + " &times;";
             else if (s === "time" || s === "cost")
-                res += showTime(x[s]) + "</td><td style='text-align:right;'>" + showPerc(x[s] / shakeSummary.sumExecution);
+                res += showTime(x[s]) + "</td><td style='text-align:right;'>" + showPerc(x[s] / prepared.summary.sumExecution);
             else
                 res += x[s];
             res += "</td>";
@@ -210,7 +209,7 @@ function runReport()
         switch(report.mode)
         {
         case "summary":
-            const res = showSummary(shakeSummary);
+            const res = showSummary(prepared.summary);
             let s = $("#welcome").html();
             s += "<ul>";
             for (var i = 0; i < res.length; i++)
@@ -221,7 +220,7 @@ function runReport()
             break;
 
         case "cmd-plot": {
-            const xs = commandPlot(shakeEx, report.query, 100);
+            const xs = commandPlot(prepared, report.query, 100);
             const ys: (dataSeries & { avg: number })[] = [];
             for (const s in xs) {
                 var x = xs[s].items;
@@ -232,7 +231,7 @@ function runReport()
             }
             if (ys.length === 0) {
                 $("#output").html("No data found, " +
-                    (shakeEx.summary.countTraceLast === 0
+                    (prepared.summary.countTraceLast === 0
                         ? "there were no traced commands in the last run."
                         : "perhaps your filter is too restrictive?"));
             }
@@ -242,21 +241,21 @@ function runReport()
                     legend: { show: true, position: "nw", sorted: "reverse" },
                     series: { stack: true, lines: { lineWidth: 0, fill: 1 } },
                     yaxis: { min: 0 },
-                    xaxis: { tickFormatter: function (i) { return showTime(shakeSummary.maxTraceStopLast * i / 100); } }
+                    xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
                 });
             }
             } break;
 
         case "cmd-table":
-            showTable(commandTable(shakeEx, report.query));
+            showTable(commandTable(prepared, report.query));
             break;
 
         case "rule-table":
-            showTable(ruleTable(shakeEx, report.query));
+            showTable(ruleTable(prepared, report.query));
             break;
 
         case "rule-graph": {
-            const xs = ruleGraph(shakeEx, report.query);
+            const xs = ruleGraph(prepared, report.query);
             if (xs.length > 250)
                 $("#output").html("Viewing a graph with > 250 nodes is not supported, and you have " + xs.length + " nodes. Try grouping more aggressively");
             else if (typeof Viz === 'undefined')

@@ -19,7 +19,7 @@ class Summary {
     maxTraceStopLast: seconds = 0 // time the last traced command stopped
 }
 
-function /* export */ summary(dat: Profile[]): Summary
+function summary(dat: Profile[]): Summary
 {
     const res = new Summary();
 
@@ -134,8 +134,9 @@ function addCost(dat: (Profile & { rdeps: int[] })[]): ProfileEx[]
     return <ProfileEx[]>res;
 }
 
-function prepare(sum: Summary, dat_: Profile[]): Prepare
+function prepare(dat_: Profile[]): Prepare
 {
+    const sum = summary(dat_);
     const dat = addCost(addRdeps(dat_));
 
     function toHash(r: RegExp | string): string {

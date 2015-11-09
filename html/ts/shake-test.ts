@@ -44,14 +44,13 @@ function test() : string
         }
     }
 
-    var sum1 = summary(dat1);
-    var ssum1 = showSummary(sum1);
+    var tab1 = prepare(dat1);
+    var ssum1 = showSummary(tab1.summary);
     console.log(ssum1);
     var want = ["4 runs" ,"7 rules","5 rebuilt","7 traced","6 in","build time is 41.00s","38.80s is traced"
                ,"longest rule takes 15.00s","longest traced command takes 14.90s","parallelism of 1.40","22.00s"];
     assertRegex(new RegExp(want.join(".*")),ssum1.join(" "));
 
-    var tab1 = prepare(sum1, dat1);
     var par1 = commandPlot(tab1,"group('x')",10)['x'];
     console.log(par1);
     var pars1 = par1.items.map(function(i){return Math.round(i*10)/10;});
