@@ -203,6 +203,52 @@ executable shake
         Development.Make.Rules
         Development.Make.Type
         Development.Ninja.All
+        Development.Ninja.Env
+        Development.Ninja.Lexer
+        Development.Ninja.Parse
+        Development.Ninja.Type
+        Development.Shake
+        Development.Shake.Args
+        Development.Shake.ByteString
+        Development.Shake.Classes
+        Development.Shake.CmdOption
+        Development.Shake.Command
+        Development.Shake.Core
+        Development.Shake.Database
+        Development.Shake.Demo
+        Development.Shake.Derived
+        Development.Shake.Errors
+        Development.Shake.FileInfo
+        Development.Shake.FilePath
+        Development.Shake.FilePattern
+        Development.Shake.Monad
+        Development.Shake.Pool
+        Development.Shake.Profile
+        Development.Shake.Progress
+        Development.Shake.Resource
+        Development.Shake.Rules.Directory
+        Development.Shake.Rules.File
+        Development.Shake.Rules.Files
+        Development.Shake.Rules.Oracle
+        Development.Shake.Rules.OrderOnly
+        Development.Shake.Rules.Rerun
+        Development.Shake.Shake
+        Development.Shake.Special
+        Development.Shake.Storage
+        Development.Shake.Types
+        Development.Shake.Value
+        General.Bilist
+        General.Binary
+        General.Cleanup
+        General.Concurrent
+        General.Extra
+        General.FileLock
+        General.Intern
+        General.Process
+        General.String
+        General.Template
+        General.Timing
+        Paths_shake
         Run
 
 
@@ -248,10 +294,56 @@ test-suite shake-test
         Development.Make.Rules
         Development.Make.Type
         Development.Ninja.All
+        Development.Ninja.Env
+        Development.Ninja.Lexer
         Development.Ninja.Parse
         Development.Ninja.Type
+        Development.Shake
+        Development.Shake.Args
+        Development.Shake.ByteString
+        Development.Shake.Classes
+        Development.Shake.CmdOption
+        Development.Shake.Command
+        Development.Shake.Config
+        Development.Shake.Core
+        Development.Shake.Database
+        Development.Shake.Demo
+        Development.Shake.Derived
+        Development.Shake.Errors
+        Development.Shake.FileInfo
+        Development.Shake.FilePath
+        Development.Shake.FilePattern
+        Development.Shake.Monad
+        Development.Shake.Pool
+        Development.Shake.Profile
+        Development.Shake.Progress
+        Development.Shake.Resource
+        Development.Shake.Rule
+        Development.Shake.Rules.Directory
+        Development.Shake.Rules.File
+        Development.Shake.Rules.Files
+        Development.Shake.Rules.Oracle
+        Development.Shake.Rules.OrderOnly
+        Development.Shake.Rules.Rerun
+        Development.Shake.Shake
+        Development.Shake.Special
+        Development.Shake.Storage
+        Development.Shake.Types
+        Development.Shake.Util
+        Development.Shake.Value
+        General.Bilist
+        General.Binary
+        General.Cleanup
+        General.Concurrent
+        General.Extra
+        General.FileLock
+        General.Intern
+        General.Process
+        General.String
+        General.Template
+        General.Timing
+        Paths_shake
         Run
-        Test.Type
         Test.Assume
         Test.Basic
         Test.Benchmark
@@ -284,6 +376,7 @@ test-suite shake-test
         Test.Tar
         Test.Throttle
         Test.Tup
+        Test.Type
         Test.Unicode
         Test.Util
         Test.Verbosity
