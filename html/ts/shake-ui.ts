@@ -14,7 +14,7 @@ class Report {
     sort: string = "time";
     sortRev: boolean = false;
 
-    constructor(mode_ = "summary", query_ = "summary") {
+    constructor(mode_ = "summary", query_ = "") {
         this.mode = mode_; this.query = query_;
     }
 }

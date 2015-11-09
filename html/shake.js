@@ -578,7 +578,7 @@ var currentTable = null;
 var Report = (function () {
     function Report(mode_, query_) {
         if (mode_ === void 0) { mode_ = "summary"; }
-        if (query_ === void 0) { query_ = "summary"; }
+        if (query_ === void 0) { query_ = ""; }
         this.sort = "time";
         this.sortRev = false;
         this.mode = mode_;
