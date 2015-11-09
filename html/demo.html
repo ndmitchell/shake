@@ -32,7 +32,7 @@ var i = 0;
 function update()
 {
     $("#desc").text(items[i].desc);
-    $("iframe").attr("src", "report.html" + items[i].url);
+    $("iframe").attr("src", "profile.html" + items[i].url);
     $("#count").text((i+1) + " of " + items.length);
 }
 
@@ -72,6 +72,6 @@ body {overflow: hidden;}
         <span id="count">N of M</span>
         <a href="javascript:goNext()">Next &gt;</a><br/>
         <p style="margin-top:4px;" id="desc"></p></div></td></td>
-	<tr><td><iframe src="report.html?mode=rule-graph&amp;query=name%28/%28%5C.%5Ba-zA-Z0-9_%5D%2B%29%24/%2C%20%22%3F%3F%3F%22%29" /></td></tr>
+	<tr><td><iframe src="profile.html?mode=rule-graph&amp;query=name%28/%28%5C.%5Ba-zA-Z0-9_%5D%2B%29%24/%2C%20%22%3F%3F%3F%22%29" /></td></tr>
 </table></body>
 </html>
