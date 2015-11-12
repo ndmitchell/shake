@@ -96,17 +96,14 @@ shaken2 test rules = shaken test rules2
 tracker :: IO Lint
 tracker = do
   fsatrace <- findExecutable $ "fsatrace" <.> exe
-  trackerExe <- return Nothing -- findExecutable "tracker.exe"
   return $ if isJust fsatrace
            then LintFSATrace
-           else if isJust trackerExe
-                then LintTracker
-                else LintBasic
+           else LintBasic
 
 hasTracker :: IO Bool
 hasTracker = do
   t <- tracker
-  return $ t == LintFSATrace || t == LintTracker
+  return $ t == LintFSATrace
 
 
 shakeWithClean :: IO () -> ShakeOptions -> Rules () -> IO ()
