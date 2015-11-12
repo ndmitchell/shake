@@ -22,10 +22,11 @@ import System.Random
 -- Monad for non-deterministic (but otherwise pure) computations
 type NonDet a = IO a
 
+rnds :: [Bool]
+rnds = map (unsafePerformIO . const randomIO) [0..99]
+
 nonDet :: NonDet [Bool]
-nonDet = do bs <- unsafeInterleaveIO nonDet
-            b <- randomIO
-            return $ b:bs
+nonDet = return $ cycle rnds
 
 -- Left = deterministic list, Right = non-deterministic tree
 data Queue a = Queue [a] (Either [a] (Maybe (Tree a)))
