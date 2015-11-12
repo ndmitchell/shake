@@ -72,8 +72,7 @@ shaken test rules sleeper = do
                                  ,shakeReport = ["output/" ++ name ++ "/report.html"]
                                  ,shakeLint = Just t
                                  ,shakeLintInside = [cwd]
-                                 ,shakeLintIgnore = map (toStandard (normalise cwd) </>)
-                                                    [".cabal-sandbox//",".stack-work//"]
+                                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]
                                  })
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())

@@ -6,6 +6,7 @@ import Paths_shake
 import Development.Shake.Types
 import Development.Shake.Core
 import Development.Shake.Demo
+import Development.Shake.FilePath
 import Development.Shake.Rules.File
 import Development.Shake.Progress
 import Development.Shake.Shake
@@ -115,7 +116,12 @@ shakeArgsWith baseOpts userOptions rules = do
         progressRecords = [x | ProgressRecord x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
         printDirectory = last $ False : [x | PrintDirectory x <- flagsExtra]
-        shakeOpts = foldl' (flip ($)) baseOpts flagsShake
+        oshakeOpts = foldl' (flip ($)) baseOpts flagsShake
+        shakeOpts = oshakeOpts {shakeLintInside = map (toStandard . normalise . addTrailingPathSeparator) $
+                                                  shakeLintInside oshakeOpts
+                               ,shakeLintIgnore = map toStandard $
+                                                  shakeLintIgnore oshakeOpts
+                               }
 
     -- error if you pass some clean and some dirty with specific flags
     errs <- return $ errs ++ flagsError ++ ["cannot mix " ++ a ++ " and " ++ b | a:b:_ <-

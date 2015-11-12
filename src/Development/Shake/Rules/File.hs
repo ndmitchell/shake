@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Development.Shake.Rules.File(
-    need, needBS, needed, neededBS, want,
+    need, needBS, needed, neededBS, needNorm, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
@@ -115,6 +115,9 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [FileA]) >> return ()
+
+needNorm :: [FilePath] -> Action ()
+needNorm xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [FileA]) >> return ()

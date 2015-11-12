@@ -126,7 +126,7 @@ commandExplicit funcName icopts results exe args = do
             Just LintFSATrace -> fsatrace act
             _ -> if autodepping then autodeps act else act exe args
         autodepping = AutoDeps `elem` copts
-        inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
+        inside = shakeLintInside opts
         ignore = map (?==) $ shakeLintIgnore opts
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) inside
@@ -158,7 +158,7 @@ commandExplicit funcName icopts results exe args = do
             cwd <- liftIO getCurrentDirectory
             let reader (FSATRead x) = x
                 reader _ = error "autodeps"
-            needed $ ham cwd $ map reader xs
+            needNorm $ ham cwd $ map reader xs
             return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
