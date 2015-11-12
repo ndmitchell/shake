@@ -122,45 +122,47 @@ commandExplicit funcName icopts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-    let tracker act = case lintOpts of
+    let tracker act = case shakeLint opts of
             Just LintTracker -> winTracker act
             Just LintFSATrace -> fsatrace act
-            _ -> if autodepping then fsatrace act else act exe args
-        linting = case lintOpts of
-            Just LintTracker -> True
-            Just LintFSATrace -> True
-            _ -> False
+            _ -> if autodepping then autodeps act else act exe args
         autodepping = AutoDeps `elem` copts
-        lintOpts = shakeLint opts            
+        inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
+        ignore = map (?==) $ shakeLintIgnore opts
+        ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
+                                         , any (`isPrefixOf` x) inside
+                                         , not $ any ($ x) ignore]
         track (rs,ws) = do
             cwd <- liftIO getCurrentDirectory
-            let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
-                ignore = map (?==) $ shakeLintIgnore opts
-                ham xs = [x | x <- map toStandard xs
-                            , any (`isPrefixOf` x) inside
-                            , not $ any ($ x) ignore]
-                rel = map (makeRelative cwd)
-                reads = rel $ ham rs
-                writes = rel $ ham ws
+            let reads = ham cwd rs
+                writes = ham cwd ws
             when autodepping $
                 needed reads
-            when linting $ do
-                trackRead reads
-                trackWrite writes
+            trackRead reads
+            trackWrite writes
 
-        winTracker act = do
-            (dir, cleanup) <- liftIO newTempDir
-            flip actionFinally cleanup $ do
-                res <- act "tracker" $ "/if":dir:"/c":exe:args
-                liftIO (trackerFiles dir) >>= track
-                return res
+        withTemp f cont = do
+            (x, cleanup) <- liftIO f
+            actionFinally (cont x) cleanup
 
-        fsatrace act = do
-            (file, cleanup) <- liftIO newTempFile
-            flip actionFinally cleanup $ do
-                res <- act "fsatrace" $ file:"--":exe:args
-                liftIO (fsatraceFiles file) >>= track
-                return res
+        winTracker act = withTemp newTempDir $ \dir -> do
+            res <- act "tracker" $ "/if":dir:"/c":exe:args
+            liftIO (trackerFiles dir) >>= track
+            return res
+
+        fsatrace act = withTemp newTempFile $ \file -> do
+            res <- act "fsatrace" $ file:"--":exe:args
+            liftIO (fsatraceFiles file) >>= track
+            return res
+
+        autodeps act = withTemp newTempFile $ \file -> do
+            res <-  act "fsatrace" $ file:"--":exe:args
+            xs <- liftIO $ parseFSAT <$> readFileUTF8' file
+            cwd <- liftIO getCurrentDirectory
+            let reader (FSATRead x) = Just x
+                reader _ = Nothing
+            needed $ ham cwd $ mapMaybe reader xs
+            return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
 
