@@ -122,10 +122,16 @@ commandExplicit funcName icopts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-    let tracker act = case shakeLint opts of
+    let tracker act = case lintOpts of
             Just LintTracker -> winTracker act
             Just LintFSATrace -> fsatrace act
-            _ -> act exe args
+            _ -> if autodepping then fsatrace act else act exe args
+        linting = case lintOpts of
+            Just LintTracker -> True
+            Just LintFSATrace -> True
+            _ -> False
+        autodepping = AutoDeps `elem` copts
+        lintOpts = shakeLint opts            
         track (rs,ws) = do
             cwd <- liftIO getCurrentDirectory
             let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
@@ -136,10 +142,11 @@ commandExplicit funcName icopts results exe args = do
                 rel = map (makeRelative cwd)
                 reads = rel $ ham rs
                 writes = rel $ ham ws
-            when (AutoDeps `elem` copts) $
+            when autodepping $
                 needed reads
-            trackRead reads
-            trackWrite writes
+            when linting $ do
+                trackRead reads
+                trackWrite writes
 
         winTracker act = do
             (dir, cleanup) <- liftIO newTempDir
