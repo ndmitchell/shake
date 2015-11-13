@@ -24,5 +24,5 @@ data CmdOption
     | EchoStderr Bool -- ^ Should I echo the @stderr@? Defaults to 'True' unless a 'Stderr' result is required or you use 'FileStderr'.
     | FileStdout FilePath -- ^ Should I put the @stdout@ to a file.
     | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
-    | AutoDeps -- ^ Compute dependencies automatically. Requires either 'LintFSATrace' or 'LintTracker'.
+    | AutoDeps -- ^ Compute dependencies automatically.
       deriving (Eq,Ord,Show,Data,Typeable)

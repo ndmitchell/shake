@@ -123,79 +123,51 @@ commandExplicit funcName icopts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act = case shakeLint opts of
-            Just LintTracker -> winTracker act
             Just LintFSATrace -> fsatrace act
-            _ -> act exe args
-        track (rs,ws) = do
+            _ -> if autodepping then autodeps act else act exe args
+        autodepping = AutoDeps `elem` copts
+        inside = shakeLintInside opts
+        ignore = map (?==) $ shakeLintIgnore opts
+        ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
+                                         , any (`isPrefixOf` x) inside
+                                         , not $ any ($ x) ignore]
+        withTemp f cont = do
+            (x, cleanup) <- liftIO f
+            actionFinally (cont x) cleanup
+
+        fsatrace act = withTemp newTempFile $ \file -> do
+            res <- act "fsatrace" $ file:"--":exe:args
+            xs <- liftIO $ parseFSAT "rwm" <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
-            let inside = map (toStandard . addTrailingPathSeparator . normalise) $ shakeLintInside opts
-                ignore = map (?==) $ shakeLintIgnore opts
-                ham xs = [x | x <- map toStandard xs
-                            , any (`isPrefixOf` x) inside
-                            , not $ any ($ x) ignore]
-                rel = map (makeRelative cwd)
-                reads = rel $ ham rs
-                writes = rel $ ham ws
-            when (AutoDeps `elem` copts) $
+            let reader (FSATRead x) = Just x; reader _ = Nothing
+                writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
+                existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
+            rs <- existing reader xs
+            ws <- existing writer xs
+            let reads = ham cwd rs
+                writes = ham cwd ws
+            when autodepping $
                 needed reads
             trackRead reads
             trackWrite writes
+            return res
 
-        winTracker act = do
-            (dir, cleanup) <- liftIO newTempDir
-            flip actionFinally cleanup $ do
-                res <- act "tracker" $ "/if":dir:"/c":exe:args
-                liftIO (trackerFiles dir) >>= track
-                return res
-
-        fsatrace act = do
-            (file, cleanup) <- liftIO newTempFile
-            flip actionFinally cleanup $ do
-                res <- act "fsatrace" $ file:"--":exe:args
-                liftIO (fsatraceFiles file) >>= track
-                return res
+        autodeps act = withTemp newTempFile $ \file -> do
+            res <-  act "fsatrace" $ file:"--":exe:args
+            xs <- liftIO $ parseFSAT "r" <$> readFileUTF8' file
+            cwd <- liftIO getCurrentDirectory
+            let reader (FSATRead x) = x
+                reader _ = error "autodeps"
+            needNorm $ ham cwd $ map reader xs
+            return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
 
 
--- | Given a directory (as passed to tracker /if) report on which files were used for reading/writing
-trackerFiles :: FilePath -> IO ([FilePath], [FilePath])
-trackerFiles dir = do
-    files <- getDirectoryContents dir
-    let f typ = do
-            files <- forM [x | x <- files, takeExtension x == ".tlog", takeExtension (dropExtension $ dropExtension x) == '.':typ] $ \file ->
-                fmap lines $ readFileEncoding utf16 $ dir </> file
-            fmap nubOrd $ mapMaybeM correctCase $ nubOrd $ concat files
-    liftM2 (,) (f "read") (f "write")
-
-
-correctCase :: FilePath -> IO (Maybe FilePath)
-correctCase = uncurry f . splitDrive
-    where
-        f pre "" = return $ Just pre
-        f pre x = do
-            let (a,b) = (takeDirectory1 x, dropDirectory1 x)
-            dir <- getDirectoryContents pre
-            case find ((==) a . upper) dir of
-                Nothing -> return Nothing -- if it can't be found it probably doesn't exist, so assume a file that wasn't really read
-                Just v -> f (pre </> v) b
-
-
-fsatraceFiles :: FilePath -> IO ([FilePath], [FilePath])
-fsatraceFiles file = do
-    xs <- parseFSAT <$> readFileUTF8 file
-    let reader (FSATRead x) = Just x; reader _ = Nothing
-        writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
-        existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
-    frs <- existing reader xs
-    fws <- existing writer xs
-    return (frs, fws)
-
-
 data FSAT = FSATWrite FilePath | FSATRead FilePath | FSATMove FilePath FilePath | FSATDelete FilePath
 
-parseFSAT :: String -> [FSAT] -- any parse errors are skipped
-parseFSAT = mapMaybe (f . wordsBy (== '|')) . lines
+parseFSAT :: String -> String -> [FSAT] -- any parse errors are skipped
+parseFSAT ops = mapMaybe (f . wordsBy (== '|')) . filter ((`elem` ops) . head) . lines
     where f ["w",x] = Just $ FSATWrite x
           f ["r",x] = Just $ FSATRead x
           f ["m",x,y] = Just $ FSATMove x y

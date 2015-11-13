@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Development.Shake.Rules.File(
-    need, needBS, needed, neededBS, want,
+    need, needBS, needed, neededBS, needNorm, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
@@ -116,6 +116,9 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [FileA]) >> return ()
 
+needNorm :: [FilePath] -> Action ()
+needNorm xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
+
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [FileA]) >> return ()
 
@@ -152,13 +155,13 @@ neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
 
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
---   automatically inserted in 'LintTracker' mode.
+--   automatically inserted in 'LintFSATrace' mode.
 trackRead :: [FilePath] -> Action ()
 trackRead = mapM_ (trackUse . FileQ . packU)
 
 -- | Track that a file was written by the action preceeding it. If 'shakeLint' is activated
 --   then these files must either be the target of this rule, or never referred to by the build system.
---   Calls to 'trackWrite' are automatically inserted in 'LintTracker' mode.
+--   Calls to 'trackWrite' are automatically inserted in 'LintFSATrace' mode.
 trackWrite :: [FilePath] -> Action ()
 trackWrite = mapM_ (trackChange . FileQ . packU)
 
