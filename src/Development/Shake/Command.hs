@@ -522,6 +522,10 @@ instance CmdResult r => CmdArguments (IO r) where
         (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 
+instance CmdArguments [Either CmdOption String] where
+    cmdArguments = id
+
+
 class Arg a where arg :: a -> [Either CmdOption String]
 instance Arg String where arg = map Right . words
 instance Arg [String] where arg = map Right
