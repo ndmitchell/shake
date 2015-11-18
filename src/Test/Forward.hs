@@ -11,7 +11,7 @@ main = shaken test $ \args obj -> forwardRule $ do
     cs <- getDirectoryFiles src ["*.c"]
     os <- forP cs $ \c -> do
         let o = obj c <.> "o"
-        cache $ cmd "gcc -o" [o] "-c" [src </> c]
+        cache $ cmd "gcc -c" [src </> c] "-o" [o]
         return o
     cache $ cmd "gcc -o" [obj "Main" <.> exe] os
 
