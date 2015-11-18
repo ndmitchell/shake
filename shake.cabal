@@ -113,7 +113,6 @@ library
         Development.Shake
         Development.Shake.Classes
         Development.Shake.Command
-        Development.Shake.CmdOption
         Development.Shake.Config
         Development.Shake.FilePath
         Development.Shake.Rule
