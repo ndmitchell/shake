@@ -126,6 +126,7 @@ library
         Development.Shake.Args
         Development.Shake.ByteString
         Development.Shake.Core
+        Development.Shake.CmdOption
         Development.Shake.Database
         Development.Shake.Demo
         Development.Shake.Derived
