@@ -11,6 +11,7 @@ module Development.Shake.Core(
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     newCache, newCacheIO,
     unsafeExtraThread,
+    parallel,
     -- Internal stuff
     rulesIO, runAfter, unsafeIgnoreDependencies,
     ) where
@@ -900,6 +901,29 @@ unsafeExtraThread act = Action $ do
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
+    captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
+
+
+-- | Execute a list of actions in parallel.
+parallel :: [Action a] -> Action [a]
+parallel [] = return []
+parallel [x] = fmap return x
+parallel acts = Action $ do
+    global@Global{..} <- getRO
+    local <- getRW
+    done <- liftIO newBarrier
+    st <- liftIO $ newVar $ Just $ length acts
+    refs <- liftIO $ forM acts $ \act -> do
+        ref <- newIORef Nothing
+        runAction global local act $ \res -> do
+            writeIORef ref $ Just res
+            modifyVar_ st $ \v -> case v of
+                Nothing -> return Nothing
+                Just i | i == 1 || isLeft res -> do signalBarrier done (); return Nothing
+                Just i -> return $ Just $ i - 1
+        return ref
+    liftIO $ waitBarrier done
+    res <- liftIO $ sequence . catMaybes <$> mapM readIORef refs
     captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
 
 
