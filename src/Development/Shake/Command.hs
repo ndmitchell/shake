@@ -10,7 +10,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd, unit, CmdArguments,
+    command, command_, cmd, unit, CmdArguments, (:->),
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
@@ -462,6 +462,8 @@ command_ opts x xs = void $ commandExplicit "command_" opts [] x xs
 ---------------------------------------------------------------------
 -- VARIABLE ARGUMENT WRAPPER
 
+-- | A type annotation, equivalent to the first argument, but in variable argument contexts,
+--   gives a clue as to what return type is expected (not actually enforced).
 type a :-> t = a
 
 

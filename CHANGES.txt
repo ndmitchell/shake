@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #336, export :->
     #337, fix the docs for &%>
     #297, make <enter> run the query profile viewer
     #305, make profiling work with newer Chrome
