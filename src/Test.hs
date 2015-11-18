@@ -29,6 +29,7 @@ import qualified Test.FileLock as FileLock
 import qualified Test.Files as Files
 import qualified Test.FilePath as FilePath
 import qualified Test.FilePattern as FilePattern
+import qualified Test.Forward as Forward
 import qualified Test.Journal as Journal
 import qualified Test.Lint as Lint
 import qualified Test.Live as Live
@@ -62,6 +63,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
+        ,"forward" * Forward.main
         ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "makefile" * Makefile.main, "manual" * Manual.main
         ,"monad" * Monad.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main

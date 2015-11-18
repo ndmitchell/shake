@@ -115,6 +115,7 @@ library
         Development.Shake.Command
         Development.Shake.Config
         Development.Shake.FilePath
+        Development.Shake.Forward
         Development.Shake.Rule
         Development.Shake.Util
 
@@ -221,6 +222,7 @@ executable shake
         Development.Shake.FileInfo
         Development.Shake.FilePath
         Development.Shake.FilePattern
+        Development.Shake.Forward
         Development.Shake.Monad
         Development.Shake.Pool
         Development.Shake.Profile
@@ -313,6 +315,7 @@ test-suite shake-test
         Development.Shake.FileInfo
         Development.Shake.FilePath
         Development.Shake.FilePattern
+        Development.Shake.Forward
         Development.Shake.Monad
         Development.Shake.Pool
         Development.Shake.Profile
@@ -359,6 +362,7 @@ test-suite shake-test
         Test.FilePath
         Test.FilePattern
         Test.Files
+        Test.Forward
         Test.Journal
         Test.Lint
         Test.Live

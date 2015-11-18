@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add Development.Shake.Forward for forward-defined systems
     #336, export :->
     #337, fix the docs for &%>
     #297, make <enter> run the query profile viewer

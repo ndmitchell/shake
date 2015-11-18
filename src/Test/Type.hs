@@ -2,6 +2,7 @@
 module Test.Type(sleep, module Test.Type) where
 
 import Development.Shake hiding (copyFileChanged)
+import Development.Shake.Forward
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.String
 import General.Extra
@@ -31,7 +32,8 @@ shaken test rules sleeper = do
     name:args <- getArgs
     when ("--sleep" `elem` args) sleeper
     putStrLn $ "## BUILD " ++ unwords (name:args)
-    args <- return $ delete "--sleep" args
+    let forward = "--forward" `elem` args
+    args <- return $ args \\ ["--sleep","--forward"]
     let out = "output/" ++ name ++ "/"
     let obj x = if "/" `isPrefixOf` x then init out ++ x else out ++ x
     createDirectoryIfMissing True out
@@ -68,12 +70,13 @@ shaken test rules sleeper = do
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out)
-                    (shakeOptions{shakeFiles = out
-                                 ,shakeReport = ["output/" ++ name ++ "/report.html"]
-                                 ,shakeLint = Just t
-                                 ,shakeLintInside = [cwd]
-                                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]
-                                 })
+                    ((if forward then forwardOptions else id) $ shakeOptions
+                        {shakeFiles = out
+                        ,shakeReport = ["output/" ++ name ++ "/report.html"]
+                        ,shakeLint = Just t
+                        ,shakeLintInside = [cwd]
+                        ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]
+                        })
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
 
