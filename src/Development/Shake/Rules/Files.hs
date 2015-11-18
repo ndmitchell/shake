@@ -64,7 +64,6 @@ instance Rule FilesQ FilesA where
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
---   Think of it as the OR (@||@) equivalent of '%>'.
 (&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 ps &%> act
     | not $ compatible ps = error $ unlines $
