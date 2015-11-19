@@ -38,7 +38,7 @@ enqueuePriority x (Queue p t) = Queue (x:p) t
 
 enqueue :: a -> Queue a -> NonDet (Queue a)
 enqueue x (Queue p (Left xs)) = return $ Queue p $ Left $ x:xs
-enqueue x (Queue p (Right Nothing)) = return $ Queue p $ Right $ Just $ Leaf x
+enqueue x (Queue p (Right Nothing)) = return $ Queue p $ Right $ Just $ singleTree x
 enqueue x (Queue p (Right (Just t))) = do bs <- nonDet; return $ Queue p $ Right $ Just $ insertTree bs x t
 
 dequeue :: Queue a -> Maybe (NonDet (a, Queue a))
@@ -54,6 +54,9 @@ dequeue (Queue [] (Right Nothing)) = Nothing
 
 -- Note that for a Random tree, since everything is Random, Branch x y =~= Branch y x
 data Tree a = Leaf a | Branch (Tree a) (Tree a)
+
+singleTree :: a -> Tree a
+singleTree x = Leaf x
 
 insertTree :: [Bool] -> a -> Tree a -> Tree a
 insertTree _ x (Leaf y) = Branch (Leaf x) (Leaf y)
