@@ -66,17 +66,17 @@ shaken test rules sleeper = do
             cwd <- getCurrentDirectory
             t <- tracker
             let (_,files,_) = getOpt Permute [] args
-
+            opts <- return $ shakeOptions
+                {shakeFiles = out
+                ,shakeReport = ["output/" ++ name ++ "/report.html"]}
+            opts <- return $ if forward then forwardOptions opts else opts
+                {shakeLint = Just t
+                ,shakeLintInside = [cwd]
+                ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs (args \\ files) $
                 shakeWithClean
                     (removeDirectoryRecursive out)
-                    ((if forward then forwardOptions else id) $ shakeOptions
-                        {shakeFiles = out
-                        ,shakeReport = ["output/" ++ name ++ "/report.html"]
-                        ,shakeLint = Just t
-                        ,shakeLintInside = [cwd]
-                        ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]
-                        })
+                    opts
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
 
