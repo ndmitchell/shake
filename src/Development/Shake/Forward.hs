@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables, MultiParamTypeClasses #-}
 
 -- | A module for producing forward-defined build systems, in contrast to standard backwards-defined
---   build systems such as shake. As an example:
+--   build systems such as shake. Based around ideas from <https://code.google.com/p/fabricate/ fabricate>.
+--   As an example:
 --
 -- @
 --import "Development.Shake"
