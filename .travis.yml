@@ -13,4 +13,5 @@ script:
  - git clone https://github.com/jacereda/fsatrace.git
  - (cd fsatrace && make)
  - export PATH=$PATH:`pwd`/fsatrace
+ - fsatrace - -- echo fsatrace works
  - wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --quiet | sh
