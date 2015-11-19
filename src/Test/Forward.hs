@@ -4,6 +4,7 @@ module Test.Forward(main) where
 import Development.Shake
 import Development.Shake.Forward
 import Development.Shake.FilePath
+import Control.Monad.Extra
 import Test.Type
 
 main = shaken test $ \args obj -> forwardRule $ do
@@ -16,4 +17,5 @@ main = shaken test $ \args obj -> forwardRule $ do
     cache $ cmd "gcc -o" [obj "Main" <.> exe] os
 
 test build obj = do
-    build ["--forward"]
+    whenM hasTracker $
+        build ["--forward"]
