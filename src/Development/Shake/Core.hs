@@ -911,20 +911,20 @@ parallel [x] = fmap return x
 parallel acts = Action $ do
     global@Global{..} <- getRO
     local <- getRW
-    done <- liftIO newBarrier
     st <- liftIO $ newVar $ Just $ length acts
-    refs <- liftIO $ forM acts $ \act -> do
-        ref <- newIORef Nothing
-        runAction global local act $ \res -> do
-            writeIORef ref $ Just res
-            modifyVar_ st $ \v -> case v of
-                Nothing -> return Nothing
-                Just i | i == 1 || isLeft res -> do signalBarrier done (); return Nothing
-                Just i -> return $ Just $ i - 1
-        return ref
-    liftIO $ waitBarrier done
-    res <- liftIO $ sequence . catMaybes <$> mapM readIORef refs
-    captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
+    refs <- liftIO $ replicateM (length acts) $ newIORef Nothing
+    captureRAW $ \continue -> do
+        let resume = do
+                res <- liftIO $ sequence . catMaybes <$> mapM readIORef refs
+                (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
+
+        liftIO $ forM_ (zip acts refs) $ \(act, ref) ->
+            runAction global local act $ \res -> do
+                writeIORef ref $ Just res
+                modifyVar_ st $ \v -> case v of
+                    Nothing -> return Nothing
+                    Just i | i == 1 || isLeft res -> do resume; return Nothing
+                    Just i -> return $ Just $ i - 1
 
 
 -- | Ignore any dependencies added by an action.
