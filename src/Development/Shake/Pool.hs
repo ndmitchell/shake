@@ -32,10 +32,10 @@ newQueue deterministic = Queue [] $ if deterministic then Left [] else Right Not
 enqueuePriority :: a -> Queue a -> Queue a
 enqueuePriority x (Queue p t) = Queue (x:p) t
 
-enqueue :: a -> Queue a -> NonDet (Queue a)
-enqueue x (Queue p (Left xs)) = return $ Queue p $ Left $ x:xs
-enqueue x (Queue p (Right Nothing)) = return $ Queue p $ Right $ Just $ singleTree x
-enqueue x (Queue p (Right (Just t))) = return $ Queue p $ Right $ Just $ insertTree x t
+enqueue :: a -> Queue a -> Queue a
+enqueue x (Queue p (Left xs)) = Queue p $ Left $ x:xs
+enqueue x (Queue p (Right Nothing)) = Queue p $ Right $ Just $ singleTree x
+enqueue x (Queue p (Right (Just t))) = Queue p $ Right $ Just $ insertTree x t
 
 dequeue :: Queue a -> Maybe (NonDet (a, Queue a))
 dequeue (Queue (p:ps) t) = Just $ return (p, Queue ps t)
@@ -126,7 +126,7 @@ step pool@(Pool var done) op = do
 -- | Add a new task to the pool, may be cancelled by sending it an exception
 addPool :: Pool -> IO a -> IO ()
 addPool pool act = step pool $ \s -> do
-    todo <- enqueue (void act) (todo s)
+    todo <- return $ enqueue (void act) (todo s)
     return s{todo = todo}
 
 -- | Add a new task to the pool, may be cancelled by sending it an exception.
