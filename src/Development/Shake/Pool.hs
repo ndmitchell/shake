@@ -7,12 +7,13 @@ module Development.Shake.Pool(
     ) where
 
 import Control.Concurrent.Extra
+import Development.Shake.Errors
 import System.Time.Extra
 import Control.Exception
 import Control.Monad
 import General.Timing
 import qualified Data.HashSet as Set
-import System.IO.Unsafe
+import qualified Data.HashMap.Strict as Map
 import System.Random
 
 
@@ -21,11 +22,6 @@ import System.Random
 
 -- Monad for non-deterministic (but otherwise pure) computations
 type NonDet a = IO a
-
-nonDet :: NonDet [Bool]
-nonDet = do bs <- unsafeInterleaveIO nonDet
-            b <- randomIO
-            return $ b:bs
 
 -- Left = deterministic list, Right = non-deterministic tree
 data Queue a = Queue [a] (Either [a] (Maybe (Tree a)))
@@ -39,37 +35,39 @@ enqueuePriority x (Queue p t) = Queue (x:p) t
 enqueue :: a -> Queue a -> NonDet (Queue a)
 enqueue x (Queue p (Left xs)) = return $ Queue p $ Left $ x:xs
 enqueue x (Queue p (Right Nothing)) = return $ Queue p $ Right $ Just $ singleTree x
-enqueue x (Queue p (Right (Just t))) = do bs <- nonDet; return $ Queue p $ Right $ Just $ insertTree bs x t
+enqueue x (Queue p (Right (Just t))) = return $ Queue p $ Right $ Just $ insertTree x t
 
 dequeue :: Queue a -> Maybe (NonDet (a, Queue a))
 dequeue (Queue (p:ps) t) = Just $ return (p, Queue ps t)
 dequeue (Queue [] (Left (x:xs))) = Just $ return (x, Queue [] $ Left xs)
 dequeue (Queue [] (Left [])) = Nothing
-dequeue (Queue [] (Right (Just t))) = Just $ do bs <- nonDet; (x,t) <- return $ removeTree bs t; return (x, Queue [] $ Right t)
+dequeue (Queue [] (Right (Just t))) = Just $ do bs <- randomIO; (x,t) <- return $ removeTree bs t; return (x, Queue [] $ Right t)
 dequeue (Queue [] (Right Nothing)) = Nothing
 
 
 ---------------------------------------------------------------------
 -- TREE
 
--- Note that for a Random tree, since everything is Random, Branch x y =~= Branch y x
-data Tree a = Leaf a | Branch (Tree a) (Tree a)
+-- A tree where removal is random. Nodes are stored at indicies 0..n-1
+newtype Tree a = Tree (Map.HashMap Int a)
 
 singleTree :: a -> Tree a
-singleTree x = Leaf x
+singleTree x = Tree $ Map.singleton 0 x
 
-insertTree :: [Bool] -> a -> Tree a -> Tree a
-insertTree _ x (Leaf y) = Branch (Leaf x) (Leaf y)
-insertTree (b:bs) x (Branch y z) = if b then f y z else f z y
-    where f y z = Branch y (insertTree bs x z)
+insertTree :: a -> Tree a -> Tree a
+insertTree x (Tree mp) = Tree $ Map.insert (Map.size mp) x mp
 
-removeTree :: [Bool] -> Tree a -> (a, Maybe (Tree a))
-removeTree _ (Leaf x) = (x, Nothing)
-removeTree (b:bs) (Branch y z) = if b then f y z else f z y
+-- Remove an item at random, put the n-1 item to go in it's place
+removeTree :: Int -> Tree a -> (a, Maybe (Tree a))
+removeTree rnd (Tree mp)
+        | n == 0 = err "removeTree, tree is empty"
+        | n == 1 = (mp Map.! 0, Nothing)
+        | i == n-1 = (mp Map.! i, Just $ Tree $ Map.delete i mp)
+        | otherwise = (mp Map.! i, Just $ Tree $ Map.insert i (mp Map.! (n-1)) $ Map.delete (n-1) mp)
     where
-        f y z = case removeTree bs z of
-                    (x, Nothing) -> (x, Just y)
-                    (x, Just z) -> (x, Just $ Branch y z)
+        n = Map.size mp
+        i = abs rnd `mod` n
+
 
 ---------------------------------------------------------------------
 -- THREAD POOL
