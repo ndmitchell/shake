@@ -47,8 +47,11 @@ import Data.IORef
 import Data.Either
 import Data.List.Extra
 import Numeric
+import Control.Applicative
 import System.IO.Unsafe
 import qualified Data.HashMap.Strict as Map
+import Prelude
+
 
 {-# NOINLINE forwards #-}
 forwards :: IORef (Map.HashMap ForwardQ (Action ()))
