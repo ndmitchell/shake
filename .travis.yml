@@ -11,6 +11,6 @@ matrix:
 
 script:
  - git clone https://github.com/jacereda/fsatrace.git
- - (cd fsatrace/unix && make)
- - export PATH=$PATH:`pwd`/fsatrace/unix
+ - (cd fsatrace && make)
+ - export PATH=$PATH:`pwd`/fsatrace
  - wget https://raw.github.com/ndmitchell/neil/master/travis.sh -O - --no-check-certificate --quiet | sh
