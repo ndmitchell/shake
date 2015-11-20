@@ -147,7 +147,7 @@ commandExplicit funcName opts results exe args = do
 
         fsatrace act = withTempFile $ \file -> do
             res <- fsaCmd act file
-            xs <- liftIO $ parseFSAT "rwm" <$> readFileUTF8' file
+            xs <- liftIO $ parseFSAT <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
             let reader (FSATRead x) = Just x; reader _ = Nothing
                 writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
@@ -164,7 +164,7 @@ commandExplicit funcName opts results exe args = do
 
         autodeps act = withTempFile $ \file -> do
             res <-  fsaCmd act file
-            xs <- liftIO $ parseFSAT "r" <$> readFileUTF8' file
+            xs <- liftIO $ parseFSAT <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
             needNorm $ ham cwd [x | FSATRead x <- xs]
             return res
@@ -176,17 +176,16 @@ commandExplicit funcName opts results exe args = do
 data FSAT
     = FSATWrite FilePath
     | FSATRead FilePath
-    | FSATMove FilePath FilePath
     | FSATDelete FilePath
+    | FSATMove FilePath FilePath
 
--- | Given a list of 1 letter prefixes we care about, and the body, produce the 'FSAT' entries.
---   Ignore any parse errors.
-parseFSAT :: [Char] -> String -> [FSAT]
-parseFSAT ops = mapMaybe (f . wordsBy (== '|')) . filter ((`elem` ops) . head) . lines
-    where f ["w",x] = Just $ FSATWrite x
-          f ["r",x] = Just $ FSATRead x
-          f ["m",x,y] = Just $ FSATMove x y
-          f ["d",x] = Just $ FSATDelete x
+-- | Parse the 'FSAT' entries, ignoring anything you don't understand.
+parseFSAT :: String -> [FSAT]
+parseFSAT = mapMaybe f . lines
+    where f ('w':'|':xs) = Just $ FSATWrite xs
+          f ('r':'|':xs) = Just $ FSATRead xs
+          f ('d':'|':xs) = Just $ FSATDelete xs
+          f ('m':'|':xs) | (xs,'|':ys) <- break (== '|') xs = Just $ FSATMove xs ys
           f _ = Nothing
 
 ---------------------------------------------------------------------
