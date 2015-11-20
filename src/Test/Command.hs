@@ -140,8 +140,11 @@ main = shaken test $ \args obj -> do
         liftIO $ assertContents file "hello\n"
 
 
-test build obj =
+test build obj = do
     -- reduce the overhead by running all the tests in parallel
+    -- lint can make a big different to the command lines, so test with and without
+    whenM hasTracker $
+        build ["-j4","--no-lint"]
     build ["-j4"]
 
 
