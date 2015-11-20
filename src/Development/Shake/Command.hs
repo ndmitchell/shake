@@ -109,7 +109,7 @@ commandExplicit funcName opts results exe args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    opts <- return $ opts ++ shakeCommandOptions
+    opts <- return $ shakeCommandOptions ++ opts
 
     let skipper act = if null results && not shakeRunCommands then return [] else act
 
