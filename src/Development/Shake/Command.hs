@@ -107,7 +107,6 @@ instance Eq Pid where _ == _ = True
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
 commandExplicit funcName icopts results exe args = do
     opts <- getShakeOptions
-    verb <- getVerbosity
 
     let copts = icopts ++ shakeCommandOptions opts
 
@@ -116,6 +115,7 @@ commandExplicit funcName icopts results exe args = do
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- copts]
             putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ saneCommandForUser exe args
+            verb <- getVerbosity
             (if verb >= Loud then quietly else id) act
 
     let tracer = case reverse [x | Traced x <- copts] of
