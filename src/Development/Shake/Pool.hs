@@ -49,23 +49,22 @@ dequeue (Queue [] (Right Nothing)) = Nothing
 -- TREE
 
 -- A tree where removal is random. Nodes are stored at indicies 0..n-1
-newtype Tree a = Tree (Map.HashMap Int a)
+data Tree a = Tree {-# UNPACK #-} !Int (Map.HashMap Int a)
 
 singleTree :: a -> Tree a
-singleTree x = Tree $ Map.singleton 0 x
+singleTree x = Tree 1 $ Map.singleton 0 x
 
 insertTree :: a -> Tree a -> Tree a
-insertTree x (Tree mp) = Tree $ Map.insert (Map.size mp) x mp
+insertTree x (Tree n mp) = Tree (n+1) $ Map.insert n x mp
 
 -- Remove an item at random, put the n-1 item to go in it's place
 removeTree :: Int -> Tree a -> (a, Maybe (Tree a))
-removeTree rnd (Tree mp)
+removeTree rnd (Tree n mp)
         | n == 0 = err "removeTree, tree is empty"
         | n == 1 = (mp Map.! 0, Nothing)
-        | i == n-1 = (mp Map.! i, Just $ Tree $ Map.delete i mp)
-        | otherwise = (mp Map.! i, Just $ Tree $ Map.insert i (mp Map.! (n-1)) $ Map.delete (n-1) mp)
+        | i == n-1 = (mp Map.! i, Just $ Tree (n-1) $ Map.delete i mp)
+        | otherwise = (mp Map.! i, Just $ Tree (n-1) $ Map.insert i (mp Map.! (n-1)) $ Map.delete (n-1) mp)
     where
-        n = Map.size mp
         i = abs rnd `mod` n
 
 
