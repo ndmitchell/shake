@@ -9,6 +9,7 @@ import Control.Exception.Extra
 import System.Time.Extra
 import Control.Monad.Extra
 import System.Directory
+import System.Environment
 import Test.Type
 import System.Exit
 import System.Process
@@ -90,6 +91,7 @@ main = shaken test $ \args obj -> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
         Stdout out <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell helper "vFOO"
         liftIO $ out === "HELLO SHAKE\n"
+        liftIO $ print =<< getEnvironment
         Stdout out <- cmd (AddEnv "FOO" "GOODBYE SHAKE") Shell helper "vFOO"
         liftIO $ out === "GOODBYE SHAKE\n"
 
