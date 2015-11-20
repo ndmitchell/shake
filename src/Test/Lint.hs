@@ -98,12 +98,10 @@ main = shaken test $ \args obj -> do
         need [obj "tracker-source.c"]
         cmd AutoDeps "gcc" ["-c", obj "tracker-source.c", "-o", out]
 
-    where gen t f = unit $ if isWindows
-                           then cmd "cmd.exe" ["/C echo " ++ t ++ ">" ++ toNative f]
-                           else cmd "sh -c" ["echo " ++ t ++ " >" ++ f]
+    where gen t f = unit $ cmd Shell "echo" t ">" (toNative f)
           access f = unit $ if isWindows
-                            then cmd "cmd.exe" ["/C type " ++ toNative f ++ ">nul"]
-                            else cmd "sh -c" ["cat " ++ f ++ ">/dev/null"]
+                            then cmd Shell "type" (toNative f) "> nul"
+                            else cmd Shell "cat" f "> /dev/null"
 
 
 test build obj = do
