@@ -26,7 +26,7 @@ import Data.Maybe
 import System.Directory
 import System.Environment.Extra
 import System.Exit
-import System.IO.Extra
+import System.IO.Extra hiding (withTempFile)
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
@@ -131,11 +131,8 @@ commandExplicit funcName icopts results exe args = do
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) inside
                                          , not $ any ($ x) ignore]
-        withTemp f cont = do
-            (x, cleanup) <- liftIO f
-            actionFinally (cont x) cleanup
 
-        fsatrace act = withTemp newTempFile $ \file -> do
+        fsatrace act = withTempFile $ \file -> do
             res <- act "fsatrace" $ file:"--":exe:args
             xs <- liftIO $ parseFSAT "rwm" <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
@@ -152,7 +149,7 @@ commandExplicit funcName icopts results exe args = do
             trackWrite writes
             return res
 
-        autodeps act = withTemp newTempFile $ \file -> do
+        autodeps act = withTempFile $ \file -> do
             res <-  act "fsatrace" $ file:"--":exe:args
             xs <- liftIO $ parseFSAT "r" <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
@@ -534,3 +531,13 @@ instance Arg [String] where arg = map Right
 instance Arg CmdOption where arg = return . Left
 instance Arg [CmdOption] where arg = map Left
 instance Arg a => Arg (Maybe a) where arg = maybe [] arg
+
+
+---------------------------------------------------------------------
+-- UTILITIES
+
+-- Copied from Derived. Once Derived no longer exports cmd stuff, import from there.
+withTempFile :: (FilePath -> Action a) -> Action a
+withTempFile act = do
+    (file, del) <- liftIO newTempFile
+    act file `actionFinally` del
