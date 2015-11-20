@@ -166,9 +166,7 @@ commandExplicit funcName opts results exe args = do
             res <-  fsaCmd act file
             xs <- liftIO $ parseFSAT "r" <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
-            let reader (FSATRead x) = x
-                reader _ = error "autodeps"
-            needNorm $ ham cwd $ map reader xs
+            needNorm $ ham cwd [x | FSATRead x <- xs]
             return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
