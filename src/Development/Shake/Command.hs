@@ -103,6 +103,7 @@ instance Eq Pid where _ == _ = True
 ---------------------------------------------------------------------
 -- ACTION EXPLICIT OPERATION
 
+-- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
 commandExplicit funcName icopts results exe args = do
     opts <- getShakeOptions
@@ -161,9 +162,16 @@ commandExplicit funcName icopts results exe args = do
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
 
 
-data FSAT = FSATWrite FilePath | FSATRead FilePath | FSATMove FilePath FilePath | FSATDelete FilePath
+-- | Parse the FSATrace structure
+data FSAT
+    = FSATWrite FilePath
+    | FSATRead FilePath
+    | FSATMove FilePath FilePath
+    | FSATDelete FilePath
 
-parseFSAT :: String -> String -> [FSAT] -- any parse errors are skipped
+-- | Given a list of 1 letter prefixes we care about, and the body, produce the 'FSAT' entries.
+--   Ignore any parse errors.
+parseFSAT :: [Char] -> String -> [FSAT]
 parseFSAT ops = mapMaybe (f . wordsBy (== '|')) . filter ((`elem` ops) . head) . lines
     where f ["w",x] = Just $ FSATWrite x
           f ["r",x] = Just $ FSATRead x
@@ -174,6 +182,7 @@ parseFSAT ops = mapMaybe (f . wordsBy (== '|')) . filter ((`elem` ops) . head) .
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION
 
+-- | Given a very explicit set of CmdOption, translate them to a General.Process structure
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
 commandExplicitIO funcName opts results exe args = do
     let (grabStdout, grabStderr) = both or $ unzip $ for results $ \r -> case r of
@@ -251,6 +260,7 @@ commandExplicitIO funcName opts results exe args = do
         Right (dur,(pid,ex)) -> mapM (\f -> f dur pid ex) resultBuild
 
 
+-- | Apply all environment operations, to produce a new environment to use.
 resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])
 resolveEnv opts
     | null env, null addEnv, null addPath, null remEnv = return Nothing
@@ -299,11 +309,14 @@ resolvePath po
 resolvePath po = return po
 
 
+-- | Given a list of directories, and a file name, return the complete path if you can find it.
+--   Like findExecutable, but with a custom PATH.
 findExecutableWith :: [FilePath] -> String -> IO (Maybe FilePath)
 findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
     ifM (doesFileExist s) (return $ Just s) (return Nothing)
 
 
+-- Given a command line, show it in a way suitable for the user.
 -- Like System.Process, but tweaked to show less escaping,
 -- Relies on relatively detailed internals of showCommandForUser.
 saneCommandForUser :: FilePath -> [String] -> String
