@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #335, add deriving Read instances for more types
     Add Development.Shake.Forward for forward-defined systems
     #336, export :->
     #337, fix the docs for &%>
