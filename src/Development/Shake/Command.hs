@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
@@ -106,11 +106,13 @@ instance Eq Pid where _ == _ = True
 -- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
 commandExplicit funcName icopts results exe args = do
-    opts <- getShakeOptions
+    ShakeOptions
+        {shakeCommandOptions,shakeRunCommands
+        ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
 
-    let copts = icopts ++ shakeCommandOptions opts
+    let copts = icopts ++ shakeCommandOptions
 
-    let skipper act = if null results && not (shakeRunCommands opts) then return [] else act
+    let skipper act = if null results && not shakeRunCommands then return [] else act
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- copts]
@@ -123,14 +125,13 @@ commandExplicit funcName icopts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-    let tracker act = case shakeLint opts of
+    let tracker act = case shakeLint of
             Just LintFSATrace -> fsatrace act
             _ -> if autodepping then autodeps act else act exe args
         autodepping = AutoDeps `elem` copts
-        inside = shakeLintInside opts
-        ignore = map (?==) $ shakeLintIgnore opts
+        ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
-                                         , any (`isPrefixOf` x) inside
+                                         , any (`isPrefixOf` x) shakeLintInside
                                          , not $ any ($ x) ignore]
 
         fsatrace act = withTempFile $ \file -> do
