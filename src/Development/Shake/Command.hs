@@ -124,6 +124,11 @@ commandExplicit funcName opts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
+    let useLint = shakeLint == Just LintFSATrace
+    let useAutoDeps = AutoDeps `elem` opts
+    let useShell = Shell `elem` opts
+    opts <- return $ if useLint || useAutoDeps then filter (/= Shell) opts else opts
+
     let tracker act = case shakeLint of
             Just LintFSATrace -> fsatrace act
             _ -> if autodepping then autodeps act else act exe args
@@ -133,8 +138,15 @@ commandExplicit funcName opts results exe args = do
                                          , any (`isPrefixOf` x) shakeLintInside
                                          , not $ any ($ x) ignore]
 
+        fsaCmd act file
+            | not useShell = act "fsatrace" $ file:"--":exe:args
+            | not isWindows = act "fsatrace" $ file:"--":"/bin/sh":"-c":exe:args
+            | otherwise = act "fsatrace" [file,"--","cmd",unwords $ "/c":exe:args]
+                -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
+                -- the fact that the arguments are [cmd,/c whatever] is importantant, making it 1 or 3 fails
+
         fsatrace act = withTempFile $ \file -> do
-            res <- act "fsatrace" $ file:"--":exe:args
+            res <- fsaCmd act file
             xs <- liftIO $ parseFSAT "rwm" <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
             let reader (FSATRead x) = Just x; reader _ = Nothing
@@ -151,7 +163,7 @@ commandExplicit funcName opts results exe args = do
             return res
 
         autodeps act = withTempFile $ \file -> do
-            res <-  act "fsatrace" $ file:"--":exe:args
+            res <-  fsaCmd act file
             xs <- liftIO $ parseFSAT "r" <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
             let reader (FSATRead x) = x
