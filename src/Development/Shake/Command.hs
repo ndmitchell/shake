@@ -105,22 +105,21 @@ instance Eq Pid where _ == _ = True
 
 -- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName icopts results exe args = do
+commandExplicit funcName opts results exe args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-
-    let copts = icopts ++ shakeCommandOptions
+    opts <- return $ opts ++ shakeCommandOptions
 
     let skipper act = if null results && not shakeRunCommands then return [] else act
 
     let verboser act = do
-            let cwd = listToMaybe $ reverse [x | Cwd x <- copts]
+            let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
             putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ saneCommandForUser exe args
             verb <- getVerbosity
             (if verb >= Loud then quietly else id) act
 
-    let tracer = case reverse [x | Traced x <- copts] of
+    let tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
@@ -128,7 +127,7 @@ commandExplicit funcName icopts results exe args = do
     let tracker act = case shakeLint of
             Just LintFSATrace -> fsatrace act
             _ -> if autodepping then autodeps act else act exe args
-        autodepping = AutoDeps `elem` copts
+        autodepping = AutoDeps `elem` opts
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) shakeLintInside
@@ -160,7 +159,7 @@ commandExplicit funcName icopts results exe args = do
             needNorm $ ham cwd $ map reader xs
             return res
 
-    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName copts results exe args
+    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
 
 
 -- | Parse the FSATrace structure
