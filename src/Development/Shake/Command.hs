@@ -140,7 +140,7 @@ commandExplicit funcName opts results exe args = do
 
         fsaCmd act file
             | not useShell = act "fsatrace" $ file:"--":exe:args
-            | not isWindows = act "fsatrace" $ file:"--":"/bin/sh":"-c":exe:args
+            | not isWindows = act "fsatrace" [file,"--","/bin/sh","-c",unwords $ exe:args]
             | otherwise = act "fsatrace" [file,"--","cmd",unwords $ "/c":exe:args]
                 -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
                 -- the fact that the arguments are [cmd,/c whatever] is importantant, making it 1 or 3 fails
