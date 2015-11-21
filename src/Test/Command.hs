@@ -94,6 +94,13 @@ main = shaken test $ \args obj -> do
         Stdout out <- cmd (AddEnv "FOO" "GOODBYE SHAKE") Shell helper "vFOO"
         liftIO $ out === "GOODBYE SHAKE\n"
 
+    "space" !> do
+        Stdout out <- cmd helper ["oSPACE 1"]
+        liftIO $ out === "SPACE 1\n"
+        when False $
+            Stdout out <- cmd helper Shell "\"oSPACE 2\""
+            liftIO $ out === "SPACE 2\n"
+
     "path" !> do
         let path = AddPath [dropTrailingPathSeparator $ obj ""] []
         unit $ cmd $ obj "shake_helper"
