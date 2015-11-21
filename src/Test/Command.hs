@@ -97,7 +97,7 @@ main = shaken test $ \args obj -> do
     "space" !> do
         Stdout out <- cmd helper ["oSPACE 1"]
         liftIO $ out === "SPACE 1\n"
-        when False $
+        unless isWindows $ do
             Stdout out <- cmd helper Shell "\"oSPACE 2\""
             liftIO $ out === "SPACE 2\n"
 
