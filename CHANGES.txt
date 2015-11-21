@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #333, optimise the random pool, up to 20% faster
     #335, add deriving Read instances for more types
     Add Development.Shake.Forward for forward-defined systems
     #336, export :->
