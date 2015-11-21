@@ -9,7 +9,6 @@ import Control.Exception.Extra
 import System.Time.Extra
 import Control.Monad.Extra
 import System.Directory
-import System.Environment
 import Test.Type
 import System.Exit
 import System.Process
