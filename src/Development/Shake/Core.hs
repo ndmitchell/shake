@@ -921,8 +921,9 @@ parallel acts = Action $ do
                 res <- liftIO $ sequence . catMaybes <$> mapM readIORef results
                 (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
 
-        liftIO $ forM_ (zip acts results) $ \(act, result) ->
-            runAction global local act $ \res -> do
+        liftIO $ forM_ (zip acts results) $ \(act, result) -> do
+            let act2 = ifM (liftIO $ isJust <$> readVar todo) act (fail "")
+            runAction global local act2 $ \res -> do
                 writeIORef result $ Just res
                 modifyVar_ todo $ \v -> case v of
                     Nothing -> return Nothing
