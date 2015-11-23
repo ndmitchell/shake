@@ -100,7 +100,7 @@ main = shaken test $ \args obj -> do
             Stdout out <- cmd helper Shell "\"oSPACE 2\""
             liftIO $ out === "SPACE 2\n"
         (Stdout (), CmdLine x) <- cmd helper ["oSPACE 3","oDIRECT"]
-        unless (" \"oSPACE 3\" oDIRECT" `isSuffixOf` x) $
+        unless (" \"oSPACE 3\" oDIRECT" `isSuffixOf` replace "\'" "\"" x) $
             fail $ "Invalid CmdLine, " ++ x
 
     "path" !> do
