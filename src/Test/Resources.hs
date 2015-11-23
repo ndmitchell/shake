@@ -9,21 +9,22 @@ import Data.IORef
 
 
 main = shaken test $ \args obj -> do
-    -- test I have good orderings
+    -- test I have good Ord and Show
     want args
     do
         r1 <- newResource "test" 2
-        r2 <- newResource "test" 2
+        r2 <- newResource "special" 67
         unless (r1 < r2 || r2 < r1) $ error "Resources should have a good ordering"
+        unless ("special" `isInfixOf` show r2) $ error "Resource should contain their name when shown"
 
     -- test you are capped to a maximum value
     do
         let cap = 2
         inside <- rulesIO $ newIORef 0
-        resource <- newResource "test" cap
+        res <- newResource "test" cap
         phony "cap" $ need [obj $ "c_file" ++ show i ++ ".txt" | i <- [1..4]]
         obj "c_*.txt" %> \out ->
-            withResource resource 1 $ do
+            withResource res 1 $ do
                 old <- liftIO $ atomicModifyIORef inside $ \i -> (i+1,i)
                 when (old >= cap) $ error "Too many resources in use at one time"
                 liftIO $ sleep 0.1
