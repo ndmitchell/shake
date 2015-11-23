@@ -8,7 +8,7 @@ import Data.IORef
 
 
 main extra = do
-    ref <- newIORef 0
+    inside <- newIORef 0
     flip (shaken test) extra $ \args obj -> do
         want args
 
@@ -21,10 +21,10 @@ main extra = do
             need $ map obj ["file1.txt","file2.txt","file3.txt","file4.txt"]
         obj "*.txt" %> \out ->
             withResource r1_cap 1 $ do
-                old <- liftIO $ atomicModifyIORef ref $ \i -> (i+1,i)
+                old <- liftIO $ atomicModifyIORef inside $ \i -> (i+1,i)
                 when (old >= cap) $ error "Too many resources in use at one time"
                 liftIO $ sleep 0.1
-                liftIO $ atomicModifyIORef ref $ \i -> (i-1,i)
+                liftIO $ atomicModifyIORef inside $ \i -> (i-1,i)
                 writeFile' out ""
 
 
