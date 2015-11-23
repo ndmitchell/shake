@@ -911,17 +911,20 @@ parallel [x] = fmap return x
 parallel acts = Action $ do
     global@Global{..} <- getRO
     local <- getRW
-    st <- liftIO $ newVar $ Just $ length acts
-    refs <- liftIO $ replicateM (length acts) $ newIORef Nothing
+    -- number of items still to complete, or Nothing for has completed (by either failure or completion)
+    todo :: Var (Maybe Int) <- liftIO $ newVar $ Just $ length acts
+    -- a list of refs where the results go
+    results :: [IORef (Maybe (Either SomeException a))] <- liftIO $ replicateM (length acts) $ newIORef Nothing
+
     captureRAW $ \continue -> do
         let resume = do
-                res <- liftIO $ sequence . catMaybes <$> mapM readIORef refs
+                res <- liftIO $ sequence . catMaybes <$> mapM readIORef results
                 (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
 
-        liftIO $ forM_ (zip acts refs) $ \(act, ref) ->
+        liftIO $ forM_ (zip acts results) $ \(act, result) ->
             runAction global local act $ \res -> do
-                writeIORef ref $ Just res
-                modifyVar_ st $ \v -> case v of
+                writeIORef result $ Just res
+                modifyVar_ todo $ \v -> case v of
                     Nothing -> return Nothing
                     Just i | i == 1 || isLeft res -> do resume; return Nothing
                     Just i -> return $ Just $ i - 1
