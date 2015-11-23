@@ -17,5 +17,6 @@ main = shaken test $ \args obj -> forwardRule $ do
     cache $ cmd "gcc -o" [obj "Main" <.> exe] os
 
 test build obj = do
-    whenM hasTracker $
+    whenM hasTracker $ do
+        build ["--forward","--clean"]
         build ["--forward"]
