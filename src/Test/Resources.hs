@@ -10,6 +10,7 @@ import Data.IORef
 
 main = shaken test $ \args obj -> do
     -- test I have good orderings
+    want args
     do
         r1 <- newResource "test" 2
         r2 <- newResource "test" 2
