@@ -20,6 +20,7 @@ import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
+import Data.Char
 import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
@@ -115,7 +116,7 @@ commandExplicit funcName opts results exe args = do
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
-            putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ saneCommandForUser exe args
+            putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ showCommandForUser2 exe args
             verb <- getVerbosity
             (if verb >= Loud then quietly else id) act
 
@@ -218,7 +219,7 @@ commandExplicitIO funcName opts results exe args = do
     let optEchoStdout = last $ (not grabStdout && null optFileStdout) : [x | EchoStdout x <- opts]
     let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
 
-    let cmdline = saneCommandForUser exe args
+    let cmdline = showCommandForUser2 exe args
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
         buf Str{} = do x <- newBuffer; return ([DestString x | not optAsync], Str . concat <$> readBuffer x)
@@ -323,16 +324,6 @@ resolvePath po = return po
 findExecutableWith :: [FilePath] -> String -> IO (Maybe FilePath)
 findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
     ifM (doesFileExist s) (return $ Just s) (return Nothing)
-
-
--- Given a command line, show it in a way suitable for the user.
--- Like System.Process, but tweaked to show less escaping,
--- Relies on relatively detailed internals of showCommandForUser.
-saneCommandForUser :: FilePath -> [String] -> String
-saneCommandForUser cmd args = unwords $ map f $ cmd:args
-    where
-        f x = if take (length y - 2) (drop 1 y) == x then x else y
-            where y = showCommandForUser x []
 
 
 ---------------------------------------------------------------------
@@ -563,3 +554,10 @@ withTempFile :: (FilePath -> Action a) -> Action a
 withTempFile act = do
     (file, del) <- liftIO newTempFile
     act file `actionFinally` del
+
+-- A better version of showCommandForUser, which doesn't escape so much on Windows
+showCommandForUser2 :: FilePath -> [String] -> String
+showCommandForUser2 cmd args
+    | not isWindows = showCommandForUser cmd args
+    | otherwise = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
+    where safe xs = not (null xs) && not (any (\x -> isSpace x || x == '\"') xs)
