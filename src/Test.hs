@@ -45,7 +45,6 @@ import qualified Test.Random as Random
 import qualified Test.Resources as Resources
 import qualified Test.Self as Self
 import qualified Test.Tar as Tar
-import qualified Test.Throttle as Throttle
 import qualified Test.Tup as Tup
 import qualified Test.Unicode as Unicode
 import qualified Test.Util as Util
@@ -68,7 +67,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"monad" * Monad.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main
-        ,"throttle" * Throttle.main, "verbosity" * Verbosity.main, "version" * Version.main, "tup" * Tup.main]
+        ,"verbosity" * Verbosity.main, "version" * Version.main, "tup" * Tup.main]
     where (*) = (,)
 
 

@@ -4,6 +4,10 @@ module Test.Resources(main) where
 import Development.Shake
 import Development.Shake.Core(rulesIO)
 import Test.Type
+import Data.List
+import System.FilePath
+import Control.Exception.Extra hiding (assert)
+import System.Time.Extra
 import Control.Monad
 import Data.IORef
 
@@ -49,9 +53,28 @@ main = shaken test $ \args obj -> do
             liftIO $ atomicModifyIORef done $ \i -> (i+1,())
             writeFile' out ""
 
+    -- test that throttle works properly
+    do
+        res <- newThrottle "throttle" 2 0.4
+        phony "throttle" $ need $ map obj ["t_file1.1","t_file2.1","t_file3.2","t_file4.1","t_file5.2"]
+        obj "t_*.*" %> \out -> do
+            withResource res (read $ drop 1 $ takeExtension out) $
+                when (takeBaseName out == "t_file3") $ liftIO $ sleep 0.2
+            writeFile' out ""
+
 
 test build obj = do
     build ["-j2","cap","--clean"]
     build ["-j4","cap","--clean"]
     build ["-j10","cap","--clean"]
     build ["-j2","schedule","--clean"]
+
+    forM_ ["-j1","-j8"] $ \flags ->
+        -- we are sometimes over the window if the machine is "a bit loaded" at some particular time
+        -- therefore we rerun the test three times, and only fail if it fails on all of them
+        retry 3 $ do
+            (s, _) <- duration $ build [flags,"throttle","--no-report","--clean"]
+            -- the 0.1s cap is a guess at an upper bound for how long everything else should take
+            -- and should be raised on slower machines
+            assert (s >= 1.4 && s < 1.6) $
+                "Bad throttling, expected to take 1.4s + computation time (cap of 0.2s), took " ++ show s ++ "s"
