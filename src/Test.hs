@@ -39,6 +39,7 @@ import qualified Test.Monad as Monad
 import qualified Test.Ninja as Ninja
 import qualified Test.Oracle as Oracle
 import qualified Test.OrderOnly as OrderOnly
+import qualified Test.Parallel as Parallel
 import qualified Test.Pool as Pool
 import qualified Test.Progress as Progress
 import qualified Test.Random as Random
@@ -64,7 +65,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
         ,"forward" * Forward.main
         ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "makefile" * Makefile.main, "manual" * Manual.main
-        ,"monad" * Monad.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
+        ,"monad" * Monad.main, "parallel" * Parallel.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main
         ,"verbosity" * Verbosity.main, "version" * Version.main, "tup" * Tup.main]

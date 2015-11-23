@@ -372,6 +372,7 @@ test-suite shake-test
         Test.Ninja
         Test.Oracle
         Test.OrderOnly
+        Test.Parallel
         Test.Pool
         Test.Progress
         Test.Random
