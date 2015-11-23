@@ -378,7 +378,6 @@ test-suite shake-test
         Test.Resources
         Test.Self
         Test.Tar
-        Test.Throttle
         Test.Tup
         Test.Type
         Test.Unicode
