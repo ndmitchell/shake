@@ -29,9 +29,6 @@ main extra = do
 
 
 test build obj = do
-    build ["clean"]
-    build ["-j2","cap"]
-    build ["clean"]
-    build ["-j4","cap"]
-    build ["clean"]
-    build ["-j10","cap"]
+    build ["-j2","cap","--clean"]
+    build ["-j4","cap","--clean"]
+    build ["-j10","cap","--clean"]
