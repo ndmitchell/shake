@@ -9,6 +9,7 @@ module Development.Shake.Derived(
     par, forP
     ) where
 
+import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Process
@@ -22,6 +23,7 @@ import Development.Shake.FilePath
 import Development.Shake.Types
 import qualified Data.ByteString as BS
 import Data.Hashable
+import Prelude
 
 
 -- | Get a checksum of a list of files, suitable for using as `shakeVersion`.
