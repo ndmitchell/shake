@@ -11,22 +11,32 @@ import Data.IORef
 
 main = shaken test $ \args obj -> do
     want args
+
     phony "cancel" $ do
-        done <- liftIO $ newIORef 4
+        writeFile' (obj "cancel") ""
+        done <- liftIO $ newIORef 0
         lock <- liftIO newLock
-        void $ parallel $ replicate 4 $ liftIO $ do
-            x <- atomicModifyIORef done $ dupe . pred
-            when (x == 2) $ do sleep 0.1; fail "boom"
+        void $ parallel $ replicate 5 $ liftIO $ do
+            x <- atomicModifyIORef done $ dupe . succ
+            when (x == 3) $ do sleep 0.1; fail "boom"
             withLock lock $ appendFile (obj "cancel") "x"
 
-{-
-make sure you cancel parallel actions if any fail
-make sure they run in parallel, but only at -j2
-make sure they report their execution timing correctly
--}
+    phony "parallel" $ do
+        active <- liftIO $ newIORef 0
+        peak <- liftIO $ newIORef 0    
+        void $ parallel $ replicate 8 $ liftIO $ do
+            now <- atomicModifyIORef active $ dupe . succ
+            atomicModifyIORef peak $ dupe . max now
+            sleep 0.1
+            atomicModifyIORef active $ dupe . pred
+        peak <- liftIO $ readIORef peak
+        writeFile' (obj "parallel") $ show peak
 
 
 test build obj = do
-    writeFile (obj "cancel") ""
     assertException ["boom"] $ build ["cancel","-j1","--quiet"]
-    assertContents (obj "cancel") "x"
+    assertContents (obj "cancel") "xx"
+    build ["parallel","-j1"]
+    assertContents (obj "parallel") "1"
+    build ["parallel","-j5"]
+    assertContents (obj "parallel") "5"
