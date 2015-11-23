@@ -5,7 +5,8 @@ module Development.Shake.Derived(
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,
     withTempFile, withTempDir,
-    getHashedShakeVersion
+    getHashedShakeVersion,
+    par, forP
     ) where
 
 import Control.Monad.Extra
@@ -178,3 +179,12 @@ withTempDir :: (FilePath -> Action a) -> Action a
 withTempDir act = do
     (dir,del) <- liftIO newTempDir
     act dir `actionFinally` del
+
+
+-- | A 'parallel' version of 'forM'.
+forP :: [a] -> (a -> Action b) -> Action [b]
+forP xs f = parallel $ map f xs
+
+-- | Execute two operations in parallel, based on 'parallel'.
+par :: Action a -> Action b -> Action (a,b)
+par a b = do [Left a, Right b] <- parallel [Left <$> a, Right <$> b]; return (a,b)

@@ -109,6 +109,8 @@ module Development.Shake(
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
+    -- * Explicit parallelism
+    parallel, forP, par,
     -- * Utility functions
     copyFile', copyFileChanged,
     readFile', readFileLines,

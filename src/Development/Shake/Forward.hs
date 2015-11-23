@@ -34,12 +34,10 @@
 module Development.Shake.Forward(
     shakeForward, shakeArgsForward,
     forwardOptions, forwardRule,
-    forP, parallel, par,
     cache, cacheAction
     ) where
 
 import Development.Shake
-import Development.Shake.Core(parallel)
 import Development.Shake.Rule
 import Development.Shake.Command
 import Development.Shake.Classes
@@ -48,10 +46,8 @@ import Data.IORef
 import Data.Either
 import Data.List.Extra
 import Numeric
-import Control.Applicative
 import System.IO.Unsafe
 import qualified Data.HashMap.Strict as Map
-import Prelude
 
 
 {-# NOINLINE forwards #-}
@@ -92,15 +88,6 @@ forwardRule act = do
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
 forwardOptions :: ShakeOptions -> ShakeOptions
 forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
-
-
--- | A 'parallel' version of 'forM'.
-forP :: [a] -> (a -> Action b) -> Action [b]
-forP xs f = parallel $ map f xs
-
--- | Execute two operations in parallel.
-par :: Action a -> Action b -> Action (a,b)
-par a b = do [Left a, Right b] <- parallel [Left <$> a, Right <$> b]; return (a,b)
 
 
 -- | Cache an action. The name of the action must be unique for all different actions.
