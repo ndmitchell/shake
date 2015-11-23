@@ -558,6 +558,7 @@ withTempFile act = do
 -- A better version of showCommandForUser, which doesn't escape so much on Windows
 showCommandForUser2 :: FilePath -> [String] -> String
 showCommandForUser2 cmd args
-    | not isWindows = showCommandForUser cmd args
     | otherwise = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
-    where safe xs = not (null xs) && not (any (\x -> isSpace x || x == '\"') xs)
+    where
+        safe xs = not (null xs) && not (any bad xs)
+        bad x = isSpace x || (x == '\\' && not isWindows) || x `elem` "\"\'"
