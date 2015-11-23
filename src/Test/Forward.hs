@@ -19,4 +19,4 @@ main = shaken test $ \args obj -> forwardRule $ do
 test build obj = do
     whenM hasTracker $ do
         build ["--forward","--clean"]
-        build ["--forward"]
+        build ["--forward","-j2"]
