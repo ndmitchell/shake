@@ -904,7 +904,7 @@ unsafeExtraThread act = Action $ do
     captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
 
 
--- | Execute a list of actions in parallel.
+-- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
 parallel :: [Action a] -> Action [a]
 parallel [] = return []
 parallel [x] = fmap return x
