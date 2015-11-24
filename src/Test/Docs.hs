@@ -26,7 +26,7 @@ main = shaken noTest $ \args obj -> do
         unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup.hs configure"
             ["--builddir=" ++ obj "dist","--user"]
             -- package-db is very sensitive, see #267
-            ["--package-db=" ++ x | x <- maybe [] (filter (/= "") . splitSearchPath) path]
+            ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
