@@ -25,7 +25,8 @@ main = shaken noTest $ \args obj -> do
         path <- getEnv "GHC_PACKAGE_PATH"
         unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup.hs configure"
             ["--builddir=" ++ obj "dist","--user"]
-            ["--package-db=" ++ x | x <- maybe [] splitSearchPath path]
+            -- cabal uses the last package-db flag, GHC prefers the first entry, so do a reverse (#267)
+            ["--package-db=" ++ x | x <- maybe [] (reverse . splitSearchPath) path]
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
