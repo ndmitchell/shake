@@ -23,7 +23,7 @@ main = shaken noTest $ \args obj -> do
         need ["shake.cabal"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
-        unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "cabal configure"
+        unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup configure"
             ["--builddir=" ++ obj "dist","--user"]
             ["--package-db=" ++ x | x <- maybe [] splitSearchPath path]
         trackAllow [obj "dist//*"]
@@ -32,7 +32,7 @@ main = shaken noTest $ \args obj -> do
         need [config,"shake.cabal","README.md","CHANGES.txt"]
         needSource
         trackAllow [obj "dist//*"]
-        cmd "cabal haddock" ["--builddir=" ++ obj "dist"]
+        cmd "runhaskell Setup haddock" ["--builddir=" ++ obj "dist"]
 
     obj "Paths_shake.hs" %> \out ->
         copyFile' "src/Paths.hs" out
