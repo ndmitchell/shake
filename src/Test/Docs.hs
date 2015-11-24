@@ -20,7 +20,7 @@ main = shaken noTest $ \args obj -> do
     let needSource = need =<< getDirectoryFiles "." ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"]
 
     config %> \_ -> do
-        need ["shake.cabal"]
+        need ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
         unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup configure"
@@ -29,7 +29,7 @@ main = shaken noTest $ \args obj -> do
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
-        need [config,"shake.cabal","README.md","CHANGES.txt"]
+        need [config,"shake.cabal","Setup.hs","README.md","CHANGES.txt"]
         needSource
         trackAllow [obj "dist//*"]
         cmd "runhaskell Setup haddock" ["--builddir=" ++ obj "dist"]
