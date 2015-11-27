@@ -139,15 +139,16 @@ commandExplicit funcName opts results exe args = do
                                          , any (`isPrefixOf` x) shakeLintInside
                                          , not $ any ($ x) ignore]
 
-        fsaCmd act file
-            | not useShell = act "fsatrace" $ file:"--":exe:args
-            | not isWindows = act "fsatrace" [file,"--","/bin/sh","-c",unwords $ exe:args]
-            | otherwise = act "fsatrace" [file,"--","cmd",unwords $ "/c":exe:args]
+        fsaCmd act opts file
+            | not useShell = invoke $ exe:args
+            | not isWindows = invoke ["/bin/sh","-c",unwords $ exe:args]
+            | otherwise = invoke ["cmd",unwords $ "/c":exe:args]
+            where invoke rest = act "fsatrace" $ opts : file : "--" : rest
                 -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
                 -- the fact that the arguments are [cmd,/c whatever] is importantant, making it 1 or 3 fails
 
         fsatrace act = withTempFile $ \file -> do
-            res <- fsaCmd act file
+            res <- fsaCmd act "rwm" file
             xs <- liftIO $ parseFSAT <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
             let reader (FSATRead x) = Just x; reader _ = Nothing
@@ -164,7 +165,7 @@ commandExplicit funcName opts results exe args = do
             return res
 
         autodeps act = withTempFile $ \file -> do
-            res <-  fsaCmd act file
+            res <-  fsaCmd act "r" file
             xs <- liftIO $ parseFSAT <$> readFileUTF8' file
             cwd <- liftIO getCurrentDirectory
             needNorm $ ham cwd [x | FSATRead x <- xs]
