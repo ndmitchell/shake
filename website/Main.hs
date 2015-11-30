@@ -19,10 +19,15 @@ import Code
 
 data Mode = Debug | Release deriving Eq
 
+getMode :: IO Mode
+getMode = do
+    args <- getArgs
+    return $ if null args then Release else Debug
+
+
 main :: IO ()
 main = do
-    args <- getArgs
-    let mode = if null args then Release else Debug
+    mode <- getMode
     createDirectoryIfMissing True "output"
     files <- getDirectoryContents "../docs"
     code <- code "../dist/doc/html/shake/shake.txt"
