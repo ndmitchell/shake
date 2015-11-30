@@ -11,9 +11,9 @@ Large build systems written using Shake tend to be significantly shorter and sim
 
 ## Using Shake
 
-To try Shake you need to install the [Haskell Platform](http://www.haskell.org/platform/), then type `cabal update && cabal install shake`, then run `shake --demo`. The final step will create a sample Shake build system and run it (you should see [this output](Demo.md)).
+To try Shake you need to install the [Haskell Platform](https://www.haskell.org/platform/), then type `cabal update && cabal install shake`, then run `shake --demo`. The final step will create a sample Shake build system and run it (you should see [this output](Demo.md)).
 
-To write your own Shake build system, read the [user manual](Manual.md) and refer to the [API documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html). Shake build systems are [Haskell](http://haskell.org/) programs, but can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
+To write your own Shake build system, read the [user manual](Manual.md) and refer to the [API documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html). Shake build systems are [Haskell](https://haskell.org/) programs, but can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
 
 [Click to read about the background and approach of Shake.](About.md)
 
@@ -21,17 +21,17 @@ To write your own Shake build system, read the [user manual](Manual.md) and refe
 
 Stuck? Confused? Frustrated? Please get in contact! If in doubt, just email the [mailing list](https://groups.google.com/forum/?fromgroups#!forum/shake-build-system).
 
-You can ask questions on [StackOverflow](http://stackoverflow.com/questions/tagged/shake-build-system) using the tag `shake-build-system`. You can email the [mailing list](https://groups.google.com/forum/?fromgroups#!forum/shake-build-system) with anything about Shake. If you find a bug you can report it at the [GitHub issue tracker](https://github.com/ndmitchell/shake/issues). If your question needs to remain confidential you can [email me](http://community.haskell.org/~ndm/contact/), although any insights from your question won't be public, so the other approaches are preferred. 
+You can ask questions on [StackOverflow](https://stackoverflow.com/questions/tagged/shake-build-system) using the tag `shake-build-system`. You can email the [mailing list](https://groups.google.com/forum/?fromgroups#!forum/shake-build-system) with anything about Shake. If you find a bug you can report it at the [GitHub issue tracker](https://github.com/ndmitchell/shake/issues). If your question needs to remain confidential you can [email me](http://ndmitchell.com/), although any insights from your question won't be public, so the other approaches are preferred. 
 
 ## What else?
 
-Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](http://www.cmake.org/) and [Meson](http://mesonbuild.com/). Shake can [predict completion time](Manual.md#progress), [profile build systems](Manual.md#profiling) and [sanity check builds](Manual.md#lint). Shake is based on a robust underlying theory from [this academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf). Shake is an open source project under the [BSD license](https://github.com/ndmitchell/shake/blob/master/LICENSE) hosted on [GitHub](https://github.com/ndmitchell/shake/).
+Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](http://www.cmake.org/) and [Meson](http://mesonbuild.com/). Shake can [predict completion time](Manual.md#progress), [profile build systems](Manual.md#profiling) and [sanity check builds](Manual.md#lint). Shake is based on a robust underlying theory from [this academic paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf). Shake is an open source project under the [BSD license](https://github.com/ndmitchell/shake/blob/master/LICENSE) hosted on [GitHub](https://github.com/ndmitchell/shake/).
 
 ## Who uses Shake?
 
 Shake is used by lots of companies, but only a few have declared so publicly.
 
-* [Standard Chartered](http://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
+* [Standard Chartered](https://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf).
 * [factis research GmbH](http://www.factisresearch.com/) use Shake to compile their [Checkpad MED](http://www.checkpad.de/) application, as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
 * [Samplecount](http://samplecount.com/) have been using Shake since 2012, as mentioned in their [tweet](https://twitter.com/samplecount/status/491581551730511872), producing several [open-source projects](https://github.com/samplecount) for working with Shake.
 * [CovenantEyes](http://www.covenanteyes.com/) use Shake to build their Windows client, as mentioned in their [tweet](https://twitter.com/eacameron88/status/543219899599163392).
@@ -40,9 +40,9 @@ Shake is used by lots of companies, but only a few have declared so publicly.
 
 There are several libraries providing pre-made rules for Shake:
 
-* [shake-language-c](http://hackage.haskell.org/package/shake-language-c) allows cross-compiling C, C++ and Objective-C code to various target platforms.
+* [shake-language-c](https://hackage.haskell.org/package/shake-language-c) allows cross-compiling C, C++ and Objective-C code to various target platforms.
 * [shake-cpp](https://github.com/jfeltz/shake-cpp) is an abstraction layer for Shake, providing simple C++ rules.
-* [kansas-lava-shake](http://hackage.haskell.org/package/kansas-lava-shake) provides a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](http://www.xilinx.com/).
+* [kansas-lava-shake](https://hackage.haskell.org/package/kansas-lava-shake) provides a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](http://www.xilinx.com/).
 * [avr-shake](https://hackage.haskell.org/package/avr-shake) provides rules for building things with [AVR Crosspack](http://www.obdev.at/products/crosspack/index.html).
 * [shake-minify](https://hackage.haskell.org/package/shake-minify) uses native Haskell code (no external `$PATH` dependencies) to minify CSS and JS files.
 * [shake-pack](https://hackage.haskell.org/package/shake-pack) uses bz2 lib on the system to tar and bzip compress given files.

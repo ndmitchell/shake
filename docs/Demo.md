@@ -2,7 +2,7 @@
 
 To get started with Shake, you need to:
 
-* Install the [Haskell Platform](http://www.haskell.org/platform/).
+* Install the [Haskell Platform](https://www.haskell.org/platform/).
 * Type `cabal update && cabal install shake`
 * Run `shake --demo`, which should produce something similar to the trace below.
 

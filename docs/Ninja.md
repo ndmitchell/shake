@@ -6,7 +6,7 @@ Shake supports the `.ninja` file format used by the [Ninja tool](http://martine.
 
 #### Installing Shake
 
-1. Install the [Haskell Platform](http://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
+1. Install the [Haskell Platform](https://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
 2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
 3. Type `cabal install shake --global`, to build and install Shake and all its dependencies.
 4. Type `shake --help`, to verify that Shake was successfully installed.

@@ -1,6 +1,6 @@
 # Shake Manual
 
-_See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Why choose Shake](Why.md#readme); [Function documentation](http://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html)_
+_See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Why choose Shake](Why.md#readme); [Function documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html)_
 
 Shake is a Haskell library for writing build systems - designed as a replacement for `make`. This document describes how to get started with Shake, assuming no prior Haskell knowledge. First, let's take a look at a Shake build system:
 
@@ -35,7 +35,7 @@ This build system builds the executable `_build/run` from all C source files in 
 
 To run the example above:
 
-1. Install the [Haskell Platform](http://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
+1. Install the [Haskell Platform](https://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
 2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
 3. Type `cabal install shake`, to build and install Shake and all its dependencies.
 4. Type `shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
@@ -314,7 +314,7 @@ One useful feature of Shake is that it can predict the remaining build time, bas
 * Running `build --progress`
 * Setting `shakeOptions{shakeProgress=progressSimple}`
 
-The progress message will be displayed in the titlebar of the window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](http://github.org/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
+The progress message will be displayed in the titlebar of the window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](https://github.org/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
 
 ![](shake-progress.png)
 
@@ -335,9 +335,7 @@ There is a performance penalty for building with `--lint`, but it is typically s
 
 #### Profiling
 
-Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. There is a help page included in the profiling output, and a [profiling tutorial/demo](https://cdn.rawgit.com/ndmitchell/shake/35fbe03c8d3bafeae17b58af89497ff3fdd54b22/html/demo.html).
-
-To view profiling information for the _previous_ build, you can run `build --no-build --report`. This feature is useful if you have a build execution where a file unexpectedly rebuilds, you can generate a profiling report afterwards and see why. To generate a lightweight report (about 5 lines) printed to the console run `build --report=-`. 
+Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. For a full explanation of how to profile a build system see [the profiling page](Profiling.md).
 
 #### Tracing and debugging
 
@@ -409,7 +407,7 @@ Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
 
 #### Multiple outputs
 
-Some tools, for example [bison](http://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `&%>` operator to define rules:
+Some tools, for example [bison](https://www.gnu.org/software/bison/), can generate multiple outputs from one execution. We can track these in Shake using the `&%>` operator to define rules:
 
     ["//*.bison.h","//*.bison.c"] &%> \[outh, outc] -> do
         let src = outc -<.> "y"
@@ -457,61 +455,3 @@ You can run any Haskell `IO` action by using `liftIO`. As an example:
     liftIO $ launchMissiles True
 
 Most common IO operations to run as actions are already wrapped and available in the Shake library, including `readFile'`, `writeFile'` and `copyFile'`. Other useful functions can be found in `System.Directory`.
-
-#### Include files with Visual Studio
-
-While `gcc` has the `-MMD` flag to generate a Makefile, the Visual Studio compiler `cl` does not. However, it does have a flag `-showincludes` which writes the include files on stdout as they are used. The initial example could be written using `cl` as:
-
-    Stdout stdout <- cmd "cl -showincludes -c" [input] ["-Fo" ++ output]
-    need [ dropWhile isSpace x
-         | x <- lines stdout
-         , Just x <- [stripPrefix "Note: including file:" x]]
-
-The `stripPrefix` function is available in the `Data.List` module. One warning: the "including file" message is localised, so if your developers are using non-English versions of Visual Studio the prefix string will be different
-
-#### Generated imports
-
-The initial example compiles the C file, then calls `need` on all its source and header files. This works fine if the header files are all source code. However, if any of the header files are _generated_ by the build system then when the compilation occurs they will not yet have been built. In general it is important to `need` any generated files _before_ they are used.
-
-To detect the included headers without using the compiler we can define `usedHeaders` as a top-level function:
-
-    usedHeaders src = [init x | x <- lines src, Just x <- [stripPrefix "#include \"" x]]
-
-This function takes the source code of a C file (`src`) and finds all lines that begin `#include "`, then takes the filename afterwards. This function does not work for all C files, but for most projects it is usually easy to write such a function that covers everything allowed by your coding standards.
-
-Assuming all interesting headers are only included directly by the C file (a restriction we remove in the next section), we can write the build rule as:
-
-    "_build//*.o" %> \out -> do
-        let c = dropDirectory1 $ out -<.> "c"
-        src <- readFile' c
-        need $ usedHeaders src
-        cmd "gcc -c" [c] "-o" [out]
-
-
-This code calls `readFile'` (which automatically calls `need` on the source file), then uses calls `need` on all headers used by the source file, then calls `gcc`. All files have `need` called on them before they are used, so if the C file or any of the header files have build system rules they will be run. 
-
-#### Generated transitive imports
-
-The previous section described how to deal with generated include files, but only coped with headers included directly by the C file. This section describes how to extend that to work with generated headers used either in C or header files, even when used by headers that were themselves generated. We can write:
-
-    ["*.c.dep","*.h.dep"] |%> \out -> do
-        src <- readFile' $ dropExtension out
-        writeFileLines out $ usedHeaders src
-
-    "*.deps" %> \out -> do
-        dep <- readFileLines $ out -<.> "dep"
-        deps <- mapM (readFileLines . (<.> "deps")) dep
-        writeFileLines out $ nub $ dropExtension out : concat deps
-
-    "*.o" %> \out -> do
-        deps <- readFileLines $ out -<.> "c.deps"
-        need deps
-        cmd "gcc -c" [dropExtension out] "-o" out
-
-For simplicity, this code assumes all files are in a single directory and all objects are generated files are placed in the same directory. We define three rules:
-
-* The `*.c.dep` and `*.h.dep` rule uses `|%>`, which defines a single action that matches multiple patterns. The file `foo.h.dep` contains a list of headers directly included by `foo.h`, using `usedHeaders` from the previous section.
-* The `*.deps` rule takes the transitive closure of dependencies, so `foo.h.deps` contains `foo.h` and all headers that `foo.h` pulls in. The rule takes the target file, and all the `.deps` for anything in the `.dep` file, and combines them. More abstractly, the rule calculates the transitive closure of _a_, namely _a*_, by taking the dependencies of _a_ (say _b_ and _c_) and computing _a\* = union(a, b\*, c\*)_.
-* The `*.o` rule reads the associated `.deps` file (ensuring it is up to date) and then depends on its contents.
-
-The pattern of `*.deps` files occurs frequently, for example when linking Haskell files.

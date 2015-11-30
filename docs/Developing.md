@@ -9,7 +9,7 @@ I welcome contributions. Generally:
 
 You can load Shake up in `ghci`, starting from the root directory, which has a `.ghci` file to set things up. Develop, hit `:reload` to reload, then `:test` to run the test suite.
 
-Individual test can be run interactively, too:
+Individual test can be run interactively:
 
     $ :main help
     $ :main TEST_NAME test
@@ -17,6 +17,10 @@ Individual test can be run interactively, too:
 Replace `TEST_NAME` with one of the tests listed.
 
 I usually use [`ghcid`](https://github.com/ndmitchell/ghcid#readme) when developing Shake.
+
+### Continuous Integration
+
+Shake is currently tested by on Linux by [Travis](https://travis-ci.org/ndmitchell/shake), and on Windows by [Appveyor](https://ci.appveyor.com/project/ndmitchell/shake). The tests are designed to be aggressively comprehensive (testing things like performance and that documentation all type checks), so while they usually pass, do not be overly concerned if they are failing or if your patch breaks a test - serious issues will be spotted very quickly.
 
 ### Sandboxes
 

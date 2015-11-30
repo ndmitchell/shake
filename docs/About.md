@@ -11,10 +11,10 @@ Shake build systems are Haskell programs that make heavy use of the `shake` libr
 * Polymorphic dependencies, allowing dependencies on things other than files.
 * Dependencies that rebuild but don't change don't cause more things to rebuild.
 
-Much of the theory behind Shake is covered in [a conference paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by the following video:
+Much of the theory behind Shake is covered in [a conference paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by the following video:
 
 <center>
-<iframe width="420" height="315" src="http://www.youtube.com/embed/xYCPpXVlqFM" frameborder="0" allowfullscreen>
+<iframe width="420" height="315" src="https://www.youtube.com/embed/xYCPpXVlqFM" frameborder="0" allowfullscreen>
 </iframe>
 </center>
 
@@ -36,7 +36,7 @@ A Haskell compiler is a big undertaking, but the build system for a simple Haske
 
 When writing my thesis I needed a build system, and decided to try writing a simple Haskell DSL, which is still online [here](https://github.com/ndmitchell/thesis/blob/master/old/Main.hs). I defined a single operator [`<==`](https://github.com/ndmitchell/thesis/blob/master/old/Main.hs#L71) which let me express a relationship between an output and its dependencies - very simple, but it worked.
 
-Later I moved to [Standard Chartered](http://www.sc.com/), where the build system was a mass of Makefiles, and it quickly became apparent that the project had outgrown the current approach. Without really surveying the alternatives, I decided that a Haskell DSL would be easiest to fit in with the existing infrastructure, so started writing some code. The first version of the build library took under a week, followed by a month of reimplementing the existing system. It wasn't until many months later I realised that the reason everything was suddenly so much easier was because we had monadic dependencies.
+Later I moved to [Standard Chartered](https://www.sc.com/), where the build system was a mass of Makefiles, and it quickly became apparent that the project had outgrown the current approach. Without really surveying the alternatives, I decided that a Haskell DSL would be easiest to fit in with the existing infrastructure, so started writing some code. The first version of the build library took under a week, followed by a month of reimplementing the existing system. It wasn't until many months later I realised that the reason everything was suddenly so much easier was because we had monadic dependencies.
 
 While people at Standard Chartered wanted to open source Shake, that turned out not to be possible. A number of people in the Haskell community implemented their own versions of Shake, but none were as polished or as strong as our internal one. Eventually, I reimplemented Shake, from scratch, in my spare time. Writing Shake from scratch, without the original source code or documentation, it naturally turned out better than the first attempt. A while later Standard Chartered migrated to the open-source version.
 
