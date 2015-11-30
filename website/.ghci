@@ -1,3 +1,4 @@
+:set -i.
 :set -fwarn-unused-binds -fwarn-unused-imports
 :set -hide-all-packages
 :set -package=base -package=directory -package=filepath -package=text
