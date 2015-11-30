@@ -6,6 +6,7 @@ import Data.Tuple.Extra
 import Control.Monad
 import Data.Char
 import Data.List.Extra
+import Data.Maybe
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import Text.HTML.TagSoup
@@ -96,7 +97,7 @@ reformat mode code (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `is
 reformat mode code (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat mode code xs
     where f ("href",x) | ".md" `isPrefixOf` takeExtension x =
                 -- watch out for Manual.md#readme
-                ("href", dropFileName x ++ map toLower (takeBaseName x) ++
+                ("href", noReadme $ dropFileName x ++ map toLower (takeBaseName x) ++
                          (if mode == Release then "" else ".html") ++
                          drop 3 (takeExtension x))
           f x = x
@@ -111,6 +112,7 @@ reformat mode code (TagClose x:xs) | x `elem` ["p","pre","li","ol","ul","h1","h2
 reformat mode code (x:xs) = x : reformat mode code xs
 reformat mode code [] = []
 
+noReadme x = fromMaybe x $ stripSuffix "#readme" x
 
 ---------------------------------------------------------------------
 -- POPULATE A SKELETON
