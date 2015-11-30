@@ -106,6 +106,8 @@ reformat mode code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : 
     where (a,b) = break (== TagClose t) xs
           f (TagText x) = code x
           f x = [x]
+reformat mode code (TagClose x:xs) | x `elem` ["p","pre","li","ol","ul","h1","h2","h3","h4","h5","h6"] =
+    TagClose x : TagText "\n" : reformat mode code xs
 reformat mode code (x:xs) = x : reformat mode code xs
 reformat mode code [] = []
 
