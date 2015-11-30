@@ -3,6 +3,8 @@
 module Code(code) where
 
 import Data.Char
+import Control.Monad.Extra
+import System.Directory
 import Data.List.Extra
 import Data.Maybe
 import Text.HTML.TagSoup
@@ -10,6 +12,8 @@ import Text.HTML.TagSoup
 
 code :: FilePath -> IO (String -> [Tag String])
 code file = do
+    unlessM (doesFileExist file) $
+        fail $ "You must run cabal haddock --hoogle to generate the necessary info first"
     r <- resolve file
     return $ format r
 
