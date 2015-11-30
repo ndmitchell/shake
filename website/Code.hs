@@ -1,5 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
 
+-- | Generate Haskell-syntax output complete with hyperlinks to Haddock docs
 module Code(code) where
 
 import Data.Char
@@ -10,6 +11,8 @@ import Data.Maybe
 import Text.HTML.TagSoup
 
 
+-- | Given the location of the haddock --hoogle output, generate something that takes code blocks
+--   to HTML pieces.
 code :: FilePath -> IO (String -> [Tag String])
 code file = do
     unlessM (doesFileExist file) $
