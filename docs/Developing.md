@@ -7,7 +7,7 @@ I welcome contributions. Generally:
 
 ### Development Workflow
 
-I generally load Shake up in `ghci`, starting from the root directory, which has a `.ghci` file to set things up. Develop, hit `:r` to reload, then `:test` to run the test suite.
+You can load Shake up in `ghci`, starting from the root directory, which has a `.ghci` file to set things up. Develop, hit `:reload` to reload, then `:test` to run the test suite.
 
 Individual test can be run interactively, too:
 
@@ -15,6 +15,8 @@ Individual test can be run interactively, too:
     $ :main TEST_NAME test
 
 Replace `TEST_NAME` with one of the tests listed.
+
+I usually use [`ghcid`](https://github.com/ndmitchell/ghcid#readme) when developing Shake.
 
 ### Sandboxes
 
