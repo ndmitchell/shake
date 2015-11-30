@@ -28,7 +28,7 @@ Finally, a lot of attention has been given to the engineering and code quality. 
 
 ## History
 
-I was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
+I ([Neil Mitchell](http://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
 
 > The biggest challenge for Yhc was the build system - we ended up with 10,000 lines of Python Scons scripts. Without a robust build system nothing else matters. When our sole Python hacker left the team that was the beginning of the end.
 
@@ -40,3 +40,4 @@ Later I moved to [Standard Chartered](http://www.sc.com/), where the build syste
 
 While people at Standard Chartered wanted to open source Shake, that turned out not to be possible. A number of people in the Haskell community implemented their own versions of Shake, but none were as polished or as strong as our internal one. Eventually, I reimplemented Shake, from scratch, in my spare time. Writing Shake from scratch, without the original source code or documentation, it naturally turned out better than the first attempt. A while later Standard Chartered migrated to the open-source version.
 
+I still maintain Shake, but am fortunate to have [other contributors](https://github.com/ndmitchell/shake/graphs) extending and improving Shake. If you want to join in, see [notes for developers](Developing.md#readme).
