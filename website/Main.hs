@@ -17,12 +17,17 @@ import System.FilePath
 import System.IO.Extra
 import Code
 
-data Mode = Debug | Release deriving Eq
+data Mode = Debug | Release deriving (Eq,Enum,Bounded,Show)
 
 getMode :: IO Mode
 getMode = do
     args <- getArgs
-    return $ if null args then Release else Debug
+    let modes = [minBound..maxBound]
+    case args of
+        [] -> return Release
+        [x] | Just x <- lookup (lower x) $ map (lower . show &&& id) modes -> return x
+            | otherwise -> fail $ "Couldn't recognise argument, got " ++ x ++ ", wanted " ++ show modes
+        _ -> fail $ "Only allowed at most one command line argument"
 
 
 main :: IO ()
