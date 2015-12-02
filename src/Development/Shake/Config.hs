@@ -12,7 +12,7 @@
 --   This defines the variable @HEADERS_DIR@ (equal to @\/path\/to\/dir@), and
 --   @CFLAGS@ (equal to @-g -I\/path\/to\/dir -O2@), and also includes the configuration
 --   statements in the file @extra/file.cfg@. The full lexical syntax for configuration
---   files is defined here: <http://martine.github.io/ninja/manual.html#_lexical_syntax>.
+--   files is defined here: <https://ninja-build.org/manual.html#_lexical_syntax>.
 --
 --   To use the configuration file either use 'readConfigFile' to parse the configuration file
 --   and use the values directly, or 'usingConfigFile' and 'getConfig' to track the configuration
@@ -37,14 +37,14 @@ import Prelude
 
 -- | Read a config file, returning a list of the variables and their bindings.
 --   Config files use the Ninja lexical syntax:
---   <http://martine.github.io/ninja/manual.html#_lexical_syntax>
+--   <https://ninja-build.org/manual.html#_lexical_syntax>
 readConfigFile :: FilePath -> IO (Map.HashMap String String)
 readConfigFile = readConfigFileWithEnv []
 
 
 -- | Read a config file with an initial environment, returning a list of the variables and their bindings.
 --   Config files use the Ninja lexical syntax:
---   <http://martine.github.io/ninja/manual.html#_lexical_syntax>
+--   <https://ninja-build.org/manual.html#_lexical_syntax>
 readConfigFileWithEnv :: [(String, String)] -> FilePath -> IO (Map.HashMap String String)
 readConfigFileWithEnv vars file = do
     env <- Ninja.newEnv
