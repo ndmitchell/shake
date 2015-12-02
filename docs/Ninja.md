@@ -2,7 +2,7 @@
 
 _See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Shake manual](Manual.md#readme)_
 
-Shake supports the `.ninja` file format used by the [Ninja tool](http://martine.github.io/ninja/). This document describes how to use Shake instead of Ninja, and why you might want to do so.
+Shake supports the `.ninja` file format used by the [Ninja tool](https://ninja-build.org/). This document describes how to use Shake instead of Ninja, and why you might want to do so.
 
 #### Installing Shake
 
