@@ -131,18 +131,16 @@ commandExplicit funcName oopts results exe args = do
 
     let quoted x = "\"" ++ x ++ "\""
     
-    let tracker act = case shakeLint of
-            Just LintFSATrace -> fsatrace act
-            _ -> if autodepping
-                 then autodeps act
-                 else if useShell
-                      then shelled act exe args
-                      else act exe args
+    let tracker act
+            | useLint = fsatrace act
+            | useAutoDeps = autodeps act
+            | useShell = shelled act exe args
+            | otherwise = act exe args
+    
         shelled act exe args
             | isWindows = act "cmd.exe" ["/c", unwords $ exe : map quoted args]
             | otherwise = act "/bin/sh" ["-c", unwords $ map quoted (exe : args)]
                               
-        autodepping = AutoDeps `elem` opts
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) shakeLintInside
@@ -167,7 +165,7 @@ commandExplicit funcName oopts results exe args = do
             ws <- existing writer xs
             let reads = ham cwd rs
                 writes = ham cwd ws
-            when autodepping $
+            when useAutoDeps $
                 needed reads
             trackRead reads
             trackWrite writes
@@ -567,8 +565,7 @@ withTempFile act = do
 
 -- A better version of showCommandForUser, which doesn't escape so much on Windows
 showCommandForUser2 :: FilePath -> [String] -> String
-showCommandForUser2 cmd args
-    | otherwise = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
+showCommandForUser2 cmd args = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
     where
         safe xs = not (null xs) && not (any bad xs)
         bad x = isSpace x || (x == '\\' && not isWindows) || x `elem` "\"\'"
