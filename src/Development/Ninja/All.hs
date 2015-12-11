@@ -224,25 +224,26 @@ printCompDb xs = unlines $ ["["] ++ concat (zipWith f [1..] xs) ++ ["]"]
 
 
 toCommand :: String -> ([CmdOption], String, [String])
-toCommand s
-    -- On POSIX, Ninja does a /bin/sh -c, and so does Haskell in Shell mode (easy).
-    | not isWindows = ([Shell], s, [])
-    -- On Windows, Ninja passes the string directly to CreateProcess,
-    -- but Haskell applies some escaping first.
-    -- We try and get back as close to the original as we can, but it's very hacky
-    | length s < 8000 =
-        -- Using the "cmd" program adds overhead (I measure 7ms), and a limit of 8191 characters,
-        -- but is the most robust, requiring no additional escaping.
-        ([Shell], s, [])
-    | (cmd,s) <- word1 s, map toUpper cmd `elem` ["CMD","CMD.EXE"], ("/c",s) <- word1 s =
-        -- Given "cmd.exe /c <something>" we translate to Shell, which adds cmd.exe
-        -- (looked up on the current path) and /c to the front. CMake uses this rule a lot.
-        -- Adding quotes around pieces are /c goes very wrong.
-        ([Shell], s, [])
-    | otherwise =
-        -- It's a long command line which doesn't call "cmd /c". We reverse the escaping
-        -- Haskell applies, but each argument will still gain quotes around it.
-        let xs = splitArgs s in ([], head $ xs ++ [""], drop 1 xs)
+toCommand s = ([Shell], head xs, tail xs)
+    where xs = splitArgs s
+    -- -- On POSIX, Ninja does a /bin/sh -c, and so does Haskell in Shell mode (easy).
+    -- | not isWindows = ([Shell], s, [])
+    -- -- On Windows, Ninja passes the string directly to CreateProcess,
+    -- -- but Haskell applies some escaping first.
+    -- -- We try and get back as close to the original as we can, but it's very hacky
+    -- | length s < 8000 =
+    --     -- Using the "cmd" program adds overhead (I measure 7ms), and a limit of 8191 characters,
+    --     -- but is the most robust, requiring no additional escaping.
+    --     ([Shell], s, [])
+    -- | (cmd,s) <- word1 s, map toUpper cmd `elem` ["CMD","CMD.EXE"], ("/c",s) <- word1 s =
+    --     -- Given "cmd.exe /c <something>" we translate to Shell, which adds cmd.exe
+    --     -- (looked up on the current path) and /c to the front. CMake uses this rule a lot.
+    --     -- Adding quotes around pieces are /c goes very wrong.
+    --     ([Shell], s, [])
+    -- | otherwise =
+    --     -- It's a long command line which doesn't call "cmd /c". We reverse the escaping
+    --     -- Haskell applies, but each argument will still gain quotes around it.
+    --     let xs = splitArgs s in ([], head $ xs ++ [""], drop 1 xs)
 
 
 data State
@@ -255,6 +256,8 @@ data State
 splitArgs :: String -> [String]
 splitArgs = f Gap
     where
+        f _ ('(':xs) = "(" : f Gap xs
+        f _ (')':xs) = [] : ")" : f Gap xs
         f Gap (x:xs) | isSpace x = f Gap xs
         f Gap ('\"':xs) = f Quot xs
         f Gap [] = []
