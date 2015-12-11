@@ -113,7 +113,7 @@ commandExplicit funcName oopts results exe args = do
     let useShell = Shell `elem` oopts
     let useLint = shakeLint == Just LintFSATrace
     let useAutoDeps = AutoDeps `elem` oopts
-    let opts = shakeCommandOptions ++ if useLint || useAutoDeps then filter (/= Shell) oopts else oopts
+    let opts = shakeCommandOptions ++ filter (/= Shell) oopts
 
     let skipper act = if null results && not shakeRunCommands then return [] else act
 
@@ -129,9 +129,19 @@ commandExplicit funcName oopts results exe args = do
             [] -> traced (takeFileName exe)
 
 
+    let quoted x = "\"" ++ x ++ "\""
+    
     let tracker act = case shakeLint of
             Just LintFSATrace -> fsatrace act
-            _ -> if autodepping then autodeps act else act exe args
+            _ -> if autodepping
+                 then autodeps act
+                 else if useShell
+                      then shelled act exe args
+                      else act exe args
+        shelled act exe args
+            | isWindows = act "cmd.exe" ["/c", unwords $ exe : map quoted args]
+            | otherwise = act "/bin/sh" ["-c", unwords $ map quoted (exe : args)]
+                              
         autodepping = AutoDeps `elem` opts
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
@@ -140,7 +150,7 @@ commandExplicit funcName oopts results exe args = do
 
         fsaCmd act opts file
             | not useShell = invoke $ exe:args
-            | not isWindows = invoke ["/bin/sh","-c",unwords $ exe:args]
+            | not isWindows = invoke ["/bin/sh", "-c", unwords $ map quoted (exe : args)]
             | otherwise = invoke $ "cmd.exe" : "/c" : exe : args
             where invoke rest = act "fsatrace" $ opts : file : "--" : rest
                 -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
