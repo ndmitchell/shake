@@ -24,7 +24,7 @@ import Control.Monad
 import Data.Maybe
 import Data.Char
 import Data.List.Extra
-import System.Info.Extra
+--import System.Info.Extra
 import Prelude
 
 
