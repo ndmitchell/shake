@@ -106,11 +106,14 @@ instance Eq Pid where _ == _ = True
 
 -- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName opts results exe args = do
+commandExplicit funcName oopts results exe args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    opts <- return $ shakeCommandOptions ++ opts
+    let useShell = Shell `elem` oopts
+    let useLint = shakeLint == Just LintFSATrace
+    let useAutoDeps = AutoDeps `elem` oopts
+    let opts = shakeCommandOptions ++ if useLint || useAutoDeps then filter (/= Shell) oopts else oopts
 
     let skipper act = if null results && not shakeRunCommands then return [] else act
 
@@ -125,10 +128,6 @@ commandExplicit funcName opts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-    let useLint = shakeLint == Just LintFSATrace
-    let useAutoDeps = AutoDeps `elem` opts
-    let useShell = Shell `elem` opts
-    opts <- return $ if useLint || useAutoDeps then filter (/= Shell) opts else opts
 
     let tracker act = case shakeLint of
             Just LintFSATrace -> fsatrace act
@@ -142,7 +141,7 @@ commandExplicit funcName opts results exe args = do
         fsaCmd act opts file
             | not useShell = invoke $ exe:args
             | not isWindows = invoke ["/bin/sh","-c",unwords $ exe:args]
-            | otherwise = invoke ["cmd",unwords $ "/c":exe:args]
+            | otherwise = invoke $ "cmd.exe" : "/c" : exe : args
             where invoke rest = act "fsatrace" $ opts : file : "--" : rest
                 -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
                 -- the fact that the arguments are [cmd,/c whatever] is importantant, making it 1 or 3 fails
