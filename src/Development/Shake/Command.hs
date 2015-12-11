@@ -128,8 +128,15 @@ commandExplicit funcName oopts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-
-    let quoted x = "\"" ++ x ++ "\""
+    let quoted x
+            | x == "1>&" = x    
+            | x == "2>&" = x
+            | x == "1>" = x        
+            | x == "2>" = x
+            | x == ">" = x
+            | x == "<" = x
+            | x == "|" = x
+            | otherwise = "\"" ++ x ++ "\""
     
     let tracker act
             | useLint = fsatrace act
