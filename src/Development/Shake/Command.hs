@@ -44,6 +44,7 @@ import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
+import Development.Shake.Derived(writeFile')
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -111,6 +112,7 @@ commandExplicit funcName oopts results exe args = do
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
     let useShell = Shell `elem` oopts
+    let useRawShell = RawShell `elem` oopts    
     let useLint = shakeLint == Just LintFSATrace
     let useAutoDeps = AutoDeps `elem` oopts
     let opts = shakeCommandOptions ++ filter (/= Shell) oopts
@@ -128,30 +130,21 @@ commandExplicit funcName oopts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-    let quoted x
-            | x == "&&" = x        
-            | x == "||" = x
-            | x == ">" = x
-            | x == "|" = x
-            | x == "<" = x
-            | x == ">>" = x    
-            | x == "1>&" = x    
-            | x == "2>&" = x
-            | x == "1>" = x        
-            | x == "2>" = x
-            | x == "(" = x
-            | x == ")" = x        
-            | otherwise = "\"" ++ x ++ "\""
-    
     let tracker act
-            | useLint = fsatrace act
             | useAutoDeps = autodeps act
-            | useShell = shelled act exe args
+            | useRawShell = rawshelled act    
+            | useShell = shelled act
+            | useLint = fsatrace act
             | otherwise = act exe args
-    
-        shelled act exe args
-            | isWindows = act "cmd.exe" ["/c", unwords $ exe : map quoted args]
-            | otherwise = act "/bin/sh" ["-c", unwords $ map quoted (exe : args)]
+
+        sh | isWindows = "cmd.exe"
+           | otherwise = "/bin/sh"
+
+        genRawScript file = writeFile' file $ unwords $ exe : args
+        genScript file = writeFile' file $ showCommandForUser exe args
+
+        rawshelled act = withTempFile $ \file -> genRawScript file >> act sh [file]    
+        shelled act = withTempFile $ \file -> genScript file >> act sh [file]
                               
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
@@ -159,12 +152,9 @@ commandExplicit funcName oopts results exe args = do
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
-            | not useShell = invoke $ exe:args
-            | not isWindows = invoke ["/bin/sh", "-c", unwords $ map quoted (exe : args)]
-            | otherwise = invoke $ "cmd.exe" : "/c" : exe : args
-            where invoke rest = act "fsatrace" $ opts : file : "--" : rest
-                -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
-                -- the fact that the arguments are [cmd,/c whatever] is importantant, making it 1 or 3 fails
+            | useRawShell = withTempFile $ \tfile -> genRawScript tfile >> act "fsatrace" [opts, file, "--", sh, tfile]
+            | useShell = withTempFile $ \tfile -> genScript tfile >> act "fsatrace" [opts, file, "--", sh, tfile]
+            | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 
         fsatrace act = withTempFile $ \file -> do
             res <- fsaCmd act "rwm" file
