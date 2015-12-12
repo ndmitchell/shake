@@ -27,7 +27,7 @@ import Data.Maybe
 import System.Directory
 import System.Environment.Extra
 import System.Exit
-import System.IO.Extra hiding (withTempFile)
+import System.IO.Extra hiding (withTempFile, withTempDir)
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
@@ -44,7 +44,7 @@ import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
-import Development.Shake.Derived(writeFile')
+import Development.Shake.Derived(writeFile', withTempDir)
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -140,11 +140,16 @@ commandExplicit funcName oopts results exe args = do
         sh | isWindows = "cmd.exe"
            | otherwise = "/bin/sh"
 
-        genRawScript file = writeFile' file $ unwords $ exe : args
-        genScript file = writeFile' file $ showCommandForUser exe args
+        shargs | isWindows = "/d/q/c"
+               | otherwise = "--"
 
-        rawshelled act = withTempFile $ \file -> genRawScript file >> act sh [file]    
-        shelled act = withTempFile $ \file -> genScript file >> act sh [file]
+        genRawScript file = writeFile' file (unwords $ exe : args)
+        genScript file = writeFile' file (showCommandForUser2 exe args)
+
+        withTempScript act = withTempDir $ \dir -> act (dir </> "raw.bat")
+    
+        rawshelled act = withTempScript $ \script -> genRawScript script >> act sh [shargs, script]
+        shelled act = withTempScript $ \script -> genScript script >> act sh [shargs, script]
                               
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
@@ -152,8 +157,8 @@ commandExplicit funcName oopts results exe args = do
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
-            | useRawShell = withTempFile $ \tfile -> genRawScript tfile >> act "fsatrace" [opts, file, "--", sh, tfile]
-            | useShell = withTempFile $ \tfile -> genScript tfile >> act "fsatrace" [opts, file, "--", sh, tfile]
+            | useRawShell = withTempScript $ \script -> genRawScript script >> act "fsatrace" [opts, file, "--", sh, shargs, script]
+            | useShell = withTempScript $ \script -> genScript script >> act "fsatrace" [opts, file, "--", sh, shargs, script]
             | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 
         fsatrace act = withTempFile $ \file -> do
