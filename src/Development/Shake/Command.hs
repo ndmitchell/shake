@@ -112,7 +112,6 @@ commandExplicit funcName oopts results exe args = do
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
     let useShell = Shell `elem` oopts
-    let useRawShell = RawShell `elem` oopts    
     let useLint = shakeLint == Just LintFSATrace
     let useAutoDeps = AutoDeps `elem` oopts
     let opts = shakeCommandOptions ++ filter (/= Shell) oopts
@@ -131,10 +130,9 @@ commandExplicit funcName oopts results exe args = do
             [] -> traced (takeFileName exe)
 
     let tracker act
-            | useAutoDeps = autodeps act
-            | useRawShell = rawshelled act    
-            | useShell = shelled act
             | useLint = fsatrace act
+            | useAutoDeps = autodeps act
+            | useShell = shelled act
             | otherwise = act exe args
 
         sh | isWindows = "cmd.exe"
@@ -143,12 +141,10 @@ commandExplicit funcName oopts results exe args = do
         shargs | isWindows = "/d/q/c"
                | otherwise = "--"
 
-        genRawScript file = writeFile' file (unwords $ exe : args)
-        genScript file = writeFile' file (showCommandForUser2 exe args)
+        genScript file = writeFile' file $ unwords $ exe : args
 
-        withTempScript act = withTempDir $ \dir -> act (dir </> "raw.bat")
+        withTempScript act = withTempDir $ \dir -> act (dir </> "s.bat")
     
-        rawshelled act = withTempScript $ \script -> genRawScript script >> act sh [shargs, script]
         shelled act = withTempScript $ \script -> genScript script >> act sh [shargs, script]
                               
         ignore = map (?==) shakeLintIgnore
@@ -157,7 +153,6 @@ commandExplicit funcName oopts results exe args = do
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
-            | useRawShell = withTempScript $ \script -> genRawScript script >> act "fsatrace" [opts, file, "--", sh, shargs, script]
             | useShell = withTempScript $ \script -> genScript script >> act "fsatrace" [opts, file, "--", sh, shargs, script]
             | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 

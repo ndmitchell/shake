@@ -120,12 +120,12 @@ build needDeps phonys rules pools out build@Build{..} = do
 
                 when (description /= "") $ putNormal description
                 if deps == "msvc" then do
-                    Stdout stdout <- withPool $ command [RawShell] commandline []
+                    Stdout stdout <- withPool $ command [Shell] commandline []
                     prefix <- liftIO $ fmap (fromMaybe $ BS.pack "Note: including file: ") $
                                        askEnv env $ BS.pack "msvc_deps_prefix"
                     needDeps build $ parseShowIncludes prefix $ BS.pack stdout
                  else
-                    withPool $ command_ [RawShell] commandline []
+                    withPool $ command_ [Shell] commandline []
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile

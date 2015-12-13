@@ -22,7 +22,7 @@ import Prelude
 
 
 main = shaken test $ \args obj -> do
-    let helper = [toNative $ obj "shake_helper" <.> exe]
+    let helper = toNative $ obj "shake_helper" <.> exe
     let name !> test = do want [name | null args || name `elem` args]
                           name ~> do need [obj "shake_helper" <.> exe]; test
 
@@ -96,10 +96,10 @@ main = shaken test $ \args obj -> do
     "space" !> do
         Stdout out <- cmd helper ["oSPACE 1"]
         liftIO $ out === "SPACE 1\n"
-        Stdout out <- cmd Shell helper ["oSPACE 2"]
+        Stdout out <- cmd Shell helper "\"oSPACE 2\""
         liftIO $ out === "SPACE 2\n"
         whenM (liftIO hasTracker) $ do
-            Stdout out <- cmd Shell AutoDeps helper ["oSPACE 2"]
+            Stdout out <- cmd Shell AutoDeps helper "\"oSPACE 2\""
             liftIO $ out === "SPACE 2\n"
         (Stdout (), CmdLine x) <- cmd helper ["oSPACE 3","oDIRECT"]
         unless (" \"oSPACE 3\" oDIRECT" `isSuffixOf` replace "\'" "\"" x) $
