@@ -14,7 +14,7 @@ data CmdOption
     | Stdin String -- ^ Given as the @stdin@ of the spawned process. By default the @stdin@ is inherited.
     | StdinBS LBS.ByteString -- ^ Given as the @stdin@ of the spawned process.
     | FileStdin FilePath -- ^ Take the @stdin@ from a file.
-    | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces.
+    | Shell -- ^ Pass the command to the shell without escaping - any arguments will be joined with spaces. By default arguments are escaped properly.
     | BinaryPipes -- ^ Treat the @stdin@\/@stdout@\/@stderr@ messages as binary. By default 'String' results use text encoding and 'ByteString' results use binary encoding.
     | Traced String -- ^ Name to use with 'traced', or @\"\"@ for no tracing. By default traces using the name of the executable.
     | Timeout Double -- ^ Abort the computation after N seconds, will raise a failure exit code. Calls 'interruptProcessGroupOf' and 'terminateProcess', but may sometimes fail to abort the process and not timeout.
