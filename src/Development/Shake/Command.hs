@@ -141,11 +141,12 @@ commandExplicit funcName oopts results exe args = do
         shargs | isWindows = "/d/q/c"
                | otherwise = "--"
 
-        genScript file = writeFile' file $ unwords $ exe : args
-
-        withTempScript act = withTempDir $ \dir -> act (dir </> "s.bat")
+        withScriptFile act = withTempDir $ \dir ->
+            let script = dir </> "s.bat"
+                genScript = writeFile' script $ unwords $ exe : args
+            in genScript >> act script
     
-        shelled act = withTempScript $ \script -> genScript script >> act sh [shargs, script]
+        shelled act = withScriptFile $ \script -> act sh [shargs, script]
                               
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
@@ -153,7 +154,7 @@ commandExplicit funcName oopts results exe args = do
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
-            | useShell = withTempScript $ \script -> genScript script >> act "fsatrace" [opts, file, "--", sh, shargs, script]
+            | useShell = withScriptFile $ \script -> act "fsatrace" [opts, file, "--", sh, shargs, script]
             | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 
         fsatrace act = withTempFile $ \file -> do
