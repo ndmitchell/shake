@@ -24,6 +24,7 @@ import Control.Monad
 import Data.Maybe
 import Data.Char
 import Data.List.Extra
+import System.Info.Extra
 import Prelude
 
 
@@ -118,13 +119,14 @@ build needDeps phonys rules pools out build@Build{..} = do
                         Just r -> withResource r 1 act
 
                 when (description /= "") $ putNormal description
+                let (cmdOpts, cmdProg, cmdArgs) = toCommand commandline
                 if deps == "msvc" then do
-                    Stdout stdout <- withPool $ command [Shell] commandline []
+                    Stdout stdout <- withPool $ command cmdOpts cmdProg cmdArgs
                     prefix <- liftIO $ fmap (fromMaybe $ BS.pack "Note: including file: ") $
                                        askEnv env $ BS.pack "msvc_deps_prefix"
                     needDeps build $ parseShowIncludes prefix $ BS.pack stdout
                  else
-                    withPool $ command_ [Shell] commandline []
+                    withPool $ command_ cmdOpts cmdProg cmdArgs
                 when (depfile /= "") $ do
                     when (deps /= "gcc") $ need [depfile]
                     depsrc <- liftIO $ BS.readFile depfile
@@ -219,3 +221,61 @@ printCompDb xs = unlines $ ["["] ++ concat (zipWith f [1..] xs) ++ ["]"]
             ,"    \"file\": " ++ g cdbFile
             ,"  }" ++ (if i == n then "" else ",")]
         g = show
+
+
+toCommand :: String -> ([CmdOption], String, [String])
+toCommand s
+    -- On POSIX, Ninja does a /bin/sh -c, and so does Haskell in Shell mode (easy).
+    | not isWindows = ([Shell], s, [])
+    -- On Windows, Ninja passes the string directly to CreateProcess,
+    -- but Haskell applies some escaping first.
+    -- We try and get back as close to the original as we can, but it's very hacky
+    | length s < 8000 =
+        -- Using the "cmd" program adds overhead (I measure 7ms), and a limit of 8191 characters,
+        -- but is the most robust, requiring no additional escaping.
+        ([Shell], s, [])
+    | (cmd,s) <- word1 s, map toUpper cmd `elem` ["CMD","CMD.EXE"], ("/c",s) <- word1 s =
+        -- Given "cmd.exe /c <something>" we translate to Shell, which adds cmd.exe
+        -- (looked up on the current path) and /c to the front. CMake uses this rule a lot.
+        -- Adding quotes around pieces are /c goes very wrong.
+        ([Shell], s, [])
+    | otherwise =
+        -- It's a long command line which doesn't call "cmd /c". We reverse the escaping
+        -- Haskell applies, but each argument will still gain quotes around it.
+        let xs = splitArgs s in ([], head $ xs ++ [""], drop 1 xs)
+
+
+data State
+    = Gap -- ^ Current in the gap between words
+    | Word -- ^ Currently inside a space-separated argument
+    | Quot -- ^ Currently inside a quote-surrounded argument
+
+-- | The process package contains a translate function, reproduced below. The aim is that after command line
+--   parsing we should get out mostly the same answer.
+splitArgs :: String -> [String]
+splitArgs = f Gap
+    where
+        f Gap (x:xs) | isSpace x = f Gap xs
+        f Gap ('\"':xs) = f Quot xs
+        f Gap [] = []
+        f Gap xs = f Word xs
+        f Word (x:xs) | isSpace x = [] : f Gap xs
+        f Quot ('\"':xs) = [] : f Gap xs
+        f s ('\\':xs) | (length -> a, b) <- span (== '\\') xs = case b of
+            '\"':xs | even a -> add (replicate (a `div` 2) '\\' ++ "\"") $ f s xs
+                    | otherwise -> add (replicate ((a+1) `div` 2) '\\') $ f s ('\"':xs)
+            xs -> add (replicate (a+1) '\\') $ f s xs
+        f s (x:xs) = add [x] $ f s xs
+        f s [] = [[]]
+
+        add a (b:c) = (a++b):c
+        add a [] = [a]
+
+{-
+translate (cmd,args) = unwords $ f cmd : map f args
+    where
+        f x = '"' : snd (foldr escape (True,"\"") xs)
+        escape '"'  (_,     str) = (True,  '\\' : '"'  : str)
+        escape '\\' (True,  str) = (True,  '\\' : '\\' : str)
+        escape c    (_,     str) = (False, c : str)
+-}
