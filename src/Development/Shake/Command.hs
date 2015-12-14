@@ -139,7 +139,7 @@ commandExplicit funcName oopts results exe args = do
            | otherwise = "/bin/sh"
 
         shargs | isWindows = "/d/q/c"
-               | otherwise = "--"
+               | otherwise = "-e"
 
         withScriptFile act = withTempDir $ \dir ->
             let script = dir </> "s.bat"
