@@ -111,10 +111,11 @@ commandExplicit funcName oopts results exe args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    let useShell = Shell `elem` oopts
+    let fopts = shakeCommandOptions ++ oopts
+    let useShell = Shell `elem` fopts
     let useLint = shakeLint == Just LintFSATrace
-    let useAutoDeps = AutoDeps `elem` oopts
-    let opts = shakeCommandOptions ++ filter (/= Shell) oopts
+    let useAutoDeps = AutoDeps `elem` fopts
+    let opts = filter (/= Shell) fopts
 
     let skipper act = if null results && not shakeRunCommands then return [] else act
 
