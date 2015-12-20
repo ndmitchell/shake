@@ -11,6 +11,7 @@ import Data.List
 import Development.Shake.Progress
 import Development.Shake.FilePattern
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.CmdOption
 
 
@@ -162,7 +163,7 @@ shakeOptions = ShakeOptions
     ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) Nothing [] False True False
     True ChangeModtime True [] False
     (const $ return ())
-    (const $ BS.putStrLn . BS.pack) -- try and output atomically using BS
+    (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
