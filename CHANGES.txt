@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #365, fix unicode output with putNormal
     #269, add parallel execution via parallel/forP/par
     #310, preserve quoting around cmd
     #333, optimise the random pool, up to 20% faster
