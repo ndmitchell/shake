@@ -4,6 +4,8 @@ The [manual](Manual.md) describes how do do simple integration with `gcc -M`. Th
 
 The C pattern of `#include` files is probably the most brutal, so we focus on it first.
 
+This pattern also generalising to linking, for example with Haskell.
+
 #### Include files with Visual Studio
 
 While `gcc` has the `-MMD` flag to generate a Makefile, the Visual Studio compiler `cl` does not. However, it does have a flag `-showincludes` which writes the include files on stdout as they are used. The initial example could be written using `cl` as:
