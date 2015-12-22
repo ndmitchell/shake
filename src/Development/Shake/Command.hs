@@ -27,7 +27,7 @@ import Data.Maybe
 import System.Directory
 import System.Environment.Extra
 import System.Exit
-import System.IO.Extra hiding (withTempFile)
+import System.IO.Extra hiding (withTempFile, withTempDir)
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
@@ -44,6 +44,7 @@ import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
+import Development.Shake.Derived(writeFile', withTempDir)
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -106,11 +107,15 @@ instance Eq Pid where _ == _ = True
 
 -- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName opts results exe args = do
+commandExplicit funcName oopts results exe args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    opts <- return $ shakeCommandOptions ++ opts
+    let fopts = shakeCommandOptions ++ oopts
+    let useShell = Shell `elem` fopts
+    let useLint = shakeLint == Just LintFSATrace
+    let useAutoDeps = AutoDeps `elem` fopts
+    let opts = filter (/= Shell) fopts
 
     let skipper act = if null results && not shakeRunCommands then return [] else act
 
@@ -125,27 +130,33 @@ commandExplicit funcName opts results exe args = do
             msg:_ -> traced msg
             [] -> traced (takeFileName exe)
 
-    let useLint = shakeLint == Just LintFSATrace
-    let useAutoDeps = AutoDeps `elem` opts
-    let useShell = Shell `elem` opts
-    opts <- return $ if useLint || useAutoDeps then filter (/= Shell) opts else opts
+    let tracker act
+            | useLint = fsatrace act
+            | useAutoDeps = autodeps act
+            | useShell = shelled act
+            | otherwise = act exe args
 
-    let tracker act = case shakeLint of
-            Just LintFSATrace -> fsatrace act
-            _ -> if autodepping then autodeps act else act exe args
-        autodepping = AutoDeps `elem` opts
+        sh | isWindows = "cmd.exe"
+           | otherwise = "/bin/sh"
+
+        shargs | isWindows = "/d/q/c"
+               | otherwise = "-e"
+
+        withScriptFile act = withTempDir $ \dir ->
+            let script = dir </> "s.bat"
+                genScript = writeFile' script $ unwords $ exe : args
+            in genScript >> act script
+    
+        shelled act = withScriptFile $ \script -> act sh [shargs, script]
+                              
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) shakeLintInside
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
-            | not useShell = invoke $ exe:args
-            | not isWindows = invoke ["/bin/sh","-c",unwords $ exe:args]
-            | otherwise = invoke ["cmd",unwords $ "/c":exe:args]
-            where invoke rest = act "fsatrace" $ opts : file : "--" : rest
-                -- on Win98 it's command instead of cmd, but no one uses Win98 anymore
-                -- the fact that the arguments are [cmd,/c whatever] is importantant, making it 1 or 3 fails
+            | useShell = withScriptFile $ \script -> act "fsatrace" [opts, file, "--", sh, shargs, script]
+            | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 
         fsatrace act = withTempFile $ \file -> do
             res <- fsaCmd act "rwm" file
@@ -158,7 +169,7 @@ commandExplicit funcName opts results exe args = do
             ws <- existing writer xs
             let reads = ham cwd rs
                 writes = ham cwd ws
-            when autodepping $
+            when useAutoDeps $
                 needed reads
             trackRead reads
             trackWrite writes
@@ -558,8 +569,7 @@ withTempFile act = do
 
 -- A better version of showCommandForUser, which doesn't escape so much on Windows
 showCommandForUser2 :: FilePath -> [String] -> String
-showCommandForUser2 cmd args
-    | otherwise = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
+showCommandForUser2 cmd args = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
     where
         safe xs = not (null xs) && not (any bad xs)
         bad x = isSpace x || (x == '\\' && not isWindows) || x `elem` "\"\'"
