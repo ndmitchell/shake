@@ -136,18 +136,7 @@ commandExplicit funcName oopts results exe args = do
             | useShell = shelled act
             | otherwise = act exe args
 
-        sh | isWindows = "cmd.exe"
-           | otherwise = "/bin/sh"
-
-        shargs | isWindows = "/d/q/c"
-               | otherwise = "-e"
-
-        withScriptFile act = withTempDir $ \dir ->
-            let script = dir </> "s.bat"
-                genScript = writeFile' script $ unwords $ exe : args
-            in genScript >> act script
-    
-        shelled act = withScriptFile $ \script -> act sh [shargs, script]
+        shelled = runShell (unwords $ exe : args)
                               
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
@@ -155,7 +144,7 @@ commandExplicit funcName oopts results exe args = do
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
-            | useShell = withScriptFile $ \script -> act "fsatrace" [opts, file, "--", sh, shargs, script]
+            | useShell = runShell (unwords $ exe : args) $ \exe args -> act "fsatrace" $ opts : file : "--" : exe : args
             | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 
         fsatrace act = withTempFile $ \file -> do
@@ -183,6 +172,15 @@ commandExplicit funcName oopts results exe args = do
             return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
+
+
+-- | Given a shell command, call the continuation with the sanitised exec-style arguments
+runShell :: String -> (String -> [String] -> Action a) -> Action a
+runShell x act | not isWindows = act "/bin/sh" ["-c",x] -- do exactly what Haskell does
+runShell x act = withTempDir $ \dir -> do
+    let file = dir </> "s.bat"
+    writeFile' file x
+    act "cmd.exe" ["/d/q/c",file]
 
 
 -- | Parse the FSATrace structure
