@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, MultiWayIf #-}
 
 module Development.Shake.Core(
     run,
@@ -286,7 +286,7 @@ createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
-            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
+            where f :: Rule key value => (key -> Maybe (m value)) -> key -> IO (Maybe value)
                   f _ = storedValue opt
 
         equal ((_,ARule r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
@@ -647,15 +647,11 @@ trackUse key = do
     l@Local{..} <- Action getRW
     deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
     let top = topStack localStack
-    if top == Just k then
-        return () -- condition 1
-     else if k `elem` deps then
-        return () -- condition 2
-     else if any ($ k) localTrackAllows then
-        return () -- condition 3
-     else
-        Action $ putRW l{localTrackUsed = k : localTrackUsed} -- condition 4
-
+    if | top == Just k -> return () -- condition 1
+       | k `elem` deps -> return () -- condition 2
+       | any ($ k) localTrackAllows -> return () -- condition 3
+       | otherwise -> Action $
+          putRW l{localTrackUsed = k : localTrackUsed} -- condition 4
 
 trackCheckUsed :: Action ()
 trackCheckUsed = do
@@ -695,14 +691,11 @@ trackChange key = do
     Local{..} <- Action getRW
     liftIO $ do
         let top = topStack localStack
-        if top == Just k then
-            return () -- condition 1
-         else if any ($ k) localTrackAllows then
-            return () -- condition 2
-         else
+        if | top == Just k -> return () -- condition 1
+           | any ($ k) localTrackAllows -> return () -- condition 2
+           | otherwise ->
             -- condition 3
             atomicModifyIORef globalTrackAbsent $ \ks -> ((fromMaybe k top, k):ks, ())
-
 
 -- | Allow any matching key to violate the tracking rules.
 trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
