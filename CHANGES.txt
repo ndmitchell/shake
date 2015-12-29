@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #374, make --debug=file write out newlines
     #308, make sure Shell and AutoDeps work together
     #365, fix unicode output with putNormal
     #269, add parallel execution via parallel/forP/par

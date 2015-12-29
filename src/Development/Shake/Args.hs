@@ -340,7 +340,7 @@ shakeOptsEx =
         outputDebug output Nothing = output
         outputDebug output (Just file) = \v msg -> do
             when (v /= Diagnostic) $ output v msg
-            appendFile file $ unescape msg
+            appendFile file $ unescape msg ++ "\n"
 
         outputColor output v msg = output v $ escape "34" msg
 
