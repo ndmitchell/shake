@@ -215,7 +215,7 @@ whitelist x | elem x $ words $
     "NoProgress Error src rot13 .js .json .trace about://tracing .ninja " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out build " ++
     "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
-    "-threaded -rtsopts -I0 Function extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
+    "-threaded -rtsopts -I0 Hidden TypeRep extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja ByteString ProcessHandle " ++
