@@ -158,9 +158,9 @@ data ShakeOptions = ShakeOptions
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
     ,shakeExtra :: HashMap.HashMap TypeRep Dynamic
         -- ^ This a map which can be used to store arbitrary extra
-        -- information that a user may need when writing 'Rule's.  The
-        -- correct way to use this is to define a (hidden) newtype to
-        -- use as a key, so that conflicts cannot occur.
+        --   information that a user may need when writing 'Rule's.  The
+        --   correct way to use this is to define a (hidden) newtype to
+        --   use as a key, so that conflicts cannot occur.
     }
     deriving Typeable
 
