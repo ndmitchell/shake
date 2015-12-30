@@ -183,8 +183,6 @@ tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOpti
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
 unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 =
     ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromHidden y1) (fromHidden y2) (fromHidden y3)
-    -- NB: use of fromHidden for y3 is a little bit of a hack; but
-    -- arguably we should call this fromHide not fromHidden
 
 instance Data ShakeOptions where
     gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3) =
