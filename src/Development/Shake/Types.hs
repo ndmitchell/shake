@@ -9,7 +9,6 @@ module Development.Shake.Types(
 import Data.Data
 import Data.List
 import Data.Dynamic
-import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Development.Shake.Progress
 import Development.Shake.FilePattern
@@ -157,7 +156,7 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to writing using 'putStrLn'. A function called to output messages from Shake, along with the 'Verbosity' at
         --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
-    ,shakeExtra :: HashMap TypeRep Dynamic
+    ,shakeExtra :: HashMap.HashMap TypeRep Dynamic
         -- ^ This a map which can be used to store arbitrary extra
         -- information that a user may need when writing 'Rule's.  The
         -- correct way to use this is to define a (hidden) newtype to
@@ -213,7 +212,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Hidden (IO Progress -> IO ()))
                 | Just x <- cast x = show (x :: Hidden (Verbosity -> String -> IO ()))
-                | Just x <- cast x = show (x :: Hidden (HashMap TypeRep Dynamic))
+                | Just x <- cast x = show (x :: Hidden (HashMap.HashMap TypeRep Dynamic))
                 | Just x <- cast x = show (x :: [CmdOption])
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
