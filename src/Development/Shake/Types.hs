@@ -8,6 +8,9 @@ module Development.Shake.Types(
 
 import Data.Data
 import Data.List
+import Data.Dynamic
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
 import Development.Shake.Progress
 import Development.Shake.FilePattern
 import qualified Data.ByteString.Char8 as BS
@@ -76,8 +79,8 @@ data Change
 --
 --   @ 'shakeOptions'{'shakeThreads'=4, 'shakeReport'=[\"report.html\"]} @
 --
---   The 'Data' instance for this type reports the 'shakeProgress' and 'shakeOutput' fields as having the abstract type 'Function',
---   because 'Data' cannot be defined for functions.
+--   The 'Data' instance for this type reports the 'shakeProgress' and 'shakeOutput' fields as having the abstract type 'Hidden',
+--   because 'Data' cannot be defined for functions or 'TypeRep's.
 data ShakeOptions = ShakeOptions
     {shakeFiles :: FilePath
         -- ^ Defaults to @.shake@. The directory used for storing Shake metadata files.
@@ -154,6 +157,11 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to writing using 'putStrLn'. A function called to output messages from Shake, along with the 'Verbosity' at
         --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
+    ,shakeExtra :: HashMap TypeRep Dynamic
+        -- ^ This a map which can be used to store arbitrary extra
+        -- information that a user may need when writing 'Rule's.  The
+        -- correct way to use this is to define a (hidden) newtype to
+        -- use as a key, so that conflicts cannot occur.
     }
     deriving Typeable
 
@@ -164,24 +172,27 @@ shakeOptions = ShakeOptions
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
+    HashMap.empty
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
     ,"shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
-    ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput"]
+    ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromFunction y1) (fromFunction y2)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromHidden y1) (fromHidden y2) (fromHidden y3)
+    -- NB: use of fromHidden for y3 is a little bit of a hack; but
+    -- arguably we should call this fromHide not fromHidden
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
         x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k`
-        Function y1 `k` Function y2
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+        Hidden y1 `k` Hidden y2 `k` Hidden y3
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -200,25 +211,26 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Maybe Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
-                | Just x <- cast x = show (x :: Function (IO Progress -> IO ()))
-                | Just x <- cast x = show (x :: Function (Verbosity -> String -> IO ()))
+                | Just x <- cast x = show (x :: Hidden (IO Progress -> IO ()))
+                | Just x <- cast x = show (x :: Hidden (Verbosity -> String -> IO ()))
+                | Just x <- cast x = show (x :: Hidden (HashMap TypeRep Dynamic))
                 | Just x <- cast x = show (x :: [CmdOption])
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
 
 -- | Internal type, copied from Hide in Uniplate
-newtype Function a = Function {fromFunction :: a}
+newtype Hidden a = Hidden {fromHidden :: a}
     deriving Typeable
 
-instance Show (Function a) where show _ = "<function>"
+instance Show (Hidden a) where show _ = "<hidden>"
 
-instance Typeable a => Data (Function a) where
+instance Typeable a => Data (Hidden a) where
     gfoldl k z = z
     gunfold k z c = error "Development.Shake.Types.ShakeProgress: gunfold not implemented - data type has no constructors"
     toConstr _ = error "Development.Shake.Types.ShakeProgress: toConstr not implemented - data type has no constructors"
-    dataTypeOf _ = tyFunction
+    dataTypeOf _ = tyHidden
 
-tyFunction = mkDataType "Development.Shake.Types.Function" []
+tyHidden = mkDataType "Development.Shake.Types.Hidden" []
 
 
 -- | The verbosity data type, used by 'shakeVerbosity'.
