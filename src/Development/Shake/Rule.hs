@@ -3,6 +3,7 @@
 --   Most users will find the built-in set of rules sufficient.
 module Development.Shake.Rule(
     Rule(..), EqualCost(..), rule, apply, apply1,
+    MaybeStored(..),
     trackUse, trackChange, trackAllow,
     -- * Deprecated
     defaultRule
@@ -10,6 +11,7 @@ module Development.Shake.Rule(
 
 import Development.Shake.Core
 import Development.Shake.Types
+import Development.Shake.Database
 
 {-# DEPRECATED defaultRule "Use 'rule' with 'priority' 0" #-}
 

@@ -4,6 +4,7 @@
 
 module Development.Shake.Database(
     Trace(..),
+    MaybeStored(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
     Ops(..), build, Depends,
@@ -48,6 +49,20 @@ type Map = Map.HashMap
 newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
+
+-- | These are the possible results of running 'storedValue'.
+data MaybeStored a
+    = AlwaysRecomp
+        -- ^ No value on disk, we must recompile
+    | RecompIfNotEq a
+        -- ^ Value on disk, check if it's equal to the database
+    | NeverRecomp
+        -- ^ No value on disk, assume whatever is in the database is ok
+
+instance Functor MaybeStored where
+    fmap f (RecompIfNotEq v) = RecompIfNotEq (f v)
+    fmap _ AlwaysRecomp = AlwaysRecomp
+    fmap _ NeverRecomp = NeverRecomp
 
 
 ---------------------------------------------------------------------
@@ -174,7 +189,7 @@ newtype Depends = Depends {fromDepends :: [Id]}
 
 
 data Ops = Ops
-    {stored :: Key -> IO (Maybe Value)
+    {stored :: Key -> IO (MaybeStored Value)
         -- ^ Given a Key, find the value stored on disk
     ,equal :: Key -> Value -> Value -> EqualCost
         -- ^ Given both Values, see if they are equal and how expensive that check was
@@ -259,7 +274,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         _ -> do
                             s <- stored k
                             case s of
-                                Just s -> case equal k (result r) s of
+                                RecompIfNotEq s -> case equal k (result r) s of
                                     NotEqual -> rebuild
                                     EqualCheap -> continue r
                                     EqualExpensive -> do
@@ -268,7 +283,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                         journal i (k, Loaded r)
                                         i #= (k, Loaded r)
                                         continue r
-                                _ -> rebuild
+                                AlwaysRecomp -> rebuild
+                                NeverRecomp -> continue r
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
@@ -301,8 +317,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     Just r | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
-                                Just v -> reply $ Ready r{result=v}
-                                Nothing -> norm
+                                RecompIfNotEq v -> reply $ Ready r{result=v}
+                                AlwaysRecomp -> norm
+                                NeverRecomp -> reply $ Ready r
                     _ -> norm
             i #= (k, w)
 
@@ -435,7 +452,7 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
+checkValid :: Database -> (Key -> IO (MaybeStored Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
 checkValid Database{..} stored equal missing = do
     status <- readIORef status
     intern <- readIORef intern
@@ -445,15 +462,22 @@ checkValid Database{..} stored equal missing = do
     bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             now <- stored key
-            let good = maybe False ((==) EqualCheap . equal key result) now
+            let good = case now of
+                        AlwaysRecomp    -> False
+                        NeverRecomp     -> True
+                        RecompIfNotEq v -> EqualCheap == equal key result v
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
     unless (null bad) $ do
         let n = length bad
+            now_str result now = case now of
+                AlwaysRecomp    -> "<missing>"
+                NeverRecomp     -> show result
+                RecompIfNotEq v -> show v
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
-            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ maybe "<missing>" show now)]
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ now_str result now)]
                                         | (key, result, now) <- bad])
             ""
 

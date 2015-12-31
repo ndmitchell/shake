@@ -72,13 +72,15 @@ import Prelude
 -- * A way to compare two states of the same individual artifact, with 'equalValue' returning either
 --   'EqualCheap' or 'NotEqual'.
 --
--- * A way to query the current state of an artifact, with 'storedValue' returning the current state,
---   or 'Nothing' if there is no current state (e.g. the file does not exist).
+-- * A way to query the current state of an artifact, with 'storedValueE' returning the current state 'RecompIfNotEq',
+--   or 'AlwaysRecomp' if there is no current state (e.g. the file does not exist).
 --
 --   Checking if an artifact needs to be built consists of comparing two @value@s
 --   of the same @key@ with 'equalValue'. The first value is obtained by applying
---   'storedValue' to the @key@ and the second is the value stored in the build
---   database after the last successful build.
+--   'storedValueE' to the @key@ and the second is the value stored in the build
+--   database after the last successful build.  If you return
+--   'NeverRecomp' from 'storedValueE', then this check is always
+--   assumed to succeed.
 --
 --   As an example, below is a simplified rule for building files, where files are identified
 --   by a 'FilePath' and their state is identified by a hash of their contents
@@ -132,15 +134,27 @@ import Prelude
 --   'Rule' instances. Dependencies are created automatically by 'apply'.
 --
 --   For rules whose values are not stored externally,
---   'storedValue' should return 'Just' with a sentinel value
---   and 'equalValue' should always return 'EqualCheap' for that sentinel.
+--   'storedValueE' should just return 'NeverRecomp'.
 class (ShakeValue key, ShakeValue value) => Rule key value where
 
     -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
     --
-    --   As an example for filenames/timestamps, if the file exists you should return 'Just'
-    --   the timestamp, but otherwise return 'Nothing'.
+    --   As an example for filenames/timestamps, if the file exists you should return 'RecompIfNotEq'
+    --   the timestamp, but otherwise return 'AlwaysRecomp'.  If this
+    --   rule is for values that are never stored on the file system
+    --   (and only stored in the Shake database), return 'NeverRecomp'.
+    storedValueE :: ShakeOptions -> key -> IO (MaybeStored value)
+    storedValueE opts k
+        = maybe AlwaysRecomp RecompIfNotEq `fmap` storedValue opts k
+
+    -- | Like 'storeValueE', but this method does not have the ability
+    -- to return 'NeverRecomp'.  For backwards-compatibility.
     storedValue :: ShakeOptions -> key -> IO (Maybe value)
+    storedValue opts k = do
+        mb_stored <- storedValueE opts k
+        return $ case mb_stored of
+            RecompIfNotEq v -> Just v
+            _ -> Nothing -- will force spurious recomps
 
     -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
     equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
@@ -266,7 +280,7 @@ registerWitnesses SRules{..} =
 
 
 data RuleInfo m = RuleInfo
-    {stored :: Key -> IO (Maybe Value)
+    {stored :: Key -> IO (MaybeStored Value)
     ,equal :: Key -> Value -> Value -> EqualCost
     ,execute :: Key -> m Value
     ,resultType :: TypeRep
@@ -276,8 +290,8 @@ createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
-            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
-                  f _ = storedValue opt
+            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (MaybeStored value))
+                  f _ = storedValueE opt
 
         equal ((_,ARule r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
             where f :: Rule key value => (key -> Maybe (m value)) -> key -> value -> value -> EqualCost
@@ -291,9 +305,9 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
 
-runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
+runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (MaybeStored Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
-    Nothing -> return Nothing
+    Nothing -> return AlwaysRecomp
     Just RuleInfo{..} -> stored k
 
 runEqual :: Map.HashMap TypeRep (RuleInfo m) -> Key -> Value -> Value -> EqualCost
