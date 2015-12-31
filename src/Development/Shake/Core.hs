@@ -147,7 +147,7 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
     storedValueE opts k
         = maybe AlwaysRecomp RecompIfNotEq `fmap` storedValue opts k
 
-    -- | Like 'storeValueE', but this method does not have the ability
+    -- | Like 'storedValueE', but this method does not have the ability
     -- to return 'NeverRecomp'.  For backwards-compatibility.
     storedValue :: ShakeOptions -> key -> IO (Maybe value)
     storedValue opts k = do
