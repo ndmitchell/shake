@@ -219,7 +219,7 @@ whitelist x | elem x $ words $
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja ByteString ProcessHandle " ++
-    "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
+    "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Hashable Binary NFData Show Data " ++ -- work only with constraint kinds
     "@ndm_haskell file-name .PHONY filepath fsatrace base stack trim extra #include -j4 " ++
     "*> "
     = True
