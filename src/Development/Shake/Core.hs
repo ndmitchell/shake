@@ -605,6 +605,11 @@ getProgress = do
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
 --   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.
 --   The trace list is used for profile reports (see 'shakeReport').
+--
+--   'traced', by default, prints some useful extra context about what
+--   Shake is building (it's prepended with a hash).  If you want to
+--   suppress the output of 'traced' (for example you want more control
+--   over the message using 'putNormal'), use the 'quietly' combinator.
 traced :: String -> IO a -> Action a
 traced msg act = do
     Global{..} <- Action getRO
