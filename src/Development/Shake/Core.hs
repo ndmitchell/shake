@@ -65,7 +65,34 @@ import Prelude
 --   To define your own values meeting the necessary constraints it is convenient to use the extensions
 --   @GeneralizedNewtypeDeriving@ and @DeriveDataTypeable@ to write:
 --
--- > newtype MyType = MyType (String, Bool) deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- > newtype MyType = MyType (String, Bool) deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+--
+--   Why does Shake need all these instances?  In general, keys and
+--   values need to these instances.  Here's how Shake uses them:
+--
+-- * 'Show' is used to Shake can print out keys in error messages.  It
+--   is not used very much in a user-facing way for values, but it is
+--   used in the diagnostic logging (enabled with @-d@).
+--
+-- * 'Typeable' is used because Shake indexes its database by the
+--   TYPE of the key and value involved in the rule (overlap is not
+--   allowed for type classes and not allowed in Shake either!)
+--
+-- * 'Eq' and 'Hashable' are used on keys in order to build hash maps
+--   from keys to values.  'Eq' is used on values to test if the value
+--   has changed or not (this is used to support unchanging rebuilds,
+--   where Shake can avoid rerunning rules if it runs a dependency,
+--   but it turns out that no changes occurred.)  The 'Hashable'
+--   instances are *strictly* used only at runtime (and not
+--   serialized to disk), so they do not have to be stable across runs.
+--   TODO: What is Hashable on values used for?
+--
+-- * 'Binary' is used to serialize keys and values into Shake's
+--   build database; this lets Shake cache values across runs and
+--   implement unchanging rebuilds.
+--
+-- * 'NFData' is used to avoid space and thunk leaks, especially
+--   when Shake is parallelized.
 type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 
 
