@@ -201,16 +201,24 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
         liftIO $ storedValueError opts False ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
 
 
--- | Declare a phony action -- an action that does not produce a file, and will be rerun
---   in every execution that requires it. You can demand 'phony' rules using 'want' \/ 'need'.
---   Phony actions are never executed more than once in a single build run.
+-- | Declare a Make-style phony action.  A phony target does not name
+--   a file (despite living in the same namespace as file rules);
+--   rather, it names some action to be executed when explicitly
+--   requested.  You can demand 'phony' rules using 'want'. (And 'need',
+--   although that's not recommended.)
 --
---   Phony actions are intended to define command-line abbreviations. If you 'need' a phony action
---   in a rule then every execution where that rule is required will rerun both the rule and the phony
---   action. A phony action will run at most once per build.
+--   Phony actions are intended to define recipes that can be executed
+--   by the user. If you 'need' a phony action in a rule then every
+--   execution where that rule is required will rerun both the rule and
+--   the phony action.  However, note that phony actions are never
+--   executed more than once in a single build run.
 --
---   In make, the @.PHONY@ attribute on non-file-producing rules has a similar effect. For file-producing
---   rules see 'Development.Shake.alwaysRerun'.
+--   In make, the @.PHONY@ attribute on non-file-producing rules has a
+--   similar effect.  However, while in make it is acceptable to omit
+--   the @.PHONY@ attribute as long as you don't create the file in
+--   question, a Shake rule which behaves this way will fail lint.
+--   Use a phony rule!  For file-producing rules which should be
+--   rerun every execution of Shake, see 'Development.Shake.alwaysRerun'.
 phony :: String -> Action () -> Rules ()
 phony name act = phonys $ \s -> if s == name then Just act else Nothing
 
