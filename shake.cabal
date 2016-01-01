@@ -7,7 +7,7 @@ license-file:       LICENSE
 category:           Development, Shake
 author:             Neil Mitchell <ndmitchell@gmail.com>
 maintainer:         Neil Mitchell <ndmitchell@gmail.com>
-copyright:          Neil Mitchell 2011-2015
+copyright:          Neil Mitchell 2011-2016
 synopsis:           Build system library, like Make, but more accurate dependencies.
 description:
     Shake is a Haskell library for writing build systems - designed as a
