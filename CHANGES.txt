@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #239, make Rules an instance of MonadIO
     #384, add shakeExtra field to ShakeOptions for user data
     #374, make --debug=file write out newlines
     #308, make sure Shell and AutoDeps work together

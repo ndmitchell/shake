@@ -169,7 +169,7 @@ ruleValue = err "ruleValue"
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
-    deriving (Monad, Functor, Applicative, MonadFix)
+    deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
 
 rulesIO :: IO a -> Rules a
 rulesIO = Rules . liftIO
