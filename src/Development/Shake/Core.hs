@@ -13,7 +13,7 @@ module Development.Shake.Core(
     unsafeExtraThread,
     parallel,
     -- Internal stuff
-    rulesIO, runAfter, unsafeIgnoreDependencies,
+    runAfter, unsafeIgnoreDependencies,
     ) where
 
 import Control.Exception.Extra
@@ -170,9 +170,6 @@ ruleValue = err "ruleValue"
 --   To define your own custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
-
-rulesIO :: IO a -> Rules a
-rulesIO = Rules . liftIO
 
 newRules :: SRules Action -> Rules ()
 newRules = Rules . tell
@@ -749,7 +746,7 @@ trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackA
 --     'Development.Shake.cmd' \"cl -o\" [out] ...
 -- @
 newResource :: String -> Int -> Rules Resource
-newResource name mx = rulesIO $ newResourceIO name mx
+newResource name mx = liftIO $ newResourceIO name mx
 
 
 -- | Create a throttled resource, given a name (for error messages) and a number of resources (the 'Int') that can be
@@ -782,7 +779,7 @@ newResource name mx = rulesIO $ newResourceIO name mx
 --   we will never exceed an average of 1 request every 5 seconds, we may end up running an unbounded number of
 --   requests simultaneously. If this limitation causes a problem in practice it can be fixed.
 newThrottle :: String -> Int -> Double -> Rules Resource
-newThrottle name count period = rulesIO $ newThrottleIO name count period
+newThrottle name count period = liftIO $ newThrottleIO name count period
 
 
 blockApply :: String -> Action a -> Action a
@@ -877,7 +874,7 @@ newCacheIO act = do
 --   To create the result @MyFile.txt.digits@ the file @MyFile.txt@ will be read and counted, but only at most
 --   once per execution.
 newCache :: (Eq k, Hashable k) => (k -> Action v) -> Rules (k -> Action v)
-newCache = rulesIO . newCacheIO
+newCache = liftIO . newCacheIO
 
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
