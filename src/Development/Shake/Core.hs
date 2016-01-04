@@ -165,9 +165,9 @@ ruleValue :: (key -> Maybe (m value)) -> value
 ruleValue = err "ruleValue"
 
 
--- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'. Rules are combined
---   with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation. To define your own
---   custom types of rule, see "Development.Shake.Rule".
+-- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
+--   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
+--   To define your own custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Monad, Functor, Applicative, MonadFix)
 
