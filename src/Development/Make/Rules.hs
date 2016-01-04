@@ -12,7 +12,8 @@ import System.Directory
 import Control.Applicative
 import Prelude
 
-import Development.Shake.Core
+import Development.Shake
+import Development.Shake.Rule
 import Development.Shake.Classes
 import Development.Shake.FilePath
 
