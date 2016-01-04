@@ -7,3 +7,7 @@ Shake is a Haskell package focused on providing build-system functionality. Sinc
 #### Q: Is Shake limited to building Haskell?
 
 Not at all - Shake can build any project in any combination of languages. In fact, Shake isn't typically necessary for vanilla Haskell projects, as you can use [`cabal`](https://haskell.org/cabal) or [`stack`](https://stackage.org/). Shake is often used for building C/C++, Docker containers and Javascript/HTML/CSS projects.
+
+#### Q: Why is there a Shake.exe tool
+
+If you have a file Shakefile.hs it will run it. If you have a Ninja build system it will run it. Generally, most people write their own Shake executable.
