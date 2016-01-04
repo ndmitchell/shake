@@ -84,7 +84,6 @@ library
     hs-source-dirs:   src
     build-depends:
         base == 4.*,
-        old-time,
         directory,
         hashable >= 1.1.2.3,
         binary,
@@ -103,6 +102,8 @@ library
 
     if flag(portable)
         cpp-options: -DPORTABLE
+        if impl(ghc < 7.6)
+            build-depends: old-time
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
@@ -172,7 +173,6 @@ executable shake
     ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -qg -qb"
     build-depends:
         base == 4.*,
-        old-time,
         directory,
         hashable >= 1.1.2.3,
         binary,
@@ -191,6 +191,8 @@ executable shake
 
     if flag(portable)
         cpp-options: -DPORTABLE
+        if impl(ghc < 7.6)
+            build-depends: old-time
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
@@ -263,7 +265,6 @@ test-suite shake-test
     ghc-options: -threaded -rtsopts
     build-depends:
         base == 4.*,
-        old-time,
         directory,
         hashable >= 1.1.2.3,
         binary,
@@ -283,6 +284,8 @@ test-suite shake-test
 
     if flag(portable)
         cpp-options: -DPORTABLE
+        if impl(ghc < 7.6)
+            build-depends: old-time
     else
         if !os(windows)
             build-depends: unix >= 2.5.1

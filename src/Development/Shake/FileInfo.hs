@@ -90,7 +90,9 @@ getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
 
 -- deal with difference in return type of getModificationTime between directory versions
 class ExtractFileTime a where extractFileTime :: a -> Word32
+#if __GLASGOW_HASKELL__ < 706
 instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fromIntegral t
+#endif
 instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . toRational . utctDayTime
 
 

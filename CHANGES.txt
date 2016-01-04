@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #398, only require old-time with GHC 7.4
     #239, make Rules an instance of MonadIO
     #384, add shakeExtra field to ShakeOptions for user data
     #374, make --debug=file write out newlines
