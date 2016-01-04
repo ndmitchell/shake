@@ -156,15 +156,24 @@ doesDirectoryExist file = do
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
 --   if the variable is not set. The environment variable is tracked as a
 --   dependency, and if it changes the rule will rerun in subsequent builds.
---
 --   This function is a tracked version of 'getEnv'/'lookupEnv' from the base library.
+--
+-- @
+-- flags <- getEnv \"CFLAGS\"
+-- 'cmd' \"gcc -c\" [out] (maybe [] words flags)
+-- @
 getEnv :: String -> Action (Maybe String)
 getEnv var = do
     GetEnvA res <- apply1 $ GetEnvQ var
     return res
 
--- | Return the value of the environment variable, or the default value if it is
---   not set. Similar to 'getEnv'.
+-- | Return the value of the environment variable (second argument), or the
+--   default value (first argument) if it is not set. Similar to 'getEnv'.
+--
+-- @
+-- flags <- getEnvWithDefault \"-Wall\" \"CFLAGS\"
+-- 'cmd' \"gcc -c\" [out] flags
+-- @
 getEnvWithDefault :: String -> String -> Action String
 getEnvWithDefault def var = fromMaybe def <$> getEnv var
 
