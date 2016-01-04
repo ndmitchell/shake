@@ -13,9 +13,11 @@ import Control.Applicative
 import Prelude
 
 import Development.Shake.Core
-import General.String
 import Development.Shake.Classes
 import Development.Shake.FilePath
+
+-- Internal imports
+import General.String
 import Development.Shake.FileInfo
 
 infix 1 ??>

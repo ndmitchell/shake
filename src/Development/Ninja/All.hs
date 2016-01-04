@@ -6,11 +6,6 @@ import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (addEnv)
-import Development.Shake.ByteString
-import Development.Shake.Errors
-import Development.Shake.Rules.File
-import Development.Shake.Rules.OrderOnly
-import General.Timing
 import qualified Data.ByteString as BS8
 import qualified Data.ByteString.Char8 as BS
 
@@ -26,6 +21,13 @@ import Data.Char
 import Data.List.Extra
 import System.Info.Extra
 import Prelude
+
+-- Internal imports
+import General.Timing
+import Development.Shake.ByteString
+import Development.Shake.Errors
+import Development.Shake.Rules.File
+import Development.Shake.Rules.OrderOnly
 
 
 runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))
