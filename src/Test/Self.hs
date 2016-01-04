@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP #-}
 
 module Test.Self(main) where
 
@@ -85,5 +85,8 @@ cabalBuildDepends :: String -> [String]
 cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
 
 packages = words $
-    "base transformers binary unordered-containers hashable time old-time bytestring " ++
+    "base transformers binary unordered-containers hashable time bytestring " ++
     "filepath directory process deepseq random utf8-string extra js-jquery js-flot"
+#if __GLASGOW_HASKELL__ < 706
+    ++ " old-time"
+#endif
