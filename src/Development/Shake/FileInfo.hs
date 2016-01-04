@@ -19,7 +19,9 @@ import System.IO
 import System.IO.Error
 import System.Directory
 import Data.Time
+#if __GLASGOW_HASKELL__ < 706
 import System.Time
+#endif
 
 #elif defined(mingw32_HOST_OS)
 import Control.Monad
