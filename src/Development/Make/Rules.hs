@@ -18,8 +18,8 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 
 -- Internal imports
-import General.String
-import Development.Shake.FileInfo
+import General.String(BSU, unpackU, packU)
+import Development.Shake.FileInfo(ModTime, getFileInfo)
 
 infix 1 ??>
 

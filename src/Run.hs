@@ -6,7 +6,7 @@ import Development.Ninja.All
 import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
-import General.Timing
+import General.Timing(resetTimings)
 import Control.Applicative
 import Control.Monad.Extra
 import Control.Exception.Extra
