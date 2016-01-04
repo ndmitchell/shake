@@ -100,6 +100,7 @@ main = shaken noTest $ \args obj -> do
             ,"myVariable = ()"
             ,"instance Eq (OptDescr a)"
             ,"(foo,bar,baz) = undefined"
+            ,"out = \"\""
             ,"str1 = \"\""
             ,"str2 = \"\""
             ,"str = \"\""] ++
