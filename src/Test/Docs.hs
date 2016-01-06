@@ -197,7 +197,7 @@ isBlank = all isSpace
 
 -- | Remove leading and trailing blank lines (trim lifted to work on lines)
 trims :: [String] -> [String]
-trims = dropWhileEnd (all isSpace) . dropWhile (all isSpace)
+trims = dropWhileEnd isBlank . dropWhile isBlank
 
 -- | If all lines are indented by at least n spaces, then trim n spaces from each line
 unindent :: [String] -> [String]
