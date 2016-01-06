@@ -125,7 +125,7 @@ main = shaken noTest $ \args obj -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
-        () <- cmd "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
+        unit $ cmd "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
         writeFile' out ""
 
 
