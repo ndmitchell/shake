@@ -129,10 +129,14 @@ main = shaken noTest $ \args obj -> do
         writeFile' out ""
 
 
+---------------------------------------------------------------------
+-- FIND THE CODE, MANIPULATE AS CODE
+
 data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
 
+
 findCodeHaddock :: String -> [Code]
-findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . shift . lines . strip) "</pre>" x
+findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . unindent . lines . strip) "</pre>" x
                   | Just x <- stripPrefix "<code>" x = f (Expr . strip) "</code>" x
     where
         f ctor end x | Just x <- stripPrefix end x = ctor "" : findCodeHaddock x
@@ -140,13 +144,13 @@ findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . shift . lines . 
 findCodeHaddock (x:xs) = findCodeHaddock xs
 findCodeHaddock [] = []
 
+
 findCodeMarkdown :: [String] -> [Code]
-findCodeMarkdown (x:xs) | indented x && not (blank x) =
-    let (a,b) = span (\x -> indented x || blank x) (x:xs)
+findCodeMarkdown (x:xs) | indented x && not (isBlank x) =
+    let (a,b) = span (\x -> indented x || isBlank x) (x:xs)
     in Stmt (map (drop 4) a) : findCodeMarkdown b
     where
         indented x = length (takeWhile isSpace x) >= 4
-        blank = all isSpace
 findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
     where
         f ('`':xs) = let (a,b) = break (== '`') xs in Expr a : f (drop 1 b)
@@ -154,37 +158,6 @@ findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
         f [] = []
 findCodeMarkdown [] = []
 
-trims :: [String] -> [String]
-trims = dropWhileEnd (all isSpace) . dropWhile (all isSpace)
-
-restmt i ("":xs) = restmt i xs
-restmt i (('-':'-':_):xs) = restmt i xs
-restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
-    zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
-restmt i (x:xs) |
-    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && not ("cmd " `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x || " :: " `isInfixOf` x) ||
-    "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
-    where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
-restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
-              ["  undefined" | length xs == 1 && ("let" `isPrefixOf` head xs || "<-" `isInfixOf` head xs)]
-
-
-shift :: [String] -> [String]
-shift xs | all null xs = xs
-         | all (\x -> null x || " " `isPrefixOf` x) xs = shift $ map (drop 1) xs
-         | otherwise = xs
-
-
-dropComment ('-':'-':_) = []
-dropComment xs = onTail dropComment xs
-
-
-undefDots o = f o
-    where
-        f ('.':'.':'.':xs) =
-            (if any (`elem` words o) ["cmd","Development.Shake.cmd"] then "[\"\"]" else "undefined") ++
-            (if "..." `isSuffixOf` xs then "" else undefDots xs)
-        f xs = onTail f xs
 
 strip :: String -> String
 strip x
@@ -198,17 +171,74 @@ strip ('&':xs)
     | Just xs <- stripPrefix "lt;" xs = '<' : strip xs
     | Just xs <- stripPrefix "gt;" xs = '>' : strip xs
     | Just xs <- stripPrefix "amp;" xs = '&' : strip xs
-strip xs = onTail strip xs
-
-onTail f (x:xs) = x : f xs
-onTail f [] = []
+strip (x:xs) = x : strip xs
+strip [] = []
 
 
+restmt :: Int -> [String] -> [String]
+restmt i ("":xs) = restmt i xs
+restmt i (('-':'-':_):xs) = restmt i xs
+restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
+    zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
+restmt i (x:xs) |
+    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && not ("cmd " `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x || " :: " `isInfixOf` x) ||
+    "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
+    where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
+restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
+              ["  undefined" | length xs == 1 && ("let" `isPrefixOf` head xs || "<-" `isInfixOf` head xs)]
+
+
+---------------------------------------------------------------------
+-- TEXT MANIPULATION
+
+-- | Remove leading and trailing blank lines (trim lifted to work on lines)
+trims :: [String] -> [String]
+trims = dropWhileEnd (all isSpace) . dropWhile (all isSpace)
+
+-- | Remove line comments from the end of lines
+dropComment :: String -> String
+dropComment x = maybe x fst $ stripInfix "--" x
+
+-- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)
+undefDots :: String -> String
+undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = x ++ new
+            | otherwise = replace "..." new x
+    where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
+
+-- | If all lines are indented by at least n spaces, then trim n spaces from each line
+unindent :: [String] -> [String]
+unindent xs = map (drop n) xs
+    where n = minimum $ 1000 : map (length . takeWhile (== ' ')) (filter (not . isBlank) xs)
+
+-- | Is a string empty or whitespace
+isBlank :: String -> Bool
+isBlank = all isSpace
+
+
+---------------------------------------------------------------------
+-- DATA SECTION
+
+-- | Only the following identifiers can appear in italic code blocks in Haddock
+--   (otherwise it's a common markup mistake)
 italics :: [String]
 italics = words "extension command-name file-name"
 
+-- | Identifiers that indicate the fragment is a type
+types :: [String]
+types = words $
+    "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
+    "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
+    "Lint Verbosity Rules CmdOption Int Double"
+
+-- | Duplicated identifiers which require renaming
+dupes :: [String]
+dupes = words "main progressSimple rules"
+
+
+-- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
-whitelist x | all (not . isSpace) x && takeExtension x `elem` words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html .zip" = True
+whitelist x | all (not . isSpace) x && takeExtension x `elem` exts = True
+    where exts = words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html .zip"
 whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc ghc " ++
     ".. /./ /.. /../ ./ // \\ ../ //*.c //*.txt //* dir/*/* dir " ++
@@ -278,10 +308,3 @@ whitelist x = x `elem`
     ,"cmd \"gcc -o _make/run _build/main.o _build/constants.o\""
     ,"$(LitE . StringL . loc_filename <$> location)"
     ]
-
-types = words $
-    "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
-    "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
-    "Lint Verbosity Rules CmdOption Int Double"
-
-dupes = words "main progressSimple rules"
