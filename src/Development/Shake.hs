@@ -35,9 +35,9 @@
 -- * The home page has links to additional information <http://www.shakebuild.com/>, including
 --   a mailing list.
 --
--- * The theory behind Shake is described in an ICFP 2012 paper, /Shake Before Building -- Replacing Make with Haskell/
---   <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf>. The associated talk
---   forms a short overview of Shake <http://www.youtube.com/watch?v=xYCPpXVlqFM>.
+-- * The theory behind Shake is described in an ICFP 2012 paper,
+--   <http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf Shake Before Building -- Replacing Make with Haskell>.
+--   The <http://www.youtube.com/watch?v=xYCPpXVlqFM associated talk> forms a short overview of Shake .
 --
 --   /== WRITING A BUILD SYSTEM ==============================/
 --
@@ -77,7 +77,7 @@
 --   * @-I0@: Disable idle garbage collection, to avoid frequent unnecessary garbage collection, see
 --     <http://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/ a full explanation>.
 --
---   * With GHC 7.6 and before, omit @-threaded@: A GHC bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
+--   * With GHC 7.6 and before, omit @-threaded@: <http://ghc.haskell.org/trac/ghc/ticket/7646 GHC bug 7646>
 --     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
 --     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
 --
