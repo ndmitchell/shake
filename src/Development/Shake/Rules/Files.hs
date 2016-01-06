@@ -95,9 +95,9 @@ ps &%> act
 --   As an example of a function satisfying the invariaint:
 --
 -- @
---test x | 'Development.Shake.FilePath.takeExtension' x \`elem\` [\".hi\",\".o\"]
+-- test x | 'Development.Shake.FilePath.takeExtension' x \`elem\` [\".hi\",\".o\"]
 --        = Just ['Development.Shake.FilePath.dropExtension' x 'Development.Shake.FilePath.<.>' \"hi\", 'Development.Shake.FilePath.dropExtension' x 'Development.Shake.FilePath.<.>' \"o\"]
---test _ = Nothing
+-- test _ = Nothing
 -- @
 --
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.

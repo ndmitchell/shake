@@ -95,16 +95,16 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 --   provide a similar rule).
 --
 -- @
---newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
---newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
---getFileModtime file = ...
+-- newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+-- newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+-- getFileModtime file = ...
 --
---instance Rule File Modtime where
---    storedValue _ (File x) = do
---        exists <- System.Directory.doesFileExist x
---        if exists then Just \<$\> getFileModtime x else return Nothing
---    equalValue _ _ t1 t2 =
---        if t1 == t2 then EqualCheap else NotEqual
+-- instance Rule File Modtime where
+--     storedValue _ (File x) = do
+--         exists <- System.Directory.doesFileExist x
+--         if exists then Just \<$\> getFileModtime x else return Nothing
+--     equalValue _ _ t1 t2 =
+--         if t1 == t2 then EqualCheap else NotEqual
 -- @
 --
 --   This example instance means:

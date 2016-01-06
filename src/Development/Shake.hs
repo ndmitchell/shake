@@ -3,15 +3,15 @@
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
 --
 -- @
---import "Development.Shake"
---import "Development.Shake.FilePath"
+-- import "Development.Shake"
+-- import "Development.Shake.FilePath"
 --
---main = 'shakeArgs' 'shakeOptions' $ do
---    'want' [\"result.tar\"]
---    \"*.tar\" '%>' \\out -> do
---        contents \<- 'readFileLines' $ out 'Development.Shake.FilePath.-<.>' \"txt\"
---        'need' contents
---        'cmd' \"tar -cf\" [out] contents
+-- main = 'shakeArgs' 'shakeOptions' $ do
+--     'want' [\"result.tar\"]
+--     \"*.tar\" '%>' \\out -> do
+--         contents \<- 'readFileLines' $ out 'Development.Shake.FilePath.-<.>' \"txt\"
+--         'need' contents
+--         'cmd' \"tar -cf\" [out] contents
 -- @
 --
 --   We start by importing the modules defining both Shake and routines for manipulating 'FilePath' values.

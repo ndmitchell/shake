@@ -87,12 +87,12 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --   As an example of a build system that can use either @gcc@ or @distcc@ for compiling:
 --
 -- @
---import System.Console.GetOpt
+-- import System.Console.GetOpt
 --
---data Flags = DistCC deriving Eq
---flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
+-- data Flags = DistCC deriving Eq
+-- flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
 --
---main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
+-- main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
 --     if null targets then 'want' [\"result.exe\"] else 'want' targets
 --     let compiler = if DistCC \`elem\` flags then \"distcc\" else \"gcc\"
 --     \"*.o\" '%>' \\out -> do

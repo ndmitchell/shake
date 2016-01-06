@@ -50,21 +50,21 @@ instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
 --   As a more complex example, consider tracking Haskell package versions:
 --
 -- @
---newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
---newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 --
---rules = do
---    getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
---        Stdout out <- 'Development.Shake.cmd' \"ghc-pkg list --simple-output\"
---        return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
---    --
---    getPkgVersion \<- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
---        pkgs <- getPkgList $ GhcPkgList ()
---        return $ lookup pkg pkgs
---    --
---    \"myrule\" %> \\_ -> do
---        getPkgVersion $ GhcPkgVersion \"shake\"
---        ... rule using the shake version ...
+-- rules = do
+--     getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
+--         Stdout out <- 'Development.Shake.cmd' \"ghc-pkg list --simple-output\"
+--         return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
+--
+--     getPkgVersion \<- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
+--         pkgs <- getPkgList $ GhcPkgList ()
+--         return $ lookup pkg pkgs
+--
+--     \"myrule\" %> \\_ -> do
+--         getPkgVersion $ GhcPkgVersion \"shake\"
+--         ... rule using the shake version ...
 -- @
 --
 --   Using these definitions, any rule depending on the version of @shake@
