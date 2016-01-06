@@ -222,7 +222,7 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
 -- | Only the following identifiers can appear in italic code blocks in Haddock
 --   (otherwise it's a common markup mistake)
 italics :: [String]
-italics = words "extension command-name file-name N"
+italics = words "command-name file-name N"
 
 -- | Identifiers that indicate the fragment is a type
 types :: [String]
