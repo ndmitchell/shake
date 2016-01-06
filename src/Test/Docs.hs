@@ -154,7 +154,7 @@ findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
         f [] = []
 findCodeMarkdown [] = []
 
-trims = reverse . dropWhile (all isSpace) . reverse . dropWhile (all isSpace)
+trims = dropWhileEnd (all isSpace) . dropWhile (all isSpace)
 
 restmt i ("":xs) = restmt i xs
 restmt i (('-':'-':_):xs) = restmt i xs
