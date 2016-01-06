@@ -154,6 +154,7 @@ findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
         f [] = []
 findCodeMarkdown [] = []
 
+trims :: [String] -> [String]
 trims = dropWhileEnd (all isSpace) . dropWhile (all isSpace)
 
 restmt i ("":xs) = restmt i xs
