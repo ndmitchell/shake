@@ -74,9 +74,8 @@
 --
 --   * @-rtsopts@: Allow the setting of further GHC options at runtime.
 --
---   * @-I0@: Disable idle garbage collection. In a build system regularly running many system
---     commands the program appears \"idle\" very often, triggering regular unnecessary garbage collection, stealing
---     resources from the program doing actual work.
+--   * @-I0@: Disable idle garbage collection, to avoid frequent unnecessary garbage collection, see
+--     <http://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/ a full explanation>.
 --
 --   * With GHC 7.6 and before, omit @-threaded@: A GHC bug 7646 <http://ghc.haskell.org/trac/ghc/ticket/7646>
 --     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
