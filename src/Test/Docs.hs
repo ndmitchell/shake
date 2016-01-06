@@ -136,11 +136,13 @@ data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
 
 
 findCodeHaddock :: String -> [Code]
-findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . unindent . lines . strip) "</pre>" x
-                  | Just x <- stripPrefix "<code>" x = f (Expr . strip) "</code>" x
+findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . unindent . lines . strip . badItalic) "</pre>" x
+                  | Just x <- stripPrefix "<code>" x = f (Expr . strip . badItalic) "</code>" x
     where
         f ctor end x | Just x <- stripPrefix end x = ctor "" : findCodeHaddock x
         f ctor end (x:xs) = f (ctor . (x:)) end xs
+        badItalic x | bad@(_:_) <- nubOrd (extractTag "em" x) \\ italics = error $ "Bad italics, " ++ show bad
+                    | otherwise = x
 findCodeHaddock (x:xs) = findCodeHaddock xs
 findCodeHaddock [] = []
 
@@ -160,11 +162,6 @@ findCodeMarkdown [] = []
 
 
 strip :: String -> String
-strip x
-    | Just x <- stripPrefix "<em>" x
-    , (a,b) <- break (== '<') x
-    , not $ ("</em>" `isPrefixOf` b) && a `elem` italics
-    = error $ "Unexpected italics in code block: " ++ a ++ take 5 b ++ "..."
 strip ('<':xs) = strip $ drop 1 $ dropWhile (/= '>') xs
 strip ('&':xs)
     | Just xs <- stripPrefix "quot;" xs = '\"' : strip xs
@@ -214,6 +211,8 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
             | otherwise = replace "..." new x
     where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
 
+extractTag :: String -> String -> [String]
+extractTag tag = map (fst . breakOn ("</" ++ tag ++ ">")) . drop 1 . splitOn ("<" ++ tag ++ ">")
 
 
 ---------------------------------------------------------------------
