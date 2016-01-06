@@ -206,7 +206,7 @@ unindent xs = map (drop n) xs
 
 -- | Remove line comments from the end of lines
 dropComment :: String -> String
-dropComment x = maybe x fst $ stripInfix "--" x
+dropComment = fst . breakOn "--"
 
 -- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)
 undefDots :: String -> String
