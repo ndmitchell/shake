@@ -191,9 +191,18 @@ restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
 ---------------------------------------------------------------------
 -- TEXT MANIPULATION
 
+-- | Is a string empty or whitespace
+isBlank :: String -> Bool
+isBlank = all isSpace
+
 -- | Remove leading and trailing blank lines (trim lifted to work on lines)
 trims :: [String] -> [String]
 trims = dropWhileEnd (all isSpace) . dropWhile (all isSpace)
+
+-- | If all lines are indented by at least n spaces, then trim n spaces from each line
+unindent :: [String] -> [String]
+unindent xs = map (drop n) xs
+    where n = minimum $ 1000 : map (length . takeWhile (== ' ')) (filter (not . isBlank) xs)
 
 -- | Remove line comments from the end of lines
 dropComment :: String -> String
@@ -205,14 +214,6 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
             | otherwise = replace "..." new x
     where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
 
--- | If all lines are indented by at least n spaces, then trim n spaces from each line
-unindent :: [String] -> [String]
-unindent xs = map (drop n) xs
-    where n = minimum $ 1000 : map (length . takeWhile (== ' ')) (filter (not . isBlank) xs)
-
--- | Is a string empty or whitespace
-isBlank :: String -> Bool
-isBlank = all isSpace
 
 
 ---------------------------------------------------------------------
