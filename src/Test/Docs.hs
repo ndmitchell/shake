@@ -14,7 +14,7 @@ import Data.Version.Extra
 
 
 -- Older versions of Haddock garbage the --@ markup
-brokenHaddock = compilerVersion < makeVersion [7,6]
+brokenHaddock = compilerVersion < makeVersion [7,8]
 
 main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
     let index = obj "dist/doc/html/shake/index.html"
