@@ -5,12 +5,18 @@ module Test.Docs(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
+import Control.Monad
 import Data.Char
 import Data.List.Extra
 import Data.Maybe
+import System.Info
+import Data.Version.Extra
 
 
-main = shaken noTest $ \args obj -> do
+-- Older versions of Haddock garbage the --@ markup
+brokenHaddock = compilerVersion < makeVersion [7,6]
+
+main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
     let index = obj "dist/doc/html/shake/index.html"
     let config = obj "dist/setup-config"
     want [obj "Success.txt"]
