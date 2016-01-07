@@ -47,12 +47,12 @@ neededMakefileDependencies file = neededBS . concatMap snd . BS.parseMakefile =<
 --   Usually used to populate a record structure. As an example of a build system that can use either @gcc@ or @distcc@ for compiling:
 --
 -- @
---import System.Console.GetOpt
+-- import System.Console.GetOpt
 --
---data Flags = Flags {distCC :: Bool} deriving Eq
---flags = [Option \"\" [\"distcc\"] (NoArg $ Right $ \\x -> x{distCC=True}) \"Run distributed.\"]
+-- data Flags = Flags {distCC :: Bool} deriving Eq
+-- flags = [Option \"\" [\"distcc\"] (NoArg $ Right $ \\x -> x{distCC=True}) \"Run distributed.\"]
 --
---main = 'shakeArgsAccumulate' 'shakeOptions' flags (Flags False) $ \\flags targets -> return $ Just $ do
+-- main = 'shakeArgsAccumulate' 'shakeOptions' flags (Flags False) $ \\flags targets -> return $ Just $ do
 --     if null targets then 'want' [\"result.exe\"] else 'want' targets
 --     let compiler = if distCC flags then \"distcc\" else \"gcc\"
 --     \"*.o\" '%>' \\out -> do

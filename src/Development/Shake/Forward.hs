@@ -5,13 +5,13 @@
 --   As an example:
 --
 -- @
---import "Development.Shake"
---import "Development.Shake.Forward"
---import "Development.Shake.FilePath"
+-- import "Development.Shake"
+-- import "Development.Shake.Forward"
+-- import "Development.Shake.FilePath"
 --
---main = 'shakeArgsForward' 'shakeOptions' $ do
---    contents <- 'readFileLines' \"result.txt\"
---    'cache' $ 'cmd' \"tar -cf result.tar\" contents
+-- main = 'shakeArgsForward' 'shakeOptions' $ do
+--     contents <- 'readFileLines' \"result.txt\"
+--     'cache' $ 'cmd' \"tar -cf result.tar\" contents
 -- @
 --
 --   Compared to backward-defined build systems (such as normal Shake), forward-defined build

@@ -287,7 +287,7 @@ As shown before, we can use `runhaskell Build.hs` to execute our build system, b
     mkdir -p _shake
     ghc --make Build.hs -rtsopts -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
 
-This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag can be treated as magic - it instructs the Haskell compiler to turn off features that would otherwise steal CPU from the commands you are running.
+This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](http://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
 
 Now you can run a build by simply typing `./build.sh` on Linux, or `build` on Windows. On Linux you may want to alias `build` to `./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
