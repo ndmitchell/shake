@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Test.Self(main) where
 
@@ -12,6 +12,7 @@ import Control.Monad.Extra
 import Data.Char
 import Data.List.Extra
 import System.Info
+import Data.Version.Extra
 import Prelude
 
 
@@ -84,9 +85,7 @@ hsImports xs = [ takeWhile (\x -> isAlphaNum x || x `elem` "._") $ dropWhile (no
 cabalBuildDepends :: String -> [String]
 cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
 
-packages = words $
-    "base transformers binary unordered-containers hashable time bytestring " ++
-    "filepath directory process deepseq random utf8-string extra js-jquery js-flot"
-#if __GLASGOW_HASKELL__ < 706
-    ++ " old-time"
-#endif
+packages = words
+    ("base transformers binary unordered-containers hashable time bytestring " ++
+     "filepath directory process deepseq random utf8-string extra js-jquery js-flot") ++
+    ["old-time" | compilerVersion < makeVersion [7,6]]
