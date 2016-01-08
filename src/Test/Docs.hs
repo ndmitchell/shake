@@ -182,13 +182,13 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
 
 showStmt :: Int -> [String] -> [String]
 showStmt i [] = []
-showStmt i (x:xs) | fst (word1 x) `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
-showStmt i [words -> [x]] = ["expr_" ++ show i ++ " = (" ++ x ++ ")"]
 showStmt i xs | isDecl $ unlines xs = map f xs
     where f x = if fst (word1 x) `elem` dupes then "_" ++ show i ++ "_" ++ x else x
+showStmt i (x:xs) | fst (word1 x) `elem` types = ["type Code_" ++ show i ++ " = " ++ x]
+showStmt i [x] | length (words x) <= 2 = ["code_" ++ show i ++ " = (" ++ x ++ ")"] -- deal with operators and sections
 showStmt i xs | all isPredicate xs, length xs > 1 =
-    zipWith (\j x -> "expr_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] xs
-showStmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++ ["  undefined" | isBindStmt $ last xs]
+    zipWith (\j x -> "code_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] xs
+showStmt i xs = ("code_" ++ show i ++ " = do") : map ("  " ++) xs ++ ["  undefined" | isBindStmt $ last xs]
 
 isPredicate :: String -> Bool
 isPredicate x = not $ disjoint (words x) ["==","?=="]
