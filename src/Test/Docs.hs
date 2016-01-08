@@ -241,32 +241,43 @@ dupes :: [String]
 dupes = words "main progressSimple rules"
 
 
+isFilePath :: String -> Bool
+isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `elem` exts)
+    where
+        validChar x = isAlphaNum x || x `elem` "_./*"
+        exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .h .c .html .zip " ++
+                       ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits"
+
+isCmdFlag :: String -> Bool
+isCmdFlag x = length a >= 1 && length a <= 2 && all isAlphaNum b
+    where (a,b) = span (== '-') x
+
+isEnvVar :: String -> Bool
+isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
+           | Just x <- stripPrefix "%" x, Just x <- stripSuffix "%" x = all validChar x
+           | otherwise = False
+    where validChar x = isAlpha x || x == '_'
+
+
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
--- files, with common extensions that are very unlikely to be qualified identifiers
-whitelist x | all (\x -> isAlphaNum x || x `elem` "_./*") x && takeExtension x `elem` exts = True
-    where exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .h .c .html .zip " ++
-                         ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits"
-
+whitelist x | isFilePath x || isCmdFlag x || isEnvVar x = True
 whitelist x | elem x $ words $
     "newtype do excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc " ++
     ".. /. // \\ //* dir/*/* dir " ++
     "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath main.m run " ++
     "NoProgress Error src about://tracing " ++
-    ".make/i586-linux-gcc/output foo/.. build " ++
-    "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
-    "-threaded -rtsopts -I0 Hidden extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
-    "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD linkFlags temp pwd touch code out err " ++
-    "_shake _shake/build [out] manual " ++
-    "docs/manual _build _build/run ninja depfile build.ninja " ++
-    "@ndm_haskell file-name .PHONY filepath fsatrace base stack trim extra #include -j4 " ++
+    ".make/i586-linux-gcc/output build " ++
+    "/usr/special /usr/special/userbinary " ++
+    "Hidden extension xterm main opts result flagValues argValues " ++
+    "HEADERS_DIR /path/to/dir CFLAGS let linkFlags temp pwd touch code out err " ++
+    "_shake _shake/build manual " ++
+    "docs/manual _build _build/run ninja depfile " ++
+    "@ndm_haskell file-name .PHONY filepath fsatrace trim base stack extra #include " ++
     "*> "
     = True
 whitelist x | "Stdout out" `isInfixOf` x || "Stderr err" `isInfixOf` x = True
-whitelist x
-    | "foo/" `isPrefixOf` x -- path examples
-    = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
     ,"shake-progress"
