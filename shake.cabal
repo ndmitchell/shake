@@ -110,12 +110,6 @@ library
     if !os(windows)
         build-depends: unix
 
-    if os(windows)
-        if arch(x86_64)
-            cpp-options: -DCALLCONV=ccall
-        else
-            cpp-options: -DCALLCONV=stdcall
-
     exposed-modules:
         Development.Shake
         Development.Shake.Classes
@@ -204,12 +198,6 @@ executable shake
             build-depends: unix >= 2.5.1
     if !os(windows)
         build-depends: unix
-
-    if os(windows)
-        if arch(x86_64)
-            cpp-options: -DCALLCONV=ccall
-        else
-            cpp-options: -DCALLCONV=stdcall
 
     other-modules:
         Development.Make.All
@@ -303,12 +291,6 @@ test-suite shake-test
             build-depends: unix >= 2.5.1
     if !os(windows)
         build-depends: unix
-
-    if os(windows)
-        if arch(x86_64)
-            cpp-options: -DCALLCONV=ccall
-        else
-            cpp-options: -DCALLCONV=stdcall
 
     other-modules:
         Development.Make.All
