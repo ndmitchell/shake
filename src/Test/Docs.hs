@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, ViewPatterns #-}
 
 module Test.Docs(main) where
 
@@ -52,7 +52,8 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
          else
             fmap (findCodeHaddock . noR) $ readFile' $ obj $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
 
-        let f i (Stmt x) | any whitelist x = []
+        let f i (Stmt x) | "#" `isPrefixOf` concat x = []
+                         | all whitelist x = []
                          | otherwise = restmt i $ map undefDots $ trims x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                          | "import " `isPrefixOf` x = [x]
@@ -166,6 +167,9 @@ findCodeMarkdown [] = []
 
 
 restmt :: Int -> [String] -> [String]
+restmt i xs | any ("Stdout out" `isInfixOf`) xs = restmt i $ map (replace "Stdout out" "Stdout (out :: String)") xs
+restmt i xs | any ("Stderr err" `isInfixOf`) xs = restmt i $ map (replace "Stderr err" "Stderr (err :: String)") xs
+restmt i xs | any ("cmd " `isPrefixOf`) xs = restmt i $ map (\x -> if "cmd " `isPrefixOf` x then "unit $ " ++ x else x) xs
 restmt i ("":xs) = restmt i xs
 restmt i (('-':'-':_):xs) = restmt i xs
 restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
@@ -245,11 +249,11 @@ isFilePath :: String -> Bool
 isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `elem` exts)
     where
         validChar x = isAlphaNum x || x `elem` "_./*"
-        exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .h .c .html .zip " ++
+        exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .m .h .c .html .zip " ++
                        ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits"
 
 isCmdFlag :: String -> Bool
-isCmdFlag x = length a >= 1 && length a <= 2 && all isAlphaNum b
+isCmdFlag x = length a >= 1 && length a <= 2 && all (\x -> isAlphaNum x || x == '-') b
     where (a,b) = span (== '-') x
 
 isEnvVar :: String -> Bool
@@ -258,26 +262,28 @@ isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
            | otherwise = False
     where validChar x = isAlpha x || x == '_'
 
+isProgram :: String -> Bool
+isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFilePath x || all isAlpha x || x == "&&") xs
+    where programs = words "excel gcc cl make ghc cabal distcc build tar fsatrace ninja touch pwd runhaskell rot13"
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
-whitelist x | isFilePath x || isCmdFlag x || isEnvVar x = True
+whitelist x | null x || isFilePath x || all isCmdFlag (words x) || isEnvVar x || isProgram x = True
 whitelist x | elem x $ words $
-    "newtype do excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc " ++
+    "newtype do a q m c x value key os contents clean _make " ++
     ".. /. // \\ //* dir/*/* dir " ++
     "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
-    "Data.List System.Directory Development.Shake.FilePath main.m run " ++
+    "Data.List System.Directory Development.Shake.FilePath run " ++
     "NoProgress Error src about://tracing " ++
     ".make/i586-linux-gcc/output build " ++
     "/usr/special /usr/special/userbinary " ++
     "Hidden extension xterm main opts result flagValues argValues " ++
-    "HEADERS_DIR /path/to/dir CFLAGS let linkFlags temp pwd touch code out err " ++
+    "HEADERS_DIR /path/to/dir CFLAGS let linkFlags temp code out err " ++
     "_shake _shake/build manual " ++
-    "docs/manual _build _build/run ninja depfile " ++
-    "@ndm_haskell file-name .PHONY filepath fsatrace trim base stack extra #include " ++
+    "docs/manual _build _build/run depfile " ++
+    "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> "
     = True
-whitelist x | "Stdout out" `isInfixOf` x || "Stderr err" `isInfixOf` x = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
     ,"shake-progress"
@@ -288,10 +294,6 @@ whitelist x = x `elem`
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
     ,"# command-name (for file-name)"
     ,"ghc --make MyBuildSystem -rtsopts -with-rtsopts=-I0"
-    ,"-with-rtsopts"
-    ,"-qg -qb"
-    ,"gcc -MM"
-    ,"gcc -M"
     ,"shake -j"
     ,"# This is my Config file"
     ,"-g -I/path/to/dir -O2"
@@ -309,20 +311,13 @@ whitelist x = x `elem`
     ,"build _build/main.o"
     ,"build clean"
     ,"build -j8"
-    ,"cabal update && cabal install shake"
     ,"shake-build-system"
-    ,"runhaskell Build.hs"
-    ,"runhaskell Build.hs clean"
-    ,"gcc -c main.c -o main.o -MMD -MF main.m"
     ,"\"_build\" </> x -<.> \"o\""
     ,"cmd \"gcc -o\" [out] os"
-    ,"rot13 file.txt -o file.rot13"
-    ,"file.rot13"
     ,"out -<.> \"txt\""
     ,"[item1,item2,item2]"
-    ,"runhaskell Build.hs"
-    ,"cabal update"
-    ,"cabal install shake"
     ,"cmd \"gcc -o _make/run _build/main.o _build/constants.o\""
     ,"$(LitE . StringL . loc_filename <$> location)"
+    ,"(Exit code, Stdout out, Stderr err) <- cmd \"gcc --version\""
+    ,"cmd (Cwd \"generated\") Shell \"gcc -c myfile.c\" :: IO ()"
     ]
