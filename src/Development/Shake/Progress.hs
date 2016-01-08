@@ -36,6 +36,10 @@ import Prelude
 import Foreign
 import Foreign.C.Types
 
+#ifndef CALLCONV
+#define CALLCONV stdcall
+#endif
+
 foreign import CALLCONV "Windows.h SetConsoleTitleA" c_setConsoleTitle :: Ptr CChar -> IO Bool
 
 #endif

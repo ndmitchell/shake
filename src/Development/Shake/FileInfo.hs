@@ -112,6 +112,10 @@ getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
          else
             return Nothing
 
+#ifndef CALLCONV
+#define CALLCONV stdcall
+#endif
+
 foreign import CALLCONV unsafe "Windows.h GetFileAttributesExA" c_GetFileAttributesExA :: Ptr CChar  -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
 foreign import CALLCONV unsafe "Windows.h GetFileAttributesExW" c_GetFileAttributesExW :: Ptr CWchar -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
 
