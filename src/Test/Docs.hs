@@ -54,7 +54,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
 
         let f i (Stmt x) | "#" `isPrefixOf` concat x = []
                          | all whitelist x = []
-                         | otherwise = restmt i $ map undefDots $ trims x
+                         | otherwise = restmt i $ map undefDots x
             f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                          | "import " `isPrefixOf` x = [x]
                          | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
@@ -170,8 +170,7 @@ restmt :: Int -> [String] -> [String]
 restmt i xs | any ("Stdout out" `isInfixOf`) xs = restmt i $ map (replace "Stdout out" "Stdout (out :: String)") xs
 restmt i xs | any ("Stderr err" `isInfixOf`) xs = restmt i $ map (replace "Stderr err" "Stderr (err :: String)") xs
 restmt i xs | any ("cmd " `isPrefixOf`) xs = restmt i $ map (\x -> if "cmd " `isPrefixOf` x then "unit $ " ++ x else x) xs
-restmt i ("":xs) = restmt i xs
-restmt i (('-':'-':_):xs) = restmt i xs
+restmt i (x:xs) | isBlank $ dropComment x = restmt i xs
 restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
     zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
 restmt i (x:xs) |
@@ -179,7 +178,7 @@ restmt i (x:xs) |
     "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
     where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
 restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
-              ["  undefined" | length xs == 1 && ("let" `isPrefixOf` head xs || "<-" `isInfixOf` head xs)]
+              ["  undefined" | length (dropWhileEnd isBlank xs) == 1 && ("let" `isPrefixOf` head xs || "<-" `isInfixOf` head xs)]
 
 
 ---------------------------------------------------------------------
@@ -188,10 +187,6 @@ restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
 -- | Is a string empty or whitespace
 isBlank :: String -> Bool
 isBlank = all isSpace
-
--- | Remove leading and trailing blank lines (trim lifted to work on lines)
-trims :: [String] -> [String]
-trims = dropWhileEnd isBlank . dropWhile isBlank
 
 -- | If all lines are indented by at least n spaces, then trim n spaces from each line
 unindent :: [String] -> [String]
