@@ -17,9 +17,9 @@ import System.Posix.IO
 #endif
 
 #ifdef mingw32_HOST_OS
-foreign import stdcall unsafe "Windows.h CreateFileW" c_CreateFileW :: Ptr CWchar -> Word32 -> Word32 -> Ptr () -> Word32 -> Word32 -> Ptr () -> IO (Ptr ())
-foreign import stdcall unsafe "Windows.h CloseHandle" c_CloseHandle :: Ptr () -> IO Bool
-foreign import stdcall unsafe "Windows.h GetLastError" c_GetLastError :: IO Word32
+foreign import CALLCONV unsafe "Windows.h CreateFileW" c_CreateFileW :: Ptr CWchar -> Word32 -> Word32 -> Ptr () -> Word32 -> Word32 -> Ptr () -> IO (Ptr ())
+foreign import CALLCONV unsafe "Windows.h CloseHandle" c_CloseHandle :: Ptr () -> IO Bool
+foreign import CALLCONV unsafe "Windows.h GetLastError" c_GetLastError :: IO Word32
 
 c_GENERIC_WRITE = 0x40000000 :: Word32
 c_GENERIC_READ  = 0x80000000 :: Word32
