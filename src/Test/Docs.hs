@@ -168,9 +168,7 @@ showCode = concat . zipWith f [1..] . nubOrd
         f i (Stmt x) | "#" `isPrefixOf` concat x = []
                      | all whitelist x = []
                      | otherwise = showStmt i $ filter (not . isBlank . dropComment) $ map (fixCmd . undefDots) x
-        f i (Expr x) | fst (word1 x) `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
-                     | "import " `isPrefixOf` x = [x]
-                     | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim x, not $ whitelist x2]
+        f i (Expr x) = f i $ Stmt [x]
 
 
 fixCmd :: String -> String
@@ -184,6 +182,9 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
     where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
 
 showStmt :: Int -> [String] -> [String]
+showStmt i [] = []
+showStmt i (x:xs) | fst (word1 x) `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
+showStmt i [words -> [x]] = ["expr_" ++ show i ++ " = (" ++ x ++ ")"]
 showStmt i xs | isDecl $ unlines xs = map f xs
     where f x = if fst (word1 x) `elem` dupes then "_" ++ show i ++ "_" ++ x else x
 showStmt i xs | all isPredicate xs, length xs > 1 =
@@ -324,6 +325,7 @@ whitelist x = x `elem`
     ,"--value=25"
     ,"build --metadata=_metadata"
     ,"make --jobs=N"
+    ,"<.> exe"
     ,"shake-build-system"
     ,"build --report=-"
     ,"\"_build\" </> x -<.> \"o\""
