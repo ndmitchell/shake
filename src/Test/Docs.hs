@@ -170,7 +170,7 @@ showCode = concat . zipWith f [1..] . nubOrd
                      | otherwise = showStmt i $ filter (not . isBlank . dropComment) $ map (fixCmd . undefDots) x
         f i (Expr x) | fst (word1 x) `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
                      | "import " `isPrefixOf` x = [x]
-                     | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
+                     | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim x, not $ whitelist x2]
 
 
 fixCmd :: String -> String
