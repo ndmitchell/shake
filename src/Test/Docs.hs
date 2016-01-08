@@ -52,14 +52,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
          else
             fmap (findCodeHaddock . noR) $ readFile' $ obj $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
 
-        let f i (Stmt x) | "#" `isPrefixOf` concat x = []
-                         | all whitelist x = []
-                         | otherwise = restmt i $ map undefDots x
-            f i (Expr x) | takeWhile (not . isSpace) x `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
-                         | "import " `isPrefixOf` x = [x]
-                         | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
-            code = concat $ zipWith f [1..] (nubOrd src)
-            (imports,rest) = partition ("import " `isPrefixOf`) code
+        let (imports,rest) = partition ("import " `isPrefixOf`) $ showCode src
         writeFileChanged out $ unlines $
             ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, MultiParamTypeClasses, ExtendedDefaultRules, GeneralizedNewtypeDeriving #-}"
             ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables, ConstraintKinds #-}"
@@ -139,7 +132,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
 
 
 ---------------------------------------------------------------------
--- FIND THE CODE, MANIPULATE AS CODE
+-- FIND THE CODE
 
 data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
 
@@ -166,19 +159,42 @@ findCodeMarkdown (x:xs) = map Expr (evens $ splitOn "`" x) ++ findCodeMarkdown x
 findCodeMarkdown [] = []
 
 
-restmt :: Int -> [String] -> [String]
-restmt i xs | any ("Stdout out" `isInfixOf`) xs = restmt i $ map (replace "Stdout out" "Stdout (out :: String)") xs
-restmt i xs | any ("Stderr err" `isInfixOf`) xs = restmt i $ map (replace "Stderr err" "Stderr (err :: String)") xs
-restmt i xs | any ("cmd " `isPrefixOf`) xs = restmt i $ map (\x -> if "cmd " `isPrefixOf` x then "unit $ " ++ x else x) xs
-restmt i (x:xs) | isBlank $ dropComment x = restmt i xs
-restmt i (x:xs) | " ?== " `isInfixOf` x || " == " `isInfixOf` x =
-    zipWith (\j x -> "hack_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] (x:xs)
-restmt i (x:xs) |
-    not ("let" `isPrefixOf` x) && not ("[" `isPrefixOf` x) && not ("cmd " `isPrefixOf` x) && (" = " `isInfixOf` x || " | " `isInfixOf` x || " :: " `isInfixOf` x) ||
-    "import " `isPrefixOf` x || "infix" `isPrefixOf` x || "instance " `isPrefixOf` x = map f $ x:xs
-    where f x = if takeWhile (not . isSpace) x `elem` dupes then "_" ++ show i ++ "_" ++ x else x
-restmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++
-              ["  undefined" | length (dropWhileEnd isBlank xs) == 1 && ("let" `isPrefixOf` head xs || "<-" `isInfixOf` head xs)]
+---------------------------------------------------------------------
+-- RENDER THE CODE
+
+showCode :: [Code] -> [String]
+showCode = concat . zipWith f [1..] . nubOrd
+    where
+        f i (Stmt x) | "#" `isPrefixOf` concat x = []
+                     | all whitelist x = []
+                     | otherwise = showStmt i $ filter (not . isBlank . dropComment) $ map (fixCmd . undefDots) x
+        f i (Expr x) | fst (word1 x) `elem` types = ["type Expr_" ++ show i ++ " = " ++ x]
+                     | "import " `isPrefixOf` x = [x]
+                     | otherwise = ["expr_" ++ show i ++ " = (" ++ undefDots x2 ++ ")" | let x2 = trim $ dropComment x, not $ whitelist x2]
+
+
+fixCmd :: String -> String
+fixCmd x | "cmd " `isPrefixOf` x || "command " `isPrefixOf` x = "unit $ " ++ x
+fixCmd x = replace "Stdout out" "Stdout (out :: String)" $ replace "Stderr err" "Stderr (err :: String)" x
+
+showStmt :: Int -> [String] -> [String]
+showStmt i xs | isDecl $ unlines xs = map f xs
+    where f x = if fst (word1 x) `elem` dupes then "_" ++ show i ++ "_" ++ x else x
+showStmt i xs | all isPredicate xs, length xs > 1 =
+    zipWith (\j x -> "expr_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] xs
+showStmt i xs = ("stmt_" ++ show i ++ " = do") : map ("  " ++) xs ++ ["  undefined" | isBindStmt $ last xs]
+
+isPredicate :: String -> Bool
+isPredicate x = not $ disjoint (words x) ["==","?=="]
+
+isBindStmt :: String -> Bool
+isBindStmt x = "let " `isPrefixOf` x || " <- " `isInfixOf` x
+
+isDecl :: String -> Bool
+isDecl x | fst (word1 x) `elem` ["import","infix","instance","newtype"] = True
+isDecl (words -> name:"::":_) | all isAlphaNum name = True -- foo :: Type Signature
+isDecl x | "=" `elem` takeWhile (`notElem` ["let","where"]) (words x) = True -- foo arg1 arg2 = an implementation
+isDecl _ = False
 
 
 ---------------------------------------------------------------------
