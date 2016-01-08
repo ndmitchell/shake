@@ -60,12 +60,13 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             (imports,rest) = partition ("import " `isPrefixOf`) code
         writeFileLines out $
             ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, MultiParamTypeClasses, ExtendedDefaultRules, GeneralizedNewtypeDeriving #-}"
-            ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables #-}"
+            ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables, ConstraintKinds #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Applicative"
             ,"import Control.Concurrent"
             ,"import Control.Monad"
+            ,"import Data.ByteString(ByteString)"
             ,"import Data.Char"
             ,"import Data.Data"
             ,"import Data.List"
@@ -231,7 +232,8 @@ types :: [String]
 types = words $
     "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
     "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
-    "Lint Verbosity Rules CmdOption Int Double"
+    "Lint Verbosity Rules CmdOption Int Double " ++
+    "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep"
 
 -- | Duplicated identifiers which require renaming
 dupes :: [String]
@@ -254,7 +256,6 @@ whitelist x | elem x $ words $
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja ByteString ProcessHandle " ++
-    "Rule CmdResult Monoid Monad Data " ++ -- work only with constraint kinds
     "@ndm_haskell file-name .PHONY filepath fsatrace base stack trim extra #include -j4 " ++
     "*> "
     = True
