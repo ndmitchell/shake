@@ -17,7 +17,7 @@ environment:
     STACK_ROOT: "c:\\sr"
 
 test_script:
-- stack init --solver
+- stack init
 - stack setup > nul
 - echo "" | stack --no-terminal build
 - stack test
