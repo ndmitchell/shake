@@ -247,7 +247,7 @@ whitelist :: String -> Bool
 whitelist x | all (not . isSpace) x && takeExtension x `elem` exts = True
     where exts = words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html .zip"
 whitelist x | elem x $ words $
-    "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc ghc " ++
+    "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc " ++
     ".. /./ /.. /../ ./ // \\ ../ //*.c //*.txt //* dir/*/* dir " ++
     "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath main.m run .rot13 " ++
