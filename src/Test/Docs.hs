@@ -134,25 +134,25 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
 ---------------------------------------------------------------------
 -- FIND THE CODE
 
-data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
+newtype Code = Code [String] deriving (Show,Eq,Ord)
 
 
 findCodeHaddock :: String -> [Code]
-findCodeHaddock xs = f Expr "code" ++ f (Stmt . unindent . lines) "pre"
-    where
-        f op tag = map (op . innerText . checkItalic) $ insideTag tag xs
-
-        checkItalic x | bad@(_:_) <- nubOrd (insideTag "em" x) \\ italics = error $ "Bad italics, " ++ show bad
-                      | otherwise = x
+findCodeHaddock src =
+    [ Code $ unindent $ lines $ innerText x
+    | tag <- ["code","pre"]
+    , x <- insideTag tag src
+    , let bad = nubOrd (insideTag "em" x) \\ italics
+    , if null bad then True else error $ "Bad italics, " ++ show bad]
 
 
 findCodeMarkdown :: [String] -> [Code]
 findCodeMarkdown (x:xs) | indented x && not (isBlank x) =
     let (a,b) = span (\x -> indented x || isBlank x) (x:xs)
-    in Stmt (unindent a) : findCodeMarkdown b
+    in Code (unindent a) : findCodeMarkdown b
     where
         indented x = length (takeWhile isSpace x) >= 4
-findCodeMarkdown (x:xs) = map Expr (evens $ splitOn "`" x) ++ findCodeMarkdown xs
+findCodeMarkdown (x:xs) = map (Code . return) (evens $ splitOn "`" x) ++ findCodeMarkdown xs
     where
         evens (x:y:xs) = y : evens xs
         evens _ = []
@@ -165,10 +165,9 @@ findCodeMarkdown [] = []
 showCode :: [Code] -> [String]
 showCode = concat . zipWith f [1..] . nubOrd
     where
-        f i (Stmt x) | "#" `isPrefixOf` concat x = []
+        f i (Code x) | "#" `isPrefixOf` concat x = []
                      | all whitelist x = []
                      | otherwise = showStmt i $ filter (not . isBlank . dropComment) $ map (fixCmd . undefDots) x
-        f i (Expr x) = f i $ Stmt [x]
 
 
 fixCmd :: String -> String
