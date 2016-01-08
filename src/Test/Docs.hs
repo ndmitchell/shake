@@ -142,12 +142,12 @@ data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
 
 
 findCodeHaddock :: String -> [Code]
-findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . unindent . lines . strip . badItalic) "</pre>" x
-                  | Just x <- stripPrefix "<code>" x = f (Expr . strip . badItalic) "</code>" x
+findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . unindent . lines . innerText . badItalic) "</pre>" x
+                  | Just x <- stripPrefix "<code>" x = f (Expr . innerText . badItalic) "</code>" x
     where
         f ctor end x | Just x <- stripPrefix end x = ctor "" : findCodeHaddock x
         f ctor end (x:xs) = f (ctor . (x:)) end xs
-        badItalic x | bad@(_:_) <- nubOrd (extractTag "em" x) \\ italics = error $ "Bad italics, " ++ show bad
+        badItalic x | bad@(_:_) <- nubOrd (insideTag "em" x) \\ italics = error $ "Bad italics, " ++ show bad
                     | otherwise = x
 findCodeHaddock (x:xs) = findCodeHaddock xs
 findCodeHaddock [] = []
@@ -165,17 +165,6 @@ findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
         f (x:xs) = f xs
         f [] = []
 findCodeMarkdown [] = []
-
-
-strip :: String -> String
-strip ('<':xs) = strip $ drop 1 $ dropWhile (/= '>') xs
-strip ('&':xs)
-    | Just xs <- stripPrefix "quot;" xs = '\"' : strip xs
-    | Just xs <- stripPrefix "lt;" xs = '<' : strip xs
-    | Just xs <- stripPrefix "gt;" xs = '>' : strip xs
-    | Just xs <- stripPrefix "amp;" xs = '&' : strip xs
-strip (x:xs) = x : strip xs
-strip [] = []
 
 
 restmt :: Int -> [String] -> [String]
@@ -217,8 +206,20 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
             | otherwise = replace "..." new x
     where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
 
-extractTag :: String -> String -> [String]
-extractTag tag = map (fst . breakOn ("</" ++ tag ++ ">")) . drop 1 . splitOn ("<" ++ tag ++ ">")
+-- | Find all pieces of text inside a given tag
+insideTag :: String -> String -> [String]
+insideTag tag = map (fst . breakOn ("</" ++ tag ++ ">")) . drop 1 . splitOn ("<" ++ tag ++ ">")
+
+-- | Given some HTML, find the raw text
+innerText :: String -> String
+innerText ('<':xs) = innerText $ drop 1 $ dropWhile (/= '>') xs
+innerText ('&':xs)
+    | Just xs <- stripPrefix "quot;" xs = '\"' : innerText xs
+    | Just xs <- stripPrefix "lt;" xs = '<' : innerText xs
+    | Just xs <- stripPrefix "gt;" xs = '>' : innerText xs
+    | Just xs <- stripPrefix "amp;" xs = '&' : innerText xs
+innerText (x:xs) = x : innerText xs
+innerText [] = []
 
 
 ---------------------------------------------------------------------
