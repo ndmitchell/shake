@@ -242,20 +242,23 @@ dupes = words "main progressSimple rules"
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
-whitelist x | all (not . isSpace) x && takeExtension x `elem` exts = True
-    where exts = words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html .zip"
+-- files, with common extensions that are very unlikely to be qualified identifiers
+whitelist x | all (\x -> isAlphaNum x || x `elem` "_./*") x && takeExtension x `elem` exts = True
+    where exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .h .c .html .zip " ++
+                         ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits"
+
 whitelist x | elem x $ words $
-    "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc " ++
-    ".. // \\ //*.c //*.txt //* dir/*/* dir " ++
+    "newtype do excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc " ++
+    ".. /. // \\ //* dir/*/* dir " ++
     "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
-    "Data.List System.Directory Development.Shake.FilePath main.m run .rot13 " ++
-    "NoProgress Error src .js .json .trace about://tracing .ninja " ++
-    ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out build " ++
+    "Data.List System.Directory Development.Shake.FilePath main.m run " ++
+    "NoProgress Error src about://tracing " ++
+    ".make/i586-linux-gcc/output foo/.. build " ++
     "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
-    "-threaded -rtsopts -I0 Hidden TypeRep extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
-    "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
-    "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
-    "docs/manual _build _build/run ninja depfile build.ninja ByteString ProcessHandle " ++
+    "-threaded -rtsopts -I0 Hidden extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
+    "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD linkFlags temp pwd touch code out err " ++
+    "_shake _shake/build [out] manual " ++
+    "docs/manual _build _build/run ninja depfile build.ninja " ++
     "@ndm_haskell file-name .PHONY filepath fsatrace base stack trim extra #include -j4 " ++
     "*> "
     = True
