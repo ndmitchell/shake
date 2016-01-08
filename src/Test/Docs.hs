@@ -142,28 +142,24 @@ data Code = Stmt [String] | Expr String deriving (Show,Eq,Ord)
 
 
 findCodeHaddock :: String -> [Code]
-findCodeHaddock x | Just x <- stripPrefix "<pre>" x = f (Stmt . unindent . lines . innerText . badItalic) "</pre>" x
-                  | Just x <- stripPrefix "<code>" x = f (Expr . innerText . badItalic) "</code>" x
+findCodeHaddock xs = f Expr "code" ++ f (Stmt . unindent . lines) "pre"
     where
-        f ctor end x | Just x <- stripPrefix end x = ctor "" : findCodeHaddock x
-        f ctor end (x:xs) = f (ctor . (x:)) end xs
-        badItalic x | bad@(_:_) <- nubOrd (insideTag "em" x) \\ italics = error $ "Bad italics, " ++ show bad
-                    | otherwise = x
-findCodeHaddock (x:xs) = findCodeHaddock xs
-findCodeHaddock [] = []
+        f op tag = map (op . innerText . checkItalic) $ insideTag tag xs
+
+        checkItalic x | bad@(_:_) <- nubOrd (insideTag "em" x) \\ italics = error $ "Bad italics, " ++ show bad
+                      | otherwise = x
 
 
 findCodeMarkdown :: [String] -> [Code]
 findCodeMarkdown (x:xs) | indented x && not (isBlank x) =
     let (a,b) = span (\x -> indented x || isBlank x) (x:xs)
-    in Stmt (map (drop 4) a) : findCodeMarkdown b
+    in Stmt (unindent a) : findCodeMarkdown b
     where
         indented x = length (takeWhile isSpace x) >= 4
-findCodeMarkdown (x:xs) = f x ++ findCodeMarkdown xs
+findCodeMarkdown (x:xs) = map Expr (evens $ splitOn "`" x) ++ findCodeMarkdown xs
     where
-        f ('`':xs) = let (a,b) = break (== '`') xs in Expr a : f (drop 1 b)
-        f (x:xs) = f xs
-        f [] = []
+        evens (x:y:xs) = y : evens xs
+        evens _ = []
 findCodeMarkdown [] = []
 
 
