@@ -275,7 +275,7 @@ isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
 
 isProgram :: String -> Bool
 isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFilePath x || all isAlpha x || x == "&&") xs
-    where programs = words "excel gcc cl make ghc cabal distcc build tar fsatrace ninja touch pwd runhaskell rot13"
+    where programs = words "excel gcc cl make ghc cabal distcc build tar fsatrace ninja touch pwd runhaskell rot13 main shake"
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
@@ -319,7 +319,13 @@ whitelist x = x `elem`
     ,"buildDir = \"_build\""
     ,"-MMD -MF"
     ,"#!/bin/sh"
+    ,"--title=string"
+    ,"--state=Normal"
+    ,"--value=25"
+    ,"build --metadata=_metadata"
+    ,"make --jobs=N"
     ,"shake-build-system"
+    ,"build --report=-"
     ,"\"_build\" </> x -<.> \"o\""
     ,"cmd \"gcc -o\" [out] os"
     ,"out -<.> \"txt\""
