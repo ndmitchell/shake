@@ -112,7 +112,9 @@ getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
          else
             return Nothing
 
-#ifndef CALLCONV
+#ifdef x86_64_HOST_ARCH
+#define CALLCONV ccall
+#else
 #define CALLCONV stdcall
 #endif
 

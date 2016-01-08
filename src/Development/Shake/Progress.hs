@@ -36,7 +36,9 @@ import Prelude
 import Foreign
 import Foreign.C.Types
 
-#ifndef CALLCONV
+#ifdef x86_64_HOST_ARCH
+#define CALLCONV ccall
+#else
 #define CALLCONV stdcall
 #endif
 

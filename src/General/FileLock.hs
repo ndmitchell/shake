@@ -18,7 +18,9 @@ import System.Posix.IO
 
 #ifdef mingw32_HOST_OS
 
-#ifndef CALLCONV
+#ifdef x86_64_HOST_ARCH
+#define CALLCONV ccall
+#else
 #define CALLCONV stdcall
 #endif
 
