@@ -264,7 +264,7 @@ isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `el
                        ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits"
 
 isCmdFlag :: String -> Bool
-isCmdFlag x = length a >= 1 && length a <= 2 && all (\x -> isAlphaNum x || x == '-') b
+isCmdFlag x = length a >= 1 && length a <= 2 && all (\x -> isAlphaNum x || x `elem` "-=/_") b
     where (a,b) = span (== '-') x
 
 isEnvVar :: String -> Bool
