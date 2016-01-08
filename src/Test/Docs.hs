@@ -177,6 +177,12 @@ fixCmd :: String -> String
 fixCmd x | "cmd " `isPrefixOf` x || "command " `isPrefixOf` x = "unit $ " ++ x
 fixCmd x = replace "Stdout out" "Stdout (out :: String)" $ replace "Stderr err" "Stderr (err :: String)" x
 
+-- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)
+undefDots :: String -> String
+undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = x ++ new
+            | otherwise = replace "..." new x
+    where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
+
 showStmt :: Int -> [String] -> [String]
 showStmt i xs | isDecl $ unlines xs = map f xs
     where f x = if fst (word1 x) `elem` dupes then "_" ++ show i ++ "_" ++ x else x
@@ -212,12 +218,6 @@ unindent xs = map (drop n) xs
 -- | Remove line comments from the end of lines
 dropComment :: String -> String
 dropComment = fst . breakOn "--"
-
--- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)
-undefDots :: String -> String
-undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = x ++ new
-            | otherwise = replace "..." new x
-    where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
 
 -- | Find all pieces of text inside a given tag
 insideTag :: String -> String -> [String]
