@@ -244,17 +244,17 @@ whitelist x | all (not . isSpace) x && takeExtension x `elem` exts = True
     where exts = words ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .deps .h .c .html .zip"
 whitelist x | elem x $ words $
     "newtype do MyFile.txt.digits excel a q m c x value key gcc cl os make contents tar ghc cabal clean _make distcc " ++
-    ".. /./ /.. /../ ./ // \\ ../ //*.c //*.txt //* dir/*/* dir " ++
+    ".. // \\ //*.c //*.txt //* dir/*/* dir " ++
     "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath main.m run .rot13 " ++
-    "NoProgress Error src rot13 .js .json .trace about://tracing .ninja " ++
+    "NoProgress Error src .js .json .trace about://tracing .ninja " ++
     ".make/i586-linux-gcc/output _make/.database foo/.. file.src file.out build " ++
     "/usr/special /usr/special/userbinary $CFLAGS %PATH% -O2 -j8 -j -j1 " ++
     "-threaded -rtsopts -I0 Hidden TypeRep extension $OUT $C_LINK_FLAGS $PATH xterm $TERM main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let -showincludes -MMD gcc.version linkFlags temp pwd touch code out err " ++
     "_metadata/.shake.database _shake _shake/build ./build.sh build.sh build.bat [out] manual " ++
     "docs/manual _build _build/run ninja depfile build.ninja ByteString ProcessHandle " ++
-    "Rule CmdResult ShakeValue Monoid Monad Eq Typeable Data " ++ -- work only with constraint kinds
+    "Rule CmdResult Monoid Monad Data " ++ -- work only with constraint kinds
     "@ndm_haskell file-name .PHONY filepath fsatrace base stack trim extra #include -j4 " ++
     "*> "
     = True
@@ -307,7 +307,6 @@ whitelist x = x `elem`
     ,"runhaskell Build.hs"
     ,"cabal update"
     ,"cabal install shake"
-    ,"shake -j4"
     ,"cmd \"gcc -o _make/run _build/main.o _build/constants.o\""
     ,"$(LitE . StringL . loc_filename <$> location)"
     ]
