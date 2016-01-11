@@ -67,25 +67,23 @@ import Prelude
 --
 -- > newtype MyType = MyType (String, Bool) deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
 --
---   Why does Shake need all these instances?  In general, keys and
---   values need to these instances.  Here's how Shake uses them:
+--   Shake needs these instances on keys and values. They are used for:
 --
--- * 'Show' is used to Shake can print out keys in error messages.  It
---   is not used very much in a user-facing way for values, but it is
---   used in the diagnostic logging (enabled with @-d@).
+-- * 'Show' is used to print out keys in errors, profiling, progress messages
+--   and diagnostics.
 --
 -- * 'Typeable' is used because Shake indexes its database by the
---   TYPE of the key and value involved in the rule (overlap is not
---   allowed for type classes and not allowed in Shake either!)
+--   type of the key and value involved in the rule (overlap is not
+--   allowed for type classes and not allowed in Shake either).
 --
 -- * 'Eq' and 'Hashable' are used on keys in order to build hash maps
 --   from keys to values.  'Eq' is used on values to test if the value
 --   has changed or not (this is used to support unchanging rebuilds,
 --   where Shake can avoid rerunning rules if it runs a dependency,
 --   but it turns out that no changes occurred.)  The 'Hashable'
---   instances are *strictly* used only at runtime (and not
---   serialized to disk), so they do not have to be stable across runs.
---   TODO: What is Hashable on values used for?
+--   instances are only use at runtime (never serialised to disk),
+--   so they do not have to be stable across runs.
+--   Hashable on values is not used, and only required for a consistent interface.
 --
 -- * 'Binary' is used to serialize keys and values into Shake's
 --   build database; this lets Shake cache values across runs and
@@ -603,9 +601,12 @@ getProgress = do
 --   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.
 --   The trace list is used for profile reports (see 'shakeReport').
 --
---   'traced', by default, prints some useful extra context about what
---   Shake is building (it's prepended with a hash).  If you want to
---   suppress the output of 'traced' (for example you want more control
+--   By default 'traced' prints some useful extra context about what
+--   Shake is building, e.g.:
+--
+-- > # traced message (for myobject.o)
+--
+--   To suppress the output of 'traced' (for example you want more control
 --   over the message using 'putNormal'), use the 'quietly' combinator.
 traced :: String -> IO a -> Action a
 traced msg act = do
