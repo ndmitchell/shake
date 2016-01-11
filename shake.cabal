@@ -173,7 +173,7 @@ executable shake
     ghc-options: -rtsopts
     -- GHC bug 7646 means -threaded causes errors
     if impl(ghc >= 7.8)
-        -threaded "-with-rtsopts=-I0 -qg -qb"
+        ghc-options: -threaded "-with-rtsopts=-I0 -qg -qb"
     build-depends:
         base == 4.*,
         directory,
@@ -268,7 +268,7 @@ test-suite shake-test
     ghc-options: -rtsopts
     -- GHC bug 7646 means -threaded causes errors
     if impl(ghc >= 7.8)
-        -threaded
+        ghc-options: -threaded
     build-depends:
         base == 4.*,
         directory,
