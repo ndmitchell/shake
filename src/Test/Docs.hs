@@ -249,6 +249,7 @@ types = words $
     "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
     "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
+    "NFData Binary Hashable Eq Typeable Show " ++
     "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep"
 
 -- | Duplicated identifiers which require renaming
