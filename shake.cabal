@@ -170,7 +170,10 @@ executable shake
     hs-source-dirs:   src
     ghc-options: -main-is Run.main
     main-is: Run.hs
-    ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -qg -qb"
+    ghc-options: -rtsopts
+    -- GHC bug 7646 means -threaded causes errors
+    if impl(ghc >= 7.8)
+        -threaded "-with-rtsopts=-I0 -qg -qb"
     build-depends:
         base == 4.*,
         directory,
@@ -262,7 +265,10 @@ test-suite shake-test
     ghc-options: -main-is Test.main -with-rtsopts=-K1K
     main-is: Test.hs
     hs-source-dirs: src
-    ghc-options: -threaded -rtsopts
+    ghc-options: -rtsopts
+    -- GHC bug 7646 means -threaded causes errors
+    if impl(ghc >= 7.8)
+        -threaded
     build-depends:
         base == 4.*,
         directory,
