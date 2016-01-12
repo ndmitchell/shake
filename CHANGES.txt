@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #369, clarify the docs for putQuiet/putLoud
     #405, make sure phony targets with \ work on Windows
     Require extra-1.4.3
     #398, only require old-time with GHC 7.4
