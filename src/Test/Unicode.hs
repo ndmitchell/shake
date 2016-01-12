@@ -18,7 +18,7 @@ decode (x:xs) = x : decode xs
 decode [] = []
 
 
-main = shaken test $ \xs obj -> do
+main = shakenCwd test $ \xs obj -> do
     let pre:args = map decode xs
     want $ map obj args
 

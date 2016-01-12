@@ -5,7 +5,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want $ map obj args
 
     obj "foo" %> \ out -> do

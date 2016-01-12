@@ -7,7 +7,7 @@ import System.Directory(removeFile)
 import Control.Exception.Extra
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want $ map obj args
 
     obj "bar.txt" %> \out -> do

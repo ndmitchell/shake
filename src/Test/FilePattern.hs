@@ -9,7 +9,7 @@ import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
-main = shaken test $ \args obj -> return ()
+main = shakenCwd test $ \args obj -> return ()
 
 
 newtype Pattern = Pattern FilePattern deriving (Show,Eq)
