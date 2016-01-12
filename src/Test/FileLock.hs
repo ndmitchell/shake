@@ -10,7 +10,7 @@ import System.Time.Extra
 import Test.Type
 
 
-main = shakenCwd test $ \args obj ->
+main = shaken test $ \args obj ->
     action $ do
         putNormal "Starting sleep"
         liftIO $ sleep 5
