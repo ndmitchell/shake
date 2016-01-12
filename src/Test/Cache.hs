@@ -7,7 +7,7 @@ import Data.Char
 import Test.Type
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want $ map obj args
     vowels <- newCache $ \file -> do
         src <- readFile' file
