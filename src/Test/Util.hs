@@ -5,7 +5,7 @@ import Development.Shake.Util
 import Test.Type
 
 
-main = shaken test $ \args obj -> return ()
+main = shakenCwd test $ \args obj -> return ()
 
 
 test build obj = do

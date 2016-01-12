@@ -6,7 +6,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     if null args then want [obj "Out.txt",obj "Out2.txt"] else want $ map obj args
 
     obj "Out.txt" %> \out -> do

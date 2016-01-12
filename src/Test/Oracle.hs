@@ -7,7 +7,7 @@ import Test.Type
 import Control.Monad
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     let f name lhs rhs = (,) name
             (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
             ,let o = obj name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)

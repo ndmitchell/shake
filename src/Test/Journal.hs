@@ -14,7 +14,7 @@ rebuilt :: IORef Int
 rebuilt = unsafePerformIO $ newIORef 0
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want $ map obj ["a.out","b.out","c.out"]
     obj "*.out" %> \out -> do
         liftIO $ atomicModifyIORef rebuilt $ \a -> (a+1,())

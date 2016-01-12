@@ -7,7 +7,7 @@ import Control.Monad
 import Development.Shake.FilePath
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want $ map obj args
     obj "*.out" %> \out -> do
         cs <- mapM (readFile' . obj . (:".src")) $ takeBaseName out

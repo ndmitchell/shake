@@ -8,7 +8,7 @@ import Development.Shake.FilePath
 
 
 -- | Given a breadth and depth come up with a set of build files
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     let get ty = head $ [read $ drop (length ty + 1) a | a <- args, (ty ++ "=") `isPrefixOf` a] ++
                         error ("Could not find argument, expected " ++ ty ++ "=Number")
         depth = get "depth"

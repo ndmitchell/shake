@@ -9,7 +9,7 @@ import Control.Exception hiding (assert)
 import Control.Monad
 
 
-main = shaken test $ \args obj -> return ()
+main = shakenCwd test $ \args obj -> return ()
 
 
 test build obj = do

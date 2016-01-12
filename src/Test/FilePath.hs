@@ -13,7 +13,7 @@ import qualified Development.Shake.ByteString as BS
 import System.Info.Extra
 
 
-main = shaken test $ \args obj -> return ()
+main = shakenCwd test $ \args obj -> return ()
 
 
 newtype File = File String deriving Show

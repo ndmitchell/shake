@@ -9,7 +9,7 @@ import Control.Concurrent.Extra
 import Data.IORef
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want args
 
     phony "cancel" $ do

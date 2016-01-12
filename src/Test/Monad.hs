@@ -11,7 +11,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 
 
-main = shaken test $ \args obj -> return ()
+main = shakenCwd test $ \args obj -> return ()
 
 
 run :: ro -> rw -> RAW ro rw a -> IO a

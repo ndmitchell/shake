@@ -8,7 +8,7 @@ import Control.Monad
 import Data.List
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     let fun = "@" `elem` args
     let rest = delete "@" args
     want $ map obj $ if null rest then ["even.txt","odd.txt"] else rest

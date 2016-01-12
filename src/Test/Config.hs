@@ -11,7 +11,7 @@ import Data.Maybe
 import System.Directory
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want $ map obj ["hsflags.var","cflags.var","none.var","keys"]
     usingConfigFile $ obj "config"
     obj "*.var" %> \out -> do
