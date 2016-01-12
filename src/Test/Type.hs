@@ -14,7 +14,7 @@ import Control.Monad.Extra
 import Data.List
 import Data.Maybe
 import qualified Data.ByteString as BS
-import System.Directory as IO
+import System.Directory.Extra as IO
 import System.Environment.Extra
 import System.Random
 import System.Console.GetOpt
@@ -23,25 +23,39 @@ import System.Time.Extra
 import Prelude
 
 
-shaken
+shaken, shakenCwd
     :: (([String] -> IO ()) -> (String -> String) -> IO ())
     -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shaken test rules sleeper = do
+shaken = shakenEx False
+shakenCwd = shakenEx True
+
+shakenEx
+    :: Bool
+    -> (([String] -> IO ()) -> (String -> String) -> IO ())
+    -> ([String] -> (String -> String) -> Rules ())
+    -> IO ()
+    -> IO ()
+shakenEx changeDir test rules sleeper = do
     name:args <- getArgs
     when ("--sleep" `elem` args) sleeper
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let forward = "--forward" `elem` args
     args <- return $ args \\ ["--sleep","--forward"]
+    cwd <- getCurrentDirectory
     let out = "output/" ++ name ++ "/"
-    let obj x = if "/" `isPrefixOf` x then init out ++ x else out ++ x
+    let obj x = if changeDir then x else if "/" `isPrefixOf` x || null x then init out ++ x else out ++ x
+    let change = if changeDir then withCurrentDirectory out else id
+    let unchange act = do
+            new <- getCurrentDirectory
+            withCurrentDirectory cwd $ do act; createDirectoryIfMissing True new -- to deal with clean
     createDirectoryIfMissing True out
     case args of
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            test (\args -> withArgs (name:args ++ extra) $ shaken test rules sleeper) obj
+            change $ test (\args -> withArgs (name:args ++ extra) $ unchange $ shakenEx changeDir test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":_ -> removeDirectoryRecursive out
@@ -53,19 +67,18 @@ shaken test rules sleeper = do
             shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules args (out++)
 
         args -> do
-            cwd <- getCurrentDirectory
             t <- tracker
             let (_,files,_) = getOpt Permute [] args
             opts <- return $ shakeOptions
-                {shakeFiles = out
-                ,shakeReport = ["output/" ++ name ++ "/report.html"]}
+                {shakeFiles = obj ""
+                ,shakeReport = [obj "report.html"]}
             opts <- return $ if forward then forwardOptions opts else opts
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs (args \\ files) $
-                shakeWithClean
-                    (removeDirectoryRecursive out)
+                change $ shakeWithClean
+                    (removeDirectoryRecursive $ obj "")
                     opts
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
