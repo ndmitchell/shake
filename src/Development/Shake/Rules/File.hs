@@ -220,7 +220,7 @@ root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
 --   Use a phony rule!  For file-producing rules which should be
 --   rerun every execution of Shake, see 'Development.Shake.alwaysRerun'.
 phony :: String -> Action () -> Rules ()
-phony name act = phonys $ \s -> if s == name then Just act else Nothing
+phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else Nothing
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
