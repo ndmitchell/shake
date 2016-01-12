@@ -79,7 +79,7 @@ shakenEx changeDir test rules sleeper = do
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs (args \\ files) $
                 change $ shakeWithClean
-                    (do removeDirectoryRecursive $ obj ""; createDirectoryIfMissing True $ obj "")
+                    (unchange $ removeDirectoryRecursive out)
                     opts
                     -- if you have passed sleep, supress the "no errors" warning
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
