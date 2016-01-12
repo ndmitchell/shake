@@ -53,6 +53,9 @@ main = shaken test $ \args obj -> do
         x <- getShakeOptions
         writeFile' (obj "threads.txt") $ show $ shakeThreads x
 
+    phony ("slash" </> "platform") $ return ()
+    phony ("slash/forward") $ return ()
+
     obj "dummer.txt" %> \out -> do
         need ["dummy","dummy"]
         need ["dummy"]
@@ -158,5 +161,8 @@ test build obj = do
     assertContents (obj "duplicate") "1"
 
     build $ concat [["sep/" ++ show i ++ ".txt", "sep" </> show i ++ ".txt"] | i <- [1..7]]
+
+    build ["!slash" </> "platform","!slash" </> "forward"]
+    build ["!slash/platform","!slash/forward"]
 
     build [] -- should say "no want/action statements, nothing to do" (checked manually)
