@@ -84,19 +84,6 @@ shakenEx changeDir test rules sleeper = do
                     (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
 
 
-shaken2
-    :: (([String] -> IO ()) -> (String -> String) -> IO ())
-    -> ([String] -> (String -> String) -> Rules ())
-    -> IO ()
-    -> IO ()
-shaken2 test rules = shakenCwd test rules2
-    where
-        rules2 args obj = rules (map f args) obj
-            where f ('$':xs) = xs
-                  f ('!':xs) = xs
-                  f xs = xs
-
-
 tracker :: IO Lint
 tracker = do
   fsatrace <- findExecutable $ "fsatrace" <.> exe
