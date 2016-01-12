@@ -11,7 +11,7 @@ import Control.Monad
 import Data.IORef
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     -- test I have good Ord and Show
     want args
     do

@@ -26,7 +26,8 @@ showEsc = concatMap f
           f x = [x]
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
+    let unobj = id
     want $ map obj args
     obj "*.contents" %> \out ->
         writeFileLines out =<< getDirectoryContents (obj $ readEsc $ dropExtension $ unobj out)

@@ -21,7 +21,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Prelude
 
 
-main = shaken test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     let helper = toNative $ obj "shake_helper" <.> exe
     let name !> test = do want [name | null args || name `elem` args]
                           name ~> do need [obj "shake_helper" <.> exe]; test
@@ -50,7 +50,7 @@ main = shaken test $ \args obj -> do
             ,"        hFlush stderr"
             ]
 
-    obj "shake_helper.hs" %> \out -> do need ["src/Test/Command.hs"]; writeFileChanged out helper_source
+    obj "shake_helper.hs" %> \out -> do need ["../../src/Test/Command.hs"]; writeFileChanged out helper_source
     [obj "shake_helper" <.> exe, obj "shake_helper.o", obj "shake_helper.hi"] &%> \_ -> do
       need [obj "shake_helper.hs"]; cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o shake_helper"
 
