@@ -43,18 +43,8 @@ shaken test rules sleeper = do
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
             test (\args -> withArgs (name:args ++ extra) $ shaken test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
+
         "clean":_ -> removeDirectoryRecursive out
-{-
-        "lint":args -> do
-            let dbfile = out ++ ".database"
-                tempfile = "output/" ++ name ++ ".database"
-            b <- IO.doesFileExist dbfile
-            when b $ renameFile dbfile tempfile
-            removeDirectoryRecursive out
-            createDirectoryIfMissing True out
-            when b $ renameFile tempfile dbfile
-            shake shakeOptions{shakeFiles=out, shakeLint=True} $ rules args (out++)
--}
 
         "perturb":args -> forever $ do
             del <- removeFilesRandom out
