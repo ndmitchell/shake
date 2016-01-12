@@ -12,7 +12,7 @@ import System.Directory as IO
 import qualified System.IO.Extra as IO
 
 
-main = shaken2 test $ \args obj -> do
+main = shakenCwd test $ \args obj -> do
     want args
     obj "norule" %> \_ ->
         need [obj "norule_isavailable"]
@@ -101,58 +101,58 @@ test build obj = do
     build ["--sleep"]
 
     writeFile (obj "chain.1") "x"
-    build ["$chain.3","--sleep"]
+    build ["chain.3","--sleep"]
     writeFile (obj "chain.1") "err"
-    crash ["$chain.3"] ["err_chain"]
+    crash ["chain.3"] ["err_chain"]
 
-    crash ["$norule"] ["norule_isavailable"]
-    crash ["$failcreate"] ["failcreate"]
-    crash ["$failcreates"] ["failcreates"]
-    crash ["$recursive"] ["recursive"]
-    crash ["$systemcmd"] ["systemcmd","random_missing_command"]
-    crash ["$stack1"] ["stack1","stack2","stack3","crash"]
+    crash ["norule"] ["norule_isavailable"]
+    crash ["failcreate"] ["failcreate"]
+    crash ["failcreates"] ["failcreates"]
+    crash ["recursive"] ["recursive"]
+    crash ["systemcmd"] ["systemcmd","random_missing_command"]
+    crash ["stack1"] ["stack1","stack2","stack3","crash"]
 
     b <- IO.doesFileExist $ obj "staunch1"
     when b $ removeFile $ obj "staunch1"
-    crash ["$staunch1","$staunch2","-j2"] ["crash"]
+    crash ["staunch1","staunch2","-j2"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
     assert (not b) "File should not exist, should have crashed first"
-    crash ["$staunch1","$staunch2","-j2","--keep-going","--silent"] ["crash"]
+    crash ["staunch1","staunch2","-j2","--keep-going","--silent"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
     assert b "File should exist, staunch should have let it be created"
 
-    crash ["$finally1"] ["die"]
+    crash ["finally1"] ["die"]
     assertContents (obj "finally1") "1"
-    build ["$finally2"]
+    build ["finally2"]
     assertContents (obj "finally2") "1"
-    crash ["$exception1"] ["die"]
+    crash ["exception1"] ["die"]
     assertContents (obj "exception1") "1"
-    build ["$exception2"]
+    build ["exception2"]
     assertContents (obj "exception2") "0"
 
     forM_ ["finally3","finally4"] $ \name -> do
-        t <- forkIO $ ignore $ build ['$':name,"--exception"]
+        t <- forkIO $ ignore $ build [name,"--exception"]
         retry 10 $ sleep 0.1 >> assertContents (obj name) "0"
         throwTo t (IndexOutOfBounds "test")
         retry 10 $ sleep 0.1 >> assertContents (obj name) "1"
 
-    crash ["$resource"] ["cannot currently call apply","withResource","resource_name"]
+    crash ["resource"] ["cannot currently call apply","withResource","resource_name"]
 
-    build ["$overlap.foo"]
+    build ["overlap.foo"]
     assertContents (obj "overlap.foo") "overlap.*"
-    build ["$overlap.txt"]
+    build ["overlap.txt"]
     assertContents (obj "overlap.txt") "overlap.txt"
-    crash ["$overlap.txx"] ["key matches multiple rules","overlap.txx"]
-    build ["$alternative.foo","$alternative.txt"]
+    crash ["overlap.txx"] ["key matches multiple rules","overlap.txx"]
+    build ["alternative.foo","alternative.txt"]
     assertContents (obj "alternative.foo") "alternative.*"
     assertContents (obj "alternative.txt") "alternative.txt"
 
-    crash ["$tempfile"] ["tempfile-died"]
+    crash ["tempfile"] ["tempfile-died"]
     src <- readFile $ obj "tempfile"
     assertMissing src
-    build ["$tempdir"]
+    build ["tempdir"]
 
-    crash ["!die"] ["Shake","action","death error"]
+    crash ["die"] ["Shake","action","death error"]
 
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []
