@@ -89,13 +89,12 @@ shaken2
     -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shaken2 test rules = shaken test rules2
+shaken2 test rules = shakenCwd test rules2
     where
-        rules2 args obj = do
-            (objd,args) <- return $ partition ("$" `isPrefixOf`) args
-            (spec,phon) <- return $ partition ("!" `isPrefixOf`) args
-            want $ phon ++ map (obj . tail) objd
-            rules (map tail spec) obj
+        rules2 args obj = rules (map f args) obj
+            where f ('$':xs) = xs
+                  f ('!':xs) = xs
+                  f xs = xs
 
 
 tracker :: IO Lint

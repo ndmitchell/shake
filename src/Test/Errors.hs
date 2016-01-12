@@ -13,6 +13,7 @@ import qualified System.IO.Extra as IO
 
 
 main = shaken2 test $ \args obj -> do
+    want args
     obj "norule" %> \_ ->
         need [obj "norule_isavailable"]
 
