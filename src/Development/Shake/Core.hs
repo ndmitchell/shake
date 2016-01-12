@@ -624,7 +624,7 @@ putWhen :: Verbosity -> String -> Action ()
 putWhen v msg = do
     Global{..} <- Action getRO
     verb <- getVerbosity
-    when (verb >= v) $
+    when (v >= verb) $
         liftIO $ globalOutput v msg
 
 
