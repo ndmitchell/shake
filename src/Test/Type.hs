@@ -45,7 +45,8 @@ shakenEx changeDir test rules sleeper = do
     args <- return $ args \\ ["--sleep","--forward"]
     cwd <- getCurrentDirectory
     let out = "output/" ++ name ++ "/"
-    let obj x = if changeDir then x else if "/" `isPrefixOf` x || null x then init out ++ x else out ++ x
+    let obj x | changeDir = if null x then "." else x
+              | otherwise = if "/" `isPrefixOf` x || null x then init out ++ x else out ++ x
     let change = if changeDir then withCurrentDirectory out else id
     let unchange act = do
             new <- getCurrentDirectory
