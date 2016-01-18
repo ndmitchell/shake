@@ -279,7 +279,7 @@ build pool Database{..} Ops{..} stack ks continue =
                             Ready r -> do
                                 diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
                                              " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                journal i (k, Loaded r) -- leave the DB lock before appending
+                                journal i (k, Loaded r) -- we leave the DB lock before appending
                             Error _ -> do
                                 diagnostic $ "result " ++ atom k ++ " = error"
                                 journal i (k, Missing)
