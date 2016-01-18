@@ -117,10 +117,10 @@ specialIsOracleKey t = con == "OracleQ"
 -- | Error representing all expected exceptions thrown by Shake.
 --   Problems when executing rules will be raising using this exception type.
 data ShakeException = ShakeException
-        {shakeExceptionTarget :: String -- ^ The target that was being built when the exception occured.
-        ,shakeExceptionStack :: [String]  -- ^ The stack of targets, where the 'shakeExceptionTarget' is last.
-        ,shakeExceptionInner :: SomeException -- ^ The underlying exception that was raised.
-        }
+    {shakeExceptionTarget :: String -- ^ The target that was being built when the exception occured.
+    ,shakeExceptionStack :: [String]  -- ^ The stack of targets, where the 'shakeExceptionTarget' is last.
+    ,shakeExceptionInner :: SomeException -- ^ The underlying exception that was raised.
+    }
     deriving Typeable
 
 instance Exception ShakeException
