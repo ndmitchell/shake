@@ -199,7 +199,7 @@ build pool Database{..} Ops{..} stack ks continue =
 
         whenJust (checkStack is stack) $ \bad -> do
             status <- readIORef status
-            uncurry errorRuleRecursion $ case Map.lookup bad status of
+            uncurry (errorRuleRecursion []) $ case Map.lookup bad status of
                 Nothing -> (Nothing, Nothing)
                 Just (k,_) -> (Just $ typeKey k, Just $ show k)
 
