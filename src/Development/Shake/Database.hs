@@ -4,7 +4,7 @@
 
 module Development.Shake.Database(
     Trace(..),
-    Database, withDatabase,
+    Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
     Ops(..), build, Depends,
     progress,
@@ -362,6 +362,15 @@ progress Database{..} = do
 
 ---------------------------------------------------------------------
 -- QUERY DATABASE
+
+assertFinishedDatabase :: Database -> IO ()
+assertFinishedDatabase Database{..} = do
+    -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
+    status <- readIORef status
+    let bad = [key | (_, (key, Waiting{})) <- Map.toList status]
+    when (bad /= []) $
+        errorComplexRecursion (map show bad)
+
 
 -- | Given a map of representing a dependency order (with a show for error messages), find an ordering for the items such
 --   that no item points to an item before itself.

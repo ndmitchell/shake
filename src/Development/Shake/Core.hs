@@ -464,6 +464,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                             Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
+                assertFinishedDatabase database
 
                 when (null $ actions rs) $
                     when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
