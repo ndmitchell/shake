@@ -185,7 +185,7 @@ data Ops = Ops
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool Database{..} Ops{..} stack ks continue =
+build pool database@Database{..} Ops{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ \k -> do
             is <- readIORef intern
@@ -198,10 +198,15 @@ build pool Database{..} Ops{..} stack ks continue =
                     return i
 
         whenJust (checkStack is stack) $ \bad -> do
+            -- everything else gets thrown via Left and can be Staunch'd
+            -- recursion in the rules is considered a worse error, so fails immediately
             status <- readIORef status
-            uncurry (errorRuleRecursion []) $ case Map.lookup bad status of
+            let Stack _ xs _ = stack
+            stack <- return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) $ bad:xs
+            (tk, tname) <- return $ case Map.lookup bad status of
                 Nothing -> (Nothing, Nothing)
                 Just (k,_) -> (Just $ typeKey k, Just $ show k)
+            errorRuleRecursion stack tk tname
 
         vs <- mapM (reduce stack) is
         let errs = [e | Error e <- vs]
