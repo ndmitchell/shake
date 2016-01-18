@@ -29,7 +29,10 @@ alternatives = let (*) = (,) in
 
 
 errorStructured :: String -> [(String, Maybe String)] -> String -> IO a
-errorStructured msg args hint = errorIO $ unlines $
+errorStructured msg args hint = errorIO $ errorStructuredContents msg args hint
+
+errorStructuredContents :: String -> [(String, Maybe String)] -> String -> String
+errorStructuredContents msg args hint = unlines $
         [msg ++ ":"] ++
         ["  " ++ a ++ [':' | a /= ""] ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
         [hint | hint /= ""]
