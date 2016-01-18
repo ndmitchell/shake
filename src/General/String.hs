@@ -35,6 +35,8 @@ newtype BSU = BSU BS.ByteString
 instance NFData BSU where
     rnf (BSU x) = x `seq` ()
 
+instance Show BSU where
+    show = unpackU
 
 
 pack :: String -> BS
