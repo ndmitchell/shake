@@ -8,6 +8,7 @@ import General.String
 import General.Extra
 import Development.Shake.FileInfo
 import Development.Shake.FilePath
+import Paths_shake
 
 import Control.Exception.Extra hiding (assert)
 import Control.Monad.Extra
@@ -38,6 +39,10 @@ shakenEx
     -> IO ()
     -> IO ()
 shakenEx changeDir test rules sleeper = do
+    -- my debug getDataFileName (in Paths) uses a cache of the Cwd
+    -- make sure we force the cache before changing directory
+    getDataFileName ""
+
     name:args <- getArgs
     when ("--sleep" `elem` args) sleeper
     putStrLn $ "## BUILD " ++ unwords (name:args)
