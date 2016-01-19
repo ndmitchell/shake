@@ -8,6 +8,7 @@ env:
 
 matrix:
   allow_failures:
+   - env: GHCVER=8.0.1
    - env: GHCVER=head
 
 script:
