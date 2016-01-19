@@ -23,8 +23,11 @@ main = shakenCwd test $ \args obj -> do
     [obj "failcreates", obj "failcreates2"] &%> \_ ->
         writeFile' (obj "failcreates") ""
 
-    obj "recursive" %> \out -> need [obj "intermediate"]
-    obj "intermediate" %> \out -> need [obj "recursive"]
+    obj "recursive_" %> \out -> need [obj "intermediate_"]
+    obj "intermediate_" %> \out -> need [obj "recursive_"]
+
+    "rec1" %> \out -> need ["rec2"]
+    "rec2" %> \out -> need ["rec1"]
 
     obj "systemcmd" %> \_ ->
         cmd "random_missing_command"
@@ -108,7 +111,8 @@ test build obj = do
     crash ["norule"] ["norule_isavailable"]
     crash ["failcreate"] ["failcreate"]
     crash ["failcreates"] ["failcreates"]
-    crash ["recursive"] ["recursive","intermediate"]
+    crash ["recursive_"] ["recursive_","intermediate_","recursive"]
+    crash ["rec1","rec2"] ["rec1","rec2","recursive"]
     crash ["systemcmd"] ["systemcmd","random_missing_command"]
     crash ["stack1"] ["stack1","stack2","stack3","crash"]
 

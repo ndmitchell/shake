@@ -1,6 +1,7 @@
 Changelog for Shake
 
-    #400, give better errors on recursive rules
+    #400, detect indirect recursion in build rules
+    #402, give better errors on recursive rules
     #369, clarify the docs for putQuiet/putLoud
     #405, make sure phony targets with \ work on Windows
     Require extra-1.4.3

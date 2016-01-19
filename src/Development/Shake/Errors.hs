@@ -5,7 +5,7 @@ module Development.Shake.Errors(
     ShakeException(..),
     errorStructured, err,
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
-    errorMultipleRulesMatch, errorRuleRecursion, errorNoApply,
+    errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
     ) where
 
 import Data.Tuple.Extra
@@ -96,6 +96,12 @@ errorRuleRecursion stack tk k = throwIO $ wrap $ toException $ ErrorCall $ error
     "Rules may not be recursive"
     where
         wrap = if null stack then id else toException . ShakeException (last stack) stack
+
+errorComplexRecursion :: [String] -> IO a
+errorComplexRecursion ks = errorStructured
+    "Build system error - indirect recursion detected"
+    [("Key value " ++ show i, Just k) | (i, k) <- zip [1..] ks]
+    "Rules may not be recursive"
 
 errorDuplicateOracle :: TypeRep -> Maybe String -> [TypeRep] -> IO a
 errorDuplicateOracle tk k tvs = errorStructured
