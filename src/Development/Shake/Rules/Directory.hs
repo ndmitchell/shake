@@ -204,13 +204,18 @@ getDirectoryContents x = getDirAction $ GetDir x
 --
 -- > fmap (map ("Config" </>)) (getDirectoryFiles "Config" ["//*.xml"])
 -- > getDirectoryFiles "" ["Config//*.xml"]
+--
+--   If the first argument directory does not exist it will raise an error.
+--   If @foo@ does not exist, then the first of these error, but the second will not.
+--
+-- > getDirectoryFiles "foo" ["//*"] -- error
+-- > getDirectoryFiles "" ["foo//*"] -- returns []
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 
 -- | Get the directories in a directory, not including @.@ or @..@.
 --   All directories are relative to the argument directory. The result is tracked as a
 --   dependency, and if it changes the rule will rerun in subsequent builds.
---
 --
 -- > getDirectoryDirs "/Users"
 -- >    -- Return all directories in the /Users directory
