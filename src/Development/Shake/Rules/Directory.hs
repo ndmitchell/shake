@@ -216,6 +216,11 @@ getDirectoryContents x = getDirAction $ GetDir x
 --   @getDirectoryFiles \"\" [\"*.c\"]@ and someone adds @foo.c@ to the
 --   directory, that rule will rebuild. If someone changes one of the @.c@ files,
 --   but the /list/ of @.c@ files doesn't change, then it will not rebuild.
+--   As a consequence of being tracked, if the contents change during the build
+--   (e.g. you are generating @.c@ files in this directory) then the build not reach
+--   a stable point, which is an error - detected by running with @--lint@.
+--   You should only call this function returning source files.
+--
 --   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
