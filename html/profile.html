@@ -144,10 +144,10 @@ ul.space {padding-left: 20px;}
     </p>
     <ul class="space">
         <li><code>group(x : string) : true</code> - assign this item the given group. Multiple calls to <code>group</code> result in a space-separated name. The group name can also be set using <code>name</code> or <code>command</code> with captured regular expressions.</li>
-        <li><code>leaf() : bool</code> - does the rule a leaf, with no dependencies.</li>
+        <li><code>leaf() : bool</code> - is the rule a leaf, with no dependencies.</li>
         <li><code>run() : int</code> - when was the rule last run, with 0 for run in the last tracked build, and higher numbers for run longer ago.</li>
         <li><code>run(x : int) : bool</code> - equality against a run number, <code>run(0)</code> is equivalent to <code>run() == 0</code>.</li>
-        <li><code>unchanged() : bool</code> - last time the rule was build, was the value detected as unchanged.</li>
+        <li><code>unchanged() : bool</code> - last time the rule was built, did the value not change.</li>
         <li><code>slowestRule() : string</code> - the name of the rule which took longest to build.</li>
         <li><code>name() : string</code> - the name of the current rule.</li>
         <li><code>name(x : RegExp) : bool</code> - a regular expression to match against the name of the current rule. If the regular expression contains captured patterns, these will be used as the <code>group</code></li>
