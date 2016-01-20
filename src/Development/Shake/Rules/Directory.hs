@@ -6,6 +6,7 @@ module Development.Shake.Rules.Directory(
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv, getEnvWithDefault,
     removeFiles, removeFilesAfter,
+    getDirectoryFilesIO,
     defaultRuleDirectory
     ) where
 
@@ -240,10 +241,15 @@ getDir GetDir{..} = answer <$> contents dir
 getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
     where f x = IO.doesDirectoryExist $ dir </> x
 
+getDir GetDirFiles{..} = fmap answer $ getDirectoryFilesIO dir pat
+
+
+-- | A version of 'getDirectoryFiles' that is in IO, and thus untracked.
+getDirectoryFilesIO :: FilePath -> [FilePattern] -> IO [FilePath]
 -- Known infelicity: on Windows, if you search for "foo", but have the file "FOO",
 -- it will match if on its own, or not if it is paired with "*", since that forces
 -- a full directory scan, and then it uses Haskell equality (case sensitive)
-getDir GetDirFiles{dir=root,..} = fmap answer $ f "" $ snd $ walk pat
+getDirectoryFilesIO root pat = f "" $ snd $ walk pat
     where
         -- Even after we know they are there because we called contents, we still have to check they are directories/files
         -- as required

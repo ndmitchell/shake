@@ -124,6 +124,7 @@ module Development.Shake(
     needed, trackRead, trackWrite, trackAllow,
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
+    getDirectoryFilesIO,
     -- * Environment rules
     getEnv, getEnvWithDefault,
     -- * Oracle rules
