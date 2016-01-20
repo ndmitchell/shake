@@ -77,6 +77,11 @@ test build obj = do
     demand " *.txt //*.xtx.files" "A.txt B.txt C.txt/E.xtx"
     demand " C.txt/*.files" "C.txt/D.txt C.txt/E.xtx"
 
+    demand " missing_dir/*.files" ""
+    demand " missing_dir/bar/*.files" ""
+    demand " //missing_dir/*.files" ""
+    assertException ["missing_dir","does not exist"] $ build ["--quiet",showEsc "missing_dir *.files"]
+
     build ["dots","--no-lint"]
     assertContents (obj "dots") $ unlines $ words "True True True True True"
 
