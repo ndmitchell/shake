@@ -188,7 +188,7 @@ getDirectoryContents x = getDirAction $ GetDir x
 
 -- | Get the files anywhere under a directory that match any of a set of patterns.
 --   For the interpretation of the patterns see '?=='. All results will be
---   relative to the 'FilePath' argument. The result is tracked as a
+--   relative to the directory argument. The result is tracked as a
 --   dependency, and if it changes the rule will rerun in subsequent builds.
 --   Some examples:
 --
