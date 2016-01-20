@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #401, fix getDirectoryFiles error on pattern directory missing
     #400, detect indirect recursion in build rules
     #402, give better errors on recursive rules
     #369, clarify the docs for putQuiet/putLoud
