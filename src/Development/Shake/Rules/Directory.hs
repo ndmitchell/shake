@@ -211,6 +211,12 @@ getDirectoryContents x = getDirAction $ GetDir x
 --
 -- > getDirectoryFiles "foo" ["//*"] -- error
 -- > getDirectoryFiles "" ["foo//*"] -- returns []
+--
+--   This function is tracked and serves as a dependency. If a rule calls
+--   @getDirectoryFiles \"\" [\"*.c\"]@ and someone adds @foo.c@ to the
+--   directory, that rule will rebuild. If someone changes one of the @.c@ files,
+--   but the /list/ of @.c@ files doesn't change, then it will not rebuild.
+--   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 

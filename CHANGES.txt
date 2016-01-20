@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #399, explain what in getDirectoryFiles is tracked
     #108, add getDirectoryFilesIO, an untracked version
     #401, document getDirectoryFiles exception behaviour
     #401, fix getDirectoryFiles error on pattern directory missing
