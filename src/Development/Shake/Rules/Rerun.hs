@@ -4,9 +4,7 @@ module Development.Shake.Rules.Rerun(
     defaultRuleRerun, alwaysRerun
     ) where
 
-import Development.Shake.Core
-import Development.Shake.Classes
-
+import Development.Shake.Rule
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,NFData)

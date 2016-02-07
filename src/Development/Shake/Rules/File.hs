@@ -17,15 +17,13 @@ import System.Directory
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 
-import Development.Shake.Core hiding (trackAllow)
+import Development.Shake.Rule hiding (trackAllow)
 import qualified Development.Shake.Core as S
 import General.String
 import Development.Shake.ByteString
-import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.FilePattern
 import Development.Shake.FileInfo
-import Development.Shake.Types
 import Development.Shake.Errors
 
 import Data.Bits

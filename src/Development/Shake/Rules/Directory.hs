@@ -23,7 +23,7 @@ import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
 import Development.Shake.Core
-import Development.Shake.Classes
+import Development.Shake.Rule
 import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import General.Extra

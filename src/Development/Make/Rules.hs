@@ -14,7 +14,6 @@ import Prelude
 
 import Development.Shake
 import Development.Shake.Rule
-import Development.Shake.Classes
 import Development.Shake.FilePath
 
 -- Internal imports

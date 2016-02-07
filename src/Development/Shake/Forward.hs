@@ -40,7 +40,6 @@ module Development.Shake.Forward(
 import Development.Shake
 import Development.Shake.Rule
 import Development.Shake.Command
-import Development.Shake.Classes
 import Development.Shake.FilePath
 import Data.IORef
 import Data.Either
