@@ -138,8 +138,8 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
 
     -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
     --
-    --   As an example for filenames/timestamps, if the file exists you should return 'Just'
-    --   the timestamp, but otherwise return 'Nothing'.
+    --   As an example for filenames/timestamps, if the file exists you should return 'StoredValue'
+    --   the timestamp, but otherwise return 'StoredMissing'.
     storedValue :: ShakeOptions -> key -> IO (StoredValue value)
 
     -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
