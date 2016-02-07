@@ -141,10 +141,10 @@ getFileTimes name xs = do
     let opts2 = if shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
     ys <- liftIO $ mapM (storedValue opts2) xs
     case sequence ys of
-        Just ys -> return $ FilesA ys
-        Nothing | not $ shakeCreationCheck opts -> return $ FilesA []
-        Nothing -> do
-            let missing = length $ filter isNothing ys
+        StoredValue ys -> return $ FilesA ys
+        StoredMissing | not $ shakeCreationCheck opts -> return $ FilesA []
+        StoredMissing -> do
+            let missing = length $ filter (==StoredMissing) ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ unpackU x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
+                    concat ["\n  " ++ unpackU x ++ if y == StoredMissing then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]

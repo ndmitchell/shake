@@ -18,7 +18,7 @@ newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
-    storedValue _ _ = return Nothing
+    storedValue _ _ = return StoredMissing
 
 
 -- | Add extra information which rules can depend on.

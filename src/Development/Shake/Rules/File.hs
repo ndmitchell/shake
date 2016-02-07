@@ -63,11 +63,11 @@ instance Rule FileQ FileA where
     storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
         res <- getFileInfo x
         case res of
-            Nothing -> return Nothing
-            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
+            Nothing -> return StoredMissing
+            Just (time,size) | c == ChangeModtime -> return $ StoredValue $ FileA time size fileInfoNeq
             Just (time,size) -> do
                 hash <- unsafeInterleaveIO $ getFileHash x
-                return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+                return $ StoredValue $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
 
     equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
         ChangeModtime -> bool $ x1 == y1
@@ -87,10 +87,12 @@ storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
         whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
     return $ FileA fileInfoEq fileInfoEq fileInfoEq
 -}
-storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
-    where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
-          err = msg ++ "\n  " ++ unpackU (fromFileQ x)
-          opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
+storedValueError opts input msg x = f <$> storedValue opts2 x
+  where f StoredMissing | shakeCreationCheck opts || input = error err
+                        | otherwise = FileA fileInfoNeq fileInfoNeq fileInfoNeq
+        f (StoredValue a) = a
+        err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+        opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
@@ -146,8 +148,8 @@ neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
     pre <- liftIO $ mapM (storedValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
-    let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> equalValue opts (FileQ x) a b) a == NotEqual]
+    let bad = [ (x, case a of { StoredValue _ -> "File change"; StoredMissing -> "File created" })
+              | (x, a, b) <- zip3 xs pre post, case a of { StoredMissing -> NotEqual; StoredValue a -> equalValue opts (FileQ x) a b } == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured

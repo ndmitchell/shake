@@ -18,7 +18,7 @@ instance Show AlwaysRerunA where show _ = "<none>"
 instance Eq AlwaysRerunA where a == b = False
 
 instance Rule AlwaysRerunQ AlwaysRerunA where
-    storedValue _ _ = return Nothing
+    storedValue _ _ = return StoredMissing
 
 
 -- | Always rerun the associated action. Useful for defining rules that query

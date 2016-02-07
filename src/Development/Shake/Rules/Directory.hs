@@ -111,16 +111,16 @@ instance Binary GetDirectoryQ where
 
 
 instance Rule DoesFileExistQ DoesFileExistA where
-    storedValue _ (DoesFileExistQ x) = (Just . DoesFileExistA) <$> IO.doesFileExist x
+    storedValue _ (DoesFileExistQ x) = (StoredValue . DoesFileExistA) <$> IO.doesFileExist x
 
 instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
-    storedValue _ (DoesDirectoryExistQ x) = (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
+    storedValue _ (DoesDirectoryExistQ x) = (StoredValue . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
 
 instance Rule GetEnvQ GetEnvA where
-    storedValue _ (GetEnvQ x) = (Just . GetEnvA) <$> IO.lookupEnv x
+    storedValue _ (GetEnvQ x) = (StoredValue . GetEnvA) <$> IO.lookupEnv x
 
 instance Rule GetDirectoryQ GetDirectoryA where
-    storedValue _ x = Just <$> getDir x
+    storedValue _ x = StoredValue <$> getDir x
 
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.

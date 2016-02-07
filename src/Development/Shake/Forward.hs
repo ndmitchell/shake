@@ -65,7 +65,7 @@ newtype ForwardA = ForwardA ()
     deriving (Hashable,Typeable,Eq,NFData,Binary,Show)
 
 instance Rule ForwardQ ForwardA where
-    storedValue _ _ = return $ Just $ ForwardA ()
+    storedValue _ _ = return $ StoredValue $ ForwardA ()
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()

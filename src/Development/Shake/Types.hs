@@ -1,8 +1,8 @@
-{-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveFunctor, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types(
-    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..),
+    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..), StoredValue(..),
     ShakeOptions(..), shakeOptions
     ) where
 
@@ -246,3 +246,27 @@ data EqualCost
     | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
     | NotEqual -- ^ The values are not equal.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
+
+data StoredValue a
+    = StoredValue a     -- ^ I have a value persistently stored (e.g. on disk)
+    | StoredMissing     -- ^ I was expecting a value persistently stored (e.g. on disk) but didn't find it
+    deriving (Functor,Eq,Ord,Show,Read,Typeable,Data)
+
+
+instance Applicative StoredValue where
+    pure = StoredValue
+
+    StoredValue f  <*> m = fmap f m
+    StoredMissing <*> _m = StoredMissing
+
+    StoredValue _m1 *> m2 = m2
+    StoredMissing  *> _m2 = StoredMissing
+
+instance Monad StoredValue where
+    (StoredValue x) >>= k = k x
+    StoredMissing  >>= _  = StoredMissing
+
+    (>>) = (*>)
+
+    return = StoredValue
+    fail _ = StoredMissing

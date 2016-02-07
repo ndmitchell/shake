@@ -174,7 +174,7 @@ newtype Depends = Depends {fromDepends :: [Id]}
 
 
 data Ops = Ops
-    {stored :: Key -> IO (Maybe Value)
+    {stored :: Key -> IO (StoredValue Value)
         -- ^ Given a Key, find the value stored on disk
     ,equal :: Key -> Value -> Value -> EqualCost
         -- ^ Given both Values, see if they are equal and how expensive that check was
@@ -259,7 +259,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         _ -> do
                             s <- stored k
                             case s of
-                                Just s -> case equal k (result r) s of
+                                StoredValue s -> case equal k (result r) s of
                                     NotEqual -> rebuild
                                     EqualCheap -> continue r
                                     EqualExpensive -> do
@@ -268,7 +268,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                         journal i (k, Loaded r)
                                         i #= (k, Loaded r)
                                         continue r
-                                _ -> rebuild
+                                StoredMissing -> rebuild
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
@@ -301,8 +301,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     Just r | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
-                                Just v -> reply $ Ready r{result=v}
-                                Nothing -> norm
+                                StoredValue v -> reply $ Ready r{result=v}
+                                StoredMissing -> norm
                     _ -> norm
             i #= (k, w)
 
@@ -435,7 +435,7 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
+checkValid :: Database -> (Key -> IO (StoredValue Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
 checkValid Database{..} stored equal missing = do
     status <- readIORef status
     intern <- readIORef intern
@@ -445,7 +445,7 @@ checkValid Database{..} stored equal missing = do
     bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             now <- stored key
-            let good = maybe False ((==) EqualCheap . equal key result) now
+            let good = case now of { StoredValue n -> equal key result n /= NotEqual; StoredMissing -> False }
             diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
@@ -453,7 +453,7 @@ checkValid Database{..} stored equal missing = do
         let n = length bad
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
-            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ maybe "<missing>" show now)]
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ show now)]
                                         | (key, result, now) <- bad])
             ""
 
