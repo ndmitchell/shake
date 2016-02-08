@@ -562,7 +562,7 @@ applyKeyValue ks = do
     let equal = runEqual globalRules
         stored = runStored globalRules
         assume = shakeAssume globalOptions
-        exec stack k continue = do
+        exec stack k r step continue = do
             let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=mempty, localStack=stack, localBlockApply=Nothing
                           ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
             let top = showTopStack stack
@@ -574,13 +574,22 @@ applyKeyValue ks = do
                 res <- runExecute globalRules k
                 when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
+                    Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
-                        let ans = (res, localDepends, dur - localDiscount, reverse localTraces)
+                        let c | Just r <- r, equal k (result r) res /= NotEqual = changed r
+                              | otherwise = step
+                            ans = Result
+                                    { result = res
+                                    , depends = localDepends
+                                    , changed = c
+                                    , built = step
+                                    , execution = doubleToFloat $ dur - localDiscount
+                                    , traces = reverse localTraces
+                                    }
                         evaluate $ rnf ans
-                        continue $ Right ans
+                        continue $ Ready ans
         analyseResult k r =
           case assume of
               Just AssumeDirty -> return Rebuild
@@ -595,14 +604,7 @@ applyKeyValue ks = do
                       StoredMissing -> Rebuild
 
         runKey k r stack step reply = do
-          let norm = exec stack k $ \res ->
-                  reply $ case res of
-                      Left err -> Error err
-                      Right (v,depends,(doubleToFloat -> execution),traces) ->
-                          let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                                | otherwise = step
-                          in Ready Result{result=v,changed=c,built=step,..}
-
+          let norm = exec stack k r step reply
           case r of
               Just r | assume == Just AssumeClean -> do
                       v <- stored k
@@ -610,7 +612,6 @@ applyKeyValue ks = do
                           StoredValue v -> reply $ Ready r{result=v}
                           StoredMissing -> norm
               _ -> norm
-
     stack <- Action $ getsRW localStack
     (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops{..}) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}

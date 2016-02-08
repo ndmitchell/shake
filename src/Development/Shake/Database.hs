@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Database(
     Trace(..),
@@ -12,6 +12,7 @@ module Development.Shake.Database(
     toReport, checkValid, listLive
     ) where
 
+import GHC.Generics (Generic)
 import Development.Shake.Classes
 import General.Binary
 import Development.Shake.Pool
@@ -115,8 +116,9 @@ data Result = Result
     ,depends :: Depends -- ^ dependencies (don't run them early)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
-    } deriving Show
+    } deriving (Show,Generic)
 
+instance NFData Result
 
 newtype Pending = Pending (IORef (IO ()))
     -- you must run this action when you finish, while holding DB lock
