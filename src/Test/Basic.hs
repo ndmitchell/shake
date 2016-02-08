@@ -74,6 +74,10 @@ main = shaken test $ \args obj -> do
     [obj "sep" </> "3.txt", obj "sep" </> "4.txt", obj "sep" </> "5.*", obj "sep/6.txt"] |%> \out -> writeFile' out ""
     [obj "sep" </> "7.txt"] |%> \out -> writeFile' out ""
 
+    obj "ids/source" %> \out -> return ()
+    obj "ids/out" %> \out -> do need =<< readFileLines (obj "ids/source"); writeFile' out ""
+    obj "ids/*" %> \out -> do alwaysRerun; trace (takeFileName out); writeFile' out $ takeFileName out
+
 test build obj = do
     writeFile (obj "A.txt") "AAA"
     writeFile (obj "B.txt") "BBB"
@@ -164,5 +168,14 @@ test build obj = do
 
     build ["!slash" </> "platform","!slash" </> "forward"]
     build ["!slash/platform","!slash/forward"]
+
+    createDirectoryIfMissing True (obj "ids")
+    writeFile (obj "ids/source") (obj "ids/a")
+    build ["ids/out"]
+    writeFile (obj ".log") ""
+    writeFile (obj "ids/source") (obj "ids/b")
+    build ["ids/out","-j4"]
+    -- if you collapse depends to [Id] then this ends up asking for the stale 'a'
+    assertContents (obj ".log") "b"
 
     build [] -- should say "no want/action statements, nothing to do" (checked manually)
