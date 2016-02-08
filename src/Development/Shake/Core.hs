@@ -346,7 +346,7 @@ data Local = Local
     ,localVerbosity :: Verbosity
     ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
     -- mutable local variables
-    ,localDepends :: [Depends] -- built up in reverse
+    ,localDepends :: Depends -- built up in reverse
     ,localDiscount :: !Seconds
     ,localTraces :: [Trace] -- in reverse
     ,localTrackAllows :: [Key -> Bool]
@@ -438,7 +438,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress forwards
-                    let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
+                    let s1 = Local emptyStack shakeVerbosity Nothing mempty 0 [] [] []
                     forM_ (actions rs) $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
                             Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
@@ -560,7 +560,7 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     let exec stack k continue = do
-            let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=[], localStack=stack, localBlockApply=Nothing
+            let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=mempty, localStack=stack, localBlockApply=Nothing
                           ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
             let top = showTopStack stack
             time <- offsetTime
@@ -575,12 +575,12 @@ applyKeyValue ks = do
                     Right (res, Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
-                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
+                        let ans = (res, localDepends, dur - localDiscount, reverse localTraces)
                         evaluate $ rnf ans
                         continue $ Right ans
     stack <- Action $ getsRW localStack
     (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
-    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
+    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 
 
@@ -700,7 +700,7 @@ trackUse key = do
     let k = newKey key
     Global{..} <- Action getRO
     l@Local{..} <- Action getRW
-    deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
+    deps <- liftIO $ listDepends globalDatabase localDepends
     let top = topStack localStack
     if top == Just k then
         return () -- condition 1
@@ -717,7 +717,7 @@ trackCheckUsed = do
     Global{..} <- Action getRO
     Local{..} <- Action getRW
     liftIO $ do
-        deps <- concatMapM (listDepends globalDatabase) localDepends
+        deps <- listDepends globalDatabase localDepends
 
         -- check 3a
         bad <- return $ localTrackUsed \\ deps
@@ -898,7 +898,7 @@ newCacheIO act = do
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
-                        Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s, localDiscount = localDiscount s + offset}
+                        Action $ modifyRW $ \s -> s{localDepends = deps <> localDepends s, localDiscount = localDiscount s + offset}
                         return v
             Nothing -> do
                 bar <- newFence
@@ -911,7 +911,7 @@ newCacheIO act = do
                             Action $ throwRAW err
                         Right v -> do
                             post <- Action $ getsRW localDepends
-                            let deps = take (length post - length pre) post
+                            let deps = subtractDepends pre post
                             liftIO $ signalFence bar $ Right (deps, v)
                             return v
 

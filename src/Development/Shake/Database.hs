@@ -6,7 +6,7 @@ module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
-    Ops(..), build, Depends,
+    Ops(..), build, Depends, subtractDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -173,15 +173,17 @@ getResult _ = Nothing
 -- OPERATIONS
 
 newtype Depends = Depends {fromDepends :: [Id]}
-    deriving (NFData)
+    deriving (NFData,Monoid)
 
+subtractDepends :: Depends -> Depends -> Depends
+subtractDepends (Depends pre) (Depends post) = Depends $ take (length post - length pre) post
 
 data Ops = Ops
     {stored :: Key -> IO (StoredValue Value)
         -- ^ Given a Key, find the value stored on disk
     ,equal :: Key -> Value -> Value -> EqualCost
         -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Seconds, [Trace]))
+    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, Depends, Seconds, [Trace]))
         -- ^ Given a stack and a key, either raise an exception or successfully build it
     }
 
@@ -200,9 +202,43 @@ internKey intern status k = do
 queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
 queryKey status i = Map.lookup i <$> readIORef status
 
+data AnalysisResult = Rebuild | Continue | Expensive Value deriving (Show)
+
+analyseResult :: Ops -> Maybe Assume -> Key -> Value -> IO AnalysisResult
+analyseResult Ops{..} assume k r =
+  case assume of
+      Just AssumeDirty -> return Rebuild
+      Just AssumeSkip -> return Continue
+      _ -> do
+          s <- stored k
+          return $ case s of
+              StoredValue s -> case equal k r s of
+                  NotEqual -> Rebuild
+                  EqualCheap -> Continue
+                  EqualExpensive -> Expensive s
+              StoredMissing -> Rebuild
+
+runKey :: Ops -> Key -> Maybe Result -> Stack -> Maybe Assume -> Step -> (Status -> IO ()) -> IO ()
+runKey Ops{..} k r stack assume step reply = do
+  let norm = execute stack k $ \res ->
+          reply $ case res of
+              Left err -> Error err
+              Right (v,deps,(doubleToFloat -> execution),traces) ->
+                  let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                        | otherwise = step
+                  in Ready Result{result=v,changed=c,built=step,depends=fromDepends deps,..}
+
+  case r of
+      Just r | assume == Just AssumeClean -> do
+              v <- stored k
+              case v of
+                  StoredValue v -> reply $ Ready r{result=v}
+                  StoredMissing -> norm
+      _ -> norm
+
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} Ops{..} stack ks continue =
+build pool database@Database{..} ops stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -262,22 +298,17 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     let out b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     let continue r = out True >> check stack i k r (depends r)
                     let rebuild = out False >> run stack i k (Just r)
-                    case assume of
-                        Just AssumeDirty -> rebuild
-                        Just AssumeSkip -> continue r
-                        _ -> do
-                            s <- stored k
-                            case s of
-                                StoredValue s -> case equal k (result r) s of
-                                    NotEqual -> rebuild
-                                    EqualCheap -> continue r
-                                    EqualExpensive -> do
-                                        -- warning, have the db lock while appending (may harm performance)
-                                        r <- return r{result=s}
-                                        journal i (k, Loaded r)
-                                        i #= (k, Loaded r)
-                                        continue r
-                                StoredMissing -> rebuild
+                    let expensive r s = do
+                          -- warning, have the db lock while appending (may harm performance)
+                          r <- return r{result=s}
+                          journal i (k, Loaded r)
+                          i #= (k, Loaded r)
+                          continue r
+                    ar <- analyseResult ops assume k (result r)
+                    case ar of
+                        Rebuild -> rebuild
+                        Continue -> continue r
+                        Expensive s -> expensive r s
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
@@ -298,21 +329,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 diagnostic $ "result " ++ atom k ++ " = error"
                                 journal i (k, Missing)
                             _ -> return ()
-                let norm = execute (addStack i k stack) k $ \res ->
-                        reply $ case res of
-                            Left err -> Error err
-                            Right (v,deps,(doubleToFloat -> execution),traces) ->
-                                let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                                      | otherwise = step
-                                in Ready Result{result=v,changed=c,built=step,depends=concatMap fromDepends deps,..}
-
-                case r of
-                    Just r | assume == Just AssumeClean -> do
-                            v <- stored k
-                            case v of
-                                StoredValue v -> reply $ Ready r{result=v}
-                                StoredMissing -> norm
-                    _ -> norm
+                runKey ops k r (addStack i k stack) assume step reply
             i #= (k, w)
 
         check :: Stack -> Id -> Key -> Result -> [Id] -> IO Status
@@ -336,10 +353,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         Just (_, Ready r2)
                             | changed r2 > built r -> buildIt
                             | finish -> do
-                                res <- i #= (k, Ready r)
-                                if not $ isWaiting res
-                                    then runWaiting self
-                                    else afterWaiting res $ runWaiting self
+                                i #= (k, Ready r)
+                                runWaiting self
                                 return True
                             | otherwise -> return False
                 i #= (k, self)
