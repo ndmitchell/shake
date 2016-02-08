@@ -70,14 +70,10 @@ main = shakenCwd test $ \args obj -> do
 
     "cwd" !> do
         -- FIXME: Linux searches the Cwd argument for the file, Windows searches getCurrentDirectory
-        let c = liftIO . canonicalizePath
-        helper <- c $ obj "shake_helper" <.> exe
+        helper <- liftIO $ canonicalizePath $ obj "shake_helper" <.> exe
         Stdout out <- cmd (Cwd $ obj "") helper "c"
-        p0 <- c $ trim out
-        p1 <- c $ dropTrailingPathSeparator $ obj ""
-        liftIO $ print ("p0", out, trim out, p0)
-        liftIO $ print ("p1", obj "", dropTrailingPathSeparator $ obj "", p1)
-        liftIO $ p0 === p1
+        let norm = fmap dropTrailingPathSeparator . canonicalizePath . trim
+        liftIO $ join $ liftM2 (===) (norm out) (norm $ obj "")
 
     "timeout" !> do
         opts <- getShakeOptions
