@@ -91,7 +91,7 @@ For those who like concrete details, which might change at any point in the futu
         {result    :: Value   -- the result when last built
         ,built     :: Step    -- when it was actually run
         ,changed   :: Step    -- when the result last changed
-        ,depends   :: [[Id]]  -- dependencies
+        ,depends   :: [Id]  -- dependencies
         ,execution :: Float   -- duration of last run
         ,traces    :: [Trace] -- a trace of the expensive operations
         } deriving Show
@@ -99,7 +99,7 @@ For those who like concrete details, which might change at any point in the futu
 The differences from the model are:
 
 * `ModTime` became `Value`, because Shake deals with lots of types of rules.
-* The dependencies are stored as a list of lists, so we still have access to the parallelism provided by `need`, and if we start rebuilding some dependencies we can do so in parallel.
+* The dependencies are stored as a list of ids, so we build dependencies once and in parallel.
 * We store `execution` and `traces` so we can produce profiling reports.
 * I haven't shown the `File`/`Id` mapping here - that lives elsewhere.
 * I removed all strictness/`UNPACK` annotations from the definition above, and edited a few comments.
