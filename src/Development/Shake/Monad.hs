@@ -8,7 +8,7 @@ module Development.Shake.Monad(
     unmodifyRW, captureRAW,
     ) where
 
-import Control.Exception
+import Control.Exception.Extra
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Reader
@@ -32,7 +32,7 @@ type Capture a = (a -> IO ()) -> IO ()
 
 -- See https://ghc.haskell.org/trac/ghc/ticket/11555
 catchSafe :: IO a -> (SomeException -> IO a) -> IO a
-catchSafe a b = join (evaluate a) `catch` b
+catchSafe a b = join (evaluate a) `catch_` b
 
 -- | Run and then call a continuation.
 runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
