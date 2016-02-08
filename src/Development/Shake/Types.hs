@@ -113,7 +113,7 @@ data ShakeOptions = ShakeOptions
     ,shakeLintInside :: [FilePath]
         -- ^ Directories in which the files will be tracked by the linter.
     ,shakeLintIgnore :: [FilePattern]
-        -- ^ File patterns which are ignored from linter tracking, a bit like calling 'trackAllow' in every rule.
+        -- ^ File patterns which are ignored from linter tracking, a bit like calling 'Development.Shake.Rules.File.trackAllow' in every rule.
     ,shakeCommandOptions :: [CmdOption]
         -- ^ Defaults to @[]@. Additional options to be passed to all command invocations.
     ,shakeFlush :: Maybe Double

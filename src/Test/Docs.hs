@@ -68,7 +68,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"import System.Time.Extra"
             ,"import Data.Maybe"
             ,"import Data.Monoid"
-            ,"import Development.Shake hiding ((*>))"
+            ,"import Development.Shake hiding ((*>),trackAllow)"
             ,"import Development.Shake.Classes"
             ,"import Development.Shake.Rule hiding (trackAllow)"
             ,"import Development.Shake.Util"
