@@ -42,14 +42,10 @@ import Development.Shake.Core
 import Development.Shake.Rule
 import Development.Shake.Command
 import Development.Shake.FilePath
-import Development.Shake.Value
-import Data.IORef
 import Data.Either
 import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
-import System.IO.Unsafe
-import qualified Data.HashMap.Strict as Map
 
 newtype ForwardQ = ForwardQ String
     deriving (Hashable,Typeable,Eq,NFData,Binary)
