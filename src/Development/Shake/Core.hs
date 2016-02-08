@@ -15,7 +15,7 @@ module Development.Shake.Core(
     orderOnlyAction,
     -- Internal stuff
     runAfter,
-    runForward, withForward
+    runForward, withForward, forwardRule, cacheAction
     ) where
 
 import Control.Exception.Extra
@@ -497,20 +497,40 @@ runAfter op = do
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
 
-runForward :: (ShakeValue key) => key -> Action (Maybe (Action ()))
-runForward k' = do
-    let k = newKey k'
-    liftIO $ evaluate $ rnf k
-    Global{..} <- Action getRO
-    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
+newtype ForwardQ = ForwardQ String
+    deriving (Hashable,Typeable,Eq,NFData,Binary)
 
-withForward :: (ShakeValue key) => key -> Action () -> Action b -> Action b
-withForward k action act = do
-    let key = newKey k
+instance Show ForwardQ where
+    show (ForwardQ x) = x
+
+newtype ForwardA = ForwardA ()
+    deriving (Hashable,Typeable,Eq,NFData,Binary,Show)
+
+instance Rule ForwardQ ForwardA where
+    storedValue _ _ = return $ StoredValue $ ForwardA ()
+
+-- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
+forwardRule :: Action () -> Rules ()
+forwardRule act = do
+    rule $ \(ForwardQ k') -> Just $ do
+        let k = newKey k'
+        liftIO $ evaluate $ rnf k
+        Global{..} <- Action getRO
+        res <- liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
+        case res of
+            Nothing -> error "Failed to find action name"
+            Just act -> act
+        return $ ForwardA ()
+    action act
+
+-- | Cache an action. The action's key must be globally unique over all runs (i.e., change the name if the code changes), and not conflict with any rules.
+cacheAction :: String -> Action () -> Action ()
+cacheAction name action = do
+    let key = newKey name
     liftIO $ evaluate $ rnf key
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
-    r <- act
+    [ForwardA r] <- apply [ForwardQ name]
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ())
     return r
 

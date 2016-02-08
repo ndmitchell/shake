@@ -47,18 +47,6 @@ import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
 
-newtype ForwardQ = ForwardQ String
-    deriving (Hashable,Typeable,Eq,NFData,Binary)
-
-instance Show ForwardQ where
-    show (ForwardQ x) = x
-
-newtype ForwardA = ForwardA ()
-    deriving (Hashable,Typeable,Eq,NFData,Binary,Show)
-
-instance Rule ForwardQ ForwardA where
-    storedValue _ _ = return $ StoredValue $ ForwardA ()
-
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()
 shakeForward opts act = shake (forwardOptions opts) (forwardRule act)
@@ -81,13 +69,6 @@ forwardRule act = do
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
 forwardOptions :: ShakeOptions -> ShakeOptions
 forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
-
-
--- | Cache an action. The name of the action must be unique for all different actions.
-cacheAction :: String -> Action () -> Action ()
-cacheAction name action = do
-    _ :: [ForwardA] <- withForward name action $ apply [ForwardQ name]
-    return ()
 
 -- | Apply caching to an external command.
 cache :: (forall r . CmdArguments r => r) -> Action ()
