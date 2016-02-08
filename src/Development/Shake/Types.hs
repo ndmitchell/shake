@@ -6,6 +6,8 @@ module Development.Shake.Types(
     ShakeOptions(..), shakeOptions
     ) where
 
+import Control.Applicative
+import Control.Monad
 import Data.Data
 import Data.List
 import Data.Dynamic
