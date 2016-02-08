@@ -38,9 +38,11 @@ module Development.Shake.Forward(
     ) where
 
 import Development.Shake
+import Development.Shake.Core
 import Development.Shake.Rule
 import Development.Shake.Command
 import Development.Shake.FilePath
+import Development.Shake.Value
 import Data.IORef
 import Data.Either
 import Data.List.Extra
@@ -48,11 +50,6 @@ import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
 import qualified Data.HashMap.Strict as Map
-
-
-{-# NOINLINE forwards #-}
-forwards :: IORef (Map.HashMap ForwardQ (Action ()))
-forwards = unsafePerformIO $ newIORef Map.empty
 
 newtype ForwardQ = ForwardQ String
     deriving (Hashable,Typeable,Eq,NFData,Binary)
@@ -77,8 +74,8 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    rule $ \k -> Just $ do
-        res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
+    rule $ \(ForwardQ k) -> Just $ do
+        res <- runForward k
         case res of
             Nothing -> liftIO $ errorIO "Failed to find action name"
             Just act -> act
@@ -93,10 +90,8 @@ forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
 -- | Cache an action. The name of the action must be unique for all different actions.
 cacheAction :: String -> Action () -> Action ()
 cacheAction name action = do
-    let key = ForwardQ name
-    liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key action mp, ())
-    _ :: [ForwardA] <- apply [key]
-    liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
+    _ :: [ForwardA] <- withForward name action $ apply [ForwardQ name]
+    return ()
 
 -- | Apply caching to an external command.
 cache :: (forall r . CmdArguments r => r) -> Action ()

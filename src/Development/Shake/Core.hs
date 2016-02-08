@@ -14,7 +14,8 @@ module Development.Shake.Core(
     parallel,
     orderOnlyAction,
     -- Internal stuff
-    runAfter
+    runAfter,
+    runForward, withForward
     ) where
 
 import Control.Exception.Extra
@@ -333,6 +334,7 @@ data Global = Global
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
     ,globalProgress :: IO Progress
+    ,globalForwards :: IORef (Map.HashMap String (Action ()))
     }
 
 
@@ -413,6 +415,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     after <- newIORef []
     absent <- newIORef []
+    forwards <- newIORef Map.empty
     withCleanup $ \cleanup -> do
         _ <- addCleanup cleanup $ do
             when shakeTimings printTimings
@@ -434,7 +437,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
+                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress forwards
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
@@ -494,6 +497,18 @@ runAfter op = do
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
 
+runForward :: String -> Action (Maybe (Action ()))
+runForward k = do
+    Global{..} <- Action getRO
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
+
+withForward :: String -> Action () -> Action b -> Action b
+withForward key action act = do
+    Global{..} <- Action getRO
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
+    r <- act
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ())
+    return r
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule'.
