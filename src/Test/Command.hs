@@ -75,6 +75,8 @@ main = shakenCwd test $ \args obj -> do
         Stdout out <- cmd (Cwd $ obj "") helper "c"
         p0 <- c $ trim out
         p1 <- c $ dropTrailingPathSeparator $ obj ""
+        liftIO $ print ("p0", out, trim out, p0)
+        liftIO $ print ("p1", obj "", dropTrailingPathSeparator $ obj "", p1)
         liftIO $ p0 === p1
 
     "timeout" !> do
