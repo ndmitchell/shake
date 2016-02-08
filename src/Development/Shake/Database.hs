@@ -110,7 +110,7 @@ data Result = Result
     {result :: Value -- the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- the step for deciding if it's valid
-    ,depends :: [[Id]] -- dependencies
+    ,depends :: [[Id]] -- dependencies (outer list is a strict ordered series, inner list is parallel)
     ,execution :: {-# UNPACK #-} !Float -- how long it took when it was last run (seconds)
     ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
