@@ -8,12 +8,13 @@ module Development.Shake.Monad(
     unmodifyRW, captureRAW,
     ) where
 
-import Control.Exception.Extra
+import Control.Exception
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Reader
 import Data.IORef
 import Control.Applicative
+import Control.Monad
 import Prelude
 
 
@@ -29,13 +30,18 @@ newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
 type Capture a = (a -> IO ()) -> IO ()
 
 
+-- See https://ghc.haskell.org/trac/ghc/ticket/11555
+catchSafe :: IO a -> (SomeException -> IO a) -> IO a
+catchSafe a b = join (evaluate a) `catch` b
+
 -- | Run and then call a continuation.
 runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
 runRAW ro rw m k = do
     rww <- newIORef rw
     handler <- newIORef $ k . Left
+    -- see https://ghc.haskell.org/trac/ghc/ticket/11555
     fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)
-        `catch_` \e -> ($ e) =<< readIORef handler
+        `catchSafe` \e -> ($ e) =<< readIORef handler
 
 
 ---------------------------------------------------------------------
@@ -81,7 +87,7 @@ catchRAW m hdl = RAW $ ReaderT $ \s -> ContT $ \k -> do
     old <- readIORef $ handler s
     writeIORef (handler s) $ \e -> do
         writeIORef (handler s) old
-        fromRAW (hdl e) `runReaderT` s `runContT` k `catch_`
+        fromRAW (hdl e) `runReaderT` s `runContT` k `catchSafe`
             \e -> ($ e) =<< readIORef (handler s)
     fromRAW m `runReaderT` s `runContT` \v -> do
         writeIORef (handler s) old
@@ -118,5 +124,5 @@ captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
         Left e -> old e
         Right v -> do
             writeIORef (handler s) old
-            k v `catch_` \e -> ($ e) =<< readIORef (handler s)
+            k v `catchSafe` \e -> ($ e) =<< readIORef (handler s)
             writeIORef (handler s) throwIO
