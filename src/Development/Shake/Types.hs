@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, DeriveFunctor, PatternGuards #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 -- | Types exposed to the user
 module Development.Shake.Types(
@@ -7,7 +8,6 @@ module Development.Shake.Types(
     ) where
 
 import Control.Applicative
-import Control.Monad
 import Data.Data
 import Data.List
 import Data.Dynamic
