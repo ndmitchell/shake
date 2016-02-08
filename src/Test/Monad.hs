@@ -74,6 +74,9 @@ test build obj = do
         captureRAW $ \k -> throwIO Overflow
         return "x"
     res === Left Overflow
+    -- test for GHC bug 11555
+    runRAW 1 "test" (throw Overflow :: RAW Int String ()) $ \res ->
+        either (Left . fromException) Right res === Left (Just Overflow)
 
     -- catch works properly if continuation called multiple times
     ref <- newIORef []
