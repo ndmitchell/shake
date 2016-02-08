@@ -500,12 +500,14 @@ runAfter op = do
 runForward :: (ShakeValue key) => key -> Action (Maybe (Action ()))
 runForward k' = do
     let k = newKey k'
+    liftIO $ evaluate $ rnf k
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
 
 withForward :: (ShakeValue key) => key -> Action () -> Action b -> Action b
 withForward k action act = do
     let key = newKey k
+    liftIO $ evaluate $ rnf key
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
     r <- act
