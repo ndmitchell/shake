@@ -334,7 +334,7 @@ data Global = Global
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
     ,globalProgress :: IO Progress
-    ,globalForwards :: IORef (Map.HashMap String (Action ()))
+    ,globalForwards :: IORef (Map.HashMap Key (Action ()))
     }
 
 
@@ -497,13 +497,15 @@ runAfter op = do
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
 
-runForward :: String -> Action (Maybe (Action ()))
-runForward k = do
+runForward :: (ShakeValue key) => key -> Action (Maybe (Action ()))
+runForward k' = do
+    let k = newKey k'
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
 
-withForward :: String -> Action () -> Action b -> Action b
-withForward key action act = do
+withForward :: (ShakeValue key) => key -> Action () -> Action b -> Action b
+withForward k action act = do
+    let key = newKey k
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
     r <- act
