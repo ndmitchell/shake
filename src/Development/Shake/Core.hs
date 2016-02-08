@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Core(
@@ -559,7 +559,10 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    let exec stack k continue = do
+    let equal = runEqual globalRules
+        stored = runStored globalRules
+        assume = shakeAssume globalOptions
+        exec stack k continue = do
             let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=mempty, localStack=stack, localBlockApply=Nothing
                           ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
             let top = showTopStack stack
@@ -578,8 +581,38 @@ applyKeyValue ks = do
                         let ans = (res, localDepends, dur - localDiscount, reverse localTraces)
                         evaluate $ rnf ans
                         continue $ Right ans
+        analyseResult k r =
+          case assume of
+              Just AssumeDirty -> return Rebuild
+              Just AssumeSkip -> return Continue
+              _ -> do
+                  s <- stored k
+                  return $ case s of
+                      StoredValue s -> case equal k r s of
+                          NotEqual -> Rebuild
+                          EqualCheap -> Continue
+                          EqualExpensive -> Expensive s
+                      StoredMissing -> Rebuild
+
+        runKey k r stack step reply = do
+          let norm = exec stack k $ \res ->
+                  reply $ case res of
+                      Left err -> Error err
+                      Right (v,depends,(doubleToFloat -> execution),traces) ->
+                          let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                                | otherwise = step
+                          in Ready Result{result=v,changed=c,built=step,..}
+
+          case r of
+              Just r | assume == Just AssumeClean -> do
+                      v <- stored k
+                      case v of
+                          StoredValue v -> reply $ Ready r{result=v}
+                          StoredMissing -> norm
+              _ -> norm
+
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops{..}) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 

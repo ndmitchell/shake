@@ -5,8 +5,8 @@
 module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies,
-    Ops(..), build, Depends, subtractDepends,
+    listDepends, lookupDependencies, Result(..), Status(..),
+    Ops(..), AnalysisResult(..), build, Depends, subtractDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -98,7 +98,6 @@ data Database = Database
     ,step :: Step
     ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
     ,diagnostic :: String -> IO () -- ^ logging function
-    ,assume :: Maybe Assume
     }
 
 data Status
@@ -113,7 +112,7 @@ data Result = Result
     {result :: Value -- ^ the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
-    ,depends :: [Id] -- ^ dependencies (don't run them early)
+    ,depends :: Depends -- ^ dependencies (don't run them early)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
@@ -173,18 +172,18 @@ getResult _ = Nothing
 -- OPERATIONS
 
 newtype Depends = Depends {fromDepends :: [Id]}
-    deriving (NFData,Monoid)
+    deriving (Show,NFData,Monoid)
 
 subtractDepends :: Depends -> Depends -> Depends
 subtractDepends (Depends pre) (Depends post) = Depends $ take (length post - length pre) post
 
+data AnalysisResult = Rebuild | Continue | Expensive Value deriving (Show,Eq)
+
 data Ops = Ops
-    {stored :: Key -> IO (StoredValue Value)
-        -- ^ Given a Key, find the value stored on disk
-    ,equal :: Key -> Value -> Value -> EqualCost
-        -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, Depends, Seconds, [Trace]))
-        -- ^ Given a stack and a key, either raise an exception or successfully build it
+    { analyseResult :: Key -> Value -> IO AnalysisResult
+        -- ^ Given a Key and its stored value, determine whether to run it
+    , runKey :: Key -> Maybe Result -> Stack -> Step -> Capture Status
+        -- ^ Given a Key and its previous result, run it and return the status
     }
 
 
@@ -202,43 +201,9 @@ internKey intern status k = do
 queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
 queryKey status i = Map.lookup i <$> readIORef status
 
-data AnalysisResult = Rebuild | Continue | Expensive Value deriving (Show)
-
-analyseResult :: Ops -> Maybe Assume -> Key -> Value -> IO AnalysisResult
-analyseResult Ops{..} assume k r =
-  case assume of
-      Just AssumeDirty -> return Rebuild
-      Just AssumeSkip -> return Continue
-      _ -> do
-          s <- stored k
-          return $ case s of
-              StoredValue s -> case equal k r s of
-                  NotEqual -> Rebuild
-                  EqualCheap -> Continue
-                  EqualExpensive -> Expensive s
-              StoredMissing -> Rebuild
-
-runKey :: Ops -> Key -> Maybe Result -> Stack -> Maybe Assume -> Step -> (Status -> IO ()) -> IO ()
-runKey Ops{..} k r stack assume step reply = do
-  let norm = execute stack k $ \res ->
-          reply $ case res of
-              Left err -> Error err
-              Right (v,deps,(doubleToFloat -> execution),traces) ->
-                  let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                        | otherwise = step
-                  in Ready Result{result=v,changed=c,built=step,depends=fromDepends deps,..}
-
-  case r of
-      Just r | assume == Just AssumeClean -> do
-              v <- stored k
-              case v of
-                  StoredValue v -> reply $ Ready r{result=v}
-                  StoredMissing -> norm
-      _ -> norm
-
--- | Return either an exception (crash), or (how much time you spent waiting, the value)
+-- | Return either an exception (crash), or (how much time you spent waiting, stored keys, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} ops stack ks continue =
+build pool database@Database{..} Ops{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -296,7 +261,7 @@ build pool database@Database{..} ops stack ks continue =
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
                     let out b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-                    let continue r = out True >> check stack i k r (depends r)
+                    let continue r = out True >> check stack i k r (fromDepends $ depends r)
                     let rebuild = out False >> run stack i k (Just r)
                     let expensive r s = do
                           -- warning, have the db lock while appending (may harm performance)
@@ -304,7 +269,7 @@ build pool database@Database{..} ops stack ks continue =
                           journal i (k, Loaded r)
                           i #= (k, Loaded r)
                           continue r
-                    ar <- analyseResult ops assume k (result r)
+                    ar <- analyseResult k (result r)
                     case ar of
                         Rebuild -> rebuild
                         Continue -> continue r
@@ -329,7 +294,7 @@ build pool database@Database{..} ops stack ks continue =
                                 diagnostic $ "result " ++ atom k ++ " = error"
                                 journal i (k, Missing)
                             _ -> return ()
-                runKey ops k r (addStack i k stack) assume step reply
+                runKey k r (addStack i k stack) step reply
             i #= (k, w)
 
         check :: Stack -> Id -> Key -> Result -> [Id] -> IO Status
@@ -428,7 +393,7 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
 
 -- | Eliminate all errors from the database, pretending they don't exist
 resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
-resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = filter (isJust . flip Map.lookup keep) $ depends r})) keep
+resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = Depends . filter (isJust . flip Map.lookup keep) . fromDepends $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
 removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
@@ -438,7 +403,7 @@ toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
     status <- (removeStep . resultsOnly) <$> readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
-                in dependencyOrder shw $ Map.map (depends . snd) status
+                in dependencyOrder shw $ Map.map (fromDepends . depends . snd) status
         ids = Map.fromList $ zip order [0..]
 
         steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
@@ -448,7 +413,7 @@ toReport Database{..} = do
             {prfName = show k
             ,prfBuilt = fromStep built
             ,prfChanged = fromStep changed
-            ,prfDepends = mapMaybe (`Map.lookup` ids) depends
+            ,prfDepends = mapMaybe (`Map.lookup` ids) (fromDepends depends)
             ,prfExecution = floatToDouble execution
             ,prfTraces = map fromTrace traces
             }
@@ -510,7 +475,7 @@ lookupDependencies Database{..} k =
         status <- readIORef status
         let Just i = Intern.lookup k intern
         let Just (_, Ready r) = Map.lookup i status
-        return $ map (fst . fromJust . flip Map.lookup status) $ depends r
+        return . map (fst . fromJust . flip Map.lookup status) . fromDepends $ depends r
 
 
 ---------------------------------------------------------------------
@@ -524,7 +489,7 @@ stepKey :: Key
 stepKey = newKey $ StepKey ()
 
 toStepResult :: Step -> Result
-toStepResult i = Result (newValue i) i i [] 0 []
+toStepResult i = Result (newValue i) i i mempty 0 []
 
 fromStepResult :: Result -> Step
 fromStepResult = fromValue . result
@@ -551,12 +516,12 @@ withDatabase opts diagnostic act = do
                         _ -> Step 1
         journal stepId (stepKey, Loaded $ toStepResult step)
         lock <- newLock
-        act Database{assume=shakeAssume opts,..}
+        act Database{..}
 
 
 instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList x4) >> put (BinFloat x5) >> put (BinList x6)
-    getWith ws = (\x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> Result x1 x2 x3 x4 x5 x6) <$>
+    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList . fromDepends $ x4) >> put (BinFloat x5) >> put (BinList x6)
+    getWith ws = (\x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> Result x1 x2 x3 (Depends x4) x5 x6) <$>
         getWith ws <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where
