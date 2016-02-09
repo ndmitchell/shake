@@ -301,22 +301,6 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
 
-runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (StoredValue Value)
-runStored mp k = case Map.lookup (typeKey k) mp of
-    Nothing -> return StoredMissing
-    Just RuleInfo{..} -> stored k
-
-runEqual :: Map.HashMap TypeRep (RuleInfo m) -> Key -> Value -> Value -> EqualCost
-runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
-    Nothing -> NotEqual
-    Just RuleInfo{..} -> equal k v1 v2
-
-runExecute :: MonadIO m => Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
-runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-    Just RuleInfo{..} -> execute k
-
-
 ---------------------------------------------------------------------
 -- MAKE
 
@@ -452,7 +436,17 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent
-                    checkValid database (runStored ruleinfo) (runEqual ruleinfo) absent
+                    checkValid database absent $ \seen (_,v) -> case v of
+                        (key, Ready Result{..}) -> do
+                            let tk = typeKey key
+                            case Map.lookup tk ruleinfo of
+                                Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show key) Nothing
+                                Just RuleInfo{..} -> do
+                                    now <- stored key
+                                    let good = case now of { StoredValue n -> equal key result n /= NotEqual; StoredMissing -> False }
+                                    diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
+                                    return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
+                        _ -> return seen
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
@@ -498,15 +492,12 @@ runAfter op = do
     liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
 
 newtype ForwardQ = ForwardQ String
-    deriving (Hashable,Typeable,Eq,NFData,Binary)
-
-instance Show ForwardQ where
-    show (ForwardQ x) = x
+    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 newtype ForwardA = ForwardA ()
-    deriving (Hashable,Typeable,Eq,NFData,Binary,Show)
+    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-instance Rule ForwardQ ForwardA where
+instance Rule (ForwardQ) (ForwardA) where
     storedValue _ _ = return $ StoredValue $ ForwardA ()
 
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
@@ -554,15 +545,11 @@ applyForall ks = do
         Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
-
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    let equal = runEqual globalRules
-        stored = runStored globalRules
-        assume = shakeAssume globalOptions
-        exec stack k r step continue = do
+    let exec stack k r step continue equal execute = do
             let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
             let top = showTopStack stack
             time <- offsetTime
@@ -570,7 +557,7 @@ applyKeyValue ks = do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                res <- runExecute globalRules k
+                res <- execute k
                 when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
@@ -590,27 +577,33 @@ applyKeyValue ks = do
                         evaluate $ rnf ans
                         continue $ Ready ans
         analyseResult k r =
-          case assume of
+          case shakeAssume globalOptions of
               Just AssumeDirty -> return Rebuild
               Just AssumeSkip -> return Continue
-              _ -> do
-                  s <- stored k
-                  return $ case s of
-                      StoredValue s -> case equal k r s of
-                          NotEqual -> Rebuild
-                          EqualCheap -> Continue
-                          EqualExpensive -> Expensive s
-                      StoredMissing -> Rebuild
+              _ -> case Map.lookup (typeKey k) globalRules of
+                  Nothing -> return Rebuild
+                  Just RuleInfo{..} -> do
+                      s <- stored k
+                      return $ case s of
+                          StoredValue s -> case equal k r s of
+                              NotEqual -> Rebuild
+                              EqualCheap -> Continue
+                              EqualExpensive -> Expensive s
+                          StoredMissing -> Rebuild
 
-        runKey k r stack step reply = do
-          let norm = exec stack k r step reply
-          case r of
-              Just r | assume == Just AssumeClean -> do
-                      v <- stored k
-                      case v of
-                          StoredValue v -> reply $ Ready r{result=v}
-                          StoredMissing -> norm
-              _ -> norm
+        runKey k r stack step continue = do
+          let tk = typeKey k
+          case Map.lookup tk globalRules of
+              Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
+              Just RuleInfo{..} -> do
+                  let norm = exec stack k r step continue equal execute
+                  case r of
+                      Just r | shakeAssume globalOptions == Just AssumeClean -> do
+                              v <- stored k
+                              case v of
+                                  StoredValue v -> continue $ Ready r{result=v}
+                                  StoredMissing -> norm
+                      _ -> norm
     stack <- Action $ getsRW localStack
     (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops{..}) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}

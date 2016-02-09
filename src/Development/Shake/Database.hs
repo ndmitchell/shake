@@ -431,20 +431,14 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> (Key -> IO (StoredValue Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
-checkValid Database{..} stored equal missing = do
+checkValid :: (Show a) => Database -> [(Key, Key)] -> ([(Key, Value, a)] -> (Id, (Key, Status)) -> IO [(Key, Value, a)]) -> IO ()
+checkValid Database{..} missing keyCheck = do
     status <- readIORef status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
 
     -- Do not use a forM here as you use too much stack space
-    bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
-        (key, Ready Result{..}) -> do
-            now <- stored key
-            let good = case now of { StoredValue n -> equal key result n /= NotEqual; StoredMissing -> False }
-            diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
-        _ -> return seen
+    bad <- (\f -> foldM f [] (Map.toList status)) $ keyCheck
     unless (null bad) $ do
         let n = length bad
         errorStructured
