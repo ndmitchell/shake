@@ -5,8 +5,8 @@
 module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies, Result(..), Status(..),
-    Ops(..), AnalysisResult(..), build, Depends, subtractDepends,
+    listDepends, lookupDependencies, Result(..), Status(Ready,Error),
+    Ops(..), AnalysisResult(..), build, Depends, subtractDepends, finalizeDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -113,7 +113,7 @@ data Result = Result
     {result :: Value -- ^ the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
-    ,depends :: Depends -- ^ dependencies (don't run them early)
+    ,depends :: Depends -- ^ dependencies (stored in order of appearance)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Generic)
@@ -173,11 +173,14 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-newtype Depends = Depends {fromDepends :: [Id]}
+newtype Depends = Depends {fromDepends :: [[Id]]}
     deriving (Show,NFData,Monoid)
 
 subtractDepends :: Depends -> Depends -> Depends
 subtractDepends (Depends pre) (Depends post) = Depends $ take (length post - length pre) post
+
+finalizeDepends :: Depends -> Depends
+finalizeDepends = Depends . reverse . fromDepends
 
 data AnalysisResult = Rebuild | Continue | Expensive Value deriving (Show,Eq)
 
@@ -223,7 +226,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
         vs <- mapM (reduce stack) is
         let errs = [e | Error e <- vs]
         if all isReady vs then
-            return $ continue $ Right (0, Depends is, [result r | Ready r <- vs])
+            return $ continue $ Right (0, Depends [is], [result r | Ready r <- vs])
          else if not $ null errs then
             return $ continue $ Left $ head errs
          else do
@@ -231,7 +234,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
             let done x = do
                     case x of
                         Left e -> addPoolPriority pool $ continue $ Left e
-                        Right v -> addPool pool $ do dur <- time; continue $ Right (dur, Depends is, v)
+                        Right v -> addPool pool $ do dur <- time; continue $ Right (dur, Depends [is], v)
                     return True
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
@@ -299,14 +302,16 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 runKey k r (addStack i k stack) step reply
             i #= (k, w)
 
-        check :: Stack -> Id -> Key -> Result -> [Id] -> IO Status
-        check stack i k r ds = do
+        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
+        check stack i k r [] =
+            i #= (k, Ready r)
+        check stack i k r (ds:rest) = do
             vs <- mapM (reduce (addStack i k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
                 run stack i k $ Just r
              else if null ws then
-                i #= (k, Ready r)
+                check stack i k r rest
              else do
                 self <- newWaiting $ Just r
                 waitFor ws $ \finish d -> do
@@ -320,8 +325,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         Just (_, Ready r2)
                             | changed r2 > built r -> buildIt
                             | finish -> do
-                                i #= (k, Ready r)
-                                runWaiting self
+                                res <- check stack i k r rest
+                                if not $ isWaiting res
+                                    then runWaiting self
+                                    else afterWaiting res $ runWaiting self
                                 return True
                             | otherwise -> return False
                 i #= (k, self)
@@ -395,7 +402,7 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
 
 -- | Eliminate all errors from the database, pretending they don't exist
 resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
-resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = Depends . filter (isJust . flip Map.lookup keep) . fromDepends $ depends r})) keep
+resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = Depends . map (filter (isJust . flip Map.lookup keep)) . fromDepends $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
 removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
@@ -405,7 +412,7 @@ toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
     status <- (removeStep . resultsOnly) <$> readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
-                in dependencyOrder shw $ Map.map (fromDepends . depends . snd) status
+                in dependencyOrder shw $ Map.map (concat . fromDepends . depends . snd) status
         ids = Map.fromList $ zip order [0..]
 
         steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
@@ -415,7 +422,7 @@ toReport Database{..} = do
             {prfName = show k
             ,prfBuilt = fromStep built
             ,prfChanged = fromStep changed
-            ,prfDepends = mapMaybe (`Map.lookup` ids) (fromDepends depends)
+            ,prfDepends = mapMaybe (`Map.lookup` ids) (concat $ fromDepends depends)
             ,prfExecution = floatToDouble execution
             ,prfTraces = map fromTrace traces
             }
@@ -468,7 +475,7 @@ listDepends :: Database -> Depends -> IO [Key]
 listDepends Database{..} (Depends xs) =
     withLock lock $ do
         status <- readIORef status
-        return $ map (fst . fromJust . flip Map.lookup status) xs
+        return . map (fst . fromJust . flip Map.lookup status) . concat $ xs
 
 lookupDependencies :: Database -> Key -> IO [Key]
 lookupDependencies Database{..} k =
@@ -477,7 +484,7 @@ lookupDependencies Database{..} k =
         status <- readIORef status
         let Just i = Intern.lookup k intern
         let Just (_, Ready r) = Map.lookup i status
-        return . map (fst . fromJust . flip Map.lookup status) . fromDepends $ depends r
+        return . map (fst . fromJust . flip Map.lookup status) . concat . fromDepends $ depends r
 
 
 ---------------------------------------------------------------------
@@ -521,9 +528,13 @@ withDatabase opts diagnostic act = do
         act Database{..}
 
 
+instance Binary Depends where
+  put x = put (BinList . map BinList . fromDepends $ x)
+  get = Depends . map fromBinList . fromBinList <$> get
+
 instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList . fromDepends $ x4) >> put (BinFloat x5) >> put (BinList x6)
-    getWith ws = (\x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> Result x1 x2 x3 (Depends x4) x5 x6) <$>
+    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put (BinFloat x5) >> put (BinList x6)
+    getWith ws = (\x1 x2 x3 x4 (BinFloat x5) (BinList x6) -> Result x1 x2 x3 x4 x5 x6) <$>
         getWith ws <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where

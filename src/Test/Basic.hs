@@ -75,7 +75,7 @@ main = shaken test $ \args obj -> do
     [obj "sep" </> "7.txt"] |%> \out -> writeFile' out ""
 
     obj "ids/source" %> \out -> return ()
-    obj "ids/out" %> \out -> do need =<< readFileLines (obj "ids/source"); writeFile' out ""
+    obj "ids/out" %> \out -> readFile' (obj "ids/source") >>= readFile' >>= writeFile' out
     obj "ids/*" %> \out -> do alwaysRerun; trace (takeFileName out); writeFile' out $ takeFileName out
 
 test build obj = do

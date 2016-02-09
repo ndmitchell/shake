@@ -563,8 +563,7 @@ applyKeyValue ks = do
         stored = runStored globalRules
         assume = shakeAssume globalOptions
         exec stack k r step continue = do
-            let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=mempty, localStack=stack, localBlockApply=Nothing
-                          ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
+            let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
             let top = showTopStack stack
             time <- offsetTime
             runAction global s (do
@@ -582,7 +581,7 @@ applyKeyValue ks = do
                               | otherwise = step
                             ans = Result
                                     { result = res
-                                    , depends = localDepends
+                                    , depends = finalizeDepends localDepends
                                     , changed = c
                                     , built = step
                                     , execution = doubleToFloat $ dur - localDiscount
