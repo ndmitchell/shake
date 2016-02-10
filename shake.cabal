@@ -126,8 +126,10 @@ library
         Development.Shake.Args
         Development.Shake.ByteString
         Development.Shake.Core
+        Development.Shake.Core2
         Development.Shake.CmdOption
         Development.Shake.Database
+        Development.Shake.Database2
         Development.Shake.Demo
         Development.Shake.Derived
         Development.Shake.Errors
@@ -219,7 +221,9 @@ executable shake
         Development.Shake.CmdOption
         Development.Shake.Command
         Development.Shake.Core
+        Development.Shake.Core2
         Development.Shake.Database
+        Development.Shake.Database2
         Development.Shake.Demo
         Development.Shake.Derived
         Development.Shake.Errors
@@ -320,7 +324,9 @@ test-suite shake-test
         Development.Shake.Command
         Development.Shake.Config
         Development.Shake.Core
+        Development.Shake.Core2
         Development.Shake.Database
+        Development.Shake.Database2
         Development.Shake.Demo
         Development.Shake.Derived
         Development.Shake.Errors

@@ -1,7 +1,9 @@
 {-# LANGUAGE PatternGuards, RecordWildCards #-}
 
-module Development.Shake.Profile(ProfileEntry(..), ProfileTrace(..), writeProfile) where
+module Development.Shake.Profile(ProfileEntry(..), Trace(..), writeProfile) where
 
+import General.Binary
+import General.String
 import General.Template
 import Data.Tuple.Extra
 import Data.Function
@@ -11,16 +13,27 @@ import System.FilePath
 import Numeric.Extra
 import General.Extra
 import Paths_shake
-import System.Time.Extra
+import qualified System.Time.Extra as T
 import qualified Data.ByteString.Lazy.Char8 as LBS
-
+import Development.Shake.Classes
 
 data ProfileEntry = ProfileEntry
-    {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [Int], prfExecution :: Double, prfTraces :: [ProfileTrace]}
-data ProfileTrace = ProfileTrace
-    {prfCommand :: String, prfStart :: Double, prfStop :: Double}
-prfTime ProfileTrace{..} = prfStop - prfStart
+    {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [Int], prfExecution :: Float, prfTraces :: [Trace]}
 
+data Trace = Trace
+    {prfCommand :: BS, prfStart :: Float, prfStop :: Float }
+    deriving Show
+
+instance NFData Trace where
+    rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
+
+instance Binary Trace where
+    put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
+    get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
+
+prfTime Trace{..} = prfStop - prfStart
+
+showDuration = T.showDuration . floatToDouble
 
 -- | Generates an report given some build system profiling data.
 writeProfile :: FilePath -> [ProfileEntry] -> IO ()
@@ -41,7 +54,7 @@ generateSummary xs =
         " of which " ++ showDuration (sum $ map prfTime $ concatMap prfTraces xs) ++ " is traced commands."
     ,let f xs = if null xs then "0s" else (\(a,b) -> showDuration a ++ " (" ++ b ++ ")") $ maximumBy' (compare `on` fst) xs in
         "* The longest rule takes " ++ f (map (prfExecution &&& prfName) xs) ++
-        ", and the longest traced command takes " ++ f (map (prfTime &&& prfCommand) $ concatMap prfTraces xs) ++ "."
+        ", and the longest traced command takes " ++ f (map (prfTime &&& (show . prfCommand)) $ concatMap prfTraces xs) ++ "."
     ,let sumLast = sum $ map prfTime $ concatMap prfTraces ls
          maxStop = maximum $ 0 : map prfStop (concatMap prfTraces ls) in
         "* Last run gave an average parallelism of " ++ showDP 2 (if maxStop == 0 then 0 else sumLast / maxStop) ++
@@ -62,13 +75,13 @@ generateHTML xs = do
 
 generateTrace :: [ProfileEntry] -> String
 generateTrace xs = jsonListLines $
-    showEntries 0 [y{prfCommand=prfName x} | x <- xs, y <- prfTraces x] ++
+    showEntries 0 [y{prfCommand=pack $ prfName x} | x <- xs, y <- prfTraces x] ++
     showEntries 1 (concatMap prfTraces xs)
     where
         showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortBy (compare `on` prfStart) xs
         alloc as r | (a1,an:a2) <- break (\a -> prfStop a <= prfStart r) as = (a1++r:a2, (length a1,r))
                    | otherwise = (as++[r], (length as,r))
-        showEntry pid (tid, ProfileTrace{..}) = jsonObject
+        showEntry pid (tid, Trace{..}) = jsonObject
             [("args","{}"), ("ph",show "X"), ("cat",show "target")
             ,("name",show prfCommand), ("tid",show tid), ("pid",show pid)
             ,("ts",show $ 1000000*prfStart), ("dur",show $ 1000000*(prfStop-prfStart))]
@@ -84,7 +97,7 @@ generateJSON = jsonListLines . map showEntry
             ,("depends", show prfDepends)
             ,("execution", showDP 4 prfExecution)] ++
             [("traces", jsonList $ map showTrace prfTraces) | not $ null prfTraces]
-        showTrace ProfileTrace{..} = jsonObject
+        showTrace Trace{..} = jsonObject
             [("command",show prfCommand), ("start",show prfStart), ("stop",show prfStop)]
 
 jsonListLines xs = "[" ++ intercalate "\n," xs ++ "\n]"

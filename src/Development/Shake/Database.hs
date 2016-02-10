@@ -15,6 +15,7 @@ module Development.Shake.Database(
 import GHC.Generics (Generic)
 import Development.Shake.Classes
 import General.Binary
+import Development.Shake.Database2
 import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Errors
@@ -22,7 +23,6 @@ import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Profile
 import Development.Shake.Monad
-import General.String
 import General.Intern as Intern
 
 import Numeric.Extra
@@ -42,50 +42,13 @@ import Prelude
 type Map = Map.HashMap
 
 
----------------------------------------------------------------------
--- UTILITY TYPES
-
-newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
-
-incStep (Step i) = Step $ i + 1
-
-
----------------------------------------------------------------------
--- CALL STACK
-
-data Stack = Stack (Maybe Key) [Id] !(Set.HashSet Id)
-
 showStack :: Database -> Stack -> IO [String]
-showStack Database{..} (Stack _ xs _) = do
+showStack Database{..} (stackIds -> xs) = do
     status <- withLock lock $ readIORef status
     return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) xs
 
-addStack :: Id -> Key -> Stack -> Stack
-addStack x key (Stack _ xs set) = Stack (Just key) (x:xs) (Set.insert x set)
-
-showTopStack :: Stack -> String
-showTopStack = maybe "<unknown>" show . topStack
-
-topStack :: Stack -> Maybe Key
-topStack (Stack key _ _) = key
-
-checkStack :: [Id] -> Stack -> Maybe Id
-checkStack new (Stack _ old set)
-    | bad:_ <- filter (`Set.member` set) new = Just bad
-    | otherwise = Nothing
-
-emptyStack :: Stack
-emptyStack = Stack Nothing [] Set.empty
-
-
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
-
-data Trace = Trace BS Float Float -- ^ (message, start, end)
-    deriving Show
-
-instance NFData Trace where
-    rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
 
 type StatusDB = IORef (Map Id (Key, Status))
 type InternDB = IORef (Intern Key)
@@ -173,15 +136,6 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-newtype Depends = Depends {fromDepends :: [[Id]]}
-    deriving (Show,NFData,Monoid)
-
-subtractDepends :: Depends -> Depends -> Depends
-subtractDepends (Depends pre) (Depends post) = Depends $ take (length post - length pre) post
-
-finalizeDepends :: Depends -> Depends
-finalizeDepends = Depends . reverse . fromDepends
-
 data AnalysisResult = Rebuild | Continue | Expensive Value deriving (Show,Eq)
 
 data Ops = Ops
@@ -216,7 +170,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
             -- everything else gets thrown via Left and can be Staunch'd
             -- recursion in the rules is considered a worse error, so fails immediately
             status <- readIORef status
-            let Stack _ xs _ = stack
+            let xs = stackIds stack
             stack <- return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) $ bad:xs
             (tk, tname) <- return $ case Map.lookup bad status of
                 Nothing -> (Nothing, Nothing)
@@ -423,11 +377,10 @@ toReport Database{..} = do
             ,prfBuilt = fromStep built
             ,prfChanged = fromStep changed
             ,prfDepends = mapMaybe (`Map.lookup` ids) (concat $ fromDepends depends)
-            ,prfExecution = floatToDouble execution
-            ,prfTraces = map fromTrace traces
+            ,prfExecution = execution
+            ,prfTraces = traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
-                  fromTrace (Trace a b c) = ProfileTrace (unpack a) (floatToDouble b) (floatToDouble c)
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
@@ -500,8 +453,8 @@ fromStepResult = fromValue . result
 
 withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
-    registerWitness $ StepKey ()
-    registerWitness $ Step 0
+    registerWitness $ (undefined :: StepKey)
+    registerWitness $ (undefined :: Step)
     witness <- currentWitness
     withStorage opts diagnostic witness $ \mp2 journal -> do
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
@@ -516,24 +469,16 @@ withDatabase opts diagnostic act = do
         status <- newIORef mp2
         let step = case Map.lookup stepId mp2 of
                         Just (_, Loaded r) -> incStep $ fromStepResult r
-                        _ -> Step 1
+                        _ -> initialStep
         journal stepId (stepKey, Loaded $ toStepResult step)
         lock <- newLock
         act Database{..}
 
 
-instance Binary Depends where
-  put x = put (BinList . map BinList . fromDepends $ x)
-  get = Depends . map fromBinList . fromBinList <$> get
-
 instance BinaryWith Witness Result where
     putWith ws (Result x1 x2 x3 x4 x5 x6 x7) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put (BinFloat x6) >> put (BinList x7)
     getWith ws = (\x1 x2 x3 x4 x5 (BinFloat x6) (BinList x7) -> Result x1 x2 x3 x4 x5 x6 x7) <$>
         getWith ws <*> get <*> get <*> get <*> get <*> get <*> get
-
-instance Binary Trace where
-    put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
-    get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
 
 instance BinaryWith Witness Status where
     putWith ctx Missing = putWord8 0

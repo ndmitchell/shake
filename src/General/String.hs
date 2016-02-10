@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module General.String(
+    abbreviate,
     BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
     ) where
@@ -9,7 +10,18 @@ import qualified Data.ByteString as BS (any)
 import qualified Data.ByteString.Char8 as BS hiding (any)
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Classes
+import Data.List.Extra
 
+abbreviate :: [(String,String)] -> String -> String
+abbreviate [] = id
+abbreviate abbrev = f
+    where
+        -- order so longer abbreviations are preferred
+        ordAbbrev = sortOn (negate . length . fst) abbrev
+
+        f [] = []
+        f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
+        f (x:xs) = x : f xs
 
 ---------------------------------------------------------------------
 -- Data.ByteString
