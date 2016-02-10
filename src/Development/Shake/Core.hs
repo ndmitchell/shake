@@ -549,66 +549,71 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    let exec stack k r step continue equal execute = do
-            let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
-            let top = showTopStack stack
-            time <- offsetTime
-            runAction global s (do
-                liftIO $ evaluate $ rnf k
-                liftIO $ globalLint $ "before building " ++ top
-                putWhen Chatty $ "# " ++ show k
-                res <- execute k
-                when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
-                Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right (res, Local{..}) -> do
-                        dur <- time
-                        globalLint $ "after building " ++ top
-                        let c | Just r <- r, equal k (result r) res /= NotEqual = changed r
-                              | otherwise = step
-                            ans = Result
-                                    { result = res
-                                    , depends = finalizeDepends localDepends
-                                    , changed = c
-                                    , built = step
-                                    , execution = doubleToFloat $ dur - localDiscount
-                                    , traces = reverse localTraces
-                                    }
-                        evaluate $ rnf ans
-                        continue $ Ready ans
-        analyseResult k r =
-          case shakeAssume globalOptions of
-              Just AssumeDirty -> return Rebuild
-              Just AssumeSkip -> return Continue
-              _ -> case Map.lookup (typeKey k) globalRules of
-                  Nothing -> return Rebuild
-                  Just RuleInfo{..} -> do
-                      s <- stored k
-                      return $ case s of
-                          StoredValue s -> case equal k r s of
-                              NotEqual -> Rebuild
-                              EqualCheap -> Continue
-                              EqualExpensive -> Expensive s
-                          StoredMissing -> Rebuild
-
-        runKey k r stack step continue = do
-          let tk = typeKey k
-          case Map.lookup tk globalRules of
-              Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-              Just RuleInfo{..} -> do
-                  let norm = exec stack k r step continue equal execute
-                  case r of
-                      Just r | shakeAssume globalOptions == Just AssumeClean -> do
-                              v <- stored k
-                              case v of
-                                  StoredValue v -> continue $ Ready r{result=v}
-                                  StoredMissing -> norm
-                      _ -> norm
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops{..}) stack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (analyseResult_ global) (runKey_ global)) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 
+exec :: Global -> Stack -> Key -> Maybe Result -> Step -> (Status -> IO ()) -> (Key -> Value -> Value -> EqualCost) -> (Key -> Action Value) -> IO ()
+exec global@Global{..} stack k r step continue equal execute = do
+    let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
+    let top = showTopStack stack
+    time <- offsetTime
+    runAction global s (do
+        liftIO $ evaluate $ rnf k
+        liftIO $ globalLint $ "before building " ++ top
+        putWhen Chatty $ "# " ++ show k
+        res <- execute k
+        when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
+        Action $ fmap ((,) res) getRW) $ \x -> case x of
+            Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
+            Right (res, Local{..}) -> do
+                dur <- time
+                globalLint $ "after building " ++ top
+                let c | Just r <- r, equal k (result r) res /= NotEqual = changed r
+                      | otherwise = step
+                    ans = Result
+                            { result = res
+                            , depends = finalizeDepends localDepends
+                            , generatedBy = Nothing
+                            , changed = c
+                            , built = step
+                            , execution = doubleToFloat $ dur - localDiscount
+                            , traces = reverse localTraces
+                            }
+                evaluate $ rnf ans
+                continue $ Ready ans
+
+analyseResult_ :: Global -> Key -> Value -> IO AnalysisResult
+analyseResult_ global@Global{..} k r =
+  case shakeAssume globalOptions of
+      Just AssumeDirty -> return Rebuild
+      Just AssumeSkip -> return Continue
+      _ -> case Map.lookup (typeKey k) globalRules of
+          Nothing -> return Rebuild
+          Just RuleInfo{..} -> do
+              s <- stored k
+              return $ case s of
+                  StoredValue s -> case equal k r s of
+                      NotEqual -> Rebuild
+                      EqualCheap -> Continue
+                      EqualExpensive -> Expensive s
+                  StoredMissing -> Rebuild
+
+runKey_ :: Global -> Key -> Maybe Result -> Stack -> Development.Shake.Database.Step -> Capture Status
+runKey_ global@Global{..} k r stack step continue = do
+  let tk = typeKey k
+  case Map.lookup tk globalRules of
+      Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
+      Just RuleInfo{..} -> do
+          let norm = exec global stack k r step continue equal execute
+          case r of
+              Just r | shakeAssume globalOptions == Just AssumeClean -> do
+                      v <- stored k
+                      case v of
+                          StoredValue v -> continue $ Ready r{result=v}
+                          StoredMissing -> norm
+              _ -> norm
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)

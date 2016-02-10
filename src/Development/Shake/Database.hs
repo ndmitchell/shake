@@ -5,7 +5,7 @@
 module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies, Result(..), Status(Ready,Error),
+    listDepends, lookupDependencies, Step, Result(..), Status(Ready,Error),
     Ops(..), AnalysisResult(..), build, Depends, subtractDepends, finalizeDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -20,7 +20,6 @@ import Development.Shake.Value
 import Development.Shake.Errors
 import Development.Shake.Storage
 import Development.Shake.Types
-import Development.Shake.Special
 import Development.Shake.Profile
 import Development.Shake.Monad
 import General.String
@@ -114,6 +113,7 @@ data Result = Result
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
     ,depends :: Depends -- ^ dependencies (stored in order of appearance)
+    ,generatedBy :: Maybe Id -- ^ generator, if this was generated
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Generic)
@@ -492,7 +492,7 @@ stepKey :: Key
 stepKey = newKey $ StepKey ()
 
 toStepResult :: Step -> Result
-toStepResult i = Result (newValue i) i i mempty 0 []
+toStepResult i = Result (newValue i) i i mempty Nothing 0 []
 
 fromStepResult :: Result -> Step
 fromStepResult = fromValue . result
@@ -527,9 +527,9 @@ instance Binary Depends where
   get = Depends . map fromBinList . fromBinList <$> get
 
 instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put (BinFloat x5) >> put (BinList x6)
-    getWith ws = (\x1 x2 x3 x4 (BinFloat x5) (BinList x6) -> Result x1 x2 x3 x4 x5 x6) <$>
-        getWith ws <*> get <*> get <*> get <*> get <*> get
+    putWith ws (Result x1 x2 x3 x4 x5 x6 x7) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put (BinFloat x6) >> put (BinList x7)
+    getWith ws = (\x1 x2 x3 x4 x5 (BinFloat x6) (BinList x7) -> Result x1 x2 x3 x4 x5 x6 x7) <$>
+        getWith ws <*> get <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
