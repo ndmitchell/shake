@@ -72,7 +72,7 @@ getRules (Rules r) = execWriterT r
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
+rule r = newRules mempty{rules = Map.singleton k (k, Priority v [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
@@ -95,7 +95,7 @@ rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
+priority i = modifyRules $ \s -> s{rules = Map.map (\(a,Priority b cs) -> (a,Priority b (map (first $ const i) cs))) $ rules s}
 
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
@@ -113,8 +113,8 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
     where
-        f (k, v, []) = (k, v, [])
-        f (k, v, xs) = let (is,rs) = unzip xs in (k, v, [(maximum is, foldl1' g rs)])
+        f (k, Priority v []) = (k, Priority v [])
+        f (k, Priority v xs) = let (is,rs) = unzip xs in (k, Priority v [(maximum is, foldl1' g rs)])
 
         g (ARule a) (ARule b) = ARule $ \x -> a x `mplus` b2 x
             where b2 = fmap (fmap (fromJust . cast)) . b . fromJust . cast

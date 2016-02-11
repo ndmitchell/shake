@@ -3,7 +3,7 @@
 
 module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
-    Rule(..), ARule(..), SRules(..), ruleKey, ruleValue,
+    Rule(..), ARule(..), SRules(..), RuleType(..), ruleKey, ruleValue,
     run', apply, blockApply, withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     traced, trackUse, trackChange, trackAllow, orderOnlyAction,
@@ -144,23 +144,30 @@ ruleKey = err "ruleKey"
 ruleValue :: (key -> Maybe (m value)) -> value
 ruleValue = err "ruleValue"
 
+data RuleType m = Priority TypeRep{-v-} [(Double,ARule m)] -- higher fst is higher priority
+              | Custom (RuleInfo m)
+
 data SRules m = SRules
     {actions :: [m ()]
-    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule m)]) -- higher fst is higher priority
+    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},RuleType m)
     }
 
 instance Monoid (SRules m) where
     mempty = SRules [] (Map.fromList [])
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
-        where f (k, v1, xs) (_, v2, ys)
-                | v1 == v2 = (k, v1, xs ++ ys)
+        where f (k, Priority v1 xs) (_, Priority v2 ys)
+                | v1 == v2 = (k, Priority v1 (xs ++ ys))
                 | otherwise = unsafePerformIO $ errorIncompatibleRules k v1 v2
+              f _ _ = unsafePerformIO $ err "Don't know how to combine rules"
 
 registerWitnesses :: SRules m -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
-        registerWitness $ ruleKey r
-        registerWitness $ ruleValue r
+    forM_ (Map.elems rules) $ \(_, c) ->
+        case c of
+            Priority _ ((_,ARule r):_) -> do
+                registerWitness $ ruleKey r
+                registerWitness $ ruleValue r
+            Custom _ -> return ()
 
 data RuleInfo m = RuleInfo
     {analyse :: ShakeOptions -> Key -> Value -> IO AnalysisResult
@@ -201,7 +208,9 @@ executeI rs opt k vold = do
     sets = map snd . reverse . groupSort
 
 createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (analyseI (snd . head $ rs)) (executeI rs) tv
+createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,c) -> case c of
+    Priority tv rs -> RuleInfo (analyseI (snd . head $ rs)) (executeI rs) tv
+    Custom c -> c
 
 ---------------------------------------------------------------------
 -- MAKE
