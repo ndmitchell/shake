@@ -40,6 +40,8 @@ data Assume
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run/.
         --   Assume that all rules reached are clean in this run. Only useful for benchmarking, to remove any overhead
         --   from running 'Development.Shake.Rule.storedValue' operations.
+    | AssumeNothing
+        -- ^ The default behavior, assuming nothing. This assumption is safe.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
 
 
@@ -120,8 +122,8 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
         --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
         --   'shakeFlush' seconds will be lost.
-    ,shakeAssume :: Maybe Assume
-        -- ^ Defaults to 'Nothing'. Assume all build objects are clean/dirty, see 'Assume' for details.
+    ,shakeAssume :: Assume
+        -- ^ Defaults to 'AssumeNothing'. Assume all build objects are clean/dirty, see 'Assume' for details.
         --   Can be used to implement @make --touch@.
     ,shakeAbbreviations :: [(String,String)]
         -- ^ Defaults to @[]@. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation.
@@ -169,7 +171,7 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) Nothing [] False True False
+    ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) AssumeNothing [] False True False
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
@@ -206,7 +208,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Change)
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: [FilePath])
-                | Just x <- cast x = show (x :: Maybe Assume)
+                | Just x <- cast x = show (x :: Assume)
                 | Just x <- cast x = show (x :: Maybe Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
