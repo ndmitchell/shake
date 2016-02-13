@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE ExistentialQuantification, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ConstraintKinds #-}
 
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.
@@ -6,7 +6,8 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
-    Witness, currentWitness, registerWitness
+    Witness, currentWitness, registerWitness,
+    ShakeValue
     ) where
 
 import General.Binary
@@ -23,19 +24,52 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
 
+-- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
+--   This alias is only available in GHC 7.4 and above, and requires the @ConstraintKinds@ extension.
+--
+--   To define your own values meeting the necessary constraints it is convenient to use the extensions
+--   @GeneralizedNewtypeDeriving@ and @DeriveDataTypeable@ to write:
+--
+-- > newtype MyType = MyType (String, Bool) deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+--
+--   Shake needs these instances on keys and values. They are used for:
+--
+-- * 'Show' is used to print out keys in errors, profiling, progress messages
+--   and diagnostics.
+--
+-- * 'Typeable' is used because Shake indexes its database by the
+--   type of the key and value involved in the rule (overlap is not
+--   allowed for type classes and not allowed in Shake either).
+--
+-- * 'Eq' and 'Hashable' are used on keys in order to build hash maps
+--   from keys to values.  'Eq' is used on values to test if the value
+--   has changed or not (this is used to support unchanging rebuilds,
+--   where Shake can avoid rerunning rules if it runs a dependency,
+--   but it turns out that no changes occurred.)  The 'Hashable'
+--   instances are only use at runtime (never serialised to disk),
+--   so they do not have to be stable across runs.
+--   Hashable on values is not used, and only required for a consistent interface.
+--
+-- * 'Binary' is used to serialize keys and values into Shake's
+--   build database; this lets Shake cache values across runs and
+--   implement unchanging rebuilds.
+--
+-- * 'NFData' is used to avoid space and thunk leaks, especially
+--   when Shake is parallelized.
+type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
     deriving (Eq,Hashable,NFData,BinaryWith Witness)
 
-data Value = forall a . (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => Value a
+data Value = forall a . (ShakeValue a) => Value a
 
 
-newKey :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> Key
+newKey :: (ShakeValue a) => a -> Key
 newKey = Key . newValue
 
-newValue :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> Value
+newValue :: (ShakeValue a) => a -> Value
 newValue = Value
 
 typeKey :: Key -> TypeRep
@@ -74,7 +108,7 @@ instance Eq Value where
 witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
-registerWitness :: (Eq a, Show a, Typeable a, Hashable a, Binary a, NFData a) => a -> IO ()
+registerWitness :: (ShakeValue a) => a -> IO ()
 registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ err msg `asTypeOf` x) mp, ())
     where msg = "registerWitness, type " ++ show (typeOf x)
 
