@@ -171,10 +171,10 @@ test build obj = do
 
     createDirectoryIfMissing True (obj "ids")
     writeFile (obj "ids/source") (obj "ids/a")
-    build ["ids/out"]
+    build ["ids/out","--sleep"]
     writeFile (obj ".log") ""
     writeFile (obj "ids/source") (obj "ids/b")
-    build ["ids/out","-j4","--sleep"]
+    build ["ids/out","-j4"]
     -- if you collapse depends to [Id] then this ends up asking for the stale 'a'
     assertContents (obj ".log") "b"
 
