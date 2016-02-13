@@ -15,7 +15,6 @@ import Control.Monad.Trans.Reader
 import Data.IORef
 import Control.Applicative
 import Control.Monad
-import GHC.Exts(lazy)
 import Prelude
 
 
@@ -33,7 +32,7 @@ type Capture a = (a -> IO ()) -> IO ()
 
 -- See https://ghc.haskell.org/trac/ghc/ticket/11555
 catchSafe :: IO a -> (SomeException -> IO a) -> IO a
-catchSafe a b = lazy a `catch_` b
+catchSafe a b = join (evaluate a) `catch_` b
 
 -- | Run and then call a continuation.
 runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
