@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #416, export ShakeValue from the main module only
     #352, improve the grammar in the profiling document
     #399, explain what in getDirectoryFiles is tracked
     #108, add getDirectoryFilesIO, an untracked version
