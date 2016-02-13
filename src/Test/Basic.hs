@@ -174,7 +174,7 @@ test build obj = do
     build ["ids/out"]
     writeFile (obj ".log") ""
     writeFile (obj "ids/source") (obj "ids/b")
-    build ["ids/out","-j4"]
+    build ["ids/out","-j4","--sleep"]
     -- if you collapse depends to [Id] then this ends up asking for the stale 'a'
     assertContents (obj ".log") "b"
 
