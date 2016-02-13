@@ -63,13 +63,13 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 newtype Key = Key Value
     deriving (Eq,Hashable,NFData,BinaryWith Witness)
 
-data Value = forall a . (ShakeValue a) => Value a
+data Value = forall a . ShakeValue a => Value a
 
 
-newKey :: (ShakeValue a) => a -> Key
+newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
-newValue :: (ShakeValue a) => a -> Value
+newValue :: ShakeValue a => a -> Value
 newValue = Value
 
 typeKey :: Key -> TypeRep
@@ -108,7 +108,7 @@ instance Eq Value where
 witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
-registerWitness :: (ShakeValue a) => a -> IO ()
+registerWitness :: ShakeValue a => a -> IO ()
 registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ err msg `asTypeOf` x) mp, ())
     where msg = "registerWitness, type " ++ show (typeOf x)
 
