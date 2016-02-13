@@ -22,9 +22,10 @@ import Prelude
 
 
 main = shakenCwd test $ \args obj -> do
-    let helper = toNative $ obj "shake_helper" <.> exe
+    -- shake_helper must be in a subdirectory so we can test placing that subdir on the $PATH
+    let helper = toNative $ obj "helper/shake_helper" <.> exe
     let name !> test = do want [name | null args || name `elem` args]
-                          name ~> do need [obj "shake_helper" <.> exe]; test
+                          name ~> do need [obj "helper/shake_helper" <.> exe]; test
 
     let helper_source = unlines
             ["import Control.Concurrent"
@@ -50,9 +51,12 @@ main = shakenCwd test $ \args obj -> do
             ,"        hFlush stderr"
             ]
 
-    obj "shake_helper.hs" %> \out -> do need ["../../src/Test/Command.hs"]; writeFileChanged out helper_source
-    [obj "shake_helper" <.> exe, obj "shake_helper.o", obj "shake_helper.hi"] &%> \_ -> do
-      need [obj "shake_helper.hs"]; cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o shake_helper"
+    obj "shake_helper.hs" %> \out -> do
+        need ["../../src/Test/Command.hs"]
+        writeFileChanged out helper_source
+    [obj "helper/shake_helper" <.> exe, obj "shake_helper.o", obj "shake_helper.hi"] &%> \_ -> do
+        need [obj "shake_helper.hs"]
+        cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o helper/shake_helper"
 
     "capture" !> do
         (Stderr err, Stdout out) <- cmd helper ["ostuff goes here","eother stuff here"]
@@ -70,7 +74,7 @@ main = shakenCwd test $ \args obj -> do
 
     "cwd" !> do
         -- FIXME: Linux searches the Cwd argument for the file, Windows searches getCurrentDirectory
-        helper <- liftIO $ canonicalizePath $ obj "shake_helper" <.> exe
+        helper <- liftIO $ canonicalizePath $ obj "helper/shake_helper" <.> exe
         Stdout out <- cmd (Cwd $ obj "") helper "c"
         let norm = fmap dropTrailingPathSeparator . canonicalizePath . trim
         liftIO $ join $ liftM2 (===) (norm out) (norm $ obj "")
@@ -104,9 +108,9 @@ main = shakenCwd test $ \args obj -> do
             fail $ "Invalid CmdLine, " ++ x
 
     "path" !> do
-        let path = AddPath [dropTrailingPathSeparator $ obj ""] []
-        unit $ cmd $ obj "shake_helper"
-        unit $ cmd $ obj "shake_helper" <.> exe
+        let path = AddPath [dropTrailingPathSeparator $ obj "helper"] []
+        unit $ cmd $ obj "helper/shake_helper"
+        unit $ cmd $ obj "helper/shake_helper" <.> exe
         unit $ cmd path Shell "shake_helper"
         unit $ cmd path "shake_helper"
 
