@@ -25,7 +25,7 @@ import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
 
 -- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
---   This alias is only available in GHC 7.4 and above, and requires the @ConstraintKinds@ extension.
+--   Using this alias requires the @ConstraintKinds@ extension.
 --
 --   To define your own values meeting the necessary constraints it is convenient to use the extensions
 --   @GeneralizedNewtypeDeriving@ and @DeriveDataTypeable@ to write:
