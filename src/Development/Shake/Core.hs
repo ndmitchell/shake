@@ -188,8 +188,10 @@ instance Monoid a => Monoid (Rules a) where
     mappend = liftA2 mappend
 
 
--- | Add a rule to build a key, returning an appropriate 'Action'. All rules at a given priority
---   must be disjoint. Rules have priority 1 by default, but can be modified with 'priority'.
+-- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
+--   or 'Nothing' otherwise.
+--   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
+--   Rules have priority 1 by default, which can be modified with 'priority'.
 rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
