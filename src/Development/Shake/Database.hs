@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, DeriveFunctor, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Database(
     Trace(..),
@@ -29,6 +29,7 @@ import Numeric.Extra
 import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
+import Control.Monad.IO.Class
 import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
@@ -136,10 +137,10 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-data AnalysisResult = Rebuild | Continue | Expensive Value deriving (Show,Eq)
+data AnalysisResult v = Rebuild | Continue | Expensive v deriving (Show,Eq,Functor)
 
 data Ops = Ops
-    { analyseResult :: Key -> Value -> IO AnalysisResult
+    { analyseResult :: Key -> Value -> IO (AnalysisResult Value)
         -- ^ Given a Key and its stored value, determine whether to run it
     , runKey :: Key -> Maybe Result -> Stack -> Step -> Capture Status
         -- ^ Given a Key and its previous result, run it and return the status
@@ -161,8 +162,8 @@ queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
 queryKey status i = Map.lookup i <$> readIORef status
 
 -- | Return either an exception (crash), or (how much time you spent waiting, stored keys, the value)
-build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} Ops{..} stack ks continue =
+build :: Pool -> Database -> Ops -> Stack -> Bool -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build pool database@Database{..} Ops{..} stack noRebuild ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -236,6 +237,11 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
+        run stack i k r | noRebuild = do
+            liftIO $ errorStructured "Error - 'needed' key required rebuilding"
+                [("Key", Just $ show k)
+                ,("Cached result",fmap show r)]
+                ""
         run stack i k r = do
             w <- newWaiting r
             addPool pool $ do
@@ -384,7 +390,7 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> [(Key, Key)] -> ([(Key, Value, AnalysisResult)] -> (Id, (Key, Status)) -> IO [(Key, Value, AnalysisResult)]) -> IO ()
+checkValid :: Database -> [(Key, Key)] -> ([(Key, Value, AnalysisResult Value)] -> (Id, (Key, Status)) -> IO [(Key, Value, AnalysisResult Value)]) -> IO ()
 checkValid Database{..} missing keyCheck = do
     status <- readIORef status
     intern <- readIORef intern

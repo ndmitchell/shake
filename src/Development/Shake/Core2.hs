@@ -3,8 +3,9 @@
 
 module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
-    Rule(..), ARule(..), SRules(..), RuleType(..), ruleKey, ruleValue,
-    run', apply, blockApply, withResource, newCacheIO,
+    Rule(..), ARule(..), CRule(..), AnalysisResult(..),
+    SRules(..), RuleType(..), ruleKey, ruleValue, cRuleKey,
+    run', apply, applied, blockApply, withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     traced, trackUse, trackChange, trackAllow, orderOnlyAction,
     ) where
@@ -138,14 +139,26 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
 
 data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
 
+data CRule m = forall key value . (ShakeValue key, ShakeValue value) =>
+    CRule
+        {canalyse :: key -> value -> IO (AnalysisResult value)
+        ,cexecute :: forall step. key -> Maybe (value, step) -> m (value, Maybe step)
+        }
+
 ruleKey :: (key -> Maybe (m value)) -> key
 ruleKey = err "ruleKey"
 
 ruleValue :: (key -> Maybe (m value)) -> value
 ruleValue = err "ruleValue"
 
+cRuleKey :: (key -> value -> a) -> key
+cRuleKey = err "cRuleKey"
+
+cRuleValue :: (key -> value -> a) -> value
+cRuleValue = err "cRuleValue"
+
 data RuleType m = Priority TypeRep{-v-} [(Double,ARule m)] -- higher fst is higher priority
-              | Custom (RuleInfo m)
+              | Custom (CRule m)
 
 data SRules m = SRules
     {actions :: [m ()]
@@ -167,15 +180,17 @@ registerWitnesses SRules{..} =
             Priority _ ((_,ARule r):_) -> do
                 registerWitness $ ruleKey r
                 registerWitness $ ruleValue r
-            Custom _ -> return ()
+            Custom (CRule x _) -> do
+                registerWitness $ cRuleKey x
+                registerWitness $ cRuleValue x
 
 data RuleInfo m = RuleInfo
-    {analyse :: ShakeOptions -> Key -> Value -> IO AnalysisResult
-    ,execute :: forall a. ShakeOptions -> Key -> Maybe (Value, a) -> m (Value, Maybe a)
+    {analyse :: ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
+    ,execute :: forall step. ShakeOptions -> Key -> Maybe (Value, step) -> m (Value, Maybe step)
     ,resultType :: TypeRep
     }
 
-analyseI :: ARule m -> ShakeOptions -> Key -> Value -> IO AnalysisResult
+analyseI :: ARule m -> ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
 analyseI (ARule (_ :: key -> Maybe (m value))) opt@(shakeAssume -> assume) (fromKey -> k :: key) r
   | assume == AssumeDirty = return Rebuild
   | assume == AssumeSkip = return Continue
@@ -210,7 +225,11 @@ executeI rs opt k vold = do
 createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,c) -> case c of
     Priority tv rs -> RuleInfo (analyseI (snd . head $ rs)) (executeI rs) tv
-    Custom c -> c
+    Custom (CRule a e) -> RuleInfo {
+        analyse = \_ k v -> fmap newValue <$> a (fromKey k) (fromValue v),
+        execute = \_ k v -> first newValue <$> e (fromKey k) (fmap (first fromValue) v),
+        resultType = typeOf (cRuleValue a)
+    }
 
 ---------------------------------------------------------------------
 -- MAKE
@@ -362,6 +381,13 @@ runAction g l (Action x) = runRAW g l x
 apply :: Rule key value => [key] -> Action [value]
 apply = applyForall
 
+-- | Return the values associated with an already-executed rule, throwing an error if the
+--   rule would need to be re-run.
+--   This function requires that appropriate rules have been added with 'rule'.
+--   All @key@ values passed to 'needed' become dependencies of the 'Action'.
+applied :: Rule key value => [key] -> Action [value]
+applied = f True
+
 -- We don't want the forall in the Haddock docs
 -- Don't short-circuit [] as we still want error messages
 applyForall :: forall key value . Rule key value => [key] -> Action [value]
@@ -381,11 +407,11 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (analyseResult_ global) (runKey_ global)) stack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (analyseResult_ global) (runKey_ global)) stack noRebuild ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 
-analyseResult_ :: Global -> Key -> Value -> IO AnalysisResult
+analyseResult_ :: Global -> Key -> Value -> IO (AnalysisResult Value)
 analyseResult_ global@Global{..} k r = do
     let tk = typeKey k
     case Map.lookup tk globalRules of

@@ -1,10 +1,11 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, ViewPatterns #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
+{-# LANGUAGE Rank2Types, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Core(
     run,
     ShakeValue, StoredValue(..),
     Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
+    cRule, AnalysisResult(..),
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -75,6 +76,15 @@ rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
 rule r = newRules mempty{rules = Map.singleton k (k, Priority v [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
+-- | Add a custom rule; the first argument checks whether the rule needs to be rebuilt,
+--   while the seconds executes the key, using the optional previous value and step,
+--   and returning the new value and optionally the old step if the value is unchanged.
+cRule :: (ShakeValue key, ShakeValue value)
+            => (key -> value -> IO (AnalysisResult value))
+            -> (forall step. key -> Maybe (value, step) -> Action (value, Maybe step))
+            -> Rules ()
+cRule a e = newRules mempty{rules = Map.singleton k (k, Custom $ CRule a e)}
+    where k = typeOf $ cRuleKey a
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
 --   All matching rules at a given priority must be disjoint, or an error is raised.
@@ -212,6 +222,7 @@ cacheAction name action = do
     [ForwardA r] <- apply [ForwardQ name]
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ())
     return r
+
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
