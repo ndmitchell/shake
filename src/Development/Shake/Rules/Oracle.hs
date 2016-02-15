@@ -40,9 +40,10 @@ instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
 --
 -- * Each call to 'addOracle' must use a different type of question.
 --
--- * Actions passed to 'addOracle' will be run in every build they are required,
---   but if their value does not change they will not invalidate any rules depending on them.
---   To get a similar behaviour using data stored in files, see 'Development.Shake.alwaysRerun'.
+-- * Actions passed to 'addOracle' will be run in every build they are required, even if nothing else changes,
+--   so be careful of slow actions.
+--   If the result of an oracle does not change it will not invalidate any rules depending on it.
+--   To always rerun files rules see 'Development.Shake.alwaysRerun'.
 --
 -- * If the value returned by 'askOracle' is ignored then 'askOracleWith' may help avoid ambiguous type messages.
 --   Alternatively, use the result of 'addOracle', which is 'askOracle' restricted to the correct type.
