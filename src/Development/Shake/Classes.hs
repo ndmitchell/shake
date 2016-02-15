@@ -5,6 +5,9 @@ module Development.Shake.Classes(
     Show(..), Typeable(..), Eq(..), Hashable(..), Binary(..), NFData(..)
     ) where
 
+-- I would probably reexport this module by default in Development.Shake,
+-- but Binary defines 'get', which clashes with the State monad.
+
 import Data.Hashable
 import Data.Typeable
 import Data.Binary
