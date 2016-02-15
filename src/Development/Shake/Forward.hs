@@ -41,6 +41,7 @@ import Development.Shake
 import Development.Shake.Core
 import Development.Shake.Rule
 import Development.Shake.Command
+import Development.Shake.Classes
 import Development.Shake.FilePath
 import Data.Either
 import Data.List.Extra

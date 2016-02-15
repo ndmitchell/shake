@@ -5,7 +5,8 @@ module Development.Shake.Rules.Oracle(
     addOracle, askOracle, askOracleWith
     ) where
 
-import Development.Shake.Rule
+import Development.Shake.Core
+import Development.Shake.Classes
 import Control.Applicative
 import Prelude
 

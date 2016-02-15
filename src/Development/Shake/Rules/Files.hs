@@ -12,12 +12,14 @@ import System.Directory
 import Control.Applicative
 import Prelude
 
-import Development.Shake.Rule hiding (trackAllow)
+import Development.Shake.Core hiding (trackAllow)
 import General.Extra
 import General.String
+import Development.Shake.Classes
 import Development.Shake.Rules.File
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
+import Development.Shake.Types
 import Development.Shake.ByteString
 
 
