@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #410, add --digest-not flag to select ChangeModtime
     #416, export ShakeValue from the main module only
     #352, improve the grammar in the profiling document
     #399, explain what in getDirectoryFiles is tracked

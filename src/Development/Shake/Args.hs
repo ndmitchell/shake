@@ -276,6 +276,7 @@ shakeOptsEx =
     ,yes $ Option ""  ["digest-and"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeAndDigest})) "Files change when modtime and digest change."
     ,yes $ Option ""  ["digest-and-input"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeAndDigestInput})) "Files change on modtime (and digest for inputs)."
     ,yes $ Option ""  ["digest-or"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtimeOrDigest})) "Files change when modtime or digest change."
+    ,yes $ Option ""  ["digest-not"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtime})) "Files change when modtime changes."
     ,no  $ Option ""  ["exception"] (NoArg $ Right ([Exception], id)) "Throw exceptions directly."
     ,yes $ Option ""  ["flush"] (intArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
     ,yes $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
