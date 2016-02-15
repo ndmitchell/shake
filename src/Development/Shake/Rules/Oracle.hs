@@ -11,7 +11,7 @@ import Control.Applicative
 import Prelude
 
 
--- Use should type names, since the names appear in the Haddock, and are too long if they are in full
+-- Use short type names, since the names appear in the Haddock, and are too long if they are in full
 newtype OracleQ question = OracleQ question
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 newtype OracleA answer = OracleA answer
