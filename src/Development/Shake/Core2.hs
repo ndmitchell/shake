@@ -142,7 +142,7 @@ data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value
 data CRule m = forall key value . (ShakeValue key, ShakeValue value) =>
     CRule
         {canalyse :: key -> value -> IO (AnalysisResult value)
-        ,cexecute :: forall step. key -> Maybe (value, step) -> m (value, Maybe step)
+        ,cexecute :: forall step. key -> Maybe value -> m (value, Bool)
         }
 
 ruleKey :: (key -> Maybe (m value)) -> key
@@ -186,7 +186,7 @@ registerWitnesses SRules{..} =
 
 data RuleInfo m = RuleInfo
     {analyse :: ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
-    ,execute :: forall step. ShakeOptions -> Key -> Maybe (Value, step) -> m (Value, Maybe step)
+    ,execute :: ShakeOptions -> Key -> Maybe Value -> m (Value, Bool)
     ,resultType :: TypeRep
     }
 
@@ -204,7 +204,7 @@ analyseI (ARule (_ :: key -> Maybe (m value))) opt@(shakeAssume -> assume) (from
             EqualExpensive -> Expensive (newValue v)
         StoredMissing -> Rebuild
 
-executeI :: [(Double,ARule Action)] -> ShakeOptions -> Key -> Maybe (Value, a) -> Action (Value, Maybe a)
+executeI :: [(Double,ARule Action)] -> ShakeOptions -> Key -> Maybe Value -> Action (Value, Bool)
 executeI rs opt k vold = do
     let rs2 = sets [(i, \k -> (\v -> (fmap newValue v,ARule r)) <$> r (fromKey k)) | (i,ARule r) <- rs]
     (rule,ARule (_ :: key -> Maybe (Action value))) <-
@@ -212,11 +212,7 @@ executeI rs opt k vold = do
             [r]:_ -> return r
             rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
     vnew <- rule
-    let step = do
-            (vo, step) <- vold
-            case equalValue opt (fromKey k :: key) (fromValue vo) (fromValue vnew :: value) of
-                NotEqual -> Nothing
-                _ -> Just step
+    let step = maybe False (\vo -> equalValue opt (fromKey k :: key) (fromValue vo) (fromValue vnew :: value) /= NotEqual) vold
     return (vnew,step)
   where
     sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
@@ -227,7 +223,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,c) -> case c of
     Priority tv rs -> RuleInfo (analyseI (snd . head $ rs)) (executeI rs) tv
     Custom (CRule a e) -> RuleInfo {
         analyse = \_ k v -> fmap newValue <$> a (fromKey k) (fromValue v),
-        execute = \_ k v -> first newValue <$> e (fromKey k) (fmap (first fromValue) v),
+        execute = \_ k v -> first newValue <$> e (fromKey k) (fmap fromValue v),
         resultType = typeOf (cRuleValue a)
     }
 
@@ -431,18 +427,18 @@ runKey_ global@Global{..} k r stack step continue = do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                res <- execute globalOptions k ((,) <$> fmap result r <*> fmap changed r)
+                res <- execute globalOptions k (fmap result r)
                 when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right ((res,changed), Local{..}) -> do
+                    Right ((res,c), Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
                         let ans = Result
                                     { result = res
                                     , depends = finalizeDepends localDepends
                                     , generatedBy = Nothing
-                                    , changed = maybe step id changed
+                                    , changed = if c then maybe step changed r else step
                                     , built = step
                                     , execution = doubleToFloat $ dur - localDiscount
                                     , traces = reverse localTraces

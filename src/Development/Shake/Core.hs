@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, ViewPatterns #-}
-{-# LANGUAGE Rank2Types, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Core(
     run,
@@ -81,7 +81,7 @@ rule r = newRules mempty{rules = Map.singleton k (k, Priority v [(1,ARule r)])}
 --   and returning the new value and optionally the old step if the value is unchanged.
 cRule :: (ShakeValue key, ShakeValue value)
             => (key -> value -> IO (AnalysisResult value))
-            -> (forall step. key -> Maybe (value, step) -> Action (value, Maybe step))
+            -> (key -> Maybe value -> Action (value, Bool))
             -> Rules ()
 cRule a e = newRules mempty{rules = Map.singleton k (k, Custom $ CRule a e)}
     where k = typeOf $ cRuleKey a
