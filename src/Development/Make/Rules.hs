@@ -38,15 +38,16 @@ newtype File_A = File_A (Maybe ModTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
 instance Rule File_Q File_A where
-    storedValue _ (File_Q x) = maybe StoredMissing (StoredValue . File_A . Just . fst) <$> getFileInfo x
-
+    analyseR _ (File_Q x) (File_A v) = (\x -> if v == fmap fst x then Continue else Rebuild) <$> getFileInfo x
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ liftIO $ do
+defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ \vo -> liftIO $ do
     res <- getFileInfo x
     case res of
         Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
-        Just (mt,_) -> return $ File_A $ Just mt
+        Just (mt,_) -> do
+          let v = File_A $ Just mt
+          return $ (v, vo == Just v)
 
 
 need_ :: [FilePath] -> Action ()
@@ -59,9 +60,10 @@ data Phony = Phony | NotPhony deriving Eq
 
 (??>) :: (FilePath -> Bool) -> (FilePath -> Action Phony) -> Rules ()
 (??>) test act = rule $ \(File_Q x_) -> let x = unpackU x_ in
-    if not $ test x then Nothing else Just $ do
+    if not $ test x then Nothing else Just $ \vo -> do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         res <- act x
-        liftIO $ fmap (File_A . fmap fst) $ if res == Phony
+        v <- liftIO $ fmap (File_A . fmap fst) $ if res == Phony
             then return Nothing
             else getFileInfo x_
+        return (v, vo == Just v)

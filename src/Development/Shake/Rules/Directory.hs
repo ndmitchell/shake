@@ -110,30 +110,15 @@ instance Binary GetDirectoryQ where
     put (GetDirDirs x) = putWord8 2 >> put x
 
 
-instance Rule DoesFileExistQ DoesFileExistA where
-    storedValue _ (DoesFileExistQ x) = (StoredValue . DoesFileExistA) <$> IO.doesFileExist x
-
-instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
-    storedValue _ (DoesDirectoryExistQ x) = (StoredValue . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
-
-instance Rule GetEnvQ GetEnvA where
-    storedValue _ (GetEnvQ x) = (StoredValue . GetEnvA) <$> IO.lookupEnv x
-
-instance Rule GetDirectoryQ GetDirectoryA where
-    storedValue _ x = StoredValue <$> getDir x
-
-
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    rule $ \(DoesFileExistQ x) -> Just $
-        liftIO $ DoesFileExistA <$> IO.doesFileExist x
-    rule $ \(DoesDirectoryExistQ x) -> Just $
-        liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x
-    rule $ \(x :: GetDirectoryQ) -> Just $
-        liftIO $ getDir x
-    rule $ \(GetEnvQ x) -> Just $
-        liftIO $ GetEnvA <$> IO.lookupEnv x
+    let sC :: (ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
+        sC = simpleCheck . (liftIO .)
+    sC $ \(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x
+    sC $ \(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x
+    sC $ \(x :: GetDirectoryQ) -> getDir x
+    sC $ \(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a

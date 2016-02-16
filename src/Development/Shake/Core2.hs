@@ -126,29 +126,28 @@ import Prelude
 --   and 'equalValue' should always return 'EqualCheap' for that sentinel.
 class (ShakeValue key, ShakeValue value) => Rule key value where
 
-    -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
+    -- | /[Required]/ Check if the @value@ associated with a @key@ is up-to-date.
     --
-    --   As an example for filenames/timestamps, if the file exists you should return 'StoredValue'
-    --   the timestamp, but otherwise return 'StoredMissing'.
-    storedValue :: ShakeOptions -> key -> IO (StoredValue value)
+    --   As an example for filenames/timestamps, if the file exists with the given timestamp
+    --   you should return 'Continue', but otherwise return 'Rebuild'.
+    --   If the value has changed but you still do not want to rebuild, you should return
+    --   'Update' with the new value.
+    analyseR :: ShakeOptions -> key -> value -> IO (AnalysisResult value)
 
-    -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
-    equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
-    equalValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
+data ARule m = forall key value . Rule key value => ARule (ARuleI m key value)
 
-
-data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
+type ARuleI m key value = key -> Maybe (Maybe value -> m (value, Bool))
 
 data CRule m = forall key value . (ShakeValue key, ShakeValue value) =>
     CRule
         {canalyse :: key -> value -> IO (AnalysisResult value)
-        ,cexecute :: forall step. key -> Maybe value -> m (value, Bool)
+        ,cexecute :: key -> Maybe value -> m (value, Bool)
         }
 
-ruleKey :: (key -> Maybe (m value)) -> key
+ruleKey :: ARuleI m key value -> key
 ruleKey = err "ruleKey"
 
-ruleValue :: (key -> Maybe (m value)) -> value
+ruleValue :: ARuleI m key value -> value
 ruleValue = err "ruleValue"
 
 cRuleKey :: (key -> value -> a) -> key
@@ -191,10 +190,11 @@ data RuleInfo m = RuleInfo
     }
 
 analyseI :: ARule m -> ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
-analyseI (ARule (_ :: key -> Maybe (m value))) opt@(shakeAssume -> assume) (fromKey -> k :: key) r
+analyseI (ARule (_ :: ARuleI m key value)) opt@(shakeAssume -> assume) (fromKey -> k :: key) r
   | assume == AssumeDirty = return Rebuild
   | assume == AssumeSkip = return Continue
-  | otherwise = do
+  | otherwise = fmap newValue <$> analyseR opt k ((fromValue r) :: value)
+{-
     s <- storedValue opt k
     return $ case s of
         StoredValue (v :: value) -> case equalValue opt k (fromValue r) v of
@@ -203,17 +203,18 @@ analyseI (ARule (_ :: key -> Maybe (m value))) opt@(shakeAssume -> assume) (from
             EqualCheap -> Continue
             EqualExpensive -> Expensive (newValue v)
         StoredMissing -> Rebuild
+-}
 
 executeI :: [(Double,ARule Action)] -> ShakeOptions -> Key -> Maybe Value -> Action (Value, Bool)
 executeI rs opt k vold = do
-    let rs2 = sets [(i, \k -> (\v -> (fmap newValue v,ARule r)) <$> r (fromKey k)) | (i,ARule r) <- rs]
-    (rule,ARule (_ :: key -> Maybe (Action value))) <-
+    let rs2 = sets [(i, \k -> (\v -> (fmap (first newValue) . v . (fmap fromValue),ARule r)) <$> r (fromKey k)) | (i,ARule r) <- rs]
+    (rule,ARule (_ :: ARuleI Action key value)) <-
         case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
             [r]:_ -> return r
             rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-    vnew <- rule
-    let step = maybe False (\vo -> equalValue opt (fromKey k :: key) (fromValue vo) (fromValue vnew :: value) /= NotEqual) vold
-    return (vnew,step)
+    rule vold
+--    let step = maybe False (\vo -> equalValue opt (fromKey k :: key) (fromValue vo) (fromValue vnew :: value) /= NotEqual) vold
+    --return (vnew,step)
   where
     sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
     sets = map snd . reverse . groupSort
@@ -374,19 +375,19 @@ runAction g l (Action x) = runRAW g l x
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: Rule key value => [key] -> Action [value]
+apply :: (ShakeValue key, ShakeValue value) => [key] -> Action [value]
 apply = applyForall
 
 -- | Return the values associated with an already-executed rule, throwing an error if the
 --   rule would need to be re-run.
 --   This function requires that appropriate rules have been added with 'rule'.
 --   All @key@ values passed to 'needed' become dependencies of the 'Action'.
-applied :: Rule key value => [key] -> Action [value]
+applied :: (ShakeValue key, ShakeValue value) => [key] -> Action [value]
 applied = f True
 
 -- We don't want the forall in the Haddock docs
 -- Don't short-circuit [] as we still want error messages
-applyForall :: forall key value . Rule key value => [key] -> Action [value]
+applyForall :: forall key value . (ShakeValue key, ShakeValue value) => [key] -> Action [value]
 applyForall ks = do
     let tk = typeOf (err "apply key" :: key)
         tv = typeOf (err "apply type" :: value)
@@ -431,14 +432,14 @@ runKey_ global@Global{..} k r stack step continue = do
                 when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right ((res,c), Local{..}) -> do
+                    Right ((res,equal), Local{..}) -> do
                         dur <- time
                         globalLint $ "after building " ++ top
                         let ans = Result
                                     { result = res
                                     , depends = finalizeDepends localDepends
                                     , generatedBy = Nothing
-                                    , changed = if c then maybe step changed r else step
+                                    , changed = if equal then maybe step changed r else step
                                     , built = step
                                     , execution = doubleToFloat $ dur - localDiscount
                                     , traces = reverse localTraces

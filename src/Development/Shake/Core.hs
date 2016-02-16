@@ -5,7 +5,7 @@ module Development.Shake.Core(
     run,
     ShakeValue, StoredValue(..),
     Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
-    cRule, AnalysisResult(..),
+    cRule, simpleCheck, AnalysisResult(..),
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -69,22 +69,26 @@ getRules :: Rules () -> IO (SRules Action)
 getRules (Rules r) = execWriterT r
 
 -- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
---   or 'Nothing' otherwise.
+--   or 'Nothing' otherwise. The 'Bool' is 'True' if the value changed.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
-rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
+rule :: Rule key value => (key -> Maybe (Maybe value -> Action (value,Bool))) -> Rules ()
 rule r = newRules mempty{rules = Map.singleton k (k, Priority v [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 -- | Add a custom rule; the first argument checks whether the rule needs to be rebuilt,
---   while the seconds executes the key, using the optional previous value and step,
---   and returning the new value and optionally the old step if the value is unchanged.
+--   while the seconds executes the key, using the optional previous value,
+--   and returns the new value and whether the value is unchanged.
 cRule :: (ShakeValue key, ShakeValue value)
             => (key -> value -> IO (AnalysisResult value))
             -> (key -> Maybe value -> Action (value, Bool))
             -> Rules ()
 cRule a e = newRules mempty{rules = Map.singleton k (k, Custom $ CRule a e)}
     where k = typeOf $ cRuleKey a
+
+simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
+simpleCheck act = cRule (\_ _ -> return Rebuild) -- (\k v -> act k >>= \v2 -> return $ if v == v2 then Continue else Rebuild)
+  (\k v -> act k >>= \v2 -> return (v2, maybe False (==v2) v))
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
 --   All matching rules at a given priority must be disjoint, or an error is raised.
@@ -126,8 +130,7 @@ alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
         f (k, Priority v []) = (k, Priority v [])
         f (k, Priority v xs) = let (is,rs) = unzip xs in (k, Priority v [(maximum is, foldl1' g rs)])
 
-        g (ARule a) (ARule b) = ARule $ \x -> a x `mplus` b2 x
-            where b2 = fmap (fmap (fromJust . cast)) . b . fromJust . cast
+        g (ARule a) (ARule b) = ARule $ \x -> a x `mplus` ((cast b `asTypeOf` Just a) >>= ($x))
 
 
 -- | Run an action, usually used for specifying top-level requirements.
@@ -196,12 +199,12 @@ newtype ForwardA = ForwardA ()
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 instance Rule (ForwardQ) (ForwardA) where
-    storedValue _ _ = return $ StoredValue $ ForwardA ()
+    analyseR _ _ _ = return Continue
 
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    rule $ \(ForwardQ k') -> Just $ do
+    rule $ \(ForwardQ k') -> Just $ \_ -> do
         let k = newKey k'
         liftIO $ evaluate $ rnf k
         Global{..} <- Action getRO
@@ -209,7 +212,7 @@ forwardRule act = do
         case res of
             Nothing -> error "Failed to find action name"
             Just act -> act
-        return $ ForwardA ()
+        return $ (ForwardA (),False)
     action act
 
 -- | Cache an action. The action's key must be globally unique over all runs (i.e., change the name if the code changes), and not conflict with any rules.
@@ -226,7 +229,7 @@ cacheAction name action = do
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
-apply1 :: Rule key value => key -> Action value
+apply1 :: (ShakeValue key, ShakeValue value) => key -> Action value
 apply1 = fmap head . apply . return
 
 

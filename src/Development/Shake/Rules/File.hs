@@ -7,7 +7,7 @@ module Development.Shake.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    FileQ(..), FileA
+    FileQ(..), FileA, missingFile, storedValue, equalValue
     ) where
 
 import Control.Applicative
@@ -59,47 +59,65 @@ instance Binary FileA where
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
+missingFile :: FileA
+missingFile = FileA fileInfoNeq fileInfoNeq fileInfoNeq
+
+storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
+    res <- getFileInfo x
+    case res of
+        Nothing -> return StoredMissing
+        Just (time,size) | c == ChangeModtime -> return $ StoredValue $ FileA time size fileInfoNeq
+        Just (time,size) -> do
+            hash <- unsafeInterleaveIO $ getFileHash x
+            return $ StoredValue $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+
+equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+    ChangeModtime -> bool $ x1 == y1
+    ChangeDigest -> bool $ x2 == y2 && x3 == y3
+    ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+    _ | x1 == y1 -> EqualCheap
+      | x2 == y2 && x3 == y3 -> EqualExpensive
+      | otherwise -> NotEqual
+    where bool b = if b then EqualCheap else NotEqual
+
 instance Rule FileQ FileA where
-    storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
-        res <- getFileInfo x
-        case res of
-            Nothing -> return StoredMissing
-            Just (time,size) | c == ChangeModtime -> return $ StoredValue $ FileA time size fileInfoNeq
-            Just (time,size) -> do
-                hash <- unsafeInterleaveIO $ getFileHash x
-                return $ StoredValue $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+  analyseR opt@(shakeAssume -> assume) k vo = do
+    s <- storedValue opt k
+    return $ case s of
+        StoredValue v -> case equalValue opt k vo v of
+            NotEqual | assume == AssumeClean -> Update v
+            NotEqual -> Rebuild
+            EqualCheap -> Continue
+            EqualExpensive -> Update v
+        StoredMissing -> Rebuild
 
-    equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
-        ChangeModtime -> bool $ x1 == y1
-        ChangeDigest -> bool $ x2 == y2 && x3 == y3
-        ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
-        _ | x1 == y1 -> EqualCheap
-          | x2 == y2 && x3 == y3 -> EqualExpensive
-          | otherwise -> NotEqual
-        where bool b = if b then EqualCheap else NotEqual
+-- | Arguments: is the file an input; a message for failure if the file does not exist; filename; cached value
+storedValueError :: Bool -> String -> FileQ -> Maybe FileA -> Action (FileA, Bool)
+storedValueError input msg x vo = do
+    opts <- getShakeOptions
+    let opts2 = opts{shakeChange=case shakeChange opts of ChangeModtimeAndDigestInput | not input -> ChangeModtime; x -> x}
+    s <- liftIO $ storedValue opts2 x
+    return $ case s of
+        StoredMissing | shakeCreationCheck opts || input -> error err
+                      | otherwise -> (missingFile, False)
+        StoredValue a -> (a, maybe False ((/=NotEqual) . equalValue opts2 x a) vo)
+  where
+    err = msg ++ "\n  " ++ unpackU (fromFileQ x)
 
 
--- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
-storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
-{-
-storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
-    when (shakeCreationCheck opts) $ do
-        whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
-    return $ FileA fileInfoEq fileInfoEq fileInfoEq
--}
-storedValueError opts input msg x = f <$> storedValue opts2 x
-  where f StoredMissing | shakeCreationCheck opts || input = error err
-                        | otherwise = FileA fileInfoNeq fileInfoNeq fileInfoNeq
-        f (StoredValue a) = a
-        err = msg ++ "\n  " ++ unpackU (fromFileQ x)
-        opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
-
+-- | Main rule for all file-based rules
+root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
+root help test act = rule $ \xo@(FileQ x_) -> let x = unpackU x_ in
+    if not $ test x then Nothing else Just $ \vo -> do
+        liftIO $ createDirectoryIfMissing True $ takeDirectory x
+        act x
+        storedValueError False ("Error, rule " ++ help ++ " failed to build file:") xo vo
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
+defaultRuleFile = priority 0 $ rule $ \x -> Just $ \vo -> do
     opts <- getShakeOptions
-    liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
+    storedValueError True "Error, file does not exist and no rule available:" x vo
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -197,16 +215,6 @@ want :: [FilePath] -> Rules ()
 want [] = return ()
 want xs = action $ need xs
 
-
-root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
-    if not $ test x then Nothing else Just $ do
-        liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        act x
-        opts <- getShakeOptions
-        liftIO $ storedValueError opts False ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
-
-
 -- | Declare a Make-style phony action.  A phony target does not name
 --   a file (despite living in the same namespace as file rules);
 --   rather, it names some action to be executed when explicitly
@@ -232,9 +240,9 @@ phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else 
 phonys :: (String -> Maybe (Action ())) -> Rules ()
 phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
     Nothing -> Nothing
-    Just act -> Just $ do
+    Just act -> Just $ \_ -> do
         act
-        return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
+        return $ (missingFile, False)
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.

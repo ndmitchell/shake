@@ -107,7 +107,6 @@ module Development.Shake(
     command, command_, cmd, unit,
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
-    addPath, addEnv,
     -- * Explicit parallelism
     parallel, forP, par,
     -- * Utility functions
@@ -137,13 +136,7 @@ module Development.Shake(
     unsafeExtraThread,
     -- * Cache
     newCache, newCacheIO,
-    -- * Deprecated
-    (*>), (|*>), (&*>),
-    (**>), (*>>), (?>>),
-    system', systemCwd, systemOutput
     ) where
-
-import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
 
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
@@ -164,39 +157,3 @@ import Development.Shake.Rules.Files
 import Development.Shake.Rules.Oracle
 import Development.Shake.Rules.OrderOnly
 import Development.Shake.Rules.Rerun
-
-
----------------------------------------------------------------------
--- DEPRECATED SINCE 0.13, MAY 2014
-
-infix 1 **>, ?>>, *>>
-
--- | /Deprecated:/ Alias for '|%>'.
-(**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(**>) = (|%>)
-
--- | /Deprecated:/ Alias for '&?>'.
-(?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
-(?>>) = (&?>)
-
--- | /Deprecated:/ Alias for '&%>'.
-(*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-(*>>) = (&%>)
-
-
----------------------------------------------------------------------
--- DEPRECATED SINCE 0.14, MAY 2014
-
-infix 1 *>, |*>, &*>
-
--- | /Deprecated:/ Alias for '%>'. Note that @*>@ clashes with a Prelude operator in GHC 7.10.
-(*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(*>) = (%>)
-
--- | /Deprecated:/ Alias for '|%>'.
-(|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(|*>) = (|%>)
-
--- | /Deprecated:/ Alias for '&%>'.
-(&*>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-(&*>) = (&%>)

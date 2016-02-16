@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, ViewPatterns #-}
 
 module Development.Shake.Rules.Files(
     (&?>), (&%>)
@@ -16,6 +16,7 @@ import Development.Shake.Core hiding (trackAllow)
 import General.Extra
 import General.String
 import Development.Shake.Classes
+import Development.Shake.Errors
 import Development.Shake.Rules.File
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
@@ -40,13 +41,21 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) x
 
 
 instance Rule FilesQ FilesA where
-    storedValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (storedValue opts) xs
-    equalValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
-        | let n = length qs in n /= length xs || n /= length ys = NotEqual
-        | otherwise = foldr and_ EqualCheap (zipWith3 (equalValue opts) qs xs ys)
-            where and_ NotEqual x = NotEqual
-                  and_ EqualCheap x = x
-                  and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
+  analyseR _ (FilesQ xs) (FilesA ys) | length xs /= length ys = return Rebuild
+  analyseR opts (FilesQ xs) (FilesA ys) = fmap FilesA . fst <$> foldr (liftM2 and_) (return (Continue,[])) (zipWith (\x y -> (,) y <$> analyseR opts x y) xs ys)
+    where
+      and_ (_,Rebuild) _ = (Rebuild,[])
+      and_ _ (Rebuild,_) = (Rebuild,[])
+      and_ (_,Update s) (_,n) = (Update (s:n),s:n)
+      and_ (s,Continue) (Update _,n) = (Update (s:n),s:n)
+      and_ (s,Continue) (Continue,c) = (Continue,s:c)
+--     storedValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (storedValue opts) xs
+--     equalValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
+--         | let n = length qs in n /= length xs || n /= length ys = NotEqual
+--         | otherwise = foldr and_ EqualCheap (zipWith3 (equalValue opts) qs xs ys)
+--             where and_ NotEqual x = NotEqual
+--                   and_ EqualCheap x = x
+--                   and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -76,11 +85,11 @@ ps &%> act
                 return ()
         (if all simple ps then id else priority 0.5) $
             rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
-                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
+                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ \vo -> do
                     liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
                     trackAllow xs
                     act xs
-                    getFileTimes "&%>" xs_
+                    getFileTimes "&%>" xs_ vo
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
@@ -127,24 +136,33 @@ ps &%> act
 
     rule $ \(FilesQ xs_) -> let xs@(x:_) = map (unpackU . fromFileQ) xs_ in
         case checkedTest x of
-            Just ys | ys == xs -> Just $ do
+            Just ys | ys == xs -> Just $ \vo -> do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
                 act xs
-                getFileTimes "&?>" xs_
+                getFileTimes "&?>" xs_ vo
             Just ys -> error $ "Error, &?> is incompatible with " ++ show xs ++ " vs " ++ show ys
             Nothing -> Nothing
 
 
-getFileTimes :: String -> [FileQ] -> Action FilesA
-getFileTimes name xs = do
+getFileTimes :: String -> [FileQ] -> Maybe FilesA -> Action (FilesA, Bool)
+getFileTimes name xs vo = do
     opts <- getShakeOptions
-    let opts2 = if shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
-    ys <- liftIO $ mapM (storedValue opts2) xs
+    let opts2 = opts{shakeChange=case shakeChange opts of ChangeModtimeAndDigestInput -> ChangeModtime; x -> x}
+        f (Just (FilesA vs)) | length xs == length vs = map Just vs
+        f _ = map (const Nothing) xs
+
+        check x v = do
+            s <- liftIO $ storedValue opts2 x
+            return $ case s of
+                StoredMissing | shakeCreationCheck opts -> Nothing
+                              | otherwise -> Just (missingFile, False)
+                StoredValue a -> Just (a, maybe False ((/=NotEqual) . equalValue opts2 x a) v)
+    ys <- zipWithM check xs (f vo)
     case sequence ys of
-        StoredValue ys -> return $ FilesA ys
-        StoredMissing | not $ shakeCreationCheck opts -> return $ FilesA []
-        StoredMissing -> do
-            let missing = length $ filter (==StoredMissing) ys
-            error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
-                    " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ unpackU x ++ if y == StoredMissing then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
+        Just (unzip -> (ys,bs)) -> return $ (FilesA ys, and bs)
+        Nothing -> do
+            let missing = length $ filter isNothing ys
+            liftIO $ errorStructured ("Error, " ++ name ++ " rule failed to build " ++ show missing ++
+                    " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")")
+                    [(unpackU x, if isNothing y then Just " - MISSING" else Nothing) | (FileQ x,y) <- zip xs ys]
+                    ""

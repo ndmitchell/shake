@@ -17,10 +17,6 @@ newtype OracleQ question = OracleQ question
 newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
-    storedValue _ _ = return StoredMissing
-
-
 -- | Add extra information which rules can depend on.
 --   An oracle is a function from a question type @q@, to an answer type @a@.
 --   As an example, we can define an oracle allowing you to depend on the current version of GHC:
@@ -72,7 +68,7 @@ instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
 addOracle act = do
-    rule $ \(OracleQ q) -> Just $ OracleA <$> act q
+    simpleCheck $ \(OracleQ q) -> OracleA <$> act q
     return askOracle
 
 

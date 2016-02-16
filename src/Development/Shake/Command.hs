@@ -13,7 +13,6 @@ module Development.Shake.Command(
     command, command_, cmd, unit, CmdArguments, (:->),
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
-    addPath, addEnv,
     ) where
 
 import Data.Tuple.Extra
@@ -48,43 +47,6 @@ import Development.Shake.Derived
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
-
--- | /Deprecated:/ Use 'AddPath'. This function will be removed in a future version.
---
---   Add a prefix and suffix to the @$PATH@ environment variable. For example:
---
--- @
--- opt <- 'addPath' [\"\/usr\/special\"] []
--- 'cmd' opt \"userbinary --version\"
--- @
---
---   Would prepend @\/usr\/special@ to the current @$PATH@, and the command would pick
---   @\/usr\/special\/userbinary@, if it exists. To add other variables see 'addEnv'.
-addPath :: MonadIO m => [String] -> [String] -> m CmdOption
-addPath pre post = do
-    args <- liftIO getEnvironment
-    let (path,other) = partition ((== "PATH") . (if isWindows then upper else id) . fst) args
-    return $ Env $
-        [("PATH",intercalate [searchPathSeparator] $ pre ++ post) | null path] ++
-        [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
-        other
-
--- | /Deprecated:/ Use 'AddEnv'. This function will be removed in a future version.
---
---   Add a single variable to the environment. For example:
---
--- @
--- opt <- 'addEnv' [(\"CFLAGS\",\"-O2\")]
--- 'cmd' opt \"gcc -c main.c\"
--- @
---
---   Would add the environment variable @$CFLAGS@ with value @-O2@. If the variable @$CFLAGS@
---   was already defined it would be overwritten. If you wish to modify @$PATH@ see 'addPath'.
-addEnv :: MonadIO m => [(String, String)] -> m CmdOption
-addEnv extra = do
-    args <- liftIO getEnvironment
-    return $ Env $ extra ++ filter (\(a,_) -> a `notElem` map fst extra) args
-
 
 data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
 

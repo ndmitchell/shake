@@ -137,7 +137,7 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-data AnalysisResult v = Rebuild | Continue | Expensive v deriving (Show,Eq,Functor)
+data AnalysisResult v = Rebuild | Continue | Update v deriving (Show,Eq,Functor)
 
 data Ops = Ops
     { analyseResult :: Key -> Value -> IO (AnalysisResult Value)
@@ -223,7 +223,7 @@ build pool database@Database{..} Ops{..} stack noRebuild ks continue =
                     let out b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     let continue r = out True >> check stack i k r (fromDepends $ depends r)
                     let rebuild = out False >> run stack i k (Just r)
-                    let expensive r s = do
+                    let update r s = do
                           -- warning, have the db lock while appending (may harm performance)
                           r <- return r{result=s}
                           journal i (k, Loaded r)
@@ -233,7 +233,7 @@ build pool database@Database{..} Ops{..} stack noRebuild ks continue =
                     case ar of
                         Rebuild -> rebuild
                         Continue -> continue r
-                        Expensive s -> expensive r s
+                        Update s -> update r s
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
