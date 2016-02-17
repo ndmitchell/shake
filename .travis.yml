@@ -6,11 +6,6 @@ env:
  - GHCVER=8.0.1
  - GHCVER=head
 
-matrix:
-  allow_failures:
-   - env: GHCVER=8.0.1 # GHC bug 11458
-   - env: GHCVER=head
-
 script:
  - git clone https://github.com/jacereda/fsatrace.git
  - (cd fsatrace && make)
