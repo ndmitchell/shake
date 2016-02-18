@@ -22,8 +22,7 @@ import qualified Data.ByteString.Char8 as BS
 -- @
 --
 --   If @header.h@ is included by @source.c@ then the call to 'needMakefileDependencies' will cause
---   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
---   and you will have lost some opportunity for parallelism.
+--   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes.
 orderOnly :: [FilePath] -> Action ()
 orderOnly = orderOnlyAction . need
 
