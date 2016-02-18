@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Development.Shake.Rules.OrderOnly(
      orderOnly, orderOnlyBS
