@@ -713,14 +713,14 @@ trackChange key = do
 
 -- | Allow any matching key to violate the tracking rules.
 trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
-trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
-    where
-        -- We don't want the forall in the Haddock docs
-        arrow1Type :: forall a b . Typeable a => (a -> b) -> TypeRep
-        arrow1Type _ = typeOf (err "trackAllow" :: a)
+trackAllow = trackAllowForall
 
-        ty = arrow1Type test
-        f k = typeKey k == ty && test (fromKey k)
+-- We don't want the forall in the Haddock docs
+trackAllowForall :: forall key . ShakeValue key => (key -> Bool) -> Action ()
+trackAllowForall test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
+    where
+        tk = typeOf (err "trackAllow key" :: key)
+        f k = typeKey k == tk && test (fromKey k)
 
 
 ---------------------------------------------------------------------
