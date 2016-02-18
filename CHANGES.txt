@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #393, add orderOnlyAction, a general version of orderOnly
     #408, explain that alwaysRerun has no immediate effect
     #410, add --digest-not flag to select ChangeModtime
     #416, export ShakeValue from the main module only

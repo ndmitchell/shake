@@ -119,7 +119,7 @@ module Development.Shake(
     -- * File rules
     need, want, (%>), (|%>), (?>), phony, (~>), phonys,
     (&%>), (&?>),
-    orderOnly,
+    orderOnly, orderOnlyAction,
     FilePattern, (?==), (<//>),
     needed, trackRead, trackWrite, trackAllow,
     -- * Directory rules
