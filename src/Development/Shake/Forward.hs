@@ -45,6 +45,7 @@ import Development.Shake.FilePath
 import Data.IORef
 import Data.Either
 import Data.List.Extra
+import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
 import qualified Data.HashMap.Strict as Map
@@ -80,7 +81,7 @@ forwardRule act = do
     rule $ \k -> Just $ do
         res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
         case res of
-            Nothing -> error "Failed to find action name"
+            Nothing -> liftIO $ errorIO "Failed to find action name"
             Just act -> act
         return $ ForwardA ()
     action act

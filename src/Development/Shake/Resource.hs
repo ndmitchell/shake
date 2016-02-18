@@ -7,6 +7,7 @@ module Development.Shake.Resource(
 import Data.Function
 import System.IO.Unsafe
 import Control.Concurrent.Extra
+import Control.Exception.Extra
 import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
@@ -71,7 +72,7 @@ data Finite = Finite
 newResourceIO :: String -> Int -> IO Resource
 newResourceIO name mx = do
     when (mx < 0) $
-        error $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
+        errorIO $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     key <- resourceId
     var <- newVar $ Finite mx mempty
     return $ Resource (negate key) shw (acquire var) (release var)
@@ -80,8 +81,8 @@ newResourceIO name mx = do
 
         acquire :: Var Finite -> Pool -> Int -> IO () -> IO ()
         acquire var pool want continue
-            | want < 0 = error $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
-            | want > mx = error $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
+            | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
+            | want > mx = errorIO $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
             | otherwise = join  $ modifyVar var $ \x@Finite{..} -> return $
                 if want <= finiteAvailable then
                     (x{finiteAvailable = finiteAvailable - want}, continue)
@@ -131,7 +132,7 @@ data Throttle
 newThrottleIO :: String -> Int -> Double -> IO Resource
 newThrottleIO name count period = do
     when (count < 0) $
-        error $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
+        errorIO $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
     key <- resourceId
     var <- newVar $ ThrottleAvailable count
     return $ Resource key shw (acquire var) (release var)
@@ -140,8 +141,8 @@ newThrottleIO name count period = do
 
         acquire :: Var Throttle -> Pool -> Int -> IO () -> IO ()
         acquire var pool want continue
-            | want < 0 = error $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
-            | want > count = error $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
+            | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
+            | want > count = errorIO $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
             | otherwise = join $ modifyVar var $ \x -> case x of
                 ThrottleAvailable i
                     | i >= want -> return (ThrottleAvailable $ i - want, continue)

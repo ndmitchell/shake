@@ -51,7 +51,7 @@ runNinja file args (Just "compdb") = do
     putStr $ printCompDb xs
     return Nothing
 
-runNinja file args (Just x) = error $ "Unknown tool argument, expected 'compdb', got " ++ x
+runNinja file args (Just x) = errorIO $ "Unknown tool argument, expected 'compdb', got " ++ x
 
 runNinja file args tool = do
     addTiming "Ninja parse"
@@ -97,7 +97,7 @@ build needDeps phonys rules pools out build@Build{..} = do
     needBS $ concatMap (resolvePhony phonys) $ depsNormal ++ depsImplicit
     orderOnlyBS $ concatMap (resolvePhony phonys) depsOrderOnly
     case Map.lookup ruleName rules of
-        Nothing -> error $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
+        Nothing -> liftIO $ errorIO $ "Ninja rule named " ++ BS.unpack ruleName ++ " is missing, required to build " ++ BS.unpack (BS.unwords out)
         Just Rule{..} -> do
             env <- liftIO $ scopeEnv env
             liftIO $ do
@@ -117,7 +117,7 @@ build needDeps phonys rules pools out build@Build{..} = do
 
                 let withPool act = case Map.lookup pool pools of
                         _ | BS.null pool -> act
-                        Nothing -> error $ "Ninja pool named " ++ BS.unpack pool ++ " not found, required to build " ++ BS.unpack (BS.unwords out)
+                        Nothing -> liftIO $ errorIO $ "Ninja pool named " ++ BS.unpack pool ++ " not found, required to build " ++ BS.unpack (BS.unwords out)
                         Just r -> withResource r 1 act
 
                 when (description /= "") $ putNormal description
