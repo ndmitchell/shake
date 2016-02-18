@@ -25,8 +25,8 @@ import qualified Data.ByteString.Char8 as BS
 --   it to be added as a real dependency. If it isn't, then the rule won't rebuild if it changes,
 --   and you will have lost some opportunity for parallelism.
 orderOnly :: [FilePath] -> Action ()
-orderOnly = unsafeIgnoreDependencies . need
+orderOnly = orderOnlyAction . need
 
 
 orderOnlyBS :: [BS.ByteString] -> Action ()
-orderOnlyBS = unsafeIgnoreDependencies . needBS
+orderOnlyBS = orderOnlyAction . needBS

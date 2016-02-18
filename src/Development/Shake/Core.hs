@@ -12,8 +12,9 @@ module Development.Shake.Core(
     newCache, newCacheIO,
     unsafeExtraThread,
     parallel,
+    orderOnlyAction,
     -- Internal stuff
-    runAfter, unsafeIgnoreDependencies,
+    runAfter
     ) where
 
 import Control.Exception.Extra
@@ -926,9 +927,10 @@ parallel acts = Action $ do
                     Just i -> return $ Just $ i - 1
 
 
--- | Ignore any dependencies added by an action.
-unsafeIgnoreDependencies :: Action a -> Action a
-unsafeIgnoreDependencies act = Action $ do
+-- | Run an action but do not depend on anything the action uses.
+--   A more general version of 'orderOnly'.
+orderOnlyAction :: Action a -> Action a
+orderOnlyAction act = Action $ do
     pre <- getsRW localDepends
     res <- fromAction act
     modifyRW $ \s -> s{localDepends=pre}
