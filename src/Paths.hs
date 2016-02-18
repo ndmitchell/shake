@@ -10,6 +10,7 @@ import Control.Exception
 
 -- We want getDataFileName to be relative to the current directory even if
 -- we issue a change directory command. Therefore, first call caches, future ones read.
+{-# NOINLINE curdir #-}
 curdir :: String
 curdir = unsafePerformIO getCurrentDirectory
 
