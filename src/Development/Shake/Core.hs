@@ -490,20 +490,21 @@ runAfter op = do
 --   This function requires that appropriate rules have been added with 'rule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: Rule key value => [key] -> Action [value]
-apply = f -- Don't short-circuit [] as we still want error messages
-    where
-        -- We don't want the forall in the Haddock docs
-        f :: forall key value . Rule key value => [key] -> Action [value]
-        f ks = do
-            let tk = typeOf (err "apply key" :: key)
-                tv = typeOf (err "apply type" :: value)
-            Global{..} <- Action getRO
-            block <- Action $ getsRW localBlockApply
-            whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
-            case Map.lookup tk globalRules of
-                Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-                Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
-                _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
+apply = applyForall
+
+-- We don't want the forall in the Haddock docs
+-- Don't short-circuit [] as we still want error messages
+applyForall :: forall key value . Rule key value => [key] -> Action [value]
+applyForall ks = do
+    let tk = typeOf (err "apply key" :: key)
+        tv = typeOf (err "apply type" :: value)
+    Global{..} <- Action getRO
+    block <- Action $ getsRW localBlockApply
+    whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
+    case Map.lookup tk globalRules of
+        Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
+        Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
+        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
 applyKeyValue :: [Key] -> Action [Value]
