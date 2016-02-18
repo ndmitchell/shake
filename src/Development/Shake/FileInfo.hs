@@ -73,6 +73,7 @@ getFileHash x = withFile (unpackU x) ReadMode $ \h -> do
 -- If the result isn't strict then we are referencing a much bigger structure,
 -- and it causes a space leak I don't really understand on Linux when running
 -- the 'tar' test, followed by the 'benchmark' test.
+-- See this blog post: http://neilmitchell.blogspot.co.uk/2015/09/three-space-leaks.html
 result :: Word32 -> Word32 -> IO (Maybe (ModTime, FileSize))
 result x y = do
     x <- evaluate $ fileInfo x
