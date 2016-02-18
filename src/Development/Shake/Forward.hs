@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables, MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, RecordWildCards, ScopedTypeVariables, MultiParamTypeClasses #-}
 
 -- | A module for producing forward-defined build systems, in contrast to standard backwards-defined
 --   build systems such as shake. Based around ideas from <https://code.google.com/p/fabricate/ fabricate>.
@@ -39,14 +39,55 @@ module Development.Shake.Forward(
 
 import Development.Shake
 import Development.Shake.Core
-import Development.Shake.Rule
+import Development.Shake.Core2
+import Development.Shake.Monad
 import Development.Shake.Command
 import Development.Shake.Classes
 import Development.Shake.FilePath
+import Development.Shake.Value
+
 import Data.Either
 import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
+import Data.IORef
+import qualified Data.HashMap.Strict as Map
+import Control.Exception.Extra
+
+
+newtype ForwardQ = ForwardQ String
+    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+
+newtype ForwardA = ForwardA ()
+    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+
+instance Rule (ForwardQ) (ForwardA) where
+    analyseR _ _ _ = return Continue
+
+-- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
+forwardRule :: Action () -> Rules ()
+forwardRule act = do
+    rule $ \(ForwardQ k') -> Just $ \_ -> do
+        let k = newKey k'
+        liftIO $ evaluate $ rnf k
+        Global{..} <- Action getRO
+        res <- liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
+        case res of
+            Nothing -> error "Failed to find action name"
+            Just act -> act
+        return $ (ForwardA (),False)
+    action act
+
+-- | Cache an action. The action's key must be globally unique over all runs (i.e., change the name if the code changes), and not conflict with any rules.
+cacheAction :: String -> Action () -> Action ()
+cacheAction name action = do
+    let key = newKey name
+    liftIO $ evaluate $ rnf key
+    Global{..} <- Action getRO
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
+    [ForwardA r] <- apply [ForwardQ name]
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ())
+    return r
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()
