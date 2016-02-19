@@ -159,7 +159,7 @@ commandExplicit funcName oopts results exe args = do
             let reads = ham cwd rs
                 writes = ham cwd ws
             when useAutoDeps $
-                needed reads
+                unsafeAllowApply $ needed reads
             trackRead reads
             trackWrite writes
             return res
