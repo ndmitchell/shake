@@ -381,9 +381,9 @@ apply = applyForall
 -- | Return the values associated with an already-executed rule, throwing an error if the
 --   rule would need to be re-run.
 --   This function requires that appropriate rules have been added with 'rule'.
---   All @key@ values passed to 'needed' become dependencies of the 'Action'.
+--   All @key@ values passed to 'applied' become dependencies of the 'Action'.
 applied :: (ShakeValue key, ShakeValue value) => [key] -> Action [value]
-applied = f True
+applied ks = blockApply "'applied' key" (applyForall ks)
 
 -- We don't want the forall in the Haddock docs
 -- Don't short-circuit [] as we still want error messages
@@ -392,8 +392,6 @@ applyForall ks = do
     let tk = typeOf (err "apply key" :: key)
         tv = typeOf (err "apply type" :: value)
     Global{..} <- Action getRO
-    block <- Action $ getsRW localBlockApply
-    whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
     case Map.lookup tk globalRules of
         Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
         Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
@@ -404,7 +402,8 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (analyseResult_ global) (runKey_ global)) stack noRebuild ks
+    block <- Action $ getsRW localBlockApply
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (analyseResult_ global) (runKey_ global)) stack block ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 
@@ -450,14 +449,14 @@ runKey_ global@Global{..} k r stack step continue = do
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
 --   then do nothing with it.
-shakeException :: Global -> IO [String] -> SomeException -> IO ShakeException
+shakeException :: MonadIO m => Global -> m [String] -> SomeException -> m ShakeException
 shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
     Just e@ShakeException{} -> return e
     Nothing -> do
         stk <- stk
         e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
         when (shakeStaunch && shakeVerbosity >= Quiet) $
-            globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
+            liftIO . globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
         return e
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
@@ -472,12 +471,15 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 --   To suppress the output of 'traced' (for example you want more control
 --   over the message using 'putNormal'), use the 'quietly' combinator.
 traced :: String -> IO a -> Action a
-traced msg act = do
+traced s a = traced' s (liftIO a)
+
+traced' :: String -> Action a -> Action a
+traced' msg act = do
     Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
     start <- liftIO globalTimestamp
     putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
-    res <- liftIO act
+    res <- act
     stop <- liftIO globalTimestamp
     Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop) : localTraces s}
     return res

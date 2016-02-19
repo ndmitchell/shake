@@ -162,8 +162,8 @@ queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
 queryKey status i = Map.lookup i <$> readIORef status
 
 -- | Return either an exception (crash), or (how much time you spent waiting, stored keys, the value)
-build :: Pool -> Database -> Ops -> Stack -> Bool -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} Ops{..} stack noRebuild ks continue =
+build :: Pool -> Database -> Ops -> Stack -> Maybe String -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -237,11 +237,7 @@ build pool database@Database{..} Ops{..} stack noRebuild ks continue =
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
-        run stack i k r | noRebuild = do
-            liftIO $ errorStructured "Error - 'needed' key required rebuilding"
-                [("Key", Just $ show k)
-                ,("Cached result",fmap show r)]
-                ""
+        run stack i k r | Just block <- maybeBlock = errorNoApply (typeKey k) (show k) (fmap show r) block
         run stack i k r = do
             w <- newWaiting r
             addPool pool $ do

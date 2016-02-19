@@ -111,12 +111,13 @@ errorDuplicateOracle tk k tvs = errorStructured
      [("Answer type " ++ show i, Just $ show tv) | (i,tv) <- zip [1..] tvs])
     "Only one call to addOracle is allowed per question type"
 
-errorNoApply :: TypeRep -> Maybe String -> String -> IO a
-errorNoApply tk k msg = structured (specialIsOracleKey tk)
+errorNoApply :: TypeRep -> String -> Maybe String -> String -> IO a
+errorNoApply tk k v msg = structured (specialIsOracleKey tk)
     "Build system error - cannot currently call _apply_"
     [("Reason", Just msg)
     ,("_Key_ type", Just $ show tk)
-    ,("_Key_ value", k)]
+    ,("_Key_ value", Just k)
+    ,("Cached result", v)]
     "Move the _apply_ call earlier/later"
 
 
