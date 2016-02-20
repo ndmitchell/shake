@@ -10,7 +10,7 @@ module Development.Shake.Core(
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     newCache, newCacheIO,
-    unsafeExtraThread,
+    unsafeExtraThread, unsafeAllowApply,
     parallel,
     orderOnlyAction,
     -- Internal stuff
@@ -791,11 +791,15 @@ newResource name mx = liftIO $ newResourceIO name mx
 newThrottle :: String -> Int -> Double -> Rules Resource
 newThrottle name count period = liftIO $ newThrottleIO name count period
 
+unsafeAllowApply :: Action a -> Action a
+unsafeAllowApply  = applyBlockedBy Nothing
 
 blockApply :: String -> Action a -> Action a
-blockApply msg = Action . unmodifyRW f . fromAction
-    where f s0 = (s0{localBlockApply=Just msg}, \s -> s{localBlockApply=localBlockApply s0})
+blockApply = applyBlockedBy . Just
 
+applyBlockedBy :: Maybe String -> Action a -> Action a
+applyBlockedBy reason = Action . unmodifyRW f . fromAction
+    where f s0 = (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
 --   You cannot depend on a rule (e.g. 'need') while a resource is held.
