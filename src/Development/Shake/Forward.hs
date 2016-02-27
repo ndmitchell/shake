@@ -52,7 +52,6 @@ import Control.Exception.Extra
 import Numeric
 import Data.IORef
 import qualified Data.HashMap.Strict as Map
-import Control.Exception.Extra
 
 
 newtype ForwardQ = ForwardQ String
@@ -73,7 +72,7 @@ forwardRule act = do
         Global{..} <- Action getRO
         res <- liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
         case res of
-            Nothing -> error "Failed to find action name"
+            Nothing -> liftIO $ errorIO "Failed to find action name"
             Just act -> act
         return $ (ForwardA (),False)
     action act
@@ -96,17 +95,6 @@ shakeForward opts act = shake (forwardOptions opts) (forwardRule act)
 -- | Run a forward-defined build system, interpretting command-line arguments.
 shakeArgsForward :: ShakeOptions -> Action () -> IO ()
 shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
-
--- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
-forwardRule :: Action () -> Rules ()
-forwardRule act = do
-    rule $ \(ForwardQ k) -> Just $ do
-        res <- runForward k
-        case res of
-            Nothing -> liftIO $ errorIO "Failed to find action name"
-            Just act -> act
-        return $ ForwardA ()
-    action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
 forwardOptions :: ShakeOptions -> ShakeOptions

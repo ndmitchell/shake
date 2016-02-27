@@ -3,7 +3,7 @@
 
 -- | Types exposed to the user
 module Development.Shake.Types(
-    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..), StoredValue(..),
+    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..),
     ShakeOptions(..), shakeOptions
     ) where
 
@@ -27,19 +27,19 @@ import Development.Shake.CmdOption
 --   other files in the database are left unchanged.
 data Assume
     = AssumeDirty
-        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'Development.Shake.Rule.storedValue' always
-        --   returning 'Nothing'. Useful to undo the results of 'AssumeClean', for benchmarking rebuild speed and
+        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'Development.Shake.Rule.analyseR' always
+        --   returning 'Rebuild'. Useful to undo the results of 'AssumeClean', for benchmarking rebuild speed and
         --   for rebuilding if untracked dependencies have changed. This assumption is safe, but may cause
         --   more rebuilding than necessary.
     | AssumeClean
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run, and in future runs/.
         --   Assume and record that all rules reached are clean and do not require rebuilding, provided the rule
-        --   has a 'Development.Shake.Rule.storedValue' and has been built before. Useful if you have modified a file in some
+        --   has a cached result from being built before. Useful if you have modified a file in some
         --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
     | AssumeSkip
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run/.
         --   Assume that all rules reached are clean in this run. Only useful for benchmarking, to remove any overhead
-        --   from running 'Development.Shake.Rule.storedValue' operations.
+        --   from running 'Development.Shake.Rule.analyseR' operations.
     | AssumeNothing
         -- ^ The default behavior, assuming nothing. This assumption is safe.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
@@ -243,34 +243,3 @@ data Verbosity
     | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
-
--- | An equality check and a cost.
-data EqualCost
-    = EqualCheap -- ^ The equality check was cheap.
-    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
-    | NotEqual -- ^ The values are not equal.
-      deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
-
-data StoredValue a
-    = StoredValue a     -- ^ I have a value persistently stored (e.g. on disk)
-    | StoredMissing     -- ^ I was expecting a value persistently stored (e.g. on disk) but didn't find it
-    deriving (Functor,Eq,Ord,Show,Read,Typeable,Data)
-
-
-instance Applicative StoredValue where
-    pure = StoredValue
-
-    StoredValue f  <*> m = fmap f m
-    StoredMissing <*> _m = StoredMissing
-
-    StoredValue _m1 *> m2 = m2
-    StoredMissing  *> _m2 = StoredMissing
-
-instance Monad StoredValue where
-    (StoredValue x) >>= k = k x
-    StoredMissing  >>= _  = StoredMissing
-
-    (>>) = (*>)
-
-    return = StoredValue
-    fail _ = StoredMissing

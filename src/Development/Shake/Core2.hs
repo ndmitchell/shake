@@ -5,7 +5,7 @@ module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
     Rule(..), ARule(..), CRule(..), AnalysisResult(..),
     SRules(..), RuleType(..), ruleKey, ruleValue, cRuleKey,
-    run', apply, applied, blockApply, withResource, newCacheIO,
+    run', apply, applied, blockApply, unsafeAllowApply, withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     traced, trackUse, trackChange, trackAllow, orderOnlyAction,
     ) where
@@ -59,16 +59,7 @@ import Prelude
 --
 -- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
 --
--- * A way to compare two states of the same individual artifact, with 'equalValue' returning either
---   'EqualCheap' or 'NotEqual'.
---
--- * A way to query the current state of an artifact, with 'storedValue' returning the current state,
---   or 'StoredMissing' if there is no current state (e.g. the file does not exist).
---
---   Checking if an artifact needs to be built consists of comparing two @value@s
---   of the same @key@ with 'equalValue'. The first value is obtained by applying
---   'storedValue' to the @key@ and the second is the value stored in the build
---   database after the last successful build.
+-- * A way to compare an old state of the artifact with the current state of the artifact, 'analyseR'.
 --
 --   As an example, below is a simplified rule for building files, where files are identified
 --   by a 'FilePath' and their state is identified by a hash of their contents
@@ -81,11 +72,12 @@ import Prelude
 -- getFileModtime file = ...
 --
 -- instance Rule File Modtime where
---     storedValue _ (File x) = do
+--     analyseR _ (File x) (Modtime d) = do
 --         exists <- System.Directory.doesFileExist x
---         if exists then StoredValue \<$\> getFileModtime x else return StoredMissing
---     equalValue _ _ t1 t2 =
---         if t1 == t2 then EqualCheap else NotEqual
+--         if exists then do
+--             d2 <- getFileModtime x
+--             return $ if d == d2 then Rebuild else Continue
+--         else return Rebuild
 -- @
 --
 --   This example instance means:
@@ -93,6 +85,8 @@ import Prelude
 -- * A value of type @File@ uniquely identifies a generated file.
 --
 -- * A value of type @Modtime@ will be used to check if a file is up-to-date.
+--
+-- * A missing file will always rebuild, as in Make.
 --
 --   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
 --   instances are one component required for the creation of rules.
@@ -107,23 +101,23 @@ import Prelude
 -- compileFoo :: 'Rules' ()
 -- compileFoo = 'rule' (Just . compile)
 --     where
---         compile :: File -> 'Action' Modtime
---         compile (File outputFile) = do
+--         compile :: File -> Maybe Modtime -> 'Action' (Modtime, Bool)
+--         compile (File outputFile) oldd = do
 --             -- figure out the name of the input file
 --             let inputFile = outputFile '<.>' \"foo\"
 --             'unit' $ 'Development.Shake.cmd' \"fooCC\" inputFile outputFile
 --             -- return the (new) file modtime of the output file:
---             getFileModtime outputFile
+--             d <- getFileModtime outputFile
+--             return (d,Just d == oldd)
 -- @
 --
 --   /Note:/ In this example, the timestamps of the input files are never
---   used, let alone compared to the timestamps of the ouput files.
+--   used, let alone compared to the timestamps of the output files.
 --   Dependencies between output and input files are /not/ expressed by
 --   'Rule' instances. Dependencies are created automatically by 'apply'.
 --
 --   For rules whose values are not stored externally,
---   'storedValue' should return 'Just' with a sentinel value
---   and 'equalValue' should always return 'EqualCheap' for that sentinel.
+--   'analyseR' should always return 'Continue'.
 class (ShakeValue key, ShakeValue value) => Rule key value where
 
     -- | /[Required]/ Check if the @value@ associated with a @key@ is up-to-date.
@@ -194,16 +188,6 @@ analyseI (ARule (_ :: ARuleI m key value)) opt@(shakeAssume -> assume) (fromKey 
   | assume == AssumeDirty = return Rebuild
   | assume == AssumeSkip = return Continue
   | otherwise = fmap newValue <$> analyseR opt k ((fromValue r) :: value)
-{-
-    s <- storedValue opt k
-    return $ case s of
-        StoredValue (v :: value) -> case equalValue opt k (fromValue r) v of
-            NotEqual | assume == AssumeClean -> Expensive (newValue v)
-            NotEqual -> Rebuild
-            EqualCheap -> Continue
-            EqualExpensive -> Expensive (newValue v)
-        StoredMissing -> Rebuild
--}
 
 executeI :: [(Double,ARule Action)] -> ShakeOptions -> Key -> Maybe Value -> Action (Value, Bool)
 executeI rs opt k vold = do
@@ -213,8 +197,6 @@ executeI rs opt k vold = do
             [r]:_ -> return r
             rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
     rule vold
---    let step = maybe False (\vo -> equalValue opt (fromKey k :: key) (fromValue vo) (fromValue vnew :: value) /= NotEqual) vold
-    --return (vnew,step)
   where
     sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
     sets = map snd . reverse . groupSort
@@ -292,6 +274,7 @@ run' opts@ShakeOptions{..} start rs = do
     lint <- if isNothing shakeLint then return $ const $ return () else do
         dir <- getCurrentDirectory
         return $ \msg -> do
+            diagnostic msg
             now <- getCurrentDirectory
             when (dir /= now) $ errorStructured
                 "Lint checking error - current directory has changed"
@@ -339,18 +322,29 @@ run' opts@ShakeOptions{..} start rs = do
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
-                    absent <- readIORef absent
-                    checkValid database absent $ \seen (_,v) -> case v of
-                        (key, Ready Result{..}) -> do
-                            let tk = typeKey key
-                            case Map.lookup tk ruleinfo of
-                                Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show key) Nothing
-                                Just RuleInfo{..} -> do
-                                    now <- analyse opts{shakeAssume=AssumeNothing} key result
-                                    let good = case now of { Rebuild -> False; _ -> True }
-                                    diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-                                    return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
-                        _ -> return seen
+                    absent' <- readIORef absent
+                    checkValid database absent' $ \ks -> do
+                        bad <- newIORef []
+                        runPool (shakeThreads == 1) shakeThreads $ \pool -> do
+                            let opts2 = opts{shakeAssume=case shakeAssume of AssumeSkip -> AssumeSkip; _ -> AssumeNothing}
+                            let s0 = Global database pool cleanup start ruleinfo output opts2 diagnostic lint after absent getProgress forwards
+                            forM_ ks $ \(key,v) -> case v of
+                                Ready ro -> do
+                                    stat <- analyseResult_ s0 key (result ro)
+                                    let rebuilt = case stat of { Rebuild -> False; _ -> True }
+                                        reply now = do
+                                            diagnostic $ "Checking if " ++ show key ++ " is " ++ show (result ro) ++ ", " ++ if now == Nothing then "passed" else "FAILED"
+                                            whenJust now $ \now -> modifyIORef' bad ((key, result ro, now):)
+                                    if specialAlwaysRebuilds (result ro) then
+                                        runKey_ s0 key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
+                                            Error e -> raiseError =<< shakeException s0 (return ["Lint-checking"]) e
+                                            Ready r | built r == changed r -> reply . Just . Just . show $ result r
+                                            _ -> reply Nothing
+                                     else
+                                        reply (if rebuilt then Just Nothing else Nothing)
+                                _ -> return ()
+                        maybe (return ()) (throwIO . snd) =<< readIORef except
+                        readIORef bad
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
@@ -416,14 +410,14 @@ analyseResult_ global@Global{..} k r = do
 
 runKey_ :: Global -> Key -> Maybe Result -> Stack -> Development.Shake.Database.Step -> Capture Status
 runKey_ global@Global{..} k r stack step continue = do
-    let tk = typeKey k
-    case Map.lookup tk globalRules of
-        Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-        Just RuleInfo{..} -> do
-            let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
-            let top = showTopStack stack
-            time <- offsetTime
-            runAction global s (do
+    time <- offsetTime
+    let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
+    let top = showTopStack stack
+    runAction global s (do
+        let tk = typeKey k
+        case Map.lookup tk globalRules of
+            Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
+            Just RuleInfo{..} -> do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
@@ -618,6 +612,12 @@ trackAllowForall test = Action $ modifyRW $ \s -> s{localTrackAllows = f : local
 applyBlockedBy :: Maybe String -> Action a -> Action a
 applyBlockedBy reason = Action . unmodifyRW f . fromAction
     where f s0 = (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
+
+unsafeAllowApply :: Action a -> Action a
+unsafeAllowApply  = applyBlockedBy Nothing
+
+blockApply :: String -> Action a -> Action a
+blockApply = applyBlockedBy . Just
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
 --   You cannot depend on a rule (e.g. 'need') while a resource is held.

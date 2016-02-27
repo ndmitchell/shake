@@ -9,7 +9,6 @@ module Development.Shake.Derived(
     ) where
 
 import Control.Applicative
-import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory

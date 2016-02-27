@@ -3,7 +3,7 @@
 
 module Development.Shake.Core(
     run,
-    ShakeValue, StoredValue(..),
+    ShakeValue,
     Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
     cRule, simpleCheck, AnalysisResult(..),
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
@@ -274,12 +274,6 @@ newResource name mx = liftIO $ newResourceIO name mx
 --   requests simultaneously. If this limitation causes a problem in practice it can be fixed.
 newThrottle :: String -> Int -> Double -> Rules Resource
 newThrottle name count period = liftIO $ newThrottleIO name count period
-
-unsafeAllowApply :: Action a -> Action a
-unsafeAllowApply  = applyBlockedBy Nothing
-
-blockApply :: String -> Action a -> Action a
-blockApply = applyBlockedBy . Just
 
 -- | Run an action which uses part of several finite resources. Acquires the resources in a stable
 --   order, to prevent deadlock. If all rules requiring more than one resource acquire those

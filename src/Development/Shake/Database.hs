@@ -5,7 +5,7 @@
 module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies, Step, Result(..), Status(Ready,Error),
+    listDepends, lookupDependencies, Step, incStep, Result(..), Status(Ready,Error),
     Ops(..), AnalysisResult(..), build, Depends, subtractDepends, finalizeDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -29,7 +29,6 @@ import Numeric.Extra
 import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
-import Control.Monad.IO.Class
 import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
@@ -386,19 +385,18 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> [(Key, Key)] -> ([(Key, Value, AnalysisResult Value)] -> (Id, (Key, Status)) -> IO [(Key, Value, AnalysisResult Value)]) -> IO ()
+checkValid :: Database -> [(Key, Key)] -> ([(Key, Status)] -> IO [(Key, Value, Maybe String)]) -> IO ()
 checkValid Database{..} missing keyCheck = do
     status <- readIORef status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
 
-    -- Do not use a forM here as you use too much stack space
-    bad <- (\f -> foldM f [] (Map.toList status)) $ keyCheck
+    bad <- keyCheck $ Map.elems status
     unless (null bad) $ do
         let n = length bad
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
-            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("Analysis result", Just $ show now)]
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Cached value", Just $ show result),("New value", now)]
                                         | (key, result, now) <- bad])
             ""
 

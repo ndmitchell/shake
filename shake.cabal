@@ -116,6 +116,7 @@ library
         Development.Shake.FilePath
         Development.Shake.Forward
         Development.Shake.Rule
+        Development.Shake.Rules.File
         Development.Shake.Util
 
     other-modules:
@@ -141,7 +142,6 @@ library
         Development.Shake.Progress
         Development.Shake.Resource
         Development.Shake.Rules.Directory
-        Development.Shake.Rules.File
         Development.Shake.Rules.Files
         Development.Shake.Rules.Oracle
         Development.Shake.Rules.OrderOnly

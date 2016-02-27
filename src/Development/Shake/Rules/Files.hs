@@ -156,7 +156,7 @@ getFileTimes name xs vo = do
             return $ case s of
                 Nothing | shakeCreationCheck opts -> Nothing
                               | otherwise -> Just (missingFile, False)
-                Just a -> Just (a, maybe False ((/=NotEqual) . equalValue opts2 x a) v)
+                Just a -> Just (a, maybe False ((/=NotEqual) . equalValue opts2 a) v)
     ys <- zipWithM check xs (f vo)
     case sequence ys of
         Just (unzip -> (ys,bs)) -> return $ (FilesA ys, and bs)

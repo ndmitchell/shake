@@ -7,7 +7,6 @@ module Development.Shake.Pool(
     ) where
 
 import Control.Concurrent.Extra
-import Development.Shake.Errors
 import System.Time.Extra
 import Control.Exception
 import Control.Monad
@@ -16,7 +15,6 @@ import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
 import System.Random
 
-
 ---------------------------------------------------------------------
 -- UNFAIR/RANDOM QUEUE
 
@@ -24,26 +22,27 @@ import System.Random
 type NonDet a = IO a
 
 -- Left = deterministic list, Right = non-deterministic tree
-data Queue a = Queue [a] (Either [a] (Maybe (Tree a)))
+data Queue a = Queue [a] (Either [a] (Tree a))
 
 newQueue :: Bool -> Queue a
-newQueue deterministic = Queue [] $ if deterministic then Left [] else Right Nothing
+newQueue deterministic = Queue [] $ if deterministic then Left [] else Right emptyTree
 
 enqueuePriority :: a -> Queue a -> Queue a
 enqueuePriority x (Queue p t) = Queue (x:p) t
 
 enqueue :: a -> Queue a -> Queue a
 enqueue x (Queue p (Left xs)) = Queue p $ Left $ x:xs
-enqueue x (Queue p (Right Nothing)) = Queue p $ Right $ Just $ singleTree x
-enqueue x (Queue p (Right (Just t))) = Queue p $ Right $ Just $ insertTree x t
+enqueue x (Queue p (Right t)) = Queue p $ Right $ insertTree x t
 
-dequeue :: Queue a -> Maybe (NonDet (a, Queue a))
-dequeue (Queue (p:ps) t) = Just $ return (p, Queue ps t)
-dequeue (Queue [] (Left (x:xs))) = Just $ return (x, Queue [] $ Left xs)
-dequeue (Queue [] (Left [])) = Nothing
-dequeue (Queue [] (Right (Just t))) = Just $ do bs <- randomIO; (x,t) <- return $ removeTree bs t; return (x, Queue [] $ Right t)
-dequeue (Queue [] (Right Nothing)) = Nothing
-
+dequeue :: Queue a -> NonDet (Maybe (a, Queue a))
+dequeue (Queue (p:ps) t) = return $ Just (p, Queue ps t)
+dequeue (Queue [] (Left (x:xs))) = return $ Just (x, Queue [] $ Left xs)
+dequeue (Queue [] (Left [])) = return Nothing
+dequeue (Queue [] (Right t)) = do
+  bs <- randomIO
+  return $ case removeTree bs t of
+    Nothing -> Nothing
+    Just (x,t) -> Just (x, Queue [] $ Right t)
 
 ---------------------------------------------------------------------
 -- TREE
@@ -51,19 +50,19 @@ dequeue (Queue [] (Right Nothing)) = Nothing
 -- A tree where removal is random. Nodes are stored at indicies 0..n-1
 data Tree a = Tree {-# UNPACK #-} !Int (Map.HashMap Int a)
 
-singleTree :: a -> Tree a
-singleTree x = Tree 1 $ Map.singleton 0 x
+emptyTree :: Tree a
+emptyTree = Tree 0 Map.empty
 
 insertTree :: a -> Tree a -> Tree a
 insertTree x (Tree n mp) = Tree (n+1) $ Map.insert n x mp
 
 -- Remove an item at random, put the n-1 item to go in it's place
-removeTree :: Int -> Tree a -> (a, Maybe (Tree a))
+removeTree :: Int -> Tree a -> Maybe (a, Tree a)
 removeTree rnd (Tree n mp)
-        | n == 0 = err "removeTree, tree is empty"
-        | n == 1 = (mp Map.! 0, Nothing)
-        | i == n-1 = (mp Map.! i, Just $ Tree (n-1) $ Map.delete i mp)
-        | otherwise = (mp Map.! i, Just $ Tree (n-1) $ Map.insert i (mp Map.! (n-1)) $ Map.delete (n-1) mp)
+        | n == 0 = Nothing
+        | n == 1 = Just (mp Map.! 0, emptyTree)
+        | i == n-1 = Just (mp Map.! i, Tree (n-1) $ Map.delete i mp)
+        | otherwise = Just (mp Map.! i, Tree (n-1) $ Map.insert i (mp Map.! (n-1)) $ Map.delete (n-1) mp)
     where
         i = abs rnd `mod` n
 
@@ -92,12 +91,11 @@ data S = S
 emptyS :: Int -> Bool -> S
 emptyS n deterministic = S Set.empty n 0 0 $ newQueue deterministic
 
-
 worker :: Pool -> IO ()
 worker pool@(Pool var done) = do
     let onVar act = modifyVar var $ maybe (return (Nothing, return ())) act
     join $ onVar $ \s -> do
-        res <- maybe (return Nothing) (fmap Just) $ dequeue $ todo s
+        res <- dequeue $ todo s
         case res of
             Nothing -> return (Just s, return ())
             Just (now, todo2) -> return (Just s{todo = todo2}, now >> worker pool)
@@ -110,7 +108,7 @@ step pool@(Pool var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
     onVar $ \s -> do
         s <- op s
-        res <- maybe (return Nothing) (fmap Just) $ dequeue $ todo s
+        res <- dequeue $ todo s
         case res of
             Just (now, todo2) | Set.size (threads s) < threadsLimit s -> do
                 -- spawn a new worker

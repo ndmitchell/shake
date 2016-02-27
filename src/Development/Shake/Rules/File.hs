@@ -7,7 +7,7 @@ module Development.Shake.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    FileQ(..), FileA, missingFile, storedValue, equalValue
+    EqualCost(..), FileQ(..), FileA, missingFile, storedValue, equalValue
     ) where
 
 import Control.Applicative
@@ -29,6 +29,7 @@ import Development.Shake.Types
 import Development.Shake.Errors
 
 import Data.Bits
+import Data.Data
 import Data.List
 import Data.Maybe
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
@@ -71,7 +72,14 @@ storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
             hash <- unsafeInterleaveIO $ getFileHash x
             return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
 
-equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+-- | An equality check and a cost.
+data EqualCost
+    = EqualCheap -- ^ The equality check was cheap.
+    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
+    | NotEqual -- ^ The values are not equal.
+      deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
+
+equalValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
     ChangeModtime -> bool $ x1 == y1
     ChangeDigest -> bool $ x2 == y2 && x3 == y3
     ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
@@ -84,7 +92,7 @@ instance Rule FileQ FileA where
   analyseR opt@(shakeAssume -> assume) k vo = do
     s <- storedValue opt k
     return $ case s of
-        Just v -> case equalValue opt k vo v of
+        Just v -> case equalValue opt vo v of
             NotEqual | assume == AssumeClean -> Update v
             NotEqual -> Rebuild
             EqualCheap -> Continue
@@ -100,7 +108,7 @@ storedValueError input msg x vo = do
     return $ case s of
         Nothing | shakeCreationCheck opts || input -> error err
                       | otherwise -> (missingFile, False)
-        Just a -> (a, maybe False ((/=NotEqual) . equalValue opts2 x a) vo)
+        Just a -> (a, maybe False ((/=NotEqual) . equalValue opts2 a) vo)
   where
     err = msg ++ "\n  " ++ unpackU (fromFileQ x)
 
@@ -167,7 +175,7 @@ neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     pre <- liftIO $ mapM (storedValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, case a of { Just _ -> "File change"; Nothing -> "File created" })
-              | (x, a, b) <- zip3 xs pre post, case a of { Nothing -> NotEqual; Just a -> equalValue opts (FileQ x) a b } == NotEqual]
+              | (x, a, b) <- zip3 xs pre post, case a of { Nothing -> NotEqual; Just a -> equalValue opts a b } == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
