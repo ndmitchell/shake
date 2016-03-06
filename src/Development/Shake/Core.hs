@@ -11,7 +11,7 @@ module Development.Shake.Core(
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     newCache, newCacheIO,
-    unsafeExtraThread, unsafeAllowApply,
+    unsafeExtraThread, unsafeAllowApply, blockApply,
     parallel,
     orderOnlyAction,
     -- Internal stuff
