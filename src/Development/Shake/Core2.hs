@@ -131,9 +131,9 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
 data ARule k v m = Rule k v => Priority [(Double,k -> Maybe (Maybe v -> m (v, Bool)))] -- higher fst is higher priority
                  | Custom (k -> v -> IO (AnalysisResult v)) (k -> Maybe v -> m (v, Bool))
 
-combineRules :: TypeRep -> ARule k v m -> ARule k v m -> ARule k v m
-combineRules _ (Priority xs) (Priority ys) = Priority (xs ++ ys)
-combineRules k _ _ = unsafePerformIO $ errorMultipleRulesMatch k Nothing 2
+combineRules :: ARule k v m -> ARule k v m -> Maybe (ARule k v m)
+combineRules (Priority xs) (Priority ys) = Just $ Priority (xs ++ ys)
+combineRules _ _ = Nothing
 
 ruleKey :: ARule k v m -> k
 ruleKey _ = err "ruleKey"
@@ -151,8 +151,11 @@ data SRules m = SRules
 instance Typeable m => Monoid (SRules m) where
     mempty = SRules [] (Map.fromList [])
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
-        where f (k, ARule x) (_, ARule y) = (k, ARule (combineRules k x (cst y)))
-                where cst = fromMaybe (unsafePerformIO $ errorIncompatibleRules k (typeOf $ ruleValue x) (typeOf $ ruleValue y)) . cast
+        where f (k, ARule x) (_, ARule y)
+                  | Just y' <- cast y = case combineRules x y' of
+                       Just c -> (k, ARule c)
+                       Nothing -> unsafePerformIO $ errorMultipleRulesMatch k Nothing 2
+                  | otherwise = unsafePerformIO $ errorIncompatibleRules k (typeOf $ ruleValue x) (typeOf $ ruleValue y)
 
 registerWitnesses :: SRules m -> IO ()
 registerWitnesses SRules{..} =

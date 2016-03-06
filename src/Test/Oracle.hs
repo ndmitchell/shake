@@ -62,15 +62,11 @@ test build obj = do
     errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
         "askOracle is used at the wrong type"
 
-    errors ["+str-int","+str-bool"] -- Two Oracles with the same question type
+    errors ["+str-int","+str-bool"] -- Two Oracles with the same question type but different answer types
+        "Only one call to addOracle is allowed"
+
+    errors ["+str-int","+str-int"] -- Two Oracles with the same question and answer types
         "Only one call to addOracle is allowed"
 
     errors ["+str-int","*str-bool"] -- Using an Oracle at the wrong answer type
         "askOracle is used at the wrong type"
-
-    build ["+str-int","+str-int"] -- Two Oracles work if they aren't used
-    errors ["+str-int","+str-int","*str-int"] -- Two Oracles fail if they are used
-        "Only one call to addOracle is allowed"
-
-    errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
-        "Only one call to addOracle is allowed"
