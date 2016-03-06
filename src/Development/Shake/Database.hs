@@ -385,7 +385,7 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> [(Key, Key)] -> ([(Key, Status)] -> IO [(Key, Value, Maybe String)]) -> IO ()
+checkValid :: Database -> [(Key, Key)] -> ([(Key, Status)] -> IO [(Key, Value, String)]) -> IO ()
 checkValid Database{..} missing keyCheck = do
     status <- readIORef status
     intern <- readIORef intern
@@ -396,7 +396,7 @@ checkValid Database{..} missing keyCheck = do
         let n = length bad
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
-            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Cached value", Just $ show result),("New value", now)]
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Cached value", Just $ show result),("New value", Just now)]
                                         | (key, result, now) <- bad])
             ""
 

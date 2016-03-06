@@ -3,8 +3,8 @@
 
 module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
-    Rule(..), ARule(..), CRule(..), AnalysisResult(..),
-    SRules(..), RuleType(..), ruleKey, ruleValue, cRuleKey,
+    Rule(..), ARule(..), AnalysisResult(..),
+    SRules(..), RuleType(..), ruleKey, ruleValue,
     run', apply, applied, blockApply, unsafeAllowApply, withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     traced, trackUse, trackChange, trackAllow, orderOnlyAction,
@@ -128,86 +128,70 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
     --   'Update' with the new value.
     analyseR :: ShakeOptions -> key -> value -> IO (AnalysisResult value)
 
-data ARule m = forall key value . Rule key value => ARule (ARuleI m key value)
+data ARule k v m = Rule k v => Priority [(Double,k -> Maybe (Maybe v -> m (v, Bool)))] -- higher fst is higher priority
+                 | Custom (k -> v -> IO (AnalysisResult v)) (k -> Maybe v -> m (v, Bool))
 
-type ARuleI m key value = key -> Maybe (Maybe value -> m (value, Bool))
+combineRules :: TypeRep -> ARule k v m -> ARule k v m -> ARule k v m
+combineRules _ (Priority xs) (Priority ys) = Priority (xs ++ ys)
+combineRules k _ _ = unsafePerformIO $ errorMultipleRulesMatch k Nothing 2
 
-data CRule m = forall key value . (ShakeValue key, ShakeValue value) =>
-    CRule
-        {canalyse :: key -> value -> IO (AnalysisResult value)
-        ,cexecute :: key -> Maybe value -> m (value, Bool)
-        }
+ruleKey :: ARule k v m -> k
+ruleKey _ = err "ruleKey"
 
-ruleKey :: ARuleI m key value -> key
-ruleKey = err "ruleKey"
+ruleValue :: ARule k v m -> v
+ruleValue _ = err "ruleValue"
 
-ruleValue :: ARuleI m key value -> value
-ruleValue = err "ruleValue"
-
-cRuleKey :: (key -> value -> a) -> key
-cRuleKey = err "cRuleKey"
-
-cRuleValue :: (key -> value -> a) -> value
-cRuleValue = err "cRuleValue"
-
-data RuleType m = Priority TypeRep{-v-} [(Double,ARule m)] -- higher fst is higher priority
-              | Custom (CRule m)
+data RuleType m = forall k v. (ShakeValue k, ShakeValue v) => ARule (ARule k v m)
 
 data SRules m = SRules
     {actions :: [m ()]
     ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},RuleType m)
     }
 
-instance Monoid (SRules m) where
+instance Typeable m => Monoid (SRules m) where
     mempty = SRules [] (Map.fromList [])
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
-        where f (k, Priority v1 xs) (_, Priority v2 ys)
-                | v1 == v2 = (k, Priority v1 (xs ++ ys))
-                | otherwise = unsafePerformIO $ errorIncompatibleRules k v1 v2
-              f _ _ = unsafePerformIO $ err "Don't know how to combine rules"
+        where f (k, ARule x) (_, ARule y) = (k, ARule (combineRules k x (cst y)))
+                where cst = fromMaybe (unsafePerformIO $ errorIncompatibleRules k (typeOf $ ruleValue x) (typeOf $ ruleValue y)) . cast
 
 registerWitnesses :: SRules m -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems rules) $ \(_, c) ->
-        case c of
-            Priority _ ((_,ARule r):_) -> do
-                registerWitness $ ruleKey r
-                registerWitness $ ruleValue r
-            Custom (CRule x _) -> do
-                registerWitness $ cRuleKey x
-                registerWitness $ cRuleValue x
+    forM_ (Map.elems rules) $ \(_, ARule r) -> do
+        registerWitness $ ruleKey r
+        registerWitness $ ruleValue r
 
 data RuleInfo m = RuleInfo
     {analyse :: ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
-    ,execute :: ShakeOptions -> Key -> Maybe Value -> m (Value, Bool)
+    ,execute :: Key -> Maybe Value -> m (Value, Bool)
     ,resultType :: TypeRep
     }
 
-analyseI :: ARule m -> ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
-analyseI (ARule (_ :: ARuleI m key value)) opt@(shakeAssume -> assume) (fromKey -> k :: key) r
+analyseI :: (ShakeValue key, ShakeValue value) => ARule key value m -> ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
+analyseI rule opt@(shakeAssume -> assume) (fromKey -> k :: key) (fromValue -> r :: value)
   | assume == AssumeDirty = return Rebuild
   | assume == AssumeSkip = return Continue
-  | otherwise = fmap newValue <$> analyseR opt k ((fromValue r) :: value)
+  | otherwise = fmap newValue <$> case rule of
+        Priority _ -> analyseR opt k r
+        Custom a _ -> a k r
 
-executeI :: [(Double,ARule Action)] -> ShakeOptions -> Key -> Maybe Value -> Action (Value, Bool)
-executeI rs opt k vold = do
-    let rs2 = sets [(i, \k -> (\v -> (fmap (first newValue) . v . (fmap fromValue),ARule r)) <$> r (fromKey k)) | (i,ARule r) <- rs]
-    (rule,ARule (_ :: ARuleI Action key value)) <-
-        case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
-            [r]:_ -> return r
-            rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-    rule vold
+executeI :: (ShakeValue key, ShakeValue value) => ARule key value Action -> Key -> Maybe Value -> Action (Value, Bool)
+executeI rule (fromKey -> k :: key) (fmap fromValue -> vold :: Maybe value) = do
+    first newValue <$> case rule of
+        Priority rs -> case filter (not . null) $ map (mapMaybe ($ k)) $ sets rs of
+            [r]:_ -> r vold
+            rs -> liftIO $ errorMultipleRulesMatch (typeOf k) (Just $ show k) (length rs)
+        Custom _ e -> e k vold
   where
     sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
     sets = map snd . reverse . groupSort
 
 createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,c) -> case c of
-    Priority tv rs -> RuleInfo (analyseI (snd . head $ rs)) (executeI rs) tv
-    Custom (CRule a e) -> RuleInfo {
-        analyse = \_ k v -> fmap newValue <$> a (fromKey k) (fromValue v),
-        execute = \_ k v -> first newValue <$> e (fromKey k) (fmap fromValue v),
-        resultType = typeOf (cRuleValue a)
+createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,ARule c) -> RuleInfo
+    { analyse = analyseI c
+    , execute = executeI c
+    , resultType = case c of
+          Priority _ -> typeOf (ruleValue c)
+          Custom _ _ -> typeOf (ruleValue c)
     }
 
 ---------------------------------------------------------------------
@@ -331,17 +315,21 @@ run' opts@ShakeOptions{..} start rs = do
                             forM_ ks $ \(key,v) -> case v of
                                 Ready ro -> do
                                     stat <- analyseResult_ s0 key (result ro)
-                                    let rebuilt = case stat of { Rebuild -> False; _ -> True }
+                                    let clean = case stat of { Continue -> True; _ -> False }
                                         reply now = do
                                             diagnostic $ "Checking if " ++ show key ++ " is " ++ show (result ro) ++ ", " ++ if now == Nothing then "passed" else "FAILED"
                                             whenJust now $ \now -> modifyIORef' bad ((key, result ro, now):)
                                     if specialAlwaysRebuilds (result ro) then
-                                        runKey_ s0 key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
-                                            Error e -> raiseError =<< shakeException s0 (return ["Lint-checking"]) e
-                                            Ready r | built r == changed r -> reply . Just . Just . show $ result r
-                                            _ -> reply Nothing
+                                        -- skip phony rules
+                                        if specialAlwaysChanges (result ro) then
+                                            reply Nothing
+                                         else
+                                            runKey_ s0 key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
+                                                Error e -> raiseError =<< shakeException s0 (return ["Lint-checking"]) e
+                                                Ready r | built r == changed r -> reply . Just . show $ result r
+                                                _ -> reply Nothing
                                      else
-                                        reply (if rebuilt then Just Nothing else Nothing)
+                                        reply (if clean then Nothing else Just (show stat))
                                 _ -> return ()
                         maybe (return ()) (throwIO . snd) =<< readIORef except
                         readIORef bad
@@ -421,7 +409,7 @@ runKey_ global@Global{..} k r stack step continue = do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                res <- execute globalOptions k (fmap result r)
+                res <- execute k (fmap result r)
                 when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e

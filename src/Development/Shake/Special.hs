@@ -3,6 +3,7 @@
 --   Everything in this module is a hack.
 module Development.Shake.Special(
     specialAlwaysRebuilds,
+    specialAlwaysChanges,
     specialIsFileKey
     ) where
 
@@ -15,6 +16,9 @@ specialAlwaysRebuilds v = con `elem` ["AlwaysRerunA","OracleA","DoesFileExistA",
                             || (con == "FileA" && show v == "File {mod=NEQ,size=NEQ,digest=NEQ}")
     where con = show $ fst $ splitTyConApp $ typeValue v
 
+specialAlwaysChanges :: Value -> Bool
+specialAlwaysChanges v = con == "AlwaysRerunA" || (con == "FileA" && show v == "File {mod=NEQ,size=NEQ,digest=NEQ}")
+    where con = show $ fst $ splitTyConApp $ typeValue v
 
 specialIsFileKey :: TypeRep -> Bool
 specialIsFileKey t = con == "FileQ"

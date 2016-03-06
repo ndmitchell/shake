@@ -76,13 +76,13 @@ errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicate
     ,("Second result type", Just $ show tv2)]
     "A function passed to rule/defaultRule has the wrong result type"
 
-errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
+errorMultipleRulesMatch :: TypeRep -> Maybe String -> Int -> IO a
 errorMultipleRulesMatch tk k count
-    | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk (Just k) []
+    | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk k []
     | otherwise = errorStructured
     ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
     [("Key type",Just $ show tk)
-    ,("Key value",Just k)
+    ,("Key value",k)
     ,("Rules matched",Just $ show count)]
     (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
      else "Modify your rules/defaultRules so only one can produce the above key")

@@ -67,13 +67,16 @@ modifyRules f (Rules r) = Rules $ censor f r
 getRules :: Rules () -> IO (SRules Action)
 getRules (Rules r) = execWriterT r
 
+newRule :: (ShakeValue k, ShakeValue v) => ARule k v Action -> Rules ()
+newRule r = newRules mempty{rules = Map.singleton k (k, ARule r)}
+  where k = typeOf $ ruleKey r
+
 -- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
 --   or 'Nothing' otherwise. The 'Bool' is 'True' if the value changed.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
 rule :: Rule key value => (key -> Maybe (Maybe value -> Action (value,Bool))) -> Rules ()
-rule r = newRules mempty{rules = Map.singleton k (k, Priority v [(1,ARule r)])}
-    where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
+rule r = newRule $ Priority [(1,r)]
 
 -- | Add a custom rule; the first argument checks whether the rule needs to be rebuilt,
 --   while the seconds executes the key, using the optional previous value,
@@ -82,8 +85,7 @@ cRule :: (ShakeValue key, ShakeValue value)
             => (key -> value -> IO (AnalysisResult value))
             -> (key -> Maybe value -> Action (value, Bool))
             -> Rules ()
-cRule a e = newRules mempty{rules = Map.singleton k (k, Custom $ CRule a e)}
-    where k = typeOf $ cRuleKey a
+cRule a e = newRule $ Custom a e
 
 simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
 simpleCheck act = cRule (\_ _ -> return Rebuild) -- (\k v -> act k >>= \v2 -> return $ if v == v2 then Continue else Rebuild)
@@ -108,8 +110,10 @@ simpleCheck act = cRule (\_ _ -> return Rebuild) -- (\k v -> act k >>= \v2 -> re
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority i = modifyRules $ \s -> s{rules = Map.map (\(a,Priority b cs) -> (a,Priority b (map (first $ const i) cs))) $ rules s}
-
+priority i = modifyRules $ \s -> s{rules = Map.map f $ rules s}
+    where
+      f (a,ARule (Priority cs)) = (a,ARule $ Priority (map (first $ const i) cs))
+      f x = x
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
 --   in order. Only recommended for small blocks containing a handful of rules.
@@ -126,10 +130,11 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,Priority b cs) -> (a,Pri
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
     where
-        f (k, Priority v []) = (k, Priority v [])
-        f (k, Priority v xs) = let (is,rs) = unzip xs in (k, Priority v [(maximum is, foldl1' g rs)])
+        f (k, ARule a@(Priority [])) = (k, ARule a)
+        f (k, ARule (Priority xs)) = let (is,rs) = unzip xs in (k, ARule $ Priority [(maximum is, foldl1' g rs)])
+        f x = x
 
-        g (ARule a) (ARule b) = ARule $ \x -> a x `mplus` ((cast b `asTypeOf` Just a) >>= ($x))
+        g a b x = a x `mplus` b x
 
 
 -- | Run an action, usually used for specifying top-level requirements.
