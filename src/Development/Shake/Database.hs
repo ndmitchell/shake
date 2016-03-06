@@ -206,6 +206,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
+        out k r b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
 
         -- Rules for each eval* function
         -- * Must NOT lock
@@ -218,21 +219,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
-                Just (k, Loaded r) -> do
-                    let out b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-                    let continue r = out True >> check stack i k r (fromDepends $ depends r)
-                    let rebuild = out False >> run stack i k (Just r)
-                    let update r s = do
-                          -- warning, have the db lock while appending (may harm performance)
-                          r <- return r{result=s}
-                          journal i (k, Loaded r)
-                          i #= (k, Loaded r)
-                          continue r
-                    ar <- analyseResult k (result r)
-                    case ar of
-                        Rebuild -> rebuild
-                        Continue -> continue r
-                        Update s -> update r s
+                Just (k, Loaded r) -> check stack i k r (fromDepends $ depends r)
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
@@ -258,20 +245,31 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             i #= (k, w)
 
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
-        check stack i k r [] =
-            i #= (k, Ready r)
+        check stack i k r [] = do
+            ar <- analyseResult k (result r)
+            let update r s = do
+                  let r' = r{result=s}
+                  addPool pool $ journal i (k, Loaded r') -- leave DB lock before appending
+                  continue r'
+                continue r = out k r True >> i #= (k, Ready r)
+            case ar of
+                Rebuild -> out k r False >> run stack i k (Just r)
+                Continue -> continue r
+                Update s -> update r s
         check stack i k r (ds:rest) = do
             vs <- mapM (reduce (addStack i k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
-            if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
+            if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then do
+                out k r False
                 run stack i k $ Just r
-             else if null ws then
+             else if null ws then do
                 check stack i k r rest
              else do
                 self <- newWaiting $ Just r
                 waitFor ws $ \finish d -> do
                     s <- readIORef status
                     let buildIt = do
+                            out k r False
                             b <- run stack i k $ Just r
                             afterWaiting b $ runWaiting self
                             return True
