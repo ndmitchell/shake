@@ -19,6 +19,7 @@ import Development.Shake.Database2
 import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Errors
+import Development.Shake.Special
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Profile
@@ -223,7 +224,8 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                 Just (k, res) -> return res
 
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
-        run stack i k r | Just block <- maybeBlock = errorNoApply (typeKey k) (show k) (fmap show r) block
+        run stack i k r | Just block <- maybeBlock
+                        , Just True /= fmap (specialAlwaysRebuilds.result) r = errorNoApply (typeKey k) (show k) (fmap show r) block
         run stack i k r = do
             w <- newWaiting r
             addPool pool $ do
