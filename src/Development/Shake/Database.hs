@@ -161,7 +161,38 @@ internKey intern status k = do
 queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
 queryKey status i = Map.lookup i <$> readIORef status
 
+atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
+
+updateStatus :: Database -> Id -> (Key, Status) -> IO Status
+updateStatus Database{..} i (k,v) = do
+    s <- readIORef status
+    writeIORef' status $ Map.insert i (k,v) s
+    diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
+    return v
+
+reportResult :: Database -> Id -> Key -> Status -> IO ()
+reportResult Database{..} i k res = do
+    ans <- withLock lock $ do
+        s <- readIORef status
+        writeIORef' status $ Map.insert i (k,res) s
+        diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType res ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
+        case Map.lookup i s of
+            Just (_,w@(Waiting _ _)) -> runWaiting w
+        return res
+    case ans of
+        Ready r -> do
+            diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
+                          " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
+            journal i (k, Loaded r) -- we leave the DB lock before appending
+        Error _ -> do
+            diagnostic $ "result " ++ atom k ++ " = error"
+            journal i (k, Missing)
+        _ -> return ()
+
 -- | Return either an exception (crash), or (how much time you spent waiting, stored keys, the value)
+-- 'build' first takes the state lock and (on a single thread) performs as many transitions as it can without waiting on a mutex or running any rules.
+-- Then it releases the state lock and runs the rules in the thread pool and waits for all of them to finish
+-- A build requiring no rules should not result in any thread contention.
 build :: Pool -> Database -> Ops -> Stack -> Maybe String -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
     join $ withLock lock $ do
@@ -199,14 +230,6 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                                       | otherwise -> return False
             return $ return ()
     where
-        (#=) :: Id -> (Key, Status) -> IO Status
-        i #= (k,v) = do
-            s <- readIORef status
-            writeIORef' status $ Map.insert i (k,v) s
-            diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
-            return v
-
-        atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
         out k r b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
 
         -- Rules for each eval* function
@@ -228,23 +251,8 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                         , Just True /= fmap (specialAlwaysRebuilds.result) r = errorNoApply (typeKey k) (show k) (fmap show r) block
         run stack i k r = do
             w <- newWaiting r
-            addPool pool $ do
-                let reply res = do
-                        ans <- withLock lock $ do
-                            ans <- i #= (k, res)
-                            runWaiting w
-                            return ans
-                        case ans of
-                            Ready r -> do
-                                diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
-                                             " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                journal i (k, Loaded r) -- we leave the DB lock before appending
-                            Error _ -> do
-                                diagnostic $ "result " ++ atom k ++ " = error"
-                                journal i (k, Missing)
-                            _ -> return ()
-                runKey k r (addStack i k stack) step reply
-            i #= (k, w)
+            updateStatus database i (k, w)
+            addPool pool $ runKey k r (addStack i k stack) step (reportResult database i k)
 
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
         check stack i k r [] = do
@@ -253,7 +261,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                   let r' = r{result=s}
                   addPool pool $ journal i (k, Loaded r') -- leave DB lock before appending
                   continue r'
-                continue r = out k r True >> i #= (k, Ready r)
+                continue r = out k r True >> updateStatus database i (k, Ready r)
             case ar of
                 Rebuild -> out k r False >> run stack i k (Just r)
                 Continue -> continue r
@@ -268,6 +276,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                 check stack i k r rest
              else do
                 self <- newWaiting $ Just r
+                updateStatus database i (k, self)
                 waitFor ws $ \finish d -> do
                     s <- readIORef status
                     let buildIt = do
@@ -286,7 +295,6 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                                     else afterWaiting res $ runWaiting self
                                 return True
                             | otherwise -> return False
-                i #= (k, self)
 
 
 ---------------------------------------------------------------------
