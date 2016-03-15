@@ -38,6 +38,7 @@ Shake is used by lots of companies, but only a few have declared so publicly.
 * [Keystone Tower Systems](http://keystonetowersystems.com/) has a robotic welder with a Shake build system plus Haskell code running in the control system, as mentioned in their [tweet](https://twitter.com/eric_oconnor/status/581576757062434816).
 * [FP Complete](https://www.fpcomplete.com/) use Shake to [create Docker images](https://www.fpcomplete.com/blog/2015/08/stack-docker#images).
 * [Genomics Plc](http://www.genomicsplc.com/) use Shake for the build system, their first major use of Haskell in the company.
+* [codebender](https://codebender.cc/) use Shake to manage JavaScript packages that implement Arduino protocols and handle communication between the browser and Arduino devices.
 
 There are several libraries providing pre-made rules for Shake:
 
