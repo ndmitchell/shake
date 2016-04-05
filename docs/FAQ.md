@@ -32,9 +32,9 @@ Not at all - Shake can build any project in any combination of languages. In fac
 
 Shake is a Haskell package focused on providing build-system functionality. Since Shake scripts are written in Haskell, they can easily access other Haskell packages. Most general needs are met by the standard [`base` library](https://hackage.haskell.org/package/base), but a few other useful general functions can be found in [the `extra` library](https://hackage.haskell.org/package/extra) (e.g. `trim` to remove whitespace around strings). For more specific functionality (e.g. parsing, databases, JSON) find a [suitable Haskell library](https://hackage.haskell.org/packages) and use that.
 
-#### Q: Why is there a Shake.exe tool
+#### Q: Why is there a `shake` executable?
 
-If you have a file Shakefile.hs it will run it. If you have a Ninja build system it will run it. Generally, most people write their own Shake executable.
+Most users will write their own Haskell file and compile it to produce an executable that is their build tool. The `shake` executable is there to [run the demo](Demo.md), run [Ninja build files](Ninja.md) and will also run a `Shakefile.hs` if present.
 
 #### Q: What's the history of Shake?
 
