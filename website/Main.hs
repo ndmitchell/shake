@@ -105,7 +105,7 @@ reformat mode code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat mode code 
 reformat mode code (TagClose "code":TagClose "pre":xs) = reformat mode code $ TagClose "pre" : xs
 reformat mode code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat mode code b
     where (a,b) = break (== TagClose t) xs
-          f (TagText x) = code x
+          f (TagText x) | TagComment " nosyntax " `notElem` a = code x
           f x = [x]
 reformat mode code (TagClose x:xs) | x `elem` ["p","pre","li","ol","ul","h1","h2","h3","h4","h5","h6"] =
     TagClose x : TagText "\n" : reformat mode code xs

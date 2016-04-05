@@ -7,7 +7,7 @@ To get started with Shake, you need to:
 * Run `shake --demo`, which should produce something similar to the trace below.
 
 <pre>
-<b>% Welcome to the Shake v1.0 demo mode!
+<!-- nosyntax --><b>% Welcome to the Shake v1.0 demo mode!
 % Detecting machine configuration... done
 &#32;
 % The Shake demo uses an empty directory, OK to use:
