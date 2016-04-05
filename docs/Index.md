@@ -11,7 +11,7 @@ Large build systems written using Shake tend to be significantly shorter and sim
 
 ## Using Shake
 
-To try Shake you need to install the [Haskell Platform](https://www.haskell.org/platform/), then type `cabal update && cabal install shake`, then run `shake --demo`. The final step will create a sample Shake build system and run it (you should see [this output](Demo.md)).
+To try Shake you need to install the [Haskell Stack](http://haskellstack.org/), then type `stack install shake`, then run `stack exec -- shake --demo`. The final step will create a sample Shake build system and run it (you should see [this output](Demo.md)).
 
 To write your own Shake build system, read the [user manual](Manual.md) and refer to the [API documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html). Shake build systems are [Haskell](https://haskell.org/) programs, but can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
 
