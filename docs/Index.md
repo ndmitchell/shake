@@ -2,10 +2,10 @@
 
 * **A build system** - an alternative to make, Scons, Ant etc.
 * **Reliable and robust** - having been relied on commercially for over five years.
-* **Powerful dependencies** - letting you express the problem precisely and directly.
+* **Powerful** - letting you express the problem precisely and directly.
 * **Fast to run** - both to build from scratch and to rebuild.
 
-Large build systems written using Shake tend to be significantly shorter and simpler, while also running faster. If your project can use a canned build system (e.g. Visual Studio, cabal) do that; if your project is very simple use a Makefile; otherwise use Shake.
+Large build systems written using Shake tend to be significantly simpler, while also running faster. If your project can use a canned build system (e.g. Visual Studio, cabal) do that; if your project is very simple use a Makefile; otherwise use Shake.
 
 [Click to read about why you should use Shake.](Why.md)
 
