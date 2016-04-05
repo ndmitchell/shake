@@ -1,12 +1,8 @@
 # FAQ
 
-#### Q: What's the main source of documentation?
+#### Q: Where's the documentation?
 
-The main documentation is the [user manual](Manual.md#readme), which also serves as a tutorial.
-
-#### Q: Any other documentation?
-
-After the user manual, the following pages may be useful:
+The main documentation is the [user manual](Manual.md#readme), which also serves as a tutorial. After the user manual, the following pages may be useful:
 
 * [Function documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) - a list of the functions available in Shake, with individual documentation/examples about each.
 * [FAQ](FAQ.md) - which answers common questions.
@@ -20,50 +16,27 @@ Shake is suitable for all sizes of build systems, from a simple C project to a h
 * [Large frequently changing build systems](Large.md#readme) - for large build systems, it is useful to split the build system interpreter and metadata apart, making changes to the Haskell build system comparatively rare.
 -->
 
+Much of the theory behind Shake is covered in [a conference paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by [this video](https://www.youtube.com/xYCPpXVlqFM).
+
 If you have any further questions:
 
 * [Ask on StackOverflow](https://stackoverflow.com/questions/tagged/shake-build-system), using the tag `shake-build-system`.
 * [Email us](https://groups.google.com/forum/?fromgroups#!forum/shake-build-system) for any questions/bugs/thoughts on Shake. If you need more information and aren't sure where to start, use the mailing list.
 
-#### Q: Where are functions for trimming lines?
-
-Shake is a Haskell package focused on providing build-system functionality. Since Shake scripts are written in Haskell, they can easily access other Haskell packages. Most general needs are met by the standard [`base` library](https://hackage.haskell.org/package/base), but a few other useful general functions can be found in [the `extra` library](https://hackage.haskell.org/package/extra), including `trim`. For more specific functionality (e.g. parsing, databases, JSON) find a suitable Haskell library and use that.
 
 #### Q: Is Shake limited to building Haskell?
 
-Not at all - Shake can build any project in any combination of languages. In fact, Shake isn't typically necessary for vanilla Haskell projects, as you can use [`cabal`](https://haskell.org/cabal) or [`stack`](https://stackage.org/). Shake is often used for building C/C++, Docker containers and Javascript/HTML/CSS projects.
+Not at all - Shake can build any project in any combination of languages. In fact, Shake isn't typically necessary for vanilla Haskell projects, as you can use [`cabal`](https://haskell.org/cabal) or [`stack`](http://haskellstack.org/). Shake is often used for building C/C++, Docker containers and Javascript/HTML/CSS projects.
+
+#### Q: Where are functions for string manipulation?
+
+Shake is a Haskell package focused on providing build-system functionality. Since Shake scripts are written in Haskell, they can easily access other Haskell packages. Most general needs are met by the standard [`base` library](https://hackage.haskell.org/package/base), but a few other useful general functions can be found in [the `extra` library](https://hackage.haskell.org/package/extra) (e.g. `trim` to remove whitespace around strings). For more specific functionality (e.g. parsing, databases, JSON) find a [suitable Haskell library](https://hackage.haskell.org/packages) and use that.
 
 #### Q: Why is there a Shake.exe tool
 
 If you have a file Shakefile.hs it will run it. If you have a Ninja build system it will run it. Generally, most people write their own Shake executable.
 
-This page gives a technical summary of Shake, some of the philosophy behind Shake today, and also some of the history. The information might be interesting, but not necessarily useful.
-
-## Technical Details
-
-Shake build systems are Haskell programs that make heavy use of the `shake` library. While Shake build systems are Haskell programs, they can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means. The main technical innovations over other build systems are:
-
-* A Haskell domain-specific language, meaning you can reuse the Haskell packaging/abstraction mechanisms.
-* [Monadic dependencies](http://neilmitchell.blogspot.co.uk/2014/07/applicative-vs-monadic-build-systems.html), allowing new dependencies to be discovered after examining previous dependencies.
-* Polymorphic dependencies, allowing dependencies on things other than files.
-* Dependencies that rebuild but don't change don't cause more things to rebuild.
-
-Much of the theory behind Shake is covered in [a conference paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by the following video:
-
-<center>
-<iframe width="420" height="315" src="https://www.youtube.com/embed/xYCPpXVlqFM" frameborder="0" allowfullscreen>
-</iframe>
-</center>
-
-## Philosophy
-
-Shake is designed to give the user lots of power. The idea is to make it easy to express things directly and clearly, without having to "encode" the problem in a way the build system can understand. Hopefully by expressing things directly, the result is more likely to do what you expect, and consequently be more robust.
-
-On top of that power, we want build systems to be fast. The hope is that expressing things clearly lets the build system access all the information and thus go faster, but sometimes that doesn't work out. Where speed and power are in conflict, we try and tread a delicate line.
-
-Finally, a lot of attention has been given to the engineering and code quality. Shake is well engineered, with a comprehensive test suite and good test coverage.
-
-## History
+#### Q: What's the history of Shake?
 
 I ([Neil Mitchell](http://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
 
