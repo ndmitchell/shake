@@ -39,6 +39,12 @@ Most users will write their own Haskell file and compile it to produce an execut
 
 No. If two patterns overlap for a file being built it will result in a runtime error - you cannot have a pattern for `*.txt`, and another for `foo.*`, and then build a file named `foo.txt`. For objects that typically share the same extension (e.g. C and Haskell both produce `.o` objects), either disambiguate with a different extension (e.g. `.c.o` and `.hs.o`), or different directory (e.g. `obj/c/**/.o` and `obj/hs/**.o`). For more information, including ways to enable overlap and set priorities, see `%>`.
 
+#### Q: Why do multiple calls to `need` run sequentially? Are `Applicative` actions run in parallel?
+
+In Shake, `need xs >> need ys` will build `xs` in parallel, then afterwards build `ys` in parallel. The same is true of `need xs *> need ys`, where `*>` is the applicative equivalent of `>>`. In contrast, [Haxl](https://hackage.haskell.org/package/haxl) will execute both arguments to `*>` in parallel. For Shake, you are encouraged to merge adjacent `need` operations (e.g. `need (xs++ys)`), and where that is not possible (e.g. when using `askOracle`) use `parallel` explicitly.
+
+Shake _could_ follow the Haxl approach, but does not, mainly because they are targeting different problems. In Haxl, the operations are typically read-only, and any single step is likely to involve lots of operations. In contrast, with Shake the operations definitely change the file system, and there are typically only one or two per rule. Consequently, Shake opts for an explicit approach, rather than allow users to use `*>` (and then inevitably add a comment because its an unusual thing to do).
+
 #### Q: What's the history of Shake?
 
 I ([Neil Mitchell](http://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
