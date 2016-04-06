@@ -15,7 +15,7 @@ Shake is suitable for all sizes of build systems, from a simple C project to a h
 * [Large frequently changing build systems](Large.md#readme) - for large build systems, it is useful to split the build system interpreter and metadata apart, making changes to the Haskell build system comparatively rare.
 -->
 
-Much of the theory behind Shake is covered in [a conference paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by [this video](https://www.youtube.com/xYCPpXVlqFM).
+Much of the theory behind Shake is covered in [a conference paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by [this video](https://www.youtube.com/xYCPpXVlqFM) ([slides](http://ndmitchell.com/downloads/slides-shake_before_building-10_sep_2012.pdf)). Since then I've given videoed talks on [small worked examples](http://www.infoq.com/presentations/shake) ([slides](http://ndmitchell.com/downloads/slides-building_stuff_with_shake-20_nov_2014.pdf)) and [how to structure large Shake systems](https://skillsmatter.com/skillscasts/6548-defining-your-own-build-system-with-shake) ([slides](http://ndmitchell.com/downloads/slides-defining_your_own_build_system_with_shake-09_oct_2015.pdf)).
 
 If you have any further questions:
 
