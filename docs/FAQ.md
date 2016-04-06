@@ -29,7 +29,7 @@ Not at all - Shake can build any project in any combination of languages. In fac
 
 #### Q: Where are functions for string manipulation?
 
-Shake is a Haskell package focused on providing build-system functionality. Since Shake scripts are written in Haskell, they can easily access other Haskell packages. Most general needs are met by the standard [`base` library](https://hackage.haskell.org/package/base), but a few other useful general functions can be found in [the `extra` library](https://hackage.haskell.org/package/extra) (e.g. `trim` to remove whitespace around strings). For more specific functionality (e.g. parsing, databases, JSON) find a [suitable Haskell library](https://hackage.haskell.org/packages) and use that.
+Shake is a Haskell package focused on providing build-system functionality. Since Shake scripts are written in Haskell, they can easily access other Haskell packages. Most general needs are met by the standard [`base` library](https://hackage.haskell.org/package/base), but a few other useful general functions can be found in [the `extra` library](https://hackage.haskell.org/package/extra) (e.g. `trim` and `replace`). For more specific functionality (e.g. parsing, databases, JSON) find a [suitable Haskell library](https://hackage.haskell.org/packages) and use that.
 
 #### Q: Why is there a `shake` executable?
 
