@@ -30,7 +30,7 @@ resolve file = do
         f _ ("module":modu:_) = (fix modu, Just (modu, link modu "" modu))
         f modu (('(':x):rest) = f modu $ init x : rest
         f modu (('[':x):rest) = f modu $ init x : rest
-        f modu (x:"::":_) = (modu, Just (x, link modu x x))
+        f modu (x:"::":_) | x /= "*>" = (modu, Just (x, link modu x x))
         f modu _ = (modu, Nothing)
 
         fix "Development.Shake.Command" = "Development.Shake"
