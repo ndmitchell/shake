@@ -332,9 +332,9 @@ There is a performance penalty for building with `--lint`, but it is typically s
 
 <span class="target" id="profiling"></span>
 
-#### Profiling
+#### Profiling and optimisation
 
-Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. For a full explanation of how to profile a build system see [the profiling page](Profiling.md).
+Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. For a full explanation of how to profile and optimise a build system, including getting accurate timings and using Haskell profiling, see [the profiling and optimisation page](Profiling.md).
 
 #### Tracing and debugging
 
