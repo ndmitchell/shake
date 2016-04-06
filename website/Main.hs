@@ -38,12 +38,13 @@ main = do
     files <- getDirectoryContents "../docs"
     code <- code "../dist/doc/html/shake/shake.txt"
     skeleton <- skeleton mode "parts" "output/index.css"
-    forM_ files $ \file -> do
-        when (takeExtension file == ".md") $ do
+    forM_ files $ \file -> case takeExtension file of
+        ".md" -> do
             putChar '.'
             p <- readPage mode code $ "../docs" </> file
-            skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p 
-    copyFile "../docs/shake-progress.png" "output/shake-progress.png"
+            skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p
+        ".png" -> copyFile ("../docs" </> file) ("output" </> file)
+        _ -> return ()
     copyFile "parts/favicon.ico" "output/favicon.ico"
     putStrLn " done"
 
