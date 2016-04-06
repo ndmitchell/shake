@@ -35,6 +35,10 @@ Shake is a Haskell package focused on providing build-system functionality. Sinc
 
 Most users will write their own Haskell file and compile it to produce an executable that is their build tool. The `shake` executable is there to [run the demo](Demo.md), run [Ninja build files](Ninja.md) and will also run a `Shakefile.hs` if present.
 
+#### Q: Can file patterns overlap?
+
+No. If two patterns overlap for a file being built it will result in a runtime error - you cannot have a pattern for `*.txt`, and another for `foo.*`, and then build a file named `foo.txt`. For objects that typically share the same extension (e.g. C and Haskell both produce `.o` objects), either disambiguate with a different extension (e.g. `.c.o` and `.hs.o`), or different directory (e.g. `obj/c/**/.o` and `obj/hs/**.o`). For more information, including ways to enable overlap and set priorities, see `*>`.
+
 #### Q: What's the history of Shake?
 
 I ([Neil Mitchell](http://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
