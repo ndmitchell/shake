@@ -5,8 +5,8 @@
 The main documentation is the [user manual](Manual.md#readme), which also serves as a tutorial. After the user manual, the following pages may be useful:
 
 * [Function documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) - a list of the functions available in Shake, with individual documentation/examples about each.
-* [Includes](Includes.md) - how to deal with include files, import statements and other dependencies between files.
-* [Profiling](Profiling.md) - how to speed up an existing Shake build system.
+* [Includes](Includes.md) - how to deal with `#include` files, import statements and other dependencies between files.
+* [Profiling and optimisation](Profiling.md) - how to speed up an existing Shake build system.
 * [Blog posts](http://neilmitchell.blogspot.co.uk/search/label/shake) - sporadic postings about ongoing development work or other Shake-related thoughts.
 
 <!--
