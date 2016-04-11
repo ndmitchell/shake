@@ -4,7 +4,7 @@ This page discusses how to profile and optimise a Shake-based build system. In g
 
 Before doing any performance investigation, make sure you are passing a suitable parallelism flag (`-j` to automatically determine parallelism, `-j8` for 8 threads). Note also that Shake uses random scheduling, which offers a significant speedup by avoiding worst-case behaviour, but does make reproducing numbers harder than it would otherwise be.
 
-Shake features a number of different profiling tools, each capable of investigating different aspects of performance, which we now discuss.
+Shake features a number of different profiling tools, each capable of investigating different aspects of performance, which we now discuss. With all uses of `--profile`, to investigate the previous run pass `--no-build`.
 
 ## Console profile reports
 
@@ -20,11 +20,11 @@ The simplest way to view the performance of a build is to pass `--profile=-` whi
 * Last run gave an average parallelism of 3.12 times over 1m05s.
 </pre>
 
-To see the report for the previous run pass `--no-build`. Looking at the information above:
+Looking at the information above:
 
 * We have executed the build 7 times since we last wiped the Shake database (typically with a `clean` command).
 * There are 466 rules, which includes things like files, oracles and anything else that Shake tracks. In the the run 146 of them required rebuilding because they were dirty, or are always run (e.g. oracles).
-* If you were to run the build single threaded at `-j1`, ignoring any machine contention, it would take 4 minutes 53 seconds. Out of that, 4m43s was captured by `traced` commands, typically running `cmd` - so teh remaining 10s is probably Shake overheads and executing your Haskell code.
+* If you were to run the build single threaded at `-j1`, ignoring any machine contention, it would take 4 minutes 53 seconds. Out of that, 4m43s was captured by `traced` commands, typically running `cmd` - so the remaining 10s is probably Shake overheads and executing your Haskell code.
 * The longest single rule is the one to build `Development/Make/Rules.o`, which takes 10.3s, and the longest traced command is running `ghc` for 10.1s. It's probably a good guess that `Rules.o` was the one running that longest `ghc`.
 * In the last run it took 1m05s, and in that time we had an average of 3.12 traced commands running at a time. Assuming we passed `-j4` then we're doing reasonable at getting parallelism.
 
@@ -71,13 +71,9 @@ A useful step to understand performance of the zero build is to add a `putStrLn`
 
 ## HTML profile reports
 
-Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. There is a help page included in the profiling output, and a [profiling tutorial/demo](https://cdn.rawgit.com/ndmitchell/shake/35fbe03c8d3bafeae17b58af89497ff3fdd54b22/html/demo.html).
+In order to explore performance of the build system in greater detail you can use the HTML profile reports. To generate an HTML report, run `build --profile`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. There is a help page included in the profiling output, and a [profiling tutorial/demo](https://cdn.rawgit.com/ndmitchell/shake/35fbe03c8d3bafeae17b58af89497ff3fdd54b22/html/demo.html).
 
-To view profiling information for the _previous_ build, you can run `build --no-build --report`. This feature is useful if you have a build execution where a file unexpectedly rebuilds, you can generate a profiling report afterwards and see why. To generate a lightweight report (about 5 lines) printed to the console run `build --report=-`.
-
-Given the time is in want, you may get more out of Shake profiling. Pass --profile=- to get a brief profile summary, and --profile=profile.html to generate a file listing what Shake is doing. Also doing --verbose (up to 3 times) will give you increasingly detailed levels of what Shake is doing. That should let you find out if something is running, or is paused and waiting.
-
-You can also get all the raw information in JSON by specifying `--report=output.json`.
+You can also get all the raw information in JSON format by specifying `--profile=output.json`.
 
 ## Haskell profiling
 
@@ -89,8 +85,6 @@ You may find that you get better profiling without -I0 - it's certainly a flag t
 
 ## Chrome traces
 
-Before 
-
-Run `--profile=report.trace`. Navigate in your browser to `chrome://tracing/`.
+The final profiling mode lets you trace what happened. To generate a report run `--profile=report.trace`. The resulting `report.trace` file can be opened in Google Chrome by navigating to the `chrome://tracing/` page and hitting 'Load'. The process 0 section shows which rules are running, while the process 1 shows which commands are running. Note that process 0 shows the time between a rule starting and finishing, and does not display time the rule was suspended waiting for its dependents.
 
 ![](profile-trace.png)
