@@ -53,6 +53,9 @@ main = do
             putStrLn =<< readFile "build/.ninja_log"
             ninjaZero <- cmd "../nin -j3 -d stats"
 
+            cmd "../nin -t clean"
+            shakeFull <- cmd "shake -j3 --verbose"
+
             -- time Shake
             cmd "../nin -t clean"
             shakeFull <- cmd "shake -j3 --quiet --timings"
