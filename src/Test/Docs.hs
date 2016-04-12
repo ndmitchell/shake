@@ -64,10 +64,11 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"import Data.ByteString(ByteString)"
             ,"import Data.Char"
             ,"import Data.Data"
-            ,"import Data.List"
+            ,"import Data.List.Extra"
+            ,"import System.Time.Extra"
             ,"import Data.Maybe"
             ,"import Data.Monoid"
-            ,"import Development.Shake"
+            ,"import Development.Shake hiding ((*>))"
             ,"import Development.Shake.Classes"
             ,"import Development.Shake.Rule hiding (trackAllow)"
             ,"import Development.Shake.Util"
@@ -77,6 +78,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"import qualified System.Directory"
             ,"import System.Process"
             ,"import System.Exit"
+            ,"import Control.Applicative"
             ,"import Control.Monad.IO.Class"
             ,"import System.IO"] ++
             ["import " ++ replace "_" "." (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
@@ -102,6 +104,8 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"myVariable = ()"
             ,"instance Eq (OptDescr a)"
             ,"(foo,bar,baz) = undefined"
+            ,"xs = []"
+            ,"ys = []"
             ,"out = \"\""
             ,"str1 = \"\""
             ,"str2 = \"\""
@@ -249,7 +253,7 @@ types = words $
     "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
     "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
-    "NFData Binary Hashable Eq Typeable Show " ++
+    "NFData Binary Hashable Eq Typeable Show Applicative " ++
     "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep"
 
 -- | Duplicated identifiers which require renaming
@@ -291,8 +295,8 @@ whitelist x | elem x $ words $
     "/usr/special /usr/special/userbinary " ++
     "Hidden extension xterm main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let linkFlags temp code out err " ++
-    "_shake _shake/build manual " ++
-    "docs/manual _build _build/run depfile " ++
+    "_shake _shake/build manual chrome://tracing/ " ++
+    "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> "
     = True
