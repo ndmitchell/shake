@@ -10,10 +10,11 @@ module Development.Shake.Core(
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     newCache, newCacheIO,
-    unsafeExtraThread,
+    unsafeExtraThread, unsafeAllowApply,
     parallel,
+    orderOnlyAction,
     -- Internal stuff
-    runAfter, unsafeIgnoreDependencies,
+    runAfter
     ) where
 
 import Control.Exception.Extra
@@ -489,20 +490,21 @@ runAfter op = do
 --   This function requires that appropriate rules have been added with 'rule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: Rule key value => [key] -> Action [value]
-apply = f -- Don't short-circuit [] as we still want error messages
-    where
-        -- We don't want the forall in the Haddock docs
-        f :: forall key value . Rule key value => [key] -> Action [value]
-        f ks = do
-            let tk = typeOf (err "apply key" :: key)
-                tv = typeOf (err "apply type" :: value)
-            Global{..} <- Action getRO
-            block <- Action $ getsRW localBlockApply
-            whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
-            case Map.lookup tk globalRules of
-                Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-                Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
-                _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
+apply = applyForall
+
+-- We don't want the forall in the Haddock docs
+-- Don't short-circuit [] as we still want error messages
+applyForall :: forall key value . Rule key value => [key] -> Action [value]
+applyForall ks = do
+    let tk = typeOf (err "apply key" :: key)
+        tv = typeOf (err "apply type" :: value)
+    Global{..} <- Action getRO
+    block <- Action $ getsRW localBlockApply
+    whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
+    case Map.lookup tk globalRules of
+        Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
+        Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
+        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
 applyKeyValue :: [Key] -> Action [Value]
@@ -711,14 +713,14 @@ trackChange key = do
 
 -- | Allow any matching key to violate the tracking rules.
 trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
-trackAllow test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
-    where
-        -- We don't want the forall in the Haddock docs
-        arrow1Type :: forall a b . Typeable a => (a -> b) -> TypeRep
-        arrow1Type _ = typeOf (err "trackAllow" :: a)
+trackAllow = trackAllowForall
 
-        ty = arrow1Type test
-        f k = typeKey k == ty && test (fromKey k)
+-- We don't want the forall in the Haddock docs
+trackAllowForall :: forall key . ShakeValue key => (key -> Bool) -> Action ()
+trackAllowForall test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
+    where
+        tk = typeOf (err "trackAllow key" :: key)
+        f k = typeKey k == tk && test (fromKey k)
 
 
 ---------------------------------------------------------------------
@@ -789,11 +791,15 @@ newResource name mx = liftIO $ newResourceIO name mx
 newThrottle :: String -> Int -> Double -> Rules Resource
 newThrottle name count period = liftIO $ newThrottleIO name count period
 
+unsafeAllowApply :: Action a -> Action a
+unsafeAllowApply  = applyBlockedBy Nothing
 
 blockApply :: String -> Action a -> Action a
-blockApply msg = Action . unmodifyRW f . fromAction
-    where f s0 = (s0{localBlockApply=Just msg}, \s -> s{localBlockApply=localBlockApply s0})
+blockApply = applyBlockedBy . Just
 
+applyBlockedBy :: Maybe String -> Action a -> Action a
+applyBlockedBy reason = Action . unmodifyRW f . fromAction
+    where f s0 = (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
 --   You cannot depend on a rule (e.g. 'need') while a resource is held.
@@ -886,7 +892,8 @@ newCache = liftIO . newCacheIO
 
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
---   on remote machines using barely any local CPU resources. Unsafe as it allows the 'shakeThreads' limit to be exceeded.
+--   on remote machines using barely any local CPU resources.
+--   Unsafe as it allows the 'shakeThreads' limit to be exceeded.
 --   You cannot depend on a rule (e.g. 'need') while the extra thread is executing.
 --   If the rule blocks (e.g. calls 'withResource') then the extra thread may be used by some other action.
 --   Only really suitable for calling 'cmd'/'command'.
@@ -926,9 +933,10 @@ parallel acts = Action $ do
                     Just i -> return $ Just $ i - 1
 
 
--- | Ignore any dependencies added by an action.
-unsafeIgnoreDependencies :: Action a -> Action a
-unsafeIgnoreDependencies act = Action $ do
+-- | Run an action but do not depend on anything the action uses.
+--   A more general version of 'orderOnly'.
+orderOnlyAction :: Action a -> Action a
+orderOnlyAction act = Action $ do
     pre <- getsRW localDepends
     res <- fromAction act
     modifyRW $ \s -> s{localDepends=pre}

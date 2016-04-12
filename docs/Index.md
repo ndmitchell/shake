@@ -2,20 +2,20 @@
 
 * **A build system** - an alternative to make, Scons, Ant etc.
 * **Reliable and robust** - having been relied on commercially for over five years.
-* **Powerful dependencies** - letting you express the problem precisely and directly.
+* **Powerful** - letting you express the problem precisely and directly.
 * **Fast to run** - both to build from scratch and to rebuild.
 
-Large build systems written using Shake tend to be significantly shorter and simpler, while also running faster. If your project can use a canned build system (e.g. Visual Studio, cabal) do that; if your project is very simple use a Makefile; otherwise use Shake.
+Large build systems written using Shake tend to be significantly simpler, while also running faster. If your project can use a canned build system (e.g. Visual Studio, cabal) do that; if your project is very simple use a Makefile; otherwise use Shake.
 
 [Click to read about why you should use Shake.](Why.md)
 
 ## Using Shake
 
-To try Shake you need to install the [Haskell Platform](https://www.haskell.org/platform/), then type `cabal update && cabal install shake`, then run `shake --demo`. The final step will create a sample Shake build system and run it (you should see [this output](Demo.md)).
+To try Shake you need to install the [Haskell Stack](http://haskellstack.org/), then type `stack install shake`, then run `stack exec -- shake --demo`. The final step will create a sample Shake build system and run it (you should see [this output](Demo.md)).
 
-To write your own Shake build system, read the [user manual](Manual.md) and refer to the [API documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html). Shake build systems are [Haskell](https://haskell.org/) programs, but can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
+To write your own Shake build system, read the [user manual](Manual.md) and refer to the [API documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html). Further documentation on specific topics, including more examples, is available from [the FAQ](FAQ.md). Shake build systems are [Haskell](https://haskell.org/) programs, but can be treated as a powerful version of make with slightly funny syntax. The build system requires no significant Haskell knowledge, and is designed so that most features are accessible by learning the "Shake syntax", without any appreciation of what the underlying Haskell means.
 
-[Click to read about the background and approach of Shake.](About.md)
+[Click to read the user manual.](Manual.md)
 
 ## Asking questions
 
@@ -25,7 +25,7 @@ You can ask questions on [StackOverflow](https://stackoverflow.com/questions/tag
 
 ## What else?
 
-Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](http://www.cmake.org/) and [Meson](http://mesonbuild.com/). Shake can [predict completion time](Manual.md#progress), [profile build systems](Manual.md#profiling) and [sanity check builds](Manual.md#lint). Shake is based on a robust underlying theory from [this academic paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf). Shake is an open source project under the [BSD license](https://github.com/ndmitchell/shake/blob/master/LICENSE) hosted on [GitHub](https://github.com/ndmitchell/shake/).
+Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](http://www.cmake.org/) and [Meson](http://mesonbuild.com/). Shake can [predict completion time](Manual.md#progress), [profile build systems](Manual.md#profiling) and [sanity check builds](Manual.md#lint). Shake is based on a robust underlying theory from [this academic paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf). Shake is an open source project under the [BSD license](https://github.com/ndmitchell/shake/blob/master/LICENSE) hosted on [GitHub](https://github.com/ndmitchell/shake/) with a [range of contributors](https://github.com/ndmitchell/shake/graphs).
 
 ## Who uses Shake?
 

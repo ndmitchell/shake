@@ -27,19 +27,23 @@ resolve file = do
     let info = catMaybes $ snd $ mapAccumL f "" $ map words $ lines src
     return $ \x -> fromMaybe [TagText x] $ lookup x info
     where
-        f _ ("module":modu:_) = (fix modu, Just (modu, link modu "" modu))
+        f _ ("module":modu:_) = (fix modu, Just (modu, link modu "" "" modu))
         f modu (('(':x):rest) = f modu $ init x : rest
         f modu (('[':x):rest) = f modu $ init x : rest
-        f modu (x:"::":_) = (modu, Just (x, link modu x x))
+        f modu (x:"::":_) | x /= "*>" = (modu, Just (x, link modu "v" x x))
+        f modu (key:x:_)
+            | key `elem` ["type","data","newtype","class"]
+            , x `notElem` ["Show","Typeable","Binary","Eq","Hashable","NFData"]
+            = (modu, Just (x, link modu "t" x x))
         f modu _ = (modu, Nothing)
 
         fix "Development.Shake.Command" = "Development.Shake"
         fix x = x
 
-        link modu name inner = [TagOpen "a" [("href",url)], TagText inner, TagClose "a"]
-            where url = "http://hackage.haskell.org/package/shake/docs/" ++
+        link modu tag name inner = [TagOpen "a" [("href",url)], TagText inner, TagClose "a"]
+            where url = "https://hackage.haskell.org/package/shake/docs/" ++
                         intercalate "-" (wordsBy (== '.') modu) ++ ".html" ++
-                        (if name == "" then "" else "#v:" ++ concatMap g name)
+                        (if name == "" then "" else "#" ++ tag ++ ":" ++ concatMap g name)
 
         g x | x `elem` "%*-<>/&?=|~" = "-" ++ show (ord x) ++ "-"
         g x = [x]

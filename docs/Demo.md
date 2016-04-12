@@ -2,12 +2,12 @@
 
 To get started with Shake, you need to:
 
-* Install the [Haskell Platform](https://www.haskell.org/platform/).
-* Type `cabal update && cabal install shake`
-* Run `shake --demo`, which should produce something similar to the trace below.
+* Install the [Haskell Stack](http://haskellstack.org/).
+* Type `stack install shake`
+* Run `stack exec -- shake --demo`, which should produce something similar to the trace below.
 
 <pre>
-<b>% Welcome to the Shake v1.0 demo mode!
+<!-- nosyntax --><b>% Welcome to the Shake v1.0 demo mode!
 % Detecting machine configuration... done
 &#32;
 % The Shake demo uses an empty directory, OK to use:

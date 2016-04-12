@@ -38,12 +38,13 @@ main = do
     files <- getDirectoryContents "../docs"
     code <- code "../dist/doc/html/shake/shake.txt"
     skeleton <- skeleton mode "parts" "output/index.css"
-    forM_ files $ \file -> do
-        when (takeExtension file == ".md") $ do
+    forM_ files $ \file -> case takeExtension file of
+        ".md" -> do
             putChar '.'
             p <- readPage mode code $ "../docs" </> file
-            skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p 
-    copyFile "../docs/shake-progress.png" "output/shake-progress.png"
+            skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p
+        ".png" -> copyFile ("../docs" </> file) ("output" </> file)
+        _ -> return ()
     copyFile "parts/favicon.ico" "output/favicon.ico"
     putStrLn " done"
 
@@ -105,7 +106,11 @@ reformat mode code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat mode code 
 reformat mode code (TagClose "code":TagClose "pre":xs) = reformat mode code $ TagClose "pre" : xs
 reformat mode code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat mode code b
     where (a,b) = break (== TagClose t) xs
-          f (TagText x) = code x
+          skip = TagComment " nosyntax " `elem` a ||
+                 "stack " `isPrefixOf` (innerText a) ||
+                 "shake-" `isPrefixOf` (innerText a) ||
+                 "shake" == innerText a
+          f (TagText x) | not skip = code x
           f x = [x]
 reformat mode code (TagClose x:xs) | x `elem` ["p","pre","li","ol","ul","h1","h2","h3","h4","h5","h6"] =
     TagClose x : TagText "\n" : reformat mode code xs

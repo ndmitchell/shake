@@ -14,6 +14,7 @@ import Data.Maybe
 import Data.Tuple.Extra
 import Control.Applicative
 import Control.Monad.Extra
+import Control.Exception.Extra
 import System.Process
 import System.Exit
 import System.Environment.Extra
@@ -99,7 +100,7 @@ execCommand x = do
     res <- if "@" `isPrefixOf` x then sys $ drop 1 x
            else putNormal x >> sys x
     when (res /= ExitSuccess) $
-        error $ "System command failed: " ++ x
+        liftIO $ errorIO $ "System command failed: " ++ x
     where sys = quietly . traced (unwords $ take 1 $ words x) . system
 
 

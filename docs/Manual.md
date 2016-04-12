@@ -35,10 +35,9 @@ This build system builds the executable `_build/run` from all C source files in 
 
 To run the example above:
 
-1. Install the [Haskell Platform](https://www.haskell.org/platform/), which provides a Haskell compiler and standard libraries.
-2. Type `cabal update`, to download information about the latest versions of all Haskell packages.
-3. Type `cabal install shake`, to build and install Shake and all its dependencies.
-4. Type `shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
+1. Install the [Haskell Stack](http://haskellstack.org/), which provides a Haskell compiler and package manager.
+3. Type `stack install shake`, to build and install Shake and all its dependencies.
+4. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
 
 ## Basic syntax
 
@@ -333,9 +332,9 @@ There is a performance penalty for building with `--lint`, but it is typically s
 
 <span class="target" id="profiling"></span>
 
-#### Profiling
+#### Profiling and optimisation
 
-Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. For a full explanation of how to profile a build system see [the profiling page](Profiling.md).
+Shake features an advanced profiling feature. To build with profiling run `build --report`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. For a full explanation of how to profile and optimise a build system, including getting accurate timings and using Haskell profiling, see [the profiling and optimisation page](Profiling.md).
 
 #### Tracing and debugging
 

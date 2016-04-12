@@ -101,9 +101,9 @@ instance Binary GetDirectoryQ where
     get = do
         i <- getWord8
         case i of
-            0 -> liftM  GetDir get
-            1 -> liftM2 GetDirFiles get get
-            2 -> liftM  GetDirDirs get
+            0 -> GetDir <$> get
+            1 -> GetDirFiles <$> get <*> get
+            2 -> GetDirDirs <$> get
 
     put (GetDir x) = putWord8 0 >> put x
     put (GetDirFiles x y) = putWord8 1 >> put x >> put y
@@ -252,7 +252,7 @@ getDir GetDir{..} = answer <$> contents dir
 getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
     where f x = IO.doesDirectoryExist $ dir </> x
 
-getDir GetDirFiles{..} = fmap answer $ getDirectoryFilesIO dir pat
+getDir GetDirFiles{..} = answer <$> getDirectoryFilesIO dir pat
 
 
 -- | A version of 'getDirectoryFiles' that is in IO, and thus untracked.

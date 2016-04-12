@@ -3,6 +3,7 @@
 module General.Template(runTemplate) where
 
 import System.FilePath.Posix
+import Control.Exception.Extra
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Char
@@ -37,7 +38,7 @@ runTemplate ask = liftM LBS.unlines . mapM f . LBS.lines
 
         asker o@(splitFileName -> ("lib/",x)) = case lookup x libraries of
             Just act -> liftIO $ LBS.readFile =<< act
-            Nothing -> error $ "Template library, unknown library: " ++ o
+            Nothing -> liftIO $ errorIO $ "Template library, unknown library: " ++ o
         asker x = ask x
 
 

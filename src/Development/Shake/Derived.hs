@@ -10,6 +10,7 @@ module Development.Shake.Derived(
     ) where
 
 import Control.Applicative
+import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Process
@@ -49,7 +50,7 @@ getHashedShakeVersion files = do
 
 checkExitCode :: String -> ExitCode -> Action ()
 checkExitCode _ ExitSuccess = return ()
-checkExitCode cmd (ExitFailure i) = error $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
+checkExitCode cmd (ExitFailure i) = liftIO $ errorIO $ "System command failed (code " ++ show i ++ "):\n" ++ cmd
 
 {-# DEPRECATED system' "Use 'command' or 'cmd'" #-}
 {-# DEPRECATED systemCwd "Use 'command' or 'cmd' with 'Cwd'" #-}

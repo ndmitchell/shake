@@ -159,7 +159,7 @@ commandExplicit funcName oopts results exe args = do
             let reads = ham cwd rs
                 writes = ham cwd ws
             when useAutoDeps $
-                needed reads
+                unsafeAllowApply $ needed reads
             trackRead reads
             trackWrite writes
             return res
@@ -169,7 +169,7 @@ commandExplicit funcName oopts results exe args = do
             pxs <- liftIO $ parseFSAT <$> readFileUTF8' file
             xs <- liftIO $ filterM doesFileExist [x | FSATRead x <- pxs]
             cwd <- liftIO getCurrentDirectory
-            needNorm $ ham cwd xs
+            unsafeAllowApply $ needNorm $ ham cwd xs
             return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
