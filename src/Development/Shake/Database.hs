@@ -275,7 +275,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
         run stack i k r = do
             w <- newWaiting r
             addPool pool $ do
-                let reply res =  do
+                let reply res = do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)
                             runWaiting w
