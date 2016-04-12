@@ -54,7 +54,7 @@ Each line indicates one step of the build - e.g. `shakeArgsWith` is the instant 
 * Lint checking only occurs if you pass `--lint` and is the time to execute the final lint checks.
 * Profile report only occurs if you pass `--profile` and is the time to generate the profile information.
 
-The `===` values are a histogram, allowing quick visual identification of where most time was spent.
+The `==` bars are a histogram, allowing quick visual identification of where most time was spent.
 
 ## Console output
 
