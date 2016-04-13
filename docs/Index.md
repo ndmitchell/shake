@@ -7,6 +7,8 @@
 
 Large build systems written using Shake tend to be significantly simpler, while also running faster. If your project can use a canned build system (e.g. Visual Studio, cabal) do that; if your project is very simple use a Makefile; otherwise use Shake.
 
+The original motivation behind the creation of Shake was to allow rules to discover additional dependencies after running previous rules, allowing the build system to generate files and then examine them to determine their dependencies - something that cannot be expressed directly in most build systems. However, now Shake is a suitable build tool even if you do not require that feature.
+
 [Click to read about why you should use Shake.](Why.md)
 
 ## Using Shake
