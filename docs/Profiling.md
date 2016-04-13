@@ -37,13 +37,13 @@ While the console profile report focuses on what your build system did, the timi
 <pre>
 <!-- nosyntax -->shakeArgsWith                       0.000s    0%
 Function shake                      0.004s    0%
-Database read                       0.021s    0%
+Database read                       0.021s    1%
 With database                       0.002s    0%
-Running rules                     101.917s   99%  =========================
+Running rules                       1.917s   92%  =======================
 Pool finished (32 threads, 4 max)   0.000s    0%
-Lint checking                       0.081s    0%
-Profile report                      0.062s    0%
-Total                             102.087s  100%
+Lint checking                       0.081s    4%  =
+Profile report                      0.062s    3%  =
+Total                               2.087s  100%
 </pre>
 
 Each line indicates one step of the build - e.g. `shakeArgsWith` is the instant the first Shake function is called, and the `0.000s` measures the time until the next step - when the underlying `shake` function is called - and covers the time required to parse the command line arguments. The only steps that are expected to take a meaningful amount of time are:
