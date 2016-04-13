@@ -107,10 +107,7 @@ reformat mode code (TagOpen "pre" []:TagOpen "code" []:xs) = reformat mode code 
 reformat mode code (TagClose "code":TagClose "pre":xs) = reformat mode code $ TagClose "pre" : xs
 reformat mode code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : concatMap f a ++ reformat mode code b
     where (a,b) = break (== TagClose t) xs
-          skip = TagComment " nosyntax " `elem` a ||
-                 "stack " `isPrefixOf` (innerText a) ||
-                 "shake-" `isPrefixOf` (innerText a) ||
-                 "shake" == innerText a
+          skip = TagComment " nosyntax " `elem` a || notCode (innerText a)
           f (TagText x) | not skip = code x
           f x = [x]
 reformat mode code (TagClose x:xs) | x `elem` ["p","pre","li","ol","ul","h1","h2","h3","h4","h5","h6"] =
@@ -119,6 +116,15 @@ reformat mode code (x:xs) = x : reformat mode code xs
 reformat mode code [] = []
 
 noReadme x = fromMaybe x $ stripSuffix "#readme" x
+
+notCode :: String -> Bool
+notCode x =
+    "stack " `isPrefixOf` x ||
+    "shake-" `isPrefixOf` x ||
+    ("--" `isPrefixOf` x && length (lines x) == 1) ||
+    x == "shake" ||
+    (let t = takeExtension x in "." `isPrefixOf` t && all isAlpha (drop 1 t))
+
 
 ---------------------------------------------------------------------
 -- POPULATE A SKELETON
