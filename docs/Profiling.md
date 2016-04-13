@@ -77,11 +77,15 @@ You can also get all the raw information in JSON format by specifying `--profile
 
 ## Haskell profiling
 
-generate a Haskell profile.
+The Shake profiling groups time by rule names and phases of the build, but if you want to group by implementation code the Haskell profiling can be useful. Since Shake programs are normal Haskell, the standard profiling steps can be used, roughly:
 
-You can use the normal Haskell profiler
+* Compile your program with `-rtsopts -auto-all -caf-all`.
+* Run with `+RTS -p -RTS`.
+* View the resulting `.prof` file.
 
-You may find that you get better profiling without -I0 - it's certainly a flag that has messed up profiling in some versions of GHC. Generally it makes Shake performance better to include it, but for profiling it doesn't matter too much.
+In some versions of GHC profiles may generate incorrectly when combined with `-I0`, so you may need to omit that flag.
+
+Often most of the build time will be spent calling out to commands, which can be well profiled with the existing Shake mechanisms, and just contribute noise to the Haskell profiling. By passing `--no-command` you can avoid running any `cmd` calls which don't return any results (return type `Action ()`). If any of your other actions can be similarly avoided you can examine the `shakeRunCommands` flag of `ShakeOptions`.
 
 ## Chrome traces
 
