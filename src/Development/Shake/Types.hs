@@ -143,7 +143,7 @@ data ShakeOptions = ShakeOptions
 --    ,shakeOutputCheck :: Bool
 --        -- ^ Default to 'True'. If a file produced by a rule changes, should you rebuild it.
     ,shakeLiveFiles :: [FilePath]
-        -- ^ Default to '[]'. After the build system completes, write a list of all files which were /live/ in that run,
+        -- ^ Default to @[]@. After the build system completes, write a list of all files which were /live/ in that run,
         --   i.e. those which Shake checked were valid or rebuilt. Produces best answers if nothing rebuilds.
     ,shakeVersionIgnore :: Bool
         -- ^ Defaults to 'False'. Ignore any differences in 'shakeVersion'.
