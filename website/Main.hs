@@ -83,7 +83,8 @@ readPage mode code file = do
         links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "234" =
                 first ([Link{..} | i /= '4'] ++) $ second (prefix++) $ links rest
             where linkTitle = innerText $ takeWhile (/= TagClose linkLevel) xs
-                  linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words linkTitle
+                  linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words $
+                            takeWhile (`notElem` "?.!") $ fromMaybe linkTitle $ stripPrefix "Q: " linkTitle
                   (this,rest) = break (== TagClose linkLevel) xs
                   prefix = [TagOpen "span" [("class","target"),("id",linkKey)],TagClose "span"
                            ,TagOpen linkLevel at,TagOpen "a" [("href",'#':linkKey),("class","anchor")]] ++
