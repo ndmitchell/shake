@@ -54,13 +54,13 @@ main = do
             ninjaZero <- cmd "../nin -j3 -d stats"
 
             cmd "../nin -t clean"
-            shakeFull <- cmd "shake -j3 --verbose"
+            shakeFull <- cmd "shake -j3 --verbose +RTS -I10000"
 
             -- time Shake
             cmd "../nin -t clean"
-            shakeFull <- cmd "shake -j3 --quiet --timings"
+            shakeFull <- cmd "shake -j3 --quiet --timings +RTS -I10000"
             cmd "shake --no-build --report=-"
-            shakeZero <- cmd "shake -j3 --quiet --timings"
+            shakeZero <- cmd "shake -j3 --quiet --timings +RTS -I10000"
 
             -- Diagnostics
             cmd "ls -l .shake* build/.ninja*"
