@@ -266,11 +266,16 @@ isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `el
     where
         validChar x = isAlphaNum x || x `elem` "_./*"
         exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .m .h .c .html .zip " ++
-                       ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits"
+                       ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits .prof"
 
 isCmdFlag :: String -> Bool
-isCmdFlag x = length a >= 1 && length a <= 2 && all (\x -> isAlphaNum x || x `elem` "-=/_") b
+isCmdFlag "+RTS" = True
+isCmdFlag x = length a >= 1 && length a <= 2 && all (\x -> isAlphaNum x || x `elem` "-=/_[]") b
     where (a,b) = span (== '-') x
+
+isCmdFlags :: String -> Bool
+isCmdFlags = all (\x -> let y = fromMaybe x $ stripSuffix "," x in isCmdFlag y || isArg y) . words
+    where isArg = all (\x -> isUpper x || x == '=')
 
 isEnvVar :: String -> Bool
 isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
@@ -284,7 +289,7 @@ isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFil
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
-whitelist x | null x || isFilePath x || all isCmdFlag (words x) || isEnvVar x || isProgram x = True
+whitelist x | null x || isFilePath x || isCmdFlags x || isEnvVar x || isProgram x = True
 whitelist x | elem x $ words $
     "newtype do a q m c x value key os contents clean _make " ++
     ".. /. // \\ //* dir/*/* dir " ++
@@ -295,7 +300,7 @@ whitelist x | elem x $ words $
     "/usr/special /usr/special/userbinary " ++
     "Hidden extension xterm main opts result flagValues argValues " ++
     "HEADERS_DIR /path/to/dir CFLAGS let linkFlags temp code out err " ++
-    "_shake _shake/build manual chrome://tracing/ " ++
+    "_shake _shake/build manual chrome://tracing/ compdb " ++
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> "
