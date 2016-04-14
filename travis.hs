@@ -79,7 +79,7 @@ main = do
 
     createDirectoryIfMissing True "temp"
     withCurrentDirectory "temp" $
-        cmd "shake --demo --keep-going"
+        cmd "shake --demo --keep-going +RTS -I10000"
 
     ghcver <- lookupEnv "GHCVER"
     when (ghcver >= Just "7.6" && ghcver /= Just "head") $ do
