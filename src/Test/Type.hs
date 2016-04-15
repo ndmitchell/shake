@@ -167,7 +167,7 @@ assertException parts act = do
     case res of
         Left err -> let s = show err in forM_ parts $ \p ->
             assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
-        Right _ -> error "Expected an exception but succeeded"
+        Right _ -> error $ "Expected an exception containing " ++ show parts ++ ", but succeeded"
 
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
