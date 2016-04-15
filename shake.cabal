@@ -190,7 +190,8 @@ executable shake
         js-flot,
         transformers >= 0.2,
         extra >= 1.4.3,
-        deepseq >= 1.1
+        deepseq >= 1.1,
+        primitive
 
     if flag(portable)
         cpp-options: -DPORTABLE
