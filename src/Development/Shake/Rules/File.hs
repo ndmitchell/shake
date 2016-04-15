@@ -113,6 +113,10 @@ defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
 --
 --   Usually @need [foo,bar]@ is preferable to @need [foo] >> need [bar]@ as the former allows greater
 --   parallelism, while the latter requires @foo@ to finish building before starting to build @bar@.
+--
+--   This function should not be called with wildcards (e.g. @*.txt@ - use 'getDirectoryFiles' to expand them),
+--   environment variables (e.g. @$HOME@ - use 'getEnv' to expand them) or directories (directories cannot be
+--   tracked directly - track files within the directory instead).
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [FileA]) >> return ()
 
