@@ -57,7 +57,8 @@ test build obj = do
     f True (toNative "foo/bar") "foo/bar"
     f True (toNative "foo/bar") (toNative "foo/bar")
     f True "//*" "/bar"
-    f True "**/*" "/bar"
+    f False "**/*" "/bar"
+    f True "**/*" "bar"
     f True "/bob//foo" "/bob/this/test/foo"
     f True "/bob/**/foo" "/bob/this/test/foo"
     f False "/bob//foo" "bob/this/test/foo"
@@ -116,7 +117,7 @@ test build obj = do
     f False "*//*//*" "x/y"
     f False "*/**/*/**/*" "x/y"
     f True "//*/" "/"
-    f True "**/*/" "/"
+    f False "**/*/" "/"
     f True "*/////" "/"
     f True "*/**/**/" "/"
     f False "b*b*b*//" "bb"
@@ -142,7 +143,6 @@ test build obj = do
     extract "//a.txt" "a.txt" === [""]
     extract "**/a.txt" "a.txt" === [""]
     extract "//a.txt" "/a.txt" === ["/"]
-    extract "**/a.txt" "/a.txt" === ["/"]
     extract "a//b" "a/b" === [""]
     extract "a/**/b" "a/b" === [""]
     extract "a//b" "a/x/b" === ["x/"]

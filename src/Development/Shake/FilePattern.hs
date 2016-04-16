@@ -58,6 +58,7 @@ data Pat = Lit String -- ^ foo
          | Star   -- ^ /*/
          | Skip -- ^ //
          | Skip1 -- ^ //, but must be at least 1 element
+         | Rel -- ^ Does not match absolute path (** = Rel, Skip)
          | Stars String [String] String -- ^ *foo*, prefix (fixed), infix floaters, suffix
                                         -- e.g. *foo*bar = Stars "" ["foo"] "bar"
             deriving (Show,Eq,Ord)
@@ -83,7 +84,7 @@ parse = f False True . lexer
         -- str = I have ever seen a Str go past (equivalent to "can I be satisfied by no paths")
         -- slash = I am either at the start, or my previous character was Slash
         f str slash [] = [Lit "" | slash]
-        f str slash (Str "**":xs) = Skip : f True False xs
+        f str slash (Str "**":xs) = Rel : Skip : f True False xs
         f str slash (Str x:xs) = parseLit x : f True False xs
         f str slash (SlashSlash:Slash:xs) | not str = Skip1 : f str True xs
         f str slash (SlashSlash:xs) = Skip : f str False xs
@@ -107,28 +108,28 @@ internalTest = do
     "/x" # [Lit "",Lit "x"]
     "x/y" # [Lit "x",Lit "y"]
     "//" # [Skip]
-    "**" # [Skip]
+    "**" # [Rel, Skip]
     "//x" # [Skip, Lit "x"]
-    "**/x" # [Skip, Lit "x"]
+    "**/x" # [Rel, Skip, Lit "x"]
     "x//" # [Lit "x", Skip]
-    "x/**" # [Lit "x", Skip]
+    "x/**" # [Lit "x", Rel, Skip]
     "x//y" # [Lit "x",Skip, Lit "y"]
-    "x/**/y" # [Lit "x",Skip, Lit "y"]
+    "x/**/y" # [Lit "x",Rel, Skip, Lit "y"]
     "///" # [Skip1, Lit ""]
-    "**/**" # [Skip,Skip]
-    "**/**/" # [Skip, Skip, Lit ""]
+    "**/**" # [Rel, Skip,Rel, Skip]
+    "**/**/" # [Rel, Skip, Rel, Skip, Lit ""]
     "///x" # [Skip1, Lit "x"]
-    "**/x" # [Skip, Lit "x"]
+    "**/x" # [Rel, Skip, Lit "x"]
     "x///" # [Lit "x", Skip, Lit ""]
-    "x/**/" # [Lit "x", Skip, Lit ""]
+    "x/**/" # [Lit "x", Rel, Skip, Lit ""]
     "x///y" # [Lit "x",Skip, Lit "y"]
-    "x/**/y" # [Lit "x",Skip, Lit "y"]
+    "x/**/y" # [Lit "x",Rel, Skip, Lit "y"]
     "////" # [Skip, Skip]
-    "**/**/**" # [Skip, Skip, Skip]
+    "**/**/**" # [Rel, Skip, Rel, Skip, Rel, Skip]
     "////x" # [Skip, Skip, Lit "x"]
     "x////" # [Lit "x", Skip, Skip]
     "x////y" # [Lit "x",Skip, Skip, Lit "y"]
-    "**//x" # [Skip, Skip, Lit "x"]
+    "**//x" # [Rel, Skip, Skip, Lit "x"]
 
 
 -- | Optimisations that may change the matched expressions
@@ -139,11 +140,15 @@ optimise (Star:Skip:xs) = optimise $ Skip1:xs
 optimise (x:xs) = x : optimise xs
 optimise [] =[]
 
-
+-- | Given a pattern, and a list of path components, return a
+-- list of all matches (for each wildcard in order, what the
+-- wildcard matched.)
 match :: [Pat] -> [String] -> [[String]]
 match (Skip:xs) (y:ys) = map ("":) (match xs (y:ys)) ++ match (Skip1:xs) (y:ys)
 match (Skip1:xs) (y:ys) = [(y++"/"++r):rs | r:rs <- match (Skip:xs) ys]
 match (Skip:xs) [] = map ("":) $ match xs []
+match (Rel:xs) ("":_) = []
+match (Rel:xs) ys = match xs ys
 match (Star:xs) (y:ys) = map (y:) $ match xs ys
 match (Lit x:xs) (y:ys) | x == y = match xs ys
 match (x@Stars{}:xs) (y:ys) | Just rs <- matchStars x y = map (rs ++) $ match xs ys
@@ -174,9 +179,11 @@ matchStars (Stars pre mid post) x = do
 ---
 --- * @*@ matches an entire path component, excluding any separators.
 ---
---- * @\/\/@ matches an arbitrary number of path components.
+--- * @\/\/@ matches an arbitrary number of path components.  At the
+--    beginning of a path, this matches absolute paths.
 --
---  * @**@ as a path component matches an arbitrary number of path components.
+--  * @**@ as a path component matches an arbitrary number of path components,
+--    and, when a prefix, does NOT match absolute paths.
 --    Currently considered experimental.
 ---
 ---   Some examples:
@@ -186,9 +193,13 @@ matchStars (Stars pre mid post) x = do
 --- * @*.c@ matches all @.c@ files in the current directory, so @file.c@ matches,
 ---   but @file.h@ and @dir\/file.c@ don't.
 ---
---- * @\/\/*.c@ matches all @.c@ files in the current directory or its subdirectories,
----   so @file.c@, @dir\/file.c@ and @dir1\/dir2\/file.c@ all match, but @file.h@ and
+--- * @\/\/*.c@ matches all @.c@ files anywhere on the filesystem,
+---   so @file.c@, @dir\/file.c@, @dir1\/dir2\/file.c@ and @/path/to/file.c@ all match, but @file.h@ and
 ---   @dir\/file.h@ don't.
+---
+--- * @**.c@ matches all @.c@ files in the current directory and
+--    directories below it so @file.c@, @dir\/file.c@ and
+--    @dir1\/dir2\/file.c@ match, but @/path/to/file.c@ does not.
 ---
 --- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
 ---   @dir\/two\/file.h@ match, but @file.c@, @one\/dir\/file.c@, @dir\/file.h@
@@ -213,6 +224,7 @@ specials = concatMap f . parse
         f Star = [Star]
         f Skip = [Skip]
         f Skip1 = [Skip]
+        f Rel = []
         f (Stars _ xs _) = replicate (length xs + 1) Star
 
 -- | Is the pattern free from any * and //.
@@ -243,6 +255,7 @@ substitute oms oxs = intercalate "/" $ concat $ snd $ mapAccumL f oms (parse oxs
         f (m:ms) Star = (ms, [m])
         f (m:ms) Skip = (ms, split m)
         f (m:ms) Skip1 = (ms, split m)
+        f ms Rel = (ms, [])
         f ms (Stars pre mid post) = (ms2, [concat $ pre : zipWith (++) ms1 (mid++[post])])
             where (ms1,ms2) = splitAt (length mid + 1) ms
         f _ _ = error $ "Substitution failed into pattern " ++ show oxs ++ " with " ++ show (length oms) ++ " matches, namely " ++ show oms
@@ -276,12 +289,14 @@ walk ps = let ps2 = map (optimise . parse) ps in (any (\p -> isEmpty p || not (n
 next :: [Pat] -> [(Pat, [Pat])]
 next (Skip1:xs) = [(Star,Skip:xs)]
 next (Skip:xs) = (Star,Skip:xs) : next xs
+next (Rel:xs) = next xs
 next (x:xs) = [(x,xs) | not $ null xs]
 next [] = []
 
 final :: [Pat] -> Maybe Pat
 final (Skip:xs) = if isEmpty xs then Just Star else final xs
 final (Skip1:xs) = if isEmpty xs then Just Star else Nothing
+final (Rel:xs) = final xs
 final (x:xs) = if isEmpty xs then Just x else Nothing
 final [] = Nothing
 
