@@ -57,7 +57,7 @@ test build obj = do
     f True (toNative "foo/bar") "foo/bar"
     f True (toNative "foo/bar") (toNative "foo/bar")
     f True "//*" "/bar"
-    f True "**/*" "/bar"
+    f False "**/*" "/bar"
     f True "/bob//foo" "/bob/this/test/foo"
     f True "/bob/**/foo" "/bob/this/test/foo"
     f False "/bob//foo" "bob/this/test/foo"
@@ -71,7 +71,7 @@ test build obj = do
     f True "/a//" "/a"
     f True "/a/**" "/a"
     f True "///a//" "/a"
-    f True "**/a/**" "/a"
+    f False "**/a/**" "/a"
     f False "///" ""
     f True "///" "/"
     f True "/**" "/"
@@ -116,7 +116,7 @@ test build obj = do
     f False "*//*//*" "x/y"
     f False "*/**/*/**/*" "x/y"
     f True "//*/" "/"
-    f True "**/*/" "/"
+    f False "**/*/" "/"
     f True "*/////" "/"
     f True "*/**/**/" "/"
     f False "b*b*b*//" "bb"
@@ -181,6 +181,8 @@ test build obj = do
 
 
 walker :: FilePattern -> FilePath -> Bool
+-- Slight difference of opinion since Walker is always relative to something
+walker a b | isRelativePattern a, not $ isRelativePath b = False
 walker a b = f (split isPathSeparator b) $ snd $ walk [a]
     where
         f (x:xs) (Walk op) = f (x:xs) $ WalkTo $ op [x]
