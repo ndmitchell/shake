@@ -105,17 +105,19 @@ getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
         code <- peekFileAttributes fad
-        if testBit code 4 then
-            errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
-         else do
-            let peek = join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
-            if res then
-                peek
-             else if requireU x then withCWString (unpackU x) $ \file -> do
-                res <- c_GetFileAttributesExW file 0 fad
-                if res then peek else return Nothing
-             else
-                return Nothing
+        let peek = do
+                code <- peekFileAttributes fad
+                if testBit code 4 then
+                    errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
+                 else
+                    join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
+        if res then
+            peek
+         else if requireU x then withCWString (unpackU x) $ \file -> do
+            res <- c_GetFileAttributesExW file 0 fad
+            if res then peek else return Nothing
+         else
+            return Nothing
 
 #ifdef x86_64_HOST_ARCH
 #define CALLCONV ccall
