@@ -156,6 +156,8 @@ isRelativePath (x:':':_) | isWindows, isAlpha x = False
 isRelativePath _ = True
 
 
+-- | Given a pattern, and a list of path components, return a list of all matches
+--   (for each wildcard in order, what the wildcard matched).
 match :: [Pat] -> [String] -> [[String]]
 match (Skip:xs) (y:ys) = map ("":) (match xs (y:ys)) ++ match (Skip1:xs) (y:ys)
 match (Skip1:xs) (y:ys) = [(y++"/"++r):rs | r:rs <- match (Skip:xs) ys]
