@@ -172,6 +172,5 @@ test build obj = do
     (out,_) <- IO.captureOutput $ try_ $ build ["fail1","fail2","-k","-j2",""]
     assert ("die1" `isInfixOf` out && "die2" `isInfixOf` out) $ "Expected 'die1' and 'die2', but got: " ++ out
 
-    -- Disabled because buggy, see #431
-    when False $ crash ["fresh_dir"] ["fresh_dir not a file"]
-    when False $ crash ["need_dir"] ["need_dir not a file"]
+    crash ["fresh_dir"] ["expected a file, got a directory","fresh_dir"]
+    crash ["need_dir"] ["expected a file, got a directory","existing_dir"]
