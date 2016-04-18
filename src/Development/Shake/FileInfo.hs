@@ -104,14 +104,18 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
-        let peek = join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
-        if res then
-            peek
-         else if requireU x then withCWString (unpackU x) $ \file -> do
-            res <- c_GetFileAttributesExW file 0 fad
-            if res then peek else return Nothing
-         else
-            return Nothing
+        code <- peekFileAttributes fad
+        if testBit code 4 then
+            errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
+         else do
+            let peek = join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
+            if res then
+                peek
+             else if requireU x then withCWString (unpackU x) $ \file -> do
+                res <- c_GetFileAttributesExW file 0 fad
+                if res then peek else return Nothing
+             else
+                return Nothing
 
 #ifdef x86_64_HOST_ARCH
 #define CALLCONV ccall
@@ -127,6 +131,10 @@ data WIN32_FILE_ATTRIBUTE_DATA
 alloca_WIN32_FILE_ATTRIBUTE_DATA :: (Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO a) -> IO a
 alloca_WIN32_FILE_ATTRIBUTE_DATA act = allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA act
     where size_WIN32_FILE_ATTRIBUTE_DATA = 36
+
+peekFileAttributes :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Word32
+peekFileAttributes p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_dwFileAttributes
+    where index_WIN32_FILE_ATTRIBUTE_DATA_dwFileAttributes = 0
 
 peekLastWriteTimeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Word32
 peekLastWriteTimeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
