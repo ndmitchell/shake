@@ -192,9 +192,11 @@ matchStars (Stars pre mid post) x = do
 --
 -- * @*@ matches an entire path component, excluding any separators.
 --
--- * @\/\/@ matches an arbitrary number of path components.
+-- * @\/\/@ matches an arbitrary number of path components, including absolute path
+--   prefixes.
 --
--- * @**@ as a path component matches an arbitrary number of path components.
+-- * @**@ as a path component matches an arbitrary number of path components, but not
+--   absolute path prefixes.
 --   Currently considered experimental.
 --
 --   Some examples:
@@ -204,9 +206,9 @@ matchStars (Stars pre mid post) x = do
 -- * @*.c@ matches all @.c@ files in the current directory, so @file.c@ matches,
 --   but @file.h@ and @dir\/file.c@ don't.
 --
--- * @\/\/*.c@ matches all @.c@ files in the current directory or its subdirectories,
---   so @file.c@, @dir\/file.c@ and @dir1\/dir2\/file.c@ all match, but @file.h@ and
---   @dir\/file.h@ don't.
+-- * @\/\/*.c@ matches all @.c@ files anywhere on the filesystem,
+---  so @file.c@, @dir\/file.c@, @dir1\/dir2\/file.c@ and @/path/to/file.c@ all match,
+--   but @file.h@ and @dir\/file.h@ don't.
 --
 -- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
 --   @dir\/two\/file.h@ match, but @file.c@, @one\/dir\/file.c@, @dir\/file.h@
