@@ -198,8 +198,7 @@ matchStars (Stars pre mid post) x = do
 ---   normalised 'FilePath' values, so are unlikely to be correct.
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) p = case optimise $ parse p of
-    [Skip] -> const True
-    [Skip1] -> const True
+    [x] | x == Skip || x == Skip1 -> const True
     p -> not . null . match p . split isPathSeparator
 
 
