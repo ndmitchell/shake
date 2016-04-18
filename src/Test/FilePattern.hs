@@ -150,7 +150,6 @@ test build obj = do
     extract "//a.txt" "a.txt" === [""]
     extract "**/a.txt" "a.txt" === [""]
     extract "//a.txt" "/a.txt" === ["/"]
-    extract "**/a.txt" "/a.txt" === ["/"]
     extract "a//b" "a/b" === [""]
     extract "a/**/b" "a/b" === [""]
     extract "a//b" "a/x/b" === ["x/"]
