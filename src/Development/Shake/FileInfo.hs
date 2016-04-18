@@ -149,7 +149,10 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 -- Unix version
 getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
-    result (extractFileTime s) (fromIntegral $ fileSize s)
+    if isDirectory s then
+        errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
+     else
+        result (extractFileTime s) (fromIntegral $ fileSize s)
 
 extractFileTime :: FileStatus -> Word32
 #ifndef MIN_VERSION_unix
