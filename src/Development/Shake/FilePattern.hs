@@ -10,7 +10,7 @@ module Development.Shake.FilePattern(
     -- * Accelerated searching
     Walk(..), walk,
     -- * Testing only
-    internalTest
+    internalTest, isRelativePath, isRelativePattern
     ) where
 
 import Development.Shake.Errors
@@ -18,8 +18,10 @@ import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative
 import Control.Monad
+import Data.Char
 import Data.Tuple.Extra
 import Data.Maybe
+import System.Info.Extra
 import Prelude
 
 
@@ -138,6 +140,20 @@ optimise (Skip:Star:xs) = optimise $ Skip1:xs
 optimise (Star:Skip:xs) = optimise $ Skip1:xs
 optimise (x:xs) = x : optimise xs
 optimise [] =[]
+
+
+-- | A 'FilePattern' that will only match 'isRelativePath' values.
+isRelativePattern :: FilePattern -> Bool
+isRelativePattern ('*':'*':xs)
+    | [] <- xs = True
+    | x:xs <- xs, isPathSeparator x = True
+isRelativePattern _ = False
+
+-- | A non-absolute 'FilePath'.
+isRelativePath :: FilePath -> Bool
+isRelativePath (x:_) | isPathSeparator x = False
+isRelativePath (x:':':_) | isWindows, isAlpha x = False
+isRelativePath _ = True
 
 
 match :: [Pat] -> [String] -> [[String]]
