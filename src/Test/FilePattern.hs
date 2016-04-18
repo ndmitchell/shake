@@ -5,6 +5,7 @@ import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Control.Monad
 import System.IO.Unsafe
+import System.Info.Extra
 import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
@@ -121,6 +122,13 @@ test build obj = do
     f True "*/**/**/" "/"
     f False "b*b*b*//" "bb"
     f False "b*b*b*/**" "bb"
+
+    f False "**" "/"
+    f False "**/x" "/x"
+    f True "**" "x/"
+    f (not isWindows) "**" "\\\\drive"
+    f (not isWindows) "**" "C:\\drive"
+    f (not isWindows) "**" "C:drive"
 
     simple "a*b" === False
     simple "a//b" === False
