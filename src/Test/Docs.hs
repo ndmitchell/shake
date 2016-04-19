@@ -203,7 +203,7 @@ isBindStmt x = "let " `isPrefixOf` x || " <- " `isInfixOf` x
 isDecl :: String -> Bool
 isDecl x | fst (word1 x) `elem` ["import","infix","instance","newtype"] = True
 isDecl (words -> name:"::":_) | all isAlphaNum name = True -- foo :: Type Signature
-isDecl x | "=" `elem` takeWhile (`notElem` ["let","where"]) (words x) = True -- foo arg1 arg2 = an implementation
+isDecl x | "=" `elem` takeWhile (`notElem` ["let","where"]) (words $ takeWhile (/= '{') x) = True -- foo arg1 arg2 = an implementation
 isDecl _ = False
 
 
