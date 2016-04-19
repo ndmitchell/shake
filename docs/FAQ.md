@@ -44,7 +44,7 @@ Most users will write their own Haskell file and compile it to produce an execut
 
 #### Q: Can file patterns overlap?
 
-No. If two patterns overlap for a file being built it will result in a runtime error - you cannot have a pattern for `*.txt`, and another for `foo.*`, and then build a file named `foo.txt`. For objects that typically share the same extension (e.g. C and Haskell both produce `.o` objects), either disambiguate with a different extension (e.g. `.c.o` and `.hs.o`), or different directory (e.g. `obj/c/**/.o` and `obj/hs/**.o`). For more information, including ways to enable overlap and set priorities, see `%>`.
+No. If two patterns overlap for a file being built it will result in a runtime error - you cannot have a pattern for `*.txt`, and another for `foo.*`, and then build a file named `foo.txt`. For objects that typically share the same extension (e.g. C and Haskell both produce `.o` objects), either disambiguate with a different extension (e.g. `.c.o` and `.hs.o`), or different directory (e.g. `obj/c/**/.o` and `obj/hs/**/.o`). For more information, including ways to enable overlap and set priorities, see `%>`.
 
 #### Q: Why do multiple calls to `need` run sequentially? Are `Applicative` actions run in parallel?
 
