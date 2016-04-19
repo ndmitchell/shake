@@ -204,13 +204,13 @@ The `getDirectoryFiles` operation is tracked by the build system, so if the file
 
 #### List manipulations
 
-Many functions work with lists of values. The simplest operation on lists is to join two lists together, which we do with `++`. For example, `["main.c"] ++ ["constants.c"]` equals `["main.c","constants.c"]`.
+Many functions work with lists of values. The simplest operation on lists is to join two lists together, which we do with `++`. For example, `["main.c"] ++ ["constants.c"]` equals `["main.c", "constants.c"]`.
 
 Using a _list comprehension_ we can produce new lists, apply functions to the elements and filtering them. As an example:
 
     ["_build" </> x -<.> "o" | x <- inputs]
 
-This expression grabs each element from `inputs` and names it `x` (the `x <- inputs`, pronounced "`x` is drawn from `inputs`"), then applies the expression  `"_build" </> x -<.> "o"` to each element. If we start with the list `["main.c","constants.c"]`, we would end up with `["_build/main.o","_build/constants.o"]`.
+This expression grabs each element from `inputs` and names it `x` (the `x <- inputs`, pronounced "`x` is drawn from `inputs`"), then applies the expression  `"_build" </> x -<.> "o"` to each element. If we start with the list `["main.c","constants.c"]`, we would end up with `["_build/main.o", "_build/constants.o"]`.
 
 List expressions also allow us to filter the list, for example we could know that the file `"evil.c"` is in the directory, but should not be compiled. We can extend that to:
 
@@ -302,7 +302,7 @@ The initial example build system supports a number of command line flags, includ
 * `build --help` will list out all flags supported by the build system, currently 36 flags. Most flags supported by `make` are also supported by Shake based build systems.
 * `build -j8` will compile up to 8 rules simultaneously, by default Shake uses 1 processor.
 
-Most flags can also be set within the program by modifying the `shakeOptions` value. As an example, `build --metadata=_metadata` causes all Shake metadata files to be stored with names such as `_metadata/.shake.database`. Alternatively we can write `shakeOptions{shakeFiles="_metadata"}` instead of our existing `shakeFiles="_build"`. Values passed on the command line take preference over those given by `shakeOptions`. Multiple overrides can be given to `shakeOptions` by separating them with a comma, for example `shakeOptions{shakeFiles="_build",shakeThreads=8}`.
+Most flags can also be set within the program by modifying the `shakeOptions` value. As an example, `build --metadata=_metadata` causes all Shake metadata files to be stored with names such as `_metadata/.shake.database`. Alternatively we can write `shakeOptions{shakeFiles="_metadata"}` instead of our existing `shakeFiles="_build"`. Values passed on the command line take preference over those given by `shakeOptions`. Multiple overrides can be given to `shakeOptions` by separating them with a comma, for example `shakeOptions{shakeFiles="_build", shakeThreads=8}`.
 
 <span class="target" id="progress"></span>
 
@@ -311,7 +311,7 @@ Most flags can also be set within the program by modifying the `shakeOptions` va
 One useful feature of Shake is that it can predict the remaining build time, based on how long previous builds have taken. The number is only a prediction, but it does take account of which files require rebuilding, how fast your machine is currently running, parallelism settings etc. You can display progress messages in the titlebar of a Window by either:
 
 * Running `build --progress`
-* Setting `shakeOptions{shakeProgress=progressSimple}`
+* Setting `shakeOptions{shakeProgress = progressSimple}`
 
 The progress message will be displayed in the titlebar of the window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](https://github.org/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
 
