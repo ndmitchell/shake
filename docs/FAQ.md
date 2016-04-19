@@ -52,6 +52,12 @@ In Shake, `need xs >> need ys` will build `xs` in parallel, then afterwards buil
 
 Shake _could_ follow the Haxl approach, but does not, mainly because they are targeting different problems. In Haxl, the operations are typically read-only, and any single step is likely to involve lots of operations. In contrast, with Shake the operations definitely change the file system, and there are typically only one or two per rule. Consequently, Shake opts for an explicit approach, rather than allow users to use `*>` (and then inevitably add a comment because its an unusual thing to do).
 
+#### Q: How can I depend on directories?
+
+Think of directories as containers for files. They exist or don't pretty randomly, but if they have files, they must exist. In particular, you can't depend on a directory with `need` or write a rule to create a directory. Directories are created as needed - the rule for `bar/baz.exe` will create the `bar` directory if necessary. If you want to depend on a `git clone` having being performed, depend on a particular checked-out file instead (e.g. `README.md`), with the rule to create it being `git clone`.
+
+There is a tracked function `doesDirectoryExist`, to depend on the presence or absence of a directory, but you should not call it on directories which might be created by the build system.
+
 #### Q: What's the history of Shake?
 
 I ([Neil Mitchell](http://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):

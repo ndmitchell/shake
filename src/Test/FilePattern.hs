@@ -5,6 +5,7 @@ import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Control.Monad
 import System.IO.Unsafe
+import System.Info.Extra
 import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
@@ -57,7 +58,7 @@ test build obj = do
     f True (toNative "foo/bar") "foo/bar"
     f True (toNative "foo/bar") (toNative "foo/bar")
     f True "//*" "/bar"
-    f True "**/*" "/bar"
+    f False "**/*" "/bar"
     f True "/bob//foo" "/bob/this/test/foo"
     f True "/bob/**/foo" "/bob/this/test/foo"
     f False "/bob//foo" "bob/this/test/foo"
@@ -71,7 +72,7 @@ test build obj = do
     f True "/a//" "/a"
     f True "/a/**" "/a"
     f True "///a//" "/a"
-    f True "**/a/**" "/a"
+    f False "**/a/**" "/a"
     f False "///" ""
     f True "///" "/"
     f True "/**" "/"
@@ -116,11 +117,18 @@ test build obj = do
     f False "*//*//*" "x/y"
     f False "*/**/*/**/*" "x/y"
     f True "//*/" "/"
-    f True "**/*/" "/"
+    f False "**/*/" "/"
     f True "*/////" "/"
     f True "*/**/**/" "/"
     f False "b*b*b*//" "bb"
     f False "b*b*b*/**" "bb"
+
+    f False "**" "/"
+    f False "**/x" "/x"
+    f True "**" "x/"
+    f (not isWindows) "**" "\\\\drive"
+    f (not isWindows) "**" "C:\\drive"
+    f (not isWindows) "**" "C:drive"
 
     simple "a*b" === False
     simple "a//b" === False
@@ -142,7 +150,6 @@ test build obj = do
     extract "//a.txt" "a.txt" === [""]
     extract "**/a.txt" "a.txt" === [""]
     extract "//a.txt" "/a.txt" === ["/"]
-    extract "**/a.txt" "/a.txt" === ["/"]
     extract "a//b" "a/b" === [""]
     extract "a/**/b" "a/b" === [""]
     extract "a//b" "a/x/b" === ["x/"]
@@ -181,6 +188,8 @@ test build obj = do
 
 
 walker :: FilePattern -> FilePath -> Bool
+-- Slight difference of opinion since Walker is always relative to something
+walker a b | isRelativePattern a, not $ isRelativePath b = False
 walker a b = f (split isPathSeparator b) $ snd $ walk [a]
     where
         f (x:xs) (Walk op) = f (x:xs) $ WalkTo $ op [x]

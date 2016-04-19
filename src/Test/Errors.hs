@@ -93,6 +93,12 @@ main = shakenCwd test $ \args obj -> do
 
     when ("die" `elem` args) $ action $ error "death error"
 
+    obj "fresh_dir" %> \out -> liftIO $ createDirectoryIfMissing True out
+    obj "need_dir" %> \out -> do
+        liftIO $ createDirectoryIfMissing True $ obj "existing_dir"
+        need [obj "existing_dir"]
+        writeFile' out ""
+
 
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
@@ -165,3 +171,6 @@ test build obj = do
     putStrLn "## BUILD errors fail1 fail2 -k -j2"
     (out,_) <- IO.captureOutput $ try_ $ build ["fail1","fail2","-k","-j2",""]
     assert ("die1" `isInfixOf` out && "die2" `isInfixOf` out) $ "Expected 'die1' and 'die2', but got: " ++ out
+
+    crash ["fresh_dir"] ["expected a file, got a directory","fresh_dir"]
+    crash ["need_dir"] ["expected a file, got a directory","existing_dir"]

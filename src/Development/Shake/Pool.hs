@@ -93,6 +93,16 @@ emptyS :: Int -> Bool -> S
 emptyS n deterministic = S Set.empty n 0 0 $ newQueue deterministic
 
 
+worker :: Pool -> IO ()
+worker pool@(Pool var done) = do
+    let onVar act = modifyVar var $ maybe (return (Nothing, return ())) act
+    join $ onVar $ \s -> do
+        res <- maybe (return Nothing) (fmap Just) $ dequeue $ todo s
+        case res of
+            Nothing -> return (Just s, return ())
+            Just (now, todo2) -> return (Just s{todo = todo2}, now >> worker pool)
+
+
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch threadsLimit or todo
 step :: Pool -> (S -> NonDet S) -> IO ()
@@ -104,7 +114,7 @@ step pool@(Pool var done) op = do
         case res of
             Just (now, todo2) | Set.size (threads s) < threadsLimit s -> do
                 -- spawn a new worker
-                t <- forkFinally now $ \res -> case res of
+                t <- forkFinally (now >> worker pool) $ \res -> case res of
                     Left e -> onVar $ \s -> do
                         t <- myThreadId
                         mapM_ killThread $ Set.toList $ Set.delete t $ threads s

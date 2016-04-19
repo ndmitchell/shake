@@ -104,7 +104,13 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
-        let peek = join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
+        code <- peekFileAttributes fad
+        let peek = do
+                code <- peekFileAttributes fad
+                if testBit code 4 then
+                    errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
+                 else
+                    join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then
             peek
          else if requireU x then withCWString (unpackU x) $ \file -> do
@@ -128,6 +134,10 @@ alloca_WIN32_FILE_ATTRIBUTE_DATA :: (Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO a) -> I
 alloca_WIN32_FILE_ATTRIBUTE_DATA act = allocaBytes size_WIN32_FILE_ATTRIBUTE_DATA act
     where size_WIN32_FILE_ATTRIBUTE_DATA = 36
 
+peekFileAttributes :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Word32
+peekFileAttributes p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_dwFileAttributes
+    where index_WIN32_FILE_ATTRIBUTE_DATA_dwFileAttributes = 0
+
 peekLastWriteTimeLow :: Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Word32
 peekLastWriteTimeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime
     where index_WIN32_FILE_ATTRIBUTE_DATA_ftLastWriteTime_dwLowDateTime = 20
@@ -141,7 +151,10 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 -- Unix version
 getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
-    result (extractFileTime s) (fromIntegral $ fileSize s)
+    if isDirectory s then
+        errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
+     else
+        result (extractFileTime s) (fromIntegral $ fileSize s)
 
 extractFileTime :: FileStatus -> Word32
 #ifndef MIN_VERSION_unix

@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses #-}
 
 module General.Intern(
-    Intern, Id,
+    Intern, Id(..),
     empty, insert, add, lookup, toList, fromList
     ) where
 

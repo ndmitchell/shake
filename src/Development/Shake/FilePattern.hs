@@ -10,7 +10,7 @@ module Development.Shake.FilePattern(
     -- * Accelerated searching
     Walk(..), walk,
     -- * Testing only
-    internalTest
+    internalTest, isRelativePath, isRelativePattern
     ) where
 
 import Development.Shake.Errors
@@ -18,8 +18,10 @@ import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative
 import Control.Monad
+import Data.Char
 import Data.Tuple.Extra
 import Data.Maybe
+import System.Info.Extra
 import Prelude
 
 
@@ -140,6 +142,22 @@ optimise (x:xs) = x : optimise xs
 optimise [] =[]
 
 
+-- | A 'FilePattern' that will only match 'isRelativePath' values.
+isRelativePattern :: FilePattern -> Bool
+isRelativePattern ('*':'*':xs)
+    | [] <- xs = True
+    | x:xs <- xs, isPathSeparator x = True
+isRelativePattern _ = False
+
+-- | A non-absolute 'FilePath'.
+isRelativePath :: FilePath -> Bool
+isRelativePath (x:_) | isPathSeparator x = False
+isRelativePath (x:':':_) | isWindows, isAlpha x = False
+isRelativePath _ = True
+
+
+-- | Given a pattern, and a list of path components, return a list of all matches
+--   (for each wildcard in order, what the wildcard matched).
 match :: [Pat] -> [String] -> [[String]]
 match (Skip:xs) (y:ys) = map ("":) (match xs (y:ys)) ++ match (Skip1:xs) (y:ys)
 match (Skip1:xs) (y:ys) = [(y++"/"++r):rs | r:rs <- match (Skip:xs) ys]
@@ -170,37 +188,40 @@ matchStars (Stars pre mid post) x = do
             (a:) <$> stripInfixes ms x
 
 
---- | Match a 'FilePattern' against a 'FilePath', There are three special forms:
----
---- * @*@ matches an entire path component, excluding any separators.
----
---- * @\/\/@ matches an arbitrary number of path components.
+-- | Match a 'FilePattern' against a 'FilePath', There are three special forms:
 --
---  * @**@ as a path component matches an arbitrary number of path components.
---    Currently considered experimental.
----
----   Some examples:
----
---- * @test.c@ matches @test.c@ and nothing else.
----
---- * @*.c@ matches all @.c@ files in the current directory, so @file.c@ matches,
----   but @file.h@ and @dir\/file.c@ don't.
----
---- * @\/\/*.c@ matches all @.c@ files in the current directory or its subdirectories,
----   so @file.c@, @dir\/file.c@ and @dir1\/dir2\/file.c@ all match, but @file.h@ and
----   @dir\/file.h@ don't.
----
---- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
----   @dir\/two\/file.h@ match, but @file.c@, @one\/dir\/file.c@, @dir\/file.h@
----   and @dir\/one\/two\/file.c@ don't.
----
----   Patterns with constructs such as @foo\/..\/bar@ will never match
----   normalised 'FilePath' values, so are unlikely to be correct.
+-- * @*@ matches an entire path component, excluding any separators.
+--
+-- * @\/\/@ matches an arbitrary number of path components, including absolute path
+--   prefixes.
+--
+-- * @**@ as a path component matches an arbitrary number of path components, but not
+--   absolute path prefixes.
+--   Currently considered experimental.
+--
+--   Some examples:
+--
+-- * @test.c@ matches @test.c@ and nothing else.
+--
+-- * @*.c@ matches all @.c@ files in the current directory, so @file.c@ matches,
+--   but @file.h@ and @dir\/file.c@ don't.
+--
+-- * @\/\/*.c@ matches all @.c@ files anywhere on the filesystem,
+---  so @file.c@, @dir\/file.c@, @dir1\/dir2\/file.c@ and @/path/to/file.c@ all match,
+--   but @file.h@ and @dir\/file.h@ don't.
+--
+-- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
+--   @dir\/two\/file.h@ match, but @file.c@, @one\/dir\/file.c@, @dir\/file.h@
+--   and @dir\/one\/two\/file.c@ don't.
+--
+--   Patterns with constructs such as @foo\/..\/bar@ will never match
+--   normalised 'FilePath' values, so are unlikely to be correct.
 (?==) :: FilePattern -> FilePath -> Bool
 (?==) p = case optimise $ parse p of
-    [Skip] -> const True
-    [Skip1] -> const True
-    p -> not . null . match p . split isPathSeparator
+    [x] | x == Skip || x == Skip1 -> if rp then isRelativePath else const True
+    p -> let f = not . null . match p . split isPathSeparator
+         in if rp then (\x -> isRelativePath x && f x) else f
+    where rp = isRelativePattern p
 
 
 ---------------------------------------------------------------------

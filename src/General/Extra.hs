@@ -15,7 +15,7 @@ import System.IO.Extra
 import System.IO.Unsafe
 import System.Random
 import Control.Concurrent
-import Foreign.C.Types
+import GHC.Conc
 
 
 ---------------------------------------------------------------------
@@ -29,10 +29,6 @@ showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"
 ---------------------------------------------------------------------
 -- System.Info
 
--- Use the underlying GHC function
-foreign import ccall getNumberOfProcessors :: IO CInt
-
-
 {-# NOINLINE getProcessorCount #-}
 getProcessorCount :: IO Int
 -- unsafePefromIO so we cache the result and only compute it once
@@ -40,7 +36,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
     where
         act =
             if rtsSupportsBoundThreads then
-                fmap fromIntegral $ getNumberOfProcessors
+                fmap fromIntegral $ getNumProcessors
             else
                 handle_ (const $ return 1) $ do
                     env <- lookupEnv "NUMBER_OF_PROCESSORS"

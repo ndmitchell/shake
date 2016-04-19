@@ -266,7 +266,7 @@ isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `el
     where
         validChar x = isAlphaNum x || x `elem` "_./*"
         exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .m .h .c .html .zip " ++
-                       ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits .prof"
+                       ".js .json .trace .database .src .sh .bat .ninja .rot13 .version .digits .prof .md"
 
 isCmdFlag :: String -> Bool
 isCmdFlag "+RTS" = True
@@ -285,7 +285,7 @@ isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
 
 isProgram :: String -> Bool
 isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFilePath x || all isAlpha x || x == "&&") xs
-    where programs = words "excel gcc cl make ghc cabal distcc build tar fsatrace ninja touch pwd runhaskell rot13 main shake stack"
+    where programs = words "excel gcc cl make ghc cabal distcc build tar git fsatrace ninja touch pwd runhaskell rot13 main shake stack"
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
