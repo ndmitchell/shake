@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.15.6
     Require the primitive package
     #431, make it an error to need a directory
     #393, add orderOnlyAction, a general version of orderOnly
