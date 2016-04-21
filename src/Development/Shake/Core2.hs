@@ -315,7 +315,7 @@ run' opts@ShakeOptions{..} start rs = do
                         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                             let opts2 = opts{shakeAssume=case shakeAssume of AssumeSkip -> AssumeSkip; _ -> AssumeNothing}
                             let s0 = Global database pool cleanup start ruleinfo output opts2 diagnostic lint after absent getProgress forwards
-                            forM_ ks $ \(key,v) -> case v of
+                            forM_ ks $ \(i,(key,v)) -> case v of
                                 Ready ro -> do
                                     stat <- analyseResult_ s0 key (result ro)
                                     let clean = case stat of { Continue -> True; _ -> False }
@@ -327,7 +327,7 @@ run' opts@ShakeOptions{..} start rs = do
                                         if specialAlwaysChanges (result ro) then
                                             reply Nothing
                                          else
-                                            runKey_ s0 key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
+                                            runKey_ s0 i key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
                                                 Error e -> raiseError =<< shakeException s0 (return ["Lint-checking"]) e
                                                 Ready r | built r == changed r -> reply . Just . show $ result r
                                                 _ -> reply Nothing
@@ -399,8 +399,8 @@ analyseResult_ global@Global{..} k r = do
         Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just RuleInfo{..} -> analyse globalOptions k r
 
-runKey_ :: Global -> Key -> Maybe Result -> Stack -> Development.Shake.Database.Step -> Capture Status
-runKey_ global@Global{..} k r stack step continue = do
+runKey_ :: Global -> Id -> Key -> Maybe Result -> Stack -> Development.Shake.Database.Step -> Capture Status
+runKey_ global@Global{..} i k r stack step continue = do
     time <- offsetTime
     let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
     let top = showTopStack stack

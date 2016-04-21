@@ -24,11 +24,11 @@ data S ro rw = S
     ,rww :: IORef rw -- Read/Write Writeable var (rww)
     }
 
-newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
+newtype RAWP rd r m a = RAW {fromRAW :: ReaderT rd (ContT r m) a }
     deriving (Functor, Applicative, Monad, MonadIO)
 
+type RAW ro rw a = RAWP (S ro rw) () IO a
 type Capture a = (a -> IO ()) -> IO ()
-
 
 -- See https://ghc.haskell.org/trac/ghc/ticket/11555
 catchSafe :: IO a -> (SomeException -> IO a) -> IO a
@@ -42,7 +42,6 @@ runRAW ro rw m k = do
     -- see https://ghc.haskell.org/trac/ghc/ticket/11555
     fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)
         `catchSafe` \e -> ($ e) =<< readIORef handler
-
 
 ---------------------------------------------------------------------
 -- STANDARD

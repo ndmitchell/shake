@@ -6,7 +6,7 @@ module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies, Step, incStep, Result(..), Status(Ready,Error),
-    Ops(..), AnalysisResult(..), build, Depends, subtractDepends, finalizeDepends,
+    Ops(..), AnalysisResult(..), build, Id, Depends, subtractDepends, finalizeDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -142,7 +142,7 @@ data AnalysisResult v = Rebuild | Continue | Update v deriving (Show,Eq,Functor)
 data Ops = Ops
     { analyseResult :: Key -> Value -> IO (AnalysisResult Value)
         -- ^ Given a Key and its stored value, determine whether to run it
-    , runKey :: Key -> Maybe Result -> Stack -> Step -> Capture Status
+    , runKey :: Id -> Key -> Maybe Result -> Stack -> Step -> Capture Status
         -- ^ Given a Key and its previous result, run it and return the status
     }
 
@@ -179,11 +179,12 @@ reportResult Database{..} i k res = do
         case Map.lookup i s of
             Just (_,w@(Waiting _ _)) -> runWaiting w
         return res
+    -- we leave the DB lock before appending
     case ans of
         Ready r -> do
             diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
                           " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-            journal i (k, Loaded r) -- we leave the DB lock before appending
+            journal i (k, Loaded r)
         Error _ -> do
             diagnostic $ "result " ++ atom k ++ " = error"
             journal i (k, Missing)
@@ -252,7 +253,8 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
         run stack i k r = do
             w <- newWaiting r
             updateStatus database i (k, w)
-            addPool pool $ runKey k r (addStack i k stack) step (reportResult database i k)
+            addPool pool $ runKey i k r (addStack i k stack) step (reportResult database i k)
+            return w
 
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
         check stack i k r [] = do
@@ -295,6 +297,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                                     else afterWaiting res $ runWaiting self
                                 return True
                             | otherwise -> return False
+                return self
 
 
 ---------------------------------------------------------------------
@@ -393,13 +396,13 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> [(Key, Key)] -> ([(Key, Status)] -> IO [(Key, Value, String)]) -> IO ()
+checkValid :: Database -> [(Key, Key)] -> ([(Id, (Key, Status))] -> IO [(Key, Value, String)]) -> IO ()
 checkValid Database{..} missing keyCheck = do
     status <- readIORef status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
 
-    bad <- keyCheck $ Map.elems status
+    bad <- keyCheck $ Map.toList status
     unless (null bad) $ do
         let n = length bad
         errorStructured
