@@ -113,12 +113,12 @@ errorDuplicateOracle tk k tvs = errorStructured
 
 errorNoApply :: TypeRep -> String -> Maybe String -> String -> IO a
 errorNoApply tk k v msg = structured (specialIsOracleKey tk)
-    "Build system error - cannot currently call _apply_ (or _need_)"
+    "Build system error - cannot currently call _apply_"
     [("Reason", Just msg)
     ,("_Key_ type", Just $ show tk)
     ,("_Key_ value", Just k)
     ,("Cached result", v)]
-    "Move the _apply_/_need_ call earlier/later"
+    "Move the _apply_ call earlier/later"
 
 
 -- Should be in Special, but then we get an import cycle

@@ -26,6 +26,7 @@ import Development.Shake.FilePath(toStandard)
 import Development.Shake.FilePattern
 import Development.Shake.FileInfo
 import Development.Shake.Types
+import Development.Shake.Errors
 
 import Data.Bits
 import Data.Data
@@ -154,13 +155,35 @@ needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [FileA]) >> return ()
 
 
--- | Like 'need', but fails if the file is not up to date.
+-- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
 needed :: [FilePath] -> Action ()
-needed xs = blockApply "'needed' file required rebuilding" $ need xs
+needed xs = do
+    opts <- getShakeOptions
+    if isNothing $ shakeLint opts then need xs else neededCheck $ map packU xs
+
 
 neededBS :: [BS.ByteString] -> Action ()
-neededBS xs = blockApply "'needed' file required rebuilding" $ needBS xs
+neededBS xs = do
+    opts <- getShakeOptions
+    if isNothing $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
+
+
+neededCheck :: [BSU] -> Action ()
+neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
+    opts <- getShakeOptions
+    pre <- liftIO $ mapM (storedValue opts . FileQ) xs
+    post <- apply $ map FileQ xs :: Action [FileA]
+    let bad = [ (x, case a of { Just _ -> "File change"; Nothing -> "File created" })
+              | (x, a, b) <- zip3 xs pre post, case a of { Nothing -> NotEqual; Just a -> equalValue opts a b } == NotEqual]
+    case bad of
+        [] -> return ()
+        (file,msg):_ -> liftIO $ errorStructured
+            "Lint checking error - 'needed' file required rebuilding"
+            [("File", Just $ unpackU file)
+            ,("Error",Just msg)]
+            ""
+
 
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
