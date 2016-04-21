@@ -31,7 +31,6 @@ import Development.Shake.Errors
 import Data.Bits
 import Data.Data
 import Data.List
-import Data.Maybe
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 import System.IO.Unsafe(unsafeInterleaveIO)
 
@@ -158,31 +157,28 @@ needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [File
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
 needed :: [FilePath] -> Action ()
-needed xs = do
-    opts <- getShakeOptions
-    if isNothing $ shakeLint opts then need xs else neededCheck $ map packU xs
+needed = neededCheck . map packU
 
 
 neededBS :: [BS.ByteString] -> Action ()
-neededBS xs = do
-    opts <- getShakeOptions
-    if isNothing $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
+neededBS = neededCheck . map packU_
 
 
 neededCheck :: [BSU] -> Action ()
-neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
+neededCheck (map (FileQ . packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
-    pre <- liftIO $ mapM (storedValue opts . FileQ) xs
-    post <- apply $ map FileQ xs :: Action [FileA]
-    let bad = [ (x, case a of { Just _ -> "File change"; Nothing -> "File created" })
-              | (x, a, b) <- zip3 xs pre post, case a of { Nothing -> NotEqual; Just a -> equalValue opts a b } == NotEqual]
-    case bad of
-        [] -> return ()
-        (file,msg):_ -> liftIO $ errorStructured
-            "Lint checking error - 'needed' file required rebuilding"
-            [("File", Just $ unpackU file)
-            ,("Error",Just msg)]
-            ""
+    if shakeLint opts == LintNothing then (apply xs :: Action [FileA]) >> return () else do
+        pre <- liftIO $ mapM (storedValue opts) xs
+        post <- apply xs :: Action [FileA]
+        let bad = [ (x, case a of { Just _ -> "File change"; Nothing -> "File created" })
+                  | (x, a, b) <- zip3 xs pre post, case a of { Nothing -> NotEqual; Just a -> equalValue opts a b } == NotEqual]
+        case bad of
+            [] -> return ()
+            (file,msg):_ -> liftIO $ errorStructured
+                "Lint checking error - 'needed' file required rebuilding"
+                [("File", Just . unpackU . fromFileQ $ file)
+                ,("Error",Just msg)]
+                ""
 
 
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
@@ -200,10 +196,7 @@ trackWrite = mapM_ (trackChange . FileQ . packU)
 -- | Allow accessing a file in this rule, ignoring any 'trackRead'\/'trackWrite' calls matching
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
-trackAllow ps = do
-    opts <- getShakeOptions
-    when (isJust $ shakeLint opts) $
-        S.trackAllow $ \(FileQ x) -> any (?== unpackU x) ps
+trackAllow ps = S.trackAllow $ \(FileQ x) -> any (?== unpackU x) ps
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.
@@ -255,7 +248,7 @@ phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
 (~>) :: String -> Action () -> Rules ()
-(~>) = phony 
+(~>) = phony
 
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,

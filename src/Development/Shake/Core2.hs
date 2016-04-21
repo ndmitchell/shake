@@ -237,6 +237,10 @@ data Local = Local
 newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
+-- | Whether to do basic lint checks
+basicLint :: Lint -> Bool
+basicLint = (/= LintNothing)
+
 -- | Internal main function (not exported publicly)
 run' :: ShakeOptions -> IO Seconds -> SRules Action -> IO ()
 run' opts@ShakeOptions{..} start rs = do
@@ -258,7 +262,7 @@ run' opts@ShakeOptions{..} start rs = do
                 atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                 -- no need to print exceptions here, they get printed when they are wrapped
 
-    lint <- if isNothing shakeLint then return $ const $ return () else do
+    lint <- if shakeLint == LintNothing then return $ const $ return () else do
         dir <- getCurrentDirectory
         return $ \msg -> do
             diagnostic msg
@@ -307,7 +311,7 @@ run' opts@ShakeOptions{..} start rs = do
                 when (null $ actions rs) $
                     when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
 
-                when (isJust shakeLint) $ do
+                when (basicLint shakeLint) $ do
                     addTiming "Lint checking"
                     absent' <- readIORef absent
                     checkValid database absent' $ \ks -> do
@@ -413,7 +417,7 @@ runKey_ global@Global{..} i k r stack step continue = do
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
                 res <- execute k (fmap result r)
-                when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
+                when (LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right ((res,equal), Local{..}) -> do
@@ -524,26 +528,27 @@ trackUse :: ShakeValue key => key -> Action ()
 -- 3) someone explicitly gave you permission with trackAllow
 -- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
 trackUse key = do
-    let k = newKey key
     Global{..} <- Action getRO
     l@Local{..} <- Action getRW
-    deps <- liftIO $ listDepends globalDatabase localDepends
-    let top = topStack localStack
-    if top == Just k then
-        return () -- condition 1
-     else if k `elem` deps then
-        return () -- condition 2
-     else if any ($ k) localTrackAllows then
-        return () -- condition 3
-     else
-        Action $ putRW l{localTrackUsed = k : localTrackUsed} -- condition 4
+    when (basicLint $ shakeLint globalOptions) $ do
+        let k = newKey key
+        deps <- liftIO $ listDepends globalDatabase localDepends
+        let top = topStack localStack
+        if top == Just k then
+            return () -- condition 1
+        else if k `elem` deps then
+            return () -- condition 2
+        else if any ($ k) localTrackAllows then
+            return () -- condition 3
+        else
+            Action $ putRW l{localTrackUsed = k : localTrackUsed} -- condition 4
 
 
 trackCheckUsed :: Action ()
 trackCheckUsed = do
     Global{..} <- Action getRO
     Local{..} <- Action getRW
-    liftIO $ do
+    when (basicLint $ shakeLint globalOptions) $ liftIO $ do
         deps <- listDepends globalDatabase localDepends
 
         -- check 3a
@@ -575,7 +580,7 @@ trackChange key = do
     let k = newKey key
     Global{..} <- Action getRO
     Local{..} <- Action getRW
-    liftIO $ do
+    when (basicLint $ shakeLint globalOptions) $ liftIO $ do
         let top = topStack localStack
         if top == Just k then
             return () -- condition 1
@@ -592,7 +597,9 @@ trackAllow = trackAllowForall
 
 -- We don't want the forall in the Haddock docs
 trackAllowForall :: forall key . ShakeValue key => (key -> Bool) -> Action ()
-trackAllowForall test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
+trackAllowForall test = do
+    Global{..} <- Action getRO
+    when (basicLint $ shakeLint globalOptions) $ Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
         tk = typeOf (err "trackAllow key" :: key)
         f k = typeKey k == tk && test (fromKey k)

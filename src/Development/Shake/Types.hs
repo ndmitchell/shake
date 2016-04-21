@@ -53,8 +53,9 @@ data Lint
     | LintFSATrace
         -- ^ Track which files are accessed by command line programs
         -- using <https://github.com/jacereda/fsatrace fsatrace>.
+    | LintNothing
+        -- ^ Do not perform any lint checks.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
-
 
 -- | How should you determine if a file has changed, used by 'shakeChange'. The most common values are
 --   'ChangeModtime' (very fast, @touch@ causes files to rebuild) and 'ChangeModtimeAndDigestInput'
@@ -110,8 +111,8 @@ data ShakeOptions = ShakeOptions
         --   If the file extension is @.json@ it will write JSON data; if @.js@ it will write Javascript;
         --   if @.trace@ it will write trace events (load into @about:\/\/tracing@ in Chrome);
         --   otherwise it will write HTML.
-    ,shakeLint :: Maybe Lint
-        -- ^ Defaults to 'Nothing'. Perform sanity checks during building, see 'Lint' for details.
+    ,shakeLint :: Lint
+        -- ^ Defaults to 'LintNothing'. Perform sanity checks during building, see 'Lint' for details.
     ,shakeLintInside :: [FilePath]
         -- ^ Directories in which the files will be tracked by the linter.
     ,shakeLintIgnore :: [FilePattern]
@@ -171,7 +172,7 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) AssumeNothing [] False True False
+    ".shake" 1 "1" Normal False [] LintNothing [] [] [] (Just 10) AssumeNothing [] False True False
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS

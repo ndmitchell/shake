@@ -79,7 +79,7 @@ shakenEx changeDir test rules sleeper = do
                 {shakeFiles = obj ""
                 ,shakeReport = [obj "report.html"]}
             opts <- return $ if forward then forwardOptions opts else opts
-                {shakeLint = Just t
+                {shakeLint = t
                 ,shakeLintInside = [cwd]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs (args \\ files) $

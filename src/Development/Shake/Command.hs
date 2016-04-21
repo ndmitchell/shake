@@ -75,7 +75,7 @@ commandExplicit funcName oopts results exe args = do
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
     let fopts = shakeCommandOptions ++ oopts
     let useShell = Shell `elem` fopts
-    let useLint = shakeLint == Just LintFSATrace
+    let useLint = shakeLint == LintFSATrace
     let useAutoDeps = AutoDeps `elem` fopts
     let opts = filter (/= Shell) fopts
 
@@ -99,7 +99,7 @@ commandExplicit funcName oopts results exe args = do
             | otherwise = act exe args
 
         shelled = runShell (unwords $ exe : args)
-                              
+
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) shakeLintInside
