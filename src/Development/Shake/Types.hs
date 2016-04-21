@@ -210,7 +210,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: [FilePath])
                 | Just x <- cast x = show (x :: Assume)
-                | Just x <- cast x = show (x :: Maybe Lint)
+                | Just x <- cast x = show (x :: Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Hidden (IO Progress -> IO ()))
