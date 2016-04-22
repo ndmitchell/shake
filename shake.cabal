@@ -55,8 +55,6 @@ extra-source-files:
     src/Test/Tup/newmath/square.h
     src/Paths.hs
     docs/Manual.md
-    docs/Ninja.md
-    docs/Why.md
     docs/shake-progress.png
 
 data-files:
