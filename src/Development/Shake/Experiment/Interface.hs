@@ -10,7 +10,7 @@
 --
 --   Q: What is the appropriate sugar? Something like @storedValueE@ from the PR?
 --   Q: Are these really the right names?
-module Development.Shake.Interface(
+module Development.Shake.Experiment.Interface(
     Encoder(..),
     UserRule(..),
     addBuiltinRule, BuiltinRule
