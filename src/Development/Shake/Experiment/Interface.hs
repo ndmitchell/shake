@@ -12,8 +12,8 @@
 --   Q: Are these really the right names?
 module Development.Shake.Experiment.Interface(
     Encoder(..),
-    UserRule(..),
-    addBuiltinRule, BuiltinRule
+    UserRule(..), matchUserRule,
+    BuiltinRule, addBuiltinRule
     ) where
 
 import Development.Shake.Classes
@@ -64,9 +64,20 @@ instance Encoder Int where
 --   As an example '?>' and '*>' will add entries to the 'Match' data type.
 data UserRule a
     = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> Rules ()@.
-    | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
+    | Priority Rational (UserRule a) -- ^ Rules defined under 'priority'.
     | Unordered [UserRule a] -- ^ Rules defined normally, at most one should match.
     | Ordered [UserRule a] -- ^ Rules defined under 'alternative', matched in order.
+      deriving (Eq,Show,Functor)
+
+-- | Rules first since they might be able to be optimised in some cases
+matchUserRule :: UserRule a -> (a -> Maybe b) -> [b]
+matchUserRule x p = map snd $ f x
+    where
+        -- nesting Priority/Unordered is not a great idea
+        f (UserRule x) = [(1, y) | Just y <- [p x]]
+        f (Priority p x) = map ((,) p . snd) $ f x
+        f (Unordered xs) = let rs = concatMap f xs in filter ((== maximum (map fst rs)) . fst) rs
+        f (Ordered xs) = take 1 $ f $ Unordered xs
 
 
 ---------------------------------------------------------------------
