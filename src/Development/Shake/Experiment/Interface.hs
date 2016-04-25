@@ -134,6 +134,14 @@ unsafePerformIO.
 -}
 
 
+{- Files
+
+Need to be built as two rules - given [A,B] rule, need an A rule and a B rule, plus an [A,B] rule.
+The [A] rule probably wants to store the key and result of A, but it doesn't need to compute it separately.
+Needs to store the Key because the key must always be serialised.
+-}
+
+
 {- Phony
 
 The key will be a file-compatible ByteArray. The result will be () and take 0 bytes.
