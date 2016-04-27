@@ -139,7 +139,7 @@ readFile' :: FilePath -> Action String
 readFile' x = need [x] >> liftIO (readFile x)
 
 -- | Write a file, lifted to the 'Action' monad.
-writeFile' :: FilePath -> String -> Action ()
+writeFile' :: MonadIO m => FilePath -> String -> m ()
 writeFile' name x = liftIO $ writeFile name x
 
 
@@ -149,12 +149,12 @@ readFileLines :: FilePath -> Action [String]
 readFileLines = fmap lines . readFile'
 
 -- | A version of 'writeFile'' which writes out a list of lines.
-writeFileLines :: FilePath -> [String] -> Action ()
+writeFileLines :: MonadIO m => FilePath -> [String] -> m ()
 writeFileLines name = writeFile' name . unlines
 
 
 -- | Write a file, but only if the contents would change.
-writeFileChanged :: FilePath -> String -> Action ()
+writeFileChanged :: MonadIO m => FilePath -> String -> m ()
 writeFileChanged name x = liftIO $ do
     b <- doesFileExist name
     if not b then writeFile name x else do
