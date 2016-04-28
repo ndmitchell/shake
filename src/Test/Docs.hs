@@ -91,6 +91,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"remaining = 1.1"
             ,"done = 1.1"
             ,"time_elapsed = 1.1"
+            ,"act = undefined"
             ,"old = \"\""
             ,"new = \"\""
             ,"myfile = \"\""

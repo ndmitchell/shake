@@ -111,6 +111,7 @@ module Development.Shake(
     -- * Explicit parallelism
     parallel, forP, par,
     -- * Utility functions
+    whenFilesDifer,
     copyFile', copyFileChanged,
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,

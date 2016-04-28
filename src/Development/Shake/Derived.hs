@@ -1,6 +1,7 @@
 
 module Development.Shake.Derived(
     system', systemCwd, systemOutput,
+    whenFilesDifer,
     copyFile', copyFileChanged,
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,
@@ -119,20 +120,20 @@ copyFile' old new = do
     liftIO $ copyFile old new
 
 
--- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
---   The @old@ file will be tracked as a dependency.
-copyFileChanged :: FilePath -> FilePath -> Action ()
-copyFileChanged old new = do
-    need [old]
+-- | @whenFilesDifer act old new@ executes the action @act@ on the files
+--   when the contents of files @old@ and @new@ difer. The @old@ file must exist.
+whenFilesDifer :: MonadIO m => (FilePath -> FilePath -> m ()) -> FilePath -> FilePath -> m ()
+whenFilesDifer act old new = do
     eq <- liftIO $ doesFileExist new &&^ do
         withBinaryFile old ReadMode $ \h1 -> withBinaryFile new ReadMode $ \h2 ->
             liftM2 (==) (hFileSize h1) (hFileSize h2) &&^
                 liftM2 (==) (BS.hGetContents h1) (BS.hGetContents h2)
-    unless eq $ do
-        putLoud $ "Copying from " ++ old ++ " to " ++ new
-        -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
-        liftIO $ copyFile old new
+    unless eq $ act old new
 
+-- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
+--   The @old@ file will be tracked as a dependency.
+copyFileChanged :: FilePath -> FilePath -> Action ()
+copyFileChanged = whenFilesDifer copyFile'
 
 -- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.
 readFile' :: FilePath -> Action String

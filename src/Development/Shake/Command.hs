@@ -44,7 +44,7 @@ import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
-import Development.Shake.Derived(writeFile', withTempDir)
+import Development.Shake.Derived(writeFile', withTempDir, withTempFile)
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -559,12 +559,6 @@ instance Arg a => Arg (Maybe a) where arg = maybe [] arg
 
 ---------------------------------------------------------------------
 -- UTILITIES
-
--- Copied from Derived. Once Derived no longer exports cmd stuff, import from there.
-withTempFile :: (FilePath -> Action a) -> Action a
-withTempFile act = do
-    (file, del) <- liftIO newTempFile
-    act file `actionFinally` del
 
 -- A better version of showCommandForUser, which doesn't escape so much on Windows
 showCommandForUser2 :: FilePath -> [String] -> String
