@@ -44,7 +44,7 @@ import Development.Shake.FilePath
 import Development.Shake.FilePattern
 import Development.Shake.Types
 import Development.Shake.Rules.File
-import Development.Shake.Derived(writeFile', withTempDir, withTempFile)
+import Development.Shake.Derived
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
