@@ -261,13 +261,17 @@ executable shake
 test-suite shake-test
     default-language: Haskell2010
     type: exitcode-stdio-1.0
-    ghc-options: -main-is Test.main -with-rtsopts=-K1K
     main-is: Test.hs
     hs-source-dirs: src
-    ghc-options: -rtsopts
-    -- GHC bug 7646 means -threaded causes errors
+
+    ghc-options: -main-is Test.main -rtsopts
+    if impl(ghc >= 7.6)
+        -- space leak introduced by -O1 in 7.4, see #445
+        -with-rtsopts=-K1K
     if impl(ghc >= 7.8)
+        -- GHC bug 7646 (fixed in 7.8) means -threaded causes errors
         ghc-options: -threaded
+
     build-depends:
         base == 4.*,
         directory,
