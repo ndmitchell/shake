@@ -124,11 +124,7 @@ copyFile' old new = do
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
     need [old]
-    eq <- liftIO $ doesFileExist new &&^ do
-        withBinaryFile old ReadMode $ \h1 -> withBinaryFile new ReadMode $ \h2 ->
-            liftM2 (==) (hFileSize h1) (hFileSize h2) &&^
-                liftM2 (==) (BS.hGetContents h1) (BS.hGetContents h2)
-    unless eq $ do
+    unlessM (liftIO $ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
         liftIO $ copyFile old new
