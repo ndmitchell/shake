@@ -95,7 +95,7 @@ library
         js-jquery,
         js-flot,
         transformers >= 0.2,
-        extra >= 1.4.3,
+        extra >= 1.4.4,
         deepseq >= 1.1
 
     if flag(portable)
