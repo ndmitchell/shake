@@ -124,6 +124,8 @@ copyFile' old new = do
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
     need [old]
+    -- in newer versions of the directory package we can use copyFileWithMetadata which (we think) updates
+    -- the timestamp as well and thus no need to read the source file twice.
     unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
