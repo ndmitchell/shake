@@ -124,7 +124,7 @@ copyFile' old new = do
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
     need [old]
-    unlessM (liftIO $ fileEq old new) $ do
+    unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
         liftIO $ copyFile old new
