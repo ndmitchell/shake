@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #448, fix FSATrace on Mac 10.11
     #444, optimise copyFileChanged
     Require extra-1.4.4
     #58, change writeFile functions to MonadIO
