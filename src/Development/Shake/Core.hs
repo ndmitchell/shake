@@ -14,8 +14,7 @@ module Development.Shake.Core(
     parallel,
     orderOnlyAction,
     -- Internal stuff
-    runAfter,
-    fakeExe
+    runAfter
     ) where
 
 import Control.Exception.Extra
@@ -35,7 +34,6 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.IORef
 import System.Directory
-import System.FilePath
 import System.IO.Extra
 import System.Time.Extra
 import Data.Monoid
@@ -326,7 +324,6 @@ data Global = Global
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
     ,globalProgress :: IO Progress
-    ,globalFakesCache :: FilePath -> Action FilePath
     }
 
 
@@ -403,27 +400,6 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Wanted",Just dir)
                 ,("Got",Just now)]
                 ""
-
-    fcache <- newCacheIO $ \e -> liftIO $ do
-        me <- findExecutable e
-        case me of
-            Just re -> do
-                let isSystem = any (`isPrefixOf` re) [ "/bin"
-                                                     , "/usr"
-                                                     , "/sbin"
-                                                     ]
-                if isSystem
-                    then do
-                        tmpdir <- getTemporaryDirectory
-                        let fakedir = tmpdir ++ "fsatrace-fakes/"
-                            fake = fakedir ++ takeFileName e
-                        createDirectoryIfMissing True fakedir
-                        putStrLn $ "copying " ++ re ++ " to " ++ fake
-                        copyFile re fake
-                        return fake
-                    else return re
-            Nothing -> return e
-
     diagnostic "Starting run 2"
 
     after <- newIORef []
@@ -449,7 +425,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress fcache
+                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
                     forM_ (actions rs) $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
@@ -590,10 +566,6 @@ getProgress = do
     res <- Action $ getsRO globalProgress
     liftIO res
 
-fakeExe :: FilePath -> Action FilePath
-fakeExe e = do
-    gfc <- Action $ getsRO globalFakesCache
-    gfc e
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
 --   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.

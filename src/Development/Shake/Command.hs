@@ -149,6 +149,24 @@ commandExplicit funcName oopts results exe args = do
             | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
 
         fsaCmdMac act opts file = do
+            let fakeExe e = liftIO $ do
+                    me <- findExecutable e
+                    case me of
+                        Just re -> do
+                            let isSystem = any (`isPrefixOf` re) [ "/bin"
+                                                                 , "/usr"
+                                                                 , "/sbin"
+                                                                 ]
+                            if isSystem
+                                then do
+                                    tmpdir <- getTemporaryDirectory
+                                    let fake = tmpdir ++ "fsatrace-fakes" ++ re
+                                    unlessM (doesFileExist fake) $ do
+                                        createDirectoryIfMissing True $ takeDirectory fake
+                                        copyFile re fake
+                                    return fake
+                                else return re
+                        Nothing -> return e
             fexe <- fakeExe exe
             if useShell
                 then do
