@@ -144,8 +144,35 @@ commandExplicit funcName oopts results exe args = do
                                          , not $ any ($ x) ignore]
 
         fsaCmd act opts file
+            | isMac = fsaCmdMac act opts file
             | useShell = runShell (unwords $ exe : args) $ \exe args -> act "fsatrace" $ opts : file : "--" : exe : args
             | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
+
+        fsaCmdMac act opts file = do
+            let fakeExe e = liftIO $ do
+                    me <- findExecutable e
+                    case me of
+                        Just re -> do
+                            let isSystem = any (`isPrefixOf` re) [ "/bin"
+                                                                 , "/usr"
+                                                                 , "/sbin"
+                                                                 ]
+                            if isSystem
+                                then do
+                                    tmpdir <- getTemporaryDirectory
+                                    let fake = tmpdir ++ "fsatrace-fakes" ++ re
+                                    unlessM (doesFileExist fake) $ do
+                                        createDirectoryIfMissing True $ takeDirectory fake
+                                        copyFile re fake
+                                    return fake
+                                else return re
+                        Nothing -> return e
+            fexe <- fakeExe exe
+            if useShell
+                then do
+                    fsh <- fakeExe "/bin/sh"
+                    act "fsatrace" $ opts : file : "--" : fsh : "-c" : [unwords $ fexe : args]
+                else act "fsatrace" $ opts : file : "--" : fexe : args
 
         fsatrace act = withTempFile $ \file -> do
             res <- fsaCmd act "rwm" file
