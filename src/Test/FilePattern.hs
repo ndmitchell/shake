@@ -183,6 +183,9 @@ test build obj = do
     (True, WalkTo _) <- return $ walk [""]
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
+        let label _ = property in
+            -- Ignore label to workaround QuickCheck space-leak
+            -- See #450 and https://github.com/nick8325/quickcheck/pull/93
         let b = p ?== x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
     return ()
 
