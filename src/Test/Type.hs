@@ -186,7 +186,9 @@ sleepFileTimeCalibrate :: IO (IO ())
 sleepFileTimeCalibrate = do
     let file = "output/calibrate"
     createDirectoryIfMissing True $ takeDirectory file
-    mtimes <- forM [1..10] $ \i -> fmap fst $ duration $ do
+    -- with 10 measurements can get a bit slow, see #451
+    -- if it rounds to a second then 1st will be a fraction, but 2nd will be full second
+    mtimes <- forM [1..2] $ \i -> fmap fst $ duration $ do
         writeFile file $ show i
         let time = fmap (fst . fromMaybe (error "File missing during sleepFileTimeCalibrate")) $ getFileInfo $ packU file
         t1 <- time
