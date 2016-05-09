@@ -35,6 +35,11 @@ main = shakenCwd test $ \args obj -> do
     priority 42 $ alternatives $ obj "xx" %> output "42"
     priority 43 $ obj "xx" %> output "43"
 
+    priority 10 $ do
+        priority 7 $ obj "change" %> output "7"
+        priority 8 $ obj "change" %> output "8"
+    priority 9 $ obj "change" %> output "9"
+
 
 test build obj = do
     build ["clean"]
@@ -54,3 +59,5 @@ test build obj = do
     build ["x","xx"]
     assertContents (obj "x") "55"
     assertContents (obj "xx") "43"
+
+    assertException ["matches multiple rules"] $ build ["change","--quiet"]
