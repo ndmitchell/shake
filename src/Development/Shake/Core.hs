@@ -209,6 +209,13 @@ rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
 -- @
 --
 --   In this example @hello.txt@ will match the second rule, instead of raising an error about ambiguity.
+--
+--   The 'priority' function obeys the invariants:
+--
+-- @
+-- 'priority' p1 ('priority' p2 r1) === 'priority' p1 r1
+-- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
+-- @
 priority :: Double -> Rules () -> Rules ()
 priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
 
@@ -223,6 +230,8 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first
 -- @
 --
 --   In this example @hello.txt@ will match the first rule, instead of raising an error about ambiguity.
+--   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
+--   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
     where
