@@ -35,6 +35,7 @@ import qualified Test.Lint as Lint
 import qualified Test.Live as Live
 import qualified Test.Makefile as Makefile
 import qualified Test.Manual as Manual
+import qualified Test.Match as Match
 import qualified Test.Monad as Monad
 import qualified Test.Ninja as Ninja
 import qualified Test.Oracle as Oracle
@@ -63,7 +64,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
         ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
-        ,"forward" * Forward.main
+        ,"forward" * Forward.main, "match" * Match.main
         ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "makefile" * Makefile.main, "manual" * Manual.main
         ,"monad" * Monad.main, "parallel" * Parallel.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
         ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
