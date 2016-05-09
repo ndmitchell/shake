@@ -37,6 +37,7 @@ main = shakenCwd test $ \args obj -> do
 
 
 test build obj = do
+    build ["clean"]
     build ["or"]
 
     build ["alternative.foo","alternative.txt"]
