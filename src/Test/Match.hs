@@ -42,7 +42,7 @@ test build obj = do
 
     build ["alternative.foo","alternative.txt"]
     assertContents (obj "alternative.foo") "alternative.*"
-    assertContents (obj "alternative.txt") "alternative.txt"
+    assertContents (obj "alternative.txt") "alternative.t*"
 
     build ["priority.txt"]
     assertContents (obj "priority.txt") "100"
