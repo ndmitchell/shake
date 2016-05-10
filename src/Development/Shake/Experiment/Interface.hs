@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections #-}
+{-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections, ScopedTypeVariables #-}
 
 -- | Proposed new interface for defining custom rules.
 --
@@ -14,7 +14,7 @@
 --   Q: Should I just map the whole database into memory? 17Mb is not that much...
 --   A: No, makes compression way harder
 module Development.Shake.Experiment.Interface(
-    Encoder(..),
+    Encoder(..), encodeStorable, decodeStorable, encodeStorableList, decodeStorableList,
     addHelpTarget, addUserRule,
     UserRule(..), userRuleMatch,
     BuiltinRule, BuiltinInfo(..), addBuiltinRule
@@ -25,7 +25,12 @@ import Development.Shake.Types
 import Development.Shake.Core
 import Data.Proxy
 import Data.Maybe
+import Control.Monad
+import Foreign.Storable
+import Foreign.Ptr
+import System.IO.Unsafe
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Internal as BS
 
 
 ---------------------------------------------------------------------
@@ -49,9 +54,38 @@ instance Encoder () where
     decode _ = ()
 
 instance Encoder Bool where
-    encode False = BS.empty
-    encode True = BS.singleton 0
-    decode x = not $ BS.null x
+    encode False = bsFalse
+    encode True = BS.empty
+    decode = BS.null
+
+-- CAF so the True ByteString is shared
+bsFalse = BS.singleton 0
+
+instance Encoder Int where
+    encode = encodeStorable
+    decode = decodeStorable
+
+
+encodeStorable :: forall a . Storable a => a -> BS.ByteString
+encodeStorable = \x -> BS.unsafeCreate n $ \p -> poke (castPtr p) x
+    where n = sizeOf (undefined :: a)
+
+decodeStorable :: forall a . Storable a => BS.ByteString -> a
+decodeStorable = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
+        if size /= n then error "size mismatch" else peek (castPtr p)
+    where n = sizeOf (undefined :: a)
+
+
+encodeStorableList :: forall a . Storable a => [a] -> BS.ByteString
+encodeStorableList = \xs -> BS.unsafeCreate (n * length xs) $ \p ->
+    forM_ (zip [0,n..] xs) $ \(i,x) -> pokeByteOff (castPtr p) i x
+    where n = sizeOf (undefined :: a)
+
+decodeStorableList :: forall a . Storable a => BS.ByteString -> [a]
+decodeStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
+    let (d,m) = size `divMod` n in
+    if m /= 0 then error "size mismatch" else forM [0..d-1] $ \i -> peekElemOff (castPtr p) d
+    where n = sizeOf (undefined :: a)
 
 
 ---------------------------------------------------------------------

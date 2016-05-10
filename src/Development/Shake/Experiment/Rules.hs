@@ -11,40 +11,77 @@ import Data.List
 import System.Directory
 import Control.Monad.Extra
 import Control.Monad.IO.Class
+import Data.Word
+import Foreign.Storable
+import System.Info.Extra
+import Development.Shake.Types
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.UTF8 as UTF8
+
+
+apply_ :: [k] -> Action [v]
+apply_ = undefined
 
 
 ---------------------------------------------------------------------
--- SUPER-FAST STRINGS
+-- UTF8 STRINGS
 
-newtype SpecialString = SpecialString BS.ByteString
+newtype UTF8 = UTF8 BS.ByteString
+    deriving (Eq, Hashable, Typeable, Encoder)
+
+utf8Pack :: String -> UTF8
+utf8Pack = UTF8 . UTF8.fromString
+
+utf8Unpack :: UTF8 -> String
+utf8Unpack (UTF8 x) = UTF8.toString x
+
+
+---------------------------------------------------------------------
+-- FILE STUFF
+
+-- Format is platform specific:
+-- * On Windows if it has a leading 0 it's UTF8, otherwise ANSI
+-- * On Linux it's always UTF8
+newtype File = File BS.ByteString
     deriving (Encoder, Hashable, Typeable, Eq)
 
-packSpecialString :: String -> SpecialString
-packSpecialString = undefined
+filePack :: String -> File
+filePack x | isWindows = File $
+    if any (> '\xff') x then BS.cons '\0' $ UTF8.fromString x else BS.pack x
+filePack x = File $ UTF8.fromString x
 
-unpackSpecialString :: SpecialString -> String
-unpackSpecialString = undefined
+fileUnpack :: File -> String
+fileUnpack (File x) | isWindows =
+    if BS.head x == '\0' then UTF8.toString $ BS.tail x else BS.unpack x
+fileUnpack (File x) = UTF8.toString x
 
-instance Encoder String where
-    encode = BS.pack
-    decode = BS.unpack
 
-instance Encoder Int where
-    encode = encode . show
-    decode = read . decode
+data FileInfo = FileInfo {-# UNPACK #-} !Word32 {-# UNPACK #-} !Word32{-# UNPACK #-} !Word32
+    deriving Eq
 
-data FileA = FileA deriving Eq
+instance Storable FileInfo where
+    sizeOf _ = 12
+    pokeByteOff p i (FileInfo x y z) = pokeByteOff p i x >> pokeByteOff p (i+4) y >> pokeByteOff p (i+8) y
+    peekByteOff p i = FileInfo <$> peekByteOff p i <*> peekByteOff p (i+4) <*> peekByteOff p (i+8)
+    alignment _ = alignment (0 :: Word32)
 
-getFileA :: FilePath -> IO FileA
-getFileA = undefined
+instance Encoder FileInfo where
+    encode = encodeStorable
+    decode = decodeStorable
 
-apply2 :: [k] -> Action [v]
-apply2 = undefined
+getFileInfo :: ShakeOptions -> File -> IO FileInfo
+getFileInfo = error "todo"
 
-instance Encoder [FilePath]
-instance Encoder [FileA]
-instance Encoder FileA
+eqFileInfo :: ShakeOptions -> FileInfo -> FileInfo -> Bool
+eqFileInfo = error "todo"
+
+instance Encoder [File] where
+    encode = error "todo"
+    decode = error "todo"
+
+instance Encoder [FileInfo] where
+    encode = encodeStorableList
+    decode = decodeStorableList
 
 
 ---------------------------------------------------------------------
@@ -72,13 +109,13 @@ test &?> run = do
     addUserRule $ FileRule $ \x -> case test x of
         Nothing -> Nothing
         Just xs -> Just $ Forward $ do
-            res :: [FileA] <- apply2 [xs :: [FilePath]]
+            res :: [FileInfo] <- apply_ [map filePack xs :: [File]]
             return $ res !! fromJust (elemIndex x xs)
 
-files = addBuiltinRule $ \opts ask xs old check -> do  
+files = addBuiltinRule $ \opts ask (xs :: [File]) old check -> do  
     rebuild <- case old of
         Nothing -> return True
-        Just bs -> liftIO ((/= decode bs) <$> mapM getFileA xs) ||^ check
+        Just bs -> liftIO ((/= decode bs) <$> mapM (getFileInfo opts) xs) ||^ check
     if not rebuild then 
         return BuiltinInfo
             {changedDependencies = False
@@ -87,13 +124,14 @@ files = addBuiltinRule $ \opts ask xs old check -> do
             ,changedValue = False
             ,resultValue = decode $ fromJust old}
      else do
+        let xs_ = map fileUnpack xs
         [act] <- return $ userRuleMatch (fromJust $ ask Proxy) $ \(FilesRule test act) ->
-            case test $ head xs of
+            case test $ head xs_ of
                 Nothing -> Nothing
-                Just ys | xs == ys -> Just $ act xs
+                Just ys | xs_ == ys -> Just $ act xs_
                         | otherwise -> error "Invariant violated"
         act
-        res <- liftIO $ mapM getFileA xs
+        res <- liftIO $ mapM (getFileInfo opts) xs
         let changed = maybe True ((==) res . decode) old
         return BuiltinInfo
             {changedDependencies = True
@@ -106,7 +144,7 @@ files = addBuiltinRule $ \opts ask xs old check -> do
 ---------------------------------------------------------------------
 -- FILE
 
-data FileResult = Phony (Action ()) | File (Action ()) | Forward (Action FileA)
+data FileResult = Phony (Action ()) | Literal (Action ()) | Forward (Action FileInfo)
 
 newtype FileRule = FileRule (FilePath -> Maybe FileResult)
 
@@ -115,13 +153,13 @@ phony x = phonys (== x)
 phonys f act = addUserRule $ FileRule $ \x -> if f x then Just $ Phony act else Nothing
 
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-test ?> run = addUserRule $ FileRule $ \x -> if test x then Just $ File $ run x else Nothing
+test ?> run = addUserRule $ FileRule $ \x -> if test x then Just $ Literal $ run x else Nothing
 
-file = addBuiltinRule $ \_ ask x old check -> do
+file = addBuiltinRule $ \opts ask (x :: File) old check -> do
     rebuild <- case old of
         Nothing -> return True
         Just bs | BS.length bs == 0 -> return True
-                | BS.length bs == 12 -> liftIO ((/= decode bs) <$> getFileA x) ||^ check
+                | BS.length bs == 12 -> liftIO ((/= decode bs) <$> getFileInfo opts x) ||^ check
                 | BS.length bs == 13 -> check
     if not rebuild then
         return BuiltinInfo
@@ -131,7 +169,8 @@ file = addBuiltinRule $ \_ ask x old check -> do
             ,changedValue = False
             ,resultValue = decode $ fromJust old}
      else do
-        [act] <- return $ userRuleMatch (fromJust $ ask Proxy) $ \(FileRule f) -> f x
+        let x_ = fileUnpack x
+        [act] <- return $ userRuleMatch (fromJust $ ask Proxy) $ \(FileRule f) -> f x_
         case act of
             Phony act -> do
                 act
@@ -144,7 +183,7 @@ file = addBuiltinRule $ \_ ask x old check -> do
                     }
             Forward act -> do
                 res <- act
-                let store = encode res `BS.append` BS.singleton '_'
+                let store = encode res `BS.append` BS.singleton '\0'
                 return BuiltinInfo
                     {changedDependencies = True
                     ,changedStore = True
@@ -152,10 +191,9 @@ file = addBuiltinRule $ \_ ask x old check -> do
                     ,changedValue = maybe True ((/=) store) old
                     ,resultValue = ()
                     }
-            File act -> do
+            Literal act -> do
                 act
-                res <- liftIO $ getFileA x
-                let changed = maybe True ((==) res . decode) old
+                res <- liftIO $ getFileInfo opts x
                 return BuiltinInfo
                     {changedDependencies = True
                     ,changedStore = True
@@ -167,30 +205,30 @@ file = addBuiltinRule $ \_ ask x old check -> do
 ---------------------------------------------------------------------
 -- DIRECTORY RULES
 
-newtype DoesFileExist = DoesFileExist String
+newtype DoesFileExist = DoesFileExist UTF8
     deriving (Eq, Hashable, Encoder, Typeable)
 
-addDoesFileExist = addBuiltinRule $ \_ _ (DoesFileExist x) old _ -> do
-    b <- liftIO $ doesFileExist x
-    let diff = maybe True ((/=) b . decode) old
+addDoesFileExist = addBuiltinRule $ \_ _ (DoesFileExist x) old _ -> liftIO $ do
+    b <- doesFileExist $ utf8Unpack x
+    let changed = maybe True ((/=) b . decode) old
     return BuiltinInfo
         {changedDependencies = False
-        ,changedStore = diff
+        ,changedStore = changed
         ,resultStore = encode b
-        ,changedValue = diff
+        ,changedValue = changed
         ,resultValue = b}
 
 
-newtype DirectoryContents = DirectoryContents String
+newtype DirectoryContents = DirectoryContents UTF8
     deriving (Eq, Hashable, Encoder, Typeable)
 
 addDirectoryContents = addBuiltinRule $ \_ _ (DirectoryContents x) old _ -> do
-    xs <- liftIO $ getDirectoryContents x
-    let h = hash xs
-    let diff = maybe True ((/=) h . decode) old
+    xs <- liftIO $ getDirectoryContents $ utf8Unpack x
+    let h = encode $ hash xs
+    let changed = maybe True (/= h) old
     return BuiltinInfo
         {changedDependencies = False
-        ,changedStore = diff
-        ,resultStore = encode h
-        ,changedValue = diff
+        ,changedStore = changed
+        ,resultStore = h
+        ,changedValue = changed
         ,resultValue = xs}
