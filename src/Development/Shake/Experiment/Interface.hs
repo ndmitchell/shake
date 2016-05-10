@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, DeriveFunctor, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE Rank2Types, DeriveFunctor #-}
 
 -- | Proposed new interface for defining custom rules.
 --
@@ -20,7 +20,7 @@ import Development.Shake.Classes
 import Development.Shake.Types
 import Development.Shake.Core
 import Data.Proxy
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString as BS
 
 
 ---------------------------------------------------------------------
@@ -39,22 +39,14 @@ instance Encoder BS.ByteString where
     encode = id
     decode = id
 
-instance Encoder String where
-    encode = BS.pack
-    decode = BS.unpack
-
 instance Encoder () where
     encode () = BS.empty
     decode _ = ()
 
 instance Encoder Bool where
     encode False = BS.empty
-    encode True = BS.singleton '\0'
+    encode True = BS.singleton 0
     decode x = not $ BS.null x
-
-instance Encoder Int where
-    encode = encode . show
-    decode = read . decode
 
 
 ---------------------------------------------------------------------

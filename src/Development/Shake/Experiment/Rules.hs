@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeSynonymInstances, FlexibleInstances #-}
 
 module Development.Shake.Experiment.Rules where
 
@@ -23,6 +23,13 @@ packSpecialString = undefined
 unpackSpecialString :: SpecialString -> String
 unpackSpecialString = undefined
 
+instance Encoder String where
+    encode = BS.pack
+    decode = BS.unpack
+
+instance Encoder Int where
+    encode = encode . show
+    decode = read . decode
 
 
 ---------------------------------------------------------------------
