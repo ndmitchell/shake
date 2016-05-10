@@ -67,5 +67,5 @@ Build completed in 0:03m
 % For more info see <a href="http://www.shakebuild.com/">http://shakebuild.com</a>
 &#32;
 % PS. Shake can also execute Ninja build files
-% For more info see <a href="http://www.shakebuild.com/ninja/">http://shakebuild.com/ninja</a></b>
+% For more info see <a href="http://www.shakebuild.com/ninja">http://shakebuild.com/ninja</a></b>
 </pre>
