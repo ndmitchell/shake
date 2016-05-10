@@ -76,8 +76,8 @@ eqFileInfo :: ShakeOptions -> FileInfo -> FileInfo -> Bool
 eqFileInfo = error "todo"
 
 instance Encoder [File] where
-    encode = error "todo"
-    decode = error "todo"
+    encode xs = encode [x | File x <- xs]
+    decode = map File . decode
 
 instance Encoder [FileInfo] where
     encode = encodeStorableList
@@ -144,7 +144,7 @@ files = addBuiltinRule $ \opts ask (xs :: [File]) old check -> do
 ---------------------------------------------------------------------
 -- FILE
 
-data FileResult = Phony (Action ()) | Literal (Action ()) | Forward (Action FileInfo)
+data FileResult = Phony (Action ()) | One (Action ()) | Forward (Action FileInfo)
 
 newtype FileRule = FileRule (FilePath -> Maybe FileResult)
 
@@ -153,7 +153,7 @@ phony x = phonys (== x)
 phonys f act = addUserRule $ FileRule $ \x -> if f x then Just $ Phony act else Nothing
 
 (?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-test ?> run = addUserRule $ FileRule $ \x -> if test x then Just $ Literal $ run x else Nothing
+test ?> run = addUserRule $ FileRule $ \x -> if test x then Just $ One $ run x else Nothing
 
 file = addBuiltinRule $ \opts ask (x :: File) old check -> do
     rebuild <- case old of
@@ -191,7 +191,7 @@ file = addBuiltinRule $ \opts ask (x :: File) old check -> do
                     ,changedValue = maybe True ((/=) store) old
                     ,resultValue = ()
                     }
-            Literal act -> do
+            One act -> do
                 act
                 res <- liftIO $ getFileInfo opts x
                 return BuiltinInfo
@@ -224,7 +224,7 @@ newtype DirectoryContents = DirectoryContents UTF8
 
 addDirectoryContents = addBuiltinRule $ \_ _ (DirectoryContents x) old _ -> do
     xs <- liftIO $ getDirectoryContents $ utf8Unpack x
-    let h = encode $ hash xs
+    let h = encode (fromIntegral $ hash xs :: Word32)
     let changed = maybe True (/= h) old
     return BuiltinInfo
         {changedDependencies = False

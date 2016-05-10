@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections, ScopedTypeVariables #-}
+{-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections, ScopedTypeVariables, FlexibleInstances #-}
 
 -- | Proposed new interface for defining custom rules.
 --
@@ -7,12 +7,6 @@
 --
 --   It is expected most people will use higher-level facilities such as 'addOracle' or other
 --   appropriate sugar.
---
---   Q: What is the appropriate sugar? Something like @storedValueE@ from the PR?
---   Q: Are these really the right names?
---
---   Q: Should I just map the whole database into memory? 17Mb is not that much...
---   A: No, makes compression way harder
 module Development.Shake.Experiment.Interface(
     Encoder(..), encodeStorable, decodeStorable, encodeStorableList, decodeStorableList,
     addHelpTarget, addUserRule,
@@ -25,12 +19,18 @@ import Development.Shake.Types
 import Development.Shake.Core
 import Data.Proxy
 import Data.Maybe
+import Data.Word
+import Data.List
 import Control.Monad
 import Foreign.Storable
+import Data.Tuple.Extra
 import Foreign.Ptr
 import System.IO.Unsafe
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
+
+
+for2M_ as bs f = zipWithM_ f as bs
 
 
 ---------------------------------------------------------------------
@@ -39,8 +39,6 @@ import qualified Data.ByteString.Internal as BS
 -- | Methods for Binary serialisation that go directly between strict ByteString values.
 --   When the Database is read each key/value will be loaded as a separate ByteString,
 --   and for certain types (e.g. file rules) this may remain the preferred format for storing keys.
---
---   Q: Should this be ByteString or a primitive ByteArray?
 class Encoder a where
     encode :: a -> BS.ByteString
     decode :: BS.ByteString -> a
@@ -48,6 +46,21 @@ class Encoder a where
 instance Encoder BS.ByteString where
     encode = id
     decode = id
+
+instance Encoder [BS.ByteString] where
+    encode xs = BS.unsafeCreate (4 + (n * 4) + sum ns) $ \p -> do
+        pokeByteOff p 0 (fromIntegral n :: Word32)
+        for2M_ [4,8..] ns $ \i x -> pokeByteOff p i (fromIntegral x :: Word32)
+        p <- return $ p `plusPtr` (4 + (n * 4))
+        for2M_ (scanl (+) 0 ns) xs $ \i x -> BS.useAsCStringLen x $ \(bs, n) ->
+            BS.memcpy (castPtr bs) (p `plusPtr` i) n
+        where ns = map BS.length xs
+              n = length ns
+
+    decode bs = unsafePerformIO $ BS.useAsCString bs $ \p -> do
+        n <- fromIntegral <$> (peekByteOff p 0 :: IO Word32)
+        ns :: [Word32] <- forM [1..fromIntegral n] $ \i -> peekByteOff p (i * 4)
+        return $ snd $ mapAccumL (\bs i -> swap $ BS.splitAt (fromIntegral i) bs) (BS.drop (4 + (n * 4)) bs) ns
 
 instance Encoder () where
     encode () = BS.empty
@@ -61,7 +74,7 @@ instance Encoder Bool where
 -- CAF so the True ByteString is shared
 bsFalse = BS.singleton 0
 
-instance Encoder Int where
+instance Encoder Word32 where
     encode = encodeStorable
     decode = decodeStorable
 
@@ -78,7 +91,7 @@ decodeStorable = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
 
 encodeStorableList :: forall a . Storable a => [a] -> BS.ByteString
 encodeStorableList = \xs -> BS.unsafeCreate (n * length xs) $ \p ->
-    forM_ (zip [0,n..] xs) $ \(i,x) -> pokeByteOff (castPtr p) i x
+    for2M_ [0,n..] xs $ \i x -> pokeByteOff (castPtr p) i x
     where n = sizeOf (undefined :: a)
 
 decodeStorableList :: forall a . Storable a => BS.ByteString -> [a]
