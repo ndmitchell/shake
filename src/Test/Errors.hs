@@ -60,9 +60,6 @@ main = shakenCwd test $ \args obj -> do
     obj "overlap.txt" %> \out -> writeFile' out "overlap.txt"
     obj "overlap.t*" %> \out -> writeFile' out "overlap.t*"
     obj "overlap.*" %> \out -> writeFile' out "overlap.*"
-    alternatives $ do
-        obj "alternative.t*" %> \out -> writeFile' out "alternative.txt"
-        obj "alternative.*" %> \out -> writeFile' out "alternative.*"
 
     obj "chain.2" %> \out -> do
         src <- readFile' $ obj "chain.1"
@@ -153,9 +150,6 @@ test build obj = do
     build ["overlap.txt"]
     assertContents (obj "overlap.txt") "overlap.txt"
     crash ["overlap.txx"] ["key matches multiple rules","overlap.txx"]
-    build ["alternative.foo","alternative.txt"]
-    assertContents (obj "alternative.foo") "alternative.*"
-    assertContents (obj "alternative.txt") "alternative.txt"
 
     crash ["tempfile"] ["tempfile-died"]
     src <- readFile $ obj "tempfile"

@@ -380,6 +380,7 @@ test-suite shake-test
         Test.Live
         Test.Makefile
         Test.Manual
+        Test.Match
         Test.Monad
         Test.Ninja
         Test.Oracle
