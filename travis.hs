@@ -54,13 +54,13 @@ main = do
             ninjaZero <- cmd "../nin -j3 -d stats"
 
             cmd "../nin -t clean"
-            shakeFull <- cmd "shake -j3 --verbose +RTS -I10000"
+            shakeFull <- cmd "shake -j3 --verbose"
 
             -- time Shake
             cmd "../nin -t clean"
-            shakeFull <- cmd "shake -j3 --quiet --timings +RTS -I10000"
+            shakeFull <- cmd "shake -j3 --quiet --timings"
             cmd "shake --no-build --report=-"
-            shakeZero <- cmd "shake -j3 --quiet --timings +RTS -I10000"
+            shakeZero <- cmd "shake -j3 --quiet --timings"
 
             -- Diagnostics
             cmd "ls -l .shake* build/.ninja*"
@@ -79,7 +79,7 @@ main = do
 
     createDirectoryIfMissing True "temp"
     withCurrentDirectory "temp" $
-        cmd "shake --demo --keep-going +RTS -I10000"
+        cmd "shake --demo --keep-going"
 
     ghcver <- lookupEnv "GHCVER"
     when (ghcver >= Just "7.6" && ghcver /= Just "head") $ do
