@@ -125,7 +125,7 @@ defaultRuleDirectory = do
 --   dependency, and if the file is created or deleted the rule will rerun in subsequent builds.
 --
 --   You should not call 'doesFileExist' on files which can be created by the build system;
---   instead, create a file rule and call 'disableCreationCheck' if the file is not created.
+--   instead, create a file rule and disable 'shakeCreationCheck' if the file might not be created.
 doesFileExist :: FilePath -> Action Bool
 doesFileExist file = do
     DoesFileExistA res <- apply1 $ DoesFileExistQ $ toStandard file
@@ -135,7 +135,7 @@ doesFileExist file = do
 --   dependency, and if the directory is created or delete the rule will rerun in subsequent builds.
 --
 --   You should not call 'doesDirectoryExist' on directories which can be created by the build system;
---   instead, create a directory rule and call 'disableCreationCheck' if the directory is not created.
+--   instead, create a directory rule and disable 'shakeCreationCheck' if the directory might not be created.
 doesDirectoryExist :: FilePath -> Action Bool
 doesDirectoryExist file = do
     DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ $ toStandard file
@@ -204,11 +204,12 @@ getDirectoryContents x = getDirAction $ GetDir x
 --   but the /list/ of @.c@ files doesn't change, then it will not rebuild (unless the rule
 --   also depends directly on that file).
 --
---   As a consequence of being tracked, if the contents change during the run
---   after this function is called (e.g. you are generating @.c@ files in this directory),
---   then the build does not reach a stable point, which is an error -
---   detected by running with @--lint@.
---   You should only call this function after 'need'-ing all relevant generated files.
+--   As a consequence of being tracked, it is an error (detected by running with @--lint@)
+--   if the contents change during the run after this function is called
+--   (e.g. you are generating @.c@ files in this directory),
+--   since the build does not reach a stable point.
+--   .
+--   You should only call this function after generating all relevant files.
 --
 --   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]

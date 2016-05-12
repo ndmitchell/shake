@@ -123,7 +123,6 @@ root help test act = rule $ \xo@(FileQ x_) -> let x = unpackU x_ in
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = priority 0 $ rule $ \x -> Just $ \vo -> do
-    opts <- getShakeOptions
     storedValueError True "Error, file does not exist and no rule available:" x vo
 
 
