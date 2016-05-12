@@ -1,12 +1,22 @@
 {-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections, ScopedTypeVariables, FlexibleInstances #-}
 
--- | Proposed new interface for defining custom rules.
+-- | Proposed new interface for defining custom rules. There are two types of rules:
 --
---   This interface is meant to be deliberately low-level. The idea is to allow anything that
+--   * Builtin rules map between keys/values and must be unique for any key type.
+--     A builtin rule declares how to build, when to rebuild and what to store.
+--     As an example, file rules are implemented by a single builtin rule.
+--
+--   * User rules are just arbitrary values which are accumulated in the Rules structure.
+--     There may be any number of rules per type. The builtin rules are responsible for
+--     interogating and applying the user rules. Each %> call will result in one user rule.
+--
+--   The builtin rule interface is meant to be deliberately low-level. The idea is to allow anything that
 --   makes sense to be implemented efficiently and correctly.
---
 --   It is expected most people will use higher-level facilities such as 'addOracle' or other
 --   appropriate sugar.
+--
+--   The user rule interface provides no type safety, and it is expected that sugared type-safe
+--   methods will be defined on top.
 module Development.Shake.Experiment.Interface(
     Encoder(..), encodeStorable, decodeStorable, encodeStorableList, decodeStorableList,
     addHelpTarget, addUserRule,
@@ -29,7 +39,7 @@ import System.IO.Unsafe
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
 
-
+-- forM for zipWith
 for2M_ as bs f = zipWithM_ f as bs
 
 
@@ -39,6 +49,7 @@ for2M_ as bs f = zipWithM_ f as bs
 -- | Methods for Binary serialisation that go directly between strict ByteString values.
 --   When the Database is read each key/value will be loaded as a separate ByteString,
 --   and for certain types (e.g. file rules) this may remain the preferred format for storing keys.
+--   Optimised for performance.
 class Encoder a where
     encode :: a -> BS.ByteString
     decode :: BS.ByteString -> a
@@ -48,6 +59,10 @@ instance Encoder BS.ByteString where
     decode = id
 
 instance Encoder [BS.ByteString] where
+    -- Format:
+    -- n :: Word32 - number of strings
+    -- ns :: [Word32]{n} - length of each string
+    -- contents of each string concatenated (sum ns bytes)
     encode xs = BS.unsafeCreate (4 + (n * 4) + sum ns) $ \p -> do
         pokeByteOff p 0 (fromIntegral n :: Word32)
         for2M_ [4,8..] ns $ \i x -> pokeByteOff p i (fromIntegral x :: Word32)
@@ -104,14 +119,15 @@ decodeStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size)
 ---------------------------------------------------------------------
 -- USER RULES
 
+-- | Add a line to the @--help@ output defining a target that can be built.
 addHelpTarget :: String -> Rules ()
 addHelpTarget = undefined
 
+-- | Add an arbitrary user rule, most people will call sugared variants of this function.
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule = undefined
 
--- | A 'Match' data type, representing user-defined rules associated with a particular type.
---   As an example '?>' and '*>' will add entries to the 'Match' data type.
+-- | A 'Match' data type, representing calls to 'addUserRule', 'priority' and 'alternatives'.
 --
 --   /Semantics/
 --
@@ -129,7 +145,8 @@ data UserRule a
       deriving (Eq,Show,Functor)
 
 
--- | Rules first since they might be able to be optimised in some cases
+-- | Given a set of rules, and a function that declares if a rule matches, produce the rules that match.
+--   The resulting list is unordered - typically anything other than a singleton list will result in an error.
 userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]
 userRuleMatch u test = maybe [] snd $ f Nothing u
     where
@@ -144,22 +161,23 @@ userRuleMatch u test = maybe [] snd $ f Nothing u
 ---------------------------------------------------------------------
 -- DEFINING RULES
 
--- | Add a new rule, which maps between keys and values. For every distinct key/value
---   pair there may be at most one rule defined.
+-- | Add a new builtin rule, which maps between keys and values.
+--   For every distinct key there may be at most one rule defined.
 addBuiltinRule
     :: (Encoder key, Hashable key, Eq key, Typeable key, Typeable value)
     => BuiltinRule key value -> Rules ()
 addBuiltinRule = undefined
 
 -- | Function representing a built-in rule. This function will be pre-applied to the
---   first two arguments, then called repeatedly as necessary in response to 'apply'.
+--   first two arguments, then called repeatedly as necessary in response to 'apply'
+--   or values stored in the database.
 type BuiltinRule key value
     =  ShakeOptions
         -- ^ The currently active 'ShakeOptions'.
     -> (forall u . Typeable u => Proxy u -> Maybe u)
         -- ^ A way to query 'UserRule' values at a particular type.
     -> key
-        -- ^ Key that you want to build.
+        -- ^ Key that you want to build. Will be called at most once per key per run.
     -> Maybe BS.ByteString
         -- ^ 'Just' the previous result in the database, or 'Nothing' to indicate Shake has no memory of this rule.
         --   In most cases this will be a serialised value of type @value@.
