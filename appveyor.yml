@@ -1,5 +1,5 @@
 cache:
-- "c:\\sr -> appveyor.yml" #
+- "c:\\sr -> appveyor.yml" ##
 
 build: off
 
