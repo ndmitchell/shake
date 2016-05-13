@@ -18,11 +18,6 @@ data Intern a = Intern {-# UNPACK #-} !Word32 !(Map.HashMap a Id)
 newtype Id = Id Word32
     deriving (Eq,Hashable,Binary,Show,NFData)
 
-instance BinaryWith w Id where
-    putWith ctx = put
-    getWith ctx = get
-
-
 empty :: Intern a
 empty = Intern 0 Map.empty
 

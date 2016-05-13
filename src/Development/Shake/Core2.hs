@@ -47,89 +47,27 @@ import General.String
 import Prelude
 
 
----------------------------------------------------------------------
--- RULES
+-- | A 'Match' data type, representing user-defined rules associated with a particular type.
+--   As an example '?>' and '*>' will add entries to the 'Match' data type.
+--
+--   /Semantics/
+--
+-- > priority p1 (priority p2 x) == priority p1 x
+-- > priority p (x `ordered` y) = priority p x `ordered` priority p y
+-- > priority p (x `unordered` y) = priority p x `unordered` priority p y
+-- > ordered is associative
+-- > unordered is associative and commutative
+-- > alternative does not obey priorities, until picking the best one
+data UserRule a
+    = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> Rules ()@.
+    | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
+    | Unordered [UserRule a] -- ^ Rules defined normally, at most one should match.
+    | Ordered [UserRule a] -- ^ Rules defined under 'alternative', matched in order.
+      deriving (Eq,Show,Functor)
 
--- | Define a pair of types that can be used by Shake rules.
---   To import all the type classes required see "Development.Shake.Classes".
---
---   A 'Rule' instance for a class of artifacts (e.g. /files/) provides:
---
--- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
---
--- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
---
--- * A way to compare an old state of the artifact with the current state of the artifact, 'analyseR'.
---
---   As an example, below is a simplified rule for building files, where files are identified
---   by a 'FilePath' and their state is identified by a hash of their contents
---   (the builtin functions 'Development.Shake.need' and 'Development.Shake.%>'
---   provide a similar rule).
---
--- @
--- newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
--- newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
--- getFileModtime file = ...
---
--- instance Rule File Modtime where
---     analyseR _ (File x) (Modtime d) = do
---         exists <- System.Directory.doesFileExist x
---         if exists then do
---             d2 <- getFileModtime x
---             return $ if d == d2 then Rebuild else Continue
---         else return Rebuild
--- @
---
---   This example instance means:
---
--- * A value of type @File@ uniquely identifies a generated file.
---
--- * A value of type @Modtime@ will be used to check if a file is up-to-date.
---
--- * A missing file will always rebuild, as in Make.
---
---   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
---   instances are one component required for the creation of rules.
---   Actual /rules/ are functions from a @key@ to an 'Action'; they are
---   added to 'Rules' using the 'rule' function.
---
---   A rule can be created for the instance above with:
---
--- @
--- -- Compile foo files; for every foo output file there must be a
--- -- single input file named \"filename.foo\".
--- compileFoo :: 'Rules' ()
--- compileFoo = 'rule' (Just . compile)
---     where
---         compile :: File -> Maybe Modtime -> 'Action' (Modtime, Bool)
---         compile (File outputFile) oldd = do
---             -- figure out the name of the input file
---             let inputFile = outputFile '<.>' \"foo\"
---             'unit' $ 'Development.Shake.cmd' \"fooCC\" inputFile outputFile
---             -- return the (new) file modtime of the output file:
---             d <- getFileModtime outputFile
---             return (d,Just d == oldd)
--- @
---
---   /Note:/ In this example, the timestamps of the input files are never
---   used, let alone compared to the timestamps of the output files.
---   Dependencies between output and input files are /not/ expressed by
---   'Rule' instances. Dependencies are created automatically by 'apply'.
---
---   For rules whose values are not stored externally,
---   'analyseR' should always return 'Continue'.
-class (ShakeValue key, ShakeValue value) => Rule key value where
 
-    -- | /[Required]/ Check if the @value@ associated with a @key@ is up-to-date.
-    --
-    --   As an example for filenames/timestamps, if the file exists with the given timestamp
-    --   you should return 'Continue', but otherwise return 'Rebuild'.
-    --   If the value has changed but you still do not want to rebuild, you should return
-    --   'Update' with the new value.
-    analyseR :: ShakeOptions -> key -> value -> IO (AnalysisResult value)
-
-data ARule k v m = Rule k v => Priority [(Double,k -> Maybe (Maybe v -> m (v, Bool)))] -- higher fst is higher priority
-                 | Custom (k -> v -> IO (AnalysisResult v)) (k -> Maybe v -> m (v, Bool))
+data ARule k v m = Priority [(Double,k -> Maybe (Maybe v -> m (v, Bool)))] -- higher fst is higher priority
+                 | Custom (k -> Maybe v -> m (v, Bool))
 
 combineRules :: ARule k v m -> ARule k v m -> Maybe (ARule k v m)
 combineRules (Priority xs) (Priority ys) = Just $ Priority (xs ++ ys)
@@ -164,8 +102,7 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 data RuleInfo m = RuleInfo
-    {analyse :: ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
-    ,execute :: Key -> Maybe Value -> m (Value, Bool)
+    {execute :: Key -> Maybe Value -> m (Value, Bool)
     ,resultType :: TypeRep
     }
 
@@ -317,26 +254,25 @@ run' opts@ShakeOptions{..} start rs = do
                     checkValid database absent' $ \ks -> do
                         bad <- newIORef []
                         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                            let opts2 = opts{shakeAssume=case shakeAssume of AssumeSkip -> AssumeSkip; _ -> AssumeNothing}
+                            let opts2 = opts{shakeAssume=AssumeClean}
                             let s0 = Global database pool cleanup start ruleinfo output opts2 diagnostic lint after absent getProgress forwards
                             forM_ ks $ \(i,(key,v)) -> case v of
                                 Ready ro -> do
                                     stat <- analyseResult_ s0 key (result ro)
-                                    let clean = case stat of { Continue -> True; _ -> False }
-                                        reply now = do
+                                    let reply now = do
                                             diagnostic $ "Checking if " ++ show key ++ " is " ++ show (result ro) ++ ", " ++ if now == Nothing then "passed" else "FAILED"
                                             whenJust now $ \now -> modifyIORef' bad ((key, result ro, now):)
-                                    if specialAlwaysRebuilds (result ro) then
-                                        -- skip phony rules
-                                        if specialAlwaysChanges (result ro) then
+                                    case stat of
+                                        Continue -> reply Nothing
+                                        Update v -> reply (Just v)
+                                        Rebuild -> do
+                                          if specialAlwaysChanges (result ro) then
                                             reply Nothing
-                                         else
+                                          else
                                             runKey_ s0 i key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
                                                 Error e -> raiseError =<< shakeException s0 (return ["Lint-checking"]) e
                                                 Ready r | built r == changed r -> reply . Just . show $ result r
                                                 _ -> reply Nothing
-                                     else
-                                        reply (if clean then Nothing else Just (show stat))
                                 _ -> return ()
                         maybe (return ()) (throwIO . snd) =<< readIORef except
                         readIORef bad

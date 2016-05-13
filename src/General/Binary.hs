@@ -1,34 +1,15 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module General.Binary(
-    BinaryWith(..), module Data.Binary,
+    module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
 
-import Control.Applicative
 import Control.Monad
 import Data.Binary
 import Data.List
 import Foreign
 import System.IO.Unsafe as U
-
-
-class BinaryWith ctx a where
-    putWith :: ctx -> a -> Put
-    getWith :: ctx -> Get a
-
-instance (BinaryWith ctx a, BinaryWith ctx b) => BinaryWith ctx (a,b) where
-    putWith ctx (a,b) = putWith ctx a >> putWith ctx b
-    getWith ctx = liftA2 (,) (getWith ctx) (getWith ctx)
-
-instance BinaryWith ctx a => BinaryWith ctx [a] where
-    putWith ctx xs = put (length xs) >> mapM_ (putWith ctx) xs
-    getWith ctx = do n <- get; replicateM n $ getWith ctx
-
-instance BinaryWith ctx a => BinaryWith ctx (Maybe a) where
-    putWith _ Nothing = putWord8 0
-    putWith ctx (Just x) = putWord8 1 >> putWith ctx x
-    getWith ctx = do i <- getWord8; if i == 0 then return Nothing else Just <$> getWith ctx
 
 
 newtype BinList a = BinList {fromBinList :: [a]}

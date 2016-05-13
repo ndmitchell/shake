@@ -67,6 +67,80 @@ modifyRules f (Rules r) = Rules $ censor f r
 getRules :: Rules () -> IO (SRules Action)
 getRules (Rules r) = execWriterT r
 
+-- | Define a pair of types that can be used by Shake rules.
+--   To import all the type classes required see "Development.Shake.Classes".
+--
+--   A 'Rule' instance for a class of artifacts (e.g. /files/) provides:
+--
+-- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
+--
+-- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
+--
+-- * A way to compare an old state of the artifact with the current state of the artifact, 'analyseR'.
+--
+--   As an example, below is a simplified rule for building files, where files are identified
+--   by a 'FilePath' and their state is identified by a hash of their contents
+--   (the builtin functions 'Development.Shake.need' and 'Development.Shake.%>'
+--   provide a similar rule).
+--
+-- @
+-- newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+-- newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+-- getFileModtime file = ...
+--
+-- instance Rule File Modtime where
+--     analyseR _ (File x) (Modtime d) = do
+--         exists <- System.Directory.doesFileExist x
+--         if exists then do
+--             d2 <- getFileModtime x
+--             return $ if d == d2 then Rebuild else Continue
+--         else return Rebuild
+-- @
+--
+--   This example instance means:
+--
+-- * A value of type @File@ uniquely identifies a generated file.
+--
+-- * A value of type @Modtime@ will be used to check if a file is up-to-date.
+--
+-- * A missing file will always rebuild, as in Make.
+--
+--   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
+--   instances are one component required for the creation of rules.
+--   Actual /rules/ are functions from a @key@ to an 'Action'; they are
+--   added to 'Rules' using the 'rule' function.
+--
+--   A rule can be created for the instance above with:
+--
+-- @
+-- -- Compile foo files; for every foo output file there must be a
+-- -- single input file named \"filename.foo\".
+-- compileFoo :: 'Rules' ()
+-- compileFoo = 'rule' (Just . compile)
+--     where
+--         compile :: File -> Maybe Modtime -> 'Action' (Modtime, Bool)
+--         compile (File outputFile) oldd = do
+--             -- figure out the name of the input file
+--             let inputFile = outputFile '<.>' \"foo\"
+--             'unit' $ 'Development.Shake.cmd' \"fooCC\" inputFile outputFile
+--             -- return the (new) file modtime of the output file:
+--             d <- getFileModtime outputFile
+--             return (d,Just d == oldd)
+-- @
+--
+--   /Note:/ In this example, the timestamps of the input files are never
+--   used, let alone compared to the timestamps of the output files.
+--   Dependencies between output and input files are /not/ expressed by
+--   'Rule' instances. Dependencies are created automatically by 'apply'.
+--
+--   For rules whose values are not stored externally,
+--   'analyseR' should always return 'Continue'.
+--  /[Required]/ Check if the @value@ associated with a @key@ is up-to-date.
+--
+--   As an example for filenames/timestamps, if the file exists with the given timestamp
+--   you should return 'Continue', but otherwise return 'Rebuild'.
+--   If the value has changed but you still do not want to rebuild, you should return
+--   'Update' with the new value.
 newRule :: (ShakeValue k, ShakeValue v) => ARule k v Action -> Rules ()
 newRule r = newRules mempty{rules = Map.singleton k (k, ARule r)}
   where k = typeOf $ ruleKey r
@@ -88,7 +162,7 @@ cRule :: (ShakeValue key, ShakeValue value)
 cRule a e = newRule $ Custom a e
 
 simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
-simpleCheck act = cRule (\_ _ -> return Rebuild) -- (\k v -> act k >>= \v2 -> return $ if v == v2 then Continue else Rebuild)
+simpleCheck act = cRule (\_ _ -> return Rebuild)
   (\k v -> act k >>= \v2 -> return (v2, maybe False (==v2) v))
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.

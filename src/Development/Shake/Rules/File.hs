@@ -88,15 +88,25 @@ equalValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case 
     where bool b = if b then EqualCheap else NotEqual
 
 instance Rule FileQ FileA where
-  analyseR opt@(shakeAssume -> assume) k vo = do
-    s <- storedValue opt k
-    return $ case s of
-        Just v -> case equalValue opt vo v of
-            NotEqual | assume == AssumeClean -> Update v
-            NotEqual -> Rebuild
-            EqualCheap -> Continue
-            EqualExpensive -> Update v
+  analyseR opt@(ShakeOptions{..}) k (FileA ytime ysize yhash) = do
+    res <- storedValue opt k
+    let ac = shakeAssume == AssumeClean
+        bool b = case b of
+            False | ac -> Update res
+            False -> Rebuild
+            True -> Continue
+    return $ case res of
         Nothing -> Rebuild
+        Just (FileA time size hash) -> case shakeChange of
+            ChangeModtime -> bool $ time == ytime
+            ChangeDigest -> bool $ size == ysize && hash == yhash
+            ChangeModtimeOrDigest -> bool $ time == ytime && size == ysize && hash == yhash
+            _ | time == ytime -> Continue
+              | otherwise ->
+                case size == ysize && hash == yhash of
+                    False | ac -> Update res
+                    False -> Rebuild
+                    True -> Update res
 
 -- | Arguments: is the file an input; a message for failure if the file does not exist; filename; cached value
 storedValueError :: Bool -> String -> FileQ -> Maybe FileA -> Action (FileA, Bool)

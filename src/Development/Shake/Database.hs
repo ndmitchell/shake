@@ -6,7 +6,7 @@ module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies, Step, incStep, Result(..), Status(Ready,Error),
-    Ops(..), AnalysisResult(..), build, Id, Depends, subtractDepends, finalizeDepends,
+    Ops(..), build, Id, Depends, subtractDepends, finalizeDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -19,7 +19,6 @@ import Development.Shake.Database2
 import Development.Shake.Pool
 import Development.Shake.Value
 import Development.Shake.Errors
-import Development.Shake.Special
 import Development.Shake.Storage
 import Development.Shake.Types
 import Development.Shake.Profile
@@ -114,17 +113,24 @@ newWaiting r = do ref <- newIORef $ return (); return $ Waiting (Pending ref) r
 runWaiting :: Waiting -> IO ()
 runWaiting (Waiting (Pending p) _) = join $ readIORef p
 
+data WaitResult a = WaitAgain (a, Waiting) | Continue | Finish
+
 -- | Wait for a set of actions to complete.
---   If the action returns True, the function will not be called again.
+--   If the action returns Finish, the function will not be called again.
 --   If the first argument is True, the thing is ended.
-waitFor :: [(a, Waiting)] -> (Bool -> a -> IO Bool) -> IO ()
+waitFor :: [(a, Waiting)] -> (Bool -> a -> IO (WaitResult a)) -> IO ()
 waitFor ws@(_:_) act = do
-    todo <- newIORef $ length ws
-    forM_ ws $ \(k,w) -> afterWaiting w $ do
-        t <- readIORef todo
-        when (t /= 0) $ do
-            b <- act (t == 1) k
-            writeIORef' todo $ if b then 0 else t - 1
+    todo <- newVar $ length ws
+    let waitOn (k,w) = afterWaiting w . modifyVar_ todo . ((evaluate =<<).) $ \t ->
+            if t == 0 then return 0 else do
+                b <- act (t == 1) k
+                case b of
+                    Finish -> return 0
+                    Continue -> return (t - 1)
+                    WaitAgain kw -> do
+                      waitOn kw
+                      return t
+    forM_ ws waitOn
 
 
 getResult :: Status -> Maybe Result
@@ -137,13 +143,9 @@ getResult _ = Nothing
 ---------------------------------------------------------------------
 -- OPERATIONS
 
-data AnalysisResult v = Rebuild | Continue | Update v deriving (Show,Eq,Functor)
-
 data Ops = Ops
-    { analyseResult :: Key -> Value -> IO (AnalysisResult Value)
-        -- ^ Given a Key and its stored value, determine whether to run it
-    , runKey :: Id -> Key -> Maybe Result -> Stack -> Step -> Capture Status
-        -- ^ Given a Key and its previous result, run it and return the status
+    { runKey :: Id -> Key -> Maybe Result -> Bool -> Stack -> Step -> Capture Status
+        -- ^ Given a Key and its previous result and if its dependencies changed, run it and return the status
     }
 
 
@@ -168,17 +170,13 @@ updateStatus Database{..} i (k,v) = do
     s <- readIORef status
     writeIORef' status $ Map.insert i (k,v) s
     diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
+    case Map.lookup i s of
+        Just (_,w@(Waiting _ _)) -> runWaiting w
     return v
 
 reportResult :: Database -> Id -> Key -> Status -> IO ()
-reportResult Database{..} i k res = do
-    ans <- withLock lock $ do
-        s <- readIORef status
-        writeIORef' status $ Map.insert i (k,res) s
-        diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType res ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
-        case Map.lookup i s of
-            Just (_,w@(Waiting _ _)) -> runWaiting w
-        return res
+reportResult d@Database{..} i k res = do
+    ans <- updateStatus d i (k,res)
     -- we leave the DB lock before appending
     case ans of
         Ready r -> do
@@ -222,19 +220,17 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                     case x of
                         Left e -> addPoolPriority pool $ continue $ Left e
                         Right v -> addPool pool $ do dur <- time; continue $ Right (dur, Depends [is], v)
-                    return True
+                    return Finish
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
                 case Map.lookup i s of
                     Just (_, Error e) -> done $ Left e -- on error make sure we immediately kick off our parent
                     Just (_, Ready{}) | finish -> done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
-                                      | otherwise -> return False
+                                      | otherwise -> return Continue
             return $ return ()
     where
-        out k r b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-
         -- Rules for each eval* function
-        -- * Must NOT lock
+        -- * Must NOT lock (assumes lock already in place)
         -- * Must have an equal return to what is stored in the db at that point
         -- * Must not return Loaded
 
@@ -243,37 +239,30 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             s <- queryKey status i
             case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
-                Just (k, Missing) -> run stack i k Nothing
+                Just (k, Missing) -> run stack i k Nothing False
                 Just (k, Loaded r) -> check stack i k r (fromDepends $ depends r)
                 Just (k, res) -> return res
 
-        run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
-        run stack i k r | Just block <- maybeBlock
-                        , Just True /= fmap (specialAlwaysRebuilds.result) r = errorNoApply (typeKey k) (show k) (fmap show r) block
-        run stack i k r = do
+        out :: Stack -> Id -> Key -> Result -> Bool -> IO Waiting
+        out stack i k r b = do
+          diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
+          run stack i k (Just r) b
+
+        run :: Stack -> Id -> Key -> Maybe Result -> Bool -> IO Waiting
+        run stack i k r b | Just block <- maybeBlock = errorNoApply (typeKey k) (show k) (fmap show r) block
+        run stack i k r b = do
             w <- newWaiting r
             updateStatus database i (k, w)
-            addPool pool $ runKey i k r (addStack i k stack) step (reportResult database i k)
+            addPool pool $ runKey i k r b (addStack i k stack) step (reportResult database i k)
             return w
 
-        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
-        check stack i k r [] = do
-            ar <- analyseResult k (result r)
-            let update r s = do
-                  let r' = r{result=s}
-                  addPool pool $ journal i (k, Loaded r') -- leave DB lock before appending
-                  continue r'
-                continue r = out k r True >> updateStatus database i (k, Ready r)
-            case ar of
-                Rebuild -> out k r False >> run stack i k (Just r)
-                Continue -> continue r
-                Update s -> update r s
+        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Waiting
+        check stack i k r [] = out stack i k r True
         check stack i k r (ds:rest) = do
             vs <- mapM (reduce (addStack i k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then do
-                out k r False
-                run stack i k $ Just r
+                out stack i k r False
              else if null ws then do
                 check stack i k r rest
              else do
@@ -282,10 +271,9 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                 waitFor ws $ \finish d -> do
                     s <- readIORef status
                     let buildIt = do
-                            out k r False
-                            b <- run stack i k $ Just r
+                            b <- out stack i k r False
                             afterWaiting b $ runWaiting self
-                            return True
+                            return Finish
                     case Map.lookup d s of
                         Just (_, Error{}) -> buildIt
                         Just (_, Ready r2)
@@ -295,8 +283,9 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                                 if not $ isWaiting res
                                     then runWaiting self
                                     else afterWaiting res $ runWaiting self
-                                return True
-                            | otherwise -> return False
+                                return Finish
+                            | otherwise -> return Continue
+                        Just (_, w@Waiting{}) -> return (WaitAgain (d,w))
                 return self
 
 

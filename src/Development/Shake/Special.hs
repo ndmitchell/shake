@@ -12,12 +12,12 @@ import Data.Typeable
 
 
 specialAlwaysRebuilds :: Value -> Bool
-specialAlwaysRebuilds v = con `elem` ["AlwaysRerunA","OracleA","DoesFileExistA","DoesDirectoryExistA","GetDirectoryA","GetEnvA"]
+specialAlwaysRebuilds v = con `elem` ["OracleA","DoesFileExistA","DoesDirectoryExistA","GetDirectoryA","GetEnvA"]
                             || (con == "FileA" && show v == "File {mod=NEQ,size=NEQ,digest=NEQ}")
     where con = show $ fst $ splitTyConApp $ typeValue v
 
 specialAlwaysChanges :: Value -> Bool
-specialAlwaysChanges v = con == "AlwaysRerunA" || (con == "FileA" && show v == "File {mod=NEQ,size=NEQ,digest=NEQ}")
+specialAlwaysChanges v = (con == "FileA" && show v == "File {mod=NEQ,size=NEQ,digest=NEQ}")
     where con = show $ fst $ splitTyConApp $ typeValue v
 
 specialIsFileKey :: TypeRep -> Bool

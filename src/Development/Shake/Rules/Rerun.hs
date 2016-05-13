@@ -9,13 +9,10 @@ import Development.Shake.Classes
 
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
-instance Show AlwaysRerunQ where show _ = "alwaysRerun"
+    deriving (Typeable,Eq,Hashable,Binary,NFData,Show)
 
 newtype AlwaysRerunA = AlwaysRerunA ()
-    deriving (Typeable,Hashable,Binary,NFData)
-instance Show AlwaysRerunA where show _ = "<none>"
-instance Eq AlwaysRerunA where a == b = False
+    deriving (Typeable,Hashable,Binary,NFData,Show,Eq)
 
 -- | Always rerun the associated action. Useful for defining rules that query
 --   the environment. For example:
@@ -35,4 +32,7 @@ alwaysRerun :: Action ()
 alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = simpleCheck $ \AlwaysRerunQ{} -> return $ AlwaysRerunA ()
+defaultRuleRerun = cRule (\_ _ -> return Rebuild)
+  (\AlwaysRerunQ{} _ -> do
+    assume <- fmap shakeAssume getShakeOptions
+    return (v2, assume == AssumeClean))

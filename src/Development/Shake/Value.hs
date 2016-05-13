@@ -10,7 +10,6 @@ module Development.Shake.Value(
     ShakeValue
     ) where
 
-import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Errors
 import Data.Typeable
@@ -20,8 +19,15 @@ import Data.Function
 import Data.IORef
 import Data.List
 import Data.Maybe
+import Data.Dynamic
+import General.Binary
+import Data.Binary.Get
+import Data.Binary.Put
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.Lazy as LBS8
+
 import System.IO.Unsafe
 
 -- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
@@ -61,45 +67,38 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
-    deriving (Eq,Hashable,NFData,BinaryWith Witness)
+    deriving (Typeable,Eq,Show,Hashable,NFData,Binary)
 
-data Value = forall a . ShakeValue a => Value a
+newtype Value = Value LBS.ByteString
+    deriving (Typeable,Eq,Show,Hashable,NFData,Binary)
 
-
-newKey :: ShakeValue a => a -> Key
+newKey :: ShakeValue a => a -> IO Key
 newKey = Key . newValue
 
-newValue :: ShakeValue a => a -> Value
-newValue = Value
+newValue :: ShakeValue a => a -> IO Value
+newValue a = do
+    ws <- currentWitness
+    let msg = "no witness for " ++ show (typeOf a)
+    return . Value . runPut $ do
+        put $ fromMaybe (error msg) $ Map.lookup (typeOf a) (witnessOut ws)
+        put a
 
-typeKey :: Key -> TypeRep
-typeKey (Key v) = typeValue v
-
-typeValue :: Value -> TypeRep
-typeValue (Value x) = typeOf x
-
-fromKey :: Typeable a => Key -> a
+fromKey :: Typeable a => Key -> IO a
 fromKey (Key v) = fromValue v
 
-fromValue :: Typeable a => Value -> a
-fromValue (Value x) = fromMaybe (err "fromValue, bad cast") $ cast x
-
-instance Show Key where
-    show (Key a) = show a
-
-instance Show Value where
-    show (Value a) = show a
-
-instance NFData Value where
-    rnf (Value a) = rnf a
-
-instance Hashable Value where
-    hashWithSalt salt (Value a) = hashWithSalt salt (typeOf a) `xor` hashWithSalt salt a
-
-instance Eq Value where
-    Value a == Value b = maybe False (a ==) $ cast b
-    Value a /= Value b = maybe True (a /=) $ cast b
-
+fromValue :: Typeable a => Value -> IO a
+fromValue (Value x) = do
+    ws <- currentWitness
+    return . runGet $ do
+        h <- get
+        case Map.lookup h $ witnessIn ws of
+            Nothing | h >= 0 && h < genericLength (typeNames ws) -> error $
+                "Failed to find a type " ++ (typeNames ws !! fromIntegral h) ++ " which is stored in the database.\n" ++
+                "The most likely cause is that your build tool has changed significantly."
+            Nothing -> error $
+                -- should not happen, unless proper data corruption
+                "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
+            Just act -> fromMaybe (err "fromValue, bad cast") . fromDynamic <$> act
 
 ---------------------------------------------------------------------
 -- BINARY INSTANCES
@@ -109,9 +108,7 @@ witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: ShakeValue a => a -> IO ()
-registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ err msg `asTypeOf` x) mp, ())
-    where msg = "registerWitness, type " ++ show (typeOf x)
-
+registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (fmap toDyn (get `asTypeOf` return x)) mp, ())
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
 -- elements were added and stable between program executions.
@@ -122,7 +119,7 @@ toStableList = sortBy (compare `on` show . fst) . Map.toList
 
 data Witness = Witness
     {typeNames :: [String] -- the canonical data, the names of the types
-    ,witnessIn :: Map.HashMap Word16 Value -- for reading in, the find the values (some may be missing)
+    ,witnessIn :: Map.HashMap Word16 (Get Dynamic) -- for reading in, the find the values (some may be missing)
     ,witnessOut :: Map.HashMap TypeRep Word16 -- for writing out, find the value
     } deriving Show
 
@@ -137,7 +134,6 @@ currentWitness = do
     let (ks,vs) = unzip $ toStableList ws
     return $ Witness (map show ks) (Map.fromList $ zip [0..] vs) (Map.fromList $ zip ks [0..])
 
-
 instance Binary Witness where
     put (Witness ts _ _) = put $ BS.unlines $ map BS.pack ts
     get = do
@@ -151,22 +147,3 @@ instance Binary Witness where
             readIORefAfter :: a -> IORef b -> IO b
             readIORefAfter v ref = v `seq` readIORef ref
 
-
-instance BinaryWith Witness Value where
-    putWith ws (Value x) = do
-        let msg = "no witness for " ++ show (typeOf x)
-        put $ fromMaybe (error msg) $ Map.lookup (typeOf x) (witnessOut ws)
-        put x
-
-    getWith ws = do
-        h <- get
-        case Map.lookup h $ witnessIn ws of
-            Nothing | h >= 0 && h < genericLength (typeNames ws) -> error $
-                "Failed to find a type " ++ (typeNames ws !! fromIntegral h) ++ " which is stored in the database.\n" ++
-                "The most likely cause is that your build tool has changed significantly."
-            Nothing -> error $
-                -- should not happen, unless proper data corruption
-                "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
-            Just (Value t) -> do
-                x <- get
-                return $ Value $ x `asTypeOf` t
