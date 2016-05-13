@@ -58,7 +58,7 @@ data Database = Database
     {lock :: Lock
     ,intern :: InternDB
     ,status :: StatusDB
-    ,oldstatus :: Map Id (Value, DBStatus)
+    ,oldstatus :: Map Id (Key, DBStatus)
     ,step :: Step
     ,journal :: Id -> (Key, DBStatus) -> IO ()
     ,diagnostic :: String -> IO () -- ^ logging function
@@ -241,8 +241,22 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             case s of
                 Just (_, res) -> return res
                 Nothing -> case Map.lookup i oldstatus of
-                    Just (_, r) -> check stack i k r (fromDepends $ depends r)
+                    Just (oldk, r) -> check stack i oldk r (fromDepends $ depends r)
                     Nothing -> run stack i k Nothing False
+
+        -- | Reduce for dependencies loaded from the database
+        reduce' :: Stack -> Id -> IO Status
+        reduce' stack i = do
+            s <- queryKey status i
+            case s of
+                Just (_, res) -> return res
+                Nothing -> case Map.lookup i oldstatus of
+                    Just (oldk, r) -> check stack i oldk r (fromDepends $ depends r)
+                    Nothing -> do
+                      status <- readIORef status
+                      let xs = stackIds stack
+                      stack <- return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) $ xs
+                      errorNoReference stack (show i)
 
         out :: Stack -> Id -> Key -> Result -> Bool -> IO Waiting
         out stack i k r b = do
@@ -260,7 +274,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Waiting
         check stack i k r [] = out stack i k r True
         check stack i k r (ds:rest) = do
-            vs <- mapM (reduce (addStack i k stack)) ds
+            vs <- mapM (reduce' (addStack i k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
             if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then do
                 out stack i k r False

@@ -6,6 +6,7 @@ module Development.Shake.Errors(
     errorStructured, err,
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
+    errorNoReference
     ) where
 
 import Control.Exception.Extra
@@ -29,20 +30,20 @@ errorStructuredContents msg args hint = unlines $
 
 errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> IO a
 errorNoRuleToBuildType tk k tv = errorStructured
-    "Build system error - no _rule_ matches the _key_ type"
-    [("_Key_ type", Just $ show tk)
-    ,("_Key_ value", k)
-    ,("_Result_ type", fmap show tv)]
-    "Either you are missing a call to _rule/defaultRule_, or your call to _apply_ has the wrong _key_ type"
+    "Build system error - no rule matches the key type"
+    [("Key type", Just $ show tk)
+    ,("Key value", k)
+    ,("Result type", fmap show tv)]
+    "Either you are missing a call to rule/defaultRule, or your call to apply has the wrong key type"
 
 errorRuleTypeMismatch :: TypeRep -> Maybe String -> TypeRep -> TypeRep -> IO a
 errorRuleTypeMismatch tk k tvReal tvWant = errorStructured
-    "Build system error - _rule_ used at the wrong _result_ type"
-    [("_Key_ type", Just $ show tk)
-    ,("_Key_ value", k)
-    ,("_Rule_ _result_ type", Just $ show tvReal)
-    ,("Requested _result_ type", Just $ show tvWant)]
-    "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
+    "Build system error - rule used at the wrong result type"
+    [("Key type", Just $ show tk)
+    ,("Key value", k)
+    ,("Rule result type", Just $ show tvReal)
+    ,("Requested result type", Just $ show tvWant)]
+    "Either the function passed to rule/defaultRule has the wrong result type, or the result of apply is used at the wrong type"
 
 errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> IO a
 errorIncompatibleRules tk tv1 tv2 = errorStructured
@@ -61,14 +62,13 @@ errorMultipleRulesMatch tk k count = errorStructured
     (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
      else "Modify your rules/defaultRules so only one can produce the above key")
 
+wrap stack = if null stack then id else toException . ShakeException (last stack) stack
+
 errorRuleRecursion :: [String] -> Maybe String -> IO a
--- may involve both rules and oracle, so report as only rules
-errorRuleRecursion stack k = throwIO $ wrap $ toException $ ErrorCall $ errorStructuredContents
+errorRuleRecursion stack k = throwIO $ wrap stack $ toException $ ErrorCall $ errorStructuredContents
     "Build system error - recursion detected"
     [("Key",k)]
     "Rules may not be recursive"
-    where
-        wrap = if null stack then id else toException . ShakeException (last stack) stack
 
 errorComplexRecursion :: [String] -> IO a
 errorComplexRecursion ks = errorStructured
@@ -78,11 +78,17 @@ errorComplexRecursion ks = errorStructured
 
 errorNoApply :: String -> Maybe String -> String -> IO a
 errorNoApply k v msg = errorStructured
-    "Build system error - cannot currently call _apply_"
+    "Build system error - cannot currently call apply"
     [("Reason", Just msg)
     ,("Key value", Just k)
     ,("Cached result", v)]
-    "Move the _apply_ call earlier/later"
+    "Move the apply call earlier/later"
+
+errorNoReference :: [String] -> String -> IO a
+errorNoReference stack i = throwIO $ wrap stack $ toException $ ErrorCall $ errorStructuredContents
+    "Build system error - cannot find id referenced in dependencies"
+    [("Id",Just i)]
+    "Your database may be corrupted"
 
 -- | Error representing all expected exceptions thrown by Shake.
 --   Problems when executing rules will be raising using this exception type.
