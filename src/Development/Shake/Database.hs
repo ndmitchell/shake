@@ -15,6 +15,8 @@ module Development.Shake.Database(
 import GHC.Generics (Generic)
 import Development.Shake.Classes
 import General.Binary
+import Data.Binary.Get
+import Data.Binary.Put
 import Development.Shake.Database2
 import Development.Shake.Pool
 import Development.Shake.Value
@@ -51,7 +53,7 @@ showStack Database{..} (stackIds -> xs) = do
 -- CENTRAL TYPES
 
 type StatusDB = IORef (Map Id (Key, Status))
-type InternDB = IORef (Intern Value)
+type InternDB = IORef (Intern Key)
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself
 data Database = Database
@@ -150,13 +152,13 @@ data Ops = Ops
         -- ^ Given a Key and its previous result and if its dependencies changed, run it and return the status
     }
 
-lookupKey :: Key -> Intern Value -> Maybe Id
-lookupKey (Key _ k) is = Intern.lookup k is
+lookupKey :: Key -> Intern Key -> Maybe Id
+lookupKey = Intern.lookup
 
 internKey :: InternDB -> Key -> IO Id
-internKey intern kt@(Key _ k) = do
+internKey intern k = do
     is <- readIORef intern
-    case Intern.lookup k is of
+    case lookupKey k is of
         Just i -> return i
         Nothing -> do
             (is, i) <- return $ Intern.add k is
@@ -375,9 +377,12 @@ resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
 resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = Depends . map (filter (isJust . flip Map.lookup keep)) . fromDepends $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
+removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
+removeStep = Map.filter (\(k,_) -> k /= stepKey)
+
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
-    status <- resultsOnly <$> readIORef status
+    status <- (removeStep . resultsOnly) <$> readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . fromDepends . depends . snd) status
         ids = Map.fromList $ zip order [0..]
@@ -453,6 +458,9 @@ lookupDependencies Database{..} k =
 newtype StepKey = StepKey ()
     deriving (Show,Eq,Typeable,Hashable,Binary,NFData)
 
+stepKey :: Key
+stepKey = newKey $ StepKey ()
+
 toStepResult :: Step -> Result
 toStepResult i = Result (encode i) i i mempty Nothing 0 []
 
@@ -462,19 +470,19 @@ fromStepResult = decode . result
 withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
     registerWitness $ (undefined :: StepKey)
-    stepKey <- newKey $ StepKey ()
     witness <- currentWitness
     withStorage opts diagnostic witness $ \mp2 journal' -> do
-        let journal i (Key _ k,v) = journal' (encode i) (encode (k,v))
-        let oldstatus = Map.fromList [(decode i, decode ks) | (i, ks) <- Map.toList mp2]
-        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList oldstatus]
+        let journal i (k,v) = journal' (encode i) (encode (runPut $ putKeyWith witness k,v))
+            unpack (i,t) = (decode i, case decode t of (k,s) -> (runGet (getKeyWith witness) k, s))
+        let oldstatus = Map.fromList . map unpack $ Map.toList mp2
+            mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList oldstatus]
         intern <- newIORef mp1
-        stepId <- internKey intern status stepKey
+        stepId <- internKey intern stepKey
         let step = case Map.lookup stepId oldstatus of
-                        Just r -> incStep $ fromStepResult r
+                        Just (_,r) -> incStep . fromStepResult $ r
                         _ -> initialStep
             stepResult = toStepResult step
-        status <- newIORef $ Map.singleton stepKey (Ready stepResult)
+        status <- newIORef $ Map.singleton stepId (stepKey, Ready stepResult)
         journal stepId (stepKey, stepResult)
         lock <- newLock
         act Database{..}
