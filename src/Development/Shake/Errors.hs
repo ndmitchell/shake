@@ -8,25 +8,12 @@ module Development.Shake.Errors(
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
     ) where
 
-import Data.Tuple.Extra
 import Control.Exception.Extra
 import Data.Typeable
-import Data.List
 
 
 err :: String -> a
 err msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
-
-alternatives = let (*) = (,) in
-    ["_rule_" * "oracle"
-    ,"_Rule_" * "Oracle"
-    ,"_key_" * "question"
-    ,"_Key_" * "Question"
-    ,"_result_" * "answer"
-    ,"_Result_" * "Answer"
-    ,"_rule/defaultRule_" * "addOracle"
-    ,"_apply_" * "askOracle"]
-
 
 errorStructured :: String -> [(String, Maybe String)] -> String -> IO a
 errorStructured msg args hint = errorIO $ errorStructuredContents msg args hint
@@ -40,19 +27,8 @@ errorStructuredContents msg args hint = unlines $
         as = maximum $ 0 : map (length . fst) args2
         args2 = [(a,b) | (a,Just b) <- args]
 
-
-
-structured :: Bool -> String -> [(String, Maybe String)] -> String -> IO a
-structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f hint)
-    where
-        f = filter (/= '_') . (if alt then g else id)
-        g xs | (a,b):_ <- filter (\(a,b) -> a `isPrefixOf` xs) alternatives = b ++ g (drop (length a) xs)
-        g (x:xs) = x : g xs
-        g [] = []
-
-
 errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> IO a
-errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
+errorNoRuleToBuildType tk k tv = errorStructured
     "Build system error - no _rule_ matches the _key_ type"
     [("_Key_ type", Just $ show tk)
     ,("_Key_ value", k)
@@ -60,7 +36,7 @@ errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     "Either you are missing a call to _rule/defaultRule_, or your call to _apply_ has the wrong _key_ type"
 
 errorRuleTypeMismatch :: TypeRep -> Maybe String -> TypeRep -> TypeRep -> IO a
-errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
+errorRuleTypeMismatch tk k tvReal tvWant = errorStructured
     "Build system error - _rule_ used at the wrong _result_ type"
     [("_Key_ type", Just $ show tk)
     ,("_Key_ value", k)
@@ -69,7 +45,7 @@ errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
 
 errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> IO a
-errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else errorStructured
+errorIncompatibleRules tk tv1 tv2 = errorStructured
     "Build system error - rule has multiple result types"
     [("Key type", Just $ show tk)
     ,("First result type", Just $ show tv1)
@@ -77,9 +53,7 @@ errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicate
     "A function passed to rule/defaultRule has the wrong result type"
 
 errorMultipleRulesMatch :: TypeRep -> Maybe String -> Int -> IO a
-errorMultipleRulesMatch tk k count
-    | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk k []
-    | otherwise = errorStructured
+errorMultipleRulesMatch tk k count = errorStructured
     ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
     [("Key type",Just $ show tk)
     ,("Key value",k)
@@ -87,12 +61,11 @@ errorMultipleRulesMatch tk k count
     (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
      else "Modify your rules/defaultRules so only one can produce the above key")
 
-errorRuleRecursion :: [String] -> Maybe TypeRep -> Maybe String -> IO a
+errorRuleRecursion :: [String] -> Maybe String -> IO a
 -- may involve both rules and oracle, so report as only rules
-errorRuleRecursion stack tk k = throwIO $ wrap $ toException $ ErrorCall $ errorStructuredContents
+errorRuleRecursion stack k = throwIO $ wrap $ toException $ ErrorCall $ errorStructuredContents
     "Build system error - recursion detected"
-    [("Key type",fmap show tk)
-    ,("Key value",k)]
+    [("Key",k)]
     "Rules may not be recursive"
     where
         wrap = if null stack then id else toException . ShakeException (last stack) stack
@@ -103,29 +76,13 @@ errorComplexRecursion ks = errorStructured
     [("Key value " ++ show i, Just k) | (i, k) <- zip [1..] ks]
     "Rules may not be recursive"
 
-errorDuplicateOracle :: TypeRep -> Maybe String -> [TypeRep] -> IO a
-errorDuplicateOracle tk k tvs = errorStructured
-    "Build system error - duplicate oracles for the same question type"
-    ([("Question type",Just $ show tk)
-     ,("Question value",k)] ++
-     [("Answer type " ++ show i, Just $ show tv) | (i,tv) <- zip [1..] tvs])
-    "Only one call to addOracle is allowed per question type"
-
-errorNoApply :: TypeRep -> String -> Maybe String -> String -> IO a
-errorNoApply tk k v msg = structured (specialIsOracleKey tk)
+errorNoApply :: String -> Maybe String -> String -> IO a
+errorNoApply k v msg = errorStructured
     "Build system error - cannot currently call _apply_"
     [("Reason", Just msg)
-    ,("_Key_ type", Just $ show tk)
-    ,("_Key_ value", Just k)
+    ,("Key value", Just k)
     ,("Cached result", v)]
     "Move the _apply_ call earlier/later"
-
-
--- Should be in Special, but then we get an import cycle
-specialIsOracleKey :: TypeRep -> Bool
-specialIsOracleKey t = con == "OracleQ"
-    where con = show $ fst $ splitTyConApp t
-
 
 -- | Error representing all expected exceptions thrown by Shake.
 --   Problems when executing rules will be raising using this exception type.

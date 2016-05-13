@@ -51,25 +51,26 @@ showStack Database{..} (stackIds -> xs) = do
 -- CENTRAL TYPES
 
 type StatusDB = IORef (Map Id (Key, Status))
-type InternDB = IORef (Intern Key)
+type InternDB = IORef (Intern Value)
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself
 data Database = Database
     {lock :: Lock
     ,intern :: InternDB
     ,status :: StatusDB
+    ,oldstatus :: Map Id (Value, DBStatus)
     ,step :: Step
-    ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
+    ,journal :: Id -> (Key, DBStatus) -> IO ()
     ,diagnostic :: String -> IO () -- ^ logging function
     }
 
 data Status
     = Ready Result -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
-    | Loaded Result -- ^ Loaded from the database
     | Waiting Pending (Maybe Result) -- ^ Currently checking if I am valid or building
-    | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
+
+type DBStatus = Result -- ^ Loaded from the database
 
 data Result = Result
     {result :: Value -- ^ the result associated with the Key
@@ -83,6 +84,11 @@ data Result = Result
 
 instance NFData Result
 
+instance Binary Result where
+    put (Result x1 x2 x3 x4 x5 x6 x7) = put x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put (BinFloat x6) >> put (BinList x7)
+    get = (\x1 x2 x3 x4 x5 (BinFloat x6) (BinList x7) -> Result x1 x2 x3 x4 x5 x6 x7) <$>
+        get <*> get <*> get <*> get <*> get <*> get <*> get
+
 newtype Pending = Pending (IORef (IO ()))
     -- you must run this action when you finish, while holding DB lock
     -- after you have set the result to Error or Ready
@@ -92,14 +98,11 @@ instance Show Pending where show _ = "Pending"
 
 statusType Ready{} = "Ready"
 statusType Error{} = "Error"
-statusType Loaded{} = "Loaded"
 statusType Waiting{} = "Waiting"
-statusType Missing{} = "Missing"
 
 isError Error{} = True; isError _ = False
 isWaiting Waiting{} = True; isWaiting _ = False
 isReady Ready{} = True; isReady _ = False
-
 
 -- All the waiting operations are only valid when isWaiting
 type Waiting = Status
@@ -135,7 +138,6 @@ waitFor ws@(_:_) act = do
 
 getResult :: Status -> Maybe Result
 getResult (Ready r) = Just r
-getResult (Loaded r) = Just r
 getResult (Waiting _ r) = r
 getResult _ = Nothing
 
@@ -148,16 +150,17 @@ data Ops = Ops
         -- ^ Given a Key and its previous result and if its dependencies changed, run it and return the status
     }
 
+lookupKey :: Key -> Intern Value -> Maybe Id
+lookupKey (Key _ k) is = Intern.lookup k is
 
-internKey :: InternDB -> StatusDB -> Key -> IO Id
-internKey intern status k = do
+internKey :: InternDB -> Key -> IO Id
+internKey intern kt@(Key _ k) = do
     is <- readIORef intern
     case Intern.lookup k is of
         Just i -> return i
         Nothing -> do
             (is, i) <- return $ Intern.add k is
             writeIORef' intern is
-            modifyIORef' status $ Map.insert i (k,Missing)
             return i
 
 queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
@@ -182,20 +185,20 @@ reportResult d@Database{..} i k res = do
         Ready r -> do
             diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
                           " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-            journal i (k, Loaded r)
+            journal i (k, r)
         Error _ -> do
             diagnostic $ "result " ++ atom k ++ " = error"
-            journal i (k, Missing)
+            -- don't store errors
         _ -> return ()
 
--- | Return either an exception (crash), or (how much time you spent waiting, stored keys, the value)
+-- | Return either an exception (crash), or (how much time you spent waiting, interned keys, key results)
 -- 'build' first takes the state lock and (on a single thread) performs as many transitions as it can without waiting on a mutex or running any rules.
 -- Then it releases the state lock and runs the rules in the thread pool and waits for all of them to finish
 -- A build requiring no rules should not result in any thread contention.
-build :: Pool -> Database -> Ops -> Stack -> Maybe String -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build :: Pool -> Database -> Ops -> Stack -> Maybe String -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Result]))
 build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
     join $ withLock lock $ do
-        is <- forM ks $ internKey intern status
+        is <- forM ks $ internKey intern
 
         whenJust (checkStack is stack) $ \bad -> do
             -- everything else gets thrown via Left and can be Staunch'd
@@ -203,15 +206,13 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             status <- readIORef status
             let xs = stackIds stack
             stack <- return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) $ bad:xs
-            (tk, tname) <- return $ case Map.lookup bad status of
-                Nothing -> (Nothing, Nothing)
-                Just (k,_) -> (Just $ typeKey k, Just $ show k)
-            errorRuleRecursion stack tk tname
+            let tname = fmap (show.fst) $ Map.lookup bad status
+            errorRuleRecursion stack tname
 
-        vs <- mapM (reduce stack) is
+        vs <- mapM (reduce stack) (zip is ks)
         let errs = [e | Error e <- vs]
         if all isReady vs then
-            return $ continue $ Right (0, Depends [is], [result r | Ready r <- vs])
+            return $ continue $ Right (0, Depends [is], [r | Ready r <- vs])
          else if not $ null errs then
             return $ continue $ Left $ head errs
          else do
@@ -225,7 +226,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                 s <- readIORef status
                 case Map.lookup i s of
                     Just (_, Error e) -> done $ Left e -- on error make sure we immediately kick off our parent
-                    Just (_, Ready{}) | finish -> done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                    Just (_, Ready{}) | finish -> done $ Right [r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
                                       | otherwise -> return Continue
             return $ return ()
     where
@@ -234,14 +235,14 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
         -- * Must have an equal return to what is stored in the db at that point
         -- * Must not return Loaded
 
-        reduce :: Stack -> Id -> IO Status
-        reduce stack i = do
+        reduce :: Stack -> (Id,Key) -> IO Status
+        reduce stack (i,k) = do
             s <- queryKey status i
             case s of
-                Nothing -> err $ "interned value missing from database, " ++ show i
-                Just (k, Missing) -> run stack i k Nothing False
-                Just (k, Loaded r) -> check stack i k r (fromDepends $ depends r)
-                Just (k, res) -> return res
+                Just (_, res) -> return res
+                Nothing -> case Map.lookup i oldstatus of
+                    Just (_, r) -> check stack i k r (fromDepends $ depends r)
+                    Nothing -> run stack i k Nothing False
 
         out :: Stack -> Id -> Key -> Result -> Bool -> IO Waiting
         out stack i k r b = do
@@ -249,7 +250,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
           run stack i k (Just r) b
 
         run :: Stack -> Id -> Key -> Maybe Result -> Bool -> IO Waiting
-        run stack i k r b | Just block <- maybeBlock = errorNoApply (typeKey k) (show k) (fmap show r) block
+        run stack i k r b | Just block <- maybeBlock = errorNoApply (show k) (fmap show r) block
         run stack i k r b = do
             w <- newWaiting r
             updateStatus database i (k, w)
@@ -302,7 +303,7 @@ progress Database{..} = do
         f s (Ready Result{..}) = if step == built
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
             else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + g execution}
-        f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + g execution}
+--        f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + g execution}
         f s (Waiting _ r) =
             let (d,c) = timeTodo s
                 t | Just Result{..} <- r = let d2 = d + g execution in d2 `seq` (d2,c)
@@ -360,12 +361,9 @@ resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
 resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = Depends . map (filter (isJust . flip Map.lookup keep)) . fromDepends $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
-removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
-removeStep = Map.filter (\(k,_) -> k /= stepKey)
-
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
-    status <- (removeStep . resultsOnly) <$> readIORef status
+    status <- resultsOnly <$> readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . fromDepends . depends . snd) status
         ids = Map.fromList $ zip order [0..]
@@ -400,7 +398,7 @@ checkValid Database{..} missing keyCheck = do
                                         | (key, result, now) <- bad])
             ""
 
-    bad <- return [(parent,key) | (parent, key) <- missing, isJust $ Intern.lookup key intern]
+    bad <- return [(parent,key) | (parent, key) <- missing, isJust $ lookupKey key intern]
     unless (null bad) $ do
         let n = length bad
         errorStructured
@@ -429,7 +427,7 @@ lookupDependencies Database{..} k =
     withLock lock $ do
         intern <- readIORef intern
         status <- readIORef status
-        let Just i = Intern.lookup k intern
+        let Just i = lookupKey k intern
         let Just (_, Ready r) = Map.lookup i status
         return . map (fst . fromJust . flip Map.lookup status) . concat . fromDepends $ depends r
 
@@ -441,47 +439,28 @@ lookupDependencies Database{..} k =
 newtype StepKey = StepKey ()
     deriving (Show,Eq,Typeable,Hashable,Binary,NFData)
 
-stepKey :: Key
-stepKey = newKey $ StepKey ()
-
 toStepResult :: Step -> Result
-toStepResult i = Result (newValue i) i i mempty Nothing 0 []
+toStepResult i = Result (encode i) i i mempty Nothing 0 []
 
 fromStepResult :: Result -> Step
-fromStepResult = fromValue . result
-
+fromStepResult = decode . result
 
 withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
     registerWitness $ (undefined :: StepKey)
-    registerWitness $ (undefined :: Step)
+    stepKey <- newKey $ StepKey ()
     witness <- currentWitness
-    withStorage opts diagnostic witness $ \mp2 journal -> do
-        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
-
-        (mp1, stepId) <- case Intern.lookup stepKey mp1 of
-            Just stepId -> return (mp1, stepId)
-            Nothing -> do
-                (mp1, stepId) <- return $ Intern.add stepKey mp1
-                return (mp1, stepId)
-
+    withStorage opts diagnostic witness $ \mp2 journal' -> do
+        let journal i (Key _ k,v) = journal' (encode i) (encode (k,v))
+        let oldstatus = Map.fromList [(decode i, decode ks) | (i, ks) <- Map.toList mp2]
+        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList oldstatus]
         intern <- newIORef mp1
-        status <- newIORef mp2
-        let step = case Map.lookup stepId mp2 of
-                        Just (_, Loaded r) -> incStep $ fromStepResult r
+        stepId <- internKey intern status stepKey
+        let step = case Map.lookup stepId oldstatus of
+                        Just r -> incStep $ fromStepResult r
                         _ -> initialStep
-        journal stepId (stepKey, Loaded $ toStepResult step)
+            stepResult = toStepResult step
+        status <- newIORef $ Map.singleton stepKey (Ready stepResult)
+        journal stepId (stepKey, stepResult)
         lock <- newLock
         act Database{..}
-
-
-instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6 x7) = putWith ws x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put (BinFloat x6) >> put (BinList x7)
-    getWith ws = (\x1 x2 x3 x4 x5 (BinFloat x6) (BinList x7) -> Result x1 x2 x3 x4 x5 x6 x7) <$>
-        getWith ws <*> get <*> get <*> get <*> get <*> get <*> get
-
-instance BinaryWith Witness Status where
-    putWith ctx Missing = putWord8 0
-    putWith ctx (Loaded x) = putWord8 1 >> putWith ctx x
-    putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ statusType x
-    getWith ctx = do i <- getWord8; if i == 0 then return Missing else Loaded <$> getWith ctx

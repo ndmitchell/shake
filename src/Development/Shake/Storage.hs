@@ -18,8 +18,6 @@ import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Concurrent.Extra
-import Data.Binary.Get
-import Data.Binary.Put
 import Data.Time
 import Data.Char
 import Development.Shake.Classes
@@ -55,12 +53,11 @@ splitVersion abc = (a `LBS.append` b, c)
 
 
 withStorage
-    :: (Show k, Show v, Eq w, Eq k, Hashable k
-       ,Binary w, BinaryWith w k, BinaryWith w v)
+    :: (Eq w, Binary w)
     => ShakeOptions             -- ^ Storage options
     -> (String -> IO ())        -- ^ Logging function
     -> w                        -- ^ Witness
-    -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
+    -> (Map LBS.ByteString LBS.ByteString -> (LBS.ByteString -> LBS.ByteString -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = do
   diagnostic $ "Before fileLock on " ++ shakeFiles </> ".shake.lock"
@@ -126,7 +123,7 @@ withStorage ShakeOptions{..} diagnostic witness act = do
                         diagnostic $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
                         let ws = decode w
                             f mp (k, v) = Map.insert k v mp
-                            ents = map (runGet $ getWith ws) xs
+                            ents = map decode xs
                             mp = foldl' f Map.empty ents
 
                         when (shakeVerbosity == Diagnostic) $ do
@@ -185,7 +182,7 @@ withStorage ShakeOptions{..} diagnostic witness act = do
             hSeek h AbsoluteSeek 0
             LBS.hPut h ver
             writeChunk h $ encode witness
-            mapM_ (writeChunk h . runPut . putWith witness) $ Map.toList mp
+            mapM_ (writeChunk h . encode) $ Map.toList mp
             hFlush h
             diagnostic "Flush"
 
@@ -196,7 +193,7 @@ withStorage ShakeOptions{..} diagnostic witness act = do
                            -- also lets us recover in the case of corruption
             flushThread shakeFlush h $ \out -> do
                 addTiming "With database"
-                act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
+                act mp $ \k v -> out $ toChunk $ encode (k, v)
 
 
 -- We avoid calling flush too often on SSD drives, as that can be slow

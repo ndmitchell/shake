@@ -1,11 +1,11 @@
-{-# LANGUAGE ExistentialQuantification, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances, DeriveGeneric, DeriveAnyClass, MultiParamTypeClasses, ConstraintKinds #-}
 
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.
 -}
 module Development.Shake.Value(
-    Value, newValue, fromValue, typeValue,
-    Key, newKey, fromKey, typeKey,
+    Value, newValue, fromValue,
+    Key(..), newKey, fromKey, keyString,
     Witness, currentWitness, registerWitness,
     ShakeValue
     ) where
@@ -13,8 +13,7 @@ module Development.Shake.Value(
 import Development.Shake.Classes
 import Development.Shake.Errors
 import Data.Typeable
-
-import Data.Bits
+import GHC.Generics
 import Data.Function
 import Data.IORef
 import Data.List
@@ -26,7 +25,6 @@ import Data.Binary.Put
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.ByteString.Lazy as LBS8
 
 import System.IO.Unsafe
 
@@ -66,30 +64,32 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
-newtype Key = Key Value
-    deriving (Typeable,Eq,Show,Hashable,NFData,Binary)
+data Key = Key TypeRep Value
+    deriving (Typeable,Eq,Show,Hashable,NFData,Generic)
 
-newtype Value = Value LBS.ByteString
-    deriving (Typeable,Eq,Show,Hashable,NFData,Binary)
+type Value = LBS.ByteString
 
 newKey :: ShakeValue a => a -> IO Key
-newKey = Key . newValue
+newKey a = Key (typeOf a) <$> newValue a
 
 newValue :: ShakeValue a => a -> IO Value
 newValue a = do
     ws <- currentWitness
     let msg = "no witness for " ++ show (typeOf a)
-    return . Value . runPut $ do
+    return . runPut $ do
         put $ fromMaybe (error msg) $ Map.lookup (typeOf a) (witnessOut ws)
         put a
 
 fromKey :: Typeable a => Key -> IO a
-fromKey (Key v) = fromValue v
+fromKey (Key _ v) = fromValue v
+
+keyString :: Key -> LBS.ByteString
+keyString (Key _ v) = v
 
 fromValue :: Typeable a => Value -> IO a
-fromValue (Value x) = do
+fromValue x = do
     ws <- currentWitness
-    return . runGet $ do
+    return . flip runGet x $ do
         h <- get
         case Map.lookup h $ witnessIn ws of
             Nothing | h >= 0 && h < genericLength (typeNames ws) -> error $
@@ -104,7 +104,7 @@ fromValue (Value x) = do
 -- BINARY INSTANCES
 
 {-# NOINLINE witness #-}
-witness :: IORef (Map.HashMap TypeRep Value)
+witness :: IORef (Map.HashMap TypeRep (Get Dynamic))
 witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: ShakeValue a => a -> IO ()
@@ -122,6 +122,9 @@ data Witness = Witness
     ,witnessIn :: Map.HashMap Word16 (Get Dynamic) -- for reading in, the find the values (some may be missing)
     ,witnessOut :: Map.HashMap TypeRep Word16 -- for writing out, find the value
     } deriving Show
+
+instance Show (Get Dynamic) where
+    show _ = "<Get Dynamic>"
 
 instance Eq Witness where
     -- Type names are produced by toStableList so should to remain consistent
