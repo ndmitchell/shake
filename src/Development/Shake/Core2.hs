@@ -3,11 +3,11 @@
 
 module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
-    SRules(..), BuiltinRule(..),
+    SRules(..), BuiltinRule(..), BuiltinResult(..), Result(..),
+    UserRule(..), RuleSet(..), userRuleMatch, userRule, ruleValue,
     run', apply, applied, blockApply, unsafeAllowApply, withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    traced, trackUse, trackChange, trackAllow, orderOnlyAction,
-    UserRule(..), userRuleMatch, userRule, ruleValue
+    traced, trackUse, trackChange, trackAllow, orderOnlyAction
     ) where
 
 import Control.Exception.Extra
@@ -86,7 +86,7 @@ combineRules x (Unordered xs) = Unordered (x:xs)
 combineRules (Unordered xs) x = Unordered (xs++[x])
 combineRules x y = Unordered [x,y]
 
-data RuleSet = forall a. (Typeable a) => ARule (UserRule a)
+data RuleSet = forall a. (Typeable a) => ARule { fromARule :: UserRule a }
 
 data SRules m = SRules
     {actions :: [m ()]
@@ -326,9 +326,6 @@ runKey_ global@Global{..} i k r deps stack step continue = do
         case Map.lookup tk globalRules of
             Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
             Just BuiltinRule{..} -> do
-                --   | assume == AssumeDirty = return Rebuild
-                --   | assume == AssumeSkip = return Continue
-                --
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k

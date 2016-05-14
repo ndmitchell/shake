@@ -4,8 +4,9 @@
 module Development.Shake.Core(
     run,
     ShakeValue,
-    Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
-    cRule, simpleCheck, AnalysisResult(..),
+    Rules, action, withoutActions, alternatives, priority,
+    BuiltinRule(..), BuiltinResult(..), newBuiltinRule,
+    newUserRule, getUserRules, simpleCheck,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -26,7 +27,8 @@ import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
-import Data.Typeable
+import Data.Dynamic
+import General.Binary
 import Data.Function
 import Data.Either.Extra
 import Data.List.Extra
@@ -39,6 +41,7 @@ import Data.Monoid
 
 import Development.Shake.Classes
 import Development.Shake.Core2
+import Development.Shake.Errors
 import Development.Shake.Pool
 import Development.Shake.Monad
 import Development.Shake.Resource
@@ -141,29 +144,34 @@ getRules (Rules r) = execWriterT r
 --   you should return 'Continue', but otherwise return 'Rebuild'.
 --   If the value has changed but you still do not want to rebuild, you should return
 --   'Update' with the new value.
-newRule :: (ShakeValue k, ShakeValue v) => ARule k v Action -> Rules ()
-newRule r = newRules mempty{rules = Map.singleton k (k, ARule r)}
-  where k = typeOf $ ruleKey r
+newBuiltinRule :: TypeRep -> BuiltinRule Action -> Rules ()
+newBuiltinRule k r = newRules mempty{rules = Map.singleton k r}
+
+-- | A simplified built-in rule that runs on every Shake invocation, caches its value between runs, and uses Eq for equality.
+simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
+simpleCheck = f
+  where
+    f :: forall key value. (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
+    f act = newBuiltinRule (typeOf (undefined :: key)) (BuiltinRule
+        { execute = \k vo _ -> do
+                --   | assume == AssumeDirty = return Rebuild
+                --   | assume == AssumeSkip = return Continue
+                --
+            v <- act . fromKeyDef k $ err "simpleCheck key conversion failure"
+            return $ BuiltinResult
+              { resultStoreB = encode v
+              , resultValueB = toDyn v
+              , dependsB = Nothing
+              , changedB = maybe False ((==) v . decode . result) vo
+              }
+        })
 
 -- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
 --   or 'Nothing' otherwise. The 'Bool' is 'True' if the value changed.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
-rule :: Rule key value => (key -> Maybe (Maybe value -> Action (value,Bool))) -> Rules ()
-rule r = newRule $ Priority [(1,r)]
-
--- | Add a custom rule; the first argument checks whether the rule needs to be rebuilt,
---   while the seconds executes the key, using the optional previous value,
---   and returns the new value and whether the value is unchanged.
-cRule :: (ShakeValue key, ShakeValue value)
-            => (key -> value -> IO (AnalysisResult value))
-            -> (key -> Maybe value -> Action (value, Bool))
-            -> Rules ()
-cRule a e = newRule $ Custom a e
-
-simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
-simpleCheck act = cRule (\_ _ -> return Rebuild)
-  (\k v -> act k >>= \v2 -> return (v2, maybe False (==v2) v))
+newUserRule :: (Typeable a) => a -> Rules ()
+newUserRule r = newRules mempty{userrules = Map.singleton (typeOf r) (ARule (UserRule r))}
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
 --   All matching rules at a given priority must be disjoint, or an error is raised.
@@ -184,10 +192,8 @@ simpleCheck act = cRule (\_ _ -> return Rebuild)
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority i = modifyRules $ \s -> s{rules = Map.map f $ rules s}
-    where
-      f (a,ARule (Priority cs)) = (a,ARule $ Priority (map (first $ const i) cs))
-      f x = x
+priority d = modifyRules $ \s -> s{userrules = Map.map f $ userrules s}
+  where f (ARule s) = ARule (Priority d s)
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
 --   in order. Only recommended for small blocks containing a handful of rules.
@@ -202,14 +208,8 @@ priority i = modifyRules $ \s -> s{rules = Map.map f $ rules s}
 --   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
 --   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
 alternatives :: Rules () -> Rules ()
-alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
-    where
-        f (k, ARule a@(Priority [])) = (k, ARule a)
-        f (k, ARule (Priority xs)) = let (is,rs) = unzip xs in (k, ARule $ Priority [(maximum is, foldl1' g rs)])
-        f x = x
-
-        g a b x = a x `mplus` b x
-
+alternatives = modifyRules $ \r -> r{userrules = Map.map f $ userrules r}
+  where f (ARule s) = ARule (Alternative s)
 
 -- | Run an action, usually used for specifying top-level requirements.
 --
@@ -257,7 +257,6 @@ actionFinally = actionBoom True
 run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
-
     start <- offsetTime
     rs <- getRules rs
     run' opts start rs
@@ -275,6 +274,12 @@ runAfter op = do
 apply1 :: (ShakeValue key, ShakeValue value) => key -> Action value
 apply1 = fmap head . apply . return
 
+-- | Get the user rules for a given type
+getUserRules :: (Typeable a) => Action (Maybe (UserRule a))
+getUserRules = do
+    umap <- Action $ getsRO globalUserRules
+    let x = cast =<< Map.lookup (typeOf (fromJust x)) umap
+    return x
 
 -- | Get the initial 'ShakeOptions', these will not change during the build process.
 getShakeOptions :: Action ShakeOptions
