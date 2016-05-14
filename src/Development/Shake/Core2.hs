@@ -102,8 +102,29 @@ registerWitnesses SRules{..} =
         registerWitness $ ruleValue r
 
 data RuleInfo m = RuleInfo
-    {execute :: Key -> Maybe Value -> m (Value, Bool)
+    {(forall u . Typeable u => Proxy u -> Maybe u)
+        -- ^ A way to query 'UserRule' values at a particular type.
+    -> key
+        -- ^ Key that you want to build.
+    -> Maybe BS.ByteString
+        -- ^ 'Just' the previous result in the database, or 'Nothing' to indicate Shake has no memory of this rule.
+        --   In most cases this will be a serialised value of type @value@.
+    -> Action Bool
+        -- ^ An 'Action' that if executed will return whether any dependencies from the previous execution have changed.
+        --   Returns 'True' if any dependency has changed, or if Shake has no memory of this rule.
+        --   Does not add any dependencies.
+    -> Action (BuiltinInfo value)
+      execute :: Key -> Maybe Value -> Bool -> m ()
     ,resultType :: TypeRep
+    ,keyType :: TypeRep
+    }
+
+data BuiltinInfo value = BuiltinInfo
+    {resultStore :: [(BS.ByteString,BS.ByteString)]
+        -- ^ Return new values to store. Empty if nothing changed.
+    ,changedValue :: Bool
+    ,resultValue :: value
+        -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
     }
 
 analyseI :: (ShakeValue key, ShakeValue value) => ARule key value m -> ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
@@ -139,8 +160,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,ARule c) -> RuleInfo
 
 -- global constants of Action
 data Global = Global
-    {globalDatabase :: Database
-    ,globalPool :: Pool
+    {global1 :: Global1
     ,globalCleanup :: Cleanup
     ,globalTimestamp :: IO Seconds
     ,globalRules :: Map.HashMap TypeRep (RuleInfo Action)
@@ -157,12 +177,10 @@ data Global = Global
 -- local variables of Action
 data Local = Local
     -- constants
-    {localStack :: Stack
+    {local1 :: Local1
     -- stack scoped local variables
     ,localVerbosity :: Verbosity
-    ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
     -- mutable local variables
-    ,localDepends :: Depends -- built up in reverse
     ,localDiscount :: !Seconds
     ,localTraces :: [Trace] -- in reverse
     ,localTrackAllows :: [Key -> Bool]
@@ -325,10 +343,7 @@ applyForall ks = do
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
-    global@Global{..} <- Action getRO
-    stack <- Action $ getsRW localStack
-    block <- Action $ getsRW localBlockApply
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (analyseResult_ global) (runKey_ global)) stack block ks
+    (dur, dep, vs) <- Action $ build (Ops (analyseResult_ global) (runKey_ global)) ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 

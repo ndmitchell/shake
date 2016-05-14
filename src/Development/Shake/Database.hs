@@ -37,6 +37,7 @@ import qualified Data.HashMap.Strict as Map
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List
+import Data.Tuple.Extra
 import System.Time.Extra
 import Data.Monoid
 import Prelude
@@ -67,9 +68,9 @@ data Database = Database
     }
 
 data Status
-    = Ready Result -- ^ I have a value
-    | Error SomeException -- ^ I have been run and raised an error
-    | Waiting Pending (Maybe Result) -- ^ Currently checking if I am valid or building
+    = Ready LiveResult
+    | Error SomeException -- ^ I have been run and raised a fatal error
+    | Waiting Pending (Maybe Result) -- ^ Currently building
       deriving Show
 
 type DBStatus = Result -- ^ Loaded from the database
@@ -79,17 +80,21 @@ data Result = Result
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
     ,depends :: Depends -- ^ dependencies (stored in order of appearance)
-    ,generatedBy :: Maybe Id -- ^ generator, if this was generated
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
-    ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
+    } deriving (Show,Generic)
+
+data LiveResult = LiveResult
+    { resultValue :: Any -- ^ dynamic return value limited to lifetime of the program
+    , resultStore :: Result -- ^ persistent database value
+    , traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Generic)
 
 instance NFData Result
 
 instance Binary Result where
-    put (Result x1 x2 x3 x4 x5 x6 x7) = put x1 >> put x2 >> put x3 >> put x4 >> put x5 >> put (BinFloat x6) >> put (BinList x7)
-    get = (\x1 x2 x3 x4 x5 (BinFloat x6) (BinList x7) -> Result x1 x2 x3 x4 x5 x6 x7) <$>
-        get <*> get <*> get <*> get <*> get <*> get <*> get
+    put (Result x1 x2 x3 x4 x5) = put x1 >> put x2 >> put x3 >> put x4 >> put (BinFloat x5)
+    get = (\x1 x2 x3 x4 (BinFloat x5) -> Result x1 x2 x3 x4 x5) <$>
+        get <*> get <*> get <*> get <*> get
 
 newtype Pending = Pending (IORef (IO ()))
     -- you must run this action when you finish, while holding DB lock
@@ -139,7 +144,7 @@ waitFor ws@(_:_) act = do
 
 
 getResult :: Status -> Maybe Result
-getResult (Ready r) = Just r
+getResult (Ready r) = Just (resultStore r)
 getResult (Waiting _ r) = r
 getResult _ = Nothing
 
@@ -184,7 +189,7 @@ reportResult d@Database{..} i k res = do
     ans <- updateStatus d i (k,res)
     -- we leave the DB lock before appending
     case ans of
-        Ready r -> do
+        Ready (resultStore -> r) -> do
             diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
                           " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
             journal i (k, r)
@@ -197,7 +202,7 @@ reportResult d@Database{..} i k res = do
 -- 'build' first takes the state lock and (on a single thread) performs as many transitions as it can without waiting on a mutex or running any rules.
 -- Then it releases the state lock and runs the rules in the thread pool and waits for all of them to finish
 -- A build requiring no rules should not result in any thread contention.
-build :: Pool -> Database -> Ops -> Stack -> Maybe String -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Result]))
+build :: Pool -> Database -> Ops -> Stack -> Maybe String -> [Key] -> Capture (Either SomeException (Seconds,Depends,[LiveResult]))
 build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern
@@ -227,6 +232,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
             waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
                 s <- readIORef status
                 case Map.lookup i s of
+                    Just (_, w@Waiting{}) -> return (WaitAgain (i,w))
                     Just (_, Error e) -> done $ Left e -- on error make sure we immediately kick off our parent
                     Just (_, Ready{}) | finish -> done $ Right [r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
                                       | otherwise -> return Continue
@@ -278,7 +284,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
         check stack i k r (ds:rest) = do
             vs <- mapM (reduce' (addStack i k stack)) ds
             let ws = filter (isWaiting . snd) $ zip ds vs
-            if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then do
+            if any isError vs || any (> built r) [changed | Ready (LiveResult {resultStore = Result{..}}) <- vs] then do
                 out stack i k r False
              else if null ws then do
                 check stack i k r rest
@@ -294,7 +300,7 @@ build pool database@Database{..} Ops{..} stack maybeBlock ks continue =
                     case Map.lookup d s of
                         Just (_, Error{}) -> buildIt
                         Just (_, Ready r2)
-                            | changed r2 > built r -> buildIt
+                            | changed (resultStore r2) > built r -> buildIt
                             | finish -> do
                                 res <- check stack i k r rest
                                 if not $ isWaiting res
@@ -316,7 +322,7 @@ progress Database{..} = do
     where
         g = floatToDouble
 
-        f s (Ready Result{..}) = if step == built
+        f s (Ready (LiveResult {resultStore = Result{..}})) = if step == built
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
             else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + g execution}
 --        f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + g execution}
@@ -373,24 +379,29 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
 
 
 -- | Eliminate all errors from the database, pretending they don't exist
-resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
-resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = Depends . map (filter (isJust . flip Map.lookup keep)) . fromDepends $ depends r})) keep
-    where keep = Map.filter (isJust . getResult . snd) mp
+resultsOnly :: Map Id (Key, Status) -> Map Id (Key, LiveResult)
+resultsOnly mp = Map.map (second f) keep
+    where
+      keep = Map.filter (isJust . getResult . snd) mp
+      f (Ready v) = let r = resultStore v
+                        filteredDeps = Depends . map (filter (isJust . flip Map.lookup keep)) . fromDepends $ depends r
+                    in
+                        v { resultStore = r { depends = filteredDeps } }
 
-removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
+removeStep :: Map Id (Key, LiveResult) -> Map Id (Key, LiveResult)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
     status <- (removeStep . resultsOnly) <$> readIORef status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
-                in dependencyOrder shw $ Map.map (concat . fromDepends . depends . snd) status
+                in dependencyOrder shw $ Map.map (concat . fromDepends . depends . resultStore . snd) status
         ids = Map.fromList $ zip order [0..]
 
-        steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
+        steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,LiveResult { resultStore = Result{..}}) <- Map.elems status]
                 in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
 
-        f (k, Result{..}) = ProfileEntry
+        f (k, LiveResult{resultStore=Result{..},..}) = ProfileEntry
             {prfName = show k
             ,prfBuilt = fromStep built
             ,prfChanged = fromStep changed
@@ -448,7 +459,7 @@ lookupDependencies Database{..} k =
         status <- readIORef status
         let Just i = lookupKey k intern
         let Just (_, Ready r) = Map.lookup i status
-        return . map (fst . fromJust . flip Map.lookup status) . concat . fromDepends $ depends r
+        return . map (fst . fromJust . flip Map.lookup status) . concat . fromDepends . depends . resultStore $ r
 
 
 ---------------------------------------------------------------------
@@ -461,8 +472,11 @@ newtype StepKey = StepKey ()
 stepKey :: Key
 stepKey = newKey $ StepKey ()
 
-toStepResult :: Step -> Result
-toStepResult i = Result (encode i) i i mempty Nothing 0 []
+toStepResult :: Step -> LiveResult
+toStepResult i = LiveResult
+  { resultValue = err "Step does not have a value"
+  , resultStore = Result (encode i) i i mempty 0
+  , traces = [] }
 
 fromStepResult :: Result -> Step
 fromStepResult = decode . result
@@ -483,6 +497,6 @@ withDatabase opts diagnostic act = do
                         _ -> initialStep
             stepResult = toStepResult step
         status <- newIORef $ Map.singleton stepId (stepKey, Ready stepResult)
-        journal stepId (stepKey, stepResult)
+        journal stepId (stepKey, resultStore stepResult)
         lock <- newLock
         act Database{..}
