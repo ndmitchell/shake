@@ -3,11 +3,11 @@
 
 module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
-    Rule(..), ARule(..), AnalysisResult(..),
-    SRules(..), RuleType(..), ruleKey, ruleValue,
+    SRules(..), BuiltinRule(..),
     run', apply, applied, blockApply, unsafeAllowApply, withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     traced, trackUse, trackChange, trackAllow, orderOnlyAction,
+    UserRule(..), userRuleMatch, userRule, ruleValue
     ) where
 
 import Control.Exception.Extra
@@ -17,6 +17,7 @@ import Control.Concurrent.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Typeable
+import Data.Dynamic
 import Data.Function
 import Data.Either.Extra
 import Numeric.Extra
@@ -39,7 +40,6 @@ import Development.Shake.Value
 import Development.Shake.Profile
 import Development.Shake.Types
 import Development.Shake.Errors
-import Development.Shake.Special
 import General.Timing
 import General.Concurrent
 import General.Cleanup
@@ -59,100 +59,57 @@ import Prelude
 -- > unordered is associative and commutative
 -- > alternative does not obey priorities, until picking the best one
 data UserRule a
-    = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> Rules ()@.
+    = UserRule a
+    | Unordered [UserRule a] -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> Rules ()@.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
-    | Unordered [UserRule a] -- ^ Rules defined normally, at most one should match.
-    | Ordered [UserRule a] -- ^ Rules defined under 'alternative', matched in order.
+    | Alternative (UserRule a) -- ^ matched in order.
       deriving (Eq,Show,Functor)
 
+-- | Rules might be able to be optimised in some cases
+userRuleMatch :: UserRule (Maybe a) -> [[a]]
+userRuleMatch = map snd . reverse . groupSort . f
+    where
+        f :: UserRule (Maybe a) -> [(Double,a)]
+        f (UserRule x) = maybe [] (\x -> [(1,x)]) x
+        f (Unordered xs) = concatMap f xs
+        f (Priority d x) = map (first $ const d) $ f x
+        f (Alternative x) = take 1 $ f x
 
-data ARule k v m = Priority [(Double,k -> Maybe (Maybe v -> m (v, Bool)))] -- higher fst is higher priority
-                 | Custom (k -> Maybe v -> m (v, Bool))
+userRule :: (Typeable k, Show k) => UserRule a -> (a -> Maybe b) -> k -> IO b
+userRule u f k = case userRuleMatch (fmap f u) of
+    [r]:_ -> return r
+    rs:_  -> errorMultipleRulesMatch (typeOf k) (Just $ show k) (length rs)
+    []    -> errorMultipleRulesMatch (typeOf k) (Just $ show k) 0
 
-combineRules :: ARule k v m -> ARule k v m -> Maybe (ARule k v m)
-combineRules (Priority xs) (Priority ys) = Just $ Priority (xs ++ ys)
-combineRules _ _ = Nothing
+combineRules :: UserRule a -> UserRule a -> UserRule a
+combineRules x (Unordered xs) = Unordered (x:xs)
+combineRules (Unordered xs) x = Unordered (xs++[x])
+combineRules x y = Unordered [x,y]
 
-ruleKey :: ARule k v m -> k
-ruleKey _ = err "ruleKey"
-
-ruleValue :: ARule k v m -> v
-ruleValue _ = err "ruleValue"
-
-data RuleType m = forall k v. (ShakeValue k, ShakeValue v) => ARule (ARule k v m)
+data RuleSet = forall a. (Typeable a) => ARule (UserRule a)
 
 data SRules m = SRules
     {actions :: [m ()]
-    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},RuleType m)
+    ,rules :: Map.HashMap TypeRep (BuiltinRule m)
+    ,userrules :: Map.HashMap TypeRep RuleSet
     }
 
 instance Typeable m => Monoid (SRules m) where
-    mempty = SRules [] (Map.fromList [])
-    mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
-        where f (k, ARule x) (_, ARule y)
-                  | Just y' <- cast y = case combineRules x y' of
-                       Just c -> (k, ARule c)
-                       Nothing -> unsafePerformIO $ errorMultipleRulesMatch k Nothing 2
+    mempty = SRules [] Map.empty Map.empty
+    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWithKey f x2 y2) (Map.unionWithKey g x3 y3)
+      where f k _ _ = unsafePerformIO $ errorMultipleRulesMatch k Nothing 2
+            g k (ARule x) (ARule y)
+                  | Just y' <- cast y = ARule (combineRules x y')
                   | otherwise = unsafePerformIO $ errorIncompatibleRules k (typeOf $ ruleValue x) (typeOf $ ruleValue y)
 
-registerWitnesses :: SRules m -> IO ()
-registerWitnesses SRules{..} =
-    forM_ (Map.elems rules) $ \(_, ARule r) -> do
-        registerWitness $ ruleKey r
-        registerWitness $ ruleValue r
+ruleValue :: UserRule a -> a
+ruleValue _ = err "ruleValue"
 
-data RuleInfo m = RuleInfo
-    {(forall u . Typeable u => Proxy u -> Maybe u)
-        -- ^ A way to query 'UserRule' values at a particular type.
-    -> key
-        -- ^ Key that you want to build.
-    -> Maybe BS.ByteString
-        -- ^ 'Just' the previous result in the database, or 'Nothing' to indicate Shake has no memory of this rule.
-        --   In most cases this will be a serialised value of type @value@.
-    -> Action Bool
-        -- ^ An 'Action' that if executed will return whether any dependencies from the previous execution have changed.
-        --   Returns 'True' if any dependency has changed, or if Shake has no memory of this rule.
-        --   Does not add any dependencies.
-    -> Action (BuiltinInfo value)
-      execute :: Key -> Maybe Value -> Bool -> m ()
-    ,resultType :: TypeRep
-    ,keyType :: TypeRep
-    }
-
-data BuiltinInfo value = BuiltinInfo
-    {resultStore :: [(BS.ByteString,BS.ByteString)]
-        -- ^ Return new values to store. Empty if nothing changed.
-    ,changedValue :: Bool
-    ,resultValue :: value
-        -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
-    }
-
-analyseI :: (ShakeValue key, ShakeValue value) => ARule key value m -> ShakeOptions -> Key -> Value -> IO (AnalysisResult Value)
-analyseI rule opt@(shakeAssume -> assume) (fromKey -> k :: key) (fromValue -> r :: value)
-  | assume == AssumeDirty = return Rebuild
-  | assume == AssumeSkip = return Continue
-  | otherwise = fmap newValue <$> case rule of
-        Priority _ -> analyseR opt k r
-        Custom a _ -> a k r
-
-executeI :: (ShakeValue key, ShakeValue value) => ARule key value Action -> Key -> Maybe Value -> Action (Value, Bool)
-executeI rule (fromKey -> k :: key) (fmap fromValue -> vold :: Maybe value) = do
-    first newValue <$> case rule of
-        Priority rs -> case filter (not . null) $ map (mapMaybe ($ k)) $ sets rs of
-            [r]:_ -> r vold
-            rs -> liftIO $ errorMultipleRulesMatch (typeOf k) (Just $ show k) (length rs)
-        Custom _ e -> e k vold
-  where
-    sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
-    sets = map snd . reverse . groupSort
-
-createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,ARule c) -> RuleInfo
-    { analyse = analyseI c
-    , execute = executeI c
-    , resultType = case c of
-          Priority _ -> typeOf (ruleValue c)
-          Custom _ _ -> typeOf (ruleValue c)
+data BuiltinRule m = BuiltinRule
+    { execute :: Key -- ^ Key that you want to build.
+              -> Maybe Result -- ^ the previous result in the database, if any
+              -> Bool -- ^ 'True' if any dependency has changed, or if Shake has no memory of this rule.
+              -> m LiveResult -- ^ result of executing the rule
     }
 
 ---------------------------------------------------------------------
@@ -160,10 +117,12 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,ARule c) -> RuleInfo
 
 -- global constants of Action
 data Global = Global
-    {global1 :: Global1
+    {globalDatabase :: Database
+    ,globalPool :: Pool
     ,globalCleanup :: Cleanup
     ,globalTimestamp :: IO Seconds
-    ,globalRules :: Map.HashMap TypeRep (RuleInfo Action)
+    ,globalRules :: Map.HashMap TypeRep (BuiltinRule Action)
+    ,globalUserRules :: Map.HashMap TypeRep RuleSet
     ,globalOutput :: Verbosity -> String -> IO ()
     ,globalOptions  :: ShakeOptions
     ,globalDiagnostic :: String -> IO ()
@@ -177,10 +136,12 @@ data Global = Global
 -- local variables of Action
 data Local = Local
     -- constants
-    {local1 :: Local1
+    {localStack :: Stack
     -- stack scoped local variables
     ,localVerbosity :: Verbosity
+    ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
     -- mutable local variables
+    ,localDepends :: Depends -- built up in reverse
     ,localDiscount :: !Seconds
     ,localTraces :: [Trace] -- in reverse
     ,localTrackAllows :: [Key -> Bool]
@@ -199,8 +160,6 @@ basicLint = (/= LintNothing)
 -- | Internal main function (not exported publicly)
 run' :: ShakeOptions -> IO Seconds -> SRules Action -> IO ()
 run' opts@ShakeOptions{..} start rs = do
-    registerWitnesses rs
-
     outputLocked <- do
         lock <- newLock
         return $ \v msg -> withLock lock $ shakeOutput v msg
@@ -251,10 +210,9 @@ run' opts@ShakeOptions{..} start rs = do
                     killThread tid
                     void $ timeout 1000000 $ waitBarrier wait
 
-                let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress forwards
+                    let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts diagnostic lint after absent getProgress forwards
                     let s1 = Local emptyStack shakeVerbosity Nothing mempty 0 [] [] []
                     forM_ (actions rs) $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
@@ -273,25 +231,20 @@ run' opts@ShakeOptions{..} start rs = do
                         bad <- newIORef []
                         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                             let opts2 = opts{shakeAssume=AssumeClean}
-                            let s0 = Global database pool cleanup start ruleinfo output opts2 diagnostic lint after absent getProgress forwards
+                            let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts2 diagnostic lint after absent getProgress forwards
                             forM_ ks $ \(i,(key,v)) -> case v of
                                 Ready ro -> do
-                                    stat <- analyseResult_ s0 key (result ro)
-                                    let reply now = do
-                                            diagnostic $ "Checking if " ++ show key ++ " is " ++ show (result ro) ++ ", " ++ if now == Nothing then "passed" else "FAILED"
-                                            whenJust now $ \now -> modifyIORef' bad ((key, result ro, now):)
-                                    case stat of
-                                        Continue -> reply Nothing
-                                        Update v -> reply (Just v)
-                                        Rebuild -> do
-                                          if specialAlwaysChanges (result ro) then
-                                            reply Nothing
-                                          else
-                                            runKey_ s0 i key (Just ro) emptyStack (incStep $ built ro) $ \ans -> case ans of
-                                                Error e -> raiseError =<< shakeException s0 (return ["Lint-checking"]) e
-                                                Ready r | built r == changed r -> reply . Just . show $ result r
-                                                _ -> reply Nothing
-                                _ -> return ()
+                                    let reply = undefined
+--                                         reply (Error e) = raiseError =<< shakeException s0 (return ["Lint-checking"]) e
+--                                         reply (Ready r) = do
+--                                             let now = built r == changed r
+--                                             diagnostic $ "Checking if " ++ show key ++ " is " ++ show (result ro) ++ ", " ++ if now then "passed" else "FAILED"
+--                                             whenJust now $ \now -> modifyIORef' bad ((key, result ro, now):)
+                                    runKey_
+                                        s0 i key (Just $ resultStore ro) False
+                                        emptyStack
+                                        (incStep $ built $ resultStore ro)
+                                        reply
                         maybe (return ()) (throwIO . snd) =<< readIORef except
                         readIORef bad
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
@@ -304,12 +257,13 @@ run' opts@ShakeOptions{..} start rs = do
                         writeProfile file report
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
-                    live <- listLive database
-                    let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
-                    forM_ shakeLiveFiles $ \file -> do
-                        when (shakeVerbosity >= Normal) $
-                            output Normal $ "Writing live list to " ++ file
-                        (if file == "-" then putStr else writeFile file) $ unlines liveFiles
+                    -- TODO: actual pruning
+--                     live <- listLive database
+--                     let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
+--                     forM_ shakeLiveFiles $ \file -> do
+--                         when (shakeVerbosity >= Normal) $
+--                             output Normal $ "Writing live list to " ++ file
+--                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             sequence_ . reverse =<< readIORef after
 
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
@@ -335,27 +289,28 @@ applyForall ks = do
     let tk = typeOf (err "apply key" :: key)
         tv = typeOf (err "apply type" :: value)
     Global{..} <- Action getRO
+    -- this duplicates the check in runKey, but we can give better error messages here
     case Map.lookup tk globalRules of
         Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
-        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
+        _ -> return ()
+    vs <- applyKeyValue (map newKey ks)
+    let f k (resultValue -> v) = case fromDynamic v of
+            Just v -> return v
+            Nothing -> liftIO $ errorRuleTypeMismatch tk (Just $ show k) (dynTypeRep v) tv
+    zipWithM f ks vs
 
-applyKeyValue :: [Key] -> Action [Value]
+applyKeyValue :: [Key] -> Action [LiveResult]
 applyKeyValue [] = return []
 applyKeyValue ks = do
-    (dur, dep, vs) <- Action $ build (Ops (analyseResult_ global) (runKey_ global)) ks
+    global@Global{..} <- Action getRO
+    stack <- Action $ getsRW localStack
+    block <- Action $ getsRW localBlockApply
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runKey_ global)) stack block ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep <> localDepends s}
     return vs
 
-analyseResult_ :: Global -> Key -> Value -> IO (AnalysisResult Value)
-analyseResult_ global@Global{..} k r = do
-    let tk = typeKey k
-    case Map.lookup tk globalRules of
-        Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-        Just RuleInfo{..} -> analyse globalOptions k r
-
-runKey_ :: Global -> Id -> Key -> Maybe Result -> Stack -> Development.Shake.Database.Step -> Capture Status
-runKey_ global@Global{..} i k r stack step continue = do
+runKey_ :: Global -> Id -> Key -> Maybe Result -> Bool -> Stack -> Step -> Capture Status
+runKey_ global@Global{..} i k r deps stack step continue = do
     time <- offsetTime
     let s = Local stack (shakeVerbosity globalOptions) Nothing mempty 0 [] [] []
     let top = showTopStack stack
@@ -363,28 +318,33 @@ runKey_ global@Global{..} i k r stack step continue = do
         let tk = typeKey k
         case Map.lookup tk globalRules of
             Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-            Just RuleInfo{..} -> do
+            Just BuiltinRule{..} -> do
+                --   | assume == AssumeDirty = return Rebuild
+                --   | assume == AssumeSkip = return Continue
+                --
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                res <- execute k (fmap result r)
+                res <- execute k r deps
                 when (LintFSATrace == shakeLint globalOptions) trackCheckUsed
-                Action $ fmap ((,) res) getRW) $ \x -> case x of
+                --                 Action $ fmap ((,) res) getRW
+                return res) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right ((res,equal), Local{..}) -> do
-                        dur <- time
-                        globalLint $ "after building " ++ top
-                        let ans = Result
-                                    { result = res
-                                    , depends = finalizeDepends localDepends
-                                    , generatedBy = Nothing
-                                    , changed = if equal then maybe step changed r else step
-                                    , built = step
-                                    , execution = doubleToFloat $ dur - localDiscount
-                                    , traces = reverse localTraces
-                                    }
-                        evaluate $ rnf ans
-                        continue $ Ready ans
+                    Right r -> continue $ Ready r
+--                     Right ((res,equal), Local{..}) -> do
+--                         dur <- time
+--                         globalLint $ "after building " ++ top
+--                         let ans = Result
+--                                     { result = res
+--                                     , depends = finalizeDepends localDepends
+--                                     , generatedBy = Nothing
+--                                     , changed = if equal then maybe step changed r else step
+--                                     , built = step
+--                                     , execution = doubleToFloat $ dur - localDiscount
+--                                     , traces = reverse localTraces
+--                                     }
+--                         evaluate $ rnf ans
+--                         continue $ Ready ans
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
@@ -553,7 +513,7 @@ trackAllowForall test = do
     when (basicLint $ shakeLint globalOptions) $ Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
         tk = typeOf (err "trackAllow key" :: key)
-        f k = typeKey k == tk && test (fromKey k)
+        f k = typeKey k == tk && fmap test (fromKey k) == Just True
 
 ---------------------------------------------------------------------
 -- RESOURCES

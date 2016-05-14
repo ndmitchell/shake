@@ -59,7 +59,7 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 type Value = LBS.ByteString
 
 data Key = Key
-  { keyType :: TypeRep
+  { typeKey :: TypeRep
   , keyString :: Value
   }
     deriving (Typeable,Eq,Show,Hashable,NFData,Generic)

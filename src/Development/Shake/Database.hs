@@ -5,7 +5,7 @@
 module Development.Shake.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies, Step, incStep, Result(..), Status(Ready,Error),
+    listDepends, lookupDependencies, Step, incStep, Result(..), LiveResult(..), Status(Ready,Error),
     Ops(..), build, Id, Depends, subtractDepends, finalizeDepends,
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -14,9 +14,6 @@ module Development.Shake.Database(
 
 import GHC.Generics (Generic)
 import Development.Shake.Classes
-import General.Binary
-import Data.Binary.Get
-import Data.Binary.Put
 import Development.Shake.Database2
 import Development.Shake.Pool
 import Development.Shake.Value
@@ -34,7 +31,11 @@ import Control.Monad.Extra
 import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
+import General.Binary
+import Data.Binary.Get
+import Data.Binary.Put
 import Data.IORef.Extra
+import Data.Dynamic
 import Data.Maybe
 import Data.List
 import Data.Tuple.Extra
@@ -84,7 +85,7 @@ data Result = Result
     } deriving (Show,Generic)
 
 data LiveResult = LiveResult
-    { resultValue :: Any -- ^ dynamic return value limited to lifetime of the program
+    { resultValue :: Dynamic -- ^ dynamic return value limited to lifetime of the program
     , resultStore :: Result -- ^ persistent database value
     , traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Generic)
@@ -186,8 +187,8 @@ updateStatus Database{..} i (k,v) = do
 
 reportResult :: Database -> Id -> Key -> Status -> IO ()
 reportResult d@Database{..} i k res = do
-    ans <- updateStatus d i (k,res)
-    -- we leave the DB lock before appending
+    ans <- withLock lock $ updateStatus d i (k,res)
+    -- we leave the DB lock before appending to the journal
     case ans of
         Ready (resultStore -> r) -> do
             diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
