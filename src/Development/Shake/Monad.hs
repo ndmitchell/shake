@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Monad(
-    RAW, Capture, runRAW,
+    RAWP(..), RAW, Capture, runRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     withRO, withRW,
     catchRAW, tryRAW, throwRAW,
@@ -10,7 +10,7 @@ module Development.Shake.Monad(
 
 import Control.Exception.Extra
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Cont
+import Control.Monad.Trans.Cont as Cont
 import Control.Monad.Trans.Reader
 import Data.IORef
 import Control.Applicative
@@ -46,37 +46,36 @@ runRAW ro rw m k = do
 ---------------------------------------------------------------------
 -- STANDARD
 
-getRO :: RAW ro rw ro
+getRO :: RAWP (S ro rw) r m ro
 getRO = RAW $ asks ro
 
-getRW :: RAW ro rw rw
+getRW :: MonadIO m => RAWP (S ro rw) r m rw
 getRW = RAW $ liftIO . readIORef =<< asks rww
 
-getsRO :: (ro -> a) -> RAW ro rw a
+getsRO :: (ro -> a) -> RAWP (S ro rw) r m a
 getsRO f = fmap f getRO
 
-getsRW :: (rw -> a) -> RAW ro rw a
+getsRW :: MonadIO m => (rw -> a) -> RAWP (S ro rw) r m a
 getsRW f = fmap f getRW
 
 -- | Strict version
-putRW :: rw -> RAW ro rw ()
+putRW :: MonadIO m => rw -> RAWP (S ro rw) r m ()
 putRW rw = rw `seq` RAW $ liftIO . flip writeIORef rw =<< asks rww
 
-withRAW :: (S ro rw -> S ro2 rw2) -> RAW ro2 rw2 a -> RAW ro rw a
+withRAW :: (rd -> rd2) -> RAWP rd2 r m a -> RAWP rd r m a
 withRAW f m = RAW $ withReaderT f $ fromRAW m
 
-modifyRW :: (rw -> rw) -> RAW ro rw ()
+modifyRW :: MonadIO m => (rw -> rw) -> RAWP (S ro rw) r m ()
 modifyRW f = do x <- getRW; putRW $ f x
 
-withRO :: (ro -> ro2) -> RAW ro2 rw a -> RAW ro rw a
+withRO :: (ro -> ro2) -> RAWP (S ro2 rw) r m a -> RAWP (S ro rw) r m a
 withRO f = withRAW $ \s -> s{ro=f $ ro s}
 
-withRW :: (rw -> rw2) -> RAW ro rw2 a -> RAW ro rw a
+withRW :: MonadIO m => (rw -> rw2) -> RAWP (S ro rw2) r m a -> RAWP (S ro rw) r m a
 withRW f m = do
     rw <- getRW
     rww <- liftIO $ newIORef $ f rw
     withRAW (\s -> s{rww=rww}) m
-
 
 ---------------------------------------------------------------------
 -- EXCEPTIONS
@@ -96,15 +95,27 @@ catchRAW m hdl = RAW $ ReaderT $ \s -> ContT $ \k -> do
 tryRAW :: RAW ro rw a -> RAW ro rw (Either SomeException a)
 tryRAW m = catchRAW (fmap Right m) (return . Left)
 
-throwRAW :: Exception e => e -> RAW ro rw a
+throwRAW :: (Exception e, MonadIO m) => e -> m a
 throwRAW = liftIO . throwIO
 
+
+---------------------------------------------------------------------
+-- Delimited control flow
+
+-- | @'resetT' m@ delimits the continuation of any 'shiftT' inside @m@.
+resetT :: (Monad m) => RAWP rd r m r -> RAWP rd r' m r
+resetT (RAW c) = RAW $ ReaderT $ \s -> Cont.resetT (runReaderT c s)
+
+-- | @'shiftT' f@ captures the continuation up to the nearest enclosing
+-- 'resetT' and passes it to @f@
+shiftT :: (Monad m) => ((a -> m r) -> RAWP rd r m r) -> RAWP rd r m a
+shiftT f = RAW $ ReaderT $ \s -> Cont.shiftT (\c -> fromRAW (f c) `runReaderT` s)
 
 ---------------------------------------------------------------------
 -- WEIRD STUFF
 
 -- | Apply a modification, run an action, then undo the changes after.
-unmodifyRW :: (rw -> (rw, rw -> rw)) -> RAW ro rw a -> RAW ro rw a
+unmodifyRW :: MonadIO m => (rw -> (rw, rw -> rw)) -> RAWP (S ro rw) r m a -> RAWP (S ro rw) r m a
 unmodifyRW f m = do
     (s2,undo) <- fmap f getRW
     putRW s2

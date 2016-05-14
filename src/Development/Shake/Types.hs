@@ -3,7 +3,7 @@
 
 -- | Types exposed to the user
 module Development.Shake.Types(
-    Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..),
+    Progress(..), Verbosity(..), RunCommands(..), Lint(..), Change(..),
     ShakeOptions(..), shakeOptions
     ) where
 
@@ -18,32 +18,16 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.CmdOption
 
-
--- | The current assumptions made by the build system, used by 'shakeAssume'. These options
---   allow the end user to specify that any rules run are either to be treated as clean, or as
---   dirty, regardless of what the build system thinks.
---
---   These assumptions only operate on files reached by the current 'Development.Shake.action' commands. Any
---   other files in the database are left unchanged.
-data Assume
-    = AssumeDirty
-        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'Development.Shake.Rule.analyseR' always
-        --   returning 'Rebuild'. Useful to undo the results of 'AssumeClean', for benchmarking rebuild speed and
-        --   for rebuilding if untracked dependencies have changed. This assumption is safe, but may cause
-        --   more rebuilding than necessary.
-    | AssumeClean
-        -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run, and in future runs/.
-        --   Assume and record that all rules reached are clean and do not require rebuilding, provided the rule
-        --   has a cached result from being built before. Useful if you have modified a file in some
-        --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
-    | AssumeSkip
-        -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run/.
-        --   Assume that all rules reached are clean in this run. Only useful for benchmarking, to remove any overhead
-        --   from running 'Development.Shake.Rule.analyseR' operations.
-    | AssumeNothing
-        -- ^ The default behavior, assuming nothing. This assumption is safe.
+-- | Which commands to run, used by 'shakeRunCommands'.
+data RunCommands
+    = RunMinimal
+        -- ^ Run only those commands necessary to record an output value. Typically, this will run oracles and record the modification times of all files.
+    | RunUser
+        -- ^ Run user rules, but avoid running system commands if possible. In particular, this will skip commands whose output streams and exit code
+        --   are not used. Useful for profiling the non-command portion of the build system.
+    | RunCommands
+        -- ^ Run commands normally.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
-
 
 -- | Which lint checks to perform, used by 'shakeLint'.
 data Lint
@@ -113,6 +97,7 @@ data ShakeOptions = ShakeOptions
         --   otherwise it will write HTML.
     ,shakeLint :: Lint
         -- ^ Defaults to 'LintNothing'. Perform sanity checks during building, see 'Lint' for details.
+    -- TODO: move to Lint -> LintFSATrace since they are only used there
     ,shakeLintInside :: [FilePath]
         -- ^ Directories in which the files will be tracked by the linter.
     ,shakeLintIgnore :: [FilePattern]
@@ -123,9 +108,9 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
         --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
         --   'shakeFlush' seconds will be lost.
-    ,shakeAssume :: Assume
-        -- ^ Defaults to 'AssumeNothing'. Assume all build objects are clean/dirty, see 'Assume' for details.
-        --   Can be used to implement @make --touch@.
+    ,shakeRead :: Bool
+        -- ^ True (default): use previous build results from the database to detect unchanging builds.
+        --   False: recompute all values.
     ,shakeAbbreviations :: [(String,String)]
         -- ^ Defaults to @[]@. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation.
         --   Commonly used to replace the long paths (e.g. @.make\/i586-linux-gcc\/output@) with an abbreviation (e.g. @$OUT@).
@@ -136,17 +121,15 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'True'. Change 'stdout' and 'stderr' to line buffering while running Shake.
     ,shakeTimings :: Bool
         -- ^ Defaults to 'False'. Print timing information for each stage at the end.
-    ,shakeRunCommands :: Bool
-        -- ^ Default to 'True'. Should you run command line actions, set to 'False' to skip actions whose output streams and exit code
-        --   are not used. Useful for profiling the non-command portion of the build system.
+    ,shakeRunCommands :: RunCommands
+        -- ^ Defaults to 'RunCommands'. Which commands to run, see 'RunCommands' for details.
     ,shakeChange :: Change
-        -- ^ Default to 'ChangeModtime'. How to check if a file has changed, see 'Change' for details.
+        -- ^ Defaults to 'ChangeModtime'. How to check if a file has changed, see 'Change' for details.
     ,shakeCreationCheck :: Bool
-        -- ^ Default to 'True'. After running a rule to create a file, is it an error if the file does not exist.
+        -- ^ Defaults to 'True'. After running a rule to create a file, is it an error if the file does not exist.
         --   Provided for compatibility with @make@ and @ninja@ (which have ugly file creation semantics).
-
---    ,shakeOutputCheck :: Bool
---        -- ^ Default to 'True'. If a file produced by a rule changes, should you rebuild it.
+    ,shakeOutputCheck :: Bool
+        -- ^ Defaults to 'True'. If an output of a rule changes, should you rerun that rule.
     ,shakeLiveFiles :: [FilePath]
         -- ^ Default to @[]@. After the build system completes, write a list of all files which were /live/ in that run,
         --   i.e. those which Shake checked were valid or rebuilt. Produces best answers if nothing rebuilds.
@@ -172,8 +155,8 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] LintNothing [] [] [] (Just 10) AssumeNothing [] False True False
-    True ChangeModtime True [] False
+    ".shake" 1 "1" Normal False [] LintNothing [] [] [] (Just 10) True [] False True False
+    RunCommands ChangeModtime True True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     HashMap.empty
@@ -181,20 +164,20 @@ shakeOptions = ShakeOptions
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
-    ,"shakeFlush", "shakeAssume", "shakeAbbreviations", "shakeStorageLog"
-    ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
+    ,"shakeFlush", "shakeRead", "shakeAbbreviations", "shakeStorageLog"
+    ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck", "shakeOutputCheck"
     ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromHidden y1) (fromHidden y2) (fromHidden y3)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 y1 y2 y3 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 (fromHidden y1) (fromHidden y2) (fromHidden y3)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 y1 y2 y3) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
-        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k`
         Hidden y1 `k` Hidden y2 `k` Hidden y3
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -209,7 +192,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Change)
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: [FilePath])
-                | Just x <- cast x = show (x :: Assume)
+                | Just x <- cast x = show (x :: RunCommands)
                 | Just x <- cast x = show (x :: Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])

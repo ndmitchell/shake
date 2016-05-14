@@ -62,22 +62,50 @@ instance Show FileA where
 missingFile :: FileA
 missingFile = FileA fileInfoNeq fileInfoNeq fileInfoNeq
 
-storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
-    res <- getFileInfo x
-    case res of
-        Nothing -> return Nothing
-        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
-        Just (time,size) -> do
-            hash <- unsafeInterleaveIO $ getFileHash x
-            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
-
--- | An equality check and a cost.
-data EqualCost
-    = EqualCheap -- ^ The equality check was cheap.
-    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
-    | NotEqual -- ^ The values are not equal.
-      deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
-
+-- | This function is not actually exported, but Haddock is buggy. Please ignore.
+defaultRuleFile :: Rules ()
+defaultRuleFile = newBuiltinRule (typeOf (undefined :: FileQ)) (BuiltinRule
+    { execute = \k vo dep -> do
+        opts@ShakeOptions{..} <- getShakeOptions
+        doRebuild <- case vo of
+            _ | shakeRunCommands < RunUser -> False
+            Nothing -> True
+            Just vo -> do
+                res <- getFileInfo x
+                case res of
+                    Nothing -> return Nothing
+                    Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
+                    Just (time,size) -> do
+                        hash <- unsafeInterleaveIO $ getFileHash x
+                        return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+        let ac = shakeAssume == AssumeClean
+            bool b = case b of
+                False | ac -> Update res
+                False -> Rebuild
+                True -> Continue
+        return $ case res of
+            Nothing -> Rebuild
+            Just (FileA time size hash) -> case shakeChange of
+                ChangeModtime -> bool $ time == ytime
+                ChangeDigest -> bool $ size == ysize && hash == yhash
+                ChangeModtimeOrDigest -> bool $ time == ytime && size == ysize && hash == yhash
+                _ | time == ytime -> Continue
+                  | otherwise ->
+                    case size == ysize && hash == yhash of
+                        False | ac -> Update res
+                        False -> Rebuild
+                        True -> Update res
+        liftIO $ createDirectoryIfMissing True $ takeDirectory x
+        act x
+        let msg = ("Error, rule " ++ help ++ " failed to build file:")
+                  ("Error, file does not exist and no rule available:")
+            phony -> return $ (missingFile, False)
+        let opts2 = opts{shakeChange=case shakeChange opts of ChangeModtimeAndDigestInput | not input -> ChangeModtime; x -> x}
+        s <- liftIO $ storedValue opts2 x
+        return $ case s of
+            Nothing | shakeCreationCheck opts || input -> error err
+                          | otherwise -> (missingFile, False)
+            Just a -> (a, maybe False ((/=NotEqual) . equalValue opts2 a) vo)
 equalValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
     ChangeModtime -> bool $ x1 == y1
     ChangeDigest -> bool $ x2 == y2 && x3 == y3
@@ -86,54 +114,34 @@ equalValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case 
       | x2 == y2 && x3 == y3 -> EqualExpensive
       | otherwise -> NotEqual
     where bool b = if b then EqualCheap else NotEqual
+      where
+        err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+        v <- act . fromKeyDef k $ err "simpleCheck key conversion failure"
+        return $ BuiltinResult
+          { resultStoreB = encode v
+          , resultValueB = toDyn v
+          , dependsB = Nothing
+          , changedB = maybe False ((==) v . decode . result) vo
+          }
+    })
 
-instance Rule FileQ FileA where
-  analyseR opt@(ShakeOptions{..}) k (FileA ytime ysize yhash) = do
-    res <- storedValue opt k
-    let ac = shakeAssume == AssumeClean
-        bool b = case b of
-            False | ac -> Update res
-            False -> Rebuild
-            True -> Continue
-    return $ case res of
-        Nothing -> Rebuild
-        Just (FileA time size hash) -> case shakeChange of
-            ChangeModtime -> bool $ time == ytime
-            ChangeDigest -> bool $ size == ysize && hash == yhash
-            ChangeModtimeOrDigest -> bool $ time == ytime && size == ysize && hash == yhash
-            _ | time == ytime -> Continue
-              | otherwise ->
-                case size == ysize && hash == yhash of
-                    False | ac -> Update res
-                    False -> Rebuild
-                    True -> Update res
+type FileAct = FileQ -> Maybe (Action ())
 
--- | Arguments: is the file an input; a message for failure if the file does not exist; filename; cached value
-storedValueError :: Bool -> String -> FileQ -> Maybe FileA -> Action (FileA, Bool)
-storedValueError input msg x vo = do
-    opts <- getShakeOptions
-    let opts2 = opts{shakeChange=case shakeChange opts of ChangeModtimeAndDigestInput | not input -> ChangeModtime; x -> x}
-    s <- liftIO $ storedValue opts2 x
-    return $ case s of
-        Nothing | shakeCreationCheck opts || input -> error err
-                      | otherwise -> (missingFile, False)
-        Just a -> (a, maybe False ((/=NotEqual) . equalValue opts2 a) vo)
-  where
-    err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+data FileRule = Root
+  { act :: FileAct
+  , help :: String
+  } | Phony { act :: FileAct }
 
-
--- | Main rule for all file-based rules
+-- | Main constructor for file-based rules
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = rule $ \xo@(FileQ x_) -> let x = unpackU x_ in
-    if not $ test x then Nothing else Just $ \vo -> do
-        liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        act x
-        storedValueError False ("Error, rule " ++ help ++ " failed to build file:") xo vo
+root help test act = addUserRule $ Root
+    { act = \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ act x
+    , help = help
+    }
 
--- | This function is not actually exported, but Haddock is buggy. Please ignore.
-defaultRuleFile :: Rules ()
-defaultRuleFile = priority 0 $ rule $ \x -> Just $ \vo -> do
-    storedValueError True "Error, file does not exist and no rule available:" x vo
+-- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
+phonys :: (String -> Maybe (Action ())) -> Rules ()
+phonys act = addUserRule $ Phony { act = \(FileQ x_) -> act $ unpackU x_ }
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.

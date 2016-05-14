@@ -237,7 +237,7 @@ run' opts@ShakeOptions{..} start rs = do
                     checkValid database absent' $ \ks -> do
                         bad <- newIORef []
                         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                            let opts2 = opts{shakeAssume=AssumeClean}
+                            let opts2 = opts{shakeRunCommands=RunMinimal}
                             let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts2 diagnostic lint after absent getProgress forwards
                             forM_ ks $ \(i,(key,v)) -> case v of
                                 Ready ro -> do
