@@ -109,7 +109,14 @@ data BuiltinRule m = BuiltinRule
     { execute :: Key -- ^ Key that you want to build.
               -> Maybe Result -- ^ the previous result in the database, if any
               -> Bool -- ^ 'True' if any dependency has changed, or if Shake has no memory of this rule.
-              -> m LiveResult -- ^ result of executing the rule
+              -> m BuiltinResult -- ^ result of executing the rule
+    }
+
+data BuiltinResult = BuiltinResult
+    { resultStoreB :: Value -- ^ the result associated with the Key
+    , resultValueB :: Dynamic -- ^ dynamic return value limited to lifetime of the program
+    , dependsB :: Maybe Depends -- ^ dependencies, or Nothing to use inferred dependencies
+    , changedB :: Bool
     }
 
 ---------------------------------------------------------------------
@@ -325,26 +332,27 @@ runKey_ global@Global{..} i k r deps stack step continue = do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                res <- execute k r deps
+                BuiltinResult{..} <- execute k r deps
                 when (LintFSATrace == shakeLint globalOptions) trackCheckUsed
-                --                 Action $ fmap ((,) res) getRW
-                return res) $ \x -> case x of
+                liftIO $ globalLint $ "after building " ++ top
+                dur <- liftIO time
+                Local{..} <- Action $ getRW
+                let ans = LiveResult
+                          { resultValue = resultValueB
+                          , resultStore = Result
+                            { result = resultStoreB
+                            , depends = fromMaybe (finalizeDepends localDepends) dependsB
+                            , changed = if changedB then step else maybe step changed r
+                            , built = step
+                            , execution = doubleToFloat $ dur - localDiscount
+                            }
+                          , traces = reverse localTraces
+                          }
+                liftIO $ evaluate $ rnf ans
+                return ans
+                ) $ \x -> case x of
                     Left e -> continue . Error . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right r -> continue $ Ready r
---                     Right ((res,equal), Local{..}) -> do
---                         dur <- time
---                         globalLint $ "after building " ++ top
---                         let ans = Result
---                                     { result = res
---                                     , depends = finalizeDepends localDepends
---                                     , generatedBy = Nothing
---                                     , changed = if equal then maybe step changed r else step
---                                     , built = step
---                                     , execution = doubleToFloat $ dur - localDiscount
---                                     , traces = reverse localTraces
---                                     }
---                         evaluate $ rnf ans
---                         continue $ Ready ans
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)

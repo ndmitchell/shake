@@ -92,6 +92,9 @@ data LiveResult = LiveResult
 
 instance NFData Result
 
+instance NFData LiveResult where
+  rnf (LiveResult x1 x2 x3) = rnf x2 `seq` rnf x3
+
 instance Binary Result where
     put (Result x1 x2 x3 x4 x5) = put x1 >> put x2 >> put x3 >> put x4 >> put (BinFloat x5)
     get = (\x1 x2 x3 x4 (BinFloat x5) -> Result x1 x2 x3 x4 x5) <$>
