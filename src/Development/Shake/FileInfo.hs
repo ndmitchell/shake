@@ -1,18 +1,18 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric, DeriveDataTypeable, CPP, ForeignFunctionInterface, LambdaCase #-}
 
 module Development.Shake.FileInfo(
-    FileInfo, fileInfoEq, fileInfoNeq,
+    FileInfo(FileEq,FileNeq), (=?=),
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
     ) where
 
+import GHC.Generics
 import Control.Exception.Extra
 import Development.Shake.Classes
+import Development.Shake.Errors
 import General.String
 import qualified Data.ByteString.Lazy as LBS
-import Data.Char
 import Data.Word
-import Numeric
 import System.IO
 
 #if defined(PORTABLE)
@@ -35,27 +35,31 @@ import System.IO.Error
 import System.Posix.Files.ByteString
 #endif
 
--- A piece of file information, where 0 and 1 are special (see fileInfo* functions)
-newtype FileInfo a = FileInfo Word32
-    deriving (Typeable,Hashable,Binary,NFData)
+-- | A piece of file information, with special equal and not-equal values
+data FileInfo a = FileEq -- ^ Equal to everything
+                   | FileNeq -- ^ Equal to nothing
+                   | FileInfo Word32 -- ^ in [2..maxBound]
+    deriving (Show,Eq,Typeable,Hashable,NFData,Generic)
 
-fileInfoEq, fileInfoNeq :: FileInfo a
-fileInfoEq  = FileInfo 0   -- Equal to everything
-fileInfoNeq = FileInfo 1   -- Equal to nothing
+instance Binary (FileInfo a) where
+    get = get >>= \case
+        0 -> return FileEq
+        1 -> return FileNeq
+        a -> return $ FileInfo a
+    put FileEq = put (0 :: Word32)
+    put FileNeq = put (1 :: Word32)
+    put (FileInfo a) | a >= 2 = put a
+                     | otherwise = err ("Invalid FileInfo")
 
+-- | Truncate a Word32 into FileInfo
 fileInfo :: Word32 -> FileInfo a
 fileInfo a = FileInfo $ if a > maxBound - 2 then a else a + 2
 
-instance Show (FileInfo a) where
-    show (FileInfo x)
-        | x == 0 = "EQ"
-        | x == 1 = "NEQ"
-        | otherwise = "0x" ++ map toUpper (showHex (x-2) "")
+infix 4 =?=
 
-instance Eq (FileInfo a) where
-    FileInfo a == FileInfo b
-        | a == 0 || b == 0 = True
-        | a == 1 || b == 1 = False
+-- | FileInfo comparison using the special equality semantics
+a =?= b | a == FileEq || b == FileEq = True
+        | a == FileNeq || b == FileNeq = False
         | otherwise = a == b
 
 data FileInfoHash; type FileHash = FileInfo FileInfoHash

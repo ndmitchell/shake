@@ -6,7 +6,7 @@ module Development.Shake.Core(
     ShakeValue,
     Rules, action, withoutActions, alternatives, priority,
     BuiltinRule(..), BuiltinResult(..), newBuiltinRule,
-    newUserRule, getUserRules, simpleCheck,
+    addUserRule, getUserRules, userRule, simpleCheck,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -170,8 +170,8 @@ simpleCheck = f
 --   or 'Nothing' otherwise. The 'Bool' is 'True' if the value changed.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
-newUserRule :: (Typeable a) => a -> Rules ()
-newUserRule r = newRules mempty{userrules = Map.singleton (typeOf r) (ARule (UserRule r))}
+addUserRule :: (Typeable a) => a -> Rules ()
+addUserRule r = newRules mempty{userrules = Map.singleton (typeOf r) (ARule (UserRule r))}
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
 --   All matching rules at a given priority must be disjoint, or an error is raised.

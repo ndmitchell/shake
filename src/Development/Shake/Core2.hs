@@ -75,8 +75,8 @@ userRuleMatch = map snd . reverse . groupSort . f
         f (Priority d x) = map (first $ const d) $ f x
         f (Alternative x) = take 1 $ f x
 
-userRule :: (Typeable k, Show k) => UserRule a -> (a -> Maybe b) -> k -> IO b
-userRule u f k = case userRuleMatch (fmap f u) of
+userRule :: (Typeable k, Show k) => (a -> Maybe b) -> k -> UserRule a -> IO b
+userRule f k u = case userRuleMatch (fmap f u) of
     [r]:_ -> return r
     rs:_  -> errorMultipleRulesMatch (typeOf k) (Just $ show k) (length rs)
     []    -> errorMultipleRulesMatch (typeOf k) (Just $ show k) 0
@@ -329,7 +329,8 @@ runKey_ global@Global{..} i k r deps stack step continue = do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                BuiltinResult{..} <- execute k r deps
+                let r' = if shakeRead globalOptions then r else Nothing
+                BuiltinResult{..} <- execute k r' deps
                 when (LintFSATrace == shakeLint globalOptions) trackCheckUsed
                 liftIO $ globalLint $ "after building " ++ top
                 dur <- liftIO time

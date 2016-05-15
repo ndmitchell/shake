@@ -5,6 +5,7 @@ module Development.Shake.Rules.Rerun(
     ) where
 
 import Development.Shake.Core
+import Development.Shake.Core2
 import Development.Shake.Classes
 
 
@@ -32,7 +33,13 @@ alwaysRerun :: Action ()
 alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = cRule (\_ _ -> return Rebuild)
-  (\AlwaysRerunQ{} _ -> do
-    assume <- fmap shakeAssume getShakeOptions
-    return (v2, assume == AssumeClean))
+defaultRuleRerun = newBuiltinRule (typeOf (undefined :: AlwaysRerunQ)) (BuiltinRule
+        { execute = \_ _ _ -> do
+            let v = AlwaysRerunA ()
+            return $ BuiltinResult
+              { resultStoreB = encode v
+              , resultValueB = toDyn v
+              , dependsB = Nothing
+              , changedB = True
+              }
+        })

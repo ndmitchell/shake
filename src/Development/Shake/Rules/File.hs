@@ -1,5 +1,5 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveGeneric, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns, RecordWildCards #-}
 
 module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, needNorm, want,
@@ -7,16 +7,25 @@ module Development.Shake.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    EqualCost(..), FileQ(..), FileA, missingFile, storedValue, equalValue
+    -- EqualCost(..), FileQ(..), FileA, missingFile, storedValue, equalValue
     ) where
 
+import GHC.Generics
 import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
+import Data.Binary
+import Data.Dynamic
+import Data.Maybe
+import Data.List
+import Data.Tuple.Extra
+import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
+
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 
+import Development.Shake.Core2 hiding (trackAllow)
 import Development.Shake.Core hiding (trackAllow)
 import qualified Development.Shake.Core as S
 import General.String
@@ -27,121 +36,109 @@ import Development.Shake.FilePattern
 import Development.Shake.FileInfo
 import Development.Shake.Types
 import Development.Shake.Errors
+import Development.Shake.Value
 
-import Data.Bits
-import Data.Data
-import Data.List
-import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
-import System.IO.Unsafe(unsafeInterleaveIO)
-
+import Prelude hiding (mod)
 
 infix 1 %>, ?>, |%>, ~>
 
-
 newtype FileQ = FileQ {fromFileQ :: BSU}
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,NFData,Generic)
 
 instance Show FileQ where show (FileQ x) = unpackU x
 
-data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
-    deriving (Typeable,Eq)
+data FileA = FileA { mod :: {-# UNPACK #-} !ModTime, size :: {-# UNPACK #-} !FileSize, digest :: {-# UNPACK #-} !FileHash }
+    deriving (Typeable,Eq,Show,Generic)
 
-instance Hashable FileA where
-    hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
-
-instance NFData FileA where
-    rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
-
-instance Binary FileA where
-    put (FileA a b c) = put a >> put b >> put c
-    get = liftA3 FileA get get get
-
-instance Show FileA where
-    show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
+instance Hashable FileA
+instance NFData FileA
+instance Binary FileA
 
 missingFile :: FileA
-missingFile = FileA fileInfoNeq fileInfoNeq fileInfoNeq
+missingFile = FileA FileNeq FileNeq FileNeq
+
+-- | Interleaved file checking and result comparison, where the first is the stored result
+--   and the second is the new result if known. True if the two FileA's are equal.
+compareFileA :: Change -> FileQ -> Maybe FileA -> Maybe FileA -> IO Bool
+compareFileA _ _ Nothing _ = return False
+compareFileA sC x (Just vo) (Just vn) | vo == vn = return True
+compareFileA sC x (Just vo) vn = do
+    let oldinfo@(FileA ytime ysize yhash) = vo
+    res <- maybe (getFileInfo $ fromFileQ x) (return . Just . (mod &&& size)) vn
+    case res of
+        Nothing -> return $ oldinfo == missingFile
+        Just (time,size) -> do
+            let m = time =?= ytime
+            case sC of
+                ChangeModtime -> return m
+                ChangeModtimeAndDigest | not m -> return False
+                ChangeModtimeOrDigest | m -> return True
+                _ | not (size =?= ysize) -> return False
+                _ -> (=?=) yhash <$> maybe (getFileHash $ fromFileQ x) (return . digest) vn
+
+-- | Gets the current status of the file. Also does error checking for
+--   if the file wasn't created by the user rule.
+getFileA :: Change -> Maybe String -> FileQ -> IO FileA
+getFileA sC msg' x = (getFileInfo $ fromFileQ x) >>= \res -> case res of
+    Nothing | Just msg <- msg' -> error msg
+    Nothing -> return missingFile
+    Just (time,size) -> do
+        case sC of
+            ChangeModtime -> return (FileA time size FileNeq)
+            _ -> FileA time size <$> (getFileHash $ fromFileQ x)
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = newBuiltinRule (typeOf (undefined :: FileQ)) (BuiltinRule
-    { execute = \k vo dep -> do
+    { execute = \k vo' dep -> do
         opts@ShakeOptions{..} <- getShakeOptions
-        doRebuild <- case vo of
-            _ | shakeRunCommands < RunUser -> False
-            Nothing -> True
-            Just vo -> do
-                res <- getFileInfo x
-                case res of
-                    Nothing -> return Nothing
-                    Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
-                    Just (time,size) -> do
-                        hash <- unsafeInterleaveIO $ getFileHash x
-                        return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
-        let ac = shakeAssume == AssumeClean
-            bool b = case b of
-                False | ac -> Update res
-                False -> Rebuild
-                True -> Continue
-        return $ case res of
-            Nothing -> Rebuild
-            Just (FileA time size hash) -> case shakeChange of
-                ChangeModtime -> bool $ time == ytime
-                ChangeDigest -> bool $ size == ysize && hash == yhash
-                ChangeModtimeOrDigest -> bool $ time == ytime && size == ysize && hash == yhash
-                _ | time == ytime -> Continue
-                  | otherwise ->
-                    case size == ysize && hash == yhash of
-                        False | ac -> Update res
-                        False -> Rebuild
-                        True -> Update res
-        liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        act x
-        let msg = ("Error, rule " ++ help ++ " failed to build file:")
-                  ("Error, file does not exist and no rule available:")
-            phony -> return $ (missingFile, False)
-        let opts2 = opts{shakeChange=case shakeChange opts of ChangeModtimeAndDigestInput | not input -> ChangeModtime; x -> x}
-        s <- liftIO $ storedValue opts2 x
-        return $ case s of
-            Nothing | shakeCreationCheck opts || input -> error err
-                          | otherwise -> (missingFile, False)
-            Just a -> (a, maybe False ((/=NotEqual) . equalValue opts2 a) vo)
-equalValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
-    ChangeModtime -> bool $ x1 == y1
-    ChangeDigest -> bool $ x2 == y2 && x3 == y3
-    ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
-    _ | x1 == y1 -> EqualCheap
-      | x2 == y2 && x3 == y3 -> EqualExpensive
-      | otherwise -> NotEqual
-    where bool b = if b then EqualCheap else NotEqual
-      where
-        err = msg ++ "\n  " ++ unpackU (fromFileQ x)
-        v <- act . fromKeyDef k $ err "simpleCheck key conversion failure"
+        let x = fromKeyDef k (err "TypeRep not correct") :: FileQ
+        let vo = fmap (decode . result) vo'
+        urule <- join $ liftIO . traverse (userRule ($x) x) <$> (getUserRules :: Action (Maybe (UserRule FileRule)))
+        let output = isJust urule
+            isPhony = case urule of { Just (Phony{}) -> True; _ -> False}
+        let sC = case shakeChange of
+                ChangeModtimeAndDigestInput | output -> ChangeModtime
+                                            | otherwise -> ChangeModtimeAndDigest
+                x -> x
+        resultOK <- case () of
+            _ | shakeRunCommands < RunUser -> return True
+            _ | shakeOutputCheck == False -> return True
+            _ | not output || isPhony -> return False
+            _ -> liftIO $ compareFileA sC x vo Nothing
+        liftIO $ createDirectoryIfMissing True $ takeDirectory (unpackU . fromFileQ $ x)
+        when (output && (not resultOK || dep)) $ act (fromJust urule)
+        let msg | not shakeCreationCheck && output = Nothing
+                | Just Root{..} <- urule
+                    = Just $ "Error, rule " ++ help ++ " failed to build file:"
+                | otherwise = Just "Error, file does not exist and no rule available:"
+        fileA <- if isPhony then return missingFile else liftIO $ getFileA sC msg x
+        changedB <- liftIO $ compareFileA sC x vo (Just fileA)
         return $ BuiltinResult
-          { resultStoreB = encode v
-          , resultValueB = toDyn v
+          { resultStoreB = encode fileA
+          , resultValueB = toDyn fileA
           , dependsB = Nothing
-          , changedB = maybe False ((==) v . decode . result) vo
+          , changedB = changedB
           }
     })
 
-type FileAct = FileQ -> Maybe (Action ())
+type FileRule = FileQ -> Maybe FileResult
 
-data FileRule = Root
-  { act :: FileAct
+data FileResult = Root
+  { act :: Action ()
   , help :: String
-  } | Phony { act :: FileAct }
+  } | Phony { act :: Action () }
 
 -- | Main constructor for file-based rules
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule $ Root
-    { act = \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ act x
+root help test act = addUserRule $ \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ Root
+    { act = act x
     , help = help
     }
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ Phony { act = \(FileQ x_) -> act $ unpackU x_ }
+phonys act = addUserRule $ \(FileQ x_) -> fmap Phony . act $ unpackU x_
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -182,6 +179,8 @@ neededBS = neededCheck . map packU_
 
 
 neededCheck :: [BSU] -> Action ()
+neededCheck = undefined
+{-
 neededCheck (map (FileQ . packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
     if shakeLint opts == LintNothing then (apply xs :: Action [FileA]) >> return () else do
@@ -196,7 +195,7 @@ neededCheck (map (FileQ . packU_ . filepathNormalise . unpackU_) -> xs) = do
                 [("File", Just . unpackU . fromFileQ $ file)
                 ,("Error",Just msg)]
                 ""
-
+                -}
 
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
@@ -253,14 +252,6 @@ want xs = action $ need xs
 --   rerun every execution of Shake, see 'Development.Shake.alwaysRerun'.
 phony :: String -> Action () -> Rules ()
 phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else Nothing
-
--- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
-phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
-    Nothing -> Nothing
-    Just act -> Just $ \_ -> do
-        act
-        return $ (missingFile, False)
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
