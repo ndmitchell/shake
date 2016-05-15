@@ -79,7 +79,7 @@ commandExplicit funcName oopts results exe args = do
     let useAutoDeps = AutoDeps `elem` fopts
     let opts = filter (/= Shell) fopts
 
-    let skipper act = if null results && not shakeRunCommands then return [] else act
+    let skipper act = if null results && shakeRunCommands < RunCommands then return [] else act
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]

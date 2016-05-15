@@ -54,6 +54,13 @@ instance Hashable FileA
 instance NFData FileA
 instance Binary FileA
 
+type FileRule = FileQ -> Maybe FileResult
+
+data FileResult = Root
+  { act :: Action ()
+  , help :: String
+  } | Phony { act :: Action () }
+
 missingFile :: FileA
 missingFile = FileA FileNeq FileNeq FileNeq
 
@@ -62,19 +69,16 @@ missingFile = FileA FileNeq FileNeq FileNeq
 compareFileA :: Change -> FileQ -> Maybe FileA -> Maybe FileA -> IO Bool
 compareFileA _ _ Nothing _ = return False
 compareFileA sC x (Just vo) (Just vn) | vo == vn = return True
-compareFileA sC x (Just vo) vn = do
-    let oldinfo@(FileA ytime ysize yhash) = vo
+compareFileA sC x (Just oldinfo@(FileA ytime ysize yhash)) vn = do
     res <- maybe (getFileInfo $ fromFileQ x) (return . Just . (mod &&& size)) vn
     case res of
         Nothing -> return $ oldinfo == missingFile
-        Just (time,size) -> do
-            let m = time =?= ytime
-            case sC of
-                ChangeModtime -> return m
-                ChangeModtimeAndDigest | not m -> return False
-                ChangeModtimeOrDigest | m -> return True
-                _ | not (size =?= ysize) -> return False
-                _ -> (=?=) yhash <$> maybe (getFileHash $ fromFileQ x) (return . digest) vn
+        Just (time,size) -> let m = time =?= ytime in case sC of
+            ChangeModtime -> return m
+            ChangeModtimeAndDigest | not m -> return False
+            ChangeModtimeOrDigest | m -> return True
+            _ | not (size =?= ysize) -> return False
+            _ -> (=?=) yhash <$> maybe (getFileHash $ fromFileQ x) (return . digest) vn
 
 -- | Gets the current status of the file. Also does error checking for
 --   if the file wasn't created by the user rule.
@@ -82,10 +86,9 @@ getFileA :: Change -> Maybe String -> FileQ -> IO FileA
 getFileA sC msg' x = (getFileInfo $ fromFileQ x) >>= \res -> case res of
     Nothing | Just msg <- msg' -> error msg
     Nothing -> return missingFile
-    Just (time,size) -> do
-        case sC of
-            ChangeModtime -> return (FileA time size FileNeq)
-            _ -> FileA time size <$> (getFileHash $ fromFileQ x)
+    Just (time,size) -> case sC of
+        ChangeModtime -> return (FileA time size FileNeq)
+        _ -> FileA time size <$> (getFileHash $ fromFileQ x)
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
@@ -101,13 +104,13 @@ defaultRuleFile = newBuiltinRule (typeOf (undefined :: FileQ)) (BuiltinRule
                 ChangeModtimeAndDigestInput | output -> ChangeModtime
                                             | otherwise -> ChangeModtimeAndDigest
                 x -> x
-        resultOK <- case () of
-            _ | shakeRunCommands < RunUser -> return True
-            _ | shakeOutputCheck == False -> return True
-            _ | not output || isPhony -> return False
+        uptodate <- case () of
+            _ | shakeRunCommands == RunMinimal || not output -> return True
+            _ | dep || isPhony -> return False
+            _ | not shakeOutputCheck -> return True
             _ -> liftIO $ compareFileA sC x vo Nothing
         liftIO $ createDirectoryIfMissing True $ takeDirectory (unpackU . fromFileQ $ x)
-        when (output && (not resultOK || dep)) $ act (fromJust urule)
+        when (not uptodate) $ act (fromJust urule)
         let msg | not shakeCreationCheck && output = Nothing
                 | Just Root{..} <- urule
                     = Just $ "Error, rule " ++ help ++ " failed to build file:"
@@ -117,24 +120,15 @@ defaultRuleFile = newBuiltinRule (typeOf (undefined :: FileQ)) (BuiltinRule
         return $ BuiltinResult
           { resultStoreB = encode fileA
           , resultValueB = toDyn fileA
-          , dependsB = Nothing
+          , dependsB = if uptodate then fmap depends vo' else Nothing
           , changedB = changedB
           }
     })
 
-type FileRule = FileQ -> Maybe FileResult
-
-data FileResult = Root
-  { act :: Action ()
-  , help :: String
-  } | Phony { act :: Action () }
-
 -- | Main constructor for file-based rules
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 root help test act = addUserRule $ \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ Root
-    { act = act x
-    , help = help
-    }
+    { act = act x, help = help }
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
