@@ -35,8 +35,6 @@ import Development.Shake.FilePath(toStandard)
 import Development.Shake.FilePattern
 import Development.Shake.FileInfo
 import Development.Shake.Types
-import Development.Shake.Errors
-import Development.Shake.Value
 
 import Prelude hiding (mod)
 
@@ -54,7 +52,7 @@ instance Hashable FileA
 instance NFData FileA
 instance Binary FileA
 
-type FileRule = FileQ -> Maybe FileResult
+newtype FileRule = FileRule { fromFileRule :: FileQ -> Maybe FileResult }
 
 data FileResult = Root
   { act :: Action ()
@@ -94,7 +92,7 @@ getFileA sC msg' (FileQ x) = getFileInfo x >>= \res -> case res of
 defaultRuleFile :: Rules ()
 defaultRuleFile = addBuiltinRule $ \x vo dep -> do
     opts@ShakeOptions{..} <- getShakeOptions
-    urule <- join $ liftIO . traverse (userRule ($x) x) <$> (getUserRules :: Action (Maybe (UserRule FileRule)))
+    urule <- join $ liftIO . traverse (userRule (($x) . fromFileRule) x) <$> getUserRules
     let output = isJust urule
         isPhony = case urule of { Just (Phony{}) -> True; _ -> False}
     let sC = case shakeChange of
@@ -106,7 +104,7 @@ defaultRuleFile = addBuiltinRule $ \x vo dep -> do
         _ | dep || isPhony -> return False
         _ | not shakeOutputCheck -> return True
         _ -> liftIO $ compareFileA sC x vo Nothing
-    liftIO $ createDirectoryIfMissing True $ takeDirectory (unpackU . fromFileQ $ x)
+    liftIO . createDirectoryIfMissing True . takeDirectory . unpackU $ fromFileQ x
     when (not uptodate) $ act (fromJust urule)
     let msg | not shakeCreationCheck && output = Nothing
             | Just Root{..} <- urule
@@ -118,12 +116,11 @@ defaultRuleFile = addBuiltinRule $ \x vo dep -> do
 
 -- | Main constructor for file-based rules
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule $ \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ Root { act = act x, help = help }
+root help test act = addUserRule . FileRule $ \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ Root { act = act x, help = help }
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ \(FileQ x_) -> fmap Phony . act $ unpackU x_
-
+phonys act = addUserRule . FileRule $ \(FileQ x_) -> fmap Phony . act $ unpackU x_
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
 --   The file arguments may be built in parallel, in any order. This function is particularly
