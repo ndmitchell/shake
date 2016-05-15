@@ -5,7 +5,7 @@ module Development.Shake.Core(
     run,
     ShakeValue,
     Rules, action, withoutActions, alternatives, priority,
-    BuiltinRule(..), BuiltinResult(..), newBuiltinRule,
+    BuiltinRule(..), BuiltinResult(..), addBuiltinRule,
     addUserRule, getUserRules, userRule, simpleCheck,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
@@ -147,10 +147,29 @@ getRules (Rules r) = execWriterT r
 newBuiltinRule :: TypeRep -> BuiltinRule Action -> Rules ()
 newBuiltinRule k r = newRules mempty{rules = Map.singleton k r}
 
+-- | Less general version of newBuiltinRule
+--   The passed-in function should return (new value, whether value changed, whether building was skipped)
+addBuiltinRule :: (ShakeValue key, ShakeValue value) => (key -> Maybe value -> Bool -> Action (value, Bool, Bool)) -> Rules ()
+addBuiltinRule = f
+    where
+    f :: forall key value. (ShakeValue key, ShakeValue value) => (key -> Maybe value -> Bool -> Action (value, Bool, Bool)) -> Rules ()
+    f act = newBuiltinRule (typeOf (undefined :: key)) (BuiltinRule { execute = \k' vo' dep -> do
+        let k = fromKeyDef k' (err "addBuiltinRule: incorrect type")
+        let vo = fmap (decode . result) vo'
+        (res, wasChanged, uptodate) <- act k vo dep
+        return $ BuiltinResult
+          { resultStoreB = encode res
+          , resultValueB = toDyn res
+          , dependsB = if uptodate then fmap depends vo' else Nothing
+          , changedB = wasChanged
+          }
+    })
+
+
 -- | A simplified built-in rule that runs on every Shake invocation, caches its value between runs, and uses Eq for equality.
 simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
 simpleCheck = f
-  where
+    where
     f :: forall key value. (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
     f act = newBuiltinRule (typeOf (undefined :: key)) (BuiltinRule
         { execute = \k vo _ -> do
