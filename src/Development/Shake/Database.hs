@@ -487,7 +487,7 @@ fromStepResult = decode . result
 
 withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
-    registerWitness $ (undefined :: StepKey)
+    registerWitness (undefined :: StepKey)
     witness <- currentWitness
     withStorage opts diagnostic witness $ \mp2 journal' -> do
         let journal i (k,v) = journal' (encode i) (encode (runPut $ putKeyWith witness k,v))

@@ -10,6 +10,8 @@ module Development.Make.Rules(
 import Control.Monad.IO.Class
 import System.Directory
 import Control.Applicative
+import Data.Binary
+import Data.Maybe
 import Prelude
 
 import Development.Shake
@@ -25,30 +27,36 @@ infix 1 ??>
 
 ---------------------------------------------------------------------
 -- FILE_ RULES
--- These are like file rules, but a rule may not bother creating the result
--- Which matches the (insane) semantics of make
--- If a file is not produced, it will rebuild forever
+-- These are like file rules, but matching the (insane) semantics of make:
+-- A rule may not bother creating its file; in that case, it will rebuild forever
 
 newtype File_Q = File_Q BSU
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show File_Q where show (File_Q x) = unpackU x
 
-newtype File_A = File_A (Maybe ModTime)
-    deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
+newtype File_Rule = File_Rule { fromFile_Rule :: BSU -> Maybe (Action Phony) }
 
-instance Rule File_Q File_A where
-    analyseR _ (File_Q x) (File_A v) = (\x -> if v == fmap fst x then Continue else Rebuild) <$> getFileInfo x
+type File_A = Maybe ModTime
+
+getModTime :: BSU -> Action File_A
+getModTime x = fmap fst <$> liftIO (getFileInfo x)
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ \vo -> liftIO $ do
-    res <- getFileInfo x
-    case res of
-        Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
-        Just (mt,_) -> do
-          let v = File_A $ Just mt
-          return $ (v, vo == Just v)
-
+defaultRuleFile_ = addBuiltinRule $ \(File_Q x) vo dep -> do
+    res <- getModTime x
+    if vo == Just res && isJust res then
+        return $ BuiltinResult (encode res) res False True
+    else do
+        act <- userRule fromFile_Rule x
+        phony <- case act of
+            Nothing | res == Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
+                    | otherwise -> return Phony
+            Just a -> a
+        mtime <- case phony of
+            Phony -> return Nothing
+            NotPhony -> getModTime x
+        return $ BuiltinResult (encode mtime) mtime True (vo == Just mtime)
 
 need_ :: [FilePath] -> Action ()
 need_ xs = (apply $ map (File_Q . packU) xs :: Action [File_A]) >> return ()
@@ -59,11 +67,7 @@ want_ = action . need_
 data Phony = Phony | NotPhony deriving Eq
 
 (??>) :: (FilePath -> Bool) -> (FilePath -> Action Phony) -> Rules ()
-(??>) test act = rule $ \(File_Q x_) -> let x = unpackU x_ in
-    if not $ test x then Nothing else Just $ \vo -> do
+(??>) test act = addUserRule . File_Rule $ \x_ -> let x = unpackU x_ in
+    if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        res <- act x
-        v <- liftIO $ fmap (File_A . fmap fst) $ if res == Phony
-            then return Nothing
-            else getFileInfo x_
-        return (v, vo == Just v)
+        act x

@@ -5,7 +5,7 @@ module Development.Shake.Core(
     run,
     ShakeValue,
     Rules, action, withoutActions, alternatives, priority,
-    BuiltinRule(..), BuiltinResult(..), newBuiltinRule, addBuiltinRule,
+    BuiltinRule(..), BuiltinResult(..), addBuiltinRule,
     addUserRule, getUserRules, userRule, simpleCheck,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
@@ -70,109 +70,92 @@ modifyRules f (Rules r) = Rules $ censor f r
 getRules :: Rules () -> IO (SRules Action)
 getRules (Rules r) = execWriterT r
 
--- | Define a pair of types that can be used by Shake rules.
---   To import all the type classes required see "Development.Shake.Classes".
+-- | Define a built-in Shake rule.
 --
---   A 'Rule' instance for a class of artifacts (e.g. /files/) provides:
+--   A rule for a type of artifacts (e.g. /files/) provides:
 --
--- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
+-- * How to identify artifacts, given by the @key@ type.
 --
--- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
---
--- * A way to compare an old state of the artifact with the current state of the artifact, 'analyseR'.
+-- * A way to produce a 'BuiltinResult', given the key value, the previous result, and whether
+--   any dependencies have changed. Usually, this will 'userRule' to get the user-defined rules,
+--   but you can use 'getUserRules' for customized matching behavior or avoid user rules entirely.
 --
 --   As an example, below is a simplified rule for building files, where files are identified
---   by a 'FilePath' and their state is identified by a hash of their contents
+--   by a 'FilePath' and their state is identified by their modification time.
 --   (the builtin functions 'Development.Shake.need' and 'Development.Shake.%>'
 --   provide a similar rule).
 --
 -- @
 -- newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
--- newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
+-- newtype FileRule = FileRule { fromFileRule :: FilePath -> Maybe (Action ())) }
+-- newtype ModTime = ...
+-- getFileModtime :: FilePath -> Action ModTime
 -- getFileModtime file = ...
 --
--- instance Rule File Modtime where
---     analyseR _ (File x) (Modtime d) = do
---         exists <- System.Directory.doesFileExist x
---         if exists then do
---             d2 <- getFileModtime x
---             return $ if d == d2 then Rebuild else Continue
---         else return Rebuild
+-- fileRule :: 'Rules' ()
+-- fileRule = 'addBuiltinRule' $ (\(File x) d dep = do
+--         d2 <- getFileModtime x
+--         let uptodate = d == Just d2 && not dep
+--         urule <- 'userRule' fromFileRule x
+--         case urule of
+--             Just act | not uptodate -> do
+--                 act
+--                 d3 <- getFileModtime x
+--                 return $ BuiltinResult (encode d3) () True (d == Just d3)
+--             _ -> return $ BuiltinResult (encode d2) () False (d == Just d2)
 -- @
 --
 --   This example instance means:
 --
--- * A value of type @File@ uniquely identifies a generated file.
+-- * A value of type @File@ uniquely identifies a file
 --
--- * A value of type @Modtime@ will be used to check if a file is up-to-date.
+-- * A user may add rules using the @FileRule@ type; they are executed if the modification
+--   time changed or was not stored in Shake's database, or if a dependency changed.
 --
--- * A missing file will always rebuild, as in Make.
+-- * Running the rule stores a 'ModTime' modification time but returns '()' from 'apply'
 --
---   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
---   instances are one component required for the creation of rules.
---   Actual /rules/ are functions from a @key@ to an 'Action'; they are
---   added to 'Rules' using the 'rule' function.
+-- * Rules depending on this rule will re-run if the modification time changed from its stored value.
 --
---   A rule can be created for the instance above with:
+--   A simple build system can be created for the instance above with:
 --
 -- @
--- -- Compile foo files; for every foo output file there must be a
--- -- single input file named \"filename.foo\".
+-- -- Produce foo files using fooCC. For every output file \"filename.foo\" there must be an
+-- -- input file named \"filename\".
 -- compileFoo :: 'Rules' ()
--- compileFoo = 'rule' (Just . compile)
+-- compileFoo = 'alternatives' $ do
+--     'addUserRule' (FileRule touch)
+--     'addUserRule' (FileRule compile)
+--     'action' ('apply' \"filename\")
 --     where
---         compile :: File -> Maybe Modtime -> 'Action' (Modtime, Bool)
---         compile (File outputFile) oldd = do
+--         compile :: FilePath -> Maybe ('Action' ())
+--         compile outputFile = when (takeExtension outputFile == \"foo\") . Just $ do
 --             -- figure out the name of the input file
---             let inputFile = outputFile '<.>' \"foo\"
+--             let inputFile = dropExtension outputFile
+--             'unit' $ 'apply' (File inputFile)
 --             'unit' $ 'Development.Shake.cmd' \"fooCC\" inputFile outputFile
---             -- return the (new) file modtime of the output file:
---             d <- getFileModtime outputFile
---             return (d,Just d == oldd)
 -- @
 --
---   /Note:/ In this example, the timestamps of the input files are never
---   used, let alone compared to the timestamps of the output files.
---   Dependencies between output and input files are /not/ expressed by
---   'Rule' instances. Dependencies are created automatically by 'apply'.
+--   /Note:/ Dependencies between output and input files are /not/ expressed by
+--   rules, but instead by invocations of 'apply' within the rules.
+--   The timestamps of the files are only compared to themselves; Shake uses its
+--   own (logical) clock for tracking dependencies.
 --
---   For rules whose values are not stored externally,
---   'analyseR' should always return 'Continue'.
---  /[Required]/ Check if the @value@ associated with a @key@ is up-to-date.
---
---   As an example for filenames/timestamps, if the file exists with the given timestamp
---   you should return 'Continue', but otherwise return 'Rebuild'.
---   If the value has changed but you still do not want to rebuild, you should return
---   'Update' with the new value.
-newBuiltinRule :: TypeRep -> BuiltinRule Action -> Rules ()
-newBuiltinRule k r = newRules mempty{rules = Map.singleton k r}
-
--- | Less general version of newBuiltinRule
---   The passed-in function should return (new value, whether value changed, whether building was skipped)
-addBuiltinRule :: (ShakeValue key, ShakeValue value) => (key -> Maybe value -> Bool -> Action (value, Bool, Bool)) -> Rules ()
-addBuiltinRule = f
+-- addBuiltinRule :: (ShakeValue key, ShakeValue value) => (key -> Maybe value -> Bool -> Action (BuiltinResult value)) -> Rules ()
+addBuiltinRule :: (Typeable key, Binary key, Binary vsto, Typeable vdyn) => (key -> Maybe vsto -> Bool -> Action (BuiltinResult vdyn)) -> Rules ()
+addBuiltinRule act = newRules mempty{rules = Map.singleton kt f}
     where
-    f :: forall key value. (ShakeValue key, ShakeValue value) => (key -> Maybe value -> Bool -> Action (value, Bool, Bool)) -> Rules ()
-    f act = newBuiltinRule (typeOf (undefined :: key)) (BuiltinRule { execute = \k' vo' dep -> do
+    kt = typeOf $ (undefined :: (key -> foo) -> key) act
+    f = BuiltinRule { execute = \k' vo' dep -> do
         let k = fromKeyDef k' (err "addBuiltinRule: incorrect type")
         let vo = fmap (decode . result) vo'
-        (res, wasChanged, uptodate) <- act k vo dep
-        return $ BuiltinResult
-          { resultStoreB = encode res
-          , resultValueB = toDyn res
-          , dependsB = if uptodate then fmap depends vo' else Nothing
-          , changedB = wasChanged
-          }
-    })
+        fmap toDyn <$> act k vo dep
+    }
 
 -- | A simplified built-in rule that runs on every Shake invocation, caches its value between runs, and uses Eq for equality.
-simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
-simpleCheck = f
-    where
-    f :: forall key value. (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
-    f act = addBuiltinRule $ \k vo _ -> do
-        v <- act k
-        return $ (v, maybe False ((==) v) vo, False)
+-- simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
+simpleCheck act = addBuiltinRule $ \k vo _ -> do
+    v <- act k
+    return $ BuiltinResult (encode v) v True (maybe False ((==) v) vo)
 
 -- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
 --   or 'Nothing' otherwise. The 'Bool' is 'True' if the value changed.
@@ -218,6 +201,17 @@ priority d = modifyRules $ \s -> s{userrules = Map.map f $ userrules s}
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{userrules = Map.map f $ userrules r}
   where f (ARule s) = ARule (Alternative s)
+
+-- | The default user rule system, processing alternatives and priorities but disallowing multiple matching rules
+userRule :: (Show k, Typeable k, Typeable a) => (a -> k -> Maybe b) -> k -> Action (Maybe b)
+userRule from k = do
+    u <- getUserRules
+    case u of
+        Nothing -> return Nothing
+        Just u -> case userRuleMatch (fmap (($k) . from) u) of
+            [r]:_ -> return $ Just r
+            rs:_  -> liftIO $ errorMultipleRulesMatch (typeOf k) (Just $ show k) (length rs)
+            []    -> return Nothing
 
 -- | Run an action, usually used for specifying top-level requirements.
 --

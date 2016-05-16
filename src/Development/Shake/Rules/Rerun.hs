@@ -8,8 +8,7 @@ import Development.Shake.Core
 import Development.Shake.Classes
 import Development.Shake.Types
 
-import Data.Dynamic
-import Data.Binary
+import qualified Data.ByteString.Lazy as LBS
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,NFData,Show)
@@ -34,15 +33,13 @@ alwaysRerun = apply1 $ AlwaysRerunQ ()
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
     simpleCheck (\OutputCheck{} -> fmap shakeOutputCheck getShakeOptions)
-    newBuiltinRule (typeOf (undefined :: AlwaysRerunQ)) (BuiltinRule
-        { execute = \_ _ _ -> do
-            return $ BuiltinResult
-              { resultStoreB = encode ()
-              , resultValueB = toDyn ()
-              , dependsB = Nothing
-              , changedB = True
-              }
-        })
+    addBuiltinRule $ \AlwaysRerunQ{} (_ :: Maybe ()) _ -> do
+        return $ BuiltinResult
+            { resultStoreB = LBS.empty
+            , resultValueB = ()
+            , ranDependsB = True
+            , unchangedB = False
+            }
 
 newtype OutputCheck = OutputCheck ()
     deriving (Typeable,Eq,Hashable,Binary,NFData,Show)

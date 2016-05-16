@@ -9,9 +9,9 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import Data.List.Extra
 import System.Directory
-import Control.Applicative
 import Prelude
 
+import Data.Binary
 import Development.Shake.Core hiding (trackAllow)
 import General.Extra
 import General.String
@@ -39,7 +39,7 @@ defaultRuleFiles :: Rules ()
 defaultRuleFiles = addBuiltinRule $ \(FilesQ xs) vo dep -> do
     opts@ShakeOptions{..} <- getShakeOptions
     outputCheck <- outputCheck
-    Just urule <- join $ liftIO . traverse (userRule (($xs) . fromFilesRule) xs) <$> getUserRules
+    Just urule <- userRule fromFilesRule xs
     let sC = case shakeChange of
             ChangeModtimeAndDigestInput -> ChangeModtime
             x -> x
@@ -54,7 +54,7 @@ defaultRuleFiles = addBuiltinRule $ \(FilesQ xs) vo dep -> do
             | otherwise = Just $ "Error, rule for " ++ show (FilesQ xs) ++ " failed to build file:"
     filesA <- mapM (liftIO . getFileA sC msg) xs
     equalF <- maybe (return False) (fmap and . mapM (\(x,vn,vo) -> liftIO $ compareFileA sC x (Just vo) Nothing) . zip3 xs filesA) vo
-    return $ (filesA, not equalF, uptodate)
+    return $ BuiltinResult (encode filesA) filesA (not uptodate) equalF
 
 -- | Define a rule for building multiple files at the same time.
 --   Think of it as the AND (@&&@) equivalent of '%>'.
@@ -85,7 +85,7 @@ ps &%> act
                 ChangeModtimeAndDigestInput -> ChangeModtime
                 x -> x
             equalF <- liftIO $ compareFileA sC (fileqs !! i) vo (Just vn) -- cheap (no-disk) comparison
-            return (vn, not equalF, False)
+            return $ BuiltinResult (encode vn) vn False (not equalF)
         (if all simple ps then id else priority 0.5) $
             addUserRule . FilesRule $ \xs_ -> let xs = map (unpackU . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ trackAllow xs >> act xs

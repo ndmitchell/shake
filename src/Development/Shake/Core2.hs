@@ -4,8 +4,9 @@
 module Development.Shake.Core2(
     Action(..), runAction, Global(..), Local,
     SRules(..), BuiltinRule(..), BuiltinResult(..), Result(..),
-    UserRule(..), RuleSet(..), userRuleMatch, userRule, ruleValue,
-    run', apply, applied, blockApply, unsafeAllowApply, withResource, newCacheIO,
+    UserRule(..), RuleSet(..), userRuleMatch, ruleValue,
+    run', apply, applied, applyKeyValue, blockApply, unsafeAllowApply,
+    withResource, newCacheIO,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     traced, trackUse, trackChange, trackAllow, orderOnlyAction
     ) where
@@ -75,12 +76,6 @@ userRuleMatch = map snd . reverse . groupSort . f
         f (Priority d x) = map (first $ const d) $ f x
         f (Alternative x) = take 1 $ f x
 
-userRule :: (Typeable k, Show k) => (a -> Maybe b) -> k -> UserRule a -> IO b
-userRule f k u = case userRuleMatch (fmap f u) of
-    [r]:_ -> return r
-    rs:_  -> errorMultipleRulesMatch (typeOf k) (Just $ show k) (length rs)
-    []    -> errorMultipleRulesMatch (typeOf k) (Just $ show k) 0
-
 combineRules :: UserRule a -> UserRule a -> UserRule a
 combineRules x (Unordered xs) = Unordered (x:xs)
 combineRules (Unordered xs) x = Unordered (xs++[x])
@@ -109,15 +104,15 @@ data BuiltinRule m = BuiltinRule
     { execute :: Key -- ^ Key that you want to build.
               -> Maybe Result -- ^ the previous result in the database, if any
               -> Bool -- ^ 'True' if any dependency has changed, or if Shake has no memory of this rule.
-              -> m BuiltinResult -- ^ result of executing the rule
+              -> m (BuiltinResult Dynamic) -- ^ result of executing the rule
     }
 
-data BuiltinResult = BuiltinResult
-    { resultStoreB :: Value -- ^ the result associated with the Key
-    , resultValueB :: Dynamic -- ^ dynamic return value limited to lifetime of the program
-    , dependsB :: Maybe Depends -- ^ dependencies, or Nothing to use inferred dependencies
-    , changedB :: Bool
-    }
+data BuiltinResult value = BuiltinResult
+    { resultStoreB :: Value -- ^ the associated store result
+    , resultValueB :: value -- ^ dynamic return value limited to lifetime of the program
+    , ranDependsB :: Bool -- ^ whether the dependencies for this rule were 'apply'-d
+    , unchangedB :: Bool -- ^ whether the value is the same, so that there is no need to run reverse dependencies
+    } deriving (Typeable, Functor)
 
 ---------------------------------------------------------------------
 -- MAKE
@@ -137,7 +132,7 @@ data Global = Global
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
     ,globalProgress :: IO Progress
-    ,globalForwards :: IORef (Map.HashMap Key (Action ()))
+    ,globalForwards :: IORef (Map.HashMap Value (Action Value))
     }
 
 -- local variables of Action
@@ -306,6 +301,7 @@ applyForall ks = do
             Nothing -> liftIO $ errorRuleTypeMismatch tk (Just $ show k) (dynTypeRep v) tv
     zipWithM f ks vs
 
+-- | The monomorphic function underlying 'apply', for those who need it
 applyKeyValue :: [Key] -> Action [LiveResult]
 applyKeyValue [] = return []
 applyKeyValue ks = do
@@ -335,12 +331,13 @@ runKey_ global@Global{..} i k r deps stack step continue = do
                 liftIO $ globalLint $ "after building " ++ top
                 dur <- liftIO time
                 Local{..} <- Action $ getRW
+                let ldeps = finalizeDepends localDepends
                 let ans = LiveResult
                           { resultValue = resultValueB
                           , resultStore = Result
                             { result = resultStoreB
-                            , depends = fromMaybe (finalizeDepends localDepends) dependsB
-                            , changed = if changedB then step else maybe step changed r
+                            , depends = if ranDependsB then ldeps else maybe ldeps depends r
+                            , changed = if unchangedB then maybe step changed r else step
                             , built = step
                             , execution = doubleToFloat $ dur - localDiscount
                             }

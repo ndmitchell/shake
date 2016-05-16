@@ -82,6 +82,7 @@ library
     hs-source-dirs:   src
     build-depends:
         base == 4.*,
+        ansi-terminal,
         directory,
         hashable >= 1.1.2.3,
         binary,
@@ -176,6 +177,7 @@ executable shake
         ghc-options: -threaded "-with-rtsopts=-I0 -qg -qb"
     build-depends:
         base == 4.*,
+        ansi-terminal,
         directory,
         hashable >= 1.1.2.3,
         binary,
@@ -278,6 +280,7 @@ test-suite shake-test
 
     build-depends:
         base == 4.*,
+        ansi-terminal,
         directory,
         hashable >= 1.1.2.3,
         binary,

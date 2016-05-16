@@ -46,42 +46,62 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.Value
 
+import Data.Binary
+import Data.Binary.Put
 import Data.Either
 import Data.List.Extra
-import Control.Monad
 import Control.Exception.Extra
 import Numeric
 import Data.IORef
 import qualified Data.HashMap.Strict as Map
 
 
-newtype ForwardQ = ForwardQ String
+newtype ForwardQ = ForwardQ Value
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    addBuiltinRule $ \(ForwardQ name) _ dep -> do
-        let k = newKey name
-        liftIO $ evaluate $ rnf k
+    liftIO $ registerWitness $ (undefined :: String)
+    addBuiltinRule $ \(ForwardQ k) vo dep -> do
         Global{..} <- Action getRO
         res <- liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
-        when dep $ case res of
-            Nothing -> liftIO $ errorIO "Failed to find action"
+        v <- case res of
+            Nothing -> liftIO . errorIO $ "Failed to find action: " ++ show k
+            _ | dep, Just vo <- vo -> return vo
             Just act -> act
-        return ((),False,not dep)
+        return $ BuiltinResult v v (not dep) $ maybe False ((==) v) vo
     action act
 
--- | Cache an action. The action's key must be globally unique over all runs (i.e., change the name if the code changes), and not conflict with any rules.
-cacheAction :: String -> Action () -> Action ()
+-- | Cache an action. The action's key must be globally unique over all runs (i.e., change if the code changes).
+--   The result is compared for equality using its 'Binary' serialization.
+--
+--   /If you use this function with a key type other than 'String', you must register it using 'registerWitness' before running Shake/
+--
+-- An example:
+--
+-- @
+-- import "Development.Shake"
+-- import "Development.Shake.Forward"
+-- import "Development.Shake.Value"
+--
+-- main = do
+--     'registerWitness' (undefined :: Integer)
+--     'shakeArgsForward' 'shakeOptions' $ do
+--         exists <- 'cacheAction' (0 :: Integer) $ 'doesFileExist' \"result.txt\"
+--         'cacheAction' (1 :: Integer) $ writeFile' \"result2.txt\" (show exists)
+-- @
+cacheAction :: (Typeable a, Binary a, Binary b) => a -> Action b -> Action b
 cacheAction name action = do
-    let key = newKey name
+    ws <- liftIO currentWitness
+    let key = runPut $ putKeyWith ws $ newKey name
+        act = fmap encode action
     liftIO $ evaluate $ rnf key
     Global{..} <- Action getRO
-    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
-    () <- apply1 (ForwardQ name)
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key act mp, ())
+    res <- fmap decode . apply1 $ ForwardQ key
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ()) -- needed?
-    return ()
+    return res
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()

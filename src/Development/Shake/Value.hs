@@ -6,7 +6,7 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Value(
     Value,  Key(..), newKey, fromKey, fromKeyDef,
     Witness, currentWitness, registerWitness,
-    putKeyWith, getKeyWith,
+    putType, putKeyWith, getType, getKeyWith,
     ShakeValue
     ) where
 
@@ -64,14 +64,13 @@ data Key = Key
   }
     deriving (Typeable,Eq,Show,Hashable,NFData,Generic)
 
-putKeyWith :: Witness -> Key -> Put
-putKeyWith ws (Key t v) = do
+putType :: Witness -> TypeRep -> Put
+putType ws t = do
     let msg = "no witness for " ++ show t
     put $ fromMaybe (error msg) $ Map.lookup t (witnessOut ws)
-    putLazyByteString v
 
-getKeyWith :: Witness -> Get Key
-getKeyWith ws = do
+getType :: Witness -> Get TypeRep
+getType ws = do
     h <- get
     case Map.lookup h $ witnessIn ws of
         Nothing | h >= 0 && h < genericLength (typeNames ws) -> error $
@@ -80,7 +79,17 @@ getKeyWith ws = do
         Nothing -> error $
             -- should not happen, unless proper data corruption
             "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
-        Just ty -> Key ty <$> getRemainingLazyByteString
+        Just ty -> return ty
+
+putKeyWith :: Witness -> Key -> Put
+putKeyWith ws (Key t v) = do
+    putType ws t
+    putLazyByteString v
+
+getKeyWith :: Witness -> Get Key
+getKeyWith ws = do
+    ty <- getType ws
+    Key ty <$> getRemainingLazyByteString
 
 newKey :: (Typeable a, Binary a) => a -> Key
 newKey a = Key (typeOf a) (encode a)
@@ -102,8 +111,11 @@ fromKeyDef (Key t v) def = case decode v of
 witness :: IORef (Set.HashSet TypeRep)
 witness = unsafePerformIO $ newIORef Set.empty
 
-registerWitness :: Typeable a => a -> IO ()
-registerWitness x = atomicModifyIORef witness $ \mp -> (Set.insert (typeOf x) mp, ())
+registerWitness :: (Typeable a) => a -> IO ()
+registerWitness x = registerWitness' (typeOf x)
+
+registerWitness' :: TypeRep -> IO ()
+registerWitness' x = atomicModifyIORef witness $ \mp -> (Set.insert x mp, ())
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
 -- elements were added and stable between program executions.

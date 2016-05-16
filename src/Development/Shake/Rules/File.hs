@@ -19,7 +19,6 @@ import Data.Binary
 import Data.Dynamic
 import Data.Maybe
 import Data.List
-import Data.Traversable
 import Data.Tuple.Extra
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
@@ -61,7 +60,7 @@ data FileResult = Root
   { help :: String
   , isPhony :: Bool
   , act :: Action ()
-  } | Forward (Maybe FileA -> Action (FileA, Bool, Bool))
+  } | Forward (Maybe FileA -> Action (BuiltinResult FileA))
 
 missingFile :: FileA
 missingFile = FileA FileNeq FileNeq FileNeq
@@ -96,7 +95,7 @@ getFileA sC msg' (FileQ x) = getFileInfo x >>= \res -> case res of
 defaultRuleFile :: Rules ()
 defaultRuleFile = addBuiltinRule $ \x vo dep -> do
     opts@ShakeOptions{..} <- getShakeOptions
-    urule <- join $ liftIO . traverse (userRule (($x) . fromFileRule) x) <$> getUserRules
+    urule <- userRule fromFileRule x
     case urule of
       Just (Forward a) -> a vo
       _ -> do
@@ -119,7 +118,7 @@ defaultRuleFile = addBuiltinRule $ \x vo dep -> do
                       (\Root{..} -> "Error, rule " ++ help ++ " failed to build file:") urule
         fileA <- if isPhony then return missingFile else liftIO $ getFileA sC msg x
         equalF <- liftIO $ compareFileA sC x vo (Just fileA)
-        return $ (fileA, not equalF, uptodate)
+        return $ BuiltinResult (encode fileA) fileA (not uptodate) equalF
 
 -- | Main constructor for file-based rules
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
@@ -130,7 +129,7 @@ phonys :: (String -> Maybe (Action ())) -> Rules ()
 phonys act = addUserRule . FileRule $ \(FileQ x_) -> fmap (Root "with phonys" True) . act $ unpackU x_
 
 -- | Forwarding rule, for multi-file rules
-forward :: FilePattern -> (FilePath -> Maybe FileA -> Action (FileA, Bool, Bool)) -> Rules ()
+forward :: FilePattern -> (FilePath -> Maybe FileA -> Action (BuiltinResult FileA)) -> Rules ()
 forward test act = (if simple test then id else priority 0.5) $
     addUserRule . FileRule $ \f@(FileQ x_) -> let x = unpackU x_ in if not $ test ?== x then Nothing else Just $ Forward (act x)
 
@@ -175,7 +174,7 @@ neededCheck :: [BSU] -> Action ()
 neededCheck (map (FileQ . packU_ . filepathNormalise . unpackU_) -> xs) = do
     ShakeOptions{..} <- getShakeOptions
     parallel $ flip map xs $ \file -> do
-        urule <- join $ liftIO . traverse (userRule (($file) . fromFileRule) file) <$> getUserRules
+        urule <- userRule fromFileRule file
         case urule of
             Nothing -> do
                 outputCheck <- outputCheck
