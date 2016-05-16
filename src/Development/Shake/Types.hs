@@ -111,6 +111,9 @@ data ShakeOptions = ShakeOptions
     ,shakeRead :: Bool
         -- ^ True (default): use previous build results from the database to detect unchanging builds.
         --   False: recompute all values.
+    ,shakeWrite :: Bool
+        -- ^ True (default): write database to file
+        --   False: suppress database modifications
     ,shakeAbbreviations :: [(String,String)]
         -- ^ Defaults to @[]@. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation.
         --   Commonly used to replace the long paths (e.g. @.make\/i586-linux-gcc\/output@) with an abbreviation (e.g. @$OUT@).
@@ -130,6 +133,7 @@ data ShakeOptions = ShakeOptions
         --   Provided for compatibility with @make@ and @ninja@ (which have ugly file creation semantics).
     ,shakeOutputCheck :: Bool
         -- ^ Defaults to 'True'. If an output of a rule changes, should you rerun that rule.
+        --   Changing this flag significantly modifies Shake's dependency structure.
     ,shakeLiveFiles :: [FilePath]
         -- ^ Default to @[]@. After the build system completes, write a list of all files which were /live/ in that run,
         --   i.e. those which Shake checked were valid or rebuilt. Produces best answers if nothing rebuilds.
@@ -155,7 +159,7 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] LintNothing [] [] [] (Just 10) True [] False True False
+    ".shake" 1 "1" Normal False [] LintNothing [] [] [] (Just 10) True True [] False True False
     RunCommands ChangeModtime True True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
@@ -164,20 +168,20 @@ shakeOptions = ShakeOptions
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
     ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
-    ,"shakeFlush", "shakeRead", "shakeAbbreviations", "shakeStorageLog"
+    ,"shakeFlush", "shakeRead", "shakeWrite", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck", "shakeOutputCheck"
     ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 y1 y2 y3 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 (fromHidden y1) (fromHidden y2) (fromHidden y3)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 y1 y2 y3 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 (fromHidden y1) (fromHidden y2) (fromHidden y3)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 y1 y2 y3) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 y1 y2 y3) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
-        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k`
         Hidden y1 `k` Hidden y2 `k` Hidden y3
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 

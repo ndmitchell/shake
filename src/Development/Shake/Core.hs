@@ -5,7 +5,7 @@ module Development.Shake.Core(
     run,
     ShakeValue,
     Rules, action, withoutActions, alternatives, priority,
-    BuiltinRule(..), BuiltinResult(..), addBuiltinRule,
+    BuiltinRule(..), BuiltinResult(..), newBuiltinRule, addBuiltinRule,
     addUserRule, getUserRules, userRule, simpleCheck,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
@@ -165,25 +165,14 @@ addBuiltinRule = f
           }
     })
 
-
 -- | A simplified built-in rule that runs on every Shake invocation, caches its value between runs, and uses Eq for equality.
 simpleCheck :: (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
 simpleCheck = f
     where
     f :: forall key value. (ShakeValue key, ShakeValue value) => (key -> Action value) -> Rules ()
-    f act = newBuiltinRule (typeOf (undefined :: key)) (BuiltinRule
-        { execute = \k vo _ -> do
-                --   | assume == AssumeDirty = return Rebuild
-                --   | assume == AssumeSkip = return Continue
-                --
-            v <- act . fromKeyDef k $ err "simpleCheck key conversion failure"
-            return $ BuiltinResult
-              { resultStoreB = encode v
-              , resultValueB = toDyn v
-              , dependsB = Nothing
-              , changedB = maybe False ((==) v . decode . result) vo
-              }
-        })
+    f act = addBuiltinRule $ \k vo _ -> do
+        v <- act k
+        return $ (v, maybe False ((==) v) vo, False)
 
 -- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
 --   or 'Nothing' otherwise. The 'Bool' is 'True' if the value changed.

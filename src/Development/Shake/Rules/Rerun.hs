@@ -1,19 +1,18 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Rules.Rerun(
-    defaultRuleRerun, alwaysRerun
+    defaultRuleRerun, alwaysRerun, outputCheck
     ) where
 
 import Development.Shake.Core
-import Development.Shake.Core2
 import Development.Shake.Classes
+import Development.Shake.Types
 
+import Data.Dynamic
+import Data.Binary
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,NFData,Show)
-
-newtype AlwaysRerunA = AlwaysRerunA ()
-    deriving (Typeable,Hashable,Binary,NFData,Show,Eq)
 
 -- | Always rerun the associated action. Useful for defining rules that query
 --   the environment. For example:
@@ -30,16 +29,24 @@ newtype AlwaysRerunA = AlwaysRerunA ()
 --   Note that 'alwaysRerun' is applied when a rule is executed. Modifying an existing rule
 --   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
 alwaysRerun :: Action ()
-alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
+alwaysRerun = apply1 $ AlwaysRerunQ ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = newBuiltinRule (typeOf (undefined :: AlwaysRerunQ)) (BuiltinRule
+defaultRuleRerun = do
+    simpleCheck (\OutputCheck{} -> fmap shakeOutputCheck getShakeOptions)
+    newBuiltinRule (typeOf (undefined :: AlwaysRerunQ)) (BuiltinRule
         { execute = \_ _ _ -> do
-            let v = AlwaysRerunA ()
             return $ BuiltinResult
-              { resultStoreB = encode v
-              , resultValueB = toDyn v
+              { resultStoreB = encode ()
+              , resultValueB = toDyn ()
               , dependsB = Nothing
               , changedB = True
               }
         })
+
+newtype OutputCheck = OutputCheck ()
+    deriving (Typeable,Eq,Hashable,Binary,NFData,Show)
+
+-- | A tracking version of 'shakeOutputCheck' that will re-run all relevant rules when it changes.
+outputCheck :: Action Bool
+outputCheck = apply1 (OutputCheck ())

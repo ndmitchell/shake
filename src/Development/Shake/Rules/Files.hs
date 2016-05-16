@@ -1,7 +1,7 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, ViewPatterns #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, ViewPatterns, RecordWildCards #-}
 
 module Development.Shake.Rules.Files(
-    (&?>), (&%>)
+    (&?>), (&%>), defaultRuleFiles
     ) where
 
 import Control.Monad
@@ -16,8 +16,8 @@ import Development.Shake.Core hiding (trackAllow)
 import General.Extra
 import General.String
 import Development.Shake.Classes
-import Development.Shake.Errors
 import Development.Shake.Rules.File
+import Development.Shake.Rules.Rerun
 import Development.Shake.FilePattern
 import Development.Shake.FilePath
 import Development.Shake.Types
@@ -30,33 +30,31 @@ infix 1 &?>, &%>
 newtype FilesQ = FilesQ [FileQ]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-
-
-newtype FilesA = FilesA [FileA]
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
-
-instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . show) xs
-
 instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) xs
 
+newtype FilesRule = FilesRule { fromFilesRule :: [FileQ] -> Maybe (Action ()) }
+    deriving (Typeable)
 
-instance Rule FilesQ FilesA where
-  analyseR _ (FilesQ xs) (FilesA ys) | length xs /= length ys = return Rebuild
-  analyseR opts (FilesQ xs) (FilesA ys) = fmap FilesA . fst <$> foldr (liftM2 and_) (return (Continue,[])) (zipWith (\x y -> (,) y <$> analyseR opts x y) xs ys)
-    where
-      and_ (_,Rebuild) _ = (Rebuild,[])
-      and_ _ (Rebuild,_) = (Rebuild,[])
-      and_ (_,Update s) (_,n) = (Update (s:n),s:n)
-      and_ (s,Continue) (Update _,n) = (Update (s:n),s:n)
-      and_ (s,Continue) (Continue,c) = (Continue,s:c)
---     storedValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (storedValue opts) xs
---     equalValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
---         | let n = length qs in n /= length xs || n /= length ys = NotEqual
---         | otherwise = foldr and_ EqualCheap (zipWith3 (equalValue opts) qs xs ys)
---             where and_ NotEqual x = NotEqual
---                   and_ EqualCheap x = x
---                   and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
-
+defaultRuleFiles :: Rules ()
+defaultRuleFiles = addBuiltinRule $ \(FilesQ xs) vo dep -> do
+    opts@ShakeOptions{..} <- getShakeOptions
+    outputCheck <- outputCheck
+    Just urule <- join $ liftIO . traverse (userRule (($xs) . fromFilesRule) xs) <$> getUserRules
+    let sC = case shakeChange of
+            ChangeModtimeAndDigestInput -> ChangeModtime
+            x -> x
+    uptodate <- case () of
+        _ | shakeRunCommands == RunMinimal -> return True
+        _ | dep -> return False
+        _ | not outputCheck -> return True
+        _ -> maybe (return False) (fmap and . zipWithM (\x vo -> liftIO $ compareFileA sC x (Just vo) Nothing) xs) vo
+    mapM_ (liftIO . createDirectoryIfMissing True . takeDirectory . unpackU . fromFileQ) xs
+    when (not uptodate) $ urule
+    let msg | not shakeCreationCheck = Nothing
+            | otherwise = Just $ "Error, rule for " ++ show (FilesQ xs) ++ " failed to build file:"
+    filesA <- mapM (liftIO . getFileA sC msg) xs
+    equalF <- maybe (return False) (fmap and . mapM (\(x,vn,vo) -> liftIO $ compareFileA sC x (Just vo) Nothing) . zip3 xs filesA) vo
+    return $ (filesA, not equalF, uptodate)
 
 -- | Define a rule for building multiple files at the same time.
 --   Think of it as the AND (@&&@) equivalent of '%>'.
@@ -71,7 +69,7 @@ instance Rule FilesQ FilesA where
 --
 --   However, in practice, it's usually easier to define rules with '%>' and make the @.hi@ depend
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must
---   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
+--   have the same sequence of @\/\/@ and @*@ wildcards in the same order. They are substituted to match.
 --   This function will create directories for the result files, if necessary.
 (&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 ps &%> act
@@ -79,17 +77,18 @@ ps &%> act
         "All patterns to &%> must have the same number and position of // and * wildcards" :
         ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = do
-        forM_ ps $ \p ->
-            p %> \file -> do
-                _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU . substitute (extract p file)) ps
-                return ()
+        forM_ (zip [0..] ps) $ \(i,p) -> forward p $ \file vo -> do
+            let fileqs = map (FileQ . packU_ . filepathNormalise . unpackU_ . packU . substitute (extract p file)) ps
+            files <- apply1 $ FilesQ $ fileqs
+            let vn = files !! i
+            sC <- flip fmap getShakeOptions $ \opts -> case shakeChange opts of
+                ChangeModtimeAndDigestInput -> ChangeModtime
+                x -> x
+            equalF <- liftIO $ compareFileA sC (fileqs !! i) vo (Just vn) -- cheap (no-disk) comparison
+            return (vn, not equalF, False)
         (if all simple ps then id else priority 0.5) $
-            rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
-                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ \vo -> do
-                    liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
-                    trackAllow xs
-                    act xs
-                    getFileTimes "&%>" xs_ vo
+            addUserRule . FilesRule $ \xs_ -> let xs = map (unpackU . fromFileQ) xs_ in
+                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ trackAllow xs >> act xs
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
@@ -111,7 +110,7 @@ ps &%> act
 --
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (&?>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
-(&?>) test act = priority 0.5 $ do
+(&?>) test act = undefined{- priority 0.5 $ do
     let norm = toStandard . normaliseEx
     let inputOutput suf inp out =
             ["Input" ++ suf ++ ":", "  " ++ inp] ++
@@ -142,27 +141,4 @@ ps &%> act
                 getFileTimes "&?>" xs_ vo
             Just ys -> error $ "Error, &?> is incompatible with " ++ show xs ++ " vs " ++ show ys
             Nothing -> Nothing
-
-
-getFileTimes :: String -> [FileQ] -> Maybe FilesA -> Action (FilesA, Bool)
-getFileTimes name xs vo = do
-    opts <- getShakeOptions
-    let opts2 = opts{shakeChange=case shakeChange opts of ChangeModtimeAndDigestInput -> ChangeModtime; x -> x}
-        f (Just (FilesA vs)) | length xs == length vs = map Just vs
-        f _ = map (const Nothing) xs
-
-        check x v = do
-            s <- liftIO $ storedValue opts2 x
-            return $ case s of
-                Nothing | shakeCreationCheck opts -> Nothing
-                              | otherwise -> Just (missingFile, False)
-                Just a -> Just (a, maybe False ((/=NotEqual) . equalValue opts2 a) v)
-    ys <- zipWithM check xs (f vo)
-    case sequence ys of
-        Just (unzip -> (ys,bs)) -> return $ (FilesA ys, and bs)
-        Nothing -> do
-            let missing = length $ filter isNothing ys
-            liftIO $ errorStructured ("Error, " ++ name ++ " rule failed to build " ++ show missing ++
-                    " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")")
-                    [(unpackU x, if isNothing y then Just " - MISSING" else Nothing) | (FileQ x,y) <- zip xs ys]
-                    ""
+            -}

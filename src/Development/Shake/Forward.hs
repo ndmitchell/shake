@@ -48,6 +48,7 @@ import Development.Shake.Value
 
 import Data.Either
 import Data.List.Extra
+import Control.Monad
 import Control.Exception.Extra
 import Numeric
 import Data.IORef
@@ -57,24 +58,18 @@ import qualified Data.HashMap.Strict as Map
 newtype ForwardQ = ForwardQ String
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-newtype ForwardA = ForwardA ()
-    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
-
-instance Rule (ForwardQ) (ForwardA) where
-    analyseR _ _ _ = return Continue
-
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    rule $ \(ForwardQ k') -> Just $ \_ -> do
-        let k = newKey k'
+    addBuiltinRule $ \(ForwardQ name) _ dep -> do
+        let k = newKey name
         liftIO $ evaluate $ rnf k
         Global{..} <- Action getRO
         res <- liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
-        case res of
-            Nothing -> liftIO $ errorIO "Failed to find action name"
+        when dep $ case res of
+            Nothing -> liftIO $ errorIO "Failed to find action"
             Just act -> act
-        return $ (ForwardA (),False)
+        return ((),False,not dep)
     action act
 
 -- | Cache an action. The action's key must be globally unique over all runs (i.e., change the name if the code changes), and not conflict with any rules.
@@ -84,9 +79,9 @@ cacheAction name action = do
     liftIO $ evaluate $ rnf key
     Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key action mp, ())
-    [ForwardA r] <- apply [ForwardQ name]
-    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ())
-    return r
+    () <- apply1 (ForwardQ name)
+    liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ()) -- needed?
+    return ()
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()

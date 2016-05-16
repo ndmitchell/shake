@@ -5,9 +5,9 @@ module Development.Shake.Rules.File(
     need, needBS, needed, neededBS, needNorm, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (%>), (|%>), (?>), phony, (~>), phonys,
+    (%>), (|%>), (?>), phony, (~>), phonys, forward,
     -- * Internal only
-    -- EqualCost(..), FileQ(..), FileA, missingFile, storedValue, equalValue
+    FileQ(..), FileA, missingFile, compareFileA, getFileA
     ) where
 
 import GHC.Generics
@@ -19,6 +19,7 @@ import Data.Binary
 import Data.Dynamic
 import Data.Maybe
 import Data.List
+import Data.Traversable
 import Data.Tuple.Extra
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 
@@ -35,6 +36,7 @@ import Development.Shake.FilePath(toStandard)
 import Development.Shake.FilePattern
 import Development.Shake.FileInfo
 import Development.Shake.Types
+import Development.Shake.Rules.Rerun
 
 import Prelude hiding (mod)
 
@@ -53,11 +55,13 @@ instance NFData FileA
 instance Binary FileA
 
 newtype FileRule = FileRule { fromFileRule :: FileQ -> Maybe FileResult }
+    deriving Typeable
 
 data FileResult = Root
-  { act :: Action ()
-  , help :: String
-  } | Phony { act :: Action () }
+  { help :: String
+  , isPhony :: Bool
+  , act :: Action ()
+  } | Forward (Maybe FileA -> Action (FileA, Bool, Bool))
 
 missingFile :: FileA
 missingFile = FileA FileNeq FileNeq FileNeq
@@ -93,34 +97,42 @@ defaultRuleFile :: Rules ()
 defaultRuleFile = addBuiltinRule $ \x vo dep -> do
     opts@ShakeOptions{..} <- getShakeOptions
     urule <- join $ liftIO . traverse (userRule (($x) . fromFileRule) x) <$> getUserRules
-    let output = isJust urule
-        isPhony = case urule of { Just (Phony{}) -> True; _ -> False}
-    let sC = case shakeChange of
-            ChangeModtimeAndDigestInput | output -> ChangeModtime
-                                        | otherwise -> ChangeModtimeAndDigest
-            x -> x
-    uptodate <- case () of
-        _ | shakeRunCommands == RunMinimal || not output -> return True
-        _ | dep || isPhony -> return False
-        _ | not shakeOutputCheck -> return True
-        _ -> liftIO $ compareFileA sC x vo Nothing
-    liftIO . createDirectoryIfMissing True . takeDirectory . unpackU $ fromFileQ x
-    when (not uptodate) $ act (fromJust urule)
-    let msg | not shakeCreationCheck && output = Nothing
-            | Just Root{..} <- urule
-                = Just $ "Error, rule " ++ help ++ " failed to build file:"
-            | otherwise = Just "Error, file does not exist and no rule available:"
-    fileA <- if isPhony then return missingFile else liftIO $ getFileA sC msg x
-    changedB <- liftIO $ compareFileA sC x vo (Just fileA)
-    return $ (fileA, changedB, uptodate)
+    case urule of
+      Just (Forward a) -> a vo
+      _ -> do
+        outputCheck <- outputCheck
+        let output = isJust urule
+        isPhony <- return $ maybe False isPhony urule
+        let sC = case shakeChange of
+                ChangeModtimeAndDigestInput | output -> ChangeModtime
+                                            | otherwise -> ChangeModtimeAndDigest
+                x -> x
+        uptodate <- case () of
+            _ | shakeRunCommands == RunMinimal || not output -> return True
+            _ | dep || isPhony -> return False
+            _ | not outputCheck -> return True
+            _ -> liftIO $ compareFileA sC x vo Nothing
+        liftIO . createDirectoryIfMissing True . takeDirectory . unpackU $ fromFileQ x
+        when (not uptodate) $ act (fromJust urule)
+        let msg | not shakeCreationCheck && output = Nothing
+                | otherwise = Just $ maybe "Error, file does not exist and no rule available:"
+                      (\Root{..} -> "Error, rule " ++ help ++ " failed to build file:") urule
+        fileA <- if isPhony then return missingFile else liftIO $ getFileA sC msg x
+        equalF <- liftIO $ compareFileA sC x vo (Just fileA)
+        return $ (fileA, not equalF, uptodate)
 
 -- | Main constructor for file-based rules
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule . FileRule $ \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ Root { act = act x, help = help }
+root help test act = addUserRule . FileRule $ \(FileQ x_) -> let x = unpackU x_ in if not $ test x then Nothing else Just $ Root help False (act x)
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule . FileRule $ \(FileQ x_) -> fmap Phony . act $ unpackU x_
+phonys act = addUserRule . FileRule $ \(FileQ x_) -> fmap (Root "with phonys" True) . act $ unpackU x_
+
+-- | Forwarding rule, for multi-file rules
+forward :: FilePattern -> (FilePath -> Maybe FileA -> Action (FileA, Bool, Bool)) -> Rules ()
+forward test act = (if simple test then id else priority 0.5) $
+    addUserRule . FileRule $ \f@(FileQ x_) -> let x = unpackU x_ in if not $ test ?== x then Nothing else Just $ Forward (act x)
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
 --   The file arguments may be built in parallel, in any order. This function is particularly
@@ -149,8 +161,8 @@ needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [FileA]) >> return ()
 
 
--- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
---   Used for adding dependencies on files that have already been used in this rule.
+-- | Like 'need', but check that the file has no rules defined or that it was already built.
+--   Used to add dependencies after commands have been run.
 needed :: [FilePath] -> Action ()
 needed = neededCheck . map packU
 
@@ -160,23 +172,16 @@ neededBS = neededCheck . map packU_
 
 
 neededCheck :: [BSU] -> Action ()
-neededCheck = undefined
-{-
 neededCheck (map (FileQ . packU_ . filepathNormalise . unpackU_) -> xs) = do
-    opts <- getShakeOptions
-    if shakeLint opts == LintNothing then (apply xs :: Action [FileA]) >> return () else do
-        pre <- liftIO $ mapM (storedValue opts) xs
-        post <- apply xs :: Action [FileA]
-        let bad = [ (x, case a of { Just _ -> "File change"; Nothing -> "File created" })
-                  | (x, a, b) <- zip3 xs pre post, case a of { Nothing -> NotEqual; Just a -> equalValue opts a b } == NotEqual]
-        case bad of
-            [] -> return ()
-            (file,msg):_ -> liftIO $ errorStructured
-                "Lint checking error - 'needed' file required rebuilding"
-                [("File", Just . unpackU . fromFileQ $ file)
-                ,("Error",Just msg)]
-                ""
-                -}
+    ShakeOptions{..} <- getShakeOptions
+    parallel $ flip map xs $ \file -> do
+        urule <- join $ liftIO . traverse (userRule (($file) . fromFileRule) file) <$> getUserRules
+        case urule of
+            Nothing -> do
+                outputCheck <- outputCheck
+                (if outputCheck then id else orderOnlyAction) $ apply1 file :: Action FileA
+            Just (Root{..}) -> blockApply ("'needed' file has file rule " ++ help ++ " defined") (apply1 file :: Action FileA)
+    return ()
 
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
