@@ -111,8 +111,9 @@ defaultRuleFile = addBuiltinRule $ \x vo dep -> do
             _ | dep || isPhony -> return False
             _ | not outputCheck -> return True
             _ -> liftIO $ compareFileA sC x vo Nothing
-        liftIO . createDirectoryIfMissing True . takeDirectory . unpackU $ fromFileQ x
-        when (not uptodate) $ act (fromJust urule)
+        when (not uptodate) $ do
+            liftIO . createDirectoryIfMissing True . takeDirectory . unpackU $ fromFileQ x
+            act (fromJust urule)
         let msg | not shakeCreationCheck && output = Nothing
                 | otherwise = Just $ maybe "Error, file does not exist and no rule available:"
                       (\Root{..} -> "Error, rule " ++ help ++ " failed to build file:") urule
