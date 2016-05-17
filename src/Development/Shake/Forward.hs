@@ -55,6 +55,9 @@ import Numeric
 import Data.IORef
 import qualified Data.HashMap.Strict as Map
 
+-{-# NOINLINE globalForwards #-}
+globalForwards :: IORef (Map.HashMap Value (Action Value))
+globalForwards = unsafePerformIO $ newIORef Map.empty
 
 newtype ForwardQ = ForwardQ Value
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
@@ -64,7 +67,6 @@ forwardRule :: Action () -> Rules ()
 forwardRule act = do
     liftIO $ registerWitness $ (undefined :: String)
     addBuiltinRule $ \(ForwardQ k) vo dep -> do
-        Global{..} <- Action getRO
         res <- liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
         v <- case res of
             Nothing -> liftIO . errorIO $ "Failed to find action: " ++ show k
@@ -97,7 +99,6 @@ cacheAction name action = do
     let key = runPut $ putKeyWith ws $ newKey name
         act = fmap encode action
     liftIO $ evaluate $ rnf key
-    Global{..} <- Action getRO
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.insert key act mp, ())
     res <- fmap decode . apply1 $ ForwardQ key
     liftIO $ atomicModifyIORef globalForwards $ \mp -> (Map.delete key mp, ()) -- needed?

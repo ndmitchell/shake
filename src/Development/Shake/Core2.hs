@@ -132,7 +132,6 @@ data Global = Global
     ,globalAfter :: IORef [IO ()]
     ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
     ,globalProgress :: IO Progress
-    ,globalForwards :: IORef (Map.HashMap Value (Action Value))
     }
 
 -- local variables of Action
@@ -193,7 +192,6 @@ run' opts@ShakeOptions{..} start rs = do
 
     after <- newIORef []
     absent <- newIORef []
-    forwards <- newIORef Map.empty
     withCleanup $ \cleanup -> do
         _ <- addCleanup cleanup $ do
             when shakeTimings printTimings
@@ -214,7 +212,7 @@ run' opts@ShakeOptions{..} start rs = do
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts diagnostic lint after absent getProgress forwards
+                    let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts diagnostic lint after absent getProgress
                     let s1 = Local emptyStack shakeVerbosity Nothing mempty 0 [] [] []
                     forM_ (actions rs) $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
@@ -233,7 +231,7 @@ run' opts@ShakeOptions{..} start rs = do
                         bad <- newIORef []
                         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                             let opts2 = opts{shakeRunCommands=RunMinimal}
-                            let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts2 diagnostic lint after absent getProgress forwards
+                            let s0 = Global database pool cleanup start (rules rs) (userrules rs) output opts2 diagnostic lint after absent getProgress
                             forM_ ks $ \(i,(key,v)) -> case v of
                                 Ready ro -> do
                                     let reply = undefined
