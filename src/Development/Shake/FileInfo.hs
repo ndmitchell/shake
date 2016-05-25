@@ -108,7 +108,7 @@ getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
         let peek = do
                 code <- peekFileAttributes fad
                 if testBit code 4 then
-                    errorIO $ "Shake error: getFileInfo, expected a file, got a directory: " ++ unpackU x ++ ". Possible cause: you're calling `need` on a directory. Shake only allows you to `need` a file."
+                    errorIO $ "Shake error: getFileInfo, expected a file, got a directory: " ++ unpackU x ++ ". Possible cause: you're calling `need` on a directory. Shake only allows you to `need` files."
                  else
                     join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then
