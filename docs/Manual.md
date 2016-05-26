@@ -2,7 +2,7 @@
 
 _See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Why choose Shake](Why.md#readme); [Function documentation](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html)_
 
-Shake is a Haskell library for writing build systems – designed as a replacement for `make`. This document describes how to get started with Shake, assuming no prior Haskell knowledge. First, let's take a look at a Shake build system:
+Shake is a Haskell library for writing build systems -- designed as a replacement for `make`. This document describes how to get started with Shake, assuming no prior Haskell knowledge. First, let's take a look at a Shake build system:
 
     import Development.Shake
     import Development.Shake.Command
@@ -114,7 +114,7 @@ This rule can build any `.rot13` file. Imagine we are building `"file.rot13"`, i
 * Using `need` to introduce a dependency on the `src` file, ensuring that if `src` changes then `out` will be rebuilt and that `src` will be up-to-date before any further commands are run.
 * Using `cmd` to run the command line `rot13 file.txt -o file.rot13`, which should read `file.txt` and write out `file.rot13` being the ROT13 encoding of the file.
 
-Many rules follow this pattern – calculate some local variables, `need` some dependencies, then use `cmd` to perform some actions. We now discuss each of the three statements.
+Many rules follow this pattern -- calculate some local variables, `need` some dependencies, then use `cmd` to perform some actions. We now discuss each of the three statements.
 
 #### Local variables
 
@@ -178,13 +178,13 @@ As a wart, if the `cmd` call is _not_ the last line of a rule, you must precede 
 
 Shake provides a complete library of filepath manipulation functions (see the [docs for `Development.Shake.FilePath`](https://hackage.haskell.org/package/shake/docs/Development-Shake-FilePath.html)), but the most common are:
 
-* `str1 </> str2` – add the path components together with a slash, e.g. `"_build" </> "main.o"` equals `"_build/main.o"`.
-* `str1 <.> str2` – add an extension, e.g. `"main" <.> "o"` equals `"main.o"`.
-* `str1 ++ str2` – append two strings together, e.g. `"hello" ++ "world"` equals `"helloworld"`.
-* `str1 -<.> str2` – replace an extension, e.g. `"main.c" -<.> "o"` equals `"main.o"`.
-* `dropExtension str` – drop the final extension of a filepath if it has one, e.g. `dropExtension "main.o"` equals `"main"`, while `dropExtension "main"` equals `"main"`.
-* `takeFileName str` – drop the path component, e.g. `takeFileName "_build/src/main.o"` equals `"main.o"`.
-* `dropDirectory1 str` – drop the first path component, e.g. `dropDirectory1 "_build/src/main.o"` equals `"src/main.o"`.
+* `str1 </> str2` -- add the path components together with a slash, e.g. `"_build" </> "main.o"` equals `"_build/main.o"`.
+* `str1 <.> str2` -- add an extension, e.g. `"main" <.> "o"` equals `"main.o"`.
+* `str1 ++ str2` -- append two strings together, e.g. `"hello" ++ "world"` equals `"helloworld"`.
+* `str1 -<.> str2` -- replace an extension, e.g. `"main.c" -<.> "o"` equals `"main.o"`.
+* `dropExtension str` -- drop the final extension of a filepath if it has one, e.g. `dropExtension "main.o"` equals `"main"`, while `dropExtension "main"` equals `"main"`.
+* `takeFileName str` -- drop the path component, e.g. `takeFileName "_build/src/main.o"` equals `"main.o"`.
+* `dropDirectory1 str` -- drop the first path component, e.g. `dropDirectory1 "_build/src/main.o"` equals `"src/main.o"`.
 
 ## Advanced Syntax
 
