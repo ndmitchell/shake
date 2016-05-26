@@ -1,6 +1,6 @@
 # Profiling and optimisation
 
-This page discusses how to profile and optimise a Shake-based build system. In general there are two extremes of build system performance - when nothing has changed (also known as the zero build), and when everything has changed or when building from scratch (the full build). By optimising both extremes, and ensuring dependencies are minimal, we typically ensure good performance everywhere.
+This page discusses how to profile and optimise a Shake-based build system. In general there are two extremes of build system performance -- when nothing has changed (also known as the zero build), and when everything has changed or when building from scratch (the full build). By optimising both extremes, and ensuring dependencies are minimal, we typically ensure good performance everywhere.
 
 Before doing any performance investigation, make sure you are passing a suitable parallelism flag (`-j` to automatically determine parallelism, `-j8` for 8 threads). Note also that Shake uses random scheduling, which offers a significant speedup by avoiding worst-case behaviour, but does make reproducing numbers harder than it would otherwise be.
 
@@ -24,7 +24,7 @@ Looking at the information above:
 
 * We have executed the build 7 times since we last wiped the Shake database (typically with a `clean` command).
 * There are 466 rules, which includes things like files, oracles and anything else that Shake tracks. In the the run 146 of them required rebuilding because they were dirty, or are always run (e.g. oracles).
-* If you were to run the build single threaded at `-j1`, ignoring any machine contention, it would take 4 minutes 53 seconds. Out of that, 4m43s was captured by `traced` commands, typically running `cmd` - so the remaining 10s is probably Shake overheads and executing your Haskell code.
+* If you were to run the build single threaded at `-j1`, ignoring any machine contention, it would take 4 minutes 53 seconds. Out of that, 4m43s was captured by `traced` commands, typically running `cmd` -- so the remaining 10s is probably Shake overheads and executing your Haskell code.
 * The longest single rule is the one to build `Development/Make/Rules.o`, which takes 10.3s, and the longest traced command is running `ghc` for 10.1s. It's probably a good guess that `Rules.o` was the one running that longest `ghc`.
 * In the last run it took 1m05s, and in that time we had an average of 3.12 traced commands running at a time. Assuming we passed `-j4` then we're doing reasonable at getting parallelism.
 
@@ -46,7 +46,7 @@ Profile report                      0.062s    3%  =
 Total                               2.087s  100%
 </pre>
 
-Each line indicates one step of the build - e.g. `shakeArgsWith` is the instant the first Shake function is called, and the `0.000s` measures the time until the next step - when the underlying `shake` function is called - and covers the time required to parse the command line arguments. The only steps that are expected to take a meaningful amount of time are:
+Each line indicates one step of the build -- e.g. `shakeArgsWith` is the instant the first Shake function is called, and the `0.000s` measures the time until the next step -- when the underlying `shake` function is called -- and covers the time required to parse the command line arguments. The only steps that are expected to take a meaningful amount of time are:
 
 * Database read, which has to deserialise the Shake database. If this value is large, look at if your `.shake.database` file is large. If you have custom oracles they might be serialising to a large result. If you are dynamically changing filename every run that will result in lots of stale values.
 * Running rules, when all your rules are run. The other profiling methods can shed light on what is actually happening when your rules are running. In a full build this step should be expected to take nearly 100% of the time.

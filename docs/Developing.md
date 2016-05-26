@@ -20,7 +20,7 @@ I usually use [`ghcid`](https://github.com/ndmitchell/ghcid#readme) when develop
 
 ### Continuous Integration
 
-Shake is currently tested by on Linux by [Travis](https://travis-ci.org/ndmitchell/shake), and on Windows by [Appveyor](https://ci.appveyor.com/project/ndmitchell/shake). The tests are designed to be aggressively comprehensive (testing things like performance and that documentation all type checks), so while they usually pass, do not be overly concerned if they are failing or if your patch breaks a test - serious issues will be spotted very quickly.
+Shake is currently tested by on Linux by [Travis](https://travis-ci.org/ndmitchell/shake), and on Windows by [Appveyor](https://ci.appveyor.com/project/ndmitchell/shake). The tests are designed to be aggressively comprehensive (testing things like performance and that documentation all type checks), so while they usually pass, do not be overly concerned if they are failing or if your patch breaks a test -- serious issues will be spotted very quickly.
 
 ### Sandboxes
 

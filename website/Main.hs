@@ -112,6 +112,8 @@ reformat mode code (TagOpen t at:xs) | t `elem` ["pre","code"] = TagOpen t at : 
           f x = [x]
 reformat mode code (TagClose x:xs) | x `elem` ["p","pre","li","ol","ul","h1","h2","h3","h4","h5","h6"] =
     TagClose x : TagText "\n" : reformat mode code xs
+reformat mode code (TagText x:xs) = TagText (replace " -- " " \x2013 " x) : reformat mode code xs
+    -- properly render the ASCII fallback "--" as Unicode's EN DASH (U+2013)
 reformat mode code (x:xs) = x : reformat mode code xs
 reformat mode code [] = []
 
