@@ -141,7 +141,7 @@ instance Show ShakeException where
     show ShakeException{..} = unlines $
         "Error when running Shake build system:" :
         map ("* " ++) shakeExceptionStack ++
-#if MIN_VERSION_base(4,8,0)
+#if __GLASGOW_HASKELL__ >= 710
         [displayException shakeExceptionInner]
 #else
         [show shakeExceptionInner]
