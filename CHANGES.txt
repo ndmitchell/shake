@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #457, better error message when calling need on a directory
     #456, use displayException for inner exceptions
     Improve the documentation for priority/alternative
     #448, fix FSATrace on Mac 10.11

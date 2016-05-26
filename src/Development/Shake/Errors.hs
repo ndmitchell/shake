@@ -6,6 +6,7 @@ module Development.Shake.Errors(
     errorStructured, err,
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
+    errorDirectoryNotFile
     ) where
 
 import Data.Tuple.Extra
@@ -50,6 +51,12 @@ structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f h
         g (x:xs) = x : g xs
         g [] = []
 
+
+errorDirectoryNotFile :: FilePath -> IO a
+errorDirectoryNotFile dir = errorStructured
+    "Build system error - expected a file, got a directory"
+    [("Directory", Just dir)]
+    "Probably due to calling 'need' on a directory. Shake only permits 'need' on files."
 
 errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> IO a
 errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)

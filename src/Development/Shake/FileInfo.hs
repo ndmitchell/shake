@@ -8,6 +8,7 @@ module Development.Shake.FileInfo(
 
 import Control.Exception.Extra
 import Development.Shake.Classes
+import Development.Shake.Errors
 import General.String
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char
@@ -108,7 +109,7 @@ getFileInfo x = BS.useAsCString (unpackU_ x) $ \file ->
         let peek = do
                 code <- peekFileAttributes fad
                 if testBit code 4 then
-                    errorIO $ "Shake error: getFileInfo, expected a file, got a directory: " ++ unpackU x ++ ". Possible cause: you're calling `need` on a directory. Shake only allows you to `need` files."
+                    errorDirectoryNotFile $ unpackU x
                  else
                     join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then
@@ -152,7 +153,7 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     s <- getFileStatus $ unpackU_ x
     if isDirectory s then
-        errorIO $ "getFileInfo, expected a file, got a directory: " ++ unpackU x
+        errorDirectoryNotFile $ unpackU x
      else
         result (extractFileTime s) (fromIntegral $ fileSize s)
 
