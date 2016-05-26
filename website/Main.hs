@@ -10,6 +10,8 @@ import Data.Maybe
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import Text.HTML.TagSoup
+import Text.HTML.TagSoup.Entity
+import qualified Data.Map as Map
 import Text.Markdown
 import Text.Blaze.Html.Renderer.Text
 import System.Directory
@@ -68,7 +70,9 @@ readFileTags :: FilePath -> IO [Tag String]
 readFileTags = fmap parseTags . readFile'
 
 writeFileTags :: FilePath -> [Tag String] -> IO ()
-writeFileTags file = writeFile file . renderTags
+writeFileTags file = writeFile file . renderTagsOptions renderOptions{optEscape=concatMap (\x -> Map.findWithDefault [x] x escapes)}
+    where escapes = Map.fromList $ [(b, "&" ++ a ++ ";") | (a,[b]) <- xmlEntities] ++
+                                   [(b, "&" ++ a ++ ";") | (a,[b]) <- htmlEntities, not $ isAscii b]
 
 
 ---------------------------------------------------------------------
