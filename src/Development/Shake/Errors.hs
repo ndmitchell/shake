@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, PatternGuards, RecordWildCards #-}
+{-# LANGUAGE DeriveDataTypeable, PatternGuards, RecordWildCards, CPP #-}
 
 -- | Errors seen by the user
 module Development.Shake.Errors(
@@ -141,4 +141,8 @@ instance Show ShakeException where
     show ShakeException{..} = unlines $
         "Error when running Shake build system:" :
         map ("* " ++) shakeExceptionStack ++
+#if MIN_VERSION_base(4,8,0)
+        [displayException shakeExceptionInner]
+#else
         [show shakeExceptionInner]
+#endif
