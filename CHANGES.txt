@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Extra base bounds to rule out building on GHC 7.4
 0.15.7
     Require extra-1.4.8
     #457, better error message when calling need on a directory
