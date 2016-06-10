@@ -410,6 +410,7 @@ newtype CmdTime = CmdTime {fromCmdTime :: Double}
 --   suitable for user diagnostics, but not for direct execution.
 newtype CmdLine = CmdLine {fromCmdLine :: String}
 
+-- | The allowable 'String'-like values that can be captured.
 class CmdString a where cmdString :: (Str, Str -> a)
 instance CmdString () where cmdString = (Unit, \Unit -> ())
 instance CmdString String where cmdString = (Str "", \(Str x) -> x)
@@ -560,6 +561,7 @@ type a :-> t = a
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
 
+-- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where cmdArguments :: [Either CmdOption String] -> t
 instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs ++ arg x
