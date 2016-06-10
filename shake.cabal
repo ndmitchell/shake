@@ -232,6 +232,7 @@ executable shake
         Development.Shake.Profile
         Development.Shake.Progress
         Development.Shake.Resource
+        Development.Shake.Rule
         Development.Shake.Rules.Directory
         Development.Shake.Rules.File
         Development.Shake.Rules.Files
