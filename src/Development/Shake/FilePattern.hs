@@ -207,7 +207,7 @@ matchStars (Stars pre mid post) x = do
 --   but @file.h@ and @dir\/file.c@ don't.
 --
 -- * @\/\/*.c@ matches all @.c@ files anywhere on the filesystem,
----  so @file.c@, @dir\/file.c@, @dir1\/dir2\/file.c@ and @/path/to/file.c@ all match,
+--   so @file.c@, @dir\/file.c@, @dir1\/dir2\/file.c@ and @\/path\/to\/file.c@ all match,
 --   but @file.h@ and @dir\/file.h@ don't.
 --
 -- * @dir\/*\/*@ matches all files one level below @dir@, so @dir\/one\/file.c@ and
