@@ -5,6 +5,7 @@ To get started with Shake, you need to:
 * Install the [Haskell Stack](http://haskellstack.org/).
 * Type `stack install shake`
 * Run `stack exec -- shake --demo`, which should produce something similar to the trace below.
+* To repeat the build after the initial demo, run `stack exec ./build.sh` in the demo directory.
 
 <pre>
 <!-- nosyntax --><b>% Welcome to the Shake v1.0 demo mode!
