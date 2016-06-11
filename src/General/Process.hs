@@ -163,7 +163,8 @@ process po = do
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++
                               [(errh, stderr, poStderr) | Just errh <- [errh], CreatePipe <- [std_err cp]]
                 wait <- forM streams $ \(h, hh, dest) -> do
-                    let isTied = not $ poStdout `disjoint` poStderr
+                    -- no point tying the streams together if one is being streamed directly
+                    let isTied = not (poStdout `disjoint` poStderr) && length streams == 2
                     let isBinary = not $ any isDestString dest && not (any isDestBytes dest)
                     when isTied $ hSetBuffering h LineBuffering
                     when (DestEcho `elem` dest) $ do
