@@ -548,6 +548,7 @@ instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
     get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
 
+-- | The Status wrapper over Value is to deforest the Map, avoiding one additional traversal.
 instance BinaryWith Witness Status where
     putWith ctx (Loaded x) = putWith ctx x
     putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ statusType x
