@@ -17,7 +17,7 @@ main = shaken noTest $ \args obj -> do
 
     action $ do
         keys <- getConfigKeys
-        need [x -<.> exe | x <- keys, takeExtension x == ".exe"]
+        need [obj $ x -<.> exe | x <- keys, takeExtension x == ".exe"]
 
     let objects dir key = do
             let f x | takeExtension x == ".c" = obj $ dir </> x -<.> "o"
