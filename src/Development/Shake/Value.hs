@@ -113,13 +113,9 @@ instance Hashable Value where
     hashWithSalt salt Value{..} = hashWithSalt salt valueType `xor` valueHash salt value
 
 instance Eq Value where
-    a == b =
-        case a of
-            Value{valueType=at,value=a,valueEq=eq} ->
-                case b of
-                    Value{valueType=bt,value=b} ->
-                        if at /= bt then False
-                        else eq a (unsafeCoerce b)
+    Value{valueType=at,value=a,valueEq=eq} == Value{valueType=bt,value=b}
+        | at /= bt = False
+        | otherwise = eq a (unsafeCoerce b)
 
 
 ---------------------------------------------------------------------
