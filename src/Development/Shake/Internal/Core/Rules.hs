@@ -123,37 +123,37 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
     equalValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
 
 
-data ARule m = forall key value . Rule key value => ARule (key -> Maybe (m value))
+data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
 
-ruleKey :: (key -> Maybe (m value)) -> key
+ruleKey :: (key -> Maybe (Action value)) -> key
 ruleKey = err "ruleKey"
 
-ruleValue :: (key -> Maybe (m value)) -> value
+ruleValue :: (key -> Maybe (Action value)) -> value
 ruleValue = err "ruleValue"
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (WriterT (SRules Action) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
 
-newRules :: SRules Action -> Rules ()
+newRules :: SRules -> Rules ()
 newRules = Rules . tell
 
-modifyRules :: (SRules Action -> SRules Action) -> Rules () -> Rules ()
+modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-getRules :: Rules () -> IO (SRules Action)
+getRules :: Rules () -> IO SRules
 getRules (Rules r) = execWriterT r
 
 
-data SRules m = SRules
-    {actions :: [m ()]
-    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule m)]) -- higher fst is higher priority
+data SRules = SRules
+    {actions :: [Action ()]
+    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule)]) -- higher fst is higher priority
     }
 
-instance Monoid (SRules m) where
+instance Monoid SRules where
     mempty = SRules [] (Map.fromList [])
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
         where f (k, v1, xs) (_, v2, ys)
@@ -243,13 +243,13 @@ withoutActions :: Rules () -> Rules ()
 withoutActions = modifyRules $ \x -> x{actions=[]}
 
 
-registerWitnesses :: SRules m -> IO ()
+registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
     forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
         registerWitness (ruleKey r) (ruleValue r)
 
 
-createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
+createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep (RuleInfo Action)
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
