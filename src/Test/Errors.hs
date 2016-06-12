@@ -103,6 +103,7 @@ main = shakenCwd test $ \args obj -> do
         writeFile' out ""
     obj "persist_failure.2" %> \out -> do
         src <- readFile' "persist_failure.3"
+        liftIO $ print ("persist_failure.3", src)
         if src == "die" then do
             liftIO $ appendFile "persist_failure.log" "[err]"
             fail "die"
