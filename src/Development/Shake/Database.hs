@@ -96,7 +96,7 @@ data Database = Database
     ,intern :: InternDB
     ,status :: StatusDB
     ,step :: Step
-    ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
+    ,journal :: Id -> (Key, Status {- must be Loaded -}) -> IO ()
     ,diagnostic :: String -> IO () -- ^ logging function
     ,assume :: Maybe Assume
     }
@@ -549,7 +549,6 @@ instance Binary Trace where
     get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
 
 instance BinaryWith Witness Status where
-    putWith ctx Missing = putWord8 0
-    putWith ctx (Loaded x) = putWord8 1 >> putWith ctx x
+    putWith ctx (Loaded x) = putWith ctx x
     putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ statusType x
-    getWith ctx = do i <- getWord8; if i == 0 then return Missing else Loaded <$> getWith ctx
+    getWith ctx = Loaded <$> getWith ctx
