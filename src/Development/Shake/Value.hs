@@ -130,8 +130,8 @@ registerWitness k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
 -- elements were added and stable between program executions.
--- Don't rely on the hashmap order since that might not be stable, if different salting is applied.
-toStableList :: Map.HashMap TypeRep v -> [(TypeRep,v)]
+-- Don't rely on the hashmap order since that might not be stable, if hashes clash.
+toStableList :: Ord k => Map.HashMap k v -> [(k,v)]
 toStableList = sortOn fst . Map.toList
 
 
