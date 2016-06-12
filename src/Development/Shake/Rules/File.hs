@@ -237,7 +237,7 @@ phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
 (~>) :: String -> Action () -> Rules ()
-(~>) = phony 
+(~>) = phony
 
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
