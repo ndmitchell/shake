@@ -22,7 +22,7 @@ import qualified Data.HashSet as Set
 import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
-import Development.Shake.Internal.Core.Core
+import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Classes
 import Development.Shake.FilePath

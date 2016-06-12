@@ -148,7 +148,7 @@ import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
 import Control.Monad.IO.Class
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
-import Development.Shake.Internal.Core.Core hiding (trackAllow)
+import Development.Shake.Internal.Core.Run hiding (trackAllow)
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Derived
 import Development.Shake.Internal.Errors

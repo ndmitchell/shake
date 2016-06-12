@@ -12,7 +12,7 @@ import System.Directory
 import Control.Applicative
 import Prelude
 
-import Development.Shake.Internal.Core.Core hiding (trackAllow)
+import Development.Shake.Internal.Core.Run hiding (trackAllow)
 import Development.Shake.Internal.Core.Rules
 import General.Extra
 import General.String

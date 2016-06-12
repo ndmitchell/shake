@@ -127,7 +127,7 @@ library
         Development.Shake.Internal.ByteString
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Rules
-        Development.Shake.Internal.Core.Core
+        Development.Shake.Internal.Core.Run
         Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Database
         Development.Shake.Internal.Demo
@@ -222,7 +222,7 @@ executable shake
         Development.Shake.Command
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Rules
-        Development.Shake.Internal.Core.Core
+        Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Database
         Development.Shake.Internal.Demo
         Development.Shake.Internal.Derived
@@ -326,7 +326,7 @@ test-suite shake-test
         Development.Shake.Config
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Rules
-        Development.Shake.Internal.Core.Core
+        Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Database
         Development.Shake.Internal.Demo
         Development.Shake.Internal.Derived
