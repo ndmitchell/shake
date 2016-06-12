@@ -13,6 +13,7 @@ import Control.Applicative
 import Prelude
 
 import Development.Shake.Internal.Core.Core hiding (trackAllow)
+import Development.Shake.Internal.Core.Rules
 import General.Extra
 import General.String
 import Development.Shake.Classes

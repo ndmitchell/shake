@@ -6,6 +6,8 @@ module Development.Shake.Internal.Rules.Oracle(
     ) where
 
 import Development.Shake.Internal.Core.Core
+import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import Control.Applicative
 import Prelude

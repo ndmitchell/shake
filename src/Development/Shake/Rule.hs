@@ -7,4 +7,5 @@ module Development.Shake.Rule(
     ) where
 
 import Development.Shake.Internal.Core.Core
+import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Types

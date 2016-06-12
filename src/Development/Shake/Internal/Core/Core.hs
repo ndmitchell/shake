@@ -3,8 +3,6 @@
 
 module Development.Shake.Internal.Core.Core(
     run,
-    ShakeValue,
-    Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
     trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,

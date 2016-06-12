@@ -19,6 +19,7 @@ import qualified Data.HashSet as Set
 
 import Development.Shake.Internal.Core.Core hiding (trackAllow)
 import qualified Development.Shake.Internal.Core.Core as S
+import Development.Shake.Internal.Core.Rules
 import General.String
 import Development.Shake.Internal.ByteString
 import Development.Shake.Classes
