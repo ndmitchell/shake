@@ -81,38 +81,41 @@ emptyStack = Stack Nothing [] Set.empty
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
-data Trace = Trace BS Float Float -- (message, start, end)
+data Trace = Trace BS Float Float -- ^ (message, start, end)
     deriving Show
 
 instance NFData Trace where
     rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
 
+type StatusDB = IORef (Map Id (Key, Status))
+type InternDB = IORef (Intern Key)
+
 -- | Invariant: The database does not have any cycles where a Key depends on itself
 data Database = Database
     {lock :: Lock
-    ,intern :: IORef (Intern Key)
-    ,status :: IORef (Map Id (Key, Status))
+    ,intern :: InternDB
+    ,status :: StatusDB
     ,step :: Step
     ,journal :: Id -> (Key, Status {- Loaded or Missing -}) -> IO ()
-    ,diagnostic :: String -> IO () -- logging function
+    ,diagnostic :: String -> IO () -- ^ logging function
     ,assume :: Maybe Assume
     }
 
 data Status
-    = Ready Result -- I have a value
-    | Error SomeException -- I have been run and raised an error
-    | Loaded Result -- Loaded from the database
-    | Waiting Pending (Maybe Result) -- Currently checking if I am valid or building
-    | Missing -- I am only here because I got into the Intern table
+    = Ready Result -- ^ I have a value
+    | Error SomeException -- ^ I have been run and raised an error
+    | Loaded Result -- ^ Loaded from the database
+    | Waiting Pending (Maybe Result) -- ^ Currently checking if I am valid or building
+    | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
 data Result = Result
-    {result :: Value -- the result associated with the Key
-    ,built :: {-# UNPACK #-} !Step -- when it was actually run
-    ,changed :: {-# UNPACK #-} !Step -- the step for deciding if it's valid
-    ,depends :: [[Id]] -- dependencies (outer list is a strict ordered series, inner list is parallel)
-    ,execution :: {-# UNPACK #-} !Float -- how long it took when it was last run (seconds)
-    ,traces :: [Trace] -- a trace of the expensive operations (start/end in seconds since beginning of run)
+    {result :: Value -- ^ the result associated with the Key
+    ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
+    ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
+    ,depends :: [[Id]] -- ^ dependencies (don't run them early)
+    ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
+    ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving Show
 
 
@@ -146,9 +149,9 @@ newWaiting r = do ref <- newIORef $ return (); return $ Waiting (Pending ref) r
 runWaiting :: Waiting -> IO ()
 runWaiting (Waiting (Pending p) _) = join $ readIORef p
 
--- Wait for a set of actions to complete
--- If the action returns True, the function will not be called again
--- If the first argument is True, the thing is ended
+-- | Wait for a set of actions to complete.
+--   If the action returns True, the function will not be called again.
+--   If the first argument is True, the thing is ended.
 waitFor :: [(a, Waiting)] -> (Bool -> a -> IO Bool) -> IO ()
 waitFor ws@(_:_) act = do
     todo <- newIORef $ length ws
@@ -183,19 +186,25 @@ data Ops = Ops
     }
 
 
+internKey :: InternDB -> StatusDB -> Key -> IO Id
+internKey intern status k = do
+    is <- readIORef intern
+    case Intern.lookup k is of
+        Just i -> return i
+        Nothing -> do
+            (is, i) <- return $ Intern.add k is
+            writeIORef' intern is
+            modifyIORef' status $ Map.insert i (k,Missing)
+            return i
+
+queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
+queryKey status i = Map.lookup i <$> readIORef status
+
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool database@Database{..} Ops{..} stack ks continue =
     join $ withLock lock $ do
-        is <- forM ks $ \k -> do
-            is <- readIORef intern
-            case Intern.lookup k is of
-                Just i -> return i
-                Nothing -> do
-                    (is, i) <- return $ Intern.add k is
-                    writeIORef' intern is
-                    modifyIORef' status $ Map.insert i (k,Missing)
-                    return i
+        is <- forM ks $ internKey intern status
 
         whenJust (checkStack is stack) $ \bad -> do
             -- everything else gets thrown via Left and can be Staunch'd
@@ -245,8 +254,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         reduce :: Stack -> Id -> IO Status
         reduce stack i = do
-            s <- readIORef status
-            case Map.lookup i s of
+            s <- queryKey status i
+            case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
