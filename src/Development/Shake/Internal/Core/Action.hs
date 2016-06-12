@@ -37,10 +37,10 @@ import Prelude
 newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO)
 
-data RuleInfo m = RuleInfo
+data RuleInfo = RuleInfo
     {stored :: Key -> IO (Maybe Value)
     ,equal :: Key -> Value -> Value -> EqualCost
-    ,execute :: Key -> m Value
+    ,execute :: Key -> Action Value
     ,resultType :: TypeRep
     }
 
@@ -50,7 +50,7 @@ data Global = Global
     ,globalPool :: Pool
     ,globalCleanup :: Cleanup
     ,globalTimestamp :: IO Seconds
-    ,globalRules :: Map.HashMap TypeRep (RuleInfo Action)
+    ,globalRules :: Map.HashMap TypeRep RuleInfo
     ,globalOutput :: Verbosity -> String -> IO ()
     ,globalOptions  :: ShakeOptions
     ,globalDiagnostic :: String -> IO ()

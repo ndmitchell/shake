@@ -249,7 +249,7 @@ registerWitnesses SRules{..} =
         registerWitness (ruleKey r) (ruleValue r)
 
 
-createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep (RuleInfo Action)
+createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
@@ -268,17 +268,17 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
 
-runStored :: Map.HashMap TypeRep (RuleInfo m) -> Key -> IO (Maybe Value)
+runStored :: Map.HashMap TypeRep RuleInfo-> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just RuleInfo{..} -> stored k
 
-runEqual :: Map.HashMap TypeRep (RuleInfo m) -> Key -> Value -> Value -> EqualCost
+runEqual :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> Value -> EqualCost
 runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
     Nothing -> NotEqual
     Just RuleInfo{..} -> equal k v1 v2
 
-runExecute :: MonadIO m => Map.HashMap TypeRep (RuleInfo m) -> Key -> m Value
+runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
 runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
     Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
     Just RuleInfo{..} -> execute k
