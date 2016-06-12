@@ -11,7 +11,7 @@ import Control.Exception.Extra
 import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
-import Development.Shake.Internal.Pool
+import Development.Shake.Internal.Core.Pool
 import System.Time.Extra
 import Data.Monoid
 import Prelude

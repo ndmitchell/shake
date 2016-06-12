@@ -4,7 +4,7 @@ module Development.Shake.Internal.Args(shakeOptDescrs, shakeArgs, shakeArgsWith)
 
 import Paths_shake
 import Development.Shake.Internal.Types
-import Development.Shake.Internal.Core
+import Development.Shake.Internal.Core.Core
 import Development.Shake.Internal.Demo
 import Development.Shake.FilePath
 import Development.Shake.Internal.Rules.File

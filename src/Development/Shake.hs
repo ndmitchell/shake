@@ -149,7 +149,7 @@ import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
 -- then shows all the things that are hidden in the docs, which is terrible.
 import Control.Monad.IO.Class
 import Development.Shake.Internal.Types
-import Development.Shake.Internal.Core hiding (trackAllow)
+import Development.Shake.Internal.Core.Core hiding (trackAllow)
 import Development.Shake.Internal.Derived
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Progress

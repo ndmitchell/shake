@@ -39,7 +39,7 @@ import Control.Applicative
 import Prelude
 
 import Development.Shake.Internal.CmdOption
-import Development.Shake.Internal.Core
+import Development.Shake.Internal.Core.Core
 import Development.Shake.FilePath
 import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Types

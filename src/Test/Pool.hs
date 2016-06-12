@@ -2,7 +2,7 @@
 module Test.Pool(main) where
 
 import Test.Type
-import Development.Shake.Internal.Pool
+import Development.Shake.Internal.Core.Pool
 
 import Control.Concurrent
 import Control.Exception hiding (assert)

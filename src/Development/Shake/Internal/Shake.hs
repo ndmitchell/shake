@@ -4,7 +4,7 @@ module Development.Shake.Internal.Shake(shake) where
 
 import Development.Shake.Internal.Types
 import General.Timing
-import Development.Shake.Internal.Core
+import Development.Shake.Internal.Core.Core
 
 import Development.Shake.Internal.Rules.Directory
 import Development.Shake.Internal.Rules.File

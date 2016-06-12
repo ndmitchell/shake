@@ -6,5 +6,5 @@ module Development.Shake.Rule(
     trackUse, trackChange, trackAllow
     ) where
 
-import Development.Shake.Internal.Core
+import Development.Shake.Internal.Core.Core
 import Development.Shake.Internal.Types

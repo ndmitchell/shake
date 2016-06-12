@@ -17,8 +17,8 @@ import System.Directory
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 
-import Development.Shake.Internal.Core hiding (trackAllow)
-import qualified Development.Shake.Internal.Core as S
+import Development.Shake.Internal.Core.Core hiding (trackAllow)
+import qualified Development.Shake.Internal.Core.Core as S
 import General.String
 import Development.Shake.Internal.ByteString
 import Development.Shake.Classes

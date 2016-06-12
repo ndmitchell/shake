@@ -18,7 +18,7 @@ import System.Directory
 import System.Exit
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
-import Development.Shake.Internal.Core
+import Development.Shake.Internal.Core.Core
 import Development.Shake.Internal.Rules.File
 import Development.Shake.FilePath
 import Development.Shake.Internal.Types

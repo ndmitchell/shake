@@ -2,7 +2,7 @@
 module Test.Monad(main) where
 
 import Test.Type
-import Development.Shake.Internal.Monad
+import Development.Shake.Internal.Core.Monad
 
 import Data.IORef
 import Control.Concurrent

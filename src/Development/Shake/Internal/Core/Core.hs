@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
-module Development.Shake.Internal.Core(
+module Development.Shake.Internal.Core.Core(
     run,
     ShakeValue,
     Rule(..), Rules, rule, action, withoutActions, alternatives, priority,
@@ -40,9 +40,9 @@ import Data.Monoid
 import System.IO.Unsafe
 
 import Development.Shake.Classes
-import Development.Shake.Internal.Pool
-import Development.Shake.Internal.Database
-import Development.Shake.Internal.Monad
+import Development.Shake.Internal.Core.Pool
+import Development.Shake.Internal.Core.Database
+import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Resource
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile

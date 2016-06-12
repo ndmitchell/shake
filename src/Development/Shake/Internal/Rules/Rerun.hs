@@ -4,7 +4,7 @@ module Development.Shake.Internal.Rules.Rerun(
     defaultRuleRerun, alwaysRerun
     ) where
 
-import Development.Shake.Internal.Core
+import Development.Shake.Internal.Core.Core
 import Development.Shake.Classes
 
 

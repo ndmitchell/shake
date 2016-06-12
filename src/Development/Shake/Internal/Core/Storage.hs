@@ -5,7 +5,7 @@ We can't rely on getting any exceptions or termination at the end, so we'd bette
 We store a series of records, and if they contain twice as many records as needed, we compress
 -}
 
-module Development.Shake.Internal.Storage(
+module Development.Shake.Internal.Core.Storage(
     withStorage
     ) where
 
