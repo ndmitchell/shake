@@ -2,10 +2,7 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rule(..), Rules,
-    SRules(actions), getRules,
-    registerWitnesses,
-    createRuleinfo,
+    Rule(..), Rules, runRules,
     runStored, runExecute, runEqual,
     rule, action, withoutActions, alternatives, priority
     ) where
@@ -144,8 +141,11 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-getRules :: Rules () -> IO SRules
-getRules (Rules r) = execWriterT r
+runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep RuleInfo)
+runRules opts (Rules r) = do
+    srules <- execWriterT r
+    registerWitnesses srules
+    return (actions srules, createRuleinfo opts srules)
 
 
 data SRules = SRules

@@ -63,8 +63,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
 
     start <- offsetTime
-    rs <- getRules rs
-    registerWitnesses rs
+    (actions, ruleinfo) <- runRules opts rs
 
     outputLocked <- do
         lock <- newLock
@@ -114,19 +113,18 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     killThread tid
                     void $ timeout 1000000 $ waitBarrier wait
 
-                let ruleinfo = createRuleinfo opts rs
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
                     let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
-                    forM_ (actions rs) $ \act ->
+                    forM_ actions $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
                             Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
                 assertFinishedDatabase database
 
-                when (null $ actions rs) $
+                when (null actions) $
                     when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
 
                 when (isJust shakeLint) $ do
