@@ -5,7 +5,7 @@ module Development.Shake.Internal.Core.Rules(
     Rule(..), Rules,
     SRules(actions), getRules,
     registerWitnesses,
-    RuleInfo(..), createRuleinfo,
+    createRuleinfo,
     runStored, runExecute, runEqual,
     rule, action, withoutActions, alternatives, priority
     ) where
