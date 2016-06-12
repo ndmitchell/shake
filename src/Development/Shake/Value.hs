@@ -1,4 +1,5 @@
-{-# LANGUAGE ExistentialQuantification, GeneralizedNewtypeDeriving, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds #-}
 
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.
@@ -23,6 +24,7 @@ import Data.Maybe
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
+import Unsafe.Coerce
 
 -- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
 --   Using this alias requires the @ConstraintKinds@ extension.
@@ -63,41 +65,61 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 newtype Key = Key Value
     deriving (Eq,Hashable,NFData,BinaryWith Witness)
 
-data Value = forall a . ShakeValue a => Value a
+data Value = forall a . Value
+    {valueShow :: a -> String
+    ,valueEq :: a -> a -> Bool
+    ,valueType :: a -> TypeRep
+    ,valueRnf :: a -> ()
+    ,valueHash :: Int -> a -> Int
+    ,valuePut :: a -> Put
+    ,valueGet :: Get a
+    ,value :: a
+    }
 
 
 newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
 newValue :: ShakeValue a => a -> Value
-newValue = Value
+newValue = Value show (==) typeOf rnf hashWithSalt put get
 
 typeKey :: Key -> TypeRep
 typeKey (Key v) = typeValue v
 
 typeValue :: Value -> TypeRep
-typeValue (Value x) = typeOf x
+typeValue Value{..} = valueType value
 
 fromKey :: Typeable a => Key -> a
 fromKey (Key v) = fromValue v
 
+castValue :: forall a . Typeable a => Value -> Maybe a
+castValue Value{..}
+    | valueType value == typeOf (undefined :: a) = Just $ unsafeCoerce value
+    | otherwise = Nothing
+
 fromValue :: Typeable a => Value -> a
-fromValue (Value x) = fromMaybe (err "fromValue, bad cast") $ cast x
+fromValue = fromMaybe (err "fromValue, bad cast") . castValue
 
 instance Show Key where
     show (Key a) = show a
 
 instance Show Value where
-    show (Value a) = show a
+    show Value{..} = valueShow value
 
 instance NFData Value where
-    rnf (Value a) = rnf a
+    rnf Value{..} = valueRnf value
 
 instance Hashable Value where
-    hashWithSalt salt (Value a) = hashWithSalt salt (typeOf a) `xor` hashWithSalt salt a
+    hashWithSalt salt Value{..} = hashWithSalt salt (valueType value) `xor` valueHash salt value
 
 instance Eq Value where
-    Value a == Value b = maybe False (a ==) $ cast b
+    a == b =
+        case a of
+            Value{valueType=at,value=a,valueEq=eq} ->
+                case b of
+                    Value{valueType=bt,value=b} ->
+                        if at a /= bt b then False
+                        else eq a (unsafeCoerce b)
 
 
 ---------------------------------------------------------------------
@@ -108,7 +130,7 @@ witness :: IORef (Map.HashMap TypeRep Value)
 witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: ShakeValue a => a -> IO ()
-registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (Value $ err msg `asTypeOf` x) mp, ())
+registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (newValue $ err msg `asTypeOf` x) mp, ())
     where msg = "registerWitness, type " ++ show (typeOf x)
 
 
@@ -152,10 +174,10 @@ instance Binary Witness where
 
 
 instance BinaryWith Witness Value where
-    putWith ws (Value x) = do
-        let msg = "no witness for " ++ show (typeOf x)
-        put $ fromMaybe (error msg) $ Map.lookup (typeOf x) (witnessOut ws)
-        put x
+    putWith ws Value{..} = do
+        let msg = "no witness for " ++ show (valueType value)
+        put $ fromMaybe (error msg) $ Map.lookup (valueType value) (witnessOut ws)
+        valuePut value
 
     getWith ws = do
         h <- get
@@ -166,6 +188,6 @@ instance BinaryWith Witness Value where
             Nothing -> error $
                 -- should not happen, unless proper data corruption
                 "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
-            Just (Value t) -> do
-                x <- get
-                return $ Value $ x `asTypeOf` t
+            Just v@Value{..} -> do
+                x <- valueGet
+                return Value{value=x, ..}
