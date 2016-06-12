@@ -10,6 +10,7 @@ module Development.Shake.Storage(
     ) where
 
 import General.Binary
+import General.Intern
 import Development.Shake.Types
 import General.Timing
 import General.FileLock
@@ -55,12 +56,12 @@ splitVersion abc = (a `LBS.append` b, c)
 
 
 withStorage
-    :: (Show k, Show v, Eq w, Eq k, Hashable k
-       ,Binary w, BinaryWith w k, BinaryWith w v)
+    :: (Show v, Eq w
+       ,Binary w, BinaryWith w v)
     => ShakeOptions             -- ^ Storage options
     -> (String -> IO ())        -- ^ Logging function
     -> w                        -- ^ Witness
-    -> (Map k v -> (k -> v -> IO ()) -> IO a)  -- ^ Execute
+    -> (Map Id v -> (Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = do
   diagnostic $ "Before fileLock on " ++ shakeFiles </> ".shake.lock"
