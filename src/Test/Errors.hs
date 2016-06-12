@@ -185,7 +185,7 @@ test build obj = do
     -- check errors don't persist to the database, #428
     writeFile (obj "persist_failure.log") ""
     writeFile (obj "persist_failure.3") "test"
-    build ["persist_failure.1"]
+    build ["persist_failure.1","--sleep"]
     writeFile (obj "persist_failure.3") "die"
     crash ["persist_failure.1","--sleep"] []
     assertContents (obj "persist_failure.log") "[pre][post][err][pre]"
@@ -193,5 +193,5 @@ test build obj = do
     build ["persist_failure.1","--sleep"]
     assertContents (obj "persist_failure.log") "[pre][post][err][pre]"
     writeFile (obj "persist_failure.3") "more"
-    build ["persist_failure.1","--sleep"]
+    build ["persist_failure.1"]
     assertContents (obj "persist_failure.log") "[pre][post][err][pre][pre][post]"
