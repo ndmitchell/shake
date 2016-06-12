@@ -43,7 +43,7 @@ import Development.Shake.Classes
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Core.Database
-import Development.Shake.Internal.Core.Monad(getRO, getRW, getsRW, captureRAW, modifyRW, getsRO, unmodifyRW, putRW, tryRAW, throwRAW)
+import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Resource
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile
