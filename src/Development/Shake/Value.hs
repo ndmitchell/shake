@@ -68,7 +68,7 @@ newtype Key = Key Value
 data Value = forall a . Value
     {valueShow :: a -> String
     ,valueEq :: a -> a -> Bool
-    ,valueType :: a -> TypeRep
+    ,valueType :: TypeRep
     ,valueRnf :: a -> ()
     ,valueHash :: Int -> a -> Int
     ,valuePut :: a -> Put
@@ -80,21 +80,21 @@ data Value = forall a . Value
 newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
-newValue :: ShakeValue a => a -> Value
-newValue = Value show (==) typeOf rnf hashWithSalt put get
+newValue :: forall a . ShakeValue a => a -> Value
+newValue = Value show (==) (typeOf (undefined :: a)) rnf hashWithSalt put get
 
 typeKey :: Key -> TypeRep
 typeKey (Key v) = typeValue v
 
 typeValue :: Value -> TypeRep
-typeValue Value{..} = valueType value
+typeValue Value{..} = valueType
 
 fromKey :: Typeable a => Key -> a
 fromKey (Key v) = fromValue v
 
 castValue :: forall a . Typeable a => Value -> Maybe a
 castValue Value{..}
-    | valueType value == typeOf (undefined :: a) = Just $ unsafeCoerce value
+    | valueType == typeOf (undefined :: a) = Just $ unsafeCoerce value
     | otherwise = Nothing
 
 fromValue :: Typeable a => Value -> a
@@ -110,7 +110,7 @@ instance NFData Value where
     rnf Value{..} = valueRnf value
 
 instance Hashable Value where
-    hashWithSalt salt Value{..} = hashWithSalt salt (valueType value) `xor` valueHash salt value
+    hashWithSalt salt Value{..} = hashWithSalt salt valueType `xor` valueHash salt value
 
 instance Eq Value where
     a == b =
@@ -118,7 +118,7 @@ instance Eq Value where
             Value{valueType=at,value=a,valueEq=eq} ->
                 case b of
                     Value{valueType=bt,value=b} ->
-                        if at a /= bt b then False
+                        if at /= bt then False
                         else eq a (unsafeCoerce b)
 
 
@@ -175,8 +175,8 @@ instance Binary Witness where
 
 instance BinaryWith Witness Value where
     putWith ws Value{..} = do
-        let msg = "no witness for " ++ show (valueType value)
-        put $ fromMaybe (error msg) $ Map.lookup (valueType value) (witnessOut ws)
+        let msg = "no witness for " ++ show valueType
+        put $ fromMaybe (error msg) $ Map.lookup valueType (witnessOut ws)
         valuePut value
 
     getWith ws = do
