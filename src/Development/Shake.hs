@@ -85,8 +85,6 @@
 --     to disable parallel garbage collection. Parallel garbage collection in Shake
 --     programs typically goes slower than sequential garbage collection, while occupying many cores that
 --     could be used for running system commands.
---
---   /Acknowledgements/: Thanks to Austin Seipp for properly integrating the profiling code.
 module Development.Shake(
     -- * Core
     shake,
