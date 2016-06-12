@@ -96,6 +96,18 @@ main = shakenCwd test $ \args obj -> do
         need [obj "existing_dir"]
         writeFile' out ""
 
+    obj "persist_failure.1" %> \out -> do
+        liftIO $ appendFile "persist_failure.log" "[pre]"
+        need ["persist_failure.2"]
+        liftIO $ appendFile "persist_failure.log" "[post]"
+        writeFile' out ""
+    obj "persist_failure.2" %> \out -> do
+        src <- readFile' "persist_failure.3"
+        if src == "die" then do
+            liftIO $ appendFile "persist_failure.log" "[err]"
+            fail "die"
+        else
+            writeFileChanged out src
 
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
@@ -168,3 +180,17 @@ test build obj = do
 
     crash ["fresh_dir"] ["expected a file, got a directory","fresh_dir"]
     crash ["need_dir"] ["expected a file, got a directory","existing_dir"]
+
+    -- check errors don't persist to the database, #428
+    writeFile (obj "persist_failure.log") ""
+    writeFile (obj "persist_failure.3") "test"
+    build ["persist_failure.1"]
+    writeFile (obj "persist_failure.3") "die"
+    crash ["persist_failure.1"] []
+    assertContents (obj "persist_failure.log") "[pre][post][err][pre]"
+    writeFile (obj "persist_failure.3") "test"
+    build ["persist_failure.1"]
+    assertContents (obj "persist_failure.log") "[pre][post][err][pre]"
+    writeFile (obj "persist_failure.3") "more"
+    build ["persist_failure.1"]
+    assertContents (obj "persist_failure.log") "[pre][post][err][pre][pre][post]"
