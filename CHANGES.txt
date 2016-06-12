@@ -1,5 +1,7 @@
 Changelog for Shake
 
+    Documentation tweaks
+    Optimise the thread pool
     Fix progress output through wget
 0.15.8
     Extra base bounds to rule out building on GHC 7.4
