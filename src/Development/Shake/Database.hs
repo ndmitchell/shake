@@ -296,7 +296,6 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 journal i (k, Loaded r) -- we leave the DB lock before appending
                             Error _ -> do
                                 diagnostic $ "result " ++ atom k ++ " = error"
-                                journal i (k, Missing)
                             _ -> return ()
                 let norm = execute (addStack i k stack) k $ \res ->
                         reply $ case res of
