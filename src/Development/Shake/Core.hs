@@ -270,8 +270,7 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 registerWitnesses :: SRules m -> IO ()
 registerWitnesses SRules{..} =
     forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
-        registerWitness $ ruleKey r
-        registerWitness $ ruleValue r
+        registerWitness (ruleKey r) (ruleValue r)
 
 
 data RuleInfo m = RuleInfo

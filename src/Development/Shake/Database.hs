@@ -519,8 +519,7 @@ fromStepResult = fromValue . result
 
 withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
-    registerWitness $ StepKey ()
-    registerWitness $ Step 0
+    registerWitness (StepKey ()) (Step 0)
     witness <- currentWitness
     withStorage opts diagnostic witness $ \mp2 journal -> do
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
