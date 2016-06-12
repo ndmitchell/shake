@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.15.9
     Documentation tweaks
     Optimise the thread pool
     Fix progress output through wget
