@@ -63,10 +63,7 @@ withStorage
     -> w                        -- ^ Witness
     -> (Map Id v -> (Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{..} diagnostic witness act = do
-  diagnostic $ "Before fileLock on " ++ shakeFiles </> ".shake.lock"
-  withLockFile (shakeFiles </> ".shake.lock") $ do
-    diagnostic "After fileLock"
+withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
         bupfile = shakeFiles </> ".shake.backup"
     createDirectoryIfMissing True shakeFiles
@@ -198,6 +195,16 @@ withStorage ShakeOptions{..} diagnostic witness act = do
             flushThread shakeFlush h $ \out -> do
                 addTiming "With database"
                 act mp $ \k v -> out $ toChunk $ runPut $ putWith witness (k, v)
+
+
+withLockFileDiagnostic :: (String -> IO ()) -> FilePath -> IO a -> IO a
+withLockFileDiagnostic diagnostic file act = do
+    diagnostic $ "Before withLockFile on " ++ file
+    res <- withLockFile file $ do
+        diagnostic "Inside withLockFile"
+        act
+    diagnostic $ "After withLockFile"
+    return res
 
 
 -- We avoid calling flush too often on SSD drives, as that can be slow
