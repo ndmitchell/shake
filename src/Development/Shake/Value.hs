@@ -72,7 +72,6 @@ data Value = forall a . Value
     ,valueRnf :: a -> ()
     ,valueHash :: Int -> a -> Int
     ,valuePut :: a -> Put
-    ,valueGet :: Get a
     ,value :: a
     }
 
@@ -81,7 +80,7 @@ newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
 newValue :: forall a . ShakeValue a => a -> Value
-newValue = Value (typeOf (undefined :: a)) show (==) rnf hashWithSalt put get
+newValue = Value (typeOf (undefined :: a)) show (==) rnf hashWithSalt put
 
 typeKey :: Key -> TypeRep
 typeKey (Key v) = typeValue v
@@ -122,12 +121,11 @@ instance Eq Value where
 -- BINARY INSTANCES
 
 {-# NOINLINE witness #-}
-witness :: IORef (Map.HashMap TypeRep Value)
+witness :: IORef (Map.HashMap TypeRep (Get Value))
 witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: ShakeValue a => a -> IO ()
-registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (newValue $ err msg `asTypeOf` x) mp, ())
-    where msg = "registerWitness, type " ++ show (typeOf x)
+registerWitness x = atomicModifyIORef witness $ \mp -> (Map.insert (typeOf x) (do v <- get; return $ newValue $ v `asTypeOf` x) mp, ())
 
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
@@ -139,9 +137,9 @@ toStableList = sortBy (compare `on` show . fst) . Map.toList
 
 data Witness = Witness
     {typeNames :: [String] -- the canonical data, the names of the types
-    ,witnessIn :: Map.HashMap Word16 Value -- for reading in, the find the values (some may be missing)
+    ,witnessIn :: Map.HashMap Word16 (Get Value) -- for reading in, the find the values (some may be missing)
     ,witnessOut :: Map.HashMap TypeRep Word16 -- for writing out, find the value
-    } deriving Show
+    }
 
 instance Eq Witness where
     -- Type names are produced by toStableList so should to remain consistent
@@ -184,6 +182,4 @@ instance BinaryWith Witness Value where
             Nothing -> error $
                 -- should not happen, unless proper data corruption
                 "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
-            Just v@Value{..} -> do
-                x <- valueGet
-                return Value{value=x, ..}
+            Just get -> get
