@@ -228,6 +228,7 @@ getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 -- | Get the directories in a directory, not including @.@ or @..@.
 --   All directories are relative to the argument directory. The result is tracked as a
 --   dependency, and if it changes the rule will rerun in subsequent builds.
+--   The rules about creating entries described in 'getDirectoryFiles' also apply here.
 --
 -- > getDirectoryDirs "/Users"
 -- >    -- Return all directories in the /Users directory
