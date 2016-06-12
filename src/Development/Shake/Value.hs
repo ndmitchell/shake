@@ -66,9 +66,9 @@ newtype Key = Key Value
     deriving (Eq,Hashable,NFData,BinaryWith Witness)
 
 data Value = forall a . Value
-    {valueShow :: a -> String
+    {valueType :: TypeRep
+    ,valueShow :: a -> String
     ,valueEq :: a -> a -> Bool
-    ,valueType :: TypeRep
     ,valueRnf :: a -> ()
     ,valueHash :: Int -> a -> Int
     ,valuePut :: a -> Put
@@ -81,7 +81,7 @@ newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
 newValue :: forall a . ShakeValue a => a -> Value
-newValue = Value show (==) (typeOf (undefined :: a)) rnf hashWithSalt put get
+newValue = Value (typeOf (undefined :: a)) show (==) rnf hashWithSalt put get
 
 typeKey :: Key -> TypeRep
 typeKey (Key v) = typeValue v
