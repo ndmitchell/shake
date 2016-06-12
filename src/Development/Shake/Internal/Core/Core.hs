@@ -40,9 +40,10 @@ import Data.Monoid
 import System.IO.Unsafe
 
 import Development.Shake.Classes
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Core.Database
-import Development.Shake.Internal.Core.Monad
+import Development.Shake.Internal.Core.Monad(getRO, getRW, getsRW, captureRAW, modifyRW, getsRO, unmodifyRW, putRW, tryRAW, throwRAW)
 import Development.Shake.Internal.Resource
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile
@@ -273,13 +274,6 @@ registerWitnesses SRules{..} =
         registerWitness (ruleKey r) (ruleValue r)
 
 
-data RuleInfo m = RuleInfo
-    {stored :: Key -> IO (Maybe Value)
-    ,equal :: Key -> Value -> Value -> EqualCost
-    ,execute :: Key -> m Value
-    ,resultType :: TypeRep
-    }
-
 createRuleinfo :: ShakeOptions -> SRules Action -> Map.HashMap TypeRep (RuleInfo Action)
 createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
@@ -317,61 +311,6 @@ runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
 
 ---------------------------------------------------------------------
 -- MAKE
-
--- global constants of Action
-data Global = Global
-    {globalDatabase :: Database
-    ,globalPool :: Pool
-    ,globalCleanup :: Cleanup
-    ,globalTimestamp :: IO Seconds
-    ,globalRules :: Map.HashMap TypeRep (RuleInfo Action)
-    ,globalOutput :: Verbosity -> String -> IO ()
-    ,globalOptions  :: ShakeOptions
-    ,globalDiagnostic :: String -> IO ()
-    ,globalLint :: String -> IO ()
-    ,globalAfter :: IORef [IO ()]
-    ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
-    ,globalProgress :: IO Progress
-    }
-
-
--- local variables of Action
-data Local = Local
-    -- constants
-    {localStack :: Stack
-    -- stack scoped local variables
-    ,localVerbosity :: Verbosity
-    ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
-    -- mutable local variables
-    ,localDepends :: [Depends] -- built up in reverse
-    ,localDiscount :: !Seconds
-    ,localTraces :: [Trace] -- in reverse
-    ,localTrackAllows :: [Key -> Bool]
-    ,localTrackUsed :: [Key]
-    }
-
--- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
---   Action values are used by 'rule' and 'action'. The 'Action' monad tracks the dependencies of a 'Rule'.
-newtype Action a = Action {fromAction :: RAW Global Local a}
-    deriving (Functor, Applicative, Monad, MonadIO)
-
-
-actionBoom :: Bool -> Action a -> IO b -> Action a
-actionBoom runOnSuccess act clean = do
-    cleanup <- Action $ getsRO globalCleanup
-    clean <- liftIO $ addCleanup cleanup $ void clean
-    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (clean True) >> throwRAW e
-    liftIO $ clean runOnSuccess
-    return res
-
--- | If an exception is raised by the 'Action', perform some 'IO'.
-actionOnException :: Action a -> IO b -> Action a
-actionOnException = actionBoom False
-
--- | After an 'Action', perform some 'IO', even if there is an exception.
-actionFinally :: Action a -> IO b -> Action a
-actionFinally = actionBoom True
-
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
@@ -482,10 +421,6 @@ abbreviate abbrev = f
         f [] = []
         f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
         f (x:xs) = x : f xs
-
-
-runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
-runAction g l (Action x) = runRAW g l x
 
 
 runAfter :: IO () -> Action ()

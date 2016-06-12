@@ -125,6 +125,7 @@ library
         Development.Ninja.Type
         Development.Shake.Internal.Args
         Development.Shake.Internal.ByteString
+        Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Core
         Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Database
@@ -218,6 +219,7 @@ executable shake
         Development.Shake.Classes
         Development.Shake.Internal.CmdOption
         Development.Shake.Command
+        Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Core
         Development.Shake.Internal.Core.Database
         Development.Shake.Internal.Demo
@@ -320,6 +322,7 @@ test-suite shake-test
         Development.Shake.Internal.CmdOption
         Development.Shake.Command
         Development.Shake.Config
+        Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Core
         Development.Shake.Internal.Core.Database
         Development.Shake.Internal.Demo
