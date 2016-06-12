@@ -1,10 +1,10 @@
 
-module Development.Shake.Rules.OrderOnly(
+module Development.Shake.Internal.Rules.OrderOnly(
      orderOnly, orderOnlyBS
     ) where
 
-import Development.Shake.Core
-import Development.Shake.Rules.File
+import Development.Shake.Internal.Core
+import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString.Char8 as BS
 
 

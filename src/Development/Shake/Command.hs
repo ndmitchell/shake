@@ -38,13 +38,13 @@ import General.Process
 import Control.Applicative
 import Prelude
 
-import Development.Shake.CmdOption
-import Development.Shake.Core
+import Development.Shake.Internal.CmdOption
+import Development.Shake.Internal.Core
 import Development.Shake.FilePath
-import Development.Shake.FilePattern
-import Development.Shake.Types
-import Development.Shake.Rules.File
-import Development.Shake.Derived
+import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.Types
+import Development.Shake.Internal.Rules.File
+import Development.Shake.Internal.Derived
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION

@@ -5,13 +5,13 @@ We can't rely on getting any exceptions or termination at the end, so we'd bette
 We store a series of records, and if they contain twice as many records as needed, we compress
 -}
 
-module Development.Shake.Storage(
+module Development.Shake.Internal.Storage(
     withStorage
     ) where
 
 import General.Binary
 import General.Intern
-import Development.Shake.Types
+import Development.Shake.Internal.Types
 import General.Timing
 import General.FileLock
 

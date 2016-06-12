@@ -24,10 +24,10 @@ import Prelude
 
 -- Internal imports
 import General.Timing(addTiming)
-import Development.Shake.ByteString(filepathNormalise, parseMakefile)
-import Development.Shake.Errors(errorStructured)
-import Development.Shake.Rules.File(needBS, neededBS)
-import Development.Shake.Rules.OrderOnly(orderOnlyBS)
+import Development.Shake.Internal.ByteString(filepathNormalise, parseMakefile)
+import Development.Shake.Internal.Errors(errorStructured)
+import Development.Shake.Internal.Rules.File(needBS, neededBS)
+import Development.Shake.Internal.Rules.OrderOnly(orderOnlyBS)
 
 
 runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))

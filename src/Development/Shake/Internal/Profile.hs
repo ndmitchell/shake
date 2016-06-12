@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, RecordWildCards #-}
 
-module Development.Shake.Profile(ProfileEntry(..), ProfileTrace(..), writeProfile) where
+module Development.Shake.Internal.Profile(ProfileEntry(..), ProfileTrace(..), writeProfile) where
 
 import General.Template
 import Data.Tuple.Extra

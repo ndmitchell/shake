@@ -148,22 +148,22 @@ import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
 import Control.Monad.IO.Class
-import Development.Shake.Types
-import Development.Shake.Core hiding (trackAllow)
-import Development.Shake.Derived
-import Development.Shake.Errors
-import Development.Shake.Progress
-import Development.Shake.Args
-import Development.Shake.Shake
+import Development.Shake.Internal.Types
+import Development.Shake.Internal.Core hiding (trackAllow)
+import Development.Shake.Internal.Derived
+import Development.Shake.Internal.Errors
+import Development.Shake.Internal.Progress
+import Development.Shake.Internal.Args
+import Development.Shake.Internal.Shake
 
 import Development.Shake.Command
-import Development.Shake.Rules.Directory
-import Development.Shake.Rules.File
-import Development.Shake.FilePattern
-import Development.Shake.Rules.Files
-import Development.Shake.Rules.Oracle
-import Development.Shake.Rules.OrderOnly
-import Development.Shake.Rules.Rerun
+import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.Rules.Directory
+import Development.Shake.Internal.Rules.File
+import Development.Shake.Internal.Rules.Files
+import Development.Shake.Internal.Rules.Oracle
+import Development.Shake.Internal.Rules.OrderOnly
+import Development.Shake.Internal.Rules.Rerun
 
 
 ---------------------------------------------------------------------

@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
-module Development.Shake.Database(
+module Development.Shake.Internal.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
@@ -14,14 +14,14 @@ module Development.Shake.Database(
 
 import Development.Shake.Classes
 import General.Binary
-import Development.Shake.Pool
-import Development.Shake.Value
-import Development.Shake.Errors
-import Development.Shake.Storage
-import Development.Shake.Types
-import Development.Shake.Special
-import Development.Shake.Profile
-import Development.Shake.Monad
+import Development.Shake.Internal.Pool
+import Development.Shake.Internal.Value
+import Development.Shake.Internal.Errors
+import Development.Shake.Internal.Storage
+import Development.Shake.Internal.Types
+import Development.Shake.Internal.Special
+import Development.Shake.Internal.Profile
+import Development.Shake.Internal.Monad
 import General.String
 import General.Intern as Intern
 

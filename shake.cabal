@@ -123,32 +123,32 @@ library
         Development.Ninja.Lexer
         Development.Ninja.Parse
         Development.Ninja.Type
-        Development.Shake.Args
-        Development.Shake.ByteString
-        Development.Shake.Core
-        Development.Shake.CmdOption
-        Development.Shake.Database
-        Development.Shake.Demo
-        Development.Shake.Derived
-        Development.Shake.Errors
-        Development.Shake.FileInfo
-        Development.Shake.FilePattern
-        Development.Shake.Monad
-        Development.Shake.Pool
-        Development.Shake.Profile
-        Development.Shake.Progress
-        Development.Shake.Resource
-        Development.Shake.Rules.Directory
-        Development.Shake.Rules.File
-        Development.Shake.Rules.Files
-        Development.Shake.Rules.Oracle
-        Development.Shake.Rules.OrderOnly
-        Development.Shake.Rules.Rerun
-        Development.Shake.Shake
-        Development.Shake.Special
-        Development.Shake.Storage
-        Development.Shake.Types
-        Development.Shake.Value
+        Development.Shake.Internal.Args
+        Development.Shake.Internal.ByteString
+        Development.Shake.Internal.Core
+        Development.Shake.Internal.CmdOption
+        Development.Shake.Internal.Database
+        Development.Shake.Internal.Demo
+        Development.Shake.Internal.Derived
+        Development.Shake.Internal.Errors
+        Development.Shake.Internal.FileInfo
+        Development.Shake.Internal.FilePattern
+        Development.Shake.Internal.Monad
+        Development.Shake.Internal.Pool
+        Development.Shake.Internal.Profile
+        Development.Shake.Internal.Progress
+        Development.Shake.Internal.Resource
+        Development.Shake.Internal.Rules.Directory
+        Development.Shake.Internal.Rules.File
+        Development.Shake.Internal.Rules.Files
+        Development.Shake.Internal.Rules.Oracle
+        Development.Shake.Internal.Rules.OrderOnly
+        Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.Shake
+        Development.Shake.Internal.Special
+        Development.Shake.Internal.Storage
+        Development.Shake.Internal.Types
+        Development.Shake.Internal.Value
         General.Bilist
         General.Binary
         General.Cleanup
@@ -213,37 +213,37 @@ executable shake
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Shake
-        Development.Shake.Args
-        Development.Shake.ByteString
+        Development.Shake.Internal.Args
+        Development.Shake.Internal.ByteString
         Development.Shake.Classes
-        Development.Shake.CmdOption
+        Development.Shake.Internal.CmdOption
         Development.Shake.Command
-        Development.Shake.Core
-        Development.Shake.Database
-        Development.Shake.Demo
-        Development.Shake.Derived
-        Development.Shake.Errors
-        Development.Shake.FileInfo
+        Development.Shake.Internal.Core
+        Development.Shake.Internal.Database
+        Development.Shake.Internal.Demo
+        Development.Shake.Internal.Derived
+        Development.Shake.Internal.Errors
+        Development.Shake.Internal.FileInfo
         Development.Shake.FilePath
-        Development.Shake.FilePattern
+        Development.Shake.Internal.FilePattern
         Development.Shake.Forward
-        Development.Shake.Monad
-        Development.Shake.Pool
-        Development.Shake.Profile
-        Development.Shake.Progress
-        Development.Shake.Resource
+        Development.Shake.Internal.Monad
+        Development.Shake.Internal.Pool
+        Development.Shake.Internal.Profile
+        Development.Shake.Internal.Progress
+        Development.Shake.Internal.Resource
         Development.Shake.Rule
-        Development.Shake.Rules.Directory
-        Development.Shake.Rules.File
-        Development.Shake.Rules.Files
-        Development.Shake.Rules.Oracle
-        Development.Shake.Rules.OrderOnly
-        Development.Shake.Rules.Rerun
-        Development.Shake.Shake
-        Development.Shake.Special
-        Development.Shake.Storage
-        Development.Shake.Types
-        Development.Shake.Value
+        Development.Shake.Internal.Rules.Directory
+        Development.Shake.Internal.Rules.File
+        Development.Shake.Internal.Rules.Files
+        Development.Shake.Internal.Rules.Oracle
+        Development.Shake.Internal.Rules.OrderOnly
+        Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.Shake
+        Development.Shake.Internal.Special
+        Development.Shake.Internal.Storage
+        Development.Shake.Internal.Types
+        Development.Shake.Internal.Value
         General.Bilist
         General.Binary
         General.Cleanup
@@ -314,39 +314,39 @@ test-suite shake-test
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Shake
-        Development.Shake.Args
-        Development.Shake.ByteString
+        Development.Shake.Internal.Args
+        Development.Shake.Internal.ByteString
         Development.Shake.Classes
-        Development.Shake.CmdOption
+        Development.Shake.Internal.CmdOption
         Development.Shake.Command
         Development.Shake.Config
-        Development.Shake.Core
-        Development.Shake.Database
-        Development.Shake.Demo
-        Development.Shake.Derived
-        Development.Shake.Errors
-        Development.Shake.FileInfo
+        Development.Shake.Internal.Core
+        Development.Shake.Internal.Database
+        Development.Shake.Internal.Demo
+        Development.Shake.Internal.Derived
+        Development.Shake.Internal.Errors
+        Development.Shake.Internal.FileInfo
         Development.Shake.FilePath
-        Development.Shake.FilePattern
+        Development.Shake.Internal.FilePattern
         Development.Shake.Forward
-        Development.Shake.Monad
-        Development.Shake.Pool
-        Development.Shake.Profile
-        Development.Shake.Progress
-        Development.Shake.Resource
+        Development.Shake.Internal.Monad
+        Development.Shake.Internal.Pool
+        Development.Shake.Internal.Profile
+        Development.Shake.Internal.Progress
+        Development.Shake.Internal.Resource
         Development.Shake.Rule
-        Development.Shake.Rules.Directory
-        Development.Shake.Rules.File
-        Development.Shake.Rules.Files
-        Development.Shake.Rules.Oracle
-        Development.Shake.Rules.OrderOnly
-        Development.Shake.Rules.Rerun
-        Development.Shake.Shake
-        Development.Shake.Special
-        Development.Shake.Storage
-        Development.Shake.Types
+        Development.Shake.Internal.Rules.Directory
+        Development.Shake.Internal.Rules.File
+        Development.Shake.Internal.Rules.Files
+        Development.Shake.Internal.Rules.Oracle
+        Development.Shake.Internal.Rules.OrderOnly
+        Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.Shake
+        Development.Shake.Internal.Special
+        Development.Shake.Internal.Storage
+        Development.Shake.Internal.Types
         Development.Shake.Util
-        Development.Shake.Value
+        Development.Shake.Internal.Value
         General.Bilist
         General.Binary
         General.Cleanup

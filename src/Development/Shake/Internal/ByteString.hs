@@ -1,5 +1,5 @@
 
-module Development.Shake.ByteString(parseMakefile, filepathNormalise, linesCR) where
+module Development.Shake.Internal.ByteString(parseMakefile, filepathNormalise, linesCR) where
 
 import qualified Data.ByteString.Char8 as BS
 import qualified System.FilePath as Native

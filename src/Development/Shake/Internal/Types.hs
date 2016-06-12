@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
 
 -- | Types exposed to the user
-module Development.Shake.Types(
+module Development.Shake.Internal.Types(
     Progress(..), Verbosity(..), Assume(..), Lint(..), Change(..), EqualCost(..),
     ShakeOptions(..), shakeOptions
     ) where
@@ -10,11 +10,11 @@ import Data.Data
 import Data.List
 import Data.Dynamic
 import qualified Data.HashMap.Strict as HashMap
-import Development.Shake.Progress
-import Development.Shake.FilePattern
+import Development.Shake.Internal.Progress
+import Development.Shake.Internal.FilePattern
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
-import Development.Shake.CmdOption
+import Development.Shake.Internal.CmdOption
 
 
 -- | The current assumptions made by the build system, used by 'shakeAssume'. These options

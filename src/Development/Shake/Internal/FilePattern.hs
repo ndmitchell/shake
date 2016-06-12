@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, ViewPatterns #-}
 
-module Development.Shake.FilePattern(
+module Development.Shake.Internal.FilePattern(
     -- * Primitive API, as exposed
     FilePattern, (?==), (<//>),
     -- * Optimisation opportunities
@@ -13,7 +13,7 @@ module Development.Shake.FilePattern(
     internalTest, isRelativePath, isRelativePattern
     ) where
 
-import Development.Shake.Errors
+import Development.Shake.Internal.Errors
 import System.FilePath(isPathSeparator)
 import Data.List.Extra
 import Control.Applicative

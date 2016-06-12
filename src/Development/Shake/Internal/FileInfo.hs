@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
-module Development.Shake.FileInfo(
+module Development.Shake.Internal.FileInfo(
     FileInfo, fileInfoEq, fileInfoNeq,
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
@@ -8,7 +8,7 @@ module Development.Shake.FileInfo(
 
 import Control.Exception.Extra
 import Development.Shake.Classes
-import Development.Shake.Errors
+import Development.Shake.Internal.Errors
 import General.String
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char

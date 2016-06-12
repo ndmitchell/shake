@@ -19,7 +19,7 @@ import Development.Shake.FilePath
 
 -- Internal imports
 import General.String(BSU, unpackU, packU)
-import Development.Shake.FileInfo(ModTime, getFileInfo)
+import Development.Shake.Internal.FileInfo(ModTime, getFileInfo)
 
 infix 1 ??>
 

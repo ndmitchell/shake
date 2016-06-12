@@ -1,11 +1,11 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, ConstraintKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Development.Shake.Rules.Oracle(
+module Development.Shake.Internal.Rules.Oracle(
     addOracle, askOracle, askOracleWith
     ) where
 
-import Development.Shake.Core
+import Development.Shake.Internal.Core
 import Development.Shake.Classes
 import Control.Applicative
 import Prelude

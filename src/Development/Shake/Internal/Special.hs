@@ -1,12 +1,12 @@
 
 -- | This module contains rule types that have special behaviour in some way.
 --   Everything in this module is a hack.
-module Development.Shake.Special(
+module Development.Shake.Internal.Special(
     specialAlwaysRebuilds,
     specialIsFileKey
     ) where
 
-import Development.Shake.Value
+import Development.Shake.Internal.Value
 import Data.Typeable
 
 

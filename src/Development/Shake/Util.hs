@@ -6,9 +6,9 @@ module Development.Shake.Util(
     ) where
 
 import Development.Shake
-import Development.Shake.Rules.File
+import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString.Char8 as BS
-import qualified Development.Shake.ByteString as BS
+import qualified Development.Shake.Internal.ByteString as BS
 import Data.Tuple.Extra
 import Control.Applicative
 import Data.List

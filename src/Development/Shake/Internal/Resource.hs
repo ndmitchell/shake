@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, ViewPatterns #-}
 
-module Development.Shake.Resource(
+module Development.Shake.Internal.Resource(
     Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
     ) where
 
@@ -11,7 +11,7 @@ import Control.Exception.Extra
 import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
-import Development.Shake.Pool
+import Development.Shake.Internal.Pool
 import System.Time.Extra
 import Data.Monoid
 import Prelude

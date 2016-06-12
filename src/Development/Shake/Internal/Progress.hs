@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ViewPatterns, ForeignFunctionInterface #-}
 
 -- | Progress tracking
-module Development.Shake.Progress(
+module Development.Shake.Internal.Progress(
     Progress(..),
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
     ProgressEntry(..), progressReplay, writeProgressReport -- INTERNAL USE ONLY

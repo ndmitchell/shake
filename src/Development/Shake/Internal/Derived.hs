@@ -1,5 +1,5 @@
 
-module Development.Shake.Derived(
+module Development.Shake.Internal.Derived(
     system', systemCwd, systemOutput,
     copyFile', copyFileChanged,
     readFile', readFileLines,
@@ -18,10 +18,10 @@ import System.Directory
 import System.Exit
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
-import Development.Shake.Core
-import Development.Shake.Rules.File
+import Development.Shake.Internal.Core
+import Development.Shake.Internal.Rules.File
 import Development.Shake.FilePath
-import Development.Shake.Types
+import Development.Shake.Internal.Types
 import qualified Data.ByteString as BS
 import Data.Hashable
 import Prelude

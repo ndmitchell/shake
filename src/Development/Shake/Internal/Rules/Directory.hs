@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards, FlexibleContexts #-}
 
 -- | Both System.Directory and System.Environment wrappers
-module Development.Shake.Rules.Directory(
+module Development.Shake.Internal.Rules.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv, getEnvWithDefault,
@@ -22,10 +22,10 @@ import qualified Data.HashSet as Set
 import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
-import Development.Shake.Core
+import Development.Shake.Internal.Core
 import Development.Shake.Classes
 import Development.Shake.FilePath
-import Development.Shake.FilePattern
+import Development.Shake.Internal.FilePattern
 import General.Extra
 import Prelude
 

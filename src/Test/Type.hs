@@ -6,7 +6,7 @@ import Development.Shake.Forward
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import General.String
 import General.Extra
-import Development.Shake.FileInfo
+import Development.Shake.Internal.FileInfo
 import Development.Shake.FilePath
 import Paths_shake
 

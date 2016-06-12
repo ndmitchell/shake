@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, PatternGuards, RecordWildCards, CPP #-}
 
 -- | Errors seen by the user
-module Development.Shake.Errors(
+module Development.Shake.Internal.Errors(
     ShakeException(..),
     errorStructured, err,
     errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,

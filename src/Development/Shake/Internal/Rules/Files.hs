@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
-module Development.Shake.Rules.Files(
+module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>)
     ) where
 
@@ -12,15 +12,15 @@ import System.Directory
 import Control.Applicative
 import Prelude
 
-import Development.Shake.Core hiding (trackAllow)
+import Development.Shake.Internal.Core hiding (trackAllow)
 import General.Extra
 import General.String
 import Development.Shake.Classes
-import Development.Shake.Rules.File
-import Development.Shake.FilePattern
+import Development.Shake.Internal.Rules.File
+import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
-import Development.Shake.Types
-import Development.Shake.ByteString
+import Development.Shake.Internal.Types
+import Development.Shake.Internal.ByteString
 
 
 infix 1 &?>, &%>

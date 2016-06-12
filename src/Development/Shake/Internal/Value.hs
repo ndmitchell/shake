@@ -4,7 +4,7 @@
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.
 -}
-module Development.Shake.Value(
+module Development.Shake.Internal.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
     Witness, currentWitness, registerWitness,
@@ -13,7 +13,7 @@ module Development.Shake.Value(
 
 import General.Binary
 import Development.Shake.Classes
-import Development.Shake.Errors
+import Development.Shake.Internal.Errors
 import Data.Typeable
 
 import Data.Bits

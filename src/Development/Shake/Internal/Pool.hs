@@ -1,6 +1,6 @@
 
 -- | Thread pool implementation.
-module Development.Shake.Pool(
+module Development.Shake.Internal.Pool(
     Pool, runPool,
     addPool, addPoolPriority,
     increasePool

@@ -1,6 +1,6 @@
 
 -- | Demo tutorial, accessed with --demo
-module Development.Shake.Demo(demo) where
+module Development.Shake.Internal.Demo(demo) where
 
 import Paths_shake
 import Development.Shake.Command

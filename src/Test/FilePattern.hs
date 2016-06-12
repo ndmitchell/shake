@@ -1,7 +1,7 @@
 
 module Test.FilePattern(main) where
 
-import Development.Shake.FilePattern
+import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
 import Control.Monad
 import System.IO.Unsafe

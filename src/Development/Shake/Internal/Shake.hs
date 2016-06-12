@@ -1,14 +1,14 @@
 
 -- | The main entry point that calls all the default rules
-module Development.Shake.Shake(shake) where
+module Development.Shake.Internal.Shake(shake) where
 
-import Development.Shake.Types
+import Development.Shake.Internal.Types
 import General.Timing
-import Development.Shake.Core
+import Development.Shake.Internal.Core
 
-import Development.Shake.Rules.Directory
-import Development.Shake.Rules.File
-import Development.Shake.Rules.Rerun
+import Development.Shake.Internal.Rules.Directory
+import Development.Shake.Internal.Rules.File
+import Development.Shake.Internal.Rules.Rerun
 
 
 -- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".
