@@ -17,7 +17,6 @@ import Development.Shake.Errors
 import Data.Typeable
 
 import Data.Bits
-import Data.Function
 import Data.IORef
 import Data.List
 import Data.Maybe
@@ -131,9 +130,9 @@ registerWitness k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
 -- elements were added and stable between program executions.
--- Cannot rely on hash (not pure in hashable-1.2) or compare (not available before 7.2)
+-- Don't rely on the hashmap order since that might not be stable, if different salting is applied.
 toStableList :: Map.HashMap TypeRep v -> [(TypeRep,v)]
-toStableList = sortBy (compare `on` show . fst) . Map.toList
+toStableList = sortOn fst . Map.toList
 
 
 data Witness = Witness
