@@ -18,7 +18,7 @@ import Data.Typeable
 
 import Data.Bits
 import Data.IORef
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Char8 as BS
