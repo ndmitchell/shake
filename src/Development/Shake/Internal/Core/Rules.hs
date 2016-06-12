@@ -268,7 +268,7 @@ createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (sto
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
 
-runStored :: Map.HashMap TypeRep RuleInfo-> Key -> IO (Maybe Value)
+runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just RuleInfo{..} -> stored k
