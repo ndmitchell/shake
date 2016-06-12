@@ -186,11 +186,11 @@ test build obj = do
     writeFile (obj "persist_failure.3") "test"
     build ["persist_failure.1"]
     writeFile (obj "persist_failure.3") "die"
-    crash ["persist_failure.1"] []
+    crash ["persist_failure.1","--sleep"] []
     assertContents (obj "persist_failure.log") "[pre][post][err][pre]"
     writeFile (obj "persist_failure.3") "test"
-    build ["persist_failure.1"]
+    build ["persist_failure.1","--sleep"]
     assertContents (obj "persist_failure.log") "[pre][post][err][pre]"
     writeFile (obj "persist_failure.3") "more"
-    build ["persist_failure.1"]
+    build ["persist_failure.1","--sleep"]
     assertContents (obj "persist_failure.log") "[pre][post][err][pre][pre][post]"
