@@ -7,6 +7,7 @@ module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,
     getShakeOptions, getProgress,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
+    blockApply, unsafeAllowApply
     ) where
 
 import Control.Exception.Extra
@@ -170,3 +171,17 @@ withVerbosity new = Action . unmodifyRW f . fromAction
 --   not turn off any 'Diagnostic' tracing.
 quietly :: Action a -> Action a
 quietly = withVerbosity Quiet
+
+
+---------------------------------------------------------------------
+-- BLOCK APPLY
+
+unsafeAllowApply :: Action a -> Action a
+unsafeAllowApply  = applyBlockedBy Nothing
+
+blockApply :: String -> Action a -> Action a
+blockApply = applyBlockedBy . Just
+
+applyBlockedBy :: Maybe String -> Action a -> Action a
+applyBlockedBy reason = Action . unmodifyRW f . fromAction
+    where f s0 = (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
