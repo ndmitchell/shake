@@ -24,7 +24,6 @@ import Control.Monad.IO.Class
 import Data.Typeable
 import Data.Function
 import Data.Either.Extra
-import Numeric.Extra
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
@@ -49,7 +48,6 @@ import General.Timing
 import General.Extra
 import General.Concurrent
 import General.Cleanup
-import General.String
 import Prelude
 
 ---------------------------------------------------------------------
@@ -237,29 +235,6 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 --   use 'apply' to allow parallelism.
 apply1 :: Rule key value => key -> Action value
 apply1 = fmap head . apply . return
-
-
--- | Write an action to the trace list, along with the start/end time of running the IO action.
---   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.
---   The trace list is used for profile reports (see 'shakeReport').
---
---   By default 'traced' prints some useful extra context about what
---   Shake is building, e.g.:
---
--- > # traced message (for myobject.o)
---
---   To suppress the output of 'traced' (for example you want more control
---   over the message using 'putNormal'), use the 'quietly' combinator.
-traced :: String -> IO a -> Action a
-traced msg act = do
-    Global{..} <- Action getRO
-    stack <- Action $ getsRW localStack
-    start <- liftIO globalTimestamp
-    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
-    res <- liftIO act
-    stop <- liftIO globalTimestamp
-    Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop) : localTraces s}
-    return res
 
 
 ---------------------------------------------------------------------

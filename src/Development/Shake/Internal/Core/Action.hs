@@ -7,7 +7,8 @@ module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,
     getShakeOptions, getProgress,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    blockApply, unsafeAllowApply
+    blockApply, unsafeAllowApply,
+    traced
     ) where
 
 import Control.Exception.Extra
@@ -22,6 +23,7 @@ import Data.Maybe
 import Data.IORef
 import System.IO.Extra
 import System.Time.Extra
+import Numeric.Extra
 
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Core.Database
@@ -29,6 +31,7 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
 import General.Cleanup
+import General.String
 import Prelude
 
 ---------------------------------------------------------------------
@@ -185,3 +188,29 @@ blockApply = applyBlockedBy . Just
 applyBlockedBy :: Maybe String -> Action a -> Action a
 applyBlockedBy reason = Action . unmodifyRW f . fromAction
     where f s0 = (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
+
+
+---------------------------------------------------------------------
+-- TRACING
+
+-- | Write an action to the trace list, along with the start/end time of running the IO action.
+--   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.
+--   The trace list is used for profile reports (see 'shakeReport').
+--
+--   By default 'traced' prints some useful extra context about what
+--   Shake is building, e.g.:
+--
+-- > # traced message (for myobject.o)
+--
+--   To suppress the output of 'traced' (for example you want more control
+--   over the message using 'putNormal'), use the 'quietly' combinator.
+traced :: String -> IO a -> Action a
+traced msg act = do
+    Global{..} <- Action getRO
+    stack <- Action $ getsRW localStack
+    start <- liftIO globalTimestamp
+    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
+    res <- liftIO act
+    stop <- liftIO globalTimestamp
+    Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop) : localTraces s}
+    return res
