@@ -51,18 +51,18 @@ data RuleInfo = RuleInfo
 
 -- global constants of Action
 data Global = Global
-    {globalDatabase :: Database
-    ,globalPool :: Pool
-    ,globalCleanup :: Cleanup
-    ,globalTimestamp :: IO Seconds
-    ,globalRules :: Map.HashMap TypeRep RuleInfo
-    ,globalOutput :: Verbosity -> String -> IO ()
-    ,globalOptions  :: ShakeOptions
-    ,globalDiagnostic :: String -> IO ()
-    ,globalLint :: String -> IO ()
-    ,globalAfter :: IORef [IO ()]
-    ,globalTrackAbsent :: IORef [(Key, Key)] -- in rule fst, snd must be absent
-    ,globalProgress :: IO Progress
+    {globalDatabase :: Database -- ^ Database, contains knowledge of the state of each key
+    ,globalPool :: Pool -- ^ Pool, for queuing new elements
+    ,globalCleanup :: Cleanup -- ^ Cleanup operations
+    ,globalTimestamp :: IO Seconds -- ^ Clock saying how many seconds through the build
+    ,globalRules :: Map.HashMap TypeRep RuleInfo -- ^ Rules for this build
+    ,globalOutput :: Verbosity -> String -> IO () -- ^ Output function
+    ,globalOptions  :: ShakeOptions -- ^ Shake options
+    ,globalDiagnostic :: String -> IO () -- ^ Debugging function
+    ,globalLint :: String -> IO () -- ^ Run lint checking
+    ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
+    ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
+    ,globalProgress :: IO Progress -- ^ Request current progress state
     }
 
 -- local variables of Action
