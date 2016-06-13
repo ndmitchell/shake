@@ -120,7 +120,7 @@ class (ShakeValue key, ShakeValue value) => Rule key value where
     equalValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
 
 
-data ARule = forall key value . Rule key value => ARule (key -> Maybe (Action value))
+data UserRule_ = forall key value . Rule key value => UserRule_ (key -> Maybe (Action value))
 
 ruleKey :: (key -> Maybe (Action value)) -> key
 ruleKey = err "ruleKey"
@@ -150,7 +150,7 @@ runRules opts (Rules r) = do
 
 data SRules = SRules
     {actions :: [Action ()]
-    ,userRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule)]) -- higher fst is higher priority
+    ,userRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,UserRule_)]) -- higher fst is higher priority
     }
 
 instance Monoid SRules where
@@ -170,7 +170,7 @@ instance Monoid a => Monoid (Rules a) where
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
 addUserRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-addUserRule r = newRules mempty{userRules = Map.singleton k (k, v, [(1,ARule r)])}
+addUserRule r = newRules mempty{userRules = Map.singleton k (k, v, [(1,UserRule_ r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
@@ -214,7 +214,7 @@ alternatives = modifyRules $ \r -> r{userRules = Map.map f $ userRules r}
         f (k, v, []) = (k, v, [])
         f (k, v, xs) = let (is,rs) = unzip xs in (k, v, [(maximum is, foldl1' g rs)])
 
-        g (ARule a) (ARule b) = ARule $ \x -> a x `mplus` b2 x
+        g (UserRule_ a) (UserRule_ b) = UserRule_ $ \x -> a x `mplus` b2 x
             where b2 = fmap (fmap (fromJust . cast)) . b . fromJust . cast
 
 
@@ -245,25 +245,25 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems userRules) $ \(_, _, (_,ARule r):_) -> do
+    forM_ (Map.elems userRules) $ \(_, _, (_,UserRule_ r):_) -> do
         registerWitness (ruleKey r) (ruleValue r)
 
 
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..} = flip Map.map userRules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
-        stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
+        stored ((_,UserRule_ r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
                   f _ = storedValue opt
 
-        equal ((_,ARule r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
+        equal ((_,UserRule_ r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
             where f :: Rule key value => (key -> Maybe (m value)) -> key -> value -> value -> EqualCost
                   f _ = equalValue opt
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
                rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-            where rs2 = sets [(i, \k -> fmap newValue <$> r (fromKey k)) | (i,ARule r) <- rs]
+            where rs2 = sets [(i, \k -> fmap newValue <$> r (fromKey k)) | (i,UserRule_ r) <- rs]
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
