@@ -40,4 +40,4 @@ alwaysRerun :: Action ()
 alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = rule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()
+defaultRuleRerun = addUserRule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()

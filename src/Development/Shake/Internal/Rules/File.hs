@@ -96,7 +96,7 @@ storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
 
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
-defaultRuleFile = priority 0 $ rule $ \x -> Just $ do
+defaultRuleFile = priority 0 $ addUserRule $ \x -> Just $ do
     opts <- getShakeOptions
     liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
 
@@ -198,7 +198,7 @@ want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = rule $ \(FileQ x_) -> let x = unpackU x_ in
+root help test act = addUserRule $ \(FileQ x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
@@ -229,7 +229,7 @@ phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else 
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = rule $ \(FileQ x_) -> case act $ unpackU x_ of
+phonys act = addUserRule $ \(FileQ x_) -> case act $ unpackU x_ of
     Nothing -> Nothing
     Just act -> Just $ do
         act

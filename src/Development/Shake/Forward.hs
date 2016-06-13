@@ -78,7 +78,7 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    rule $ \k -> Just $ do
+    addUserRule $ \k -> Just $ do
         res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
         case res of
             Nothing -> liftIO $ errorIO "Failed to find action name"

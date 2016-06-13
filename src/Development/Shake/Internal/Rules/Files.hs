@@ -76,7 +76,7 @@ ps &%> act
                 _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU . substitute (extract p file)) ps
                 return ()
         (if all simple ps then id else priority 0.5) $
-            rule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
+            addUserRule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                     liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
                     trackAllow xs
@@ -126,7 +126,7 @@ ps &%> act
         _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) $ fromJust $ test x
         return ()
 
-    rule $ \(FilesQ xs_) -> let xs@(x:_) = map (unpackU . fromFileQ) xs_ in
+    addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (unpackU . fromFileQ) xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs

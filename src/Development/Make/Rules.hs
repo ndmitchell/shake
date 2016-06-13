@@ -42,7 +42,7 @@ instance Rule File_Q File_A where
 
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = priority 0 $ rule $ \(File_Q x) -> Just $ liftIO $ do
+defaultRuleFile_ = priority 0 $ addUserRule $ \(File_Q x) -> Just $ liftIO $ do
     res <- getFileInfo x
     case res of
         Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
@@ -58,7 +58,7 @@ want_ = action . need_
 data Phony = Phony | NotPhony deriving Eq
 
 (??>) :: (FilePath -> Bool) -> (FilePath -> Action Phony) -> Rules ()
-(??>) test act = rule $ \(File_Q x_) -> let x = unpackU x_ in
+(??>) test act = addUserRule $ \(File_Q x_) -> let x = unpackU x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         res <- act x

@@ -127,13 +127,13 @@ instance Rule GetDirectoryQ GetDirectoryA where
 -- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    rule $ \(DoesFileExistQ x) -> Just $
+    addUserRule $ \(DoesFileExistQ x) -> Just $
         liftIO $ DoesFileExistA <$> IO.doesFileExist x
-    rule $ \(DoesDirectoryExistQ x) -> Just $
+    addUserRule $ \(DoesDirectoryExistQ x) -> Just $
         liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x
-    rule $ \(x :: GetDirectoryQ) -> Just $
+    addUserRule $ \(x :: GetDirectoryQ) -> Just $
         liftIO $ getDir x
-    rule $ \(GetEnvQ x) -> Just $
+    addUserRule $ \(GetEnvQ x) -> Just $
         liftIO $ GetEnvA <$> IO.lookupEnv x
 
 

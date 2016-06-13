@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Core.Rules(
     Rule(..), Rules, runRules,
     runStored, runExecute, runEqual,
-    rule, action, withoutActions, alternatives, priority
+    addUserRule, action, withoutActions, alternatives, priority
     ) where
 
 import Control.Applicative
@@ -150,7 +150,7 @@ runRules opts (Rules r) = do
 
 data SRules = SRules
     {actions :: [Action ()]
-    ,rules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule)]) -- higher fst is higher priority
+    ,userRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,ARule)]) -- higher fst is higher priority
     }
 
 instance Monoid SRules where
@@ -169,8 +169,8 @@ instance Monoid a => Monoid (Rules a) where
 --   or 'Nothing' otherwise.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
-rule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
-rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
+addUserRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
+addUserRule r = newRules mempty{userRules = Map.singleton k (k, v, [(1,ARule r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
 
@@ -193,7 +193,7 @@ rule r = newRules mempty{rules = Map.singleton k (k, v, [(1,ARule r)])}
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ rules s}
+priority i = modifyRules $ \s -> s{userRules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ userRules s}
 
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
@@ -209,7 +209,7 @@ priority i = modifyRules $ \s -> s{rules = Map.map (\(a,b,cs) -> (a,b,map (first
 --   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
 --   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
 alternatives :: Rules () -> Rules ()
-alternatives = modifyRules $ \r -> r{rules = Map.map f $ rules r}
+alternatives = modifyRules $ \r -> r{userRules = Map.map f $ userRules r}
     where
         f (k, v, []) = (k, v, [])
         f (k, v, xs) = let (is,rs) = unzip xs in (k, v, [(maximum is, foldl1' g rs)])
@@ -245,12 +245,12 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems rules) $ \(_, _, (_,ARule r):_) -> do
+    forM_ (Map.elems userRules) $ \(_, _, (_,ARule r):_) -> do
         registerWitness (ruleKey r) (ruleValue r)
 
 
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
-createRuleinfo opt SRules{..} = flip Map.map rules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
+createRuleinfo opt SRules{..} = flip Map.map userRules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
     where
         stored ((_,ARule r):_) = fmap (fmap newValue) . f r . fromKey
             where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
