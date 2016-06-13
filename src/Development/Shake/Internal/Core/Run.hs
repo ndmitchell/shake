@@ -211,6 +211,23 @@ applyKeyValue ks = do
     return vs
 
 
+
+runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
+runStored mp k = case Map.lookup (typeKey k) mp of
+    Nothing -> return Nothing
+    Just RuleInfo{..} -> stored k
+
+runEqual :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> Value -> EqualCost
+runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
+    Nothing -> NotEqual
+    Just RuleInfo{..} -> equal k v1 v2
+
+runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
+runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
+    Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
+    Just RuleInfo{..} -> execute k
+
+
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
 --   then do nothing with it.

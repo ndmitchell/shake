@@ -3,7 +3,6 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rule(..), Rules, runRules,
-    runStored, runExecute, runEqual,
     addUserRule, action, withoutActions, alternatives, priority
     ) where
 
@@ -267,18 +266,3 @@ createRuleinfo opt SRules{..} = flip Map.map userRules $ \(_,tv,rs) -> RuleInfo 
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
-
-runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
-runStored mp k = case Map.lookup (typeKey k) mp of
-    Nothing -> return Nothing
-    Just RuleInfo{..} -> stored k
-
-runEqual :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> Value -> EqualCost
-runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
-    Nothing -> NotEqual
-    Just RuleInfo{..} -> equal k v1 v2
-
-runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
-runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-    Just RuleInfo{..} -> execute k
