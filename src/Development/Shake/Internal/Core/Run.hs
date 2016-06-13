@@ -162,12 +162,6 @@ abbreviate abbrev = f
         f (x:xs) = x : f xs
 
 
-runAfter :: IO () -> Action ()
-runAfter op = do
-    Global{..} <- Action getRO
-    liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
-
-
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'rule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.

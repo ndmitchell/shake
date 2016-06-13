@@ -5,7 +5,7 @@ module Development.Shake.Internal.Core.Action(
     RuleInfo(..), Global(..), Local(..), Action(..),
     newLocal,
     runAction, actionOnException, actionFinally,
-    getShakeOptions, getProgress,
+    getShakeOptions, getProgress, runAfter,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     blockApply, unsafeAllowApply,
     traced
@@ -123,6 +123,12 @@ getProgress :: Action Progress
 getProgress = do
     res <- Action $ getsRO globalProgress
     liftIO res
+
+-- | Specify an action to be run after the database has been closed, if building completes successfully.
+runAfter :: IO () -> Action ()
+runAfter op = do
+    Global{..} <- Action getRO
+    liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
 
 
 ---------------------------------------------------------------------
