@@ -3,6 +3,7 @@
 
 module Development.Shake.Internal.Core.Action(
     RuleInfo(..), Global(..), Local(..), Action(..),
+    newLocal,
     runAction, actionOnException, actionFinally,
     getShakeOptions, getProgress,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -74,6 +75,10 @@ data Local = Local
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
     }
+
+newLocal :: Stack -> Verbosity -> Local
+newLocal stack verb = Local stack verb Nothing [] 0 [] [] []
+
 
 ---------------------------------------------------------------------
 -- RAW WRAPPERS

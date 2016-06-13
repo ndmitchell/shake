@@ -114,7 +114,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
-                    let s1 = Local emptyStack shakeVerbosity Nothing [] 0 [] [] []
+                    let s1 = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
                         addPool pool $ runAction s0 s1 act $ \x -> case x of
                             Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
@@ -196,8 +196,7 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     let exec stack k continue = do
-            let s = Local {localVerbosity=shakeVerbosity globalOptions, localDepends=[], localStack=stack, localBlockApply=Nothing
-                          ,localDiscount=0, localTraces=[], localTrackAllows=[], localTrackUsed=[]}
+            let s = newLocal stack (shakeVerbosity globalOptions)
             let top = showTopStack stack
             time <- offsetTime
             runAction global s (do
