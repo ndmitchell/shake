@@ -124,7 +124,6 @@ instance Rule GetDirectoryQ GetDirectoryA where
     storedValue _ x = Just <$> getDir x
 
 
--- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     addUserRule $ \(DoesFileExistQ x) -> Just $

@@ -94,7 +94,6 @@ storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
--- | This function is not actually exported, but Haddock is buggy. Please ignore.
 defaultRuleFile :: Rules ()
 defaultRuleFile = priority 0 $ addUserRule $ \x -> Just $ do
     opts <- getShakeOptions
