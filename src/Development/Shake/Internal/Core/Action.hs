@@ -63,16 +63,16 @@ data Global = Global
 -- local variables of Action
 data Local = Local
     -- constants
-    {localStack :: Stack
+    {localStack :: Stack -- ^ The stack that ran to get here.
     -- stack scoped local variables
-    ,localVerbosity :: Verbosity
-    ,localBlockApply ::  Maybe String -- reason to block apply, or Nothing to allow
+    ,localVerbosity :: Verbosity -- ^ Verbosity, may be changed locally
+    ,localBlockApply ::  Maybe String -- ^ Reason to block apply, or Nothing to allow
     -- mutable local variables
-    ,localDepends :: [Depends] -- built up in reverse
-    ,localDiscount :: !Seconds
-    ,localTraces :: [Trace] -- in reverse
-    ,localTrackAllows :: [Key -> Bool]
-    ,localTrackUsed :: [Key]
+    ,localDepends :: [Depends] -- ^ Dependencies, built up in reverse
+    ,localDiscount :: !Seconds -- ^ Time spend building dependencies
+    ,localTraces :: [Trace] -- ^ Traces, built in reverse
+    ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
+    ,localTrackUsed :: [Key] -- ^ Things that have been used
     }
 
 ---------------------------------------------------------------------
