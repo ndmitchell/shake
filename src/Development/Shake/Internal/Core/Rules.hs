@@ -153,7 +153,7 @@ data SRules = SRules
     }
 
 instance Monoid SRules where
-    mempty = SRules [] (Map.fromList [])
+    mempty = SRules [] Map.empty
     mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
         where f (k, v1, xs) (_, v2, ys)
                 | v1 == v2 = (k, v1, xs ++ ys)
