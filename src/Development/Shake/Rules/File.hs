@@ -61,7 +61,7 @@ instance Show FileA where
 
 instance Rule FileQ FileA where
     storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
-        res <- getFileInfo x
+        res <- getFileInfoNoDirErr x
         case res of
             Nothing -> return Nothing
             Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
