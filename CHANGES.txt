@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #465, fix phony names which clash with directories
     Significant changes to defining custom rules
     Delete the deprecated defaultRule
     IMPORTANT: Incompatible on disk format change
