@@ -41,4 +41,4 @@ defaultRuleRerun = do
     addBuiltinRule BuiltinRule
         {storedValue = \_ AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
         ,equalValue = defaultEqualValue}
-    addUserRule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()
+    addUserRule $ \AlwaysRerunQ{} -> Just $ (return $ AlwaysRerunA () :: Action AlwaysRerunA)

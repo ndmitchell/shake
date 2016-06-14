@@ -43,11 +43,11 @@ defaultRuleFile_ = do
     addBuiltinRule BuiltinRule
         {storedValue = \_ (File_Q x) -> fmap (File_A . Just . fst) <$> getFileInfo x
         ,equalValue = defaultEqualValue}
-    priority 0 $ addUserRule $ \(File_Q x) -> Just $ liftIO $ do
+    priority 0 $ addUserRule $ \(File_Q x) -> (Just $ liftIO $ do
         res <- getFileInfo x
         case res of
             Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
-            Just (mt,_) -> return $ File_A $ Just mt
+            Just (mt,_) -> return $ File_A $ Just mt) :: Maybe (Action File_A)
 
 
 need_ :: [FilePath] -> Action ()

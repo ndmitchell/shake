@@ -126,14 +126,15 @@ defaultRuleDirectory = do
         {storedValue = \_ x -> Just <$> getDir x
         ,equalValue = defaultEqualValue}
 
+    let liftAction (act :: IO a) = liftIO act :: Action a
     addUserRule $ \(DoesFileExistQ x) -> Just $
-        liftIO $ DoesFileExistA <$> IO.doesFileExist x
+        liftAction $ DoesFileExistA <$> IO.doesFileExist x
     addUserRule $ \(DoesDirectoryExistQ x) -> Just $
-        liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x
+        liftAction $ DoesDirectoryExistA <$> IO.doesDirectoryExist x
     addUserRule $ \(x :: GetDirectoryQ) -> Just $
-        liftIO $ getDir x
+        liftAction $ getDir x
     addUserRule $ \(GetEnvQ x) -> Just $
-        liftIO $ GetEnvA <$> IO.lookupEnv x
+        liftAction $ GetEnvA <$> IO.lookupEnv x
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
