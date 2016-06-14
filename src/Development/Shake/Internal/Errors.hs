@@ -75,6 +75,7 @@ errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     ,("Requested _result_ type", Just $ show tvWant)]
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
 
+-- TODO: Not used
 errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> IO a
 errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else errorStructured
     "Build system error - rule has multiple result types"
