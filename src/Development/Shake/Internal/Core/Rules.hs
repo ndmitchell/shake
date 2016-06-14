@@ -278,16 +278,18 @@ createRuleinfo opt SRules{..}
     | bad@(_:_) <- Map.keys $ userRules `Map.difference` builtinRules = err "user rules with no builtin rules" -- TODO
     | otherwise = flip Map.map builtinRules $ \(tk,tv,BuiltinRule_ b) -> case Map.lookup tk userRules of
         Just (uk,uv,_) | uv /= tv -> err "user rule with different result type" -- TODO
-        user -> RuleInfo (stored b) (equal b) (execute $ maybe [] thd3 user) tv
+        user -> RuleInfo (stored b) (equal b) (execute b $ maybe [] thd3 user) tv
     where
         stored BuiltinRule{..} = fmap (fmap newValue) . storedValue opt . fromKey
 
         equal BuiltinRule{..} = \k v1 v2 -> equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
 
-        execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
+        execute (BuiltinRule{} :: BuiltinRule key value) rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r
                rs -> liftIO $ errorMultipleRulesMatch (typeKey k) (show k) (length rs)
-            where rs2 = sets [(i, \k -> fmap newValue <$> r (fromKey k)) | (i,UserRule_ r) <- rs]
+            where rs2 = sets [ (i, \k -> fmap newValue <$> r' (fromKey k))
+                             | (i,UserRule_ r) <- rs
+                             , let Just (r' :: key -> Maybe (Action value)) = cast r ]
 
         sets :: Ord a => [(a, b)] -> [[b]] -- highest to lowest
         sets = map snd . reverse . groupSort
