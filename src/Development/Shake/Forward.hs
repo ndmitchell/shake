@@ -64,9 +64,6 @@ instance Show ForwardQ where
 newtype ForwardA = ForwardA ()
     deriving (Hashable,Typeable,Eq,NFData,Binary,Show)
 
-instance Rule ForwardQ ForwardA where
-    storedValue _ _ = return $ Just $ ForwardA ()
-
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()
 shakeForward opts act = shake (forwardOptions opts) (forwardRule act)
@@ -78,6 +75,9 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ ForwardQ{} -> return $ Just $ ForwardA ()
+        ,equalValue = defaultEqualValue}
     addUserRule $ \k -> Just $ do
         res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
         case res of

@@ -111,21 +111,21 @@ instance Binary GetDirectoryQ where
     put (GetDirDirs x) = putWord8 2 >> put x
 
 
-instance Rule DoesFileExistQ DoesFileExistA where
-    storedValue _ (DoesFileExistQ x) = (Just . DoesFileExistA) <$> IO.doesFileExist x
-
-instance Rule DoesDirectoryExistQ DoesDirectoryExistA where
-    storedValue _ (DoesDirectoryExistQ x) = (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
-
-instance Rule GetEnvQ GetEnvA where
-    storedValue _ (GetEnvQ x) = (Just . GetEnvA) <$> IO.lookupEnv x
-
-instance Rule GetDirectoryQ GetDirectoryA where
-    storedValue _ x = Just <$> getDir x
-
-
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ (DoesFileExistQ x) -> (Just . DoesFileExistA) <$> IO.doesFileExist x
+        ,equalValue = defaultEqualValue}
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ (DoesDirectoryExistQ x) -> (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
+        ,equalValue = defaultEqualValue}
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ (GetEnvQ x) -> (Just . GetEnvA) <$> IO.lookupEnv x
+        ,equalValue = defaultEqualValue}
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ x -> Just <$> getDir x
+        ,equalValue = defaultEqualValue}
+
     addUserRule $ \(DoesFileExistQ x) -> Just $
         liftIO $ DoesFileExistA <$> IO.doesFileExist x
     addUserRule $ \(DoesDirectoryExistQ x) -> Just $

@@ -25,7 +25,7 @@ import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
 import Unsafe.Coerce
 
--- | Define an alias for the six type classes required for things involved in Shake 'Development.Shake.Rule's.
+-- | Define an alias for the six type classes required for things involved in Shake rules.
 --   Using this alias requires the @ConstraintKinds@ extension.
 --
 --   To define your own values meeting the necessary constraints it is convenient to use the extensions

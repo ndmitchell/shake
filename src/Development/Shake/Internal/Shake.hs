@@ -9,6 +9,7 @@ import Development.Shake.Internal.Core.Rules
 
 import Development.Shake.Internal.Rules.Directory
 import Development.Shake.Internal.Rules.File
+import Development.Shake.Internal.Rules.Files
 import Development.Shake.Internal.Rules.Rerun
 
 
@@ -23,6 +24,7 @@ shake opts r = do
     run opts $ do
         r
         defaultRuleFile
+        defaultRuleFiles
         defaultRuleDirectory
         defaultRuleRerun
     return ()

@@ -7,7 +7,7 @@ module Development.Shake.Internal.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    FileQ(..), FileA
+    FileQ(..), FileA, fileStoredValue, fileEqualValue
     ) where
 
 import Control.Applicative
@@ -60,24 +60,26 @@ instance Binary FileA where
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
-instance Rule FileQ FileA where
-    storedValue ShakeOptions{shakeChange=c} (FileQ x) = do
-        res <- getFileInfo x
-        case res of
-            Nothing -> return Nothing
-            Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
-            Just (time,size) -> do
-                hash <- unsafeInterleaveIO $ getFileHash x
-                return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
 
-    equalValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
-        ChangeModtime -> bool $ x1 == y1
-        ChangeDigest -> bool $ x2 == y2 && x3 == y3
-        ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
-        _ | x1 == y1 -> EqualCheap
-          | x2 == y2 && x3 == y3 -> EqualExpensive
-          | otherwise -> NotEqual
-        where bool b = if b then EqualCheap else NotEqual
+fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
+fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
+    res <- getFileInfo x
+    case res of
+        Nothing -> return Nothing
+        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
+        Just (time,size) -> do
+            hash <- unsafeInterleaveIO $ getFileHash x
+            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+
+fileEqualValue :: ShakeOptions -> FileQ -> FileA -> FileA -> EqualCost
+fileEqualValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+    ChangeModtime -> bool $ x1 == y1
+    ChangeDigest -> bool $ x2 == y2 && x3 == y3
+    ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+    _ | x1 == y1 -> EqualCheap
+      | x2 == y2 && x3 == y3 -> EqualExpensive
+      | otherwise -> NotEqual
+    where bool b = if b then EqualCheap else NotEqual
 
 
 -- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
@@ -88,16 +90,19 @@ storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
         whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
     return $ FileA fileInfoEq fileInfoEq fileInfoEq
 -}
-storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
+storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
     where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
           err = msg ++ "\n  " ++ unpackU (fromFileQ x)
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
 defaultRuleFile :: Rules ()
-defaultRuleFile = priority 0 $ addUserRule $ \x -> Just $ do
-    opts <- getShakeOptions
-    liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
+defaultRuleFile = do
+    addBuiltinRule BuiltinRule{storedValue=fileStoredValue, equalValue=fileEqualValue}
+
+    priority 0 $ addUserRule $ \x -> Just $ do
+        opts <- getShakeOptions
+        liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -144,10 +149,10 @@ neededBS xs = do
 neededCheck :: [BSU] -> Action ()
 neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
-    pre <- liftIO $ mapM (storedValue opts . FileQ) xs
+    pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> equalValue opts (FileQ x) a b) a == NotEqual]
+              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts (FileQ x) a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured

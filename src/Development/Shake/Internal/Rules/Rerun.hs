@@ -18,9 +18,6 @@ newtype AlwaysRerunA = AlwaysRerunA ()
 instance Show AlwaysRerunA where show _ = "<none>"
 instance Eq AlwaysRerunA where a == b = False
 
-instance Rule AlwaysRerunQ AlwaysRerunA where
-    storedValue _ _ = return Nothing
-
 
 -- | Always rerun the associated action. Useful for defining rules that query
 --   the environment. For example:
@@ -40,4 +37,8 @@ alwaysRerun :: Action ()
 alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
-defaultRuleRerun = addUserRule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()
+defaultRuleRerun = do
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
+        ,equalValue = defaultEqualValue}
+    addUserRule $ \AlwaysRerunQ{} -> Just $ return $ AlwaysRerunA()

@@ -37,16 +37,17 @@ instance Show File_Q where show (File_Q x) = unpackU x
 newtype File_A = File_A (Maybe ModTime)
     deriving (Typeable,Eq,Hashable,Binary,Show,NFData)
 
-instance Rule File_Q File_A where
-    storedValue _ (File_Q x) = fmap (File_A . Just . fst) <$> getFileInfo x
-
 
 defaultRuleFile_ :: Rules ()
-defaultRuleFile_ = priority 0 $ addUserRule $ \(File_Q x) -> Just $ liftIO $ do
-    res <- getFileInfo x
-    case res of
-        Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
-        Just (mt,_) -> return $ File_A $ Just mt
+defaultRuleFile_ = do
+    addBuiltinRule BuiltinRule
+        {storedValue = \_ (File_Q x) -> fmap (File_A . Just . fst) <$> getFileInfo x
+        ,equalValue = defaultEqualValue}
+    priority 0 $ addUserRule $ \(File_Q x) -> Just $ liftIO $ do
+        res <- getFileInfo x
+        case res of
+            Nothing -> error $ "Error, file does not exist and no rule available:\n  " ++ unpackU x
+            Just (mt,_) -> return $ File_A $ Just mt
 
 
 need_ :: [FilePath] -> Action ()

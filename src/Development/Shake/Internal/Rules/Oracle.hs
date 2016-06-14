@@ -19,9 +19,6 @@ newtype OracleQ question = OracleQ question
 newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
-    storedValue _ _ = return Nothing
-
 
 -- | Add extra information which rules can depend on.
 --   An oracle is a function from a question type @q@, to an answer type @a@.
@@ -73,9 +70,14 @@ instance (ShakeValue q, ShakeValue a) => Rule (OracleQ q) (OracleA a) where
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracle act = do
-    addUserRule $ \(OracleQ q) -> Just $ OracleA <$> act q
-    return askOracle
+addOracle = f where
+    f :: forall q a . (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
+    f act = do
+        addBuiltinRule BuiltinRule
+            {storedValue = \_ (_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))
+            ,equalValue = defaultEqualValue}
+        addUserRule $ \(OracleQ q) -> Just $ OracleA <$> act q
+        return askOracle
 
 
 -- | Get information previously added with 'addOracle'. The question/answer types must match those provided

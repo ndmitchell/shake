@@ -38,7 +38,7 @@ import Prelude
 -- UNDERLYING DATA TYPE
 
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
---   Action values are used by 'rule' and 'action'. The 'Action' monad tracks the dependencies of a 'Rule'.
+--   Action values are used by 'addUserRule' and 'action'. The 'Action' monad tracks the dependencies of a rule.
 newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO)
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Development.Shake.Internal.Rules.Files(
-    (&?>), (&%>)
+    (&?>), (&%>), defaultRuleFiles
     ) where
 
 import Control.Monad
@@ -40,14 +40,20 @@ instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . 
 instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) xs
 
 
-instance Rule FilesQ FilesA where
-    storedValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (storedValue opts) xs
-    equalValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
-        | let n = length qs in n /= length xs || n /= length ys = NotEqual
-        | otherwise = foldr and_ EqualCheap (zipWith3 (equalValue opts) qs xs ys)
-            where and_ NotEqual x = NotEqual
-                  and_ EqualCheap x = x
-                  and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
+filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)
+filesStoredValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (fileStoredValue opts) xs
+
+filesEqualValue :: ShakeOptions -> FilesQ -> FilesA -> FilesA -> EqualCost
+filesEqualValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
+    | let n = length qs in n /= length xs || n /= length ys = NotEqual
+    | otherwise = foldr and_ EqualCheap (zipWith3 (fileEqualValue opts) qs xs ys)
+        where and_ NotEqual x = NotEqual
+              and_ EqualCheap x = x
+              and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
+
+defaultRuleFiles :: Rules ()
+defaultRuleFiles = do
+    addBuiltinRule BuiltinRule{storedValue=filesStoredValue, equalValue=filesEqualValue}
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -140,7 +146,7 @@ getFileTimes :: String -> [FileQ] -> Action FilesA
 getFileTimes name xs = do
     opts <- getShakeOptions
     let opts2 = if shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
-    ys <- liftIO $ mapM (storedValue opts2) xs
+    ys <- liftIO $ mapM (fileStoredValue opts2) xs
     case sequence ys of
         Just ys -> return $ FilesA ys
         Nothing | not $ shakeCreationCheck opts -> return $ FilesA []

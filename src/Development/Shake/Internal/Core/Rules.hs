@@ -2,8 +2,10 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rule(..), Rules, runRules,
-    addUserRule, action, withoutActions, alternatives, priority
+    Rules, runRules,
+    BuiltinRule(..), addBuiltinRule, defaultEqualValue,
+    addUserRule, alternatives, priority,
+    action, withoutActions
     ) where
 
 import Control.Applicative
@@ -32,7 +34,7 @@ import Prelude
 ---------------------------------------------------------------------
 -- RULES
 
--- | Define a pair of types that can be used by Shake rules.
+--   Define a pair of types that can be used by Shake rules.
 --   To import all the type classes required see "Development.Shake.Classes".
 --
 --   A 'Rule' instance for a class of artifacts (e.g. /files/) provides:
@@ -62,7 +64,7 @@ import Prelude
 -- newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
 -- getFileModtime file = ...
 --
--- instance Rule File Modtime where
+-- addBuiltinRule Builtininstance Rule File Modtime where
 --     storedValue _ (File x) = do
 --         exists <- System.Directory.doesFileExist x
 --         if exists then Just \<$\> getFileModtime x else return Nothing
@@ -106,20 +108,33 @@ import Prelude
 --   For rules whose values are not stored externally,
 --   'storedValue' should return 'Just' with a sentinel value
 --   and 'equalValue' should always return 'EqualCheap' for that sentinel.
-class (ShakeValue key, ShakeValue value) => Rule key value where
 
-    -- | /[Required]/ Retrieve the @value@ associated with a @key@, if available.
-    --
-    --   As an example for filenames/timestamps, if the file exists you should return 'Just'
-    --   the timestamp, but otherwise return 'Nothing'.
-    storedValue :: ShakeOptions -> key -> IO (Maybe value)
+-- | TODO: Docs
+data BuiltinRule key value = BuiltinRule
+    {storedValue :: ShakeOptions -> key -> IO (Maybe value)
+        -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
+        --
+        --   As an example for filenames/timestamps, if the file exists you should return 'Just'
+        --   the timestamp, but otherwise return 'Nothing'.
+    ,equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
+        -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
+        --   Use 'defaultEqualValue' if you do not want a different equality.
+    }
 
-    -- | /[Optional]/ Equality check, with a notion of how expensive the check was.
-    equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
-    equalValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
+-- | Default 'equalValue' field.
+defaultEqualValue :: Eq value => ShakeOptions -> key -> value -> value -> EqualCost
+defaultEqualValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
 
 
-data UserRule_ = forall key value . Rule key value => UserRule_ (key -> Maybe (Action value))
+data BuiltinRule_ = forall key value . (ShakeValue key, ShakeValue value) => BuiltinRule_ (BuiltinRule key value)
+
+data UserRule_ = forall key value . (ShakeValue key, ShakeValue value) => UserRule_ (key -> Maybe (Action value))
+
+builtinKey :: BuiltinRule key value -> key
+builtinKey = err "builtinKey"
+
+builtinValue :: BuiltinRule key value -> value
+builtinValue = err "builtinValue"
 
 ruleKey :: (key -> Maybe (Action value)) -> key
 ruleKey = err "ruleKey"
@@ -149,13 +164,17 @@ runRules opts (Rules r) = do
 
 data SRules = SRules
     {actions :: [Action ()]
+    ,builtinRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},BuiltinRule_)
     ,userRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,UserRule_)]) -- higher fst is higher priority
     }
 
 instance Monoid SRules where
-    mempty = SRules [] Map.empty
-    mappend (SRules x1 x2) (SRules y1 y2) = SRules (x1++y1) (Map.unionWith f x2 y2)
-        where f (k, v1, xs) (_, v2, ys)
+    mempty = SRules [] Map.empty Map.empty
+    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
+        where
+            f a b = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
+
+            g (k, v1, xs) (_, v2, ys)
                 | v1 == v2 = (k, v1, xs ++ ys)
                 | otherwise = unsafePerformIO $ errorIncompatibleRules k v1 v2
 
@@ -168,9 +187,15 @@ instance Monoid a => Monoid (Rules a) where
 --   or 'Nothing' otherwise.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
-addUserRule :: Rule key value => (key -> Maybe (Action value)) -> Rules ()
+addUserRule :: (ShakeValue key, ShakeValue value) => (key -> Maybe (Action value)) -> Rules ()
 addUserRule r = newRules mempty{userRules = Map.singleton k (k, v, [(1,UserRule_ r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
+
+
+-- | Add a builtin rule type.
+addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRule key value -> Rules ()
+addBuiltinRule b = newRules mempty{builtinRules = Map.singleton k (k, v, BuiltinRule_ b)}
+    where k = typeOf $ builtinKey b; v = typeOf $ builtinValue b
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -249,15 +274,15 @@ registerWitnesses SRules{..} =
 
 
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
-createRuleinfo opt SRules{..} = flip Map.map userRules $ \(_,tv,rs) -> RuleInfo (stored rs) (equal rs) (execute rs) tv
+createRuleinfo opt SRules{..}
+    | bad@(_:_) <- Map.keys $ userRules `Map.difference` builtinRules = err "user rules with no builtin rules" -- TODO
+    | otherwise = flip Map.map builtinRules $ \(tk,tv,BuiltinRule_ b) -> case Map.lookup tk userRules of
+        Just (uk,uv,_) | uv /= tv -> err "user rule with different result type" -- TODO
+        user -> RuleInfo (stored b) (equal b) (execute $ maybe [] thd3 user) tv
     where
-        stored ((_,UserRule_ r):_) = fmap (fmap newValue) . f r . fromKey
-            where f :: Rule key value => (key -> Maybe (m value)) -> (key -> IO (Maybe value))
-                  f _ = storedValue opt
+        stored BuiltinRule{..} = fmap (fmap newValue) . storedValue opt . fromKey
 
-        equal ((_,UserRule_ r):_) = \k v1 v2 -> f r (fromKey k) (fromValue v1) (fromValue v2)
-            where f :: Rule key value => (key -> Maybe (m value)) -> key -> value -> value -> EqualCost
-                  f _ = equalValue opt
+        equal BuiltinRule{..} = \k v1 v2 -> equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
 
         execute rs = \k -> case filter (not . null) $ map (mapMaybe ($ k)) rs2 of
                [r]:_ -> r

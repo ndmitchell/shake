@@ -163,14 +163,14 @@ abbreviate abbrev = f
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
---   This function requires that appropriate rules have been added with 'rule'.
+--   This function requires that appropriate rules have been added with 'addUserRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: Rule key value => [key] -> Action [value]
+apply :: (ShakeValue key, ShakeValue value) => [key] -> Action [value]
 apply = applyForall
 
 -- We don't want the forall in the Haddock docs
 -- Don't short-circuit [] as we still want error messages
-applyForall :: forall key value . Rule key value => [key] -> Action [value]
+applyForall :: forall key value . (ShakeValue key, ShakeValue value) => [key] -> Action [value]
 applyForall ks = do
     let tk = typeOf (err "apply key" :: key)
         tv = typeOf (err "apply type" :: value)
@@ -244,7 +244,7 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
-apply1 :: Rule key value => key -> Action value
+apply1 :: (ShakeValue key, ShakeValue value) => key -> Action value
 apply1 = fmap head . apply . return
 
 
