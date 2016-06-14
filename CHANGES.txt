@@ -1,10 +1,11 @@
 Changelog for Shake
 
-    #465, fix phony names which clash with directories
     Significant changes to defining custom rules
     Delete the deprecated defaultRule
     IMPORTANT: Incompatible on disk format change
     #428, don't persist errors to the database
+0.15.10
+    #465, fix phony names which clash with directories
 0.15.9
     Documentation tweaks
     Optimise the thread pool
