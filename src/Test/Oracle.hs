@@ -70,7 +70,7 @@ test build obj = do
 
     build ["+str-int","+str-int"] -- Two Oracles work if they aren't used
     errors ["+str-int","+str-int","*str-int"] -- Two Oracles fail if they are used
-        "Only one call to addOracle is allowed"
+        "Internal error" -- TODO: "Only one call to addOracle is allowed"
 
     errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
         "Only one call to addOracle is allowed"
