@@ -187,7 +187,7 @@ instance Monoid a => Monoid (Rules a) where
 --   or 'Nothing' otherwise.
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
-addUserRule :: (ShakeValue key, ShakeValue value) => (key -> Maybe (Action value)) -> Rules ()
+addUserRule :: (Typeable key, Typeable value) => (key -> Maybe (Action value)) -> Rules ()
 addUserRule r = newRules mempty{userRules = Map.singleton k (k, v, [(1,UserRule_ r)])}
     where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
 
