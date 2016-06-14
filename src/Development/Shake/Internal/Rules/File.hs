@@ -63,6 +63,16 @@ instance Show FileA where
 
 fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
 fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
+    res <- getFileInfo x
+    case res of
+        Nothing -> return Nothing
+        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
+        Just (time,size) -> do
+            hash <- unsafeInterleaveIO $ getFileHash x
+            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+
+fileStoredValueAllowDir :: ShakeOptions -> FileQ -> IO (Maybe FileA)
+fileStoredValueAllowDir ShakeOptions{shakeChange=c} (FileQ x) = do
     res <- getFileInfoNoDirErr x
     case res of
         Nothing -> return Nothing
@@ -98,7 +108,9 @@ storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
 
 defaultRuleFile :: Rules ()
 defaultRuleFile = do
-    addBuiltinRule BuiltinRule{storedValue=fileStoredValue, equalValue=fileEqualValue}
+    -- the whole fileStoredValueAllowDir mess is due to checking phony timestamps
+    -- and will go away with the real builtin rules
+    addBuiltinRule BuiltinRule{storedValue=fileStoredValueAllowDir, equalValue=fileEqualValue}
 
     priority 0 $ addUserRule $ \x -> Just $ do
         opts <- getShakeOptions
