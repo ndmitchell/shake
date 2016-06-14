@@ -198,9 +198,9 @@ data SRules = SRules
 
 instance Monoid SRules where
     mempty = SRules [] Map.empty Map.empty
-    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWithKey f x2 y2) (Map.unionWith g x3 y3)
+    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
         where
-            f k _ _ = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
+            f _ _ = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
             g (UserRule_ x) (UserRule_ y) = UserRule_ $ combineRules x $ fromJust $ cast y
 
 
