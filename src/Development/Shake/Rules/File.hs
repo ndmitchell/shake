@@ -79,6 +79,18 @@ instance Rule FileQ FileA where
         where bool b = if b then EqualCheap else NotEqual
 
 
+storedValueErrDir :: ShakeOptions -> FileQ -> IO (Maybe FileA)
+storedValueErrDir ShakeOptions{shakeChange=c} (FileQ x) = do
+    res <- getFileInfo x
+    case res of
+        Nothing -> return Nothing
+        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
+        Just (time,size) -> do
+            hash <- unsafeInterleaveIO $ getFileHash x
+            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+
+
+
 -- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
 storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
 {-
@@ -87,7 +99,7 @@ storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
         whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
     return $ FileA fileInfoEq fileInfoEq fileInfoEq
 -}
-storedValueError opts input msg x = fromMaybe def <$> storedValue opts2 x
+storedValueError opts input msg x = fromMaybe def <$> storedValueErrDir opts2 x
     where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
           err = msg ++ "\n  " ++ unpackU (fromFileQ x)
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
@@ -144,7 +156,7 @@ neededBS xs = do
 neededCheck :: [BSU] -> Action ()
 neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
-    pre <- liftIO $ mapM (storedValue opts . FileQ) xs
+    pre <- liftIO $ mapM (storedValueErrDir opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
               | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> equalValue opts (FileQ x) a b) a == NotEqual]
