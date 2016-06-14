@@ -21,7 +21,6 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import System.IO.Extra
 import Data.Monoid
-import System.IO.Unsafe
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Action
@@ -139,9 +138,6 @@ builtinValue = err "builtinValue"
 ruleKey :: (key -> Maybe (Action value)) -> key
 ruleKey = err "ruleKey"
 
-ruleValue :: (key -> Maybe (Action value)) -> value
-ruleValue = err "ruleValue"
-
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
@@ -164,19 +160,16 @@ runRules opts (Rules r) = do
 
 data SRules = SRules
     {actions :: [Action ()]
-    ,builtinRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},BuiltinRule_)
-    ,userRules :: Map.HashMap TypeRep{-k-} (TypeRep{-k-},TypeRep{-v-},[(Double,UserRule_)]) -- higher fst is higher priority
+    ,builtinRules :: Map.HashMap TypeRep{-k-} BuiltinRule_
+    ,userRules :: Map.HashMap TypeRep{-k-} [(Double,UserRule_)] -- higher fst is higher priority
     }
 
 instance Monoid SRules where
     mempty = SRules [] Map.empty Map.empty
-    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
+    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWithKey f x2 y2) (Map.unionWith (++) x3 y3)
         where
-            f a b = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
+            f k _ _ = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
 
-            g (k, v1, xs) (_, v2, ys)
-                | v1 == v2 = (k, v1, xs ++ ys)
-                | otherwise = unsafePerformIO $ errorIncompatibleRules k v1 v2
 
 instance Monoid a => Monoid (Rules a) where
     mempty = return mempty
@@ -188,14 +181,14 @@ instance Monoid a => Monoid (Rules a) where
 --   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
 --   Rules have priority 1 by default, which can be modified with 'priority'.
 addUserRule :: (Typeable key, Typeable value) => (key -> Maybe (Action value)) -> Rules ()
-addUserRule r = newRules mempty{userRules = Map.singleton k (k, v, [(1,UserRule_ r)])}
-    where k = typeOf $ ruleKey r; v = typeOf $ ruleValue r
+addUserRule r = newRules mempty{userRules = Map.singleton k [(1,UserRule_ r)]}
+    where k = typeOf $ ruleKey r
 
 
 -- | Add a builtin rule type.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRule key value -> Rules ()
-addBuiltinRule b = newRules mempty{builtinRules = Map.singleton k (k, v, BuiltinRule_ b)}
-    where k = typeOf $ builtinKey b; v = typeOf $ builtinValue b
+addBuiltinRule b = newRules mempty{builtinRules = Map.singleton k $ BuiltinRule_ b}
+    where k = typeOf $ builtinKey b
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -217,7 +210,7 @@ addBuiltinRule b = newRules mempty{builtinRules = Map.singleton k (k, v, Builtin
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority i = modifyRules $ \s -> s{userRules = Map.map (\(a,b,cs) -> (a,b,map (first $ const i) cs)) $ userRules s}
+priority i = modifyRules $ \s -> s{userRules = Map.map (map $ first $ const i) $ userRules s}
 
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
@@ -235,8 +228,8 @@ priority i = modifyRules $ \s -> s{userRules = Map.map (\(a,b,cs) -> (a,b,map (f
 alternatives :: Rules () -> Rules ()
 alternatives = modifyRules $ \r -> r{userRules = Map.map f $ userRules r}
     where
-        f (k, v, []) = (k, v, [])
-        f (k, v, xs) = let (is,rs) = unzip xs in (k, v, [(maximum is, foldl1' g rs)])
+        f [] = []
+        f xs = let (is,rs) = unzip xs in [(maximum is, foldl1' g rs)]
 
         g (UserRule_ a) (UserRule_ b) = UserRule_ $ \x -> a x `mplus` b2 x
             where b2 = fmap (fmap (fromJust . cast)) . b . fromJust . cast
@@ -269,16 +262,15 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems builtinRules) $ \(_, _, BuiltinRule_ r) -> do
+    forM_ (Map.elems builtinRules) $ \(BuiltinRule_ r) -> do
         registerWitness (builtinKey r) (builtinValue r)
 
 
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..}
     | bad@(_:_) <- Map.keys $ userRules `Map.difference` builtinRules = err "user rules with no builtin rules" -- TODO
-    | otherwise = flip Map.map builtinRules $ \(tk,tv,BuiltinRule_ b) -> case Map.lookup tk userRules of
-        Just (uk,uv,_) | uv /= tv -> err "user rule with different result type" -- TODO
-        user -> RuleInfo (stored b) (equal b) (execute b $ maybe [] thd3 user) tv
+    | otherwise = flip Map.map builtinRules $ \(BuiltinRule_ (b :: BuiltinRule k v)) -> case Map.lookup (typeOf (undefined :: k)) userRules of
+        user -> RuleInfo (stored b) (equal b) (execute b $ fromMaybe [] user) (typeOf (undefined :: v))
     where
         stored BuiltinRule{..} = fmap (fmap newValue) . storedValue opt . fromKey
 
