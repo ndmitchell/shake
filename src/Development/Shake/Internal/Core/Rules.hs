@@ -269,8 +269,8 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems userRules) $ \(_, _, (_,UserRule_ r):_) -> do
-        registerWitness (ruleKey r) (ruleValue r)
+    forM_ (Map.elems builtinRules) $ \(_, _, BuiltinRule_ r) -> do
+        registerWitness (builtinKey r) (builtinValue r)
 
 
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
