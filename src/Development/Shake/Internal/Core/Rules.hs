@@ -128,7 +128,7 @@ defaultEqualValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
 
 data BuiltinRule_ = forall key value . (ShakeValue key, ShakeValue value) => BuiltinRule_ (BuiltinRule key value)
 
-data UserRule_ = forall key value . (ShakeValue key, ShakeValue value) => UserRule_ (key -> Maybe (Action value))
+data UserRule_ = forall key value . (Typeable key, Typeable value) => UserRule_ (key -> Maybe (Action value))
 
 builtinKey :: BuiltinRule key value -> key
 builtinKey = err "builtinKey"
