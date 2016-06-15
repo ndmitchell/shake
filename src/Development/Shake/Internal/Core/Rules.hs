@@ -120,6 +120,7 @@ data BuiltinRule key value = BuiltinRule
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
         --   Use 'defaultBuiltinRule' if you do not want a different equality.
     ,executeRule :: (forall a . Typeable a => Proxy a -> UserRule a) -> key -> Action value
+        -- ^ How to run a rule, given ways to get a UserRule.
     }
 
 -- | Default 'equalValue' field.
