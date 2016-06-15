@@ -146,10 +146,10 @@ data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
 -- > unordered is associative and commutative
 -- > alternative does not obey priorities, until picking the best one
 data UserRule a
-    = UserRule a
-    | Unordered [UserRule a] -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> Rules ()@.
+    = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> 'Rules' ()@.
+    | Unordered [UserRule a] -- ^ Rules combined with the 'Monad'/'Monoid'.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
-    | Alternative (UserRule a) -- ^ matched in order.
+    | Alternative (UserRule a) -- ^ Rule defined under 'alternative', matched in order.
       deriving (Eq,Show,Functor,Typeable)
 
 -- | Rules might be able to be optimised in some cases
