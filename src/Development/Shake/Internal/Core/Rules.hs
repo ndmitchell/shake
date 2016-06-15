@@ -166,12 +166,6 @@ userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f $ fmap test u) 
         f (Alternative x) = take 1 $ f x
 
 
-combineRules :: UserRule a -> UserRule a -> UserRule a
-combineRules x (Unordered xs) = Unordered (x:xs)
-combineRules (Unordered xs) x = Unordered (xs++[x])
-combineRules x y = Unordered [x,y]
-
-
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
@@ -202,7 +196,10 @@ instance Monoid SRules where
     mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
         where
             f _ _ = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
-            g (UserRule_ x) (UserRule_ y) = UserRule_ $ combineRules x $ fromJust $ cast y
+            g (UserRule_ x) (UserRule_ y) = UserRule_ $ Unordered $ fromUnordered x ++ fromUnordered (fromJust $ cast y)
+
+            fromUnordered (Unordered xs) = xs
+            fromUnordered x = [x]
 
 
 instance Monoid a => Monoid (Rules a) where
