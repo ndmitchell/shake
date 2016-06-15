@@ -113,18 +113,14 @@ instance Binary GetDirectoryQ where
 
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    addBuiltinRule BuiltinRule
-        {storedValue = \_ (DoesFileExistQ x) -> (Just . DoesFileExistA) <$> IO.doesFileExist x
-        ,equalValue = defaultEqualValue}
-    addBuiltinRule BuiltinRule
-        {storedValue = \_ (DoesDirectoryExistQ x) -> (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x
-        ,equalValue = defaultEqualValue}
-    addBuiltinRule BuiltinRule
-        {storedValue = \_ (GetEnvQ x) -> (Just . GetEnvA) <$> IO.lookupEnv x
-        ,equalValue = defaultEqualValue}
-    addBuiltinRule BuiltinRule
-        {storedValue = \_ x -> Just <$> getDir x
-        ,equalValue = defaultEqualValue}
+    addBuiltinRule defaultBuiltinRule
+        {storedValue = \_ (DoesFileExistQ x) -> (Just . DoesFileExistA) <$> IO.doesFileExist x}
+    addBuiltinRule defaultBuiltinRule
+        {storedValue = \_ (DoesDirectoryExistQ x) -> (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x}
+    addBuiltinRule defaultBuiltinRule
+        {storedValue = \_ (GetEnvQ x) -> (Just . GetEnvA) <$> IO.lookupEnv x}
+    addBuiltinRule defaultBuiltinRule
+        {storedValue = \_ x -> Just <$> getDir x}
 
     let liftAction (act :: IO a) = liftIO act :: Action a
     addUserRule $ \(DoesFileExistQ x) -> Just $

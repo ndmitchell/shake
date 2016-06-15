@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    BuiltinRule(..), addBuiltinRule, defaultEqualValue,
+    BuiltinRule(..), addBuiltinRule, defaultBuiltinRule,
     addUserRule, alternatives, priority,
     action, withoutActions
     ) where
@@ -122,8 +122,11 @@ data BuiltinRule key value = BuiltinRule
     }
 
 -- | Default 'equalValue' field.
-defaultEqualValue :: Eq value => ShakeOptions -> key -> value -> value -> EqualCost
-defaultEqualValue _ _ v1 v2 = if v1 == v2 then EqualCheap else NotEqual
+defaultBuiltinRule :: Eq value => BuiltinRule key value
+defaultBuiltinRule = BuiltinRule
+    {storedValue = \_ _ -> return Nothing
+    ,equalValue = \_ _ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
+    }
 
 
 data BuiltinRule_ = forall key value . (ShakeValue key, ShakeValue value) => BuiltinRule_ (BuiltinRule key value)

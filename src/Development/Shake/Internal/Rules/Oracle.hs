@@ -73,9 +73,8 @@ addOracle :: (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Acti
 addOracle = f where
     f :: forall q a . (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
     f act = do
-        addBuiltinRule BuiltinRule
-            {storedValue = \_ (_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))
-            ,equalValue = defaultEqualValue}
+        addBuiltinRule defaultBuiltinRule
+            {storedValue = \_ (_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))}
         addUserRule $ \(OracleQ q) -> Just $ OracleA <$> act q
         return askOracle
 

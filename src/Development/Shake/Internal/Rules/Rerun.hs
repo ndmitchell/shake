@@ -38,7 +38,6 @@ alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
-    addBuiltinRule BuiltinRule
-        {storedValue = \_ AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
-        ,equalValue = defaultEqualValue}
+    addBuiltinRule defaultBuiltinRule
+        {storedValue = \_ AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)}
     addUserRule $ \AlwaysRerunQ{} -> Just $ (return $ AlwaysRerunA () :: Action AlwaysRerunA)
