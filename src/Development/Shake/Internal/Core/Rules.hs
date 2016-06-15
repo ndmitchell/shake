@@ -315,4 +315,4 @@ createRuleinfo opt SRules{..} =
                         Just (UserRule_ r) -> fromJust $ cast r
             in \k -> case userRuleMatch rules ($ fromKey k) of
                         [r] -> fmap newValue r
-                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
+                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf (undefined :: k)) (show k) (length rs)
