@@ -118,7 +118,7 @@ data BuiltinRule key value = BuiltinRule
         --   the timestamp, but otherwise return 'Nothing'.
     ,equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
-        --   Use 'defaultEqualValue' if you do not want a different equality.
+        --   Use 'defaultBuiltinRule' if you do not want a different equality.
     }
 
 -- | Default 'equalValue' field.
