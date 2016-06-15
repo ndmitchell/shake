@@ -114,11 +114,11 @@ instance Binary GetDirectoryQ where
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (DoesFileExistQ x) -> (Just . DoesFileExistA) <$> IO.doesFileExist x}
+        {storedValue = \_ (DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x}
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (DoesDirectoryExistQ x) -> (Just . DoesDirectoryExistA) <$> IO.doesDirectoryExist x}
+        {storedValue = \_ (DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x}
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (GetEnvQ x) -> (Just . GetEnvA) <$> IO.lookupEnv x}
+        {storedValue = \_ (GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x}
     addBuiltinRule defaultBuiltinRule
         {storedValue = \_ x -> Just <$> getDir x}
 
