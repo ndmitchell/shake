@@ -156,14 +156,15 @@ data UserRule a
       deriving (Eq,Show,Functor)
 
 -- | Rules might be able to be optimised in some cases
-userRuleMatch :: UserRule (Maybe a) -> [[a]]
-userRuleMatch = map snd . reverse . groupSort . f
+userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]
+userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f $ fmap test u) ++ [[]]
     where
         f :: UserRule (Maybe a) -> [(Double,a)]
         f (UserRule x) = maybe [] (\x -> [(1,x)]) x
         f (Unordered xs) = concatMap f xs
         f (Priority d x) = map (first $ const d) $ f x
         f (Alternative x) = take 1 $ f x
+
 
 combineRules :: UserRule a -> UserRule a -> UserRule a
 combineRules x (Unordered xs) = Unordered (x:xs)
@@ -308,7 +309,6 @@ createRuleinfo opt SRules{..} =
                     case Map.lookup (typeOf (undefined :: k -> Maybe (Action v))) userRules of
                         Nothing -> Unordered []
                         Just (UserRule_ r) -> fromJust $ cast r
-            in \k -> case userRuleMatch $ fmap ($ fromKey k) rules of
-                        [r]:_ -> fmap newValue r
-                        rs:_  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
-                        []    -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) 0
+            in \k -> case userRuleMatch rules ($ fromKey k) of
+                        [r] -> fmap newValue r
+                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
