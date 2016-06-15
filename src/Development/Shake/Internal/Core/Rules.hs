@@ -133,12 +133,6 @@ data BuiltinRule_ = forall key value . (ShakeValue key, ShakeValue value) => Bui
 
 data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
 
-builtinKey :: BuiltinRule key value -> key
-builtinKey = err "builtinKey"
-
-builtinValue :: BuiltinRule key value -> value
-builtinValue = err "builtinValue"
-
 
 -- | A 'Match' data type, representing user-defined rules associated with a particular type.
 --   As an example '?>' and '*>' will add entries to the 'Match' data type.
@@ -295,8 +289,8 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems builtinRules) $ \(BuiltinRule_ r) -> do
-        registerWitness (builtinKey r) (builtinValue r)
+    forM_ (Map.elems builtinRules) $ \(BuiltinRule_ (BuiltinRule{} :: BuiltinRule k v)) -> do
+        registerWitness (Proxy :: Proxy k) (Proxy :: Proxy v)
 
 
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo

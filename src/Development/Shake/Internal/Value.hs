@@ -123,9 +123,9 @@ instance Eq Value where
 witness :: IORef (Map.HashMap TypeRep (Get Value))
 witness = unsafePerformIO $ newIORef Map.empty
 
-registerWitness :: (ShakeValue k, ShakeValue v) => k -> v -> IO ()
+registerWitness :: (ShakeValue k, ShakeValue v) => Proxy k -> Proxy v -> IO ()
 registerWitness k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
-    where f x = Map.insert (typeOf x) (do v <- get; return $ newValue $ v `asTypeOf` x)
+    where f (x :: Proxy a) = Map.insert (typeRep x) (do v <- get; return $ newValue (v :: a))
 
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
