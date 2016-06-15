@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor, DeriveDataTypeable #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Rules(
@@ -156,7 +156,7 @@ data UserRule a
     | Unordered [UserRule a] -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> Rules ()@.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
     | Alternative (UserRule a) -- ^ matched in order.
-      deriving (Eq,Show,Functor)
+      deriving (Eq,Show,Functor,Typeable)
 
 -- | Rules might be able to be optimised in some cases
 userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]
