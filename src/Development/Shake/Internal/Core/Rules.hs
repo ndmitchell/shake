@@ -15,7 +15,7 @@ import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Writer.Strict
-import Data.Typeable
+import Data.Typeable.Extra
 import Data.Function
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map

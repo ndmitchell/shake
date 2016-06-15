@@ -32,7 +32,7 @@ import Control.Monad.Extra
 import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
-import Data.Typeable
+import Data.Typeable.Extra
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List

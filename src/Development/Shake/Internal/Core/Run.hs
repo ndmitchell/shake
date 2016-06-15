@@ -21,7 +21,7 @@ import Data.Tuple.Extra
 import Control.Concurrent.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
-import Data.Typeable
+import Data.Typeable.Extra
 import Data.Function
 import Data.Either.Extra
 import Data.List.Extra

@@ -14,7 +14,7 @@ module Development.Shake.Internal.Value(
 import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Internal.Errors
-import Data.Typeable
+import Data.Typeable.Extra
 
 import Data.Bits
 import Data.IORef
