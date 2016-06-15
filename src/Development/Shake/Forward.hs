@@ -76,13 +76,14 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ ForwardQ{} -> return $ Just $ ForwardA ()}
-    addUserRule $ \k -> Just $ do
-        res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
-        case res of
-            Nothing -> liftIO $ errorIO "Failed to find action name"
-            Just act -> act
-        return $ ForwardA ()
+        {storedValue = \_ ForwardQ{} -> return $ Just $ ForwardA ()
+        ,executeRule = \_ k -> do
+            res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
+            case res of
+                Nothing -> liftIO $ errorIO "Failed to find action name"
+                Just act -> act
+            return $ ForwardA ()
+        }
     action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
