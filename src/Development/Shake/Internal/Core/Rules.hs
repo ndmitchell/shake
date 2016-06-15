@@ -157,13 +157,17 @@ data UserRule a
 
 -- | Rules might be able to be optimised in some cases
 userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]
-userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f $ fmap test u) ++ [[]]
+userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap test u) ++ [[]]
     where
-        f :: UserRule (Maybe a) -> [(Double,a)]
-        f (UserRule x) = maybe [] (\x -> [(1,x)]) x
-        f (Unordered xs) = concatMap f xs
-        f (Priority d x) = map (first $ const d) $ f x
-        f (Alternative x) = take 1 $ f x
+        f :: Maybe Double -> UserRule (Maybe a) -> [(Double,a)]
+        f p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,x)]) x
+        f p (Unordered xs) = concatMap (f p) xs
+        f p (Priority p2 x) = f (Just $ fromMaybe p2 p) x
+        f p (Alternative x) = case f p x of
+            [] -> []
+            -- a bit weird to use the max priority but the first value
+            -- but that's what the current implementation does...
+            xs -> [(maximum $ map fst xs, snd $ head xs)]
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
