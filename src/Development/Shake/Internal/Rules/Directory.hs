@@ -114,23 +114,17 @@ instance Binary GetDirectoryQ where
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x}
+        {storedValue = \_ (DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
+        ,executeRule = \_ (DoesFileExistQ x) -> liftIO $ DoesFileExistA <$> IO.doesFileExist x}
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x}
+        {storedValue = \_ (DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
+        ,executeRule = \_ (DoesDirectoryExistQ x) -> liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x}
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x}
+        {storedValue = \_ (GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
+        ,executeRule = \_ (GetEnvQ x) -> liftIO $ GetEnvA <$> IO.lookupEnv x}
     addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ x -> Just <$> getDir x}
-
-    let liftAction (act :: IO a) = liftIO act :: Action a
-    addUserRule $ \(DoesFileExistQ x) -> Just $
-        liftAction $ DoesFileExistA <$> IO.doesFileExist x
-    addUserRule $ \(DoesDirectoryExistQ x) -> Just $
-        liftAction $ DoesDirectoryExistA <$> IO.doesDirectoryExist x
-    addUserRule $ \(x :: GetDirectoryQ) -> Just $
-        liftAction $ getDir x
-    addUserRule $ \(GetEnvQ x) -> Just $
-        liftAction $ GetEnvA <$> IO.lookupEnv x
+        {storedValue = \_ x -> Just <$> getDir x
+        ,executeRule = \_ x -> liftIO $ getDir x}
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
