@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor, DeriveDataTypeable #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, Rank2Types, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
@@ -119,13 +119,19 @@ data BuiltinRule key value = BuiltinRule
     ,equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
         --   Use 'defaultBuiltinRule' if you do not want a different equality.
+    ,executeRule :: (forall a . Typeable a => Proxy a -> UserRule a) -> key -> Action value
     }
 
 -- | Default 'equalValue' field.
-defaultBuiltinRule :: Eq value => BuiltinRule key value
+defaultBuiltinRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => BuiltinRule key value
 defaultBuiltinRule = BuiltinRule
     {storedValue = \_ _ -> return Nothing
     ,equalValue = \_ _ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
+    ,executeRule = \ask ->
+        let rules = ask (Proxy :: Proxy (k -> Maybe (Action v)))
+        in \k -> case userRuleMatch rules ($ k) of
+                [r] -> r
+                rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy key)) (show k) (length rs)
     }
 
 
