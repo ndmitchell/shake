@@ -302,17 +302,14 @@ registerWitnesses SRules{..} =
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..} =
     flip Map.map builtinRules $ \(BuiltinRule_ (b :: BuiltinRule k v)) ->
-        RuleInfo (stored b) (equal b) (execute (BuiltinRule_ b)) (typeRep (Proxy :: Proxy v))
+        RuleInfo (stored b) (equal b) (execute b) (typeRep (Proxy :: Proxy v))
     where
         stored BuiltinRule{..} = fmap (fmap newValue) . storedValue opt . fromKey
 
         equal BuiltinRule{..} = \k v1 v2 -> equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
 
-        execute (BuiltinRule_ (BuiltinRule{} :: BuiltinRule k v)) =
-            let rules :: UserRule (k -> Maybe (Action v)) =
-                    case Map.lookup (typeRep (Proxy :: Proxy (k -> Maybe (Action v)))) userRules of
-                        Nothing -> Unordered []
-                        Just (UserRule_ r) -> fromJust $ cast r
-            in \k -> case userRuleMatch rules ($ fromKey k) of
-                        [r] -> fmap newValue r
-                        rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy k)) (show k) (length rs)
+        execute BuiltinRule{..} = \k -> fmap newValue $ op $ fromKey k
+            where op = executeRule $ \p@(Proxy :: Proxy a) ->
+                            case Map.lookup (typeRep p) userRules of
+                                Nothing -> Unordered []
+                                Just (UserRule_ r) -> fromJust $ cast r
