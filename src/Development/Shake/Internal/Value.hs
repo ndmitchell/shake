@@ -79,7 +79,7 @@ newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
 newValue :: forall a . ShakeValue a => a -> Value
-newValue = Value (typeOf (undefined :: a)) show (==) rnf hashWithSalt put
+newValue = Value (typeRep (Proxy :: Proxy a)) show (==) rnf hashWithSalt put
 
 typeKey :: Key -> TypeRep
 typeKey (Key v) = typeValue v
@@ -92,7 +92,7 @@ fromKey (Key v) = fromValue v
 
 castValue :: forall a . Typeable a => Value -> Maybe a
 castValue Value{..}
-    | valueType == typeOf (undefined :: a) = Just $ unsafeCoerce value
+    | valueType == typeRep (Proxy :: Proxy a) = Just $ unsafeCoerce value
     | otherwise = Nothing
 
 fromValue :: Typeable a => Value -> a

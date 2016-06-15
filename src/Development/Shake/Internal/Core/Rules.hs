@@ -224,8 +224,8 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 
 -- | Add a builtin rule type.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRule key value -> Rules ()
-addBuiltinRule b = newRules mempty{builtinRules = Map.singleton k $ BuiltinRule_ b}
-    where k = typeOf $ builtinKey b
+addBuiltinRule (b :: BuiltinRule key value) = newRules mempty{builtinRules = Map.singleton k $ BuiltinRule_ b}
+    where k = typeRep (Proxy :: Proxy key)
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -302,7 +302,7 @@ registerWitnesses SRules{..} =
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..} =
     flip Map.map builtinRules $ \(BuiltinRule_ (b :: BuiltinRule k v)) ->
-        RuleInfo (stored b) (equal b) (execute (BuiltinRule_ b)) (typeOf (undefined :: v))
+        RuleInfo (stored b) (equal b) (execute (BuiltinRule_ b)) (typeRep (Proxy :: Proxy v))
     where
         stored BuiltinRule{..} = fmap (fmap newValue) . storedValue opt . fromKey
 
@@ -310,9 +310,9 @@ createRuleinfo opt SRules{..} =
 
         execute (BuiltinRule_ (BuiltinRule{} :: BuiltinRule k v)) =
             let rules :: UserRule (k -> Maybe (Action v)) =
-                    case Map.lookup (typeOf (undefined :: k -> Maybe (Action v))) userRules of
+                    case Map.lookup (typeRep (Proxy :: Proxy (k -> Maybe (Action v)))) userRules of
                         Nothing -> Unordered []
                         Just (UserRule_ r) -> fromJust $ cast r
             in \k -> case userRuleMatch rules ($ fromKey k) of
                         [r] -> fmap newValue r
-                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf (undefined :: k)) (show k) (length rs)
+                        rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy k)) (show k) (length rs)

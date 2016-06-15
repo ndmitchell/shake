@@ -172,8 +172,8 @@ apply = applyForall
 -- Don't short-circuit [] as we still want error messages
 applyForall :: forall key value . (ShakeValue key, ShakeValue value) => [key] -> Action [value]
 applyForall ks = do
-    let tk = typeOf (err "apply key" :: key)
-        tv = typeOf (err "apply type" :: value)
+    let tk = typeRep (Proxy :: Proxy key)
+        tv = typeRep (Proxy :: Proxy value)
     Global{..} <- Action getRO
     block <- Action $ getsRW localBlockApply
     whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
@@ -329,7 +329,7 @@ trackAllow = trackAllowForall
 trackAllowForall :: forall key . ShakeValue key => (key -> Bool) -> Action ()
 trackAllowForall test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
-        tk = typeOf (err "trackAllow key" :: key)
+        tk = typeRep (Proxy :: Proxy key)
         f k = typeKey k == tk && test (fromKey k)
 
 
