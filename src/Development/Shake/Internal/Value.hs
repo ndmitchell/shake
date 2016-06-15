@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds, KindSignatures #-}
 
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.
@@ -125,7 +125,7 @@ witness = unsafePerformIO $ newIORef Map.empty
 
 registerWitness :: (ShakeValue k, ShakeValue v) => Proxy k -> Proxy v -> IO ()
 registerWitness k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
-    where f (x :: Proxy a) = Map.insert (typeRep x) (do v <- get; return $ newValue (v :: a))
+    where f (x :: Proxy (a :: *)) = Map.insert (typeRep x) (do v <- get; return $ newValue (v :: a))
 
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
