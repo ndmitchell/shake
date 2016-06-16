@@ -68,7 +68,7 @@ newtype ForwardA = ForwardA ()
 shakeForward :: ShakeOptions -> Action () -> IO ()
 shakeForward opts act = shake (forwardOptions opts) (forwardRule act)
 
--- | Run a forward-defined build system, interpretting command-line arguments.
+-- | Run a forward-defined build system, interpreting command-line arguments.
 shakeArgsForward :: ShakeOptions -> Action () -> IO ()
 shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 
