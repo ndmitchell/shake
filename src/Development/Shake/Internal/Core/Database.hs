@@ -120,9 +120,9 @@ data Result = Result
     } deriving Show
 
 
-newtype Pending = Pending (IORef (IO ()))
+newtype Pending = Pending (IORef (Status -> IO ()))
     -- you must run this action when you finish, while holding DB lock
-    -- after you have set the result to Error or Ready
+    -- after you have set the result to Error or Ready, with the value you set it to
 
 instance Show Pending where show _ = "Pending"
 
@@ -141,25 +141,25 @@ isReady Ready{} = True; isReady _ = False
 -- All the waiting operations are only valid when isWaiting
 type Waiting = Status
 
-afterWaiting :: Waiting -> IO () -> IO ()
-afterWaiting (Waiting (Pending p) _) act = modifyIORef' p (>> act)
+afterWaiting :: Waiting -> (Status -> IO ()) -> IO ()
+afterWaiting (Waiting (Pending p) _) act = modifyIORef' p (\a s -> a s >> act s)
 
 newWaiting :: Maybe Result -> IO Waiting
-newWaiting r = do ref <- newIORef $ return (); return $ Waiting (Pending ref) r
+newWaiting r = do ref <- newIORef $ \_ -> return (); return $ Waiting (Pending ref) r
 
-runWaiting :: Waiting -> IO ()
-runWaiting (Waiting (Pending p) _) = join $ readIORef p
+runWaiting :: Waiting -> Status -> IO ()
+runWaiting (Waiting (Pending p) _) r = ($ r) =<< readIORef p
 
 -- | Wait for a set of actions to complete.
 --   If the action returns True, the function will not be called again.
 --   If the first argument is True, the thing is ended.
-waitFor :: [(a, Waiting)] -> (Bool -> a -> IO Bool) -> IO ()
+waitFor :: [(a, Waiting)] -> (Bool -> a -> Status -> IO Bool) -> IO ()
 waitFor ws@(_:_) act = do
     todo <- newIORef $ length ws
-    forM_ ws $ \(k,w) -> afterWaiting w $ do
+    forM_ ws $ \(k,w) -> afterWaiting w $ \s -> do
         t <- readIORef todo
         when (t /= 0) $ do
-            b <- act (t == 1) k
+            b <- act (t == 1) k s
             writeIORef' todo $ if b then 0 else t - 1
 
 
@@ -201,6 +201,7 @@ internKey intern status k = do
 queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
 queryKey status i = Map.lookup i <$> readIORef status
 
+
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool database@Database{..} Ops{..} stack ks continue =
@@ -231,12 +232,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         Left e -> addPoolPriority pool $ continue $ Left e
                         Right v -> addPool pool $ do dur <- time; continue $ Right (dur, Depends is, v)
                     return True
-            waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i -> do
-                s <- readIORef status
-                case Map.lookup i s of
-                    Just (_, Error e) -> done $ Left e -- on error make sure we immediately kick off our parent
-                    Just (_, Ready{}) | finish -> done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
-                                      | otherwise -> return False
+            waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i s -> case s of
+                Error e -> done $ Left e -- on error make sure we immediately kick off our parent
+                Ready{} | finish -> do s <- readIORef status; done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                        | otherwise -> return False
             return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
@@ -288,7 +287,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 let reply res = do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)
-                            runWaiting w
+                            runWaiting w res
                             return ans
                         case ans of
                             Ready r -> do
@@ -327,20 +326,19 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 check stack i k r rest
              else do
                 self <- newWaiting $ Just r
-                waitFor ws $ \finish d -> do
-                    s <- readIORef status
+                waitFor ws $ \finish d s -> do
                     let buildIt = do
                             b <- run stack i k $ Just r
                             afterWaiting b $ runWaiting self
                             return True
-                    case Map.lookup d s of
-                        Just (_, Error{}) -> buildIt
-                        Just (_, Ready r2)
+                    case s of
+                        Error{} -> buildIt
+                        Ready r2
                             | changed r2 > built r -> buildIt
                             | finish -> do
                                 res <- check stack i k r rest
                                 if not $ isWaiting res
-                                    then runWaiting self
+                                    then runWaiting self res
                                     else afterWaiting res $ runWaiting self
                                 return True
                             | otherwise -> return False
