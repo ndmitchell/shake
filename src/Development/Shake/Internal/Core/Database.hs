@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, Rank2Types #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(
@@ -186,6 +186,8 @@ data Ops = Ops
         -- ^ Given a stack and a key, either raise an exception or successfully build it
     }
 
+type Returns a = forall b . (a -> IO b) -> (((a -> IO ()) -> IO ()) -> IO b) -> IO b
+
 
 internKey :: InternDB -> StatusDB -> Key -> IO Id
 internKey intern status k = do
@@ -219,24 +221,14 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 Just (k,_) -> (Just $ typeKey k, Just $ show k)
             errorRuleRecursion stack tk tname
 
-        vs <- mapM (reduce stack) is
-        let errs = [e | Error e <- vs]
-        if all isReady vs then
-            return $ continue $ Right (0, Depends is, [result r | Ready r <- vs])
-         else if not $ null errs then
-            return $ continue $ Left $ head errs
-         else do
-            time <- offsetTime
-            let done x = do
-                    case x of
-                        Left e -> addPoolPriority pool $ continue $ Left e
-                        Right v -> addPool pool $ do dur <- time; continue $ Right (dur, Depends is, v)
-                    return True
-            waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i s -> case s of
-                Error e -> done $ Left e -- on error make sure we immediately kick off our parent
-                Ready{} | finish -> do s <- readIORef status; done $ Right [result r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
-                        | otherwise -> return False
-            return $ return ()
+        buildMany is
+            (return . continue . fmap (\rs -> (0, Depends is, map result rs))) $
+            \go -> do
+                time <- offsetTime
+                go $ \x -> case x of
+                    Left e -> addPoolPriority pool $ continue $ Left e
+                    Right rs -> addPool pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
+                return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
         i #= (k,v) = do
@@ -246,6 +238,26 @@ build pool database@Database{..} Ops{..} stack ks continue =
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
+
+        buildMany :: [Id] -> Returns (Either SomeException [Result])
+        buildMany is fast slow = do
+            vs <- mapM (reduce stack) is
+            let errs = [e | Error e <- vs]
+            if all isReady vs then
+                fast $ Right [r | Ready r <- vs]
+             else if not $ null errs then
+                fast $ Left $ head errs
+             else slow $ \slow ->
+                waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i s -> case s of
+                    Error e -> do
+                        slow $ Left e -- on error make sure we immediately kick off our parent
+                        return True
+                    Ready{}
+                        | finish -> do
+                            s <- readIORef status
+                            slow $ Right [r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                            return True
+                        | otherwise -> return False
 
         -- Rules for each eval* function
         -- * Must NOT lock
