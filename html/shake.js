@@ -1,3 +1,6 @@
+// GENERATED CODE - DO NOT MODIFY
+// SOURCE IS IN THE ts/ DIRECTORY
+
 "use strict";
 var Summary = (function () {
     function Summary() {
