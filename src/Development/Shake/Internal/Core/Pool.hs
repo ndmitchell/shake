@@ -2,7 +2,7 @@
 -- | Thread pool implementation.
 module Development.Shake.Internal.Core.Pool(
     Pool, runPool,
-    addPoolHighPriority, addPoolMediumPriority,
+    addPoolHighPriority, addPoolMediumPriority, addPoolLowPriority,
     increasePool
     ) where
 
@@ -140,6 +140,11 @@ addPoolMediumPriority :: Pool -> IO a -> IO ()
 addPoolMediumPriority pool act = step pool $ \s -> do
     todo <- return $ enqueue (void act) (todo s)
     return s{todo = todo}
+
+-- | Add a new task to the pool.
+--   Low priority is suitable for new tasks that are just starting.
+addPoolLowPriority :: Pool -> IO a -> IO ()
+addPoolLowPriority = addPoolMediumPriority
 
 -- | Add a new task to the pool.
 --   High priority is suitable for tasks that have detected failure and are resuming to propagate that failure.
