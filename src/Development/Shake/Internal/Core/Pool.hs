@@ -134,13 +134,13 @@ step pool@(Pool var done) op = do
             _ -> return $ Just s
 
 
--- | Add a new task to the pool, may be cancelled by sending it an exception
+-- | Add a new task to the pool.
 addPool :: Pool -> IO a -> IO ()
 addPool pool act = step pool $ \s -> do
     todo <- return $ enqueue (void act) (todo s)
     return s{todo = todo}
 
--- | Add a new task to the pool, may be cancelled by sending it an exception.
+-- | Add a new task to the pool.
 --   Takes priority over everything else.
 addPoolPriority :: Pool -> IO a -> IO ()
 addPoolPriority pool act = step pool $ \s -> do
