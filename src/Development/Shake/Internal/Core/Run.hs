@@ -323,11 +323,7 @@ trackChange key = do
 
 -- | Allow any matching key to violate the tracking rules.
 trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
-trackAllow = trackAllowForall
-
--- We don't want the forall in the Haddock docs
-trackAllowForall :: forall key . ShakeValue key => (key -> Bool) -> Action ()
-trackAllowForall test = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
+trackAllow (test :: key -> Bool) = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
         tk = typeRep (Proxy :: Proxy key)
         f k = typeKey k == tk && test (fromKey k)
