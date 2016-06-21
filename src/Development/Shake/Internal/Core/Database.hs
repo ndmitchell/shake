@@ -36,6 +36,7 @@ import Data.Typeable.Extra
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List
+import Data.Either.Extra
 import System.Time.Extra
 import Data.Monoid
 import Prelude
@@ -133,7 +134,6 @@ statusType Loaded{} = "Loaded"
 statusType Waiting{} = "Waiting"
 statusType Missing{} = "Missing"
 
-isError Error{} = True; isError _ = False
 isWaiting Waiting{} = True; isWaiting _ = False
 isReady Ready{} = True; isReady _ = False
 
@@ -334,31 +334,24 @@ build pool database@Database{..} Ops{..} stack ks continue =
         check stack i k r [] =
             i #= (k, Ready r)
         check stack i k r (ds:rest) = do
-            vs <- mapM (reduce (addStack i k stack)) ds
-            let ws = filter (isWaiting . snd) $ zip ds vs
-            if any isError vs || any (> built r) [changed | Ready Result{..} <- vs] then
-                run stack i k $ Just r
-             else if null ws then
-                check stack i k r rest
-             else do
-                self <- newWaiting $ Just r
-                waitFor ws $ \finish d s -> do
-                    let buildIt = do
+            buildMany (addStack i k stack) ds
+                (\v -> case v of
+                    Error _ -> Just ()
+                    Ready dep | changed dep > built r -> Just ()
+                    _ -> Nothing)
+                (\v -> if isLeft v then run stack i k $ Just r else check stack i k r rest) $
+                \go -> do
+                    self <- newWaiting $ Just r
+                    go $ \v ->
+                        if isLeft v then do
                             b <- run stack i k $ Just r
                             afterWaiting b $ runWaiting self
-                            return True
-                    case s of
-                        Error{} -> buildIt
-                        Ready r2
-                            | changed r2 > built r -> buildIt
-                            | finish -> do
-                                res <- check stack i k r rest
-                                if not $ isWaiting res
-                                    then runWaiting self res
-                                    else afterWaiting res $ runWaiting self
-                                return True
-                            | otherwise -> return False
-                i #= (k, self)
+                        else do
+                            res <- check stack i k r rest
+                            if not $ isWaiting res
+                                then runWaiting self res
+                                else afterWaiting res $ runWaiting self
+                    i #= (k, self)
 
 
 ---------------------------------------------------------------------
