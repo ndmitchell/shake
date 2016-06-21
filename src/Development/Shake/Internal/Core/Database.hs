@@ -226,8 +226,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
             \go -> do
                 time <- offsetTime
                 go $ \x -> case x of
-                    Left e -> addPoolPriority pool $ continue $ Left e
-                    Right rs -> addPool pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
+                    Left e -> addPoolHighPriority pool $ continue $ Left e
+                    Right rs -> addPoolMediumPriority pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
                 return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
@@ -295,7 +295,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
         run stack i k r = do
             w <- newWaiting r
-            addPool pool $ do
+            addPoolMediumPriority pool $ do
                 let reply res = do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)

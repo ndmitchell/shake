@@ -2,7 +2,7 @@
 -- | Thread pool implementation.
 module Development.Shake.Internal.Core.Pool(
     Pool, runPool,
-    addPool, addPoolPriority,
+    addPoolHighPriority, addPoolMediumPriority,
     increasePool
     ) where
 
@@ -135,15 +135,16 @@ step pool@(Pool var done) op = do
 
 
 -- | Add a new task to the pool.
-addPool :: Pool -> IO a -> IO ()
-addPool pool act = step pool $ \s -> do
+--   Medium priority is suitable for tasks that are resuming running after a pause.
+addPoolMediumPriority :: Pool -> IO a -> IO ()
+addPoolMediumPriority pool act = step pool $ \s -> do
     todo <- return $ enqueue (void act) (todo s)
     return s{todo = todo}
 
 -- | Add a new task to the pool.
---   Takes priority over everything else.
-addPoolPriority :: Pool -> IO a -> IO ()
-addPoolPriority pool act = step pool $ \s -> do
+--   High priority is suitable for tasks that have detected failure and are resuming to propagate that failure.
+addPoolHighPriority :: Pool -> IO a -> IO ()
+addPoolHighPriority pool act = step pool $ \s -> do
     todo <- return $ enqueuePriority (void act) (todo s)
     return s{todo = todo}
 
@@ -182,7 +183,7 @@ runPool deterministic n act = do
                 _ -> throwIO BlockedIndefinitelyOnMVar
     handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip onException cleanup $ do
         let pool = Pool s done
-        addPool pool $ act pool
+        addPoolMediumPriority pool $ act pool
         res <- waitBarrier done
         case res of
             Left e -> throwIO e

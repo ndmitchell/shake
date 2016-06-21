@@ -114,7 +114,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                     let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
                     let s1 = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
-                        addPool pool $ runAction s0 s1 act $ \x -> case x of
+                        addPoolMediumPriority pool $ runAction s0 s1 act $ \x -> case x of
                             Left e -> raiseError =<< shakeException s0 (return ["Top-level action/want"]) e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
@@ -447,7 +447,7 @@ newCacheIO act = do
                         pool <- Action $ getsRO globalPool
                         offset <- liftIO offsetTime
                         Action $ captureRAW $ \k -> waitFence bar $ \v ->
-                            addPool pool $ do offset <- liftIO offset; k $ Right (v,offset)
+                            addPoolMediumPriority pool $ do offset <- liftIO offset; k $ Right (v,offset)
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
@@ -504,7 +504,7 @@ unsafeExtraThread act = Action $ do
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
-    captureRAW $ \continue -> (if isLeft res then addPoolPriority else addPool) globalPool $ continue res
+    captureRAW $ \continue -> (if isLeft res then addPoolHighPriority else addPoolMediumPriority) globalPool $ continue res
 
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
@@ -526,7 +526,7 @@ parallel acts = Action $ do
 
         liftIO $ forM_ (zip acts results) $ \(act, result) -> do
             let act2 = ifM (liftIO $ isJust <$> readVar todo) act (fail "")
-            addPool globalPool $ runAction global local act2 $ \res -> do
+            addPoolMediumPriority globalPool $ runAction global local act2 $ \res -> do
                 writeIORef result $ Just res
                 modifyVar_ todo $ \v -> case v of
                     Nothing -> return Nothing

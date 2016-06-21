@@ -21,7 +21,7 @@ test build obj = do
             var <- newMVar (0,0) -- (maximum, current)
             runPool deterministic n $ \pool ->
                 forM_ [1..5] $ \i ->
-                    addPool pool $ do
+                    addPoolMediumPriority pool $ do
                         modifyMVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
                         wait
                         modifyMVar_ var $ \(mx,now) -> return (mx,now-1)
@@ -32,10 +32,10 @@ test build obj = do
         self <- myThreadId
         handle (\(ErrorCall msg) -> msg === "pass") $
             runPool deterministic 3 $ \pool -> do
-                addPool pool $ do
+                addPoolMediumPriority pool $ do
                     wait
                     error "pass"
-                addPool pool $ do
+                addPoolMediumPriority pool $ do
                     wait >> wait
                     throwTo self $ ErrorCall "fail" 
         wait >> wait -- give chance for a delayed exception
@@ -43,9 +43,9 @@ test build obj = do
         -- check someone spawned when at zero todo still gets run
         done <- newMVar False
         runPool deterministic 1 $ \pool ->
-            addPool pool $ do
+            addPoolMediumPriority pool $ do
                 wait
-                addPool pool $ do
+                addPoolMediumPriority pool $ do
                     wait
                     modifyMVar_ done $ const $ return True
         done <- readMVar done
@@ -56,7 +56,7 @@ test build obj = do
         done <- newEmptyMVar
         res <- newMVar True
         t <- forkIO $ flip finally (putMVar done ()) $ runPool deterministic 1 $ \pool ->
-            addPool pool $ do
+            addPoolMediumPriority pool $ do
                 t <- takeMVar thread
                 killThread t
                 wait -- allow the thread to die first
