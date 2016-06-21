@@ -295,7 +295,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
         run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
         run stack i k r = do
             w <- newWaiting r
-            addPoolMediumPriority pool $ do
+            addPoolLowPriority pool $ do
                 let reply res = do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)
