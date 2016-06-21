@@ -222,6 +222,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
             errorRuleRecursion stack tk tname
 
         buildMany is
+            (\v -> case v of Error e -> Just e; _ -> Nothing)
             (\v -> case v of
                 Left e -> return $ continue $ Left e;
                 Right rs -> do rs <- rs; return $ continue $ Right (0, Depends is, map result rs)) $
@@ -241,17 +242,17 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
 
-        buildMany :: [Id] -> Returns (Either SomeException (IO [Result]))
-        buildMany is fast slow = do
+        buildMany :: [Id] -> (Status -> Maybe a) -> Returns (Either a (IO [Result]))
+        buildMany is test fast slow = do
             vs <- mapM (reduce stack) is
-            let errs = [e | Error e <- vs]
+            let errs = mapMaybe test vs
             if all isReady vs then
                 fast $ Right $ return [r | Ready r <- vs]
              else if not $ null errs then
                 fast $ Left $ head errs
              else slow $ \slow ->
                 waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i s -> case s of
-                    Error e -> do
+                    _ | Just e <- test s -> do
                         slow $ Left e -- on error make sure we immediately kick off our parent
                         return True
                     Ready{}
