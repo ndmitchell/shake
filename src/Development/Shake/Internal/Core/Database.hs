@@ -186,7 +186,7 @@ data Ops = Ops
         -- ^ Given a stack and a key, either raise an exception or successfully build it
     }
 
-type Returns a = forall b . (a -> IO b) -> (((a -> IO ()) -> IO ()) -> IO b) -> IO b
+type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
 
 
 internKey :: InternDB -> StatusDB -> Key -> IO Id
