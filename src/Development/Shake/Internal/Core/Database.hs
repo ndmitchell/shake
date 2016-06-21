@@ -221,7 +221,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 Just (k,_) -> (Just $ typeKey k, Just $ show k)
             errorRuleRecursion stack tk tname
 
-        buildMany is
+        buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)
             (\v -> case v of
                 Left e -> return $ continue $ Left e;
@@ -242,8 +242,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
 
-        buildMany :: [Id] -> (Status -> Maybe a) -> Returns (Either a (IO [Result]))
-        buildMany is test fast slow = do
+        buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a (IO [Result]))
+        buildMany stack is test fast slow = do
             vs <- mapM (reduce stack) is
             let errs = mapMaybe test vs
             if all isReady vs then
