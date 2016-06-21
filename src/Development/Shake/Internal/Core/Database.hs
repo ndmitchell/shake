@@ -222,12 +222,14 @@ build pool database@Database{..} Ops{..} stack ks continue =
             errorRuleRecursion stack tk tname
 
         buildMany is
-            (return . continue . fmap (\rs -> (0, Depends is, map result rs))) $
+            (\v -> case v of
+                Left e -> return $ continue $ Left e;
+                Right rs -> do rs <- rs; return $ continue $ Right (0, Depends is, map result rs)) $
             \go -> do
                 time <- offsetTime
                 go $ \x -> case x of
                     Left e -> addPoolHighPriority pool $ continue $ Left e
-                    Right rs -> addPoolMediumPriority pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
+                    Right rs -> do rs <- rs; addPoolMediumPriority pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
                 return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
@@ -239,12 +241,12 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
 
-        buildMany :: [Id] -> Returns (Either SomeException [Result])
+        buildMany :: [Id] -> Returns (Either SomeException (IO [Result]))
         buildMany is fast slow = do
             vs <- mapM (reduce stack) is
             let errs = [e | Error e <- vs]
             if all isReady vs then
-                fast $ Right [r | Ready r <- vs]
+                fast $ Right $ return [r | Ready r <- vs]
              else if not $ null errs then
                 fast $ Left $ head errs
              else slow $ \slow ->
@@ -254,8 +256,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         return True
                     Ready{}
                         | finish -> do
-                            s <- readIORef status
-                            slow $ Right [r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                            slow $ Right $ do
+                                s <- readIORef status
+                                return [r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
                             return True
                         | otherwise -> return False
 
