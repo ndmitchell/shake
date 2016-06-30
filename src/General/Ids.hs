@@ -32,7 +32,7 @@ insert (Id i) v (Ids ref) = do
     if ii < capacity then
         writeArray values ii $ Just v
      else do
-        c2 <- return $ max (capacity * 2) (ii + 1000)
+        c2 <- return $ max (capacity * 2) (ii + 10000)
         v2 <- newArray capacity Nothing
         copyMutableArray v2 0 values 0 capacity
         writeArray values ii $ Just v
