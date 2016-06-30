@@ -2,7 +2,9 @@
 
 module General.Ids(
     Ids, Id,
-    empty, insert, lookup, null, size, sizeUpperBound
+    empty, insert, lookup,
+    null, size, sizeUpperBound,
+    toList
     ) where
 
 import Data.IORef.Extra
@@ -11,7 +13,7 @@ import General.Intern(Id(..))
 import Control.Monad
 import Data.Maybe
 import Prelude hiding (lookup, null)
-import GHC.Exts
+import GHC.Exts hiding (toList)
 
 
 data Ids a = Ids (IORef (S a))
@@ -47,6 +49,21 @@ size (Ids ref) = do
                 v <- readArray values i
                 if isJust v then go (acc+1) (i-1) else go acc (i-1)
     go 0 (used-1)
+
+
+toList :: Ids a -> IO [(Id, a)]
+toList (Ids ref) = do
+    S{..} <- readIORef ref
+    let go i
+            | i >= used = return []
+            | otherwise = do
+                v <- readArray values i
+                case v of
+                    Nothing -> go $ i+1
+                    Just v -> do
+                        xs <- go $ i+1
+                        return $ (Id $ fromIntegral i, v) : xs
+    go 0
 
 
 null :: Ids a -> IO Bool
