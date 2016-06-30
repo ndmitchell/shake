@@ -2,28 +2,40 @@
 
 module General.Ids(
     Ids, Id,
-    empty, insert, lookup
+    empty, insert, lookup, null
     ) where
 
 import Data.IORef.Extra
 import Data.Primitive.Array
 import General.Intern(Id(..))
-import Prelude hiding (lookup)
+import Control.Monad
+import Data.Maybe
+import Prelude hiding (lookup, null)
 import GHC.Exts
 
 
 data Ids a = Ids (IORef (S a))
 
 data S a = S
-    {capacity :: {-# UNPACK #-} !Int
+    {capacity :: {-# UNPACK #-} !Int -- ^ Number of entries in values, initially 0
     ,values :: {-# UNPACK #-} !(MutableArray RealWorld (Maybe a))
     }
 
+
 empty :: IO (Ids a)
 empty = do
-    let capacity = 10000
+    -- important to start at capacity == 0 so I can implement null cheaply
+    let capacity = 0
     values <- newArray capacity Nothing
     Ids <$> newIORef S{..}
+
+
+null :: Ids a -> IO Bool
+null (Ids ref) = do
+    S{..} <- readIORef ref
+    -- safe because of empty
+    return $ capacity == 0
+
 
 insert :: Id -> a -> Ids a -> IO ()
 insert (Id i) v (Ids ref) = do
