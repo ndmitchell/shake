@@ -9,6 +9,7 @@ import Control.Monad
 import Control.Concurrent
 import Control.Exception.Extra hiding (assert)
 import System.Directory as IO
+import System.Time.Extra
 import qualified System.IO.Extra as IO
 
 
@@ -110,6 +111,13 @@ main = shakenCwd test $ \args obj -> do
         else
             writeFileChanged out src
 
+    obj "fast_failure" %> \out -> do
+        liftIO $ sleep 0.1
+        fail "die"
+    obj "slow_success" %> \out -> do
+        liftIO $ sleep 20
+        writeFile' out ""
+
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
         liftIO $ putStrLn $ let x = x in x
@@ -195,3 +203,7 @@ test build obj = do
     writeFile (obj "persist_failure.3") "more"
     build ["persist_failure.1"]
     assertContents (obj "persist_failure.log") "[pre][post][err][pre][pre][post]"
+
+    -- check a fast failure aborts a slow success
+    (t, _) <- duration $ crash ["fast_failure","slow_success","-j2"] ["die"]
+    assert (t < 10) $ "Took too long, expected < 10, got " ++ show t
