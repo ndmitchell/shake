@@ -56,8 +56,8 @@ splitVersion abc = (a `LBS.append` b, c)
 
 
 withStorage
-    :: (Show v, Eq w
-       ,Binary w, BinaryWith w v)
+    :: forall w v a .
+       (Show v, Eq w, Binary w, BinaryWith w v)
     => ShakeOptions             -- ^ Storage options
     -> (String -> IO ())        -- ^ Logging function
     -> w                        -- ^ Witness
