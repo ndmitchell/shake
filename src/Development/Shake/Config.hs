@@ -13,6 +13,8 @@
 --   @CFLAGS@ (equal to @-g -I\/path\/to\/dir -O2@), and also includes the configuration
 --   statements in the file @extra/file.cfg@. The full lexical syntax for configuration
 --   files is defined here: <https://ninja-build.org/manual.html#_lexical_syntax>.
+--   The use of Ninja file syntax is due to convenience and the desire to reuse an
+--    externally-defined specification (but the choice of configuration language is mostly arbitrary).
 --
 --   To use the configuration file either use 'readConfigFile' to parse the configuration file
 --   and use the values directly, or 'usingConfigFile' and 'getConfig' to track the configuration
