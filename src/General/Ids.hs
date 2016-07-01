@@ -28,7 +28,6 @@ data S a = S
 
 empty :: IO (Ids a)
 empty = do
-    -- important to start at capacity == 0 so I can implement null cheaply
     let capacity = 0
     let used = 0
     values <- newArray capacity Nothing
