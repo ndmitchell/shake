@@ -88,7 +88,7 @@ lookup :: Id -> Ids a -> IO (Maybe a)
 lookup (Id i) (Ids ref) = do
     S{..} <- readIORef ref
     let ii = fromIntegral i
-    if ii < capacity then
+    if ii < used then
         readArray values ii
      else
         return Nothing
