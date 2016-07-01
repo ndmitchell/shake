@@ -457,12 +457,12 @@ toReport Database{..} = do
 
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
 checkValid Database{..} stored equal missing = do
-    status <- Ids.toMap status
+    status <- Ids.toList status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
 
     -- Do not use a forM here as you use too much stack space
-    bad <- (\f -> foldM f [] (Map.toList status)) $ \seen (i,v) -> case v of
+    bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             now <- stored key
             let good = maybe False ((==) EqualCheap . equal key result) now
