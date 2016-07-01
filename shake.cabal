@@ -255,6 +255,7 @@ executable shake
         General.Concurrent
         General.Extra
         General.FileLock
+        General.Ids
         General.Intern
         General.Process
         General.String

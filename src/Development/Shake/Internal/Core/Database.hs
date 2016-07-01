@@ -32,6 +32,7 @@ import Control.Monad.Extra
 import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
+import qualified General.Ids as Ids
 import Data.Typeable.Extra
 import Data.IORef.Extra
 import Data.Maybe
@@ -58,9 +59,9 @@ incStep (Step i) = Step $ i + 1
 data Stack = Stack (Maybe Key) [Id] !(Set.HashSet Id)
 
 showStack :: Database -> Stack -> IO [String]
-showStack Database{..} (Stack _ xs _) = do
-    status <- withLock lock $ readIORef status
-    return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) xs
+showStack Database{..} (Stack _ xs _) = withLock lock $ do
+    forM (reverse xs) $ \x ->
+        maybe "<unknown>" (show . fst) <$> Ids.lookup status x
 
 addStack :: Id -> Key -> Stack -> Stack
 addStack x key (Stack _ xs set) = Stack (Just key) (x:xs) (Set.insert x set)
@@ -89,7 +90,7 @@ data Trace = Trace BS Float Float -- ^ (message, start, end)
 instance NFData Trace where
     rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
 
-type StatusDB = IORef (Map Id (Key, Status))
+type StatusDB = Ids.Ids (Key, Status)
 type InternDB = IORef (Intern Key)
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself
@@ -197,11 +198,11 @@ internKey intern status k = do
         Nothing -> do
             (is, i) <- return $ Intern.add k is
             writeIORef' intern is
-            modifyIORef' status $ Map.insert i (k,Missing)
+            Ids.insert status i (k,Missing)
             return i
 
 queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
-queryKey status i = Map.lookup i <$> readIORef status
+queryKey status i = Ids.lookup status i
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
@@ -213,12 +214,14 @@ build pool database@Database{..} Ops{..} stack ks continue =
         whenJust (checkStack is stack) $ \bad -> do
             -- everything else gets thrown via Left and can be Staunch'd
             -- recursion in the rules is considered a worse error, so fails immediately
-            status <- readIORef status
             let Stack _ xs _ = stack
-            stack <- return $ reverse $ map (maybe "<unknown>" (show . fst) . flip Map.lookup status) $ bad:xs
-            (tk, tname) <- return $ case Map.lookup bad status of
-                Nothing -> (Nothing, Nothing)
-                Just (k,_) -> (Just $ typeKey k, Just $ show k)
+            stack <- forM (reverse $ bad:xs) $ \x ->
+                maybe "<unknown>" (show . fst) <$> Ids.lookup status x
+            (tk, tname) <- do
+                v <- Ids.lookup status bad
+                return $ case v of
+                    Nothing -> (Nothing, Nothing)
+                    Just (k,_) -> (Just $ typeKey k, Just $ show k)
             errorRuleRecursion stack tk tname
 
         buildMany stack is
@@ -235,9 +238,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
     where
         (#=) :: Id -> (Key, Status) -> IO Status
         i #= (k,v) = do
-            s <- readIORef status
-            writeIORef' status $ Map.insert i (k,v) s
-            diagnostic $ maybe "Missing" (statusType . snd) (Map.lookup i s) ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) (Map.lookup i s)
+            old <- Ids.lookup status i
+            Ids.insert status i (k,v)
+            diagnostic $ maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
@@ -246,10 +249,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
         buildMany stack is test fast slow = do
             vs <- mapM (reduce stack) is
             let errs = mapMaybe test vs
-            if all isReady vs then
-                fast $ Right $ return [r | Ready r <- vs]
-             else if not $ null errs then
+            if not $ null errs then
                 fast $ Left $ head errs
+             else if all isReady vs then
+                fast $ Right $ return [r | Ready r <- vs]
              else slow $ \slow ->
                 waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i s -> case s of
                     _ | Just e <- test s -> do
@@ -257,9 +260,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         return True
                     Ready{}
                         | finish -> do
-                            slow $ Right $ do
-                                s <- readIORef status
-                                return [r | i <- is, let Ready r = snd $ fromJust $ Map.lookup i s]
+                            slow $ Right $
+                                forM is $ \i -> do
+                                    Ready r <- snd . fromJust <$> Ids.lookup status i
+                                    return r
                             return True
                         | otherwise -> return False
 
@@ -359,8 +363,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
 progress :: Database -> IO Progress
 progress Database{..} = do
-    s <- readIORef status
-    return $ foldl' f mempty $ map snd $ Map.elems s
+    xs <- Ids.toList status
+    return $ foldl' f mempty $ map (snd . snd) xs
     where
         g = floatToDouble
 
@@ -382,8 +386,8 @@ progress Database{..} = do
 assertFinishedDatabase :: Database -> IO ()
 assertFinishedDatabase Database{..} = do
     -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
-    status <- readIORef status
-    let bad = [key | (_, (key, Waiting{})) <- Map.toList status]
+    status <- Ids.toList status
+    let bad = [key | (_, (key, Waiting{})) <- status]
     when (bad /= []) $
         errorComplexRecursion (map show bad)
 
@@ -430,7 +434,7 @@ removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
-    status <- (removeStep . resultsOnly) <$> readIORef status
+    status <- removeStep . resultsOnly . Map.fromList <$> Ids.toList status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]
@@ -453,7 +457,7 @@ toReport Database{..} = do
 
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
 checkValid Database{..} stored equal missing = do
-    status <- readIORef status
+    status <- Map.fromList <$> Ids.toList status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
 
@@ -487,24 +491,24 @@ checkValid Database{..} stored equal missing = do
 listLive :: Database -> IO [Key]
 listLive Database{..} = do
     diagnostic "Listing live keys"
-    status <- readIORef status
-    return [k | (k, Ready{}) <- Map.elems status]
+    status <- Ids.toList status
+    return [k | (_, (k, Ready{})) <- status]
 
 
 listDepends :: Database -> Depends -> IO [Key]
 listDepends Database{..} (Depends xs) =
     withLock lock $ do
-        status <- readIORef status
-        return $ map (fst . fromJust . flip Map.lookup status) xs
+        forM xs $ \x ->
+            fst . fromJust <$> Ids.lookup status x
 
 lookupDependencies :: Database -> Key -> IO [Key]
 lookupDependencies Database{..} k =
     withLock lock $ do
         intern <- readIORef intern
-        status <- readIORef status
         let Just i = Intern.lookup k intern
-        let Just (_, Ready r) = Map.lookup i status
-        return $ map (fst . fromJust . flip Map.lookup status) $ concat $ depends r
+        Just (_, Ready r) <- Ids.lookup status i
+        forM (concat $ depends r) $ \x ->
+            fst . fromJust <$> Ids.lookup status x
 
 
 ---------------------------------------------------------------------
@@ -528,8 +532,9 @@ withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
     registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
     witness <- currentWitness
-    withStorage opts diagnostic witness $ \mp2 journal -> do
-        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- Map.toList mp2]
+    withStorage opts diagnostic witness $ \status journal -> do
+        xs <- Ids.toList status
+        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
 
         (mp1, stepId) <- case Intern.lookup stepKey mp1 of
             Just stepId -> return (mp1, stepId)
@@ -538,10 +543,11 @@ withDatabase opts diagnostic act = do
                 return (mp1, stepId)
 
         intern <- newIORef mp1
-        status <- newIORef mp2
-        let step = case Map.lookup stepId mp2 of
-                        Just (_, Loaded r) -> incStep $ fromStepResult r
-                        _ -> Step 1
+        step <- do
+            v <- Ids.lookup status stepId
+            return $ case v of
+                Just (_, Loaded r) -> incStep $ fromStepResult r
+                _ -> Step 1
         journal stepId (stepKey, Loaded $ toStepResult step)
         lock <- newLock
         act Database{assume=shakeAssume opts,..}

@@ -14,6 +14,7 @@ import General.Intern
 import Development.Shake.Internal.Types
 import General.Timing
 import General.FileLock
+import qualified General.Ids as Ids
 
 import Data.Tuple.Extra
 import Control.Exception.Extra
@@ -24,8 +25,6 @@ import Data.Binary.Put
 import Data.Time
 import Data.Char
 import Development.Shake.Classes
-import qualified Data.HashMap.Strict as Map
-import Data.List
 import Numeric
 import System.Directory
 import System.Exit
@@ -35,8 +34,6 @@ import System.IO
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Lazy as LBS8
 
-
-type Map = Map.HashMap
 
 -- Increment every time the on-disk format/semantics change,
 -- @x@ is for the users version number
@@ -56,12 +53,11 @@ splitVersion abc = (a `LBS.append` b, c)
 
 
 withStorage
-    :: forall w v a .
-       (Show v, Eq w, Binary w, BinaryWith w v)
+    :: (Show v, Eq w, Binary w, BinaryWith w v)
     => ShakeOptions             -- ^ Storage options
     -> (String -> IO ())        -- ^ Logging function
     -> w                        -- ^ Witness
-    -> (Map Id v -> (Id -> v -> IO ()) -> IO a)  -- ^ Execute
+    -> (Ids.Ids v -> (Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
@@ -93,7 +89,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                     ,"  Expected:  " ++ disp (LBS.unpack ver)
                     ,"  Found:     " ++ disp (limit $ LBS.unpack oldVer)
                     ,"All rules will be rebuilt"]
-            continue h Map.empty
+            continue h =<< Ids.empty
          else
             -- make sure you are not handling exceptions from inside
             join $ handleBool (not . asyncException) (\err -> do
@@ -112,20 +108,20 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
 
                 -- exitFailure -- should never happen without external corruption
                                -- add back to check during random testing
-                return $ continue h Map.empty) $
+                return $ continue h =<< Ids.empty) $
                 case readChunks src of
                     ([], slop) -> do
                         when (LBS.length slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         diagnostic $ "Read 0 chunks, plus " ++ show slop ++ " slop"
-                        return $ continue h Map.empty
+                        return $ continue h =<< Ids.empty
                     (w:xs, slopRaw) -> do
                         let slop = fromIntegral $ LBS.length slopRaw
                         when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                         diagnostic $ "Read " ++ show (length xs + 1) ++ " chunks, plus " ++ show slop ++ " slop"
                         let ws = decode w
-                            f mp (k, v) = Map.insert k v mp
                             ents = map (runGet $ getWith ws) xs
-                            mp = foldl' f Map.empty ents
+                        mp <- Ids.empty
+                        forM_ ents $ \(k,v) -> Ids.insert mp k v
 
                         when (shakeVerbosity == Diagnostic) $ do
                             let raw x = "[len " ++ show (LBS.length x) ++ "] " ++ concat
@@ -138,12 +134,13 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                                 diagnostic $ "Chunk " ++ show i ++ " " ++ raw x ++ " " ++ pretty x2
                             diagnostic $ "Slop " ++ raw slopRaw
 
-                        diagnostic $ "Found " ++ show (Map.size mp) ++ " real entries"
+                        size <- Ids.sizeUpperBound mp
+                        diagnostic $ "Found at most " ++ show size ++ " real entries"
 
                         -- if mp is null, continue will reset it, so no need to clean up
-                        if verEqual && (Map.null mp || (ws == witness && Map.size mp * 2 > length xs - 2)) then do
+                        if verEqual && (size == 0 || (ws == witness && size * 2 > length xs - 2)) then do
                             -- make sure we reset to before the slop
-                            when (not (Map.null mp) && slop /= 0) $ do
+                            when (size /= 0 && slop /= 0) $ do
                                 diagnostic $ "Dropping last " ++ show slop ++ " bytes of database (incomplete)"
                                 now <- hFileSize h
                                 hSetFileSize h $ now - slop
@@ -178,18 +175,19 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             LBS.hPut h $ toChunk s
 
         reset h mp = do
-            diagnostic $ "Resetting database to " ++ show (Map.size mp) ++ " elements"
+            sz <- Ids.sizeUpperBound mp
+            diagnostic $ "Resetting database to at most " ++ show sz ++ " elements"
             hSetFileSize h 0
             hSeek h AbsoluteSeek 0
             LBS.hPut h ver
             writeChunk h $ encode witness
-            mapM_ (writeChunk h . runPut . putWith witness) $ Map.toList mp
+            mapM_ (writeChunk h . runPut . putWith witness) =<< Ids.toList mp
             hFlush h
             diagnostic "Flush"
 
         -- continuation (since if we do a compress, h changes)
         continue h mp = do
-            when (Map.null mp) $
+            whenM (Ids.null mp) $
                 reset h mp -- might as well, no data to lose, and need to ensure a good witness table
                            -- also lets us recover in the case of corruption
             flushThread shakeFlush h $ \out -> do
