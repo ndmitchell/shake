@@ -364,7 +364,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
 progress :: Database -> IO Progress
 progress Database{..} = do
     xs <- Ids.toList status
-    return $ foldl' f mempty $ map (snd . snd) xs
+    return $! foldl' f mempty $ map (snd . snd) xs
     where
         g = floatToDouble
 
