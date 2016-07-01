@@ -96,7 +96,8 @@ library
         js-flot,
         transformers >= 0.2,
         extra >= 1.4.10,
-        deepseq >= 1.1
+        deepseq >= 1.1,
+        primitive
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -294,6 +295,7 @@ test-suite shake-test
         transformers >= 0.2,
         deepseq >= 1.1,
         extra >= 1.4.10,
+        primitive,
         QuickCheck >= 2.0
 
     if flag(portable)
