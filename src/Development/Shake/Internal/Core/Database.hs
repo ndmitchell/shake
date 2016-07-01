@@ -434,7 +434,7 @@ removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
-    status <- removeStep . resultsOnly . Map.fromList <$> Ids.toList status
+    status <- removeStep . resultsOnly <$> Ids.toMap status
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concat . depends . snd) status
         ids = Map.fromList $ zip order [0..]
@@ -457,7 +457,7 @@ toReport Database{..} = do
 
 checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
 checkValid Database{..} stored equal missing = do
-    status <- Map.fromList <$> Ids.toList status
+    status <- Ids.toMap status
     intern <- readIORef intern
     diagnostic "Starting validity/lint checking"
 
