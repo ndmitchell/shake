@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, BangPatterns, GADTs #-}
+{-# LANGUAGE RecordWildCards, BangPatterns, GADTs, UnboxedTuples #-}
 
 -- Note that argument order is more like IORef than Map, because its mutable
 module General.Ids(
@@ -10,11 +10,13 @@ module General.Ids(
 
 import Data.IORef.Extra
 import Data.Primitive.Array
+import Control.Exception
 import General.Intern(Id(..))
 import Control.Monad
 import Data.Maybe
 import Data.Functor
 import Prelude hiding (lookup, null)
+import GHC.IO(IO(..))
 import GHC.Exts(RealWorld)
 
 
@@ -52,19 +54,27 @@ size (Ids ref) = do
     go 0 (used-1)
 
 
-toList :: Ids a -> IO [(Id, a)]
-toList (Ids ref) = do
+toListUnsafe :: Ids a -> IO [(Id, a)]
+toListUnsafe (Ids ref) = do
     S{..} <- readIORef ref
-    let go i
-            | i >= used = return []
-            | otherwise = do
-                v <- readArray values i
-                case v of
-                    Nothing -> go $ i+1
-                    Just v -> do
-                        xs <- go $ i+1
-                        return $ (Id $ fromIntegral i, v) : xs
-    go 0
+
+    -- execute in O(1) stack
+    -- see http://neilmitchell.blogspot.co.uk/2015/09/making-sequencemapm-for-io-take-o1-stack.html
+    let index r i | i >= used = []
+        index r i | IO io <- readArray values i = case io r of
+            (# r, Nothing #) -> index r (i+1)
+            (# r, Just v  #) -> (Id $ fromIntegral i, v) : index r (i+1)
+
+    IO $ \r -> (# r, index r 0 #)
+
+
+toList :: Ids a -> IO [(Id, a)]
+toList ids = do
+    xs <- toListUnsafe ids
+    let demand (x:xs) = demand xs
+        demand [] = ()
+    evaluate $ demand xs
+    return xs
 
 
 null :: Ids a -> IO Bool
