@@ -158,6 +158,7 @@ library
         General.Concurrent
         General.Extra
         General.FileLock
+        General.Ids
         General.Intern
         General.Process
         General.String
@@ -362,6 +363,7 @@ test-suite shake-test
         General.Concurrent
         General.Extra
         General.FileLock
+        General.Ids
         General.Intern
         General.Process
         General.String
