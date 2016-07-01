@@ -76,13 +76,13 @@ insert (Id i) v (Ids ref) = do
     let ii = fromIntegral i
     if ii < capacity then do
         writeArray values ii $ Just v
-        when (ii > used) $ writeIORef' ref S{used=ii,..}
+        when (ii >= used) $ writeIORef' ref S{used=ii+1,..}
      else do
         c2 <- return $ max (capacity * 2) (ii + 10000)
-        v2 <- newArray capacity Nothing
+        v2 <- newArray c2 Nothing
         copyMutableArray v2 0 values 0 capacity
-        writeArray values ii $ Just v
-        writeIORef' ref $ S c2 ii v2
+        writeArray v2 ii $ Just v
+        writeIORef' ref $ S c2 (ii+1) v2
 
 lookup :: Id -> Ids a -> IO (Maybe a)
 lookup (Id i) (Ids ref) = do
