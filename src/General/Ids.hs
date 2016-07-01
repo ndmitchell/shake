@@ -13,6 +13,7 @@ import Data.Primitive.Array
 import General.Intern(Id(..))
 import Control.Monad
 import Data.Maybe
+import Data.Functor
 import Prelude hiding (lookup, null)
 import GHC.Exts hiding (toList)
 
