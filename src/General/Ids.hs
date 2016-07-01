@@ -5,7 +5,7 @@ module General.Ids(
     Ids, Id,
     empty, insert, lookup,
     null, size, sizeUpperBound,
-    toList
+    toList, toMap
     ) where
 
 import Data.IORef.Extra
@@ -15,6 +15,7 @@ import General.Intern(Id(..))
 import Control.Monad
 import Data.Maybe
 import Data.Functor
+import qualified Data.HashMap.Strict as Map
 import Prelude hiding (lookup, null)
 import GHC.IO(IO(..))
 import GHC.Exts(RealWorld)
@@ -53,6 +54,11 @@ size (Ids ref) = do
                 if isJust v then go (acc+1) (i-1) else go acc (i-1)
     go 0 (used-1)
 
+
+toMap :: Ids a -> IO (Map.HashMap Id a)
+toMap ids = do
+    mp <- Map.fromList <$> toListUnsafe ids
+    return $! mp
 
 toListUnsafe :: Ids a -> IO [(Id, a)]
 toListUnsafe (Ids ref) = do
