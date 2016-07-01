@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards, BangPatterns, GADTs #-}
 
+-- Note that argument order is more like IORef than Map, because its mutable
 module General.Ids(
     Ids, Id,
     empty, insert, lookup,
@@ -70,8 +71,8 @@ null :: Ids a -> IO Bool
 null ids = (== 0) <$> sizeUpperBound ids
 
 
-insert :: Id -> a -> Ids a -> IO ()
-insert (Id i) v (Ids ref) = do
+insert :: Ids a -> Id -> a -> IO ()
+insert (Ids ref) (Id i) v = do
     S{..} <- readIORef ref
     let ii = fromIntegral i
     if ii < capacity then do
@@ -84,8 +85,8 @@ insert (Id i) v (Ids ref) = do
         writeArray v2 ii $ Just v
         writeIORef' ref $ S c2 (ii+1) v2
 
-lookup :: Id -> Ids a -> IO (Maybe a)
-lookup (Id i) (Ids ref) = do
+lookup :: Ids a -> Id -> IO (Maybe a)
+lookup (Ids ref) (Id i) = do
     S{..} <- readIORef ref
     let ii = fromIntegral i
     if ii < used then
