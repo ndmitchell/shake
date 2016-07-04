@@ -99,7 +99,7 @@ data Database = Database
     ,intern :: InternDB
     ,status :: StatusDB
     ,step :: Step
-    ,journal :: Id -> (Key, Status {- must be Loaded -}) -> IO ()
+    ,journal :: Id -> Key -> Result -> IO ()
     ,diagnostic :: String -> IO () -- ^ logging function
     ,assume :: Maybe Assume
     }
@@ -294,7 +294,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                     EqualExpensive -> do
                                         -- warning, have the db lock while appending (may harm performance)
                                         r <- return r{result=s}
-                                        journal i (k, Loaded r)
+                                        journal i k r
                                         i #= (k, Loaded r)
                                         continue r
                                 _ -> rebuild
@@ -313,7 +313,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             Ready r -> do
                                 diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
                                              " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                journal i (k, Loaded r) -- we leave the DB lock before appending
+                                journal i k r -- we leave the DB lock before appending
                             Error _ -> do
                                 diagnostic $ "result " ++ atom k ++ " = error"
                             _ -> return ()
@@ -533,6 +533,8 @@ withDatabase opts diagnostic act = do
     registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
     witness <- currentWitness
     withStorage opts diagnostic witness $ \status journal -> do
+        journal <- return $ \i k v -> journal i (k, Loaded v)
+
         xs <- Ids.toList status
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
 
@@ -548,7 +550,7 @@ withDatabase opts diagnostic act = do
             return $ case v of
                 Just (_, Loaded r) -> incStep $ fromStepResult r
                 _ -> Step 1
-        journal stepId (stepKey, Loaded $ toStepResult step)
+        journal stepId stepKey $ toStepResult step
         lock <- newLock
         act Database{assume=shakeAssume opts,..}
 
