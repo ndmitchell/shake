@@ -65,9 +65,10 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
         lock <- newLock
         return $ \v msg -> withLock lock $ shakeOutput v msg
 
-    let diagnostic = if shakeVerbosity >= Diagnostic then outputLocked Diagnostic . ("% "++) else const $ return ()
+    let diagnostic | shakeVerbosity < Diagnostic = const $ return ()
+                   | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
     let output v = outputLocked v . abbreviate shakeAbbreviations
-    diagnostic "Starting run"
+    diagnostic $ return "Starting run"
 
     except <- newIORef (Nothing :: Maybe (String, ShakeException))
     let raiseError err
@@ -87,7 +88,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 ,("Wanted",Just dir)
                 ,("Got",Just now)]
                 ""
-    diagnostic "Starting run 2"
+    diagnostic $ return "Starting run 2"
 
     after <- newIORef []
     absent <- newIORef []
@@ -96,7 +97,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
-            diagnostic "Starting run 3"
+            diagnostic $ return "Starting run 3"
             withDatabase opts diagnostic $ \database -> do
                 wait <- newBarrier
                 let getProgress = do
@@ -403,16 +404,16 @@ newThrottle name count period = liftIO $ newThrottleIO name count period
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     Global{..} <- Action getRO
-    liftIO $ globalDiagnostic $ show r ++ " waiting to acquire " ++ show i
+    liftIO $ globalDiagnostic $ return $ show r ++ " waiting to acquire " ++ show i
     offset <- liftIO offsetTime
     Action $ captureRAW $ \continue -> acquireResource r globalPool i $ continue $ Right ()
     res <- Action $ tryRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) $ do
         offset <- liftIO offset
-        liftIO $ globalDiagnostic $ show r ++ " acquired " ++ show i ++ " in " ++ showDuration offset
+        liftIO $ globalDiagnostic $ return $ show r ++ " acquired " ++ show i ++ " in " ++ showDuration offset
         Action $ modifyRW $ \s -> s{localDiscount = localDiscount s + offset}
         act
     liftIO $ releaseResource r globalPool i
-    liftIO $ globalDiagnostic $ show r ++ " released " ++ show i
+    liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
     Action $ either throwRAW return res
 
 

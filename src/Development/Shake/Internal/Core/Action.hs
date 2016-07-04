@@ -58,7 +58,7 @@ data Global = Global
     ,globalRules :: Map.HashMap TypeRep RuleInfo -- ^ Rules for this build
     ,globalOutput :: Verbosity -> String -> IO () -- ^ Output function
     ,globalOptions  :: ShakeOptions -- ^ Shake options
-    ,globalDiagnostic :: String -> IO () -- ^ Debugging function
+    ,globalDiagnostic :: IO String -> IO () -- ^ Debugging function
     ,globalLint :: String -> IO () -- ^ Run lint checking
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
