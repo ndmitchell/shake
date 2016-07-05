@@ -189,14 +189,14 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)
-            (\v -> case v of
-                Left e -> return $ continue $ Left e;
-                Right rs -> do rs <- rs; return $ continue $ Right (0, Depends is, map result rs)) $
+            (\v -> return $ continue $ case v of
+                Left e -> Left e
+                Right rs -> Right (0, Depends is, map result rs)) $
             \go -> do
                 time <- offsetTime
                 go $ \x -> case x of
                     Left e -> addPoolHighPriority pool $ continue $ Left e
-                    Right rs -> do rs <- rs; addPoolMediumPriority pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
+                    Right rs -> addPoolMediumPriority pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
                 return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
@@ -209,7 +209,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
 
-        buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a (IO [Result]))
+        buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result])
         buildMany stack is test fast slow = do
             let toAnswer v | Just v <- test v = Abort v
                 toAnswer (Ready v) = Continue v
@@ -218,8 +218,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
             res <- rendezvous =<< mapM (fmap toCompute . reduce stack) is
             case res of
-                Now v -> fast $ fmap return v
-                Later w -> slow $ \slow -> afterWaiting w $ slow . fmap return
+                Now v -> fast v
+                Later w -> slow $ \slow -> afterWaiting w slow
 
         -- Rules for each eval* function
         -- * Must NOT lock
