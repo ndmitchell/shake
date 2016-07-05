@@ -99,8 +99,8 @@ data Database = Database
     ,intern :: InternDB
     ,status :: StatusDB
     ,step :: Step
-    ,journal :: Id -> (Key, Status {- must be Loaded -}) -> IO ()
-    ,diagnostic :: String -> IO () -- ^ logging function
+    ,journal :: Id -> Key -> Result -> IO ()
+    ,diagnostic :: IO String -> IO () -- ^ logging function
     ,assume :: Maybe Assume
     }
 
@@ -238,9 +238,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
     where
         (#=) :: Id -> (Key, Status) -> IO Status
         i #= (k,v) = do
-            old <- Ids.lookup status i
+            diagnostic $ do
+                old <- Ids.lookup status i
+                return $ maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
             Ids.insert status i (k,v)
-            diagnostic $ maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
             return v
 
         atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
@@ -279,7 +280,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
                 Just (k, Loaded r) -> do
-                    let out b = diagnostic $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
+                    let out b = diagnostic $ return $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     let continue r = out True >> check stack i k r (depends r)
                     let rebuild = out False >> run stack i k (Just r)
                     case assume of
@@ -294,7 +295,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                     EqualExpensive -> do
                                         -- warning, have the db lock while appending (may harm performance)
                                         r <- return r{result=s}
-                                        journal i (k, Loaded r)
+                                        journal i k r
                                         i #= (k, Loaded r)
                                         continue r
                                 _ -> rebuild
@@ -311,11 +312,11 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             return ans
                         case ans of
                             Ready r -> do
-                                diagnostic $ "result " ++ atom k ++ " = "++ atom (result r) ++
+                                diagnostic $ return $ "result " ++ atom k ++ " = "++ atom (result r) ++
                                              " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                journal i (k, Loaded r) -- we leave the DB lock before appending
+                                journal i k r -- we leave the DB lock before appending
                             Error _ -> do
-                                diagnostic $ "result " ++ atom k ++ " = error"
+                                diagnostic $ return $ "result " ++ atom k ++ " = error"
                             _ -> return ()
                 let norm = execute (addStack i k stack) k $ \res ->
                         reply $ case res of
@@ -459,14 +460,14 @@ checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value ->
 checkValid Database{..} stored equal missing = do
     status <- Ids.toList status
     intern <- readIORef intern
-    diagnostic "Starting validity/lint checking"
+    diagnostic $ return "Starting validity/lint checking"
 
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
             now <- stored key
             let good = maybe False ((==) EqualCheap . equal key result) now
-            diagnostic $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
+            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
             return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
         _ -> return seen
     unless (null bad) $ do
@@ -485,12 +486,12 @@ checkValid Database{..} stored equal missing = do
             (intercalate [("",Just "")] [ [("Rule", Just $ show parent), ("Created", Just $ show key)] | (parent,key) <- bad])
             ""
 
-    diagnostic "Validity/lint check passed"
+    diagnostic $ return "Validity/lint check passed"
 
 
 listLive :: Database -> IO [Key]
 listLive Database{..} = do
-    diagnostic "Listing live keys"
+    diagnostic $ return "Listing live keys"
     status <- Ids.toList status
     return [k | (_, (k, Ready{})) <- status]
 
@@ -528,11 +529,13 @@ fromStepResult :: Result -> Step
 fromStepResult = fromValue . result
 
 
-withDatabase :: ShakeOptions -> (String -> IO ()) -> (Database -> IO a) -> IO a
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
     registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
     witness <- currentWitness
     withStorage opts diagnostic witness $ \status journal -> do
+        journal <- return $ \i k v -> journal i (k, Loaded v)
+
         xs <- Ids.toList status
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
 
@@ -548,7 +551,7 @@ withDatabase opts diagnostic act = do
             return $ case v of
                 Just (_, Loaded r) -> incStep $ fromStepResult r
                 _ -> Step 1
-        journal stepId (stepKey, Loaded $ toStepResult step)
+        journal stepId stepKey $ toStepResult step
         lock <- newLock
         act Database{assume=shakeAssume opts,..}
 
