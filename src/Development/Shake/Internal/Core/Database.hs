@@ -22,6 +22,7 @@ import Development.Shake.Internal.Types
 import Development.Shake.Internal.Special
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
+import Development.Shake.Internal.Core.Rendezvous
 import General.String
 import General.Intern as Intern
 
@@ -108,7 +109,7 @@ data Status
     = Ready Result -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
     | Loaded Result -- ^ Loaded from the database
-    | Waiting Pending (Maybe Result) -- ^ Currently checking if I am valid or building
+    | Waiting (Waiting Status) (Maybe Result) -- ^ Currently checking if I am valid or building
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
@@ -122,39 +123,18 @@ data Result = Result
     } deriving Show
 
 
-newtype Pending = Pending (IORef (Status -> IO ()))
-    -- you must run this action when you finish, while holding DB lock
-    -- after you have set the result to Error or Ready, with the value you set it to
-
-instance Show Pending where show _ = "Pending"
-
-
 statusType Ready{} = "Ready"
 statusType Error{} = "Error"
 statusType Loaded{} = "Loaded"
 statusType Waiting{} = "Waiting"
 statusType Missing{} = "Missing"
 
-isWaiting Waiting{} = True; isWaiting _ = False
 isReady Ready{} = True; isReady _ = False
-
-
--- All the waiting operations are only valid when isWaiting
-type Waiting = Status
-
-afterWaiting :: Waiting -> (Status -> IO ()) -> IO ()
-afterWaiting (Waiting (Pending p) _) act = modifyIORef' p (\a s -> a s >> act s)
-
-newWaiting :: Maybe Result -> IO Waiting
-newWaiting r = do ref <- newIORef $ \_ -> return (); return $ Waiting (Pending ref) r
-
-runWaiting :: Waiting -> Status -> IO ()
-runWaiting (Waiting (Pending p) _) r = ($ r) =<< readIORef p
 
 -- | Wait for a set of actions to complete.
 --   If the action returns True, the function will not be called again.
 --   If the first argument is True, the thing is ended.
-waitFor :: [(a, Waiting)] -> (Bool -> a -> Status -> IO Bool) -> IO ()
+waitFor :: [(a, Waiting Status)] -> (Bool -> a -> Status -> IO Bool) -> IO ()
 waitFor ws@(_:_) act = do
     todo <- newIORef $ length ws
     forM_ ws $ \(k,w) -> afterWaiting w $ \s -> do
@@ -252,7 +232,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
              else if all isReady vs then
                 fast $ Right $ return [r | Ready r <- vs]
              else slow $ \slow ->
-                waitFor (filter (isWaiting . snd) $ zip is vs) $ \finish i s -> case s of
+                waitFor [(i, w) | (i, Waiting w _) <- zip is vs] $ \finish i s -> case s of
                     _ | Just e <- test s -> do
                         slow $ Left e -- on error make sure we immediately kick off our parent
                         return True
@@ -298,14 +278,14 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 _ -> rebuild
                 Just (k, res) -> return res
 
-        run :: Stack -> Id -> Key -> Maybe Result -> IO Waiting
+        run :: Stack -> Id -> Key -> Maybe Result -> IO Status {- of subtype Waiting -}
         run stack i k r = do
-            w <- newWaiting r
+            (w, done) <- newWaiting
             addPoolLowPriority pool $ do
                 let reply res = do
                         ans <- withLock lock $ do
                             ans <- i #= (k, res)
-                            runWaiting w res
+                            done res
                             return ans
                         case ans of
                             Ready r -> do
@@ -330,7 +310,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 Just v -> reply $ Ready r{result=v}
                                 Nothing -> norm
                     _ -> norm
-            i #= (k, w)
+            i #= (k, Waiting w r)
 
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
         check stack i k r [] =
@@ -343,17 +323,17 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     _ -> Nothing)
                 (\v -> if isLeft v then run stack i k $ Just r else check stack i k r rest) $
                 \go -> do
-                    self <- newWaiting $ Just r
+                    (self, done) <- newWaiting
                     go $ \v ->
                         if isLeft v then do
-                            b <- run stack i k $ Just r
-                            afterWaiting b $ runWaiting self
+                            Waiting b _ <- run stack i k $ Just r
+                            afterWaiting b done
                         else do
                             res <- check stack i k r rest
-                            if not $ isWaiting res
-                                then runWaiting self res
-                                else afterWaiting res $ runWaiting self
-                    i #= (k, self)
+                            case res of
+                                Waiting w _ -> afterWaiting w done
+                                _ -> done res
+                    i #= (k, Waiting self $ Just r)
 
 
 ---------------------------------------------------------------------
