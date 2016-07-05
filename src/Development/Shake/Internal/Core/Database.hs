@@ -129,20 +129,6 @@ statusType Loaded{} = "Loaded"
 statusType Waiting{} = "Waiting"
 statusType Missing{} = "Missing"
 
-isReady Ready{} = True; isReady _ = False
-
--- | Wait for a set of actions to complete.
---   If the action returns True, the function will not be called again.
---   If the first argument is True, the thing is ended.
-waitFor :: [(a, Waiting Status)] -> (Bool -> a -> Status -> IO Bool) -> IO ()
-waitFor ws@(_:_) act = do
-    todo <- newIORef $ length ws
-    forM_ ws $ \(k,w) -> afterWaiting w $ \s -> do
-        t <- readIORef todo
-        when (t /= 0) $ do
-            b <- act (t == 1) k s
-            writeIORef' todo $ if b then 0 else t - 1
-
 
 getResult :: Status -> Maybe Result
 getResult (Ready r) = Just r
@@ -225,25 +211,15 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a (IO [Result]))
         buildMany stack is test fast slow = do
-            vs <- mapM (reduce stack) is
-            let errs = mapMaybe test vs
-            if not $ null errs then
-                fast $ Left $ head errs
-             else if all isReady vs then
-                fast $ Right $ return [r | Ready r <- vs]
-             else slow $ \slow ->
-                waitFor [(i, w) | (i, Waiting w _) <- zip is vs] $ \finish i s -> case s of
-                    _ | Just e <- test s -> do
-                        slow $ Left e -- on error make sure we immediately kick off our parent
-                        return True
-                    Ready{}
-                        | finish -> do
-                            slow $ Right $
-                                forM is $ \i -> do
-                                    Ready r <- snd . fromJust <$> Ids.lookup status i
-                                    return r
-                            return True
-                        | otherwise -> return False
+            let toAnswer v | Just v <- test v = Abort v
+                toAnswer (Ready v) = Continue v
+            let toCompute (Waiting w _) = Later $ toAnswer <$> w
+                toCompute x = Now $ toAnswer x
+
+            res <- rendezvous =<< mapM (fmap toCompute . reduce stack) is
+            case res of
+                Now v -> fast $ fmap return v
+                Later w -> slow $ \slow -> afterWaiting w $ slow . fmap return
 
         -- Rules for each eval* function
         -- * Must NOT lock
