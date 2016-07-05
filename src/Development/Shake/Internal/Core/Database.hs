@@ -201,9 +201,6 @@ internKey intern status k = do
             Ids.insert status i (k,Missing)
             return i
 
-queryKey :: StatusDB -> Id -> IO (Maybe (Key, Status))
-queryKey status i = Ids.lookup status i
-
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
@@ -275,7 +272,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
         reduce :: Stack -> Id -> IO Status
         reduce stack i = do
-            s <- queryKey status i
+            s <- Ids.lookup status i
             case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> run stack i k Nothing
