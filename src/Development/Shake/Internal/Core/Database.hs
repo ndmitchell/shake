@@ -84,7 +84,7 @@ emptyStack = Stack Nothing [] Set.empty
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
-data Trace = Trace BS Float Float -- ^ (message, start, end)
+data Trace = Trace BS {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
     deriving Show
 
 instance NFData Trace where
