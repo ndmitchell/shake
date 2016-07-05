@@ -98,7 +98,7 @@ data Database = Database
     {lock :: Lock
     ,intern :: InternDB
     ,status :: StatusDB
-    ,step :: Step
+    ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result -> IO ()
     ,diagnostic :: IO String -> IO () -- ^ logging function
     ,assume :: Maybe Assume
