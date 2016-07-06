@@ -255,6 +255,32 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 _ -> rebuild
                 Just (k, res) -> return res
 
+
+        -- | Given a Key and the list of dependencies yet to be checked, check them
+        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status {- Ready | Waiting -}
+        check stack i k r [] =
+            i #= (k, Ready r)
+        check stack i k r (ds:rest) = do
+            buildMany (addStack i k stack) ds
+                (\v -> case v of
+                    Error _ -> Just ()
+                    Ready dep | changed dep > built r -> Just ()
+                    _ -> Nothing)
+                (\v -> if isLeft v then spawn stack i k $ Just r else check stack i k r rest) $
+                \go -> do
+                    (self, done) <- newWaiting
+                    go $ \v ->
+                        if isLeft v then do
+                            Waiting b _ <- spawn stack i k $ Just r
+                            afterWaiting b done
+                        else do
+                            res <- check stack i k r rest
+                            case res of
+                                Waiting w _ -> afterWaiting w done
+                                _ -> done res
+                    i #= (k, Waiting self $ Just r)
+
+
         -- | Given a Key, queue up execution and return waiting
         spawn :: Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
         spawn stack i k r = do
@@ -289,29 +315,6 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 Nothing -> run
                     _ -> run
             i #= (k, Waiting w r)
-
-        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status {- Ready | Waiting -}
-        check stack i k r [] =
-            i #= (k, Ready r)
-        check stack i k r (ds:rest) = do
-            buildMany (addStack i k stack) ds
-                (\v -> case v of
-                    Error _ -> Just ()
-                    Ready dep | changed dep > built r -> Just ()
-                    _ -> Nothing)
-                (\v -> if isLeft v then spawn stack i k $ Just r else check stack i k r rest) $
-                \go -> do
-                    (self, done) <- newWaiting
-                    go $ \v ->
-                        if isLeft v then do
-                            Waiting b _ <- spawn stack i k $ Just r
-                            afterWaiting b done
-                        else do
-                            res <- check stack i k r rest
-                            case res of
-                                Waiting w _ -> afterWaiting w done
-                                _ -> done res
-                    i #= (k, Waiting self $ Just r)
 
 
 ---------------------------------------------------------------------
