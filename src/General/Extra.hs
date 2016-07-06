@@ -32,6 +32,8 @@ maximum' = maximumBy' compare
 ---------------------------------------------------------------------
 -- Data.List
 
+-- | If a string has any spaces then put quotes around and double up all internal quotes.
+--   Roughly the inverse of Windows command line parsing.
 showQuote :: String -> String
 showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
              | otherwise = xs
