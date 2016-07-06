@@ -222,10 +222,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 Now v -> fast v
                 Later w -> slow $ \slow -> afterWaiting w slow
 
-        -- Rules for each eval* function
+        -- Rules for each of the following functions
         -- * Must NOT lock
         -- * Must have an equal return to what is stored in the db at that point
-        -- * Must not return Loaded
+        -- * Must return one of the designated subset of values
 
         reduce :: Stack -> Id -> IO Status {- Ready | Error | Waiting -}
         reduce stack i = do
