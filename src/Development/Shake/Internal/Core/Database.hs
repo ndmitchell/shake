@@ -260,11 +260,10 @@ build pool database@Database{..} Ops{..} stack ks continue =
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
                 let reply res = do
-                        ans <- withLock lock $ do
-                            ans <- i #= (k, res)
+                        withLock lock $ do
+                            i #= (k, res)
                             done res
-                            return ans
-                        case ans of
+                        case res of
                             Ready r -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = "++ atom (result r) ++
                                              " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
