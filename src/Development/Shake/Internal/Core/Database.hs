@@ -261,16 +261,17 @@ build pool database@Database{..} Ops{..} stack ks continue =
         check stack i k r [] =
             i #= (k, Ready r)
         check stack i k r (ds:rest) = do
+            let cont v = if isLeft v then spawn stack i k $ Just r else check stack i k r rest
             buildMany (addStack i k stack) ds
                 (\v -> case v of
                     Error _ -> Just ()
                     Ready dep | changed dep > built r -> Just ()
                     _ -> Nothing)
-                (\v -> if isLeft v then spawn stack i k $ Just r else check stack i k r rest) $
+                cont $
                 \go -> do
                     (self, done) <- newWaiting
                     go $ \v -> do
-                        res <- if isLeft v then spawn stack i k $ Just r else check stack i k r rest
+                        res <- cont v
                         case res of
                             Waiting w _ -> afterWaiting w done
                             _ -> done res
