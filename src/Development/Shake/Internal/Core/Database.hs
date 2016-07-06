@@ -249,7 +249,6 @@ build pool database@Database{..} Ops{..} stack ks continue =
             let rebuild = out False >> spawn stack i k (Just r)
             case assume of
                 Just AssumeDirty -> rebuild
-                Just AssumeSkip -> continue r
                 _ -> do
                     s <- stored k
                     case s of
@@ -307,7 +306,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 in Ready Result{result=v,changed=c,built=step,depends=deps,..}
 
                 case r of
-                    Just r | assume == Just AssumeClean -> do
+                    Just r
+                        | assume == Just AssumeSkip -> finish $ Ready r
+                        | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
                                 Just v -> finish $ Ready r{result=v}
