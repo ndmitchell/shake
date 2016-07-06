@@ -23,6 +23,7 @@ import Development.Shake.Internal.Special
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
+import General.Extra
 import General.String
 import General.Intern as Intern
 
@@ -207,7 +208,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
             Ids.insert status i (k,v)
             return v
 
-        atom x = let s = show x in if ' ' `elem` s then "(" ++ s ++ ")" else s
+        atom x = showBracket $ show x
 
         buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result])
         buildMany stack is test fast slow = do

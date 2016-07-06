@@ -2,7 +2,7 @@
 module General.Extra(
     getProcessorCount,
     randomElem,
-    showQuote,
+    showQuote, showBracket,
     withs,
     maximum', maximumBy'
     ) where
@@ -37,6 +37,11 @@ maximum' = maximumBy' compare
 showQuote :: String -> String
 showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
              | otherwise = xs
+
+-- | If a string has any spaces then put brackets around it.
+showBracket :: String -> String
+showBracket xs | any isSpace xs = "(" ++ xs ++ ")"
+               | otherwise = xs
 
 
 ---------------------------------------------------------------------
