@@ -260,7 +260,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
         spawn stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                let reply res = do
+                let finish res = do
                         withLock lock $ do
                             i #= (k, res)
                             done res
@@ -272,8 +272,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 journal i k r
                             Error _ -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = error"
-                let norm = execute (addStack i k stack) k $ \res ->
-                        reply $ case res of
+
+                let run = execute (addStack i k stack) k $ \res ->
+                        finish $ case res of
                             Left err -> Error err
                             Right (v,deps,(doubleToFloat -> execution),traces) ->
                                 let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
@@ -284,9 +285,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     Just r | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
-                                Just v -> reply $ Ready r{result=v}
-                                Nothing -> norm
-                    _ -> norm
+                                Just v -> finish $ Ready r{result=v}
+                                Nothing -> run
+                    _ -> run
             i #= (k, Waiting w r)
 
         check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status {- Ready | Waiting -}
