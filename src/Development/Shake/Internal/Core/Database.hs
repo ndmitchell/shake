@@ -237,33 +237,31 @@ build pool database@Database{..} Ops{..} stack ks continue =
             case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> spawn stack i k Nothing
-                Just (k, Loaded r) -> do
-                    let out b = diagnostic $ return $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-                    let continue r = out True >> check stack i k r (depends r)
-                    let rebuild = out False >> spawn stack i k (Just r)
-                    case assume of
-                        Just AssumeDirty -> rebuild
-                        Just AssumeSkip -> continue r
-                        _ -> do
-                            s <- stored k
-                            case s of
-                                Just s -> case equal k (result r) s of
-                                    NotEqual -> rebuild
-                                    EqualCheap -> continue r
-                                    EqualExpensive -> do
-                                        -- warning, have the db lock while appending (may harm performance)
-                                        r <- return r{result=s}
-                                        journal i k r
-                                        i #= (k, Loaded r)
-                                        continue r
-                                _ -> rebuild
+                Just (k, Loaded r) -> check stack i k r (depends r)
                 Just (k, res) -> return res
 
 
         -- | Given a Key and the list of dependencies yet to be checked, check them
         check :: Stack -> Id -> Key -> Result -> [Depends] -> IO Status {- Ready | Waiting -}
-        check stack i k r [] =
-            i #= (k, Ready r)
+        check stack i k r [] = do
+            let out b = diagnostic $ return $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
+            let continue r = out True >> i #= (k, Ready r)
+            let rebuild = out False >> spawn stack i k (Just r)
+            case assume of
+                Just AssumeDirty -> rebuild
+                Just AssumeSkip -> continue r
+                _ -> do
+                    s <- stored k
+                    case s of
+                        Just s -> case equal k (result r) s of
+                            NotEqual -> rebuild
+                            EqualCheap -> continue r
+                            EqualExpensive -> do
+                                -- warning, have the db lock while appending (may harm performance)
+                                r <- return r{result=s}
+                                journal i k r
+                                continue r
+                        _ -> rebuild
         check stack i k r (Depends ds:rest) = do
             let cont v = if isLeft v then spawn stack i k $ Just r else check stack i k r rest
             buildMany (addStack i k stack) ds
