@@ -269,15 +269,11 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 (\v -> if isLeft v then spawn stack i k $ Just r else check stack i k r rest) $
                 \go -> do
                     (self, done) <- newWaiting
-                    go $ \v ->
-                        if isLeft v then do
-                            Waiting b _ <- spawn stack i k $ Just r
-                            afterWaiting b done
-                        else do
-                            res <- check stack i k r rest
-                            case res of
-                                Waiting w _ -> afterWaiting w done
-                                _ -> done res
+                    go $ \v -> do
+                        res <- if isLeft v then spawn stack i k $ Just r else check stack i k r rest
+                        case res of
+                            Waiting w _ -> afterWaiting w done
+                            _ -> done res
                     i #= (k, Waiting self $ Just r)
 
 
