@@ -19,6 +19,17 @@ import GHC.Conc
 
 
 ---------------------------------------------------------------------
+-- Prelude
+
+-- See https://ghc.haskell.org/trac/ghc/ticket/10830 - they broke maximumBy
+maximumBy' :: (a -> a -> Ordering) -> [a] -> a
+maximumBy' cmp = foldl1' $ \x y -> if cmp x y == GT then x else y
+
+maximum' :: Ord a => [a] -> a
+maximum' = maximumBy' compare
+
+
+---------------------------------------------------------------------
 -- Data.List
 
 showQuote :: String -> String
@@ -62,11 +73,3 @@ randomElem xs = do
 withs :: [(a -> r) -> r] -> ([a] -> r) -> r
 withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
-
-
--- See https://ghc.haskell.org/trac/ghc/ticket/10830 - they broke maximumBy
-maximumBy' :: (a -> a -> Ordering) -> [a] -> a
-maximumBy' cmp = foldl1' $ \x y -> if cmp x y == GT then x else y
-
-maximum' :: Ord a => [a] -> a
-maximum' = maximumBy' compare
