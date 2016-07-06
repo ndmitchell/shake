@@ -142,7 +142,11 @@ getResult _ = Nothing
 -- OPERATIONS
 
 newtype Depends = Depends {fromDepends :: [Id]}
-    deriving (NFData,Show)
+    deriving NFData
+
+instance Show Depends where
+    -- Appears in diagnostic output and the Depends ctor is just verbose
+    show = show . fromDepends
 
 
 data Ops = Ops
