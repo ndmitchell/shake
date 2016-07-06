@@ -266,12 +266,12 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             done res
                         case res of
                             Ready r -> do
-                                diagnostic $ return $ "result " ++ atom k ++ " = "++ atom (result r) ++
-                                             " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
+                                diagnostic $ return $
+                                    "result " ++ atom k ++ " = "++ atom (result r) ++
+                                    " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                                 journal i k r
                             Error _ -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = error"
-                            _ -> return ()
                 let norm = execute (addStack i k stack) k $ \res ->
                         reply $ case res of
                             Left err -> Error err
