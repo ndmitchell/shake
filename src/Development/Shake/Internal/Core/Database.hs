@@ -226,7 +226,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
         -- * Must have an equal return to what is stored in the db at that point
         -- * Must not return Loaded
 
-        reduce :: Stack -> Id -> IO Status
+        reduce :: Stack -> Id -> IO Status {- Ready | Error | Waiting -}
         reduce stack i = do
             s <- Ids.lookup status i
             case s of
@@ -254,7 +254,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 _ -> rebuild
                 Just (k, res) -> return res
 
-        run :: Stack -> Id -> Key -> Maybe Result -> IO Status {- of subtype Waiting -}
+        run :: Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
         run stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
@@ -288,7 +288,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     _ -> norm
             i #= (k, Waiting w r)
 
-        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status
+        check :: Stack -> Id -> Key -> Result -> [[Id]] -> IO Status {- Ready | Waiting -}
         check stack i k r [] =
             i #= (k, Ready r)
         check stack i k r (ds:rest) = do
