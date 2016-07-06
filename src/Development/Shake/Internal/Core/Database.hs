@@ -232,11 +232,11 @@ build pool database@Database{..} Ops{..} stack ks continue =
             s <- Ids.lookup status i
             case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
-                Just (k, Missing) -> run stack i k Nothing
+                Just (k, Missing) -> spawn stack i k Nothing
                 Just (k, Loaded r) -> do
                     let out b = diagnostic $ return $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
                     let continue r = out True >> check stack i k r (depends r)
-                    let rebuild = out False >> run stack i k (Just r)
+                    let rebuild = out False >> spawn stack i k (Just r)
                     case assume of
                         Just AssumeDirty -> rebuild
                         Just AssumeSkip -> continue r
@@ -255,8 +255,9 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 _ -> rebuild
                 Just (k, res) -> return res
 
-        run :: Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
-        run stack i k r = do
+        -- | Given a Key, queue up execution and return waiting
+        spawn :: Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
+        spawn stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
                 let reply res = do
@@ -267,7 +268,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             Ready r -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = "++ atom (result r) ++
                                              " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                journal i k r -- we leave the DB lock before appending
+                                journal i k r
                             Error _ -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = error"
                             _ -> return ()
@@ -297,12 +298,12 @@ build pool database@Database{..} Ops{..} stack ks continue =
                     Error _ -> Just ()
                     Ready dep | changed dep > built r -> Just ()
                     _ -> Nothing)
-                (\v -> if isLeft v then run stack i k $ Just r else check stack i k r rest) $
+                (\v -> if isLeft v then spawn stack i k $ Just r else check stack i k r rest) $
                 \go -> do
                     (self, done) <- newWaiting
                     go $ \v ->
                         if isLeft v then do
-                            Waiting b _ <- run stack i k $ Just r
+                            Waiting b _ <- spawn stack i k $ Just r
                             afterWaiting b done
                         else do
                             res <- check stack i k r rest
