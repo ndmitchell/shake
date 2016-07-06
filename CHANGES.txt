@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #427, check stored value after checking dependencies
     Require extra-1.4.10
     Significant changes to defining custom rules
     Delete the deprecated defaultRule

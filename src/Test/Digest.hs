@@ -27,6 +27,10 @@ main = shakenCwd test $ \args obj -> do
     obj "node1.txt" %> \file -> do need ["leaf"]; writeFile' file "x"
     obj "node2.txt" %> \file -> do need [obj "node1.txt"]; liftIO $ appendFile file "x"
 
+    [obj "rewrite1",obj "rewrite2"] &%> \outs -> do
+        alwaysRerun
+        forM_ outs $ \out -> writeFile' out "rewrite"
+
 
 test build obj = do
     let outs = take 1 $ map obj ["Out.txt","Out1.txt","Out2.txt"]
@@ -97,3 +101,7 @@ test build obj = do
     build ["--digest-and-input","Bug1.txt","--sleep"]
     writeFile (obj "Bug3.txt") "Y"
     build ["--digest-and-input","Bug1.txt","--lint"]
+
+    -- test for #427
+    build ["rewrite1","--digest-and"]
+    build ["rewrite1","--digest-and","--lint","--sleep"]
