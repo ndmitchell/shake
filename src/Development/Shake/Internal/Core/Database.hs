@@ -245,21 +245,21 @@ build pool database@Database{..} Ops{..} stack ks continue =
         check :: Stack -> Id -> Key -> Result -> [Depends] -> IO Status {- Ready | Waiting -}
         check stack i k r [] = do
             let out b = diagnostic $ return $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-            let continue r = out True >> i #= (k, Ready r)
+            let finish r = out True >> i #= (k, Ready r)
             let rebuild = out False >> spawn stack i k (Just r)
             case assume of
                 Just AssumeDirty -> rebuild
                 _ -> do
-                    s <- stored k
-                    case s of
-                        Just s -> case equal k (result r) s of
+                    v <- stored k
+                    case v of
+                        Just v -> case equal k (result r) v of
                             NotEqual -> rebuild
-                            EqualCheap -> continue r
+                            EqualCheap -> finish r
                             EqualExpensive -> do
                                 -- warning, have the db lock while appending (may harm performance)
-                                r <- return r{result=s}
+                                r <- return r{result=v}
                                 journal i k r
-                                continue r
+                                finish r
                         _ -> rebuild
         check stack i k r (Depends ds:rest) = do
             let cont v = if isLeft v then spawn stack i k $ Just r else check stack i k r rest
@@ -297,7 +297,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             Error _ -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = error"
 
-                let run = execute (addStack i k stack) k $ \res ->
+                let rebuild = execute (addStack i k stack) k $ \res ->
                         finish $ case res of
                             Left err -> Error err
                             Right (v,deps,(doubleToFloat -> execution),traces) ->
@@ -312,8 +312,8 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             v <- stored k
                             case v of
                                 Just v -> finish $ Ready r{result=v}
-                                Nothing -> run
-                    _ -> run
+                                Nothing -> rebuild
+                    _ -> rebuild
             i #= (k, Waiting w r)
 
 
