@@ -177,7 +177,7 @@ internKey intern status k = do
             return i
 
 
-atom x = showBracket $ show x
+atom x = wrapBracket $ show x
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)

@@ -2,7 +2,7 @@
 module General.Extra(
     getProcessorCount,
     randomElem,
-    showQuote, showBracket,
+    wrapQuote, wrapBracket,
     withs,
     maximum', maximumBy'
     ) where
@@ -34,13 +34,13 @@ maximum' = maximumBy' compare
 
 -- | If a string has any spaces then put quotes around and double up all internal quotes.
 --   Roughly the inverse of Windows command line parsing.
-showQuote :: String -> String
-showQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
+wrapQuote :: String -> String
+wrapQuote xs | any isSpace xs = "\"" ++ concatMap (\x -> if x == '\"' then "\"\"" else [x]) xs ++ "\""
              | otherwise = xs
 
 -- | If a string has any spaces then put brackets around it.
-showBracket :: String -> String
-showBracket xs | any isSpace xs = "(" ++ xs ++ ")"
+wrapBracket :: String -> String
+wrapBracket xs | any isSpace xs = "(" ++ xs ++ ")"
                | otherwise = xs
 
 

@@ -245,7 +245,7 @@ runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
                     _ -> rebuild
         _ -> rebuild
 
-atom x = showBracket $ show x
+atom x = wrapBracket $ show x
 
 
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
