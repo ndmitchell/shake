@@ -236,33 +236,16 @@ build pool database@Database{..} Ops{..} stack ks continue =
             s <- Ids.lookup status i
             case s of
                 Nothing -> err $ "interned value missing from database, " ++ show i
-                Just (k, Missing) -> spawn stack i k Nothing
+                Just (k, Missing) -> spawn True stack i k Nothing
                 Just (k, Loaded r) -> check stack i k r (depends r)
                 Just (k, res) -> return res
 
 
         -- | Given a Key and the list of dependencies yet to be checked, check them
         check :: Stack -> Id -> Key -> Result -> [Depends] -> IO Status {- Ready | Waiting -}
-        check stack i k r [] = do
-            let out b = diagnostic $ return $ "valid " ++ show b ++ " for " ++ atom k ++ " " ++ atom (result r)
-            let finish r = out True >> i #= (k, Ready r)
-            let rebuild = out False >> spawn stack i k (Just r)
-            case assume of
-                Just AssumeDirty -> rebuild
-                _ -> do
-                    v <- stored k
-                    case v of
-                        Just v -> case equal k (result r) v of
-                            NotEqual -> rebuild
-                            EqualCheap -> finish r
-                            EqualExpensive -> do
-                                -- warning, have the db lock while appending (may harm performance)
-                                r <- return r{result=v}
-                                journal i k r
-                                finish r
-                        _ -> rebuild
+        check stack i k r [] = spawn False stack i k $ Just r
         check stack i k r (Depends ds:rest) = do
-            let cont v = if isLeft v then spawn stack i k $ Just r else check stack i k r rest
+            let cont v = if isLeft v then spawn True stack i k $ Just r else check stack i k r rest
             buildMany (addStack i k stack) ds
                 (\v -> case v of
                     Error _ -> Just ()
@@ -310,11 +293,23 @@ build pool database@Database{..} Ops{..} stack ks continue =
                 case r of
                     Just r
                         | assume == Just AssumeSkip -> finish_ $ Ready r
+                        | assume == Just AssumeDirty -> rebuild
                         | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
                                 Just v -> finish $ Ready r{result=v}
                                 Nothing -> rebuild
+                        | not dirtyChildren -> do
+                            v <- stored k
+                            case v of
+                                Just v -> do
+                                    let eq = equal k (result r) v
+                                    diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
+                                    case eq of
+                                        NotEqual -> rebuild
+                                        EqualCheap -> finish_ $ Ready r
+                                        EqualExpensive -> finish $ Ready r{result=v}
+                                _ -> rebuild
                     _ -> rebuild
             i #= (k, Waiting w r)
 
