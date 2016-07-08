@@ -182,7 +182,7 @@ atom x = showBracket $ show x
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops2 -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} ops stack ks continue =
+build pool Database{..} ops stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
