@@ -104,7 +104,6 @@ data Database = Database
     ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result -> IO ()
     ,diagnostic :: IO String -> IO () -- ^ logging function
-    ,assume :: Maybe Assume
     }
 
 data Status
@@ -482,7 +481,7 @@ withDatabase opts diagnostic act = do
                 _ -> Step 1
         journal stepId stepKey $ toStepResult step
         lock <- newLock
-        act Database{assume=shakeAssume opts,..}
+        act Database{..}
 
 
 instance BinaryWith Witness Result where
