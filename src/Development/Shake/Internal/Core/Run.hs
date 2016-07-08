@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Run(
     run,
@@ -31,6 +31,7 @@ import Data.IORef
 import System.Directory
 import System.IO.Extra
 import System.Time.Extra
+import Numeric.Extra
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Action
@@ -207,9 +208,44 @@ applyKeyValue ks = do
                         evaluate $ rnf ans
                         continue $ Right ans
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (Ops (runStored globalRules) (runEqual globalRules) exec) stack ks
+    let ops = Ops2 $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase ops stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
+
+runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
+runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
+    let rebuild = execute stack k $ \res ->
+            continue $ (,) True $ case res of
+                Left err -> Error err
+                Right (v,deps,(doubleToFloat -> execution),traces) ->
+                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                          | otherwise = step
+                    in Ready Result{result=v,changed=c,built=step,depends=deps,..}
+
+    case r of
+        Just r
+            | assume == Just AssumeSkip -> continue (False, Ready r)
+            | assume == Just AssumeDirty -> rebuild
+            | assume == Just AssumeClean -> do
+                v <- stored k
+                case v of
+                    Just v -> continue (True, Ready r{result=v})
+                    Nothing -> rebuild
+            | not dirtyChildren -> do
+                v <- stored k
+                case v of
+                    Just v -> do
+                        let eq = equal k (result r) v
+                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
+                        case eq of
+                            NotEqual -> rebuild
+                            EqualCheap -> continue (False, Ready r)
+                            EqualExpensive -> continue (True, Ready r{result=v})
+                    _ -> rebuild
+        _ -> rebuild
+
+atom x = showBracket $ show x
 
 
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)

@@ -6,7 +6,8 @@ module Development.Shake.Internal.Core.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
-    Ops(..), build, Depends,
+    Ops(..), Ops2(..), build, Depends,
+    Step, Result(..), Status(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -149,6 +150,10 @@ instance Show Depends where
     show = show . fromDepends
 
 
+newtype Ops2 = Ops2
+    {execute2 :: Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
+    }
+
 data Ops = Ops
     {stored :: Key -> IO (Maybe Value)
         -- ^ Given a Key, find the value stored on disk
@@ -177,7 +182,7 @@ atom x = showBracket $ show x
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build :: Pool -> Database -> Ops2 -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool database@Database{..} ops stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
@@ -268,7 +273,7 @@ build pool database@Database{..} ops stack ks continue =
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                runKey ops diagnostic assume (addStack i k stack) step k r dirtyChildren $ \(write, res) -> do
+                execute2 ops (addStack i k stack) step k r dirtyChildren $ \(write, res) -> do
                     withLock lock $ do
                         i #= (k, res)
                         done res
@@ -281,39 +286,6 @@ build pool database@Database{..} ops stack ks continue =
                         Error _ -> do
                             diagnostic $ return $ "result " ++ atom k ++ " = error"
             i #= (k, Waiting w r)
-
-
-runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
-runKey ops diagnostic assume stack step k r dirtyChildren continue = do
-    let rebuild = execute ops stack k $ \res ->
-            continue $ (,) True $ case res of
-                Left err -> Error err
-                Right (v,deps,(doubleToFloat -> execution),traces) ->
-                    let c | Just r <- r, equal ops k (result r) v /= NotEqual = changed r
-                          | otherwise = step
-                    in Ready Result{result=v,changed=c,built=step,depends=deps,..}
-
-    case r of
-        Just r
-            | assume == Just AssumeSkip -> continue (False, Ready r)
-            | assume == Just AssumeDirty -> rebuild
-            | assume == Just AssumeClean -> do
-                v <- stored ops k
-                case v of
-                    Just v -> continue (True, Ready r{result=v})
-                    Nothing -> rebuild
-            | not dirtyChildren -> do
-                v <- stored ops k
-                case v of
-                    Just v -> do
-                        let eq = equal ops k (result r) v
-                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
-                        case eq of
-                            NotEqual -> rebuild
-                            EqualCheap -> continue (False, Ready r)
-                            EqualExpensive -> continue (True, Ready r{result=v})
-                    _ -> rebuild
-        _ -> rebuild
 
 
 ---------------------------------------------------------------------
