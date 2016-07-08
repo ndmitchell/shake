@@ -212,7 +212,6 @@ applyKeyValue ks = do
     return vs
 
 
-
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
 runStored mp k = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
