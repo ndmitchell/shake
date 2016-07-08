@@ -173,6 +173,9 @@ internKey intern status k = do
             return i
 
 
+atom x = showBracket $ show x
+
+
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool database@Database{..} ops stack ks continue =
@@ -211,8 +214,6 @@ build pool database@Database{..} ops stack ks continue =
                 return $ maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
             Ids.insert status i (k,v)
             return v
-
-        atom x = showBracket $ show x
 
         buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result])
         buildMany stack is test fast slow = do
