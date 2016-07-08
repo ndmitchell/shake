@@ -177,9 +177,6 @@ internKey intern status k = do
             return i
 
 
-atom x = wrapBracket $ show x
-
-
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops2 -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
 build pool Database{..} ops stack ks continue =
@@ -279,11 +276,11 @@ build pool Database{..} ops stack ks continue =
                     case res of
                         Ready r -> do
                             diagnostic $ return $
-                                "result " ++ atom k ++ " = "++ atom (result r) ++
+                                "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
                                 " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                             when write $ journal i k r
                         Error _ -> do
-                            diagnostic $ return $ "result " ++ atom k ++ " = error"
+                            diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
 
 

@@ -2,7 +2,7 @@
 module General.Extra(
     getProcessorCount,
     randomElem,
-    wrapQuote, wrapBracket,
+    wrapQuote, wrapBracket, showBracket,
     withs,
     maximum', maximumBy'
     ) where
@@ -43,6 +43,9 @@ wrapBracket :: String -> String
 wrapBracket xs | any isSpace xs = "(" ++ xs ++ ")"
                | otherwise = xs
 
+-- | Alias for @wrapBracket . show@.
+showBracket :: Show a => a -> String
+showBracket = wrapBracket . show
 
 ---------------------------------------------------------------------
 -- System.Info
