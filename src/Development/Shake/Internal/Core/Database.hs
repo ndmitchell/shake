@@ -268,51 +268,52 @@ build pool database@Database{..} ops stack ks continue =
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                let finish = finishEx True
-                    finish_ = finishEx False
-                    finishEx write res = do
-                        withLock lock $ do
-                            i #= (k, res)
-                            done res
-                        case res of
-                            Ready r -> do
-                                diagnostic $ return $
-                                    "result " ++ atom k ++ " = "++ atom (result r) ++
-                                    " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                when write $ journal i k r
-                            Error _ -> do
-                                diagnostic $ return $ "result " ++ atom k ++ " = error"
-
-                let rebuild = execute ops (addStack i k stack) k $ \res ->
-                        finish $ case res of
-                            Left err -> Error err
-                            Right (v,deps,(doubleToFloat -> execution),traces) ->
-                                let c | Just r <- r, equal ops k (result r) v /= NotEqual = changed r
-                                      | otherwise = step
-                                in Ready Result{result=v,changed=c,built=step,depends=deps,..}
-
-                case r of
-                    Just r
-                        | assume == Just AssumeSkip -> finish_ $ Ready r
-                        | assume == Just AssumeDirty -> rebuild
-                        | assume == Just AssumeClean -> do
-                            v <- stored ops k
-                            case v of
-                                Just v -> finish $ Ready r{result=v}
-                                Nothing -> rebuild
-                        | not dirtyChildren -> do
-                            v <- stored ops k
-                            case v of
-                                Just v -> do
-                                    let eq = equal ops k (result r) v
-                                    diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
-                                    case eq of
-                                        NotEqual -> rebuild
-                                        EqualCheap -> finish_ $ Ready r
-                                        EqualExpensive -> finish $ Ready r{result=v}
-                                _ -> rebuild
-                    _ -> rebuild
+                runKey ops diagnostic assume (addStack i k stack) step k r dirtyChildren $ \(write, res) -> do
+                    withLock lock $ do
+                        i #= (k, res)
+                        done res
+                    case res of
+                        Ready r -> do
+                            diagnostic $ return $
+                                "result " ++ atom k ++ " = "++ atom (result r) ++
+                                " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
+                            when write $ journal i k r
+                        Error _ -> do
+                            diagnostic $ return $ "result " ++ atom k ++ " = error"
             i #= (k, Waiting w r)
+
+
+runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
+runKey ops diagnostic assume stack step k r dirtyChildren continue = do
+    let rebuild = execute ops stack k $ \res ->
+            continue $ (,) True $ case res of
+                Left err -> Error err
+                Right (v,deps,(doubleToFloat -> execution),traces) ->
+                    let c | Just r <- r, equal ops k (result r) v /= NotEqual = changed r
+                          | otherwise = step
+                    in Ready Result{result=v,changed=c,built=step,depends=deps,..}
+
+    case r of
+        Just r
+            | assume == Just AssumeSkip -> continue (False, Ready r)
+            | assume == Just AssumeDirty -> rebuild
+            | assume == Just AssumeClean -> do
+                v <- stored ops k
+                case v of
+                    Just v -> continue (True, Ready r{result=v})
+                    Nothing -> rebuild
+            | not dirtyChildren -> do
+                v <- stored ops k
+                case v of
+                    Just v -> do
+                        let eq = equal ops k (result r) v
+                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
+                        case eq of
+                            NotEqual -> rebuild
+                            EqualCheap -> continue (False, Ready r)
+                            EqualExpensive -> continue (True, Ready r{result=v})
+                    _ -> rebuild
+        _ -> rebuild
 
 
 ---------------------------------------------------------------------
