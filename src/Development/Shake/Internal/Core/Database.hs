@@ -175,7 +175,7 @@ internKey intern status k = do
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} Ops{..} stack ks continue =
+build pool database@Database{..} ops stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -282,11 +282,11 @@ build pool database@Database{..} Ops{..} stack ks continue =
                             Error _ -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = error"
 
-                let rebuild = execute (addStack i k stack) k $ \res ->
+                let rebuild = execute ops (addStack i k stack) k $ \res ->
                         finish $ case res of
                             Left err -> Error err
                             Right (v,deps,(doubleToFloat -> execution),traces) ->
-                                let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                                let c | Just r <- r, equal ops k (result r) v /= NotEqual = changed r
                                       | otherwise = step
                                 in Ready Result{result=v,changed=c,built=step,depends=deps,..}
 
@@ -295,15 +295,15 @@ build pool database@Database{..} Ops{..} stack ks continue =
                         | assume == Just AssumeSkip -> finish_ $ Ready r
                         | assume == Just AssumeDirty -> rebuild
                         | assume == Just AssumeClean -> do
-                            v <- stored k
+                            v <- stored ops k
                             case v of
                                 Just v -> finish $ Ready r{result=v}
                                 Nothing -> rebuild
                         | not dirtyChildren -> do
-                            v <- stored k
+                            v <- stored ops k
                             case v of
                                 Just v -> do
-                                    let eq = equal k (result r) v
+                                    let eq = equal ops k (result r) v
                                     diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
                                     case eq of
                                         NotEqual -> rebuild
