@@ -280,11 +280,13 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
 
         -- | Given a Key, queue up execution and return waiting
-        spawn :: Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
-        spawn stack i k r = do
+        spawn :: Bool -> Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
+        spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                let finish res = do
+                let finish = finishEx True
+                    finish_ = finishEx False
+                    finishEx write res = do
                         withLock lock $ do
                             i #= (k, res)
                             done res
@@ -293,7 +295,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
                                 diagnostic $ return $
                                     "result " ++ atom k ++ " = "++ atom (result r) ++
                                     " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                                journal i k r
+                                when write $ journal i k r
                             Error _ -> do
                                 diagnostic $ return $ "result " ++ atom k ++ " = error"
 
@@ -307,7 +309,7 @@ build pool database@Database{..} Ops{..} stack ks continue =
 
                 case r of
                     Just r
-                        | assume == Just AssumeSkip -> finish $ Ready r
+                        | assume == Just AssumeSkip -> finish_ $ Ready r
                         | assume == Just AssumeClean -> do
                             v <- stored k
                             case v of
