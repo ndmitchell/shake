@@ -137,8 +137,7 @@ module Development.Shake(
     newCache, newCacheIO,
     -- * Deprecated
     (*>), (|*>), (&*>),
-    (**>), (*>>), (?>>),
-    system', systemCwd, systemOutput
+    (**>), (*>>), (?>>)
     ) where
 
 import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
