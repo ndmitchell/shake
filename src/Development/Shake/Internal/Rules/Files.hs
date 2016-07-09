@@ -37,7 +37,7 @@ newtype FilesA = FilesA [FileA]
 
 instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . show) xs
 
-instance Show FilesQ where show (FilesQ xs) = unwords $ map (showQuote . show) xs
+instance Show FilesQ where show (FilesQ xs) = unwords $ map (wrapQuote . show) xs
 
 
 filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)

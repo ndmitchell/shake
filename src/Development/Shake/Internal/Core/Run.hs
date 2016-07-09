@@ -250,15 +250,13 @@ runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
                 case v of
                     Just v -> do
                         let eq = equal k (result r) v
-                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ atom k ++ " " ++ atom (result r)
+                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
                         case eq of
                             NotEqual -> rebuild
                             EqualCheap -> continue (False, Ready r)
                             EqualExpensive -> continue (True, Ready r{result=v})
                     _ -> rebuild
         _ -> rebuild
-
-atom x = showBracket $ show x
 
 
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)

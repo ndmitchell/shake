@@ -104,7 +104,6 @@ data Database = Database
     ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result -> IO ()
     ,diagnostic :: IO String -> IO () -- ^ logging function
-    ,assume :: Maybe Assume
     }
 
 data Status
@@ -169,12 +168,9 @@ internKey intern status k = do
             return i
 
 
-atom x = showBracket $ show x
-
-
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> Ops2 -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool database@Database{..} ops stack ks continue =
+build pool Database{..} ops stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -271,11 +267,11 @@ build pool database@Database{..} ops stack ks continue =
                     case res of
                         Ready r -> do
                             diagnostic $ return $
-                                "result " ++ atom k ++ " = "++ atom (result r) ++
+                                "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
                                 " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                             when write $ journal i k r
                         Error _ -> do
-                            diagnostic $ return $ "result " ++ atom k ++ " = error"
+                            diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
 
 
@@ -473,7 +469,7 @@ withDatabase opts diagnostic act = do
                 _ -> Step 1
         journal stepId stepKey $ toStepResult step
         lock <- newLock
-        act Database{assume=shakeAssume opts,..}
+        act Database{..}
 
 
 instance BinaryWith Witness Result where

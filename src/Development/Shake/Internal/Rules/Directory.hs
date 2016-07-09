@@ -35,7 +35,7 @@ newtype DoesFileExistQ = DoesFileExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show DoesFileExistQ where
-    show (DoesFileExistQ a) = "doesFileExist " ++ showQuote a
+    show (DoesFileExistQ a) = "doesFileExist " ++ wrapQuote a
 
 newtype DoesFileExistA = DoesFileExistA Bool
     deriving (Typeable,Eq,Hashable,Binary,NFData)
@@ -48,7 +48,7 @@ newtype DoesDirectoryExistQ = DoesDirectoryExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show DoesDirectoryExistQ where
-    show (DoesDirectoryExistQ a) = "doesDirectoryExist " ++ showQuote a
+    show (DoesDirectoryExistQ a) = "doesDirectoryExist " ++ wrapQuote a
 
 newtype DoesDirectoryExistA = DoesDirectoryExistA Bool
     deriving (Typeable,Eq,Hashable,Binary,NFData)
@@ -61,13 +61,13 @@ newtype GetEnvQ = GetEnvQ String
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetEnvQ where
-    show (GetEnvQ a) = "getEnv " ++ showQuote a
+    show (GetEnvQ a) = "getEnv " ++ wrapQuote a
 
 newtype GetEnvA = GetEnvA (Maybe String)
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetEnvA where
-    show (GetEnvA a) = maybe "<unset>" showQuote a
+    show (GetEnvA a) = maybe "<unset>" wrapQuote a
 
 
 data GetDirectoryQ
@@ -80,12 +80,12 @@ newtype GetDirectoryA = GetDirectoryA [FilePath]
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetDirectoryQ where
-    show (GetDir x) = "getDirectoryContents " ++ showQuote x
-    show (GetDirFiles a b) = "getDirectoryFiles " ++ showQuote a ++ " [" ++ unwords (map showQuote b) ++ "]"
-    show (GetDirDirs x) = "getDirectoryDirs " ++ showQuote x
+    show (GetDir x) = "getDirectoryContents " ++ wrapQuote x
+    show (GetDirFiles a b) = "getDirectoryFiles " ++ wrapQuote a ++ " [" ++ unwords (map wrapQuote b) ++ "]"
+    show (GetDirDirs x) = "getDirectoryDirs " ++ wrapQuote x
 
 instance Show GetDirectoryA where
-    show (GetDirectoryA xs) = unwords $ map showQuote xs
+    show (GetDirectoryA xs) = unwords $ map wrapQuote xs
 
 instance NFData GetDirectoryQ where
     rnf (GetDir a) = rnf a
