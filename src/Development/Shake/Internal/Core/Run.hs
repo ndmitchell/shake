@@ -189,7 +189,15 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    let exec stack k continue = do
+    stack <- Action $ getsRW localStack
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (ops2 global) stack ks
+    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
+    return vs
+
+ops2 :: Global -> Ops2
+ops2 global@Global{..} = Ops2 $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
+    where
+        exec stack k continue = do
             let s = newLocal stack (shakeVerbosity globalOptions)
             let top = showTopStack stack
             time <- offsetTime
@@ -207,11 +215,6 @@ applyKeyValue ks = do
                         let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
                         evaluate $ rnf ans
                         continue $ Right ans
-    stack <- Action $ getsRW localStack
-    let ops = Ops2 $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase ops stack ks
-    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
-    return vs
 
 data Ops = Ops
     {stored :: Key -> IO (Maybe Value)
