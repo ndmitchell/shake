@@ -213,6 +213,16 @@ applyKeyValue ks = do
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
+data Ops = Ops
+    {stored :: Key -> IO (Maybe Value)
+        -- ^ Given a Key, find the value stored on disk
+    ,equal :: Key -> Value -> Value -> EqualCost
+        -- ^ Given both Values, see if they are equal and how expensive that check was
+    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Seconds, [Trace]))
+        -- ^ Given a stack and a key, either raise an exception or successfully build it
+    }
+
+
 runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
 runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
     let rebuild = execute stack k $ \res ->

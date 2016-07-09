@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
-    Ops(..), Ops2(..), build, Depends,
+    Ops2(..), build, Depends,
     Step, Result(..), Status(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -152,15 +152,6 @@ instance Show Depends where
 
 newtype Ops2 = Ops2
     {execute2 :: Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
-    }
-
-data Ops = Ops
-    {stored :: Key -> IO (Maybe Value)
-        -- ^ Given a Key, find the value stored on disk
-    ,equal :: Key -> Value -> Value -> EqualCost
-        -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Seconds, [Trace]))
-        -- ^ Given a stack and a key, either raise an exception or successfully build it
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
