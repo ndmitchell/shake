@@ -194,41 +194,9 @@ applyKeyValue ks = do
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
-ops :: Global -> Ops
-ops global@Global{..} = Ops (runStored globalRules) (runEqual globalRules) exec
-    where
-        exec stack k continue = do
-            let s = newLocal stack (shakeVerbosity globalOptions)
-            let top = showTopStack stack
-            time <- offsetTime
-            runAction global s (do
-                liftIO $ evaluate $ rnf k
-                liftIO $ globalLint $ "before building " ++ top
-                putWhen Chatty $ "# " ++ show k
-                res <- runExecute globalRules k
-                when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
-                Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right (res, Local{..}) -> do
-                        dur <- time
-                        globalLint $ "after building " ++ top
-                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
-                        evaluate $ rnf ans
-                        continue $ Right ans
-
-data Ops = Ops
-    {stored :: Key -> IO (Maybe Value)
-        -- ^ Given a Key, find the value stored on disk
-    ,equal :: Key -> Value -> Value -> EqualCost
-        -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Seconds, [Trace]))
-        -- ^ Given a stack and a key, either raise an exception or successfully build it
-    }
-
 
 runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
 runKey global@Global{..} stack step k r dirtyChildren continue = do
-    let Ops{..} = ops global
     let assume = shakeAssume globalOptions
     let rebuild = execute stack k $ \res ->
             continue $ case res of
@@ -259,6 +227,27 @@ runKey global@Global{..} stack step k r dirtyChildren continue = do
                             EqualExpensive -> continue $ Right (True, r{result=v})
                     _ -> rebuild
         _ -> rebuild
+    where
+        stored = runStored globalRules
+        equal = runEqual globalRules
+        execute stack k continue = do
+            let s = newLocal stack (shakeVerbosity globalOptions)
+            let top = showTopStack stack
+            time <- offsetTime
+            runAction global s (do
+                liftIO $ evaluate $ rnf k
+                liftIO $ globalLint $ "before building " ++ top
+                putWhen Chatty $ "# " ++ show k
+                res <- runExecute globalRules k
+                when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
+                Action $ fmap ((,) res) getRW) $ \x -> case x of
+                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
+                    Right (res, Local{..}) -> do
+                        dur <- time
+                        globalLint $ "after building " ++ top
+                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
+                        evaluate $ rnf ans
+                        continue $ Right ans
 
 
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
