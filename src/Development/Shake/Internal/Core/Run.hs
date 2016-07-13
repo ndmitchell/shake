@@ -190,12 +190,12 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (ops2 global) stack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
-ops2 :: Global -> BuildKey
-ops2 global@Global{..} = BuildKey $ runKey global (Ops (runStored globalRules) (runEqual globalRules) exec)
+ops :: Global -> Ops
+ops global@Global{..} = Ops (runStored globalRules) (runEqual globalRules) exec
     where
         exec stack k continue = do
             let s = newLocal stack (shakeVerbosity globalOptions)
@@ -226,8 +226,9 @@ data Ops = Ops
     }
 
 
-runKey :: Global -> Ops -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
-runKey Global{..} Ops{..} stack step k r dirtyChildren continue = do
+runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
+runKey global@Global{..} stack step k r dirtyChildren continue = do
+    let Ops{..} = ops global
     let assume = shakeAssume globalOptions
     let rebuild = execute stack k $ \res ->
             continue $ case res of
