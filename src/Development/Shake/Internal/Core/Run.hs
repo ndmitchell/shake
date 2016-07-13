@@ -196,21 +196,12 @@ applyKeyValue ks = do
 
 
 runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
-runKey global@Global{..} stack step k r dirtyChildren continue = do
-    let assume = shakeAssume globalOptions
-    let rebuild = execute stack k $ \res ->
-            continue $ case res of
-                Left err -> Left err
-                Right (v,deps,(doubleToFloat -> execution),traces) ->
-                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                          | otherwise = step
-                    in Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
-
+runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChildren continue = do
     case r of
         Just r
-            | assume == Just AssumeSkip -> continue $ Right (False, r)
-            | assume == Just AssumeDirty -> rebuild
-            | assume == Just AssumeClean -> do
+            | shakeAssume == Just AssumeSkip -> continue $ Right (False, r)
+            | shakeAssume == Just AssumeDirty -> rebuild
+            | shakeAssume == Just AssumeClean -> do
                 v <- stored k
                 case v of
                     Just v -> continue $ Right (True, r{result=v})
@@ -228,10 +219,18 @@ runKey global@Global{..} stack step k r dirtyChildren continue = do
                     _ -> rebuild
         _ -> rebuild
     where
+        rebuild = execute stack k $ \res ->
+            continue $ case res of
+                Left err -> Left err
+                Right (v,deps,(doubleToFloat -> execution),traces) ->
+                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                          | otherwise = step
+                    in Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
+
         stored = runStored globalRules
         equal = runEqual globalRules
         execute stack k continue = do
-            let s = newLocal stack (shakeVerbosity globalOptions)
+            let s = newLocal stack shakeVerbosity
             let top = showTopStack stack
             time <- offsetTime
             runAction global s (do
@@ -239,7 +238,7 @@ runKey global@Global{..} stack step k r dirtyChildren continue = do
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
                 res <- runExecute globalRules k
-                when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
+                when (Just LintFSATrace == shakeLint) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
