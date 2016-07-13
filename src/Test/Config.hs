@@ -51,11 +51,11 @@ test build obj = do
       ,"CFLAGS = -O2 -I${HEADERS_DIR} -g"]
     vars <- readConfigFileWithEnv [("SOURCE_DIR", "/path/to/src")]
                                   (obj "config")
-    assert (Map.lookup "HEADERS_DIR" vars == Just "/path/to/src/path/to/dir")
+    assertBool (Map.lookup "HEADERS_DIR" vars == Just "/path/to/src/path/to/dir")
         $ "readConfigFileWithEnv:"
             ++ " Expected: " ++ show (Just "/path/to/src/path/to/dir")
             ++ " Got: " ++ show (Map.lookup "HEADERS_DIR" vars)
-    assert (Map.lookup "CFLAGS" vars == Just "-O2 -I/path/to/src/path/to/dir -g")
+    assertBool (Map.lookup "CFLAGS" vars == Just "-O2 -I/path/to/src/path/to/dir -g")
         $ "readConfigFileWithEnv:"
             ++ " Expected: " ++ show (Just "-O2 -I/path/to/src/path/to/dir -g")
             ++ " Got: " ++ show (Map.lookup "CFLAGS" vars)

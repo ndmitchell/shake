@@ -5,7 +5,7 @@ import Test.Type
 import Development.Shake.Internal.Core.Pool
 
 import Control.Concurrent
-import Control.Exception hiding (assert)
+import Control.Exception
 import Control.Monad
 
 
@@ -49,7 +49,7 @@ test build obj = do
                     wait
                     modifyMVar_ done $ const $ return True
         done <- readMVar done
-        assert done "Waiting on someone"
+        assertBool done "Waiting on someone"
 
         -- check that killing a thread pool stops the tasks, bug 545
         thread <- newEmptyMVar
@@ -65,4 +65,4 @@ test build obj = do
         takeMVar done
         wait >> wait >> wait -- allow the bad thread to continue
         res <- readMVar res
-        assert res "Early termination"
+        assertBool res "Early termination"

@@ -144,10 +144,10 @@ test build obj = do
     when b $ removeFile $ obj "staunch1"
     crash ["staunch1","staunch2","-j2"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
-    assert (not b) "File should not exist, should have crashed first"
+    assertBool (not b) "File should not exist, should have crashed first"
     crash ["staunch1","staunch2","-j2","--keep-going","--silent"] ["crash"]
     b <- IO.doesFileExist $ obj "staunch1"
-    assert b "File should exist, staunch should have let it be created"
+    assertBool b "File should exist, staunch should have let it be created"
 
     crash ["finally1"] ["die"]
     assertContents (obj "finally1") "1"
@@ -181,11 +181,11 @@ test build obj = do
 
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []
-    assert ("nothing to do" `isInfixOf` out) $ "Expected 'nothing to do', but got: " ++ out
+    assertBool ("nothing to do" `isInfixOf` out) $ "Expected 'nothing to do', but got: " ++ out
 
     putStrLn "## BUILD errors fail1 fail2 -k -j2"
     (out,_) <- IO.captureOutput $ try_ $ build ["fail1","fail2","-k","-j2",""]
-    assert ("die1" `isInfixOf` out && "die2" `isInfixOf` out) $ "Expected 'die1' and 'die2', but got: " ++ out
+    assertBool ("die1" `isInfixOf` out && "die2" `isInfixOf` out) $ "Expected 'die1' and 'die2', but got: " ++ out
 
     crash ["fresh_dir"] ["expected a file, got a directory","fresh_dir"]
     crash ["need_dir"] ["expected a file, got a directory","existing_dir"]
@@ -206,4 +206,4 @@ test build obj = do
 
     -- check a fast failure aborts a slow success
     (t, _) <- duration $ crash ["fast_failure","slow_success","-j2"] ["die"]
-    assert (t < 10) $ "Took too long, expected < 10, got " ++ show t
+    assertBool (t < 10) $ "Took too long, expected < 10, got " ++ show t

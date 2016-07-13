@@ -14,7 +14,7 @@ test build obj = do
     v1 <- getHashedShakeVersion [obj "foo.txt"]
     writeFile (obj "foo.txt") "y"
     v2 <- getHashedShakeVersion [obj "foo.txt"]
-    assert (v1 /= v2) "Hashes must not be equal"
+    assertBool (v1 /= v2) "Hashes must not be equal"
 
     build ["clean"]
     build []
