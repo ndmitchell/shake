@@ -30,9 +30,9 @@ instance Arbitrary Path where
 test build obj = do
     internalTest
     let f b pat file = do
-            assert (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
-            assert (b == (pat `walker` file)) $ show pat ++ " `walker` " ++ show file ++ "\nEXPECTED: " ++ show b
-            when b $ assert (toStandard (substitute (extract pat file) pat) == toStandard file) $
+            assertBool (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
+            assertBool (b == (pat `walker` file)) $ show pat ++ " `walker` " ++ show file ++ "\nEXPECTED: " ++ show b
+            when b $ assertBool (toStandard (substitute (extract pat file) pat) == toStandard file) $
                 "FAILED substitute/extract property\nPattern: " ++ show pat ++ "\nFile: " ++ show file ++ "\n" ++
                 "Extracted: " ++ show (extract pat file) ++ "\nSubstitute: " ++ show (substitute (extract pat file) pat)
 
@@ -137,12 +137,12 @@ test build obj = do
     simple "a///b" === False
     simple "a/**/b" === False
 
-    assert (compatible []) "compatible"
-    assert (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
-    assert (compatible ["**/*a.txt","foo/**/a*.txt"]) "compatible"
-    assert (compatible ["//*a.txt","foo/**/a*.txt"]) "compatible"
-    assert (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
-    assert (not $ compatible ["**/*a.txt","foo/**/a*.*txt"]) "compatible"
+    assertBool (compatible []) "compatible"
+    assertBool (compatible ["//*a.txt","foo//a*.txt"]) "compatible"
+    assertBool (compatible ["**/*a.txt","foo/**/a*.txt"]) "compatible"
+    assertBool (compatible ["//*a.txt","foo/**/a*.txt"]) "compatible"
+    assertBool (not $ compatible ["//*a.txt","foo//a*.*txt"]) "compatible"
+    assertBool (not $ compatible ["**/*a.txt","foo/**/a*.*txt"]) "compatible"
     extract "//*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
     extract "**/*a.txt" "foo/bar/testa.txt" === ["foo/bar/","test"]
     extract "//*a.txt" "testa.txt" === ["","test"]

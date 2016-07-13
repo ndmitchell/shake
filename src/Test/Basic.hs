@@ -113,12 +113,12 @@ test build obj = do
 
     build ["!halfclean"]
     b <- IO.doesDirectoryExist (obj "")
-    assert b "Directory should exist, cleaner should not have removed it"
+    assertBool b "Directory should exist, cleaner should not have removed it"
 
     build ["!cleaner"]
     sleep 1 -- sometimes takes a while for the file system to notice
     b <- IO.doesDirectoryExist (obj "")
-    assert (not b) "Directory should not exist, cleaner should have removed it"
+    assertBool (not b) "Directory should not exist, cleaner should have removed it"
 
     IO.createDirectory $ obj ""
     writeFile (obj "zero.txt") ""

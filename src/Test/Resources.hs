@@ -5,7 +5,7 @@ import Development.Shake
 import Test.Type
 import Data.List
 import System.FilePath
-import Control.Exception.Extra hiding (assert)
+import Control.Exception.Extra
 import System.Time.Extra
 import Control.Monad
 import Data.IORef
@@ -75,5 +75,5 @@ test build obj = do
             (s, _) <- duration $ build [flags,"throttle","--no-report","--clean"]
             -- the 0.1s cap is a guess at an upper bound for how long everything else should take
             -- and should be raised on slower machines
-            assert (s >= 1.4 && s < 1.6) $
+            assertBool (s >= 1.4 && s < 1.6) $
                 "Bad throttling, expected to take 1.4s + computation time (cap of 0.2s), took " ++ show s ++ "s"

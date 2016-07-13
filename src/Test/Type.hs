@@ -10,7 +10,7 @@ import Development.Shake.Internal.FileInfo
 import Development.Shake.FilePath
 import Paths_shake
 
-import Control.Exception.Extra hiding (assert)
+import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.List
 import Data.Maybe
@@ -119,35 +119,35 @@ shakeWithClean clean opts rules = shakeArgsWith opts [cleanOpt] f
 unobj :: FilePath -> FilePath
 unobj = dropDirectory1 . dropDirectory1
 
-assert :: Bool -> String -> IO ()
-assert b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
+assertBool :: Bool -> String -> IO ()
+assertBool b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
 
 infix 4 ===
 
 (===) :: (Show a, Eq a) => a -> a -> IO ()
-a === b = assert (a == b) $ "failed in ===\nLHS: " ++ show a ++ "\nRHS: " ++ show b
+a === b = assertBool (a == b) $ "failed in ===\nLHS: " ++ show a ++ "\nRHS: " ++ show b
 
 
 assertExists :: FilePath -> IO ()
 assertExists file = do
     b <- IO.doesFileExist file
-    assert b $ "File was expected to exist, but is missing: " ++ file
+    assertBool b $ "File was expected to exist, but is missing: " ++ file
 
 assertMissing :: FilePath -> IO ()
 assertMissing file = do
     b <- IO.doesFileExist file
-    assert (not b) $ "File was expected to be missing, but exists: " ++ file
+    assertBool (not b) $ "File was expected to be missing, but exists: " ++ file
 
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- IO.readFile' file
-    assert (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
+    assertBool (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
 
 assertContentsOn :: (String -> String) -> FilePath -> String -> IO ()
 assertContentsOn f file want = do
     got <- IO.readFile' file
-    assert (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got ++
-                               "\nWANT (transformed): " ++ f want ++ "\nGOT (transformed): " ++ f got
+    assertBool (f want == f got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got ++
+                                   "\nWANT (transformed): " ++ f want ++ "\nGOT (transformed): " ++ f got
 
 assertContentsWords :: FilePath -> String -> IO ()
 assertContentsWords = assertContentsOn (unwords . words)
@@ -156,7 +156,7 @@ assertContentsWords = assertContentsOn (unwords . words)
 assertContentsInfix :: FilePath -> String -> IO ()
 assertContentsInfix file want = do
     got <- IO.readFile' file
-    assert (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
+    assertBool (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
 
 assertContentsUnordered :: FilePath -> [String] -> IO ()
 assertContentsUnordered file xs = assertContentsOn (unlines . sort . lines) file (unlines xs)
@@ -166,7 +166,7 @@ assertException parts act = do
     res <- try_ act
     case res of
         Left err -> let s = show err in forM_ parts $ \p ->
-            assert (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
+            assertBool (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
         Right _ -> error $ "Expected an exception containing " ++ show parts ++ ", but succeeded"
 
 

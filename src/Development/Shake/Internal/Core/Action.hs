@@ -15,6 +15,7 @@ import Control.Exception.Extra
 import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
+import Control.DeepSeq
 import Data.Typeable
 import Data.Function
 import Data.Either.Extra
@@ -46,6 +47,7 @@ data RuleInfo = RuleInfo
     {stored :: Key -> IO (Maybe Value)
     ,equal :: Key -> Value -> Value -> EqualCost
     ,execute :: Key -> Action Value
+    ,lint :: Key -> Value -> IO (Maybe String)
     ,resultType :: TypeRep
     }
 
@@ -218,5 +220,7 @@ traced msg act = do
     putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
     res <- liftIO act
     stop <- liftIO globalTimestamp
-    Action $ modifyRW $ \s -> s{localTraces = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop) : localTraces s}
+    let trace = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop)
+    liftIO $ evaluate $ rnf trace
+    Action $ modifyRW $ \s -> s{localTraces = trace : localTraces s}
     return res

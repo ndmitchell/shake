@@ -6,7 +6,7 @@ import Development.Shake.Internal.Core.Monad
 
 import Data.IORef
 import Control.Concurrent
-import Control.Exception hiding (assert)
+import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 

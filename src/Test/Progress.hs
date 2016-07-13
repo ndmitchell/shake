@@ -41,13 +41,13 @@ test build obj = do
 
     -- the first value must be plausible, or missing
     xs <- prog [187]
-    assert (isNaN $ head xs) "No first value"
+    assertBool (isNaN $ head xs) "No first value"
 
     -- desirable properties, could be weakened
     xs <- progEx 2 $ 100:map (*2) [10,9..1]
     drop 5 xs === [6,5..1]
     xs <- progEx 1 [10,9,100,8,7,6,5,4,3,2,1]
-    assert (all (<= 1.5) $ map abs $ zipWith (-) (drop 5 xs) [6,5..1]) "Close"
+    assertBool (all (<= 1.5) $ map abs $ zipWith (-) (drop 5 xs) [6,5..1]) "Close"
 
     -- if no progress is made, don't keep the time going up
     xs <- prog [10,9,8,7,7,7,7,7]
@@ -55,7 +55,7 @@ test build obj = do
 
     -- if the work rate changes, should somewhat reflect that
     xs <- prog [10,9,8,7,6.5,6,5.5,5]
-    assert (last xs > 7.1) "Some discounting (factor=0 would give 7)"
+    assertBool (last xs > 7.1) "Some discounting (factor=0 would give 7)"
 
     xs <- getDirectoryContents "src/Test/Progress"
     build $ ["--progress=replay=src/Test/Progress/" ++ x | x <- xs, takeExtension x == ".prog"] ++

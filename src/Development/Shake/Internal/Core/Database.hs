@@ -6,8 +6,8 @@ module Development.Shake.Internal.Core.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
-    Ops2(..), build, Depends,
-    Step, Result(..), Status(..),
+    BuildKey(..), build, Depends,
+    Step, Result(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -87,7 +87,7 @@ emptyStack = Stack Nothing [] Set.empty
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
-data Trace = Trace BS {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
+data Trace = Trace {-# UNPACK #-} !BS {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
     deriving Show
 
 instance NFData Trace where
@@ -149,8 +149,16 @@ instance Show Depends where
     show = show . fromDepends
 
 
-newtype Ops2 = Ops2
-    {execute2 :: Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
+newtype BuildKey = BuildKey
+    {buildKey
+        :: Stack -- Given the current stack with the key added on
+        -> Step -- And the current step
+        -> Key -- The key to build
+        -> Maybe Result -- A previous result, or Nothing if never been built before
+        -> Bool -- True if any of the children were dirty
+        -> Capture (Either SomeException (Bool, Result))
+            -- Either an error, or a result.
+            -- If the Bool is True you should rewrite the database entry.
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
@@ -169,8 +177,8 @@ internKey intern status k = do
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops2 -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool Database{..} ops stack ks continue =
+build :: Pool -> Database -> BuildKey -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build pool Database{..} BuildKey{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -260,17 +268,18 @@ build pool Database{..} ops stack ks continue =
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                execute2 ops (addStack i k stack) step k r dirtyChildren $ \(write, res) -> do
+                buildKey (addStack i k stack) step k r dirtyChildren $ \res -> do
+                    let status = either Error (Ready . snd) res
                     withLock lock $ do
-                        i #= (k, res)
-                        done res
+                        i #= (k, status)
+                        done status
                     case res of
-                        Ready r -> do
+                        Right (write, r) -> do
                             diagnostic $ return $
                                 "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
                                 " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                             when write $ journal i k r
-                        Error _ -> do
+                        Left _ -> do
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
 
@@ -372,8 +381,8 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
-checkValid Database{..} stored equal missing = do
+checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
+checkValid Database{..} check missing = do
     status <- Ids.toList status
     intern <- readIORef intern
     diagnostic $ return "Starting validity/lint checking"
@@ -381,16 +390,15 @@ checkValid Database{..} stored equal missing = do
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
-            now <- stored key
-            let good = maybe False ((==) EqualCheap . equal key result) now
-            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
+            good <- check key result
+            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
+            return $ [(key, result, now) | not $ specialAlwaysRebuilds result, Just now <- [good]] ++ seen
         _ -> return seen
     unless (null bad) $ do
         let n = length bad
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
-            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ maybe "<missing>" show now)]
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just now)]
                                         | (key, result, now) <- bad])
             ""
 

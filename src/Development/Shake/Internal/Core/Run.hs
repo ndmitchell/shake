@@ -122,34 +122,42 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 maybe (return ()) (throwIO . snd) =<< readIORef except
                 assertFinishedDatabase database
 
+                let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
+
                 when (null actions) $
-                    when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
+                    putWhen Normal "Warning: No want/action statements, nothing to do"
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent
-                    checkValid database (runStored ruleinfo) (runEqual ruleinfo) absent
-                    when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
+                    checkValid database (runLint ruleinfo) absent
+                    putWhen Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
                     report <- toReport database
                     forM_ shakeReport $ \file -> do
-                        when (shakeVerbosity >= Normal) $
-                            output Normal $ "Writing report to " ++ file
+                        putWhen Normal $ "Writing report to " ++ file
                         writeProfile file report
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
                     live <- listLive database
                     let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
                     forM_ shakeLiveFiles $ \file -> do
-                        when (shakeVerbosity >= Normal) $
-                            output Normal $ "Writing live list to " ++ file
+                        putWhen Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             sequence_ . reverse =<< readIORef after
 
 
 lineBuffering :: IO a -> IO a
-lineBuffering = withBuffering stdout LineBuffering . withBuffering stderr LineBuffering
+lineBuffering act = do
+    -- instead of withBuffering avoid two finally handlers and stack depth
+    out <- hGetBuffering stdout
+    err <- hGetBuffering stderr
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+    act `finally` do
+        hSetBuffering stdout out
+        hSetBuffering stderr err
 
 
 abbreviate :: [(String,String)] -> String -> String
@@ -190,89 +198,71 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (ops2 global) stack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) stack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
-ops2 :: Global -> Ops2
-ops2 global@Global{..} = Ops2 $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
-    where
-        exec stack k continue = do
-            let s = newLocal stack (shakeVerbosity globalOptions)
+
+runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
+runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChildren continue = do
+    let tk = typeKey k
+    RuleInfo{..} <- case Map.lookup tk globalRules of
+        Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
+        Just r -> return r
+
+    let rebuild = do
+            let s = newLocal stack shakeVerbosity
             let top = showTopStack stack
             time <- offsetTime
             runAction global s (do
                 liftIO $ evaluate $ rnf k
                 liftIO $ globalLint $ "before building " ++ top
                 putWhen Chatty $ "# " ++ show k
-                res <- runExecute globalRules k
-                when (Just LintFSATrace == shakeLint globalOptions) trackCheckUsed
+                res <- execute k
+                when (Just LintFSATrace == shakeLint) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right (res, Local{..}) -> do
+                    Right (v, Local{..}) -> do
+                        evaluate $ rnf v
                         dur <- time
                         globalLint $ "after building " ++ top
-                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
-                        evaluate $ rnf ans
-                        continue $ Right ans
-
-data Ops = Ops
-    {stored :: Key -> IO (Maybe Value)
-        -- ^ Given a Key, find the value stored on disk
-    ,equal :: Key -> Value -> Value -> EqualCost
-        -- ^ Given both Values, see if they are equal and how expensive that check was
-    ,execute :: Stack -> Key -> Capture (Either SomeException (Value, [Depends], Seconds, [Trace]))
-        -- ^ Given a stack and a key, either raise an exception or successfully build it
-    }
-
-
-runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
-runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
-    let rebuild = execute stack k $ \res ->
-            continue $ (,) True $ case res of
-                Left err -> Error err
-                Right (v,deps,(doubleToFloat -> execution),traces) ->
-                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                          | otherwise = step
-                    in Ready Result{result=v,changed=c,built=step,depends=deps,..}
+                        let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                              | otherwise = step
+                        continue $ Right $ (,) True $ Result
+                            {result=v
+                            ,changed=c
+                            ,built=step
+                            ,depends=reverse localDepends
+                            ,execution=doubleToFloat $ dur - localDiscount
+                            ,traces=reverse localTraces}
 
     case r of
         Just r
-            | assume == Just AssumeSkip -> continue (False, Ready r)
-            | assume == Just AssumeDirty -> rebuild
-            | assume == Just AssumeClean -> do
+            | shakeAssume == Just AssumeSkip -> continue $ Right (False, r)
+            | shakeAssume == Just AssumeDirty -> rebuild
+            | shakeAssume == Just AssumeClean -> do
                 v <- stored k
                 case v of
-                    Just v -> continue (True, Ready r{result=v})
+                    Just v -> continue $ Right (True, r{result=v})
                     Nothing -> rebuild
             | not dirtyChildren -> do
                 v <- stored k
                 case v of
                     Just v -> do
                         let eq = equal k (result r) v
-                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
+                        globalDiagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
                         case eq of
                             NotEqual -> rebuild
-                            EqualCheap -> continue (False, Ready r)
-                            EqualExpensive -> continue (True, Ready r{result=v})
+                            EqualCheap -> continue $ Right (False, r)
+                            EqualExpensive -> continue $ Right (True, r{result=v})
                     _ -> rebuild
         _ -> rebuild
 
 
-runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
-runStored mp k = case Map.lookup (typeKey k) mp of
+runLint :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> IO (Maybe String)
+runLint mp k v = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
-    Just RuleInfo{..} -> stored k
-
-runEqual :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> Value -> EqualCost
-runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
-    Nothing -> NotEqual
-    Just RuleInfo{..} -> equal k v1 v2
-
-runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
-runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-    Just RuleInfo{..} -> execute k
+    Just RuleInfo{..} -> lint k v
 
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.

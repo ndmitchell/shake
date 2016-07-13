@@ -303,8 +303,18 @@ registerWitnesses SRules{..} =
 createRuleinfo :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleinfo opt SRules{..} =
     flip Map.map builtinRules $ \(BuiltinRule_ (b :: BuiltinRule k v)) ->
-        RuleInfo (stored b) (equal b) (execute b) (typeRep (Proxy :: Proxy v))
+        RuleInfo (stored b) (equal b) (execute b) (lint b) (typeRep (Proxy :: Proxy v))
     where
+        lint b = \k v -> do
+            now <- st k
+            return $ case now of
+                Nothing -> Just "<missing>"
+                Just now | eq k v now == EqualCheap -> Nothing
+                         | otherwise -> Just $ show now
+            where
+                st = stored b
+                eq = equal b
+
         stored BuiltinRule{..} = fmap (fmap newValue) . storedValue opt . fromKey
 
         equal BuiltinRule{..} = \k v1 v2 -> equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
