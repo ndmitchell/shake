@@ -78,6 +78,7 @@ usingConfigFile file = do
 usingConfig :: Map.HashMap String String -> Rules ()
 usingConfig mp = do
     addOracle $ \(Config x) -> return $ Map.lookup x mp
+    addOracle $ \(ConfigKeys x) -> return $ sort $ Map.keys mp
     return ()
 
 
