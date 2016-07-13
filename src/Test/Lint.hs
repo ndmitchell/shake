@@ -4,7 +4,7 @@ module Test.Lint(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
-import Control.Exception hiding (assert)
+import Control.Exception
 import System.Directory as IO
 import System.Info.Extra
 import Control.Monad.Extra
