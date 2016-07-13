@@ -202,7 +202,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just r -> return r
 
-    let exec stack k continue = do
+    let rebuild = do
             let s = newLocal stack shakeVerbosity
             let top = showTopStack stack
             time <- offsetTime
@@ -219,15 +219,10 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                         globalLint $ "after building " ++ top
                         let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
                         evaluate $ rnf ans
-                        continue $ Right ans
-
-    let rebuild = exec stack k $ \res ->
-            continue $ case res of
-                Left err -> Left err
-                Right (v,deps,(doubleToFloat -> execution),traces) ->
-                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                          | otherwise = step
-                    in Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
+                        (v,deps,(doubleToFloat -> execution),traces) <- return ans
+                        let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                              | otherwise = step
+                        continue $ Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
 
     case r of
         Just r
