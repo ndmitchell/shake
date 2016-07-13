@@ -195,7 +195,7 @@ applyKeyValue ks = do
     return vs
 
 ops2 :: Global -> BuildKey
-ops2 global@Global{..} = BuildKey $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
+ops2 global@Global{..} = BuildKey $ runKey global (Ops (runStored globalRules) (runEqual globalRules) exec)
     where
         exec stack k continue = do
             let s = newLocal stack (shakeVerbosity globalOptions)
@@ -226,8 +226,9 @@ data Ops = Ops
     }
 
 
-runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
-runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
+runKey :: Global -> Ops -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
+runKey Global{..} Ops{..} stack step k r dirtyChildren continue = do
+    let assume = shakeAssume globalOptions
     let rebuild = execute stack k $ \res ->
             continue $ case res of
                 Left err -> Left err
@@ -250,7 +251,7 @@ runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
                 case v of
                     Just v -> do
                         let eq = equal k (result r) v
-                        diagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
+                        globalDiagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
                         case eq of
                             NotEqual -> rebuild
                             EqualCheap -> continue $ Right (False, r)
