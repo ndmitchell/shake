@@ -194,8 +194,8 @@ applyKeyValue ks = do
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
-ops2 :: Global -> Ops2
-ops2 global@Global{..} = Ops2 $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
+ops2 :: Global -> BuildKey
+ops2 global@Global{..} = BuildKey $ runKey (Ops (runStored globalRules) (runEqual globalRules) exec) globalDiagnostic (shakeAssume globalOptions)
     where
         exec stack k continue = do
             let s = newLocal stack (shakeVerbosity globalOptions)

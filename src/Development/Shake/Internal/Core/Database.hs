@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Database(
     Trace(..),
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
-    Ops2(..), build, Depends,
+    BuildKey(..), build, Depends,
     Step, Result(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -149,8 +149,16 @@ instance Show Depends where
     show = show . fromDepends
 
 
-newtype Ops2 = Ops2
-    {execute2 :: Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
+newtype BuildKey = BuildKey
+    {buildKey
+        :: Stack -- ^ Given the current stack with the key added on
+        -> Step -- ^ And the current step
+        -> Key -- ^ The key to build
+        -> Maybe Result -- ^ A previous result, or Nothing if never been built before
+        -> Bool -- ^ True if any of the children were dirty
+        -> Capture (Either SomeException (Bool, Result))
+            -- ^ Either an error, or a result.
+            --   If the Bool is True you should rewrite the database entry.
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
@@ -169,8 +177,8 @@ internKey intern status k = do
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> Ops2 -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool Database{..} ops stack ks continue =
+build :: Pool -> Database -> BuildKey -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build pool Database{..} BuildKey{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -260,7 +268,7 @@ build pool Database{..} ops stack ks continue =
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                execute2 ops (addStack i k stack) step k r dirtyChildren $ \res -> do
+                buildKey (addStack i k stack) step k r dirtyChildren $ \res -> do
                     let status = either Error (Ready . snd) res
                     withLock lock $ do
                         i #= (k, status)
