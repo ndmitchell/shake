@@ -13,7 +13,7 @@ main = shakenCwd test $ \args obj -> return ()
 
 
 test build obj = do
-    let wait = sleep 0.01
+    let wait = sleep 0.1
     forM_ [False,True] $ \deterministic -> do
 
         -- check that it aims for exactly the limit
