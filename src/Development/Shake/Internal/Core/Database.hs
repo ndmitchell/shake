@@ -7,7 +7,7 @@ module Development.Shake.Internal.Core.Database(
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
     Ops2(..), build, Depends,
-    Step, Result(..), Status(..),
+    Step, Result(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
@@ -150,7 +150,7 @@ instance Show Depends where
 
 
 newtype Ops2 = Ops2
-    {execute2 :: Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
+    {execute2 :: Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
@@ -260,17 +260,18 @@ build pool Database{..} ops stack ks continue =
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
-                execute2 ops (addStack i k stack) step k r dirtyChildren $ \(write, res) -> do
+                execute2 ops (addStack i k stack) step k r dirtyChildren $ \res -> do
+                    let status = either Error (Ready . snd) res
                     withLock lock $ do
-                        i #= (k, res)
-                        done res
+                        i #= (k, status)
+                        done status
                     case res of
-                        Ready r -> do
+                        Right (write, r) -> do
                             diagnostic $ return $
                                 "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
                                 " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                             when write $ journal i k r
-                        Error _ -> do
+                        Left _ -> do
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
 

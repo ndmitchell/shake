@@ -226,24 +226,24 @@ data Ops = Ops
     }
 
 
-runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Bool, Status)
+runKey :: Ops -> (IO String -> IO ()) -> Maybe Assume -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
 runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
     let rebuild = execute stack k $ \res ->
-            continue $ (,) True $ case res of
-                Left err -> Error err
+            continue $ case res of
+                Left err -> Left err
                 Right (v,deps,(doubleToFloat -> execution),traces) ->
                     let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
                           | otherwise = step
-                    in Ready Result{result=v,changed=c,built=step,depends=deps,..}
+                    in Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
 
     case r of
         Just r
-            | assume == Just AssumeSkip -> continue (False, Ready r)
+            | assume == Just AssumeSkip -> continue $ Right (False, r)
             | assume == Just AssumeDirty -> rebuild
             | assume == Just AssumeClean -> do
                 v <- stored k
                 case v of
-                    Just v -> continue (True, Ready r{result=v})
+                    Just v -> continue $ Right (True, r{result=v})
                     Nothing -> rebuild
             | not dirtyChildren -> do
                 v <- stored k
@@ -253,8 +253,8 @@ runKey Ops{..} diagnostic assume stack step k r dirtyChildren continue = do
                         diagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
                         case eq of
                             NotEqual -> rebuild
-                            EqualCheap -> continue (False, Ready r)
-                            EqualExpensive -> continue (True, Ready r{result=v})
+                            EqualCheap -> continue $ Right (False, r)
+                            EqualExpensive -> continue $ Right (True, r{result=v})
                     _ -> rebuild
         _ -> rebuild
 
