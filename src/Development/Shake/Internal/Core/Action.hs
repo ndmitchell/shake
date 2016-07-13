@@ -47,6 +47,7 @@ data RuleInfo = RuleInfo
     {stored :: Key -> IO (Maybe Value)
     ,equal :: Key -> Value -> Value -> EqualCost
     ,execute :: Key -> Action Value
+    ,lint :: Key -> Value -> IO (Maybe String)
     ,resultType :: TypeRep
     }
 
