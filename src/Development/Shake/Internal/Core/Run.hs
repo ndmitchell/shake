@@ -197,6 +197,38 @@ applyKeyValue ks = do
 
 runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChildren continue = do
+    let tk = typeKey k
+    RuleInfo{..} <- case Map.lookup tk globalRules of
+        Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
+        Just r -> return r
+
+    let exec stack k continue = do
+            let s = newLocal stack shakeVerbosity
+            let top = showTopStack stack
+            time <- offsetTime
+            runAction global s (do
+                liftIO $ evaluate $ rnf k
+                liftIO $ globalLint $ "before building " ++ top
+                putWhen Chatty $ "# " ++ show k
+                res <- execute k
+                when (Just LintFSATrace == shakeLint) trackCheckUsed
+                Action $ fmap ((,) res) getRW) $ \x -> case x of
+                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
+                    Right (res, Local{..}) -> do
+                        dur <- time
+                        globalLint $ "after building " ++ top
+                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
+                        evaluate $ rnf ans
+                        continue $ Right ans
+
+    let rebuild = exec stack k $ \res ->
+            continue $ case res of
+                Left err -> Left err
+                Right (v,deps,(doubleToFloat -> execution),traces) ->
+                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
+                          | otherwise = step
+                    in Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
+
     case r of
         Just r
             | shakeAssume == Just AssumeSkip -> continue $ Right (False, r)
@@ -218,35 +250,6 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                             EqualExpensive -> continue $ Right (True, r{result=v})
                     _ -> rebuild
         _ -> rebuild
-    where
-        rebuild = execute stack k $ \res ->
-            continue $ case res of
-                Left err -> Left err
-                Right (v,deps,(doubleToFloat -> execution),traces) ->
-                    let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                          | otherwise = step
-                    in Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
-
-        stored = runStored globalRules
-        equal = runEqual globalRules
-        execute stack k continue = do
-            let s = newLocal stack shakeVerbosity
-            let top = showTopStack stack
-            time <- offsetTime
-            runAction global s (do
-                liftIO $ evaluate $ rnf k
-                liftIO $ globalLint $ "before building " ++ top
-                putWhen Chatty $ "# " ++ show k
-                res <- runExecute globalRules k
-                when (Just LintFSATrace == shakeLint) trackCheckUsed
-                Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right (res, Local{..}) -> do
-                        dur <- time
-                        globalLint $ "after building " ++ top
-                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
-                        evaluate $ rnf ans
-                        continue $ Right ans
 
 
 runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
@@ -258,11 +261,6 @@ runEqual :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> Value -> EqualCost
 runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
     Nothing -> NotEqual
     Just RuleInfo{..} -> equal k v1 v2
-
-runExecute :: Map.HashMap TypeRep RuleInfo -> Key -> Action Value
-runExecute mp k = let tk = typeKey k in case Map.lookup tk mp of
-    Nothing -> liftIO $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-    Just RuleInfo{..} -> execute k
 
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
