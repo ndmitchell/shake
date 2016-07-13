@@ -151,14 +151,14 @@ instance Show Depends where
 
 newtype BuildKey = BuildKey
     {buildKey
-        :: Stack -- ^ Given the current stack with the key added on
-        -> Step -- ^ And the current step
-        -> Key -- ^ The key to build
-        -> Maybe Result -- ^ A previous result, or Nothing if never been built before
-        -> Bool -- ^ True if any of the children were dirty
+        :: Stack -- Given the current stack with the key added on
+        -> Step -- And the current step
+        -> Key -- The key to build
+        -> Maybe Result -- A previous result, or Nothing if never been built before
+        -> Bool -- True if any of the children were dirty
         -> Capture (Either SomeException (Bool, Result))
-            -- ^ Either an error, or a result.
-            --   If the Bool is True you should rewrite the database entry.
+            -- Either an error, or a result.
+            -- If the Bool is True you should rewrite the database entry.
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
