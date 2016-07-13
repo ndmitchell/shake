@@ -149,7 +149,15 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
 
 lineBuffering :: IO a -> IO a
-lineBuffering = withBuffering stdout LineBuffering . withBuffering stderr LineBuffering
+lineBuffering act = do
+    -- instead of withBuffering avoid two finally handlers and stack depth
+    out <- hGetBuffering stdout
+    err <- hGetBuffering stderr
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+    act `finally` do
+        hSetBuffering stdout out
+        hSetBuffering stderr err
 
 
 abbreviate :: [(String,String)] -> String -> String
