@@ -215,10 +215,10 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
                     Right (res, Local{..}) -> do
+                        evaluate $ rnf res
                         dur <- time
                         globalLint $ "after building " ++ top
                         let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
-                        evaluate $ rnf ans
                         (v,deps,(doubleToFloat -> execution),traces) <- return ans
                         let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
                               | otherwise = step
