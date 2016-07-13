@@ -218,11 +218,15 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                         evaluate $ rnf v
                         dur <- time
                         globalLint $ "after building " ++ top
-                        let ans = (reverse localDepends, dur - localDiscount, reverse localTraces)
-                        (deps,(doubleToFloat -> execution),traces) <- return ans
                         let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
                               | otherwise = step
-                        continue $ Right (True, Result{result=v,changed=c,built=step,depends=deps,execution=execution,traces=traces})
+                        continue $ Right $ (,) True $ Result
+                            {result=v
+                            ,changed=c
+                            ,built=step
+                            ,depends=reverse localDepends
+                            ,execution=doubleToFloat $ dur - localDiscount
+                            ,traces=reverse localTraces}
 
     case r of
         Just r
