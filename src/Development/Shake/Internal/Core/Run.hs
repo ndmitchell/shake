@@ -214,15 +214,15 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                 when (Just LintFSATrace == shakeLint) trackCheckUsed
                 Action $ fmap ((,) res) getRW) $ \x -> case x of
                     Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right (res, Local{..}) -> do
-                        evaluate $ rnf res
+                    Right (v, Local{..}) -> do
+                        evaluate $ rnf v
                         dur <- time
                         globalLint $ "after building " ++ top
-                        let ans = (res, reverse localDepends, dur - localDiscount, reverse localTraces)
-                        (v,deps,(doubleToFloat -> execution),traces) <- return ans
+                        let ans = (reverse localDepends, dur - localDiscount, reverse localTraces)
+                        (deps,(doubleToFloat -> execution),traces) <- return ans
                         let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
                               | otherwise = step
-                        continue $ Right (True, Result{result=v,changed=c,built=step,depends=deps,..})
+                        continue $ Right (True, Result{result=v,changed=c,built=step,depends=deps,execution=execution,traces=traces})
 
     case r of
         Just r
