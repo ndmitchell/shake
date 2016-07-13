@@ -122,28 +122,28 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 maybe (return ()) (throwIO . snd) =<< readIORef except
                 assertFinishedDatabase database
 
+                let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
+
                 when (null actions) $
-                    when (shakeVerbosity >= Normal) $ output Normal "Warning: No want/action statements, nothing to do"
+                    putWhen Normal "Warning: No want/action statements, nothing to do"
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent
                     checkValid database (runLint ruleinfo) absent
-                    when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
+                    putWhen Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
                     report <- toReport database
                     forM_ shakeReport $ \file -> do
-                        when (shakeVerbosity >= Normal) $
-                            output Normal $ "Writing report to " ++ file
+                        putWhen Normal $ "Writing report to " ++ file
                         writeProfile file report
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
                     live <- listLive database
                     let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
                     forM_ shakeLiveFiles $ \file -> do
-                        when (shakeVerbosity >= Normal) $
-                            output Normal $ "Writing live list to " ++ file
+                        putWhen Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             sequence_ . reverse =<< readIORef after
 
