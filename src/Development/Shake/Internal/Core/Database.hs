@@ -381,8 +381,8 @@ toReport Database{..} = do
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
-checkValid :: Database -> (Key -> IO (Maybe Value)) -> (Key -> Value -> Value -> EqualCost) -> [(Key, Key)] -> IO ()
-checkValid Database{..} stored equal missing = do
+checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
+checkValid Database{..} check missing = do
     status <- Ids.toList status
     intern <- readIORef intern
     diagnostic $ return "Starting validity/lint checking"
@@ -390,16 +390,15 @@ checkValid Database{..} stored equal missing = do
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
-            now <- stored key
-            let good = maybe False ((==) EqualCheap . equal key result) now
-            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if good then "passed" else "FAILED"
-            return $ [(key, result, now) | not good && not (specialAlwaysRebuilds result)] ++ seen
+            good <- check key result
+            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
+            return $ [(key, result, now) | not $ specialAlwaysRebuilds result, Just now <- [good]] ++ seen
         _ -> return seen
     unless (null bad) $ do
         let n = length bad
         errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
-            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just $ maybe "<missing>" show now)]
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just now)]
                                         | (key, result, now) <- bad])
             ""
 

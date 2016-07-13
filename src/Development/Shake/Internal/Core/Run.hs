@@ -128,7 +128,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     absent <- readIORef absent
-                    checkValid database (runStored ruleinfo) (runEqual ruleinfo) absent
+                    checkValid database (runLint ruleinfo) absent
                     when (shakeVerbosity >= Loud) $ output Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
@@ -251,15 +251,15 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         _ -> rebuild
 
 
-runStored :: Map.HashMap TypeRep RuleInfo -> Key -> IO (Maybe Value)
-runStored mp k = case Map.lookup (typeKey k) mp of
+runLint :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> IO (Maybe String)
+runLint mp k v = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
-    Just RuleInfo{..} -> stored k
-
-runEqual :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> Value -> EqualCost
-runEqual mp k v1 v2 = case Map.lookup (typeKey k) mp of
-    Nothing -> NotEqual
-    Just RuleInfo{..} -> equal k v1 v2
+    Just RuleInfo{..} -> do
+        now <- stored k
+        return $ case now of
+            Nothing -> Just "<missing>"
+            Just now | equal k v now == EqualCheap -> Nothing
+                     | otherwise -> Just $ show now
 
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
