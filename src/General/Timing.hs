@@ -2,38 +2,41 @@
 module General.Timing(resetTimings, addTiming, printTimings) where
 
 import Data.IORef
-import Data.Time
 import System.IO.Unsafe
 import Numeric.Extra
 import System.Time.Extra
 
+{-# NOINLINE timer #-}
+timer :: IO Seconds
+timer = unsafePerformIO offsetTime
+
 
 {-# NOINLINE timings #-}
-timings :: IORef [(UTCTime, String)] -- number of times called, newest first
+timings :: IORef [(Seconds, String)] -- number of times called, newest first
 timings = unsafePerformIO $ newIORef []
 
 
 resetTimings :: IO ()
 resetTimings = do
-    now <- getCurrentTime
+    now <- timer
     writeIORef timings [(now, "Start")]
 
 
 -- | Print all withTiming information and clear the information.
 printTimings :: IO ()
 printTimings = do
-    now <- getCurrentTime
+    now <- timer
     old <- atomicModifyIORef timings $ \ts -> ([(now, "Start")], ts)
     putStr $ unlines $ showTimings now $ reverse old
 
 
 addTiming :: String -> IO ()
 addTiming msg = do
-    now <- getCurrentTime
+    now <- timer
     atomicModifyIORef timings $ \ts -> ((now,msg):ts, ())
 
 
-showTimings :: UTCTime -> [(UTCTime, String)] -> [String]
+showTimings :: Seconds -> [(Seconds, String)] -> [String]
 showTimings _ [] = []
 showTimings stop times = showGap $
     [(a ++ "  ", showDP 3 b ++ "s  " ++ showPerc b ++ "  " ++ progress b) | (a,b) <- xs] ++
@@ -44,7 +47,7 @@ showTimings stop times = showGap $
         progress x = let i = floor $ x * 25 // mx in replicate i '=' ++ replicate (25-i) ' '
         mx = maximum $ map snd xs
         sm = sum $ map snd xs
-        xs = [ (name, stop `subtractTime` start)
+        xs = [ (name, stop - start)
              | ((start, name), stop) <- zip times $ map fst (drop 1 times) ++ [stop]]
 
 
