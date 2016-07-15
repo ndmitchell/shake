@@ -89,6 +89,6 @@ Often most of the build time will be spent calling out to commands, which can be
 
 ## Chrome traces
 
-The final profiling mode lets you trace what happened. To generate a report run `--profile=report.trace`. The resulting `report.trace` file can be opened in Google Chrome by navigating to the `chrome://tracing/` page and hitting 'Load'. The process 0 section shows which rules are running, while the process 1 shows which commands are running. Note that process 0 shows the time between a rule starting and finishing, and does not display time the rule was suspended waiting for its dependents.
+The final profiling mode lets you trace what happened. To generate a report run `--profile=report.trace`. The resulting `report.trace` file can be opened in Google Chrome by navigating to the `chrome://tracing/` page and hitting 'Load'. Both process 0 and process 1 show `traced` actions (typically commands), with process 0 being the rule name and process 1 being the command name.
 
 ![](profile-trace.png)
