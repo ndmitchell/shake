@@ -20,7 +20,6 @@ import Data.Char
 import Data.Either
 import Data.List
 import Data.Maybe
-import Data.Time
 import Data.Version(showVersion)
 import System.Console.GetOpt
 import System.Directory
@@ -149,7 +148,7 @@ shakeArgsWith baseOpts userOptions rules = do
             writeProgressReport file dat
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
-        start <- getCurrentTime
+        start <- offsetTime
         curdir <- getCurrentDirectory
         let redir = case changeDirectory of
                 Nothing -> id
@@ -191,9 +190,8 @@ shakeArgsWith baseOpts userOptions rules = do
                         putStrLn $ esc "31" $ show err
                         exitFailure
                 Right () -> do
-                    stop <- getCurrentTime
-                    let tot = diffUTCTime stop start
-                        (mins,secs) = divMod (ceiling tot) (60 :: Int)
+                    tot <- start
+                    let (mins,secs) = divMod (ceiling tot) (60 :: Int)
                         time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
                     putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
