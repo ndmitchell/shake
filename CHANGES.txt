@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #481, document how to raise errors in Action
     Delete the deprecated system* functions
     #427, check stored value after checking dependencies
     Require extra-1.4.10
