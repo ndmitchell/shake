@@ -60,6 +60,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Applicative"
             ,"import Control.Concurrent"
+            ,"import Control.Exception"
             ,"import Control.Monad"
             ,"import Data.ByteString(ByteString)"
             ,"import Data.Char"
