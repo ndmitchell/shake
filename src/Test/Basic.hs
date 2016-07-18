@@ -9,6 +9,8 @@ import Data.List
 import Data.Maybe
 import Control.Monad
 import General.Extra
+import Data.Functor
+import Prelude
 
 
 main = shaken test $ \args obj -> do
