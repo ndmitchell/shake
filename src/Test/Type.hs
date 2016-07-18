@@ -122,6 +122,9 @@ unobj = dropDirectory1 . dropDirectory1
 assertBool :: Bool -> String -> IO ()
 assertBool b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
 
+assertBoolIO :: IO Bool -> String -> IO ()
+assertBoolIO b msg = do b <- b; assertBool b msg
+
 infix 4 ===
 
 (===) :: (Show a, Eq a) => a -> a -> IO ()
@@ -137,6 +140,11 @@ assertMissing :: FilePath -> IO ()
 assertMissing file = do
     b <- IO.doesFileExist file
     assertBool (not b) $ "File was expected to be missing, but exists: " ++ file
+
+assertWithin :: Seconds -> IO () -> IO ()
+assertWithin n act = do
+    t <- timeout n act
+    when (isNothing t) $ assertBool False $ "Expected to complete within " ++ show n ++ " seconds, but did not"
 
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
