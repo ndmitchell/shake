@@ -11,6 +11,8 @@ import Control.Exception.Extra hiding (assert)
 import System.Directory as IO
 import System.Time.Extra
 import qualified System.IO.Extra as IO
+import Data.Functor
+import Prelude
 
 
 main = shakenCwd test $ \args obj -> do
