@@ -143,11 +143,9 @@ test build obj = do
     b <- IO.doesFileExist $ obj "staunch1"
     when b $ removeFile $ obj "staunch1"
     crash ["staunch1","staunch2","-j2"] ["crash"]
-    b <- IO.doesFileExist $ obj "staunch1"
-    assertBool (not b) "File should not exist, should have crashed first"
+    assertBoolIO (not <$> IO.doesFileExist (obj "staunch1")) "File should not exist, should have crashed first"
     crash ["staunch1","staunch2","-j2","--keep-going","--silent"] ["crash"]
-    b <- IO.doesFileExist $ obj "staunch1"
-    assertBool b "File should exist, staunch should have let it be created"
+    assertBoolIO (IO.doesFileExist $ obj "staunch1") "File should exist, staunch should have let it be created"
 
     crash ["finally1"] ["die"]
     assertContents (obj "finally1") "1"

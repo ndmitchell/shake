@@ -114,13 +114,11 @@ test build obj = do
     show shakeOptions === show shakeOptions
 
     build ["!halfclean"]
-    b <- IO.doesDirectoryExist (obj "")
-    assertBool b "Directory should exist, cleaner should not have removed it"
+    assertBoolIO (IO.doesDirectoryExist $ obj "") "Directory should exist, cleaner should not have removed it"
 
     build ["!cleaner"]
     sleep 1 -- sometimes takes a while for the file system to notice
-    b <- IO.doesDirectoryExist (obj "")
-    assertBool (not b) "Directory should not exist, cleaner should have removed it"
+    assertBoolIO (not <$> IO.doesDirectoryExist (obj "")) "Directory should not exist, cleaner should have removed it"
 
     IO.createDirectory $ obj ""
     writeFile (obj "zero.txt") ""
