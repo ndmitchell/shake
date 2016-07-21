@@ -42,7 +42,9 @@ test build obj = do
                         modifyVar_ good $ const $ return False
         -- note that the pool finishing means we started killing our threads
         -- not that they have actually died
-        either (Left . fromException) Right res === Left (Just (ErrorCall "pass"))
+        case res of
+            Left e | Just (ErrorCall "pass") <- fromException e -> return ()
+            _ -> fail $ "Wrong type of result, got " ++ show res
         waitBarrier stopped
         assertBoolIO (readVar good) "Must be true"
 
