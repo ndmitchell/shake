@@ -209,53 +209,26 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just r -> return r
 
-    let rebuild = do
-            let s = newLocal stack shakeVerbosity
-            let top = showTopStack stack
-            time <- offsetTime
-            runAction global s (do
-                liftIO $ evaluate $ rnf k
-                liftIO $ globalLint $ "before building " ++ top
-                putWhen Chatty $ "# " ++ show k
-                res <- execute k
-                when (Just LintFSATrace == shakeLint) trackCheckUsed
-                Action $ fmap ((,) res) getRW) $ \x -> case x of
-                    Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
-                    Right (v, Local{..}) -> do
-                        evaluate $ rnf v
-                        dur <- time
-                        globalLint $ "after building " ++ top
-                        let c | Just r <- r, equal k (result r) v /= NotEqual = changed r
-                              | otherwise = step
-                        continue $ Right $ (,) True $ Result
-                            {result=v
-                            ,changed=c
-                            ,built=step
-                            ,depends=reverse localDepends
-                            ,execution=doubleToFloat $ dur - localDiscount
-                            ,traces=reverse localTraces}
-
-    case r of
-        Just r
-            | shakeAssume == Just AssumeSkip -> continue $ Right (False, r)
-            | shakeAssume == Just AssumeDirty -> rebuild
-            | shakeAssume == Just AssumeClean -> do
-                v <- stored k
-                case v of
-                    Just v -> continue $ Right (True, r{result=v})
-                    Nothing -> rebuild
-            | not dirtyChildren -> do
-                v <- stored k
-                case v of
-                    Just v -> do
-                        let eq = equal k (result r) v
-                        globalDiagnostic $ return $ "compare " ++ show eq ++ " for " ++ showBracket k ++ " " ++ showBracket (result r)
-                        case eq of
-                            NotEqual -> rebuild
-                            EqualCheap -> continue $ Right (False, r)
-                            EqualExpensive -> continue $ Right (True, r{result=v})
-                    _ -> rebuild
-        _ -> rebuild
+    let s = newLocal stack shakeVerbosity
+    time <- offsetTime
+    runAction global s (do
+        res <- execute k (fmap result r) dirtyChildren
+        Action $ fmap ((,) res) getRW) $ \x -> case x of
+            Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
+            Right (BuiltinInfo{..}, Local{..})
+                | resultChanged == ChangedNothing || resultChanged == ChangedStore, Just r <- r ->
+                    continue $ Right $ (,) (resultChanged == ChangedStore) r{result = resultValue}
+                | otherwise -> do
+                    dur <- time
+                    let c | Just r <- r, resultChanged == ChangedRecomputeSame = changed r
+                          | otherwise = step
+                    continue $ Right $ (,) True $ Result
+                        {result = resultValue
+                        ,changed = c
+                        ,built = step
+                        ,depends = reverse localDepends
+                        ,execution = doubleToFloat $ dur - localDiscount
+                        ,traces = reverse localTraces}
 
 
 runLint :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> IO (Maybe String)

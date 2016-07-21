@@ -2,7 +2,7 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
-    RuleInfo(..), Global(..), Local(..), Action(..),
+    RuleInfo(..), BuiltinInfo(..), Changed(..), Global(..), Local(..), Action(..),
     newLocal,
     runAction, actionOnException, actionFinally,
     getShakeOptions, getProgress, runAfter,
@@ -23,6 +23,7 @@ import Data.Either.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.IORef
+import Data.List
 import System.IO.Extra
 import System.Time.Extra
 import Numeric.Extra
@@ -32,6 +33,7 @@ import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
+import Development.Shake.Internal.Errors
 import General.Cleanup
 import General.String
 import Prelude
@@ -45,13 +47,30 @@ import Prelude
 newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO, Typeable)
 
+data Changed
+    = ChangedNothing -- ^ Nothing has changed
+    | ChangedStore -- ^ The value in the Store has changed, but in a way that should be considered equal
+    | ChangedRecomputeSame -- ^ I recomputed the value and it was the same
+    | ChangedRecomputeDiff -- ^ I recomputed the value and it was different
+      deriving Eq
+
+
+data BuiltinInfo value = BuiltinInfo
+    {resultChanged :: Changed
+        -- ^ Have the required dependencies of this action changed? Use 'True' to use the dependencies this time
+        --   around as the future dependencies. Use 'False' to keep the previous dependencies.
+    -- ,resultStore :: BS.ByteString
+        -- ^ Return the new value to store, and a 'True' if that value has changed from the argument store.
+    ,resultValue :: value
+        -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
+    }
+
 data RuleInfo = RuleInfo
-    {stored :: Key -> IO (Maybe Value)
-    ,equal :: Key -> Value -> Value -> EqualCost
-    ,execute :: Key -> Action Value
+    {execute :: Key -> Maybe Value -> Bool -> Action (BuiltinInfo Value)
     ,lint :: Key -> Value -> IO (Maybe String)
     ,resultType :: TypeRep
     }
+
 
 -- global constants of Action
 data Global = Global
