@@ -4,7 +4,6 @@
 module Development.Shake.Internal.Core.Run(
     run,
     Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
-    trackUse, trackChange, trackAllow,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     newCache, newCacheIO,
@@ -283,87 +282,6 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 --   use 'apply' to allow parallelism.
 apply1 :: (ShakeValue key, ShakeValue value) => key -> Action value
 apply1 = fmap head . apply . return
-
-
----------------------------------------------------------------------
--- TRACKING
-
--- | Track that a key has been used by the action preceeding it.
-trackUse :: ShakeValue key => key -> Action ()
--- One of the following must be true:
--- 1) you are the one building this key (e.g. key == topStack)
--- 2) you have already been used by apply, and are on the dependency list
--- 3) someone explicitly gave you permission with trackAllow
--- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
-trackUse key = do
-    let k = newKey key
-    Global{..} <- Action getRO
-    l@Local{..} <- Action getRW
-    deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
-    let top = topStack localStack
-    if top == Just k then
-        return () -- condition 1
-     else if k `elem` deps then
-        return () -- condition 2
-     else if any ($ k) localTrackAllows then
-        return () -- condition 3
-     else
-        Action $ putRW l{localTrackUsed = k : localTrackUsed} -- condition 4
-
-
-trackCheckUsed :: Action ()
-trackCheckUsed = do
-    Global{..} <- Action getRO
-    Local{..} <- Action getRW
-    liftIO $ do
-        deps <- concatMapM (listDepends globalDatabase) localDepends
-
-        -- check 3a
-        bad <- return $ localTrackUsed \\ deps
-        unless (null bad) $ do
-            let n = length bad
-            errorStructured
-                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
-                [("Used", Just $ show x) | x <- bad]
-                ""
-
-        -- check 3b
-        bad <- flip filterM localTrackUsed $ \k -> (not . null) <$> lookupDependencies globalDatabase k
-        unless (null bad) $ do
-            let n = length bad
-            errorStructured
-                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
-                [("Used", Just $ show x) | x <- bad]
-                ""
-
-
--- | Track that a key has been changed by the action preceeding it.
-trackChange :: ShakeValue key => key -> Action ()
--- One of the following must be true:
--- 1) you are the one building this key (e.g. key == topStack)
--- 2) someone explicitly gave you permission with trackAllow
--- 3) this file is never known to the build system, at the end it is not in the database
-trackChange key = do
-    let k = newKey key
-    Global{..} <- Action getRO
-    Local{..} <- Action getRW
-    liftIO $ do
-        let top = topStack localStack
-        if top == Just k then
-            return () -- condition 1
-         else if any ($ k) localTrackAllows then
-            return () -- condition 2
-         else
-            -- condition 3
-            atomicModifyIORef globalTrackAbsent $ \ks -> ((fromMaybe k top, k):ks, ())
-
-
--- | Allow any matching key to violate the tracking rules.
-trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
-trackAllow (test :: key -> Bool) = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
-    where
-        tk = typeRep (Proxy :: Proxy key)
-        f k = typeKey k == tk && test (fromKey k)
 
 
 ---------------------------------------------------------------------
