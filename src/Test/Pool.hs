@@ -5,7 +5,7 @@ import Test.Type
 import Development.Shake.Internal.Core.Pool
 
 import Control.Concurrent.Extra
-import Control.Exception
+import Control.Exception.Extra
 import Control.Monad
 
 
@@ -28,25 +28,23 @@ test build obj = do
             res === (min n 5, 0)
 
         -- check that exceptions are immediate
-        replicateM_ 100 $ do
-            done <- newVar False
-            started <- newBarrier
-            print "here1"
-            handle (\(ErrorCall msg) -> do print ("here2",msg); msg === "pass") $
-                runPool deterministic 3 $ \pool -> do
-                    addPoolMediumPriority pool $ do
-                        print "here8"
-                        waitBarrier started
-                        print "here3"
-                        error "pass"
-                    addPoolMediumPriority pool $
-                        flip onException (do print "here7"; modifyVar_ done $ const $ return True) $ do
-                            print "here4"
-                            signalBarrier started ()
-                            print "here5"
-                            sleep 10
-                            print "here6"
-            assertBoolIO (readVar done) "Must be true"
+        good <- newVar True
+        started <- newBarrier
+        stopped <- newBarrier
+        res <- try_ $ runPool deterministic 3 $ \pool -> do
+                addPoolMediumPriority pool $ do
+                    waitBarrier started
+                    error "pass"
+                addPoolMediumPriority pool $
+                    flip finally (signalBarrier stopped ()) $ do
+                        signalBarrier started ()
+                        sleep 10
+                        modifyVar_ good $ const $ return False
+        -- note that the pool finishing means we started killing our threads
+        -- not that they have actually died
+        either (Left . fromException) Right res === Left (Just (ErrorCall "pass"))
+        waitBarrier stopped
+        assertBoolIO (readVar good) "Must be true"
 
         -- check someone spawned when at zero todo still gets run
         done <- newBarrier
