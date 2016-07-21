@@ -164,6 +164,8 @@ increasePool pool = do
 
 -- | Run all the tasks in the pool on the given number of works.
 --   If any thread throws an exception, the exception will be reraised.
+--   When it completes all threads have either finished, or have had 'killThread'
+--   called on them (but may not have actually died yet).
 runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool deterministic n act = do
     s <- newVar $ Just $ emptyS n deterministic
