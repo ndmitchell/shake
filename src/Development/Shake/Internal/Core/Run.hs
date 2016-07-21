@@ -33,6 +33,7 @@ import System.Time.Extra
 import Numeric.Extra
 
 import Development.Shake.Classes
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Pool

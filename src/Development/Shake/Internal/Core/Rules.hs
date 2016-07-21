@@ -26,6 +26,7 @@ import Data.Monoid
 import General.Extra
 
 import Development.Shake.Classes
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad

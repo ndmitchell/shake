@@ -151,6 +151,7 @@ library
         Development.Shake.Internal.Shake
         Development.Shake.Internal.Special
         Development.Shake.Internal.Core.Storage
+        Development.Shake.Internal.Core.Types
         Development.Shake.Internal.Types
         Development.Shake.Internal.Value
         General.Bilist
