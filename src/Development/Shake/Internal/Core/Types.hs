@@ -7,6 +7,7 @@ module Development.Shake.Internal.Core.Types(
     ) where
 
 import Control.Monad.IO.Class
+import Control.Applicative
 import Data.Typeable
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
@@ -18,6 +19,7 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
 import General.Cleanup
+import Prelude
 
 
 ---------------------------------------------------------------------
