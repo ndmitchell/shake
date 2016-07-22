@@ -228,15 +228,15 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                 e <- if shakeLint == Nothing then return e else handle return $
                     do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
                 continue . Left . toException =<< shakeException global (showStack stack) e
-            Right (BuiltinInfo{..}, Local{..})
-                | resultChanged == ChangedNothing || resultChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ (,) (resultChanged == ChangedStore) r{result = resultValue}
+            Right (RunResult{..}, Local{..})
+                | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
+                    continue $ Right $ (,) (runChanged == ChangedStore) r{result = runValue}
                 | otherwise -> do
                     dur <- time
-                    let c | Just r <- r, resultChanged == ChangedRecomputeSame = changed r
+                    let c | Just r <- r, runChanged == ChangedRecomputeSame = changed r
                           | otherwise = step
                     continue $ Right $ (,) True $ Result
-                        {result = resultValue
+                        {result = runValue
                         ,changed = c
                         ,built = step
                         ,depends = reverse localDepends

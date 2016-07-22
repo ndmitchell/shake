@@ -333,12 +333,12 @@ createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
         execute
             | shakeAssume == Just AssumeSkip = \k old dirtyChildren -> case old of
                 Nothing -> rebuild k old
-                Just v -> return $ BuiltinInfo ChangedNothing v
+                Just v -> return $ RunResult ChangedNothing v
             | shakeAssume == Just AssumeDirty = \k old _ -> rebuild k old
             | shakeAssume == Just AssumeClean = \k old _ -> do
                 v <- liftIO $ stored k
                 case v of
-                    Just v -> return $ BuiltinInfo ChangedStore v
+                    Just v -> return $ RunResult ChangedStore v
                     Nothing -> rebuild k old
             | otherwise = \k old dirtyChildren -> case old of
                 Just old | not dirtyChildren -> do
@@ -350,8 +350,8 @@ createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
                             liftIO $ diagnostic $ return $ "compare " ++ show e ++ " for " ++ showBracket k ++ " " ++ showBracket old
                             case e of
                                 NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ BuiltinInfo ChangedNothing v
-                                EqualExpensive -> return $ BuiltinInfo ChangedStore v
+                                EqualCheap -> return $ RunResult ChangedNothing v
+                                EqualExpensive -> return $ RunResult ChangedStore v
                         Nothing -> rebuild k $ Just old
                 _ -> rebuild k old
             where
@@ -360,4 +360,4 @@ createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
                     v <- exec k
                     let c | Just old <- old, equal k old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
-                    return $ BuiltinInfo c v
+                    return $ RunResult c v
