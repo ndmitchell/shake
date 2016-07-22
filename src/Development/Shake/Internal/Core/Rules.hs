@@ -360,7 +360,6 @@ createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
                     let top = showTopStack localStack
                     liftIO $ globalLint $ "before building " ++ top
                     putWhen Chatty $ "# " ++ show k
-                    liftIO $ evaluate $ rnf k
                     v <- exec k
                     liftIO $ globalLint $ "after building " ++ top
                     when (Just LintFSATrace == shakeLint) trackCheckUsed
