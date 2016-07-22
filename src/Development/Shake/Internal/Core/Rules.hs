@@ -323,7 +323,7 @@ createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
         equal k v1 v2 = equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
         exec = fmap newValue . executeRule userrule . fromKey
 
-        lint = \k v -> do
+        lint k v = do
             now <- stored k
             return $ case now of
                 Nothing -> Just "<missing>"
