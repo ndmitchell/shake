@@ -2,7 +2,8 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Types(
-    RuleInfo(..), BuiltinInfo(..), Changed(..), Global(..), Local(..), Action(..),
+    BuiltinRun, BuiltinLint, BuiltinInfo(..), Changed(..),
+    RuleInfo(..), Global(..), Local(..), Action(..),
     newLocal
     ) where
 
@@ -56,9 +57,14 @@ instance NFData value => NFData (BuiltinInfo value) where
     rnf (BuiltinInfo x1 x2) = rnf x1 `seq` rnf x2
 
 
+type BuiltinRun key value = key -> Maybe value -> Bool -> Action (BuiltinInfo value)
+
+type BuiltinLint key value = key -> value -> IO (Maybe String)
+
+
 data RuleInfo = RuleInfo
-    {execute :: Key -> Maybe Value -> Bool -> Action (BuiltinInfo Value)
-    ,lint :: Key -> Value -> IO (Maybe String)
+    {execute :: BuiltinRun Key Value
+    ,lint :: BuiltinLint Key Value
     ,resultType :: TypeRep
     }
 
