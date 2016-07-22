@@ -114,16 +114,16 @@ instance Binary GetDirectoryQ where
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     addLegacyRule defaultLegacyRule
-        {storedValue = \_ (DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
+        {storedValue = \(DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
         ,executeRule = \_ (DoesFileExistQ x) -> liftIO $ DoesFileExistA <$> IO.doesFileExist x}
     addLegacyRule defaultLegacyRule
-        {storedValue = \_ (DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
+        {storedValue = \(DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
         ,executeRule = \_ (DoesDirectoryExistQ x) -> liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x}
     addLegacyRule defaultLegacyRule
-        {storedValue = \_ (GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
+        {storedValue = \(GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
         ,executeRule = \_ (GetEnvQ x) -> liftIO $ GetEnvA <$> IO.lookupEnv x}
     addLegacyRule defaultLegacyRule
-        {storedValue = \_ x -> Just <$> getDir x
+        {storedValue = \x -> Just <$> getDir x
         ,executeRule = \_ x -> liftIO $ getDir x}
 
 

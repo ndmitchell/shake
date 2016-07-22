@@ -39,5 +39,5 @@ alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
     addLegacyRule defaultLegacyRule
-        {storedValue = \_ AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
+        {storedValue = \AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
         ,executeRule = \_ AlwaysRerunQ{} -> return $ AlwaysRerunA ()}

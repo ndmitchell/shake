@@ -117,12 +117,12 @@ import Prelude
 
 -- | TODO: Docs
 data LegacyRule key value = LegacyRule
-    {storedValue :: ShakeOptions -> key -> IO (Maybe value)
+    {storedValue :: key -> IO (Maybe value)
         -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
         --
         --   As an example for filenames/timestamps, if the file exists you should return 'Just'
         --   the timestamp, but otherwise return 'Nothing'.
-    ,equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
+    ,equalValue :: key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
         --   Use 'defaultBuiltinRule' if you do not want a different equality.
     ,executeRule :: UserRules -> key -> Action value
@@ -132,8 +132,8 @@ data LegacyRule key value = LegacyRule
 -- | Default 'equalValue' field.
 defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
 defaultLegacyRule = LegacyRule
-    {storedValue = \_ _ -> return Nothing
-    ,equalValue = \_ _ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
+    {storedValue = \_ -> return Nothing
+    ,equalValue = \_ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
     ,executeRule = \ask ->
         let rules = ask (Proxy :: Proxy (k -> Maybe (Action v)))
         in \k -> case userRuleMatch rules ($ k) of
@@ -326,8 +326,8 @@ createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
     where
         resultType = typeRep (Proxy :: Proxy v)
 
-        stored = fmap (fmap newValue) . storedValue opt . fromKey
-        equal k v1 v2 = equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
+        stored = fmap (fmap newValue) . storedValue . fromKey
+        equal k v1 v2 = equalValue (fromKey k) (fromValue v1) (fromValue v2)
         exec = fmap newValue . executeRule userrule . fromKey
 
         lint k v = do

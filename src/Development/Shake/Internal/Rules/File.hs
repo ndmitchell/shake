@@ -111,11 +111,11 @@ defaultRuleFile :: Rules ()
 defaultRuleFile = do
     -- the whole fileStoredValueAllowDir mess is due to checking phony timestamps
     -- and will go away with the real builtin rules
-    addLegacyRule defaultLegacyRule{storedValue=fileStoredValueAllowDir, equalValue=fileEqualValue}
+    opts <- getShakeOptionsRules
+    addLegacyRule defaultLegacyRule{storedValue=fileStoredValueAllowDir opts, equalValue=fileEqualValue opts}
 
     priority 0 $ addUserRule $ \x -> Just $ do
-        opts <- getShakeOptions
-        liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x
+        liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x :: Action FileA
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.

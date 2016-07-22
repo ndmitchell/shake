@@ -76,7 +76,7 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
     addLegacyRule defaultLegacyRule
-        {storedValue = \_ ForwardQ{} -> return $ Just $ ForwardA ()
+        {storedValue = \ForwardQ{} -> return $ Just $ ForwardA ()
         ,executeRule = \_ k -> do
             res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
             case res of

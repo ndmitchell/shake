@@ -74,7 +74,7 @@ addOracle = f where
     f :: forall q a . (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
     f act = do
         addLegacyRule defaultLegacyRule
-            {storedValue = \_ (_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))
+            {storedValue = \(_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))
             ,executeRule = \_ (OracleQ q) -> OracleA <$> act q}
         return askOracle
 
