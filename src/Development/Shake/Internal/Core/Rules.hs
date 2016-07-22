@@ -122,7 +122,7 @@ data LegacyRule key value = LegacyRule
     ,equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
         --   Use 'defaultBuiltinRule' if you do not want a different equality.
-    ,executeRule :: (forall a . Typeable a => Proxy a -> UserRule a) -> key -> Action value
+    ,executeRule :: UserRules -> key -> Action value
         -- ^ How to run a rule, given ways to get a UserRule.
     }
 
@@ -142,6 +142,9 @@ defaultLegacyRule = LegacyRule
 data LegacyRule_ = forall key value . (ShakeValue key, ShakeValue value) => LegacyRule_ (LegacyRule key value)
 
 data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
+
+
+type UserRules = forall a . Typeable a => Proxy a -> UserRule a
 
 
 -- | A 'Match' data type, representing user-defined rules associated with a particular type.
@@ -311,7 +314,7 @@ createRuleInfos opt SRules{..} =
                         Nothing -> Unordered []
                         Just (UserRule_ r) -> fromJust $ cast r
 
-createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> (forall a . Typeable a => Proxy a -> UserRule a) -> RuleInfo
+createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> UserRules -> RuleInfo
 createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
     where
         resultType = typeRep (Proxy :: Proxy v)
