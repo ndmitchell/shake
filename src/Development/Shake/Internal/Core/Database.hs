@@ -185,7 +185,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
         whenJust (checkStack is stack) $ \(badId, badKey) -> do
             -- everything else gets thrown via Left and can be Staunch'd
             -- recursion in the rules is considered a worse error, so fails immediately
-            errorRuleRecursion (showStack stack ++ [show badKey]) (Just $ typeKey badKey) (Just $ show badKey)
+            errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
 
         buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)
