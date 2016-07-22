@@ -6,6 +6,7 @@ module Development.Shake.Internal.Core.Types(
     newLocal
     ) where
 
+import Control.DeepSeq
 import Control.Monad.IO.Class
 import Control.Applicative
 import Data.Typeable
@@ -38,6 +39,8 @@ data Changed
     | ChangedRecomputeDiff -- ^ I recomputed the value and it was different
       deriving Eq
 
+instance NFData Changed where rnf x = x `seq` ()
+
 
 data BuiltinInfo value = BuiltinInfo
     {resultChanged :: Changed
@@ -48,6 +51,10 @@ data BuiltinInfo value = BuiltinInfo
     ,resultValue :: value
         -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
     }
+
+instance NFData value => NFData (BuiltinInfo value) where
+    rnf (BuiltinInfo x1 x2) = rnf x1 `seq` rnf x2
+
 
 data RuleInfo = RuleInfo
     {execute :: Key -> Maybe Value -> Bool -> Action (BuiltinInfo Value)

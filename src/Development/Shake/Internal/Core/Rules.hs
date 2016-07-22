@@ -11,7 +11,6 @@ module Development.Shake.Internal.Core.Rules(
 
 import Control.Applicative
 import Data.Tuple.Extra
-import Control.Exception
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
@@ -363,7 +362,6 @@ createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
                     v <- exec k
                     liftIO $ globalLint $ "after building " ++ top
                     when (Just LintFSATrace == shakeLint) trackCheckUsed
-                    liftIO $ evaluate $ rnf v
                     let c | Just old <- old, equal k old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ BuiltinInfo c v
