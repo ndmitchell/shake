@@ -26,7 +26,8 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
 import General.Extra
 import General.String
-import General.Intern as Intern
+import qualified General.Intern as Intern
+import General.Intern(Id, Intern)
 
 import Numeric.Extra
 import Control.Applicative
