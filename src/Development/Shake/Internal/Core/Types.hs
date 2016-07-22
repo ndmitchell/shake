@@ -73,7 +73,7 @@ data Global = Global
     ,globalOutput :: Verbosity -> String -> IO () -- ^ Output function
     ,globalOptions  :: ShakeOptions -- ^ Shake options
     ,globalDiagnostic :: IO String -> IO () -- ^ Debugging function
-    ,globalLint :: String -> IO () -- ^ Run lint checking
+    ,globalCurDir :: FilePath -- ^ getCurrentDirectory when we started
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state

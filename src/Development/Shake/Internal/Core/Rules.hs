@@ -27,7 +27,6 @@ import General.Extra
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
-import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
@@ -354,13 +353,8 @@ createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
                 _ -> rebuild k old
             where
                 rebuild k old = do
-                    globalLint <- Action $ getsRO globalLint
-                    localStack <- Action $ getsRW localStack
-                    let top = showTopStack localStack
-                    liftIO $ globalLint $ "before building " ++ top
                     putWhen Chatty $ "# " ++ show k
                     v <- exec k
-                    liftIO $ globalLint $ "after building " ++ top
                     let c | Just old <- old, equal k old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ BuiltinInfo c v
