@@ -60,29 +60,28 @@ incStep (Step i) = Step $ i + 1
 ---------------------------------------------------------------------
 -- CALL STACK
 
-data Stack = Stack (Maybe Key) [Id] !(Set.HashSet Id)
+-- Invariant: Stack xs set . HashSet.fromList (map fst xs) == set
+data Stack = Stack [(Id,Key)] !(Set.HashSet Id)
 
-showStack :: Database -> Stack -> IO [String]
-showStack Database{..} (Stack _ xs _) = withLock lock $ do
-    forM (reverse xs) $ \x ->
-        maybe "<unknown>" (show . fst) <$> Ids.lookup status x
-
-addStack :: Id -> Key -> Stack -> Stack
-addStack x key (Stack _ xs set) = Stack (Just key) (x:xs) (Set.insert x set)
+showStack :: Stack -> [String]
+showStack (Stack xs _) = reverse $ map (show . snd) xs
 
 showTopStack :: Stack -> String
 showTopStack = maybe "<unknown>" show . topStack
 
-topStack :: Stack -> Maybe Key
-topStack (Stack key _ _) = key
+addStack :: Id -> Key -> Stack -> Stack
+addStack x key (Stack xs set) = Stack ((x,key):xs) (Set.insert x set)
 
-checkStack :: [Id] -> Stack -> Maybe Id
-checkStack new (Stack _ old set)
-    | bad:_ <- filter (`Set.member` set) new = Just bad
+topStack :: Stack -> Maybe Key
+topStack (Stack xs _) = fmap snd $ listToMaybe xs
+
+checkStack :: [Id] -> Stack -> Maybe (Id,Key)
+checkStack new (Stack xs set)
+    | bad:_ <- filter (`Set.member` set) new = Just (bad, fromJust $ lookup bad xs)
     | otherwise = Nothing
 
 emptyStack :: Stack
-emptyStack = Stack Nothing [] Set.empty
+emptyStack = Stack [] Set.empty
 
 
 ---------------------------------------------------------------------
@@ -183,18 +182,10 @@ build pool Database{..} BuildKey{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
-        whenJust (checkStack is stack) $ \bad -> do
+        whenJust (checkStack is stack) $ \(badId, badKey) -> do
             -- everything else gets thrown via Left and can be Staunch'd
             -- recursion in the rules is considered a worse error, so fails immediately
-            let Stack _ xs _ = stack
-            stack <- forM (reverse $ bad:xs) $ \x ->
-                maybe "<unknown>" (show . fst) <$> Ids.lookup status x
-            (tk, tname) <- do
-                v <- Ids.lookup status bad
-                return $ case v of
-                    Nothing -> (Nothing, Nothing)
-                    Just (k,_) -> (Just $ typeKey k, Just $ show k)
-            errorRuleRecursion stack tk tname
+            errorRuleRecursion (showStack stack ++ [show badKey]) (Just $ typeKey badKey) (Just $ show badKey)
 
         buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)

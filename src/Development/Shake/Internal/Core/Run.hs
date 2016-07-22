@@ -215,7 +215,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
     runAction global s (do
         res <- execute k (fmap result r) dirtyChildren
         Action $ fmap ((,) res) getRW) $ \x -> case x of
-            Left e -> continue . Left . toException =<< shakeException global (showStack globalDatabase stack) e
+            Left e -> continue . Left . toException =<< shakeException global (return $ showStack stack) e
             Right (BuiltinInfo{..}, Local{..})
                 | resultChanged == ChangedNothing || resultChanged == ChangedStore, Just r <- r ->
                     continue $ Right $ (,) (resultChanged == ChangedStore) r{result = resultValue}
