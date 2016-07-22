@@ -219,6 +219,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
     runAction global s (do
         res <- execute k (fmap result r) dirtyChildren
         liftIO $ evaluate $ rnf res
+        when (Just LintFSATrace == shakeLint) trackCheckUsed
         Action $ fmap ((,) res) getRW) $ \x -> case x of
             Left e -> continue . Left . toException =<< shakeException global (showStack stack) e
             Right (BuiltinInfo{..}, Local{..})

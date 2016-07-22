@@ -361,7 +361,6 @@ createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
                     putWhen Chatty $ "# " ++ show k
                     v <- exec k
                     liftIO $ globalLint $ "after building " ++ top
-                    when (Just LintFSATrace == shakeLint) trackCheckUsed
                     let c | Just old <- old, equal k old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ BuiltinInfo c v
