@@ -75,7 +75,7 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    addBuiltinRule defaultBuiltinRule
+    addLegacyRule defaultLegacyRule
         {storedValue = \_ ForwardQ{} -> return $ Just $ ForwardA ()
         ,executeRule = \_ k -> do
             res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)

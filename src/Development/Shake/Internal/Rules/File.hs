@@ -111,7 +111,7 @@ defaultRuleFile :: Rules ()
 defaultRuleFile = do
     -- the whole fileStoredValueAllowDir mess is due to checking phony timestamps
     -- and will go away with the real builtin rules
-    addBuiltinRule defaultBuiltinRule{storedValue=fileStoredValueAllowDir, equalValue=fileEqualValue}
+    addLegacyRule defaultLegacyRule{storedValue=fileStoredValueAllowDir, equalValue=fileEqualValue}
 
     priority 0 $ addUserRule $ \x -> Just $ do
         opts <- getShakeOptions

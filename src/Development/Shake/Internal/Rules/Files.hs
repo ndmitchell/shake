@@ -53,7 +53,7 @@ filesEqualValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
 
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
-    addBuiltinRule defaultBuiltinRule{storedValue=filesStoredValue, equalValue=filesEqualValue}
+    addLegacyRule defaultLegacyRule{storedValue=filesStoredValue, equalValue=filesEqualValue}
 
 
 -- | Define a rule for building multiple files at the same time.

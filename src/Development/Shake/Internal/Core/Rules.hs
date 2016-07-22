@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    BuiltinRule(..), addBuiltinRule, defaultBuiltinRule,
+    LegacyRule(..), addLegacyRule, defaultLegacyRule,
     addUserRule, alternatives, priority,
     action, withoutActions
     ) where
@@ -113,7 +113,7 @@ import Prelude
 --   and 'equalValue' should always return 'EqualCheap' for that sentinel.
 
 -- | TODO: Docs
-data BuiltinRule key value = BuiltinRule
+data LegacyRule key value = LegacyRule
     {storedValue :: ShakeOptions -> key -> IO (Maybe value)
         -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
         --
@@ -127,8 +127,8 @@ data BuiltinRule key value = BuiltinRule
     }
 
 -- | Default 'equalValue' field.
-defaultBuiltinRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => BuiltinRule key value
-defaultBuiltinRule = BuiltinRule
+defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
+defaultLegacyRule = LegacyRule
     {storedValue = \_ _ -> return Nothing
     ,equalValue = \_ _ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
     ,executeRule = \ask ->
@@ -139,7 +139,7 @@ defaultBuiltinRule = BuiltinRule
     }
 
 
-data BuiltinRule_ = forall key value . (ShakeValue key, ShakeValue value) => BuiltinRule_ (BuiltinRule key value)
+data LegacyRule_ = forall key value . (ShakeValue key, ShakeValue value) => LegacyRule_ (LegacyRule key value)
 
 data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
 
@@ -198,7 +198,7 @@ runRules opts (Rules r) = do
 
 data SRules = SRules
     {actions :: [Action ()]
-    ,builtinRules :: Map.HashMap TypeRep{-k-} BuiltinRule_
+    ,builtinRules :: Map.HashMap TypeRep{-k-} LegacyRule_
     ,userRules :: Map.HashMap TypeRep{-k-} UserRule_ -- higher fst is higher priority
     }
 
@@ -227,8 +227,8 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 
 
 -- | Add a builtin rule type.
-addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRule key value -> Rules ()
-addBuiltinRule (b :: BuiltinRule key value) = newRules mempty{builtinRules = Map.singleton k $ BuiltinRule_ b}
+addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
+addLegacyRule (b :: LegacyRule key value) = newRules mempty{builtinRules = Map.singleton k $ LegacyRule_ b}
     where k = typeRep (Proxy :: Proxy key)
 
 
@@ -299,20 +299,20 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems builtinRules) $ \(BuiltinRule_ (BuiltinRule{} :: BuiltinRule k v)) -> do
+    forM_ (Map.elems builtinRules) $ \(LegacyRule_ (LegacyRule{} :: LegacyRule k v)) -> do
         registerWitness (Proxy :: Proxy k) (Proxy :: Proxy v)
 
 
 createRuleInfos :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleInfos opt SRules{..} =
-    flip Map.map builtinRules $ \(BuiltinRule_ (b :: BuiltinRule k v)) -> createRuleInfo opt b userrule
+    flip Map.map builtinRules $ \(LegacyRule_ (b :: LegacyRule k v)) -> createRuleInfo opt b userrule
     where userrule p@(Proxy :: Proxy a) = 
                     case Map.lookup (typeRep p) userRules of
                         Nothing -> Unordered []
                         Just (UserRule_ r) -> fromJust $ cast r
 
-createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> BuiltinRule k v -> (forall a . Typeable a => Proxy a -> UserRule a) -> RuleInfo
-createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
+createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> (forall a . Typeable a => Proxy a -> UserRule a) -> RuleInfo
+createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
     where
         resultType = typeRep (Proxy :: Proxy v)
 
