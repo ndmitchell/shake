@@ -124,7 +124,7 @@ data LegacyRule key value = LegacyRule
         --   the timestamp, but otherwise return 'Nothing'.
     ,equalValue :: key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
-        --   Use 'defaultBuiltinRule' if you do not want a different equality.
+        --   Use 'defaultLegacyRule' if you do not want a different equality.
     ,executeRule :: UserRules -> key -> Action value
         -- ^ How to run a rule, given ways to get a UserRule.
     }
