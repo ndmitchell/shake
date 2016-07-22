@@ -5,6 +5,7 @@
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
     LegacyRule(..), addLegacyRule, defaultLegacyRule,
+    getShakeOptionsRules,
     addUserRule, alternatives, priority,
     action, withoutActions
     ) where
@@ -14,6 +15,8 @@ import Data.Tuple.Extra
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 import Data.Typeable.Extra
 import Data.Function
@@ -147,6 +150,10 @@ data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
 type UserRules = forall a . Typeable a => Proxy a -> UserRule a
 
 
+-- | Get the 'ShakeOptions' that were used.
+getShakeOptionsRules :: Rules ShakeOptions
+getShakeOptionsRules = Rules $ lift ask
+
 -- | A 'Match' data type, representing user-defined rules associated with a particular type.
 --   As an example '?>' and '*>' will add entries to the 'Match' data type.
 --
@@ -183,7 +190,7 @@ userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (WriterT SRules (ReaderT ShakeOptions IO) a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
 
 newRules :: SRules -> Rules ()
@@ -194,7 +201,7 @@ modifyRules f (Rules r) = Rules $ censor f r
 
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep RuleInfo)
 runRules opts (Rules r) = do
-    srules <- execWriterT r
+    srules <- runReaderT (execWriterT r) opts
     registerWitnesses srules
     return (actions srules, createRuleInfos opts srules)
 
