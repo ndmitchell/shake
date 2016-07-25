@@ -6,6 +6,7 @@ module Development.Shake.Internal.Rules.Oracle(
     ) where
 
 import Development.Shake.Internal.Core.Run
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
@@ -73,9 +74,13 @@ addOracle :: (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Acti
 addOracle = f where
     f :: forall q a . (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
     f act = do
-        addLegacyRule defaultLegacyRule
-            {storedValue = \(_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))
-            ,executeRule = \(OracleQ q) -> OracleA <$> act q}
+        addBuiltinRule
+            (\(OracleQ q) old _ -> do
+                new <- OracleA <$> act q
+                return $ RunResult
+                    (if old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
+                    new)
+            (\_ _ -> return Nothing)
         return askOracle
 
 
