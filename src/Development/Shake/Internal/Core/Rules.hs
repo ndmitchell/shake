@@ -144,8 +144,6 @@ defaultLegacyRule = LegacyRule
 
 data LegacyRule_ = forall key value . (ShakeValue key, ShakeValue value) => LegacyRule_ (LegacyRule key value)
 
-data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
-
 
 type UserRules = forall a . Typeable a => Proxy a -> UserRule a
 
@@ -153,24 +151,6 @@ type UserRules = forall a . Typeable a => Proxy a -> UserRule a
 -- | Get the 'ShakeOptions' that were used.
 getShakeOptionsRules :: Rules ShakeOptions
 getShakeOptionsRules = Rules $ lift ask
-
--- | A 'Match' data type, representing user-defined rules associated with a particular type.
---   As an example '?>' and '*>' will add entries to the 'Match' data type.
---
---   /Semantics/
---
--- > priority p1 (priority p2 x) == priority p1 x
--- > priority p (x `ordered` y) = priority p x `ordered` priority p y
--- > priority p (x `unordered` y) = priority p x `unordered` priority p y
--- > ordered is associative
--- > unordered is associative and commutative
--- > alternative does not obey priorities, until picking the best one
-data UserRule a
-    = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> 'Rules' ()@.
-    | Unordered [UserRule a] -- ^ Rules combined with the 'Monad'/'Monoid'.
-    | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
-    | Alternative (UserRule a) -- ^ Rule defined under 'alternative', matched in order.
-      deriving (Eq,Show,Functor,Typeable)
 
 -- | Rules might be able to be optimised in some cases
 userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]

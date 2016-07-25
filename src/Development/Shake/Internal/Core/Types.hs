@@ -1,8 +1,9 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, DeriveDataTypeable #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),
+    UserRule(..), UserRule_(..),
     RuleInfo(..), Global(..), Local(..), Action(..),
     newLocal
     ) where
@@ -67,6 +68,27 @@ data RuleInfo = RuleInfo
     ,lint :: BuiltinLint Key Value
     ,resultType :: TypeRep
     }
+
+
+data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
+
+-- | A 'Match' data type, representing user-defined rules associated with a particular type.
+--   As an example '?>' and '*>' will add entries to the 'Match' data type.
+--
+--   /Semantics/
+--
+-- > priority p1 (priority p2 x) == priority p1 x
+-- > priority p (x `ordered` y) = priority p x `ordered` priority p y
+-- > priority p (x `unordered` y) = priority p x `unordered` priority p y
+-- > ordered is associative
+-- > unordered is associative and commutative
+-- > alternative does not obey priorities, until picking the best one
+data UserRule a
+    = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> 'Rules' ()@.
+    | Unordered [UserRule a] -- ^ Rules combined with the 'Monad'/'Monoid'.
+    | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
+    | Alternative (UserRule a) -- ^ Rule defined under 'alternative', matched in order.
+      deriving (Eq,Show,Functor,Typeable)
 
 
 -- global constants of Action
