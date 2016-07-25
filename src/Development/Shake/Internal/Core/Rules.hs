@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
     LegacyRule(..), addLegacyRule, defaultLegacyRule,
     getShakeOptionsRules,
-    addUserRule, alternatives, priority,
+    getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
     ) where
 
@@ -143,6 +143,15 @@ defaultLegacyRule = LegacyRule
 
 
 data LegacyRule_ = forall key value . (ShakeValue key, ShakeValue value) => LegacyRule_ (LegacyRule key value)
+
+getUserRules :: Typeable a => Action (UserRule a)
+getUserRules = f where
+    f :: forall a . Typeable a => Action (UserRule a)
+    f = do
+        userRules <- Action $ getsRO globalUserRules
+        return $ case Map.lookup (typeRep (Proxy :: Proxy a)) userRules of
+            Nothing -> Unordered []
+            Just (UserRule_ r) -> fromJust $ cast r
 
 
 type UserRules = forall a . Typeable a => Proxy a -> UserRule a
