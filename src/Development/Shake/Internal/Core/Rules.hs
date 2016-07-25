@@ -142,8 +142,6 @@ defaultLegacyRule = LegacyRule
     }
 
 
-data LegacyRule_ = forall key value . (ShakeValue key, ShakeValue value) => LegacyRule_ (LegacyRule key value)
-
 getUserRules :: Typeable a => Action (UserRule a)
 getUserRules = f where
     f :: forall a . Typeable a => Action (UserRule a)
@@ -188,13 +186,12 @@ modifyRules f (Rules r) = Rules $ censor f r
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, Map.HashMap TypeRep UserRule_)
 runRules opts (Rules r) = do
     srules <- runReaderT (execWriterT r) opts
-    registerWitnesses srules
-    return (actions srules, createRuleInfos opts srules, userRules srules)
+    return (actions srules, builtinRules srules, userRules srules)
 
 
 data SRules = SRules
     {actions :: [Action ()]
-    ,builtinRules :: Map.HashMap TypeRep{-k-} LegacyRule_
+    ,builtinRules :: Map.HashMap TypeRep{-k-} BuiltinRule
     ,userRules :: Map.HashMap TypeRep{-k-} UserRule_ -- higher fst is higher priority
     }
 
@@ -224,8 +221,11 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 
 -- | Add a builtin rule type.
 addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
-addLegacyRule (b :: LegacyRule key value) = newRules mempty{builtinRules = Map.singleton k $ LegacyRule_ b}
-    where k = typeRep (Proxy :: Proxy key)
+addLegacyRule (b :: LegacyRule key value) = do
+    opts <- getShakeOptionsRules
+    liftIO $ registerWitness (Proxy :: Proxy key) (Proxy :: Proxy value)
+    let k = typeRep (Proxy :: Proxy key)
+    newRules mempty{builtinRules = Map.singleton k $ convertLegacy opts b}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -293,18 +293,8 @@ withoutActions :: Rules () -> Rules ()
 withoutActions = modifyRules $ \x -> x{actions=[]}
 
 
-registerWitnesses :: SRules -> IO ()
-registerWitnesses SRules{..} =
-    forM_ (Map.elems builtinRules) $ \(LegacyRule_ (LegacyRule{} :: LegacyRule k v)) -> do
-        registerWitness (Proxy :: Proxy k) (Proxy :: Proxy v)
-
-
-createRuleInfos :: ShakeOptions -> SRules -> Map.HashMap TypeRep BuiltinRule
-createRuleInfos opt SRules{..} =
-    flip Map.map builtinRules $ \(LegacyRule_ (b :: LegacyRule k v)) -> createRuleInfo opt b
-
-createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> BuiltinRule
-createRuleInfo opt@ShakeOptions{..} LegacyRule{..} = BuiltinRule{..}
+convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> BuiltinRule
+convertLegacy opt@ShakeOptions{..} LegacyRule{..} = BuiltinRule{..}
     where
         builtinResult = typeRep (Proxy :: Proxy v)
 
