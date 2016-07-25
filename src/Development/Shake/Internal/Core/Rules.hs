@@ -185,7 +185,7 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep RuleInfo, Map.HashMap TypeRep UserRule_)
+runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, Map.HashMap TypeRep UserRule_)
 runRules opts (Rules r) = do
     srules <- runReaderT (execWriterT r) opts
     registerWitnesses srules
@@ -299,27 +299,27 @@ registerWitnesses SRules{..} =
         registerWitness (Proxy :: Proxy k) (Proxy :: Proxy v)
 
 
-createRuleInfos :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
+createRuleInfos :: ShakeOptions -> SRules -> Map.HashMap TypeRep BuiltinRule
 createRuleInfos opt SRules{..} =
     flip Map.map builtinRules $ \(LegacyRule_ (b :: LegacyRule k v)) -> createRuleInfo opt b
 
-createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> RuleInfo
-createRuleInfo opt@ShakeOptions{..} LegacyRule{..} = RuleInfo{..}
+createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> BuiltinRule
+createRuleInfo opt@ShakeOptions{..} LegacyRule{..} = BuiltinRule{..}
     where
-        resultType = typeRep (Proxy :: Proxy v)
+        builtinResult = typeRep (Proxy :: Proxy v)
 
         stored = fmap (fmap newValue) . storedValue . fromKey
         equal k v1 v2 = equalValue (fromKey k) (fromValue v1) (fromValue v2)
         exec = fmap newValue . executeRule . fromKey
 
-        lint k v = do
+        builtinLint k v = do
             now <- stored k
             return $ case now of
                 Nothing -> Just "<missing>"
                 Just now | equal k v now == EqualCheap -> Nothing
                          | otherwise -> Just $ show now
 
-        execute
+        builtinRun
             | shakeAssume == Just AssumeSkip = \k old dirtyChildren -> case old of
                 Nothing -> rebuild k old
                 Just v -> return $ RunResult ChangedNothing v

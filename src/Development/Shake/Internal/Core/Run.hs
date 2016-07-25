@@ -196,7 +196,7 @@ applyForall ks = do
     whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
     case Map.lookup tk globalRules of
         Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just RuleInfo{resultType=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
+        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> liftIO $ errorRuleTypeMismatch tk (show <$> listToMaybe ks) tv2 tv
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
@@ -213,14 +213,14 @@ applyKeyValue ks = do
 runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChildren continue = do
     let tk = typeKey k
-    RuleInfo{..} <- case Map.lookup tk globalRules of
+    BuiltinRule{..} <- case Map.lookup tk globalRules of
         Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just r -> return r
 
     let s = newLocal stack shakeVerbosity
     time <- offsetTime
     runAction global s (do
-        res <- execute k (fmap result r) dirtyChildren
+        res <- builtinRun k (fmap result r) dirtyChildren
         liftIO $ evaluate $ rnf res
         when (Just LintFSATrace == shakeLint) trackCheckUsed
         Action $ fmap ((,) res) getRW) $ \x -> case x of
@@ -244,10 +244,10 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                         ,traces = reverse localTraces}
 
 
-runLint :: Map.HashMap TypeRep RuleInfo -> Key -> Value -> IO (Maybe String)
+runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)
 runLint mp k v = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
-    Just RuleInfo{..} -> lint k v
+    Just BuiltinRule{..} -> builtinLint k v
 
 
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.

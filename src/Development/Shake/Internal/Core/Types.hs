@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
-    RuleInfo(..), Global(..), Local(..), Action(..),
+    BuiltinRule(..), Global(..), Local(..), Action(..),
     newLocal
     ) where
 
@@ -62,11 +62,10 @@ type BuiltinRun key value = key -> Maybe value -> Bool -> Action (RunResult valu
 
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
-
-data RuleInfo = RuleInfo
-    {execute :: BuiltinRun Key Value
-    ,lint :: BuiltinLint Key Value
-    ,resultType :: TypeRep
+data BuiltinRule = BuiltinRule
+    {builtinRun :: BuiltinRun Key Value
+    ,builtinLint :: BuiltinLint Key Value
+    ,builtinResult :: TypeRep
     }
 
 
@@ -97,7 +96,7 @@ data Global = Global
     ,globalPool :: Pool -- ^ Pool, for queuing new elements
     ,globalCleanup :: Cleanup -- ^ Cleanup operations
     ,globalTimestamp :: IO Seconds -- ^ Clock saying how many seconds through the build
-    ,globalRules :: Map.HashMap TypeRep RuleInfo -- ^ Rules for this build
+    ,globalRules :: Map.HashMap TypeRep BuiltinRule -- ^ Rules for this build
     ,globalOutput :: Verbosity -> String -> IO () -- ^ Output function
     ,globalOptions  :: ShakeOptions -- ^ Shake options
     ,globalDiagnostic :: IO String -> IO () -- ^ Debugging function
