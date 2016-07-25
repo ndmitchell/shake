@@ -52,7 +52,7 @@ data RunResult value = RunResult
         -- ^ Return the new value to store, and a 'True' if that value has changed from the argument store.
     ,runValue :: value
         -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
-    }
+    } deriving Functor
 
 instance NFData value => NFData (RunResult value) where
     rnf (RunResult x1 x2) = rnf x1 `seq` rnf x2
