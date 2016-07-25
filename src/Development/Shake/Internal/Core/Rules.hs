@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Rules(
@@ -125,7 +125,7 @@ data LegacyRule key value = LegacyRule
     ,equalValue :: key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
         --   Use 'defaultLegacyRule' if you do not want a different equality.
-    ,executeRule :: UserRules -> key -> Action value
+    ,executeRule :: key -> Action value
         -- ^ How to run a rule, given ways to get a UserRule.
     }
 
@@ -134,9 +134,9 @@ defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key,
 defaultLegacyRule = LegacyRule
     {storedValue = \_ -> return Nothing
     ,equalValue = \_ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
-    ,executeRule = \ask ->
-        let rules = ask (Proxy :: Proxy (k -> Maybe (Action v)))
-        in \k -> case userRuleMatch rules ($ k) of
+    ,executeRule = \k -> do
+        rules :: UserRule (k -> Maybe (Action v)) <- getUserRules
+        case userRuleMatch rules ($ k) of
                 [r] -> r
                 rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy key)) (show k) (length rs)
     }
@@ -152,9 +152,6 @@ getUserRules = f where
         return $ case Map.lookup (typeRep (Proxy :: Proxy a)) userRules of
             Nothing -> Unordered []
             Just (UserRule_ r) -> fromJust $ cast r
-
-
-type UserRules = forall a . Typeable a => Proxy a -> UserRule a
 
 
 -- | Get the 'ShakeOptions' that were used.
@@ -304,20 +301,16 @@ registerWitnesses SRules{..} =
 
 createRuleInfos :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleInfos opt SRules{..} =
-    flip Map.map builtinRules $ \(LegacyRule_ (b :: LegacyRule k v)) -> createRuleInfo opt b userrule
-    where userrule p@(Proxy :: Proxy a) = 
-                    case Map.lookup (typeRep p) userRules of
-                        Nothing -> Unordered []
-                        Just (UserRule_ r) -> fromJust $ cast r
+    flip Map.map builtinRules $ \(LegacyRule_ (b :: LegacyRule k v)) -> createRuleInfo opt b
 
-createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> UserRules -> RuleInfo
-createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
+createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> RuleInfo
+createRuleInfo opt@ShakeOptions{..} LegacyRule{..} = RuleInfo{..}
     where
         resultType = typeRep (Proxy :: Proxy v)
 
         stored = fmap (fmap newValue) . storedValue . fromKey
         equal k v1 v2 = equalValue (fromKey k) (fromValue v1) (fromValue v2)
-        exec = fmap newValue . executeRule userrule . fromKey
+        exec = fmap newValue . executeRule . fromKey
 
         lint k v = do
             now <- stored k

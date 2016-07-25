@@ -115,16 +115,16 @@ defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     addLegacyRule defaultLegacyRule
         {storedValue = \(DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
-        ,executeRule = \_ (DoesFileExistQ x) -> liftIO $ DoesFileExistA <$> IO.doesFileExist x}
+        ,executeRule = \(DoesFileExistQ x) -> liftIO $ DoesFileExistA <$> IO.doesFileExist x}
     addLegacyRule defaultLegacyRule
         {storedValue = \(DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
-        ,executeRule = \_ (DoesDirectoryExistQ x) -> liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x}
+        ,executeRule = \(DoesDirectoryExistQ x) -> liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x}
     addLegacyRule defaultLegacyRule
         {storedValue = \(GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
-        ,executeRule = \_ (GetEnvQ x) -> liftIO $ GetEnvA <$> IO.lookupEnv x}
+        ,executeRule = \(GetEnvQ x) -> liftIO $ GetEnvA <$> IO.lookupEnv x}
     addLegacyRule defaultLegacyRule
         {storedValue = \x -> Just <$> getDir x
-        ,executeRule = \_ x -> liftIO $ getDir x}
+        ,executeRule = \x -> liftIO $ getDir x}
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a

@@ -40,4 +40,4 @@ defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
     addLegacyRule defaultLegacyRule
         {storedValue = \AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
-        ,executeRule = \_ AlwaysRerunQ{} -> return $ AlwaysRerunA ()}
+        ,executeRule = \AlwaysRerunQ{} -> return $ AlwaysRerunA ()}

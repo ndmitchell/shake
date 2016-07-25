@@ -75,7 +75,7 @@ addOracle = f where
     f act = do
         addLegacyRule defaultLegacyRule
             {storedValue = \(_ :: OracleQ q) -> return (Nothing :: Maybe (OracleA a))
-            ,executeRule = \_ (OracleQ q) -> OracleA <$> act q}
+            ,executeRule = \(OracleQ q) -> OracleA <$> act q}
         return askOracle
 
 

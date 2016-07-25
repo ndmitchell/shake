@@ -77,7 +77,7 @@ forwardRule :: Action () -> Rules ()
 forwardRule act = do
     addLegacyRule defaultLegacyRule
         {storedValue = \ForwardQ{} -> return $ Just $ ForwardA ()
-        ,executeRule = \_ k -> do
+        ,executeRule = \k -> do
             res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
             case res of
                 Nothing -> liftIO $ errorIO "Failed to find action name"
