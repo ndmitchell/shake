@@ -27,6 +27,7 @@ import Data.Maybe
 import System.IO.Extra
 import Data.Monoid
 import General.Extra
+import General.ListBuilder
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
@@ -187,18 +188,17 @@ modifyRules f (Rules r) = Rules $ censor f r
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, Map.HashMap TypeRep UserRule_)
 runRules opts (Rules r) = do
     srules <- runReaderT (execWriterT r) opts
-    return (actions srules, builtinRules srules, userRules srules)
-
+    return (runListBuilder $ actions srules, builtinRules srules, userRules srules)
 
 data SRules = SRules
-    {actions :: ![Action ()]
+    {actions :: !(ListBuilder (Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
     ,userRules :: !(Map.HashMap TypeRep{-k-} UserRule_) -- higher fst is higher priority
     }
 
 instance Monoid SRules where
-    mempty = SRules [] Map.empty Map.empty
-    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (x1++y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
+    mempty = SRules mempty Map.empty Map.empty
+    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
         where
             f _ _ = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
             g (UserRule_ x) (UserRule_ y) = UserRule_ $ Unordered $ fromUnordered x ++ fromUnordered (fromJust $ cast y)
@@ -295,13 +295,13 @@ alternatives = modifyRules $ \r -> r{userRules = Map.map f $ userRules r}
 --   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
 --   see 'Development.Shake.want'.
 action :: Action a -> Rules ()
-action a = newRules mempty{actions=[void a]}
+action a = newRules mempty{actions=newListBuilder $ void a}
 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing
 --   command line specification of what to build.
 withoutActions :: Rules () -> Rules ()
-withoutActions = modifyRules $ \x -> x{actions=[]}
+withoutActions = modifyRules $ \x -> x{actions=mempty}
 
 
 convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> BuiltinRule
