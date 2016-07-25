@@ -6,6 +6,7 @@ module Development.Shake.Internal.Rules.Rerun(
 
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Classes
 
 
@@ -38,6 +39,6 @@ alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
-    addLegacyRule defaultLegacyRule
-        {storedValue = \AlwaysRerunQ{} -> return (Nothing :: Maybe AlwaysRerunA)
-        ,executeRule = \AlwaysRerunQ{} -> return $ AlwaysRerunA ()}
+    addBuiltinRule
+        (\AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff $ AlwaysRerunA ())
+        (\_ _ -> return Nothing)
