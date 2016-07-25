@@ -105,6 +105,7 @@ data Global = Global
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state
+    ,globalUserRules :: Map.HashMap TypeRep UserRule_
     }
 
 -- local variables of Action

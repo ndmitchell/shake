@@ -179,11 +179,11 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep RuleInfo)
+runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep RuleInfo, Map.HashMap TypeRep UserRule_)
 runRules opts (Rules r) = do
     srules <- runReaderT (execWriterT r) opts
     registerWitnesses srules
-    return (actions srules, createRuleInfos opts srules)
+    return (actions srules, createRuleInfos opts srules, userRules srules)
 
 
 data SRules = SRules

@@ -60,7 +60,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
 
     start <- offsetTime
-    (actions, ruleinfo) <- runRules opts rs
+    (actions, ruleinfo, userRules) <- runRules opts rs
 
     outputLocked <- do
         lock <- newLock
@@ -104,7 +104,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress
+                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules
                     let s1 = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
                         addPoolLowPriority pool $ runAction s0 s1 act $ \x -> case x of
