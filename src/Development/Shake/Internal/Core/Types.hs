@@ -2,7 +2,8 @@
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Types(
-    RuleInfo(..), BuiltinInfo(..), Changed(..), Global(..), Local(..), Action(..),
+    BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),
+    RuleInfo(..), Global(..), Local(..), Action(..),
     newLocal
     ) where
 
@@ -32,33 +33,38 @@ import Prelude
 newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO, Typeable)
 
-data Changed
+data RunChanged
     = ChangedNothing -- ^ Nothing has changed
     | ChangedStore -- ^ The value in the Store has changed, but in a way that should be considered equal
     | ChangedRecomputeSame -- ^ I recomputed the value and it was the same
     | ChangedRecomputeDiff -- ^ I recomputed the value and it was different
-      deriving Eq
+      deriving (Eq,Show)
 
-instance NFData Changed where rnf x = x `seq` ()
+instance NFData RunChanged where rnf x = x `seq` ()
 
 
-data BuiltinInfo value = BuiltinInfo
-    {resultChanged :: Changed
+data RunResult value = RunResult
+    {runChanged :: RunChanged
         -- ^ Have the required dependencies of this action changed? Use 'True' to use the dependencies this time
         --   around as the future dependencies. Use 'False' to keep the previous dependencies.
     -- ,resultStore :: BS.ByteString
         -- ^ Return the new value to store, and a 'True' if that value has changed from the argument store.
-    ,resultValue :: value
+    ,runValue :: value
         -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
     }
 
-instance NFData value => NFData (BuiltinInfo value) where
-    rnf (BuiltinInfo x1 x2) = rnf x1 `seq` rnf x2
+instance NFData value => NFData (RunResult value) where
+    rnf (RunResult x1 x2) = rnf x1 `seq` rnf x2
+
+
+type BuiltinRun key value = key -> Maybe value -> Bool -> Action (RunResult value)
+
+type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 
 data RuleInfo = RuleInfo
-    {execute :: Key -> Maybe Value -> Bool -> Action (BuiltinInfo Value)
-    ,lint :: Key -> Value -> IO (Maybe String)
+    {execute :: BuiltinRun Key Value
+    ,lint :: BuiltinLint Key Value
     ,resultType :: TypeRep
     }
 
@@ -73,7 +79,7 @@ data Global = Global
     ,globalOutput :: Verbosity -> String -> IO () -- ^ Output function
     ,globalOptions  :: ShakeOptions -- ^ Shake options
     ,globalDiagnostic :: IO String -> IO () -- ^ Debugging function
-    ,globalLint :: String -> IO () -- ^ Run lint checking
+    ,globalCurDir :: FilePath -- ^ getCurrentDirectory when we started
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state

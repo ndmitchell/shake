@@ -40,8 +40,8 @@ newtype File_A = File_A (Maybe ModTime)
 
 defaultRuleFile_ :: Rules ()
 defaultRuleFile_ = do
-    addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (File_Q x) -> fmap (File_A . Just . fst) <$> getFileInfo x}
+    addLegacyRule defaultLegacyRule
+        {storedValue = \(File_Q x) -> fmap (File_A . Just . fst) <$> getFileInfo x}
     priority 0 $ addUserRule $ \(File_Q x) -> (Just $ liftIO $ do
         res <- getFileInfo x
         case res of

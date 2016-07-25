@@ -113,17 +113,17 @@ instance Binary GetDirectoryQ where
 
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
+    addLegacyRule defaultLegacyRule
+        {storedValue = \(DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
         ,executeRule = \_ (DoesFileExistQ x) -> liftIO $ DoesFileExistA <$> IO.doesFileExist x}
-    addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
+    addLegacyRule defaultLegacyRule
+        {storedValue = \(DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
         ,executeRule = \_ (DoesDirectoryExistQ x) -> liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x}
-    addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ (GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
+    addLegacyRule defaultLegacyRule
+        {storedValue = \(GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
         ,executeRule = \_ (GetEnvQ x) -> liftIO $ GetEnvA <$> IO.lookupEnv x}
-    addBuiltinRule defaultBuiltinRule
-        {storedValue = \_ x -> Just <$> getDir x
+    addLegacyRule defaultLegacyRule
+        {storedValue = \x -> Just <$> getDir x
         ,executeRule = \_ x -> liftIO $ getDir x}
 
 

@@ -53,7 +53,8 @@ filesEqualValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
 
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
-    addBuiltinRule defaultBuiltinRule{storedValue=filesStoredValue, equalValue=filesEqualValue}
+    opts <- getShakeOptionsRules
+    addLegacyRule defaultLegacyRule{storedValue=filesStoredValue opts, equalValue=filesEqualValue opts}
 
 
 -- | Define a rule for building multiple files at the same time.

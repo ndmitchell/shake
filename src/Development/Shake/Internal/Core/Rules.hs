@@ -4,7 +4,8 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    BuiltinRule(..), addBuiltinRule, defaultBuiltinRule,
+    LegacyRule(..), addLegacyRule, defaultLegacyRule,
+    getShakeOptionsRules,
     addUserRule, alternatives, priority,
     action, withoutActions
     ) where
@@ -14,6 +15,8 @@ import Data.Tuple.Extra
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 import Data.Typeable.Extra
 import Data.Function
@@ -27,7 +30,6 @@ import General.Extra
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
-import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
@@ -114,24 +116,24 @@ import Prelude
 --   and 'equalValue' should always return 'EqualCheap' for that sentinel.
 
 -- | TODO: Docs
-data BuiltinRule key value = BuiltinRule
-    {storedValue :: ShakeOptions -> key -> IO (Maybe value)
+data LegacyRule key value = LegacyRule
+    {storedValue :: key -> IO (Maybe value)
         -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
         --
         --   As an example for filenames/timestamps, if the file exists you should return 'Just'
         --   the timestamp, but otherwise return 'Nothing'.
-    ,equalValue :: ShakeOptions -> key -> value -> value -> EqualCost
+    ,equalValue :: key -> value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
-        --   Use 'defaultBuiltinRule' if you do not want a different equality.
-    ,executeRule :: (forall a . Typeable a => Proxy a -> UserRule a) -> key -> Action value
+        --   Use 'defaultLegacyRule' if you do not want a different equality.
+    ,executeRule :: UserRules -> key -> Action value
         -- ^ How to run a rule, given ways to get a UserRule.
     }
 
 -- | Default 'equalValue' field.
-defaultBuiltinRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => BuiltinRule key value
-defaultBuiltinRule = BuiltinRule
-    {storedValue = \_ _ -> return Nothing
-    ,equalValue = \_ _ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
+defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
+defaultLegacyRule = LegacyRule
+    {storedValue = \_ -> return Nothing
+    ,equalValue = \_ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
     ,executeRule = \ask ->
         let rules = ask (Proxy :: Proxy (k -> Maybe (Action v)))
         in \k -> case userRuleMatch rules ($ k) of
@@ -140,10 +142,17 @@ defaultBuiltinRule = BuiltinRule
     }
 
 
-data BuiltinRule_ = forall key value . (ShakeValue key, ShakeValue value) => BuiltinRule_ (BuiltinRule key value)
+data LegacyRule_ = forall key value . (ShakeValue key, ShakeValue value) => LegacyRule_ (LegacyRule key value)
 
 data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
 
+
+type UserRules = forall a . Typeable a => Proxy a -> UserRule a
+
+
+-- | Get the 'ShakeOptions' that were used.
+getShakeOptionsRules :: Rules ShakeOptions
+getShakeOptionsRules = Rules $ lift ask
 
 -- | A 'Match' data type, representing user-defined rules associated with a particular type.
 --   As an example '?>' and '*>' will add entries to the 'Match' data type.
@@ -181,7 +190,7 @@ userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (WriterT SRules IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (WriterT SRules (ReaderT ShakeOptions IO) a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
 
 newRules :: SRules -> Rules ()
@@ -192,14 +201,14 @@ modifyRules f (Rules r) = Rules $ censor f r
 
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep RuleInfo)
 runRules opts (Rules r) = do
-    srules <- execWriterT r
+    srules <- runReaderT (execWriterT r) opts
     registerWitnesses srules
     return (actions srules, createRuleInfos opts srules)
 
 
 data SRules = SRules
     {actions :: [Action ()]
-    ,builtinRules :: Map.HashMap TypeRep{-k-} BuiltinRule_
+    ,builtinRules :: Map.HashMap TypeRep{-k-} LegacyRule_
     ,userRules :: Map.HashMap TypeRep{-k-} UserRule_ -- higher fst is higher priority
     }
 
@@ -228,8 +237,8 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 
 
 -- | Add a builtin rule type.
-addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRule key value -> Rules ()
-addBuiltinRule (b :: BuiltinRule key value) = newRules mempty{builtinRules = Map.singleton k $ BuiltinRule_ b}
+addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
+addLegacyRule (b :: LegacyRule key value) = newRules mempty{builtinRules = Map.singleton k $ LegacyRule_ b}
     where k = typeRep (Proxy :: Proxy key)
 
 
@@ -300,28 +309,28 @@ withoutActions = modifyRules $ \x -> x{actions=[]}
 
 registerWitnesses :: SRules -> IO ()
 registerWitnesses SRules{..} =
-    forM_ (Map.elems builtinRules) $ \(BuiltinRule_ (BuiltinRule{} :: BuiltinRule k v)) -> do
+    forM_ (Map.elems builtinRules) $ \(LegacyRule_ (LegacyRule{} :: LegacyRule k v)) -> do
         registerWitness (Proxy :: Proxy k) (Proxy :: Proxy v)
 
 
 createRuleInfos :: ShakeOptions -> SRules -> Map.HashMap TypeRep RuleInfo
 createRuleInfos opt SRules{..} =
-    flip Map.map builtinRules $ \(BuiltinRule_ (b :: BuiltinRule k v)) -> createRuleInfo opt b userrule
+    flip Map.map builtinRules $ \(LegacyRule_ (b :: LegacyRule k v)) -> createRuleInfo opt b userrule
     where userrule p@(Proxy :: Proxy a) = 
                     case Map.lookup (typeRep p) userRules of
                         Nothing -> Unordered []
                         Just (UserRule_ r) -> fromJust $ cast r
 
-createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> BuiltinRule k v -> (forall a . Typeable a => Proxy a -> UserRule a) -> RuleInfo
-createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
+createRuleInfo :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> UserRules -> RuleInfo
+createRuleInfo opt@ShakeOptions{..} LegacyRule{..} userrule = RuleInfo{..}
     where
         resultType = typeRep (Proxy :: Proxy v)
 
-        stored = fmap (fmap newValue) . storedValue opt . fromKey
-        equal k v1 v2 = equalValue opt (fromKey k) (fromValue v1) (fromValue v2)
+        stored = fmap (fmap newValue) . storedValue . fromKey
+        equal k v1 v2 = equalValue (fromKey k) (fromValue v1) (fromValue v2)
         exec = fmap newValue . executeRule userrule . fromKey
 
-        lint = \k v -> do
+        lint k v = do
             now <- stored k
             return $ case now of
                 Nothing -> Just "<missing>"
@@ -331,12 +340,12 @@ createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
         execute
             | shakeAssume == Just AssumeSkip = \k old dirtyChildren -> case old of
                 Nothing -> rebuild k old
-                Just v -> return $ BuiltinInfo ChangedNothing v
+                Just v -> return $ RunResult ChangedNothing v
             | shakeAssume == Just AssumeDirty = \k old _ -> rebuild k old
             | shakeAssume == Just AssumeClean = \k old _ -> do
                 v <- liftIO $ stored k
                 case v of
-                    Just v -> return $ BuiltinInfo ChangedStore v
+                    Just v -> return $ RunResult ChangedStore v
                     Nothing -> rebuild k old
             | otherwise = \k old dirtyChildren -> case old of
                 Just old | not dirtyChildren -> do
@@ -348,19 +357,14 @@ createRuleInfo opt@ShakeOptions{..} BuiltinRule{..} userrule = RuleInfo{..}
                             liftIO $ diagnostic $ return $ "compare " ++ show e ++ " for " ++ showBracket k ++ " " ++ showBracket old
                             case e of
                                 NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ BuiltinInfo ChangedNothing v
-                                EqualExpensive -> return $ BuiltinInfo ChangedStore v
+                                EqualCheap -> return $ RunResult ChangedNothing v
+                                EqualExpensive -> return $ RunResult ChangedStore v
                         Nothing -> rebuild k $ Just old
                 _ -> rebuild k old
             where
                 rebuild k old = do
-                    globalLint <- Action $ getsRO globalLint
-                    localStack <- Action $ getsRW localStack
-                    let top = showTopStack localStack
-                    liftIO $ globalLint $ "before building " ++ top
                     putWhen Chatty $ "# " ++ show k
                     v <- exec k
-                    liftIO $ globalLint $ "after building " ++ top
                     let c | Just old <- old, equal k old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
-                    return $ BuiltinInfo c v
+                    return $ RunResult c v

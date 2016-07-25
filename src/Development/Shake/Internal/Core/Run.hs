@@ -79,16 +79,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                 -- no need to print exceptions here, they get printed when they are wrapped
 
-    lint <- if isNothing shakeLint then return $ const $ return () else do
-        dir <- getCurrentDirectory
-        return $ \msg -> do
-            now <- getCurrentDirectory
-            when (dir /= now) $ errorStructured
-                "Lint checking error - current directory has changed"
-                [("When", Just msg)
-                ,("Wanted",Just dir)
-                ,("Got",Just now)]
-                ""
+    curdir <- getCurrentDirectory
     diagnostic $ return "Starting run 2"
 
     after <- newIORef []
@@ -113,7 +104,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic lint after absent getProgress
+                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress
                     let s1 = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
                         addPoolLowPriority pool $ runAction s0 s1 act $ \x -> case x of
@@ -129,6 +120,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
+                    lintCurrentDirectory curdir "After completion"
                     absent <- readIORef absent
                     checkValid database (runLint ruleinfo) absent
                     putWhen Loud "Lint checking succeeded"
@@ -146,6 +138,17 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         putWhen Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             sequence_ . reverse =<< readIORef after
+
+
+lintCurrentDirectory :: FilePath -> String -> IO ()
+lintCurrentDirectory old msg = do
+    now <- getCurrentDirectory
+    when (old /= now) $ errorStructured
+        "Lint checking error - current directory has changed"
+        [("When", Just msg)
+        ,("Wanted",Just old)
+        ,("Got",Just now)]
+        ""
 
 
 lineBuffering :: IO a -> IO a
@@ -221,16 +224,19 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         liftIO $ evaluate $ rnf res
         when (Just LintFSATrace == shakeLint) trackCheckUsed
         Action $ fmap ((,) res) getRW) $ \x -> case x of
-            Left e -> continue . Left . toException =<< shakeException global (showStack stack) e
-            Right (BuiltinInfo{..}, Local{..})
-                | resultChanged == ChangedNothing || resultChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ (,) (resultChanged == ChangedStore) r{result = resultValue}
+            Left e -> do
+                e <- if shakeLint == Nothing then return e else handle return $
+                    do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
+                continue . Left . toException =<< shakeException global (showStack stack) e
+            Right (RunResult{..}, Local{..})
+                | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
+                    continue $ Right $ (,) (runChanged == ChangedStore) r{result = runValue}
                 | otherwise -> do
                     dur <- time
-                    let c | Just r <- r, resultChanged == ChangedRecomputeSame = changed r
+                    let c | Just r <- r, runChanged == ChangedRecomputeSame = changed r
                           | otherwise = step
                     continue $ Right $ (,) True $ Result
-                        {result = resultValue
+                        {result = runValue
                         ,changed = c
                         ,built = step
                         ,depends = reverse localDepends
