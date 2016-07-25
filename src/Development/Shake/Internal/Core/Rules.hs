@@ -5,6 +5,7 @@
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
     LegacyRule(..), addLegacyRule, defaultLegacyRule,
+    addBuiltinRule,
     getShakeOptionsRules,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -226,6 +227,16 @@ addLegacyRule (b :: LegacyRule key value) = do
     liftIO $ registerWitness (Proxy :: Proxy key) (Proxy :: Proxy value)
     let k = typeRep (Proxy :: Proxy key)
     newRules mempty{builtinRules = Map.singleton k $ convertLegacy opts b}
+
+
+addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRun key value -> BuiltinLint key value -> Rules ()
+addBuiltinRule (run :: BuiltinRun key value) lint = do
+    let k = Proxy :: Proxy key
+        v = Proxy :: Proxy value
+    liftIO $ registerWitness k v
+    let run_ k v b = fmap (fmap newValue) $ run (fromKey k) (fmap fromValue v) b
+    let lint_ k v = lint (fromKey k) (fromValue v)
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v)}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
