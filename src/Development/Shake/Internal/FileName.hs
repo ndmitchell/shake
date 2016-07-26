@@ -2,6 +2,7 @@
 
 module Development.Shake.Internal.FileName(
     FileName, packU, unpackU, packU_, unpackU_, requireU,
+    fileNameFromString, fileNameFromByteString,
     filepathNormalise
     ) where
 
@@ -43,6 +44,13 @@ packU_ = FileName
 
 requireU :: FileName -> Bool
 requireU = BS.any (>= 0x80) . unpackU_
+
+
+fileNameFromString :: FilePath -> FileName
+fileNameFromString = fileNameFromByteString . unpackU_ . packU
+
+fileNameFromByteString :: BS.ByteString -> FileName
+fileNameFromByteString = packU_ . filepathNormalise
 
 
 ---------------------------------------------------------------------

@@ -135,13 +135,13 @@ defaultRuleFile = do
 --   environment variables (e.g. @$HOME@ - use 'getEnv' to expand them) or directories (directories cannot be
 --   tracked directly - track files within the directory instead).
 need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . packU_ . filepathNormalise . unpackU_ . packU) xs :: Action [FileA]) >> return ()
+need xs = (apply $ map (FileQ . fileNameFromString) xs :: Action [FileA]) >> return ()
 
 needNorm :: [FilePath] -> Action ()
 needNorm xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
-needBS xs = (apply $ map (FileQ . packU_ . filepathNormalise) xs :: Action [FileA]) >> return ()
+needBS xs = (apply $ map (FileQ . fileNameFromByteString) xs :: Action [FileA]) >> return ()
 
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
