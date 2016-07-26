@@ -60,8 +60,10 @@ instance NFData value => NFData (RunResult value) where
     rnf (RunResult x1 x2) = rnf x1 `seq` rnf x2
 
 
+-- | How to run a rule.
 type BuiltinRun key value = key -> Maybe value -> Bool -> Action (RunResult value)
 
+-- | How to lint a rule.
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 data BuiltinRule = BuiltinRule
