@@ -59,7 +59,16 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
-    addLegacyRule defaultLegacyRule{storedValue=filesStoredValue opts, equalValue=filesEqualValue opts}
+    addLegacyRule LegacyRule
+        {storedValue=filesStoredValue opts
+        ,equalValue=filesEqualValue opts
+        ,executeRule = \(k :: FilesQ) -> do
+            rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
+            case userRuleMatch rules ($ k) of
+                    [r] -> r
+                    rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
+        }
+
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -185,20 +194,6 @@ data LegacyRule key value = LegacyRule
     ,executeRule :: key -> Action value
         -- ^ How to run a rule, given ways to get a UserRule.
     }
-
-
--- | Default 'equalValue' field.
-defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
-defaultLegacyRule = LegacyRule
-    {storedValue = \_ -> return Nothing
-    ,equalValue = \v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
-    ,executeRule = \k -> do
-        rules :: UserRule (k -> Maybe (Action v)) <- getUserRules
-        case userRuleMatch rules ($ k) of
-                [r] -> r
-                rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy key)) (show k) (length rs)
-    }
-
 
 
 convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
