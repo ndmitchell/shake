@@ -25,19 +25,19 @@ import Development.Shake.Internal.CmdOption
 --   other files in the database are left unchanged.
 data Assume
     = AssumeDirty
-        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to 'Development.Shake.Rule.storedValue' always
+        -- ^ Assume that all rules reached are dirty and require rebuilding, equivalent to storedValue always
         --   returning 'Nothing'. Useful to undo the results of 'AssumeClean', for benchmarking rebuild speed and
         --   for rebuilding if untracked dependencies have changed. This assumption is safe, but may cause
         --   more rebuilding than necessary.
     | AssumeClean
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run, and in future runs/.
         --   Assume and record that all rules reached are clean and do not require rebuilding, provided the rule
-        --   has a 'Development.Shake.Rule.storedValue' and has been built before. Useful if you have modified a file in some
+        --   has a storedValue and has been built before. Useful if you have modified a file in some
         --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
     | AssumeSkip
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run/.
         --   Assume that all rules reached are clean in this run. Only useful for benchmarking, to remove any overhead
-        --   from running 'Development.Shake.Rule.storedValue' operations.
+        --   from running storedValue operations.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
 
 -- | The current assumptions made by the build system, used by 'shakeAssume'. These options
