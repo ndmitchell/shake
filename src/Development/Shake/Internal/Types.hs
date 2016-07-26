@@ -17,7 +17,7 @@ import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Internal.CmdOption
 
 
--- | The current assumptions made by the build system, used by 'shakeAssume'. These options
+-- | The current assumptions made by the build system, used by 'shakeRebuild'. These options
 --   allow the end user to specify that any rules run are either to be treated as clean, or as
 --   dirty, regardless of what the build system thinks.
 --

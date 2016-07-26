@@ -257,7 +257,7 @@ italics = words "command-name file-name N"
 types :: [String]
 types = words $
     "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
-    "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
+    "Action Resource Rebuild FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
     "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep " ++

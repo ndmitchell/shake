@@ -23,12 +23,7 @@ By default all `want`/`action` statements in `Rules` will be run. If any non-fla
 * `--no-rule-version` -- ignore the `shakeVersion` setting, equivalent to setting `shakeVersionIgnore`, useful if you compute `shakeVersion` as the hash of the build system and want to ignore changes temporarily.
 * `--digest, --digest-and, --digest-and-input, --digest-or, --digest-not` -- set the `shakeChange` field to one of the `Change` values. Defaults to comparing files by modification time, but `--digest-and` (compare all files using a digest) or `--digest-and-input` (compare all input files using a digest) are often useful. However, this value is usually set in the code.
 
-In addition, there are a number of flags for controlling whether files are treated as dirty despite being clean, or clean despite being dirty. The exact semantics remain somewhat confusing, and and will be revised. All are implemented through `shakeAssume`.
-
-* `-B, --always-make` -- unconditionally make all targets.
-* `-W FILE, --what-if=FILE, --new-file=FILE, --assume-new=FILE` -- consider `FILE` to be dirty.
-* `-o FILE, --old-file=FILE, --assume-old=FILE` -- consider `FILE` to be clean and don't rebuild it.
-* `--old-all, --assume-skip, --touch` -- don't remake any files, better to use `--no-build`.
+In addition, there are a number of flags for controlling whether files are treated as dirty despite being clean, or clean despite being dirty. The exact semantics remain somewhat confusing, and should be cleaned up.
 
 ## What gets printed
 
