@@ -260,7 +260,8 @@ types = words $
     "Action Resource Assume FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
-    "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep"
+    "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep " ++
+    "BuiltinRun BuiltinLint"
 
 -- | Duplicated identifiers which require renaming
 dupes :: [String]
@@ -309,7 +310,7 @@ whitelist x | elem x $ words $
     "_shake _shake/build manual chrome://tracing/ compdb " ++
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
-    "*> "
+    "*> BuiltinRun"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
