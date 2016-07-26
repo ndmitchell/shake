@@ -233,16 +233,16 @@ getDirectoryDirs x = getDirAction $ GetDirDirs x
 
 getDirAction x = do GetDirectoryA y <- apply1 x; return y
 
-contents :: FilePath -> IO [FilePath]
+getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
 -- but raises an error on Linux. We smooth out the difference.
-contents x = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if x == "" then "." else x
+getDirectoryContentsIO x = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if x == "" then "." else x
 
 
 getDir :: GetDirectoryQ -> IO GetDirectoryA
-getDir GetDir{..} = GetDirectoryA <$> contents dir
+getDir GetDir{..} = GetDirectoryA <$> getDirectoryContentsIO dir
 
-getDir GetDirDirs{..} = fmap GetDirectoryA $ filterM f =<< contents dir
+getDir GetDirDirs{..} = fmap GetDirectoryA $ filterM f =<< getDirectoryContentsIO dir
     where f x = IO.doesDirectoryExist $ dir </> x
 
 getDir GetDirFiles{..} = GetDirectoryA <$> getDirectoryFilesIO dir pat
@@ -257,7 +257,7 @@ getDirectoryFilesIO root pat = f "" $ snd $ walk pat
     where
         -- Even after we know they are there because we called contents, we still have to check they are directories/files
         -- as required
-        f dir (Walk op) = f dir . WalkTo . op =<< contents (root </> dir)
+        f dir (Walk op) = f dir . WalkTo . op =<< getDirectoryContentsIO (root </> dir)
         f dir (WalkTo (files, dirs)) = do
             files <- filterM (IO.doesFileExist . (root </>)) $ map (dir </>) files
             dirs <- concatMapM (uncurry f) =<< filterM (IO.doesDirectoryExist . (root </>) . fst) (map (first (dir </>)) dirs)
@@ -284,7 +284,7 @@ removeFiles dir pat =
         let (b,w) = walk pat
         if b then removeDir dir else f dir w
     where
-        f dir (Walk op) = f dir . WalkTo . op =<< contents dir
+        f dir (Walk op) = f dir . WalkTo . op =<< getDirectoryContentsIO dir
         f dir (WalkTo (files, dirs)) = do
             forM_ files $ \fil ->
                 try $ removeItem $ dir </> fil :: IO (Either IOException ())
@@ -300,7 +300,7 @@ removeFiles dir pat =
         -- symlinks, so it's got different behaviour
         removeDir :: FilePath -> IO ()
         removeDir x = do
-            mapM_ (removeItem . (x </>)) =<< contents x
+            mapM_ (removeItem . (x </>)) =<< getDirectoryContentsIO x
             IO.removeDirectory x
 
 
