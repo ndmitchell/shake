@@ -9,7 +9,7 @@ import Test.QuickCheck
 import Control.Monad
 import Data.List
 import qualified Data.ByteString.Char8 as BS
-import qualified Development.Shake.Internal.ByteString as BS
+import qualified Development.Shake.Internal.FileName as BS
 import System.Info.Extra
 
 

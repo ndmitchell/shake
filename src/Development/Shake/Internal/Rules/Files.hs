@@ -21,7 +21,6 @@ import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
 import Development.Shake.Internal.Types
-import Development.Shake.Internal.ByteString
 
 
 infix 1 &?>, &%>

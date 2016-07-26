@@ -22,7 +22,6 @@ import Development.Shake.Internal.Core.Action hiding (trackAllow)
 import qualified Development.Shake.Internal.Core.Action as S
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.FileName
-import Development.Shake.Internal.ByteString
 import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.Internal.FilePattern
