@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Development.Shake.Internal.Rules.File(
-    need, needBS, needed, neededBS, needNorm, want,
+    need, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
@@ -136,9 +136,6 @@ defaultRuleFile = do
 --   tracked directly - track files within the directory instead).
 need :: [FilePath] -> Action ()
 need xs = (apply $ map (FileQ . fileNameFromString) xs :: Action [FileA]) >> return ()
-
-needNorm :: [FilePath] -> Action ()
-needNorm xs = (apply $ map (FileQ . packU) xs :: Action [FileA]) >> return ()
 
 needBS :: [BS.ByteString] -> Action ()
 needBS xs = (apply $ map (FileQ . fileNameFromByteString) xs :: Action [FileA]) >> return ()
