@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>), defaultRuleFiles
