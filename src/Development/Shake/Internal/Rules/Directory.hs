@@ -33,6 +33,9 @@ import General.Extra
 import Prelude
 
 
+---------------------------------------------------------------------
+-- KEY/VALUE TYPES
+
 newtype DoesFileExistQ = DoesFileExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
@@ -97,6 +100,9 @@ instance Show GetDirectoryA where
     show (GetDirectoryA xs) = unwords $ map wrapQuote xs
 
 
+---------------------------------------------------------------------
+-- RULE DEFINITIONS
+
 queryRule :: (ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
 queryRule query = addBuiltinRule
     (\k old _ -> liftIO $ do
@@ -117,13 +123,15 @@ defaultRuleDirectory = do
     queryRule (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
 
 
+---------------------------------------------------------------------
+-- RULE ENTRY POINTS
+
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
 --   dependency, and if the file is created or deleted the rule will rerun in subsequent builds.
 --
 --   You should not call 'doesFileExist' on files which can be created by the build system.
 doesFileExist :: FilePath -> Action Bool
 doesFileExist = fmap fromDoesFileExistA . apply1 . DoesFileExistQ . toStandard
-
 
 -- | Returns 'True' if the directory exists. The existence of the directory is tracked as a
 --   dependency, and if the directory is created or delete the rule will rerun in subsequent builds.
@@ -214,10 +222,14 @@ getDirectoryDirs :: FilePath -> Action [FilePath]
 getDirectoryDirs = fmap fromGetDirectoryA . apply1 . GetDirectoryDirsQ
 
 
+---------------------------------------------------------------------
+-- IO ROUTINES
+
 getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
 -- but raises an error on Linux. We smooth out the difference.
 getDirectoryContentsIO dir = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if dir == "" then "." else dir
+
 
 getDirectoryDirsIO :: FilePath -> IO [FilePath]
 getDirectoryDirsIO dir = filterM f =<< getDirectoryContentsIO dir
@@ -239,6 +251,9 @@ getDirectoryFilesIO root pat = f "" $ snd $ walk pat
             dirs <- concatMapM (uncurry f) =<< filterM (IO.doesDirectoryExist . (root </>) . fst) (map (first (dir </>)) dirs)
             return $ files ++ dirs
 
+
+---------------------------------------------------------------------
+-- REMOVE UTILITIES
 
 -- | Remove all files and directories that match any of the patterns within a directory.
 --   Some examples:
