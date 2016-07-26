@@ -39,7 +39,7 @@ newtype DoesFileExistQ = DoesFileExistQ FilePath
 instance Show DoesFileExistQ where
     show (DoesFileExistQ a) = "doesFileExist " ++ wrapQuote a
 
-newtype DoesFileExistA = DoesFileExistA Bool
+newtype DoesFileExistA = DoesFileExistA {fromDoesFileExistA :: Bool}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show DoesFileExistA where
@@ -52,7 +52,7 @@ newtype DoesDirectoryExistQ = DoesDirectoryExistQ FilePath
 instance Show DoesDirectoryExistQ where
     show (DoesDirectoryExistQ a) = "doesDirectoryExist " ++ wrapQuote a
 
-newtype DoesDirectoryExistA = DoesDirectoryExistA Bool
+newtype DoesDirectoryExistA = DoesDirectoryExistA {fromDoesDirectoryExistA :: Bool}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show DoesDirectoryExistA where
@@ -65,7 +65,7 @@ newtype GetEnvQ = GetEnvQ String
 instance Show GetEnvQ where
     show (GetEnvQ a) = "getEnv " ++ wrapQuote a
 
-newtype GetEnvA = GetEnvA (Maybe String)
+newtype GetEnvA = GetEnvA {fromGetEnvA :: Maybe String}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetEnvA where
@@ -78,7 +78,7 @@ data GetDirectoryQ
     | GetDirDirs {dir :: FilePath}
     deriving (Typeable,Eq)
 
-newtype GetDirectoryA = GetDirectoryA [FilePath]
+newtype GetDirectoryA = GetDirectoryA {fromGetDirectoryA :: [FilePath]}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show GetDirectoryQ where
@@ -136,18 +136,16 @@ defaultRuleDirectory = do
 --
 --   You should not call 'doesFileExist' on files which can be created by the build system.
 doesFileExist :: FilePath -> Action Bool
-doesFileExist file = do
-    DoesFileExistA res <- apply1 $ DoesFileExistQ $ toStandard file
-    return res
+doesFileExist file = fmap fromDoesFileExistA $ apply1 $ DoesFileExistQ $ toStandard file
+
 
 -- | Returns 'True' if the directory exists. The existence of the directory is tracked as a
 --   dependency, and if the directory is created or delete the rule will rerun in subsequent builds.
 --
 --   You should not call 'doesDirectoryExist' on directories which can be created by the build system.
 doesDirectoryExist :: FilePath -> Action Bool
-doesDirectoryExist file = do
-    DoesDirectoryExistA res <- apply1 $ DoesDirectoryExistQ $ toStandard file
-    return res
+doesDirectoryExist file = fmap fromDoesDirectoryExistA $ apply1 $ DoesDirectoryExistQ $ toStandard file
+
 
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
 --   if the variable is not set. The environment variable is tracked as a
@@ -159,9 +157,7 @@ doesDirectoryExist file = do
 -- 'cmd' \"gcc -c\" [out] (maybe [] words flags)
 -- @
 getEnv :: String -> Action (Maybe String)
-getEnv var = do
-    GetEnvA res <- apply1 $ GetEnvQ var
-    return res
+getEnv var = fmap fromGetEnvA $ apply1 $ GetEnvQ var
 
 -- | Return the value of the environment variable (second argument), or the
 --   default value (first argument) if it is not set. Similar to 'getEnv'.
@@ -231,7 +227,7 @@ getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 getDirectoryDirs :: FilePath -> Action [FilePath]
 getDirectoryDirs x = getDirAction $ GetDirDirs x
 
-getDirAction x = do GetDirectoryA y <- apply1 x; return y
+getDirAction x = fmap fromGetDirectoryA $ apply1 x
 
 getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
