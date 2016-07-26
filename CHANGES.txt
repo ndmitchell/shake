@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #419, remove --assume-old and --assume-new, which never worked
     Remove support for running Makefile scripts
     Add getShakeOptionsRules, to get ShakeOptions in Rules
     #479, improve the robustness of the Pool tests

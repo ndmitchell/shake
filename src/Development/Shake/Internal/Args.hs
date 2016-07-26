@@ -109,8 +109,6 @@ shakeArgsWith baseOpts userOptions rules = do
         (flagsError,flag1) = partitionEithers flags
         (self,user) = partitionEithers flag1
         (flagsExtra,flagsShake) = first concat $ unzip self
-        assumeNew = [x | AssumeNew x <- flagsExtra]
-        assumeOld = [x | AssumeOld x <- flagsExtra]
         progressReplays = [x | ProgressReplay x <- flagsExtra]
         progressRecords = [x | ProgressRecord x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
@@ -122,10 +120,7 @@ shakeArgsWith baseOpts userOptions rules = do
                                                   shakeLintIgnore oshakeOpts
                                }
 
-    -- error if you pass some clean and some dirty with specific flags
-    errs <- return $ errs ++ flagsError ++ ["cannot mix " ++ a ++ " and " ++ b | a:b:_ <-
-        [["`--assume-new'" | assumeNew/=[] ] ++ ["`--assume-old'" | assumeOld/=[] ] ++ ["explicit targets" | files/=[]]]]
-
+    errs <- return $ errs ++ flagsError
     when (errs /= []) $ do
         putStr $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
         showHelp
@@ -236,8 +231,6 @@ shakeOptDescrs = [fmapOptDescr (fmap snd) o | (True, o) <- shakeOptsEx]
 data Extra = ChangeDirectory FilePath
            | Version
            | NumericVersion
-           | AssumeNew FilePath
-           | AssumeOld FilePath
            | PrintDirectory Bool
            | Color
            | Help
@@ -287,7 +280,6 @@ shakeOptsEx =
     ,yes $ Option ""  ["live"] (OptArg (\x -> Right ([], \s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]})) "FILE") "List the files that are live [to live.txt]."
     ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,no  $ Option ""  ["numeric-version"] (NoArg $ Right ([NumericVersion],id)) "Print just the version number and exit."
-    ,no  $ Option "o" ["old-file","assume-old"] (ReqArg (\x -> Right ([AssumeOld x],id)) "FILE") "Consider FILE to be very old and don't remake it."
     ,yes $ Option ""  ["old-all"] (noArg $ \s -> s{shakeAssume=Just AssumeClean}) "Don't remake any files."
     ,yes $ Option ""  ["assume-skip"] (noArg $ \s -> s{shakeAssume=Just AssumeSkip}) "Don't remake any files this run."
     ,yes $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
@@ -309,7 +301,6 @@ shakeOptsEx =
     ,no  $ Option "v" ["version"] (NoArg $ Right ([Version],id)) "Print the version number and exit."
     ,no  $ Option "w" ["print-directory"] (NoArg $ Right ([PrintDirectory True],id)) "Print the current directory."
     ,no  $ Option ""  ["no-print-directory"] (NoArg $ Right ([PrintDirectory False],id)) "Turn off -w, even if it was turned on implicitly."
-    ,no  $ Option "W" ["what-if","new-file","assume-new"] (ReqArg (\x -> Right ([AssumeNew x],id)) "FILE") "Consider FILE to be infinitely new."
     ]
     where
         yes = (,) True
