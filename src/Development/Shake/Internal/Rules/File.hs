@@ -67,6 +67,7 @@ instance Show FileA where
 data FileResult = Phony (Action ()) | One (Action ())
 
 newtype FileRule = FileRule (FilePath -> Maybe FileResult)
+    deriving Typeable
 
 
 getRebuild :: ShakeOptions -> (FilePath -> Rebuild)
