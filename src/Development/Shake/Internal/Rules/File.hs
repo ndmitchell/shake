@@ -42,7 +42,7 @@ infix 1 %>, ?>, |%>, ~>
 newtype FileQ = FileQ {fromFileQ :: FileName}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show FileQ where show (FileQ x) = unpackU x
+instance Show FileQ where show (FileQ x) = fileNameToString x
 
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
@@ -102,7 +102,7 @@ storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
 -}
 storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
     where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
-          err = msg ++ "\n  " ++ unpackU (fromFileQ x)
+          err = msg ++ "\n  " ++ fileNameToString (fromFileQ x)
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
 
@@ -166,7 +166,7 @@ neededCheck xs = do
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
             "Lint checking error - 'needed' file required rebuilding"
-            [("File", Just $ unpackU file)
+            [("File", Just $ fileNameToString file)
             ,("Error",Just msg)]
             ""
 
@@ -189,7 +189,7 @@ trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
     opts <- getShakeOptions
     when (isJust $ shakeLint opts) $
-        S.trackAllow $ \(FileQ x) -> any (?== unpackU x) ps
+        S.trackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.
@@ -211,7 +211,7 @@ want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule $ \(FileQ x_) -> let x = unpackU x_ in
+root help test act = addUserRule $ \(FileQ x_) -> let x = fileNameToString x_ in
     if not $ test x then Nothing else Just $ do
         liftIO $ createDirectoryIfMissing True $ takeDirectory x
         act x
@@ -242,7 +242,7 @@ phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else 
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ \(FileQ x_) -> case act $ unpackU x_ of
+phonys act = addUserRule $ \(FileQ x_) -> case act $ fileNameToString x_ of
     Nothing -> Nothing
     Just act -> Just $ do
         act

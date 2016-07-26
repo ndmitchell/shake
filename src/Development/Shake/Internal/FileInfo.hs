@@ -65,7 +65,7 @@ data FileInfoSize; type FileSize = FileInfo FileInfoSize
 
 
 getFileHash :: FileName -> IO FileHash
-getFileHash x = withFile (unpackU x) ReadMode $ \h -> do
+getFileHash x = withFile (fileNameToString x) ReadMode $ \h -> do
     s <- LBS.hGetContents h
     let res = fileInfo $ fromIntegral $ hash s
     evaluate res
@@ -94,7 +94,7 @@ getFileInfoEx :: Bool -> FileName -> IO (Maybe (ModTime, FileSize))
 #if defined(PORTABLE)
 -- Portable fallback
 getFileInfoEx direrr x = handleBool isDoesNotExistError (const $ return Nothing) $ do
-    let file = unpackU x
+    let file = fileNameToString x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
     result (extractFileTime time) (fromIntegral size)
@@ -109,19 +109,19 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 
 #elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
-getFileInfoEx direrr x = BS.useAsCString (unpackU_ x) $ \file ->
+getFileInfoEx direrr x = BS.useAsCString (fileNameToByteString x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
         code <- peekFileAttributes fad
         let peek = do
                 code <- peekFileAttributes fad
                 if testBit code 4 then
-                    (if direrr then errorDirectoryNotFile $ unpackU x else return Nothing)
+                    (if direrr then errorDirectoryNotFile $ fileNameToString x else return Nothing)
                  else
                     join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then
             peek
-         else if requireU x then withCWString (unpackU x) $ \file -> do
+         else if BS.any (>= chr 0x80) (fileNameToByteString x) then withCWString (fileNameToString x) $ \file -> do
             res <- c_GetFileAttributesExW file 0 fad
             if res then peek else return Nothing
          else
@@ -158,9 +158,9 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 #else
 -- Unix version
 getFileInfoEx direrr x = handleBool isDoesNotExistError (const $ return Nothing) $ do
-    s <- getFileStatus $ unpackU_ x
+    s <- getFileStatus $ fileNameToByteString x
     if isDirectory s then
-        (if direrr then errorDirectoryNotFile $ unpackU x else return Nothing)
+        (if direrr then errorDirectoryNotFile $ fileNameToString x else return Nothing)
      else
         result (extractFileTime s) (fromIntegral $ fileSize s)
 

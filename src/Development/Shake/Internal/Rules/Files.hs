@@ -82,7 +82,7 @@ ps &%> act
                 _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
                 return ()
         (if all simple ps then id else priority 0.5) $
-            addUserRule $ \(FilesQ xs_) -> let xs = map (unpackU . fromFileQ) xs_ in
+            addUserRule $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                     liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
                     trackAllow xs
@@ -132,7 +132,7 @@ ps &%> act
         _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) $ fromJust $ test x
         return ()
 
-    addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (unpackU . fromFileQ) xs_ in
+    addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
@@ -154,4 +154,4 @@ getFileTimes name xs = do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ unpackU x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
+                    concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]

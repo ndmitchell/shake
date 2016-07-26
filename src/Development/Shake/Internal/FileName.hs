@@ -1,13 +1,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.FileName(
-    FileName, unpackU, unpackU_, requireU,
+    FileName,
     fileNameFromString, fileNameFromByteString,
+    fileNameToString, fileNameToByteString,
     filepathNormalise
     ) where
 
-import qualified Data.ByteString as BS (any)
-import qualified Data.ByteString.Char8 as BS hiding (any)
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Classes
 import qualified System.FilePath as Native
@@ -27,18 +27,13 @@ instance NFData FileName where
     rnf (FileName x) = x `seq` ()
 
 instance Show FileName where
-    show = unpackU
+    show = fileNameToString
 
+fileNameToString :: FileName -> FilePath
+fileNameToString = UTF8.toString . fileNameToByteString
 
-unpackU :: FileName -> String
-unpackU = UTF8.toString . unpackU_
-
-unpackU_ :: FileName -> BS.ByteString
-unpackU_ (FileName x) = x
-
-requireU :: FileName -> Bool
-requireU = BS.any (>= 0x80) . unpackU_
-
+fileNameToByteString :: FileName -> BS.ByteString
+fileNameToByteString (FileName x) = x
 
 fileNameFromString :: FilePath -> FileName
 fileNameFromString = fileNameFromByteString . UTF8.fromString
