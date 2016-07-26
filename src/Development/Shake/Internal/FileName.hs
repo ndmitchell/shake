@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.FileName(
-    FileName, packU, unpackU, packU_, unpackU_, requireU,
+    FileName, unpackU, unpackU_, requireU,
     fileNameFromString, fileNameFromByteString,
     filepathNormalise
     ) where
@@ -30,27 +30,21 @@ instance Show FileName where
     show = unpackU
 
 
-packU :: String -> FileName
-packU = packU_ . UTF8.fromString
-
 unpackU :: FileName -> String
 unpackU = UTF8.toString . unpackU_
 
 unpackU_ :: FileName -> BS.ByteString
 unpackU_ (FileName x) = x
 
-packU_ :: BS.ByteString -> FileName
-packU_ = FileName
-
 requireU :: FileName -> Bool
 requireU = BS.any (>= 0x80) . unpackU_
 
 
 fileNameFromString :: FilePath -> FileName
-fileNameFromString = fileNameFromByteString . unpackU_ . packU
+fileNameFromString = fileNameFromByteString . UTF8.fromString
 
 fileNameFromByteString :: BS.ByteString -> FileName
-fileNameFromByteString = packU_ . filepathNormalise
+fileNameFromByteString = FileName . filepathNormalise
 
 
 ---------------------------------------------------------------------
