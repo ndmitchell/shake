@@ -8,7 +8,7 @@ module Development.Shake.Util(
 import Development.Shake
 import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString.Char8 as BS
-import qualified Development.Shake.Internal.ByteString as BS
+import qualified General.Makefile as BS
 import Data.Tuple.Extra
 import Control.Applicative
 import Data.List

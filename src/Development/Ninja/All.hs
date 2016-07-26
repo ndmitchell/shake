@@ -24,8 +24,8 @@ import Prelude
 
 -- Internal imports
 import General.Timing(addTiming)
+import General.Makefile(parseMakefile)
 import Development.Shake.Internal.FileName(filepathNormalise)
-import Development.Shake.Internal.ByteString(parseMakefile)
 import Development.Shake.Internal.Errors(errorStructured)
 import Development.Shake.Internal.Rules.File(needBS, neededBS)
 import Development.Shake.Internal.Rules.OrderOnly(orderOnlyBS)

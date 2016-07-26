@@ -121,7 +121,7 @@ library
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Shake.Internal.Args
-        Development.Shake.Internal.ByteString
+        General.Makefile
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Rendezvous
         Development.Shake.Internal.Core.Rules
@@ -212,7 +212,7 @@ executable shake
         Development.Ninja.Type
         Development.Shake
         Development.Shake.Internal.Args
-        Development.Shake.Internal.ByteString
+        General.Makefile
         Development.Shake.Classes
         Development.Shake.Internal.CmdOption
         Development.Shake.Command
@@ -314,7 +314,7 @@ test-suite shake-test
         Development.Ninja.Type
         Development.Shake
         Development.Shake.Internal.Args
-        Development.Shake.Internal.ByteString
+        General.Makefile
         Development.Shake.Classes
         Development.Shake.Internal.CmdOption
         Development.Shake.Command
