@@ -239,16 +239,13 @@ contents :: FilePath -> IO [FilePath]
 contents x = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if x == "" then "." else x
 
 
-answer :: [FilePath] -> GetDirectoryA
-answer = GetDirectoryA
-
 getDir :: GetDirectoryQ -> IO GetDirectoryA
-getDir GetDir{..} = answer <$> contents dir
+getDir GetDir{..} = GetDirectoryA <$> contents dir
 
-getDir GetDirDirs{..} = fmap answer $ filterM f =<< contents dir
+getDir GetDirDirs{..} = fmap GetDirectoryA $ filterM f =<< contents dir
     where f x = IO.doesDirectoryExist $ dir </> x
 
-getDir GetDirFiles{..} = answer <$> getDirectoryFilesIO dir pat
+getDir GetDirFiles{..} = GetDirectoryA <$> getDirectoryFilesIO dir pat
 
 
 -- | A version of 'getDirectoryFiles' that is in IO, and thus untracked.
