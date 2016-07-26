@@ -175,13 +175,13 @@ neededCheck xs = do
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
 --   automatically inserted in 'LintFSATrace' mode.
 trackRead :: [FilePath] -> Action ()
-trackRead = mapM_ (trackUse . FileQ . packU)
+trackRead = mapM_ (trackUse . FileQ . fileNameFromString)
 
 -- | Track that a file was written by the action preceeding it. If 'shakeLint' is activated
 --   then these files must either be the target of this rule, or never referred to by the build system.
 --   Calls to 'trackWrite' are automatically inserted in 'LintFSATrace' mode.
 trackWrite :: [FilePath] -> Action ()
-trackWrite = mapM_ (trackChange . FileQ . packU)
+trackWrite = mapM_ (trackChange . FileQ . fileNameFromString)
 
 -- | Allow accessing a file in this rule, ignoring any 'trackRead'\/'trackWrite' calls matching
 --   the pattern.
