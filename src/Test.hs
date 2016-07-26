@@ -8,7 +8,7 @@ import Data.Maybe
 import System.Environment.Extra
 import General.Timing
 import Development.Shake.Internal.FileInfo
-import General.String
+import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Char8 as BS
 import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent

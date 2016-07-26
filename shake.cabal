@@ -160,7 +160,7 @@ library
         General.Intern
         General.ListBuilder
         General.Process
-        General.String
+        Development.Shake.Internal.FileName
         General.Template
         General.Timing
         Paths_shake
@@ -255,7 +255,7 @@ executable shake
         General.Intern
         General.ListBuilder
         General.Process
-        General.String
+        Development.Shake.Internal.FileName
         General.Template
         General.Timing
         Paths_shake
@@ -359,7 +359,7 @@ test-suite shake-test
         General.Intern
         General.ListBuilder
         General.Process
-        General.String
+        Development.Shake.Internal.FileName
         General.Template
         General.Timing
         Paths_shake

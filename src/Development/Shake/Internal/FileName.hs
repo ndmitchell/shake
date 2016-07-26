@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module General.String(
+module Development.Shake.Internal.FileName(
     BSU, packU, unpackU, packU_, unpackU_, requireU
     ) where
 

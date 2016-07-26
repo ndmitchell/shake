@@ -4,7 +4,7 @@ module Test.Type(sleep, module Test.Type) where
 import Development.Shake hiding (copyFileChanged)
 import Development.Shake.Forward
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
-import General.String
+import Development.Shake.Internal.FileName
 import General.Extra
 import Development.Shake.Internal.FileInfo
 import Development.Shake.FilePath

@@ -9,7 +9,7 @@ module Development.Shake.Internal.FileInfo(
 import Control.Exception.Extra
 import Development.Shake.Classes
 import Development.Shake.Internal.Errors
-import General.String
+import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char
 import Data.Word

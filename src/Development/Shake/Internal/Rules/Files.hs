@@ -15,7 +15,7 @@ import Prelude
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 import General.Extra
-import General.String
+import Development.Shake.Internal.FileName
 import Development.Shake.Classes
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
