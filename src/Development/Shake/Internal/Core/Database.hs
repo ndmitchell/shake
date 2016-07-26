@@ -24,8 +24,8 @@ import Development.Shake.Internal.Special
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
+import qualified Data.ByteString.Char8 as BS
 import General.Extra
-import General.String
 import qualified General.Intern as Intern
 import General.Intern(Id, Intern)
 
@@ -87,14 +87,14 @@ emptyStack = Stack [] Set.empty
 ---------------------------------------------------------------------
 -- TRACE
 
-data Trace = Trace {-# UNPACK #-} !BS {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
+data Trace = Trace {-# UNPACK #-} !BS.ByteString {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
     deriving Show
 
 instance NFData Trace where
     rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
 
 newTrace :: String -> Double -> Double -> Trace
-newTrace msg start stop = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop)
+newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFloat stop)
 
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
@@ -375,7 +375,7 @@ toReport Database{..} = do
             ,prfTraces = map fromTrace traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
-                  fromTrace (Trace a b c) = ProfileTrace (unpack a) (floatToDouble b) (floatToDouble c)
+                  fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
     return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
 
 
