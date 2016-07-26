@@ -7,7 +7,7 @@ module Development.Shake.Internal.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..)
+    FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), getRebuild
     ) where
 
 import Control.Applicative
@@ -15,6 +15,10 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
 import Data.Typeable
+import Data.Tuple.Extra
+import Data.List.Extra
+import Data.Bits
+import Data.Maybe
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 
@@ -31,9 +35,6 @@ import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.Types
 import Development.Shake.Internal.Errors
 
-import Data.Bits
-import Data.List
-import Data.Maybe
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 import System.IO.Unsafe(unsafeInterleaveIO)
 
@@ -67,9 +68,18 @@ data FileResult = Phony (Action ()) | One (Action ())
 
 newtype FileRule = FileRule (FilePath -> Maybe FileResult)
 
+
+getRebuild :: ShakeOptions -> (FilePath -> Rebuild)
+getRebuild ShakeOptions{shakeRebuild=rs}
+    | null rs = const RebuildNormal
+    | otherwise = \x -> fromMaybe RebuildNormal $ firstJust (\(r,pat) -> if pat x then Just r else Nothing) rs2
+        where rs2 = map (second (?==)) $ reverse rs
+
+
 defaultRuleFile = do
     opts@ShakeOptions{..} <- getShakeOptionsRules
     let isFileANeq (FileA x1 x2 x3) = isFileInfoNeq x1 && isFileInfoNeq x2 && isFileInfoNeq x3
+    getRebuild <- return $ getRebuild opts
 
     let run o@(FileQ x) old dirty = do
             let rebuild = do
@@ -93,10 +103,11 @@ defaultRuleFile = do
                             new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
                             let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
                             return $ RunResult b new
+            let r = getRebuild $ fileNameToString x
             case old of
-                Just old | shakeAssume == Just AssumeSkip -> return $ RunResult ChangedNothing old
-                _ | shakeAssume == Just AssumeDirty -> rebuild
-                _ | shakeAssume == Just AssumeClean -> do
+                _ | r == RebuildNow -> rebuild
+                Just old | r == RebuildLater -> return $ RunResult ChangedNothing old
+                _ | r == RebuildNever -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
