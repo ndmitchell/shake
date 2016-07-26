@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.Internal.FileInfo(
-    FileInfo, fileInfoEq, fileInfoNeq,
+    FileInfo, fileInfoEq, fileInfoNeq, isFileInfoNeq,
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo, getFileInfoNoDirErr
     ) where
@@ -52,6 +52,9 @@ instance Show (FileInfo a) where
         | x == 0 = "EQ"
         | x == 1 = "NEQ"
         | otherwise = "0x" ++ map toUpper (showHex (x-2) "")
+
+isFileInfoNeq :: FileInfo a -> Bool
+isFileInfoNeq (FileInfo x) = x == 1
 
 instance Eq (FileInfo a) where
     FileInfo a == FileInfo b
