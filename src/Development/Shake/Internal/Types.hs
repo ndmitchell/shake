@@ -230,7 +230,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: Bool)
                 | Just x <- cast x = show (x :: [FilePath])
                 | Just x <- cast x = show (x :: Maybe Assume)
-                | Just x <- cast x = show (x :: [(Rebuild, [FilePattern])])
+                | Just x <- cast x = show (x :: [(Rebuild, FilePattern)])
                 | Just x <- cast x = show (x :: Maybe Lint)
                 | Just x <- cast x = show (x :: Maybe Double)
                 | Just x <- cast x = show (x :: [(String,String)])
