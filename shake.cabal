@@ -145,7 +145,6 @@ library
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
-        Development.Shake.Internal.Special
         Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Core.Types
         Development.Shake.Internal.Types
@@ -241,7 +240,6 @@ executable shake
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
-        Development.Shake.Internal.Special
         Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Types
         Development.Shake.Internal.Value
@@ -344,7 +342,6 @@ test-suite shake-test
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
-        Development.Shake.Internal.Special
         Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Types
         Development.Shake.Util

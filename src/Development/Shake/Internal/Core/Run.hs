@@ -44,7 +44,6 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Types
 import Development.Shake.Internal.Errors
-import Development.Shake.Internal.Special
 import General.Timing
 import General.Extra
 import General.Concurrent
@@ -133,6 +132,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
                     live <- listLive database
+                    let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
                     let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
                     forM_ shakeLiveFiles $ \file -> do
                         putWhen Normal $ "Writing live list to " ++ file
