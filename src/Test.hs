@@ -119,7 +119,7 @@ filetime _ = do
     vars <- forM [a,b,c,d] $ \xs -> do
         mvar <- newEmptyMVar
         forkIO $ do
-            mapM_ (getFileInfo . packU_) xs
+            mapM_ (getFileInfo . fileNameFromByteString) xs
             putMVar mvar ()
         return $ takeMVar mvar
     sequence_ vars
