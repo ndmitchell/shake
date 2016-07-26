@@ -176,7 +176,7 @@ getEnvWithDefault def var = fromMaybe def <$> getEnv var
 --
 --   It is usually simpler to call either 'getDirectoryFiles' or 'getDirectoryDirs'.
 getDirectoryContents :: FilePath -> Action [FilePath]
-getDirectoryContents = getDirAction . GetDir
+getDirectoryContents = fmap fromGetDirectoryA . apply1 . GetDir
 
 -- | Get the files anywhere under a directory that match any of a set of patterns.
 --   For the interpretation of the patterns see '?=='. All results will be
@@ -214,7 +214,7 @@ getDirectoryContents = getDirAction . GetDir
 --
 --   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
-getDirectoryFiles dir pat = getDirAction $ GetDirFiles dir pat
+getDirectoryFiles dir pat = fmap fromGetDirectoryA $ apply1 $ GetDirFiles dir pat
 
 -- | Get the directories in a directory, not including @.@ or @..@.
 --   All directories are relative to the argument directory. The result is tracked as a
@@ -225,9 +225,8 @@ getDirectoryFiles dir pat = getDirAction $ GetDirFiles dir pat
 -- >    -- Return all directories in the /Users directory
 -- >    -- e.g. ["Emily","Henry","Neil"]
 getDirectoryDirs :: FilePath -> Action [FilePath]
-getDirectoryDirs = getDirAction . GetDirDirs
+getDirectoryDirs = fmap fromGetDirectoryA . apply1 . GetDirDirs
 
-getDirAction = fmap fromGetDirectoryA . apply1
 
 getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
