@@ -140,7 +140,6 @@ doesFileExist = fmap fromDoesFileExistA . apply1 . DoesFileExistQ . toStandard
 doesDirectoryExist :: FilePath -> Action Bool
 doesDirectoryExist = fmap fromDoesDirectoryExistA . apply1 . DoesDirectoryExistQ . toStandard
 
-
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
 --   if the variable is not set. The environment variable is tracked as a
 --   dependency, and if it changes the rule will rerun in subsequent builds.
