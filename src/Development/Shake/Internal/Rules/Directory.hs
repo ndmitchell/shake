@@ -72,45 +72,29 @@ instance Show GetEnvA where
     show (GetEnvA a) = maybe "<unset>" wrapQuote a
 
 
-data GetDirectoryQ
-    = GetDir {dir :: FilePath}
-    | GetDirFiles {dir :: FilePath, pat :: [FilePattern]}
-    | GetDirDirs {dir :: FilePath}
-    deriving (Typeable,Eq)
+newtype GetDirectoryContentsQ = GetDirectoryContentsQ FilePath
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show GetDirectoryContentsQ where
+    show (GetDirectoryContentsQ dir) = "getDirectoryContents " ++ wrapQuote dir
+
+newtype GetDirectoryFilesQ = GetDirectoryFilesQ (FilePath, [FilePattern])
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show GetDirectoryFilesQ where
+    show (GetDirectoryFilesQ (dir, pat)) = "getDirectoryFiles " ++ wrapQuote dir ++ " [" ++ unwords (map wrapQuote pat) ++ "]"
+
+newtype GetDirectoryDirsQ = GetDirectoryDirsQ FilePath
+    deriving (Typeable,Eq,Hashable,Binary,NFData)
+
+instance Show GetDirectoryDirsQ where
+    show (GetDirectoryDirsQ dir) = "getDirectoryDirs " ++ wrapQuote dir
 
 newtype GetDirectoryA = GetDirectoryA {fromGetDirectoryA :: [FilePath]}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
-instance Show GetDirectoryQ where
-    show (GetDir x) = "getDirectoryContents " ++ wrapQuote x
-    show (GetDirFiles a b) = "getDirectoryFiles " ++ wrapQuote a ++ " [" ++ unwords (map wrapQuote b) ++ "]"
-    show (GetDirDirs x) = "getDirectoryDirs " ++ wrapQuote x
-
 instance Show GetDirectoryA where
     show (GetDirectoryA xs) = unwords $ map wrapQuote xs
-
-instance NFData GetDirectoryQ where
-    rnf (GetDir a) = rnf a
-    rnf (GetDirFiles a b) = rnf a `seq` rnf b
-    rnf (GetDirDirs a) = rnf a
-
-instance Hashable GetDirectoryQ where
-    hashWithSalt salt = hashWithSalt salt . f
-        where f (GetDir x) = (0 :: Int, x, [])
-              f (GetDirFiles x y) = (1, x, y)
-              f (GetDirDirs x) = (2, x, [])
-
-instance Binary GetDirectoryQ where
-    get = do
-        i <- getWord8
-        case i of
-            0 -> GetDir <$> get
-            1 -> GetDirFiles <$> get <*> get
-            2 -> GetDirDirs <$> get
-
-    put (GetDir x) = putWord8 0 >> put x
-    put (GetDirFiles x y) = putWord8 1 >> put x >> put y
-    put (GetDirDirs x) = putWord8 2 >> put x
 
 
 queryRule :: (ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
@@ -128,7 +112,9 @@ defaultRuleDirectory = do
     queryRule (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
     queryRule (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
     queryRule (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
-    queryRule getDir
+    queryRule (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
+    queryRule (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
+    queryRule (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
@@ -176,7 +162,7 @@ getEnvWithDefault def var = fromMaybe def <$> getEnv var
 --
 --   It is usually simpler to call either 'getDirectoryFiles' or 'getDirectoryDirs'.
 getDirectoryContents :: FilePath -> Action [FilePath]
-getDirectoryContents = fmap fromGetDirectoryA . apply1 . GetDir
+getDirectoryContents = fmap fromGetDirectoryA . apply1 . GetDirectoryContentsQ
 
 -- | Get the files anywhere under a directory that match any of a set of patterns.
 --   For the interpretation of the patterns see '?=='. All results will be
@@ -214,7 +200,7 @@ getDirectoryContents = fmap fromGetDirectoryA . apply1 . GetDir
 --
 --   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
-getDirectoryFiles dir pat = fmap fromGetDirectoryA $ apply1 $ GetDirFiles dir pat
+getDirectoryFiles dir pat = fmap fromGetDirectoryA $ apply1 $ GetDirectoryFilesQ (dir,pat)
 
 -- | Get the directories in a directory, not including @.@ or @..@.
 --   All directories are relative to the argument directory. The result is tracked as a
@@ -225,7 +211,7 @@ getDirectoryFiles dir pat = fmap fromGetDirectoryA $ apply1 $ GetDirFiles dir pa
 -- >    -- Return all directories in the /Users directory
 -- >    -- e.g. ["Emily","Henry","Neil"]
 getDirectoryDirs :: FilePath -> Action [FilePath]
-getDirectoryDirs = fmap fromGetDirectoryA . apply1 . GetDirDirs
+getDirectoryDirs = fmap fromGetDirectoryA . apply1 . GetDirectoryDirsQ
 
 
 getDirectoryContentsIO :: FilePath -> IO [FilePath]
@@ -236,12 +222,6 @@ getDirectoryContentsIO dir = fmap (sort . filter (not . all (== '.'))) $ IO.getD
 getDirectoryDirsIO :: FilePath -> IO [FilePath]
 getDirectoryDirsIO dir = filterM f =<< getDirectoryContentsIO dir
     where f x = IO.doesDirectoryExist $ dir </> x
-
-
-getDir :: GetDirectoryQ -> IO GetDirectoryA
-getDir GetDir{..} = GetDirectoryA <$> getDirectoryContentsIO dir
-getDir GetDirDirs{..} = GetDirectoryA <$> getDirectoryDirsIO dir
-getDir GetDirFiles{..} = GetDirectoryA <$> getDirectoryFilesIO dir pat
 
 
 -- | A version of 'getDirectoryFiles' that is in IO, and thus untracked.
