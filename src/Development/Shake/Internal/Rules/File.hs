@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, RecordWildCards #-}
 
 module Development.Shake.Internal.Rules.File(
     need, needBS, needed, neededBS, want,
@@ -14,13 +14,15 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
+import Data.Typeable
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 
+import Development.Shake.Internal.Core.Types
+import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Action hiding (trackAllow)
 import qualified Development.Shake.Internal.Core.Action as S
-import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.FileName
 import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
@@ -61,19 +63,69 @@ instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
 
+data FileResult = Phony (Action ()) | One (Action ())
+
+newtype FileRule = FileRule (FilePath -> Maybe FileResult)
+
+defaultRuleFile = do
+    opts@ShakeOptions{..} <- getShakeOptionsRules
+    let isFileANeq (FileA x1 x2 x3) = isFileInfoNeq x1 && isFileInfoNeq x2 && isFileInfoNeq x3
+
+    let run o@(FileQ x) old dirty = do
+            let rebuild = do
+                    putWhen Chatty $ "# " ++ show o
+                    x <- return $ fileNameToString x
+                    rules <- getUserRules
+                    act <- case userRuleMatch rules $ \(FileRule f) -> f x of
+                        [] -> return Nothing
+                        [r] -> return $ Just r
+                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf o) (show o) (length rs)
+                    case act of
+                        Nothing -> do
+                            new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
+                            let b = case old of Just old | fileEqualValue opts o old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            return $ RunResult b new
+                        Just (Phony act) -> do
+                            act
+                            return $ RunResult ChangedRecomputeDiff $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
+                        Just (One act) -> do
+                            act
+                            new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
+                            let b = case old of Just old | fileEqualValue opts o old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            return $ RunResult b new
+            case old of
+                Just old | shakeAssume == Just AssumeSkip -> return $ RunResult ChangedNothing old
+                _ | shakeAssume == Just AssumeDirty -> rebuild
+                _ | shakeAssume == Just AssumeClean -> do
+                    now <- liftIO $ fileStoredValue opts o
+                    case now of
+                        Nothing -> rebuild
+                        Just now -> return $ RunResult ChangedStore now
+                Just old | not dirty, not $ isFileANeq old -> do
+                    now <- liftIO $ fileStoredValue opts o
+                    case now of
+                        Nothing -> rebuild
+                        Just now -> case fileEqualValue opts o old now of
+                            EqualCheap -> return $ RunResult ChangedNothing now
+                            EqualExpensive -> return $ RunResult ChangedStore now
+                            NotEqual -> rebuild
+                _ -> rebuild
+
+    let lint k v
+            | isFileANeq v = return Nothing
+            | otherwise = do
+                now <- fileStoredValue opts k
+                case now of
+                    Nothing -> return $ Just "<missing>"
+                    Just now -> case fileEqualValue opts k v now of
+                        EqualCheap -> return Nothing
+                        _ -> return $ Just $ show now
+    addBuiltinRule run lint
+
+
 fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
 fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
     res <- getFileInfo x
-    case res of
-        Nothing -> return Nothing
-        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
-        Just (time,size) -> do
-            hash <- unsafeInterleaveIO $ getFileHash x
-            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
-
-fileStoredValueAllowDir :: ShakeOptions -> FileQ -> IO (Maybe FileA)
-fileStoredValueAllowDir ShakeOptions{shakeChange=c} (FileQ x) = do
-    res <- getFileInfoNoDirErr x
     case res of
         Nothing -> return Nothing
         Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
@@ -105,16 +157,6 @@ storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
           err = msg ++ "\n  " ++ fileNameToString (fromFileQ x)
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
-
-defaultRuleFile :: Rules ()
-defaultRuleFile = do
-    -- the whole fileStoredValueAllowDir mess is due to checking phony timestamps
-    -- and will go away with the real builtin rules
-    opts <- getShakeOptionsRules
-    addLegacyRule defaultLegacyRule{storedValue=fileStoredValueAllowDir opts, equalValue=fileEqualValue opts}
-
-    priority 0 $ addUserRule $ \x -> Just $ do
-        liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" x :: Action FileA
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -211,12 +253,9 @@ want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule $ \(FileQ x_) -> let x = fileNameToString x_ in
-    if not $ test x then Nothing else Just $ do
-        liftIO $ createDirectoryIfMissing True $ takeDirectory x
-        act x
-        opts <- getShakeOptions
-        liftIO $ storedValueError opts False ("Error, rule " ++ help ++ " failed to build file:") $ FileQ x_
+root help test act = addUserRule $ FileRule $ \x -> if not $ test x then Nothing else Just $ One $ do
+    liftIO $ createDirectoryIfMissing True $ takeDirectory x
+    act x
 
 
 -- | Declare a Make-style phony action.  A phony target does not name
@@ -242,11 +281,8 @@ phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else 
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ \(FileQ x_) -> case act $ fileNameToString x_ of
-    Nothing -> Nothing
-    Just act -> Just $ do
-        act
-        return $ FileA fileInfoNeq fileInfoNeq fileInfoNeq
+phonys act = addUserRule $ FileRule $ \x -> fmap Phony $ act x
+
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
