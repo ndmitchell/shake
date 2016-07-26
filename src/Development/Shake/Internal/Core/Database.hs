@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(
-    Trace(..),
+    Trace(..), newTrace,
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies,
     BuildKey(..), build, Depends,
@@ -85,13 +85,19 @@ emptyStack = Stack [] Set.empty
 
 
 ---------------------------------------------------------------------
--- CENTRAL TYPES
+-- TRACE
 
 data Trace = Trace {-# UNPACK #-} !BS {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
     deriving Show
 
 instance NFData Trace where
     rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
+
+newTrace :: String -> Double -> Double -> Trace
+newTrace msg start stop = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop)
+
+---------------------------------------------------------------------
+-- CENTRAL TYPES
 
 type StatusDB = Ids.Ids (Key, Status)
 type InternDB = IORef (Intern Key)

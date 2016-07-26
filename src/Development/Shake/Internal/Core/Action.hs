@@ -22,7 +22,6 @@ import Data.Maybe
 import Data.IORef
 import Data.List
 import System.IO.Extra
-import Numeric.Extra
 
 import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad
@@ -31,7 +30,6 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
 import Development.Shake.Internal.Errors
 import General.Cleanup
-import General.String
 import Prelude
 
 
@@ -169,7 +167,7 @@ traced msg act = do
     putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
     res <- liftIO act
     stop <- liftIO globalTimestamp
-    let trace = Trace (pack msg) (doubleToFloat start) (doubleToFloat stop)
+    let trace = newTrace msg start stop
     liftIO $ evaluate $ rnf trace
     Action $ modifyRW $ \s -> s{localTraces = trace : localTraces s}
     return res
