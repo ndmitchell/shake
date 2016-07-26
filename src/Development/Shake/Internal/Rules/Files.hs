@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>), defaultRuleFiles
@@ -10,9 +11,14 @@ import Data.Maybe
 import Data.List.Extra
 import System.Directory
 import Control.Applicative
+import Data.Typeable.Extra
 import Prelude
 
+import Development.Shake.Internal.Value
+import Development.Shake.Internal.Errors
+import Development.Shake.Internal.Core.Action hiding (trackAllow)
 import Development.Shake.Internal.Core.Run
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import General.Extra
 import Development.Shake.Internal.FileName
@@ -121,7 +127,7 @@ ps &%> act
                 "Invariant broken in &?>, did not return the input (after normalisation)." :
                 inputOutput "" x ys
             Just ys | bad:_ <- filter ((/= Just ys) . normTest) ys -> error $ unlines $
-                ["Invariant broken in &?>, not equal for all arguments (after normalisation)."] ++
+                ["Invariant broken in &?>, not equalValue for all arguments (after normalisation)."] ++
                 inputOutput "1" x ys ++
                 inputOutput "2" bad (fromMaybe ["Nothing"] $ normTest bad)
             Just ys -> Just ys
@@ -155,3 +161,84 @@ getFileTimes name xs = do
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
                     concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
+
+
+
+-- | Add a builtin rule type.
+addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
+addLegacyRule b = do
+    opts <- getShakeOptionsRules
+    let (run, lint) = convertLegacy opts b
+    addBuiltinRule run lint
+
+
+-- | TODO: Docs
+data LegacyRule key value = LegacyRule
+    {storedValue :: key -> IO (Maybe value)
+        -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
+        --
+        --   As an example for filenames/timestamps, if the file exists you should return 'Just'
+        --   the timestamp, but otherwise return 'Nothing'.
+    ,equalValue :: key -> value -> value -> EqualCost
+        -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
+        --   Use 'defaultLegacyRule' if you do not want a different equality.
+    ,executeRule :: key -> Action value
+        -- ^ How to run a rule, given ways to get a UserRule.
+    }
+
+
+-- | Default 'equalValue' field.
+defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
+defaultLegacyRule = LegacyRule
+    {storedValue = \_ -> return Nothing
+    ,equalValue = \_ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
+    ,executeRule = \k -> do
+        rules :: UserRule (k -> Maybe (Action v)) <- getUserRules
+        case userRuleMatch rules ($ k) of
+                [r] -> r
+                rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy key)) (show k) (length rs)
+    }
+
+
+
+convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
+convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
+    where
+        builtinLint k v = do
+            now <- storedValue k
+            return $ case now of
+                Nothing -> Just "<missing>"
+                Just now | equalValue k v now == EqualCheap -> Nothing
+                         | otherwise -> Just $ show now
+
+        builtinRun
+            | shakeAssume == Just AssumeSkip = \k old dirtyChildren -> case old of
+                Nothing -> rebuild k old
+                Just v -> return $ RunResult ChangedNothing v
+            | shakeAssume == Just AssumeDirty = \k old _ -> rebuild k old
+            | shakeAssume == Just AssumeClean = \k old _ -> do
+                v <- liftIO $ storedValue k
+                case v of
+                    Just v -> return $ RunResult ChangedStore v
+                    Nothing -> rebuild k old
+            | otherwise = \k old dirtyChildren -> case old of
+                Just old | not dirtyChildren -> do
+                    v <- liftIO $ storedValue k
+                    case v of
+                        Just v -> do
+                            let e = equalValue k old v
+                            case e of
+                                NotEqual -> rebuild k $ Just old
+                                EqualCheap -> return $ RunResult ChangedNothing v
+                                EqualExpensive -> return $ RunResult ChangedStore v
+                        Nothing -> rebuild k $ Just old
+                _ -> rebuild k old
+            where
+                rebuild k old = do
+                    putWhen Chatty $ "# " ++ show k
+                    v <- executeRule k
+                    let c | Just old <- old, equalValue k old v /= NotEqual = ChangedRecomputeSame
+                          | otherwise = ChangedRecomputeDiff
+                    return $ RunResult c v
+
+

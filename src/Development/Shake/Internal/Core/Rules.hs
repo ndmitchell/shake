@@ -4,7 +4,6 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    LegacyRule(..), addLegacyRule, defaultLegacyRule, EqualCost(..),
     addBuiltinRule,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
@@ -26,12 +25,9 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import System.IO.Extra
 import Data.Monoid
-import General.Extra
 import General.ListBuilder
 
-import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
-import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
@@ -117,41 +113,6 @@ import Prelude
 --   'storedValue' should return 'Just' with a sentinel value
 --   and 'equalValue' should always return 'EqualCheap' for that sentinel.
 
--- | TODO: Docs
-data LegacyRule key value = LegacyRule
-    {storedValue :: key -> IO (Maybe value)
-        -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
-        --
-        --   As an example for filenames/timestamps, if the file exists you should return 'Just'
-        --   the timestamp, but otherwise return 'Nothing'.
-    ,equalValue :: key -> value -> value -> EqualCost
-        -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
-        --   Use 'defaultLegacyRule' if you do not want a different equality.
-    ,executeRule :: key -> Action value
-        -- ^ How to run a rule, given ways to get a UserRule.
-    }
-
-
--- | An equality check and a cost.
-data EqualCost
-    = EqualCheap -- ^ The equality check was cheap.
-    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
-    | NotEqual -- ^ The values are not equal.
-      deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
-
-
--- | Default 'equalValue' field.
-defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
-defaultLegacyRule = LegacyRule
-    {storedValue = \_ -> return Nothing
-    ,equalValue = \_ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
-    ,executeRule = \k -> do
-        rules :: UserRule (k -> Maybe (Action v)) <- getUserRules
-        case userRuleMatch rules ($ k) of
-                [r] -> r
-                rs  -> liftIO $ errorMultipleRulesMatch (typeRep (Proxy :: Proxy key)) (show k) (length rs)
-    }
-
 
 getUserRules :: Typeable a => Action (UserRule a)
 getUserRules = f where
@@ -228,15 +189,6 @@ instance Monoid a => Monoid (Rules a) where
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_ $ UserRule r}
 
-
--- | Add a builtin rule type.
-addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
-addLegacyRule (b :: LegacyRule key value) = do
-    opts <- getShakeOptionsRules
-    liftIO $ registerWitness (Proxy :: Proxy key) (Proxy :: Proxy value)
-    let k = typeRep (Proxy :: Proxy key)
-    newRules mempty{builtinRules = Map.singleton k $ convertLegacy opts b}
-
 -- | TODO: Document me.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRun key value -> BuiltinLint key value -> Rules ()
 addBuiltinRule (run :: BuiltinRun key value) lint = do
@@ -311,52 +263,3 @@ action a = newRules mempty{actions=newListBuilder $ void a}
 --   command line specification of what to build.
 withoutActions :: Rules () -> Rules ()
 withoutActions = modifyRules $ \x -> x{actions=mempty}
-
-
-convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> BuiltinRule
-convertLegacy opt@ShakeOptions{..} LegacyRule{..} = BuiltinRule{..}
-    where
-        builtinResult = typeRep (Proxy :: Proxy v)
-
-        stored = fmap (fmap newValue) . storedValue . fromKey
-        equal k v1 v2 = equalValue (fromKey k) (fromValue v1) (fromValue v2)
-        exec = fmap newValue . executeRule . fromKey
-
-        builtinLint k v = do
-            now <- stored k
-            return $ case now of
-                Nothing -> Just "<missing>"
-                Just now | equal k v now == EqualCheap -> Nothing
-                         | otherwise -> Just $ show now
-
-        builtinRun
-            | shakeAssume == Just AssumeSkip = \k old dirtyChildren -> case old of
-                Nothing -> rebuild k old
-                Just v -> return $ RunResult ChangedNothing v
-            | shakeAssume == Just AssumeDirty = \k old _ -> rebuild k old
-            | shakeAssume == Just AssumeClean = \k old _ -> do
-                v <- liftIO $ stored k
-                case v of
-                    Just v -> return $ RunResult ChangedStore v
-                    Nothing -> rebuild k old
-            | otherwise = \k old dirtyChildren -> case old of
-                Just old | not dirtyChildren -> do
-                    v <- liftIO $ stored k
-                    case v of
-                        Just v -> do
-                            let e = equal k old v
-                            diagnostic <- Action $ getsRO globalDiagnostic
-                            liftIO $ diagnostic $ return $ "compare " ++ show e ++ " for " ++ showBracket k ++ " " ++ showBracket old
-                            case e of
-                                NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ RunResult ChangedNothing v
-                                EqualExpensive -> return $ RunResult ChangedStore v
-                        Nothing -> rebuild k $ Just old
-                _ -> rebuild k old
-            where
-                rebuild k old = do
-                    putWhen Chatty $ "# " ++ show k
-                    v <- exec k
-                    let c | Just old <- old, equal k old v /= NotEqual = ChangedRecomputeSame
-                          | otherwise = ChangedRecomputeDiff
-                    return $ RunResult c v

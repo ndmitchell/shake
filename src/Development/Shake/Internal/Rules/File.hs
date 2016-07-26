@@ -7,7 +7,7 @@ module Development.Shake.Internal.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    FileQ(..), FileA, fileStoredValue, fileEqualValue
+    FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..)
     ) where
 
 import Control.Applicative
@@ -132,6 +132,14 @@ fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
         Just (time,size) -> do
             hash <- unsafeInterleaveIO $ getFileHash x
             return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+
+
+-- | An equality check and a cost.
+data EqualCost
+    = EqualCheap -- ^ The equality check was cheap.
+    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
+    | NotEqual -- ^ The values are not equal.
+      deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
 
 fileEqualValue :: ShakeOptions -> FileQ -> FileA -> FileA -> EqualCost
 fileEqualValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
