@@ -83,7 +83,7 @@ defaultRuleFile = do
                     case act of
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                            let b = case old of Just old | fileEqualValue opts o old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
                             return $ RunResult b new
                         Just (Phony act) -> do
                             act
@@ -91,7 +91,7 @@ defaultRuleFile = do
                         Just (One act) -> do
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
-                            let b = case old of Just old | fileEqualValue opts o old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
                             return $ RunResult b new
             case old of
                 Just old | shakeAssume == Just AssumeSkip -> return $ RunResult ChangedNothing old
@@ -105,7 +105,7 @@ defaultRuleFile = do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
-                        Just now -> case fileEqualValue opts o old now of
+                        Just now -> case fileEqualValue opts old now of
                             EqualCheap -> return $ RunResult ChangedNothing now
                             EqualExpensive -> return $ RunResult ChangedStore now
                             NotEqual -> rebuild
@@ -117,7 +117,7 @@ defaultRuleFile = do
                 now <- fileStoredValue opts k
                 case now of
                     Nothing -> return $ Just "<missing>"
-                    Just now -> case fileEqualValue opts k v now of
+                    Just now -> case fileEqualValue opts v now of
                         EqualCheap -> return Nothing
                         _ -> return $ Just $ show now
     addBuiltinRule run lint
@@ -141,8 +141,8 @@ data EqualCost
     | NotEqual -- ^ The values are not equal.
       deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
 
-fileEqualValue :: ShakeOptions -> FileQ -> FileA -> FileA -> EqualCost
-fileEqualValue ShakeOptions{shakeChange=c} q (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+fileEqualValue :: ShakeOptions -> FileA -> FileA -> EqualCost
+fileEqualValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
     ChangeModtime -> bool $ x1 == y1
     ChangeDigest -> bool $ x2 == y2 && x3 == y3
     ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
@@ -211,7 +211,7 @@ neededCheck xs = do
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts (FileQ x) a b) a == NotEqual]
+              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured

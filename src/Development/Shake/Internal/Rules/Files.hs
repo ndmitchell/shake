@@ -48,10 +48,10 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (wrapQuote . show) x
 filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)
 filesStoredValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (fileStoredValue opts) xs
 
-filesEqualValue :: ShakeOptions -> FilesQ -> FilesA -> FilesA -> EqualCost
-filesEqualValue opts (FilesQ qs) (FilesA xs) (FilesA ys)
-    | let n = length qs in n /= length xs || n /= length ys = NotEqual
-    | otherwise = foldr and_ EqualCheap (zipWith3 (fileEqualValue opts) qs xs ys)
+filesEqualValue :: ShakeOptions -> FilesA -> FilesA -> EqualCost
+filesEqualValue opts (FilesA xs) (FilesA ys)
+    | length xs /= length ys = NotEqual
+    | otherwise = foldr and_ EqualCheap (zipWith (fileEqualValue opts) xs ys)
         where and_ NotEqual x = NotEqual
               and_ EqualCheap x = x
               and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
@@ -179,7 +179,7 @@ data LegacyRule key value = LegacyRule
         --
         --   As an example for filenames/timestamps, if the file exists you should return 'Just'
         --   the timestamp, but otherwise return 'Nothing'.
-    ,equalValue :: key -> value -> value -> EqualCost
+    ,equalValue :: value -> value -> EqualCost
         -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
         --   Use 'defaultLegacyRule' if you do not want a different equality.
     ,executeRule :: key -> Action value
@@ -191,7 +191,7 @@ data LegacyRule key value = LegacyRule
 defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
 defaultLegacyRule = LegacyRule
     {storedValue = \_ -> return Nothing
-    ,equalValue = \_ v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
+    ,equalValue = \v1 v2 -> if v1 == v2 then EqualCheap else NotEqual
     ,executeRule = \k -> do
         rules :: UserRule (k -> Maybe (Action v)) <- getUserRules
         case userRuleMatch rules ($ k) of
@@ -208,7 +208,7 @@ convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
             now <- storedValue k
             return $ case now of
                 Nothing -> Just "<missing>"
-                Just now | equalValue k v now == EqualCheap -> Nothing
+                Just now | equalValue v now == EqualCheap -> Nothing
                          | otherwise -> Just $ show now
 
         builtinRun
@@ -226,7 +226,7 @@ convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
                     v <- liftIO $ storedValue k
                     case v of
                         Just v -> do
-                            let e = equalValue k old v
+                            let e = equalValue old v
                             case e of
                                 NotEqual -> rebuild k $ Just old
                                 EqualCheap -> return $ RunResult ChangedNothing v
@@ -237,7 +237,7 @@ convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
                 rebuild k old = do
                     putWhen Chatty $ "# " ++ show k
                     v <- executeRule k
-                    let c | Just old <- old, equalValue k old v /= NotEqual = ChangedRecomputeSame
+                    let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ RunResult c v
 
