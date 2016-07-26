@@ -3,7 +3,7 @@
 module Development.Shake.Internal.FileInfo(
     FileInfo, fileInfoEq, fileInfoNeq, isFileInfoNeq,
     FileSize, ModTime, FileHash,
-    getFileHash, getFileInfo, getFileInfoNoDirErr
+    getFileHash, getFileInfo
     ) where
 
 import Control.Exception.Extra
@@ -86,17 +86,10 @@ result x y = do
 
 
 getFileInfo :: FileName -> IO (Maybe (ModTime, FileSize))
-getFileInfo = getFileInfoEx True
-
-getFileInfoNoDirErr :: FileName -> IO (Maybe (ModTime, FileSize))
-getFileInfoNoDirErr = getFileInfoEx False
-
-
-getFileInfoEx :: Bool -> FileName -> IO (Maybe (ModTime, FileSize))
 
 #if defined(PORTABLE)
 -- Portable fallback
-getFileInfoEx direrr x = handleBool isDoesNotExistError (const $ return Nothing) $ do
+getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     let file = fileNameToString x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
@@ -112,14 +105,14 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 
 #elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
-getFileInfoEx direrr x = BS.useAsCString (fileNameToByteString x) $ \file ->
+getFileInfo x = BS.useAsCString (fileNameToByteString x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
         code <- peekFileAttributes fad
         let peek = do
                 code <- peekFileAttributes fad
                 if testBit code 4 then
-                    (if direrr then errorDirectoryNotFile $ fileNameToString x else return Nothing)
+                    errorDirectoryNotFile $ fileNameToString x
                  else
                     join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then
@@ -160,10 +153,10 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 
 #else
 -- Unix version
-getFileInfoEx direrr x = handleBool isDoesNotExistError (const $ return Nothing) $ do
+getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     s <- getFileStatus $ fileNameToByteString x
     if isDirectory s then
-        (if direrr then errorDirectoryNotFile $ fileNameToString x else return Nothing)
+        errorDirectoryNotFile $ fileNameToString x
      else
         result (extractFileTime s) (fromIntegral $ fileSize s)
 
