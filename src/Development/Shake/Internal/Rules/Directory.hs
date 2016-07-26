@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards, FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 -- | Both System.Directory and System.Environment wrappers
 module Development.Shake.Internal.Rules.Directory(
