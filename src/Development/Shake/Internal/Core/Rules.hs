@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
     LegacyRule(..), addLegacyRule, defaultLegacyRule, EqualCost(..),
     addBuiltinRule,
-    getShakeOptionsRules,
+    getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
     ) where
