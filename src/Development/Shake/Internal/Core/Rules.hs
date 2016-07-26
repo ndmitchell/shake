@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    LegacyRule(..), addLegacyRule, defaultLegacyRule,
+    LegacyRule(..), addLegacyRule, defaultLegacyRule, EqualCost(..),
     addBuiltinRule,
     getShakeOptionsRules,
     getUserRules, addUserRule, alternatives, priority,
@@ -130,6 +130,15 @@ data LegacyRule key value = LegacyRule
     ,executeRule :: key -> Action value
         -- ^ How to run a rule, given ways to get a UserRule.
     }
+
+
+-- | An equality check and a cost.
+data EqualCost
+    = EqualCheap -- ^ The equality check was cheap.
+    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
+    | NotEqual -- ^ The values are not equal.
+      deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
+
 
 -- | Default 'equalValue' field.
 defaultLegacyRule :: forall key value . (Typeable key, Typeable value, Show key, Eq value) => LegacyRule key value
