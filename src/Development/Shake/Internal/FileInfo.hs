@@ -64,7 +64,7 @@ data FileInfoMod ; type ModTime  = FileInfo FileInfoMod
 data FileInfoSize; type FileSize = FileInfo FileInfoSize
 
 
-getFileHash :: BSU -> IO FileHash
+getFileHash :: FileName -> IO FileHash
 getFileHash x = withFile (unpackU x) ReadMode $ \h -> do
     s <- LBS.hGetContents h
     let res = fileInfo $ fromIntegral $ hash s
@@ -82,14 +82,14 @@ result x y = do
     return $! Just (x, y)
 
 
-getFileInfo :: BSU -> IO (Maybe (ModTime, FileSize))
+getFileInfo :: FileName -> IO (Maybe (ModTime, FileSize))
 getFileInfo = getFileInfoEx True
 
-getFileInfoNoDirErr :: BSU -> IO (Maybe (ModTime, FileSize))
+getFileInfoNoDirErr :: FileName -> IO (Maybe (ModTime, FileSize))
 getFileInfoNoDirErr = getFileInfoEx False
 
 
-getFileInfoEx :: Bool -> BSU -> IO (Maybe (ModTime, FileSize))
+getFileInfoEx :: Bool -> FileName -> IO (Maybe (ModTime, FileSize))
 
 #if defined(PORTABLE)
 -- Portable fallback

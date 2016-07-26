@@ -39,7 +39,7 @@ import System.IO.Unsafe(unsafeInterleaveIO)
 infix 1 %>, ?>, |%>, ~>
 
 
-newtype FileQ = FileQ {fromFileQ :: BSU}
+newtype FileQ = FileQ {fromFileQ :: FileName}
     deriving (Typeable,Eq,Hashable,Binary,NFData)
 
 instance Show FileQ where show (FileQ x) = unpackU x
@@ -158,7 +158,7 @@ neededBS xs = do
     if isNothing $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
 
 
-neededCheck :: [BSU] -> Action ()
+neededCheck :: [FileName] -> Action ()
 neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
     opts <- getShakeOptions
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs

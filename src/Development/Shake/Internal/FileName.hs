@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.FileName(
-    BSU, packU, unpackU, packU_, unpackU_, requireU,
+    FileName, packU, unpackU, packU_, unpackU_, requireU,
     filepathNormalise
     ) where
 
@@ -19,29 +19,29 @@ import Data.List
 -- Mostly because ByteString does not have an NFData instance in GHC 7.4
 
 -- | UTF8 ByteString
-newtype BSU = BSU BS.ByteString
+newtype FileName = FileName BS.ByteString
     deriving (Hashable, Binary, Eq)
 
-instance NFData BSU where
-    rnf (BSU x) = x `seq` ()
+instance NFData FileName where
+    rnf (FileName x) = x `seq` ()
 
-instance Show BSU where
+instance Show FileName where
     show = unpackU
 
 
-packU :: String -> BSU
+packU :: String -> FileName
 packU = packU_ . UTF8.fromString
 
-unpackU :: BSU -> String
+unpackU :: FileName -> String
 unpackU = UTF8.toString . unpackU_
 
-unpackU_ :: BSU -> BS.ByteString
-unpackU_ (BSU x) = x
+unpackU_ :: FileName -> BS.ByteString
+unpackU_ (FileName x) = x
 
-packU_ :: BS.ByteString -> BSU
-packU_ = BSU
+packU_ :: BS.ByteString -> FileName
+packU_ = FileName
 
-requireU :: BSU -> Bool
+requireU :: FileName -> Bool
 requireU = BS.any (>= 0x80) . unpackU_
 
 
