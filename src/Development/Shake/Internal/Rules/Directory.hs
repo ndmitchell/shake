@@ -136,7 +136,7 @@ defaultRuleDirectory = do
 --
 --   You should not call 'doesFileExist' on files which can be created by the build system.
 doesFileExist :: FilePath -> Action Bool
-doesFileExist file = fmap fromDoesFileExistA $ apply1 $ DoesFileExistQ $ toStandard file
+doesFileExist = fmap fromDoesFileExistA . apply1 . DoesFileExistQ . toStandard
 
 
 -- | Returns 'True' if the directory exists. The existence of the directory is tracked as a
@@ -144,7 +144,7 @@ doesFileExist file = fmap fromDoesFileExistA $ apply1 $ DoesFileExistQ $ toStand
 --
 --   You should not call 'doesDirectoryExist' on directories which can be created by the build system.
 doesDirectoryExist :: FilePath -> Action Bool
-doesDirectoryExist file = fmap fromDoesDirectoryExistA $ apply1 $ DoesDirectoryExistQ $ toStandard file
+doesDirectoryExist = fmap fromDoesDirectoryExistA . apply1 . DoesDirectoryExistQ . toStandard
 
 
 -- | Return 'Just' the value of the environment variable, or 'Nothing'
@@ -157,7 +157,7 @@ doesDirectoryExist file = fmap fromDoesDirectoryExistA $ apply1 $ DoesDirectoryE
 -- 'cmd' \"gcc -c\" [out] (maybe [] words flags)
 -- @
 getEnv :: String -> Action (Maybe String)
-getEnv var = fmap fromGetEnvA $ apply1 $ GetEnvQ var
+getEnv = fmap fromGetEnvA . apply1 . GetEnvQ
 
 -- | Return the value of the environment variable (second argument), or the
 --   default value (first argument) if it is not set. Similar to 'getEnv'.
@@ -176,7 +176,7 @@ getEnvWithDefault def var = fromMaybe def <$> getEnv var
 --
 --   It is usually simpler to call either 'getDirectoryFiles' or 'getDirectoryDirs'.
 getDirectoryContents :: FilePath -> Action [FilePath]
-getDirectoryContents x = getDirAction $ GetDir x
+getDirectoryContents = getDirAction . GetDir
 
 -- | Get the files anywhere under a directory that match any of a set of patterns.
 --   For the interpretation of the patterns see '?=='. All results will be
@@ -214,7 +214,7 @@ getDirectoryContents x = getDirAction $ GetDir x
 --
 --   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
-getDirectoryFiles x f = getDirAction $ GetDirFiles x f
+getDirectoryFiles dir pat = getDirAction $ GetDirFiles dir pat
 
 -- | Get the directories in a directory, not including @.@ or @..@.
 --   All directories are relative to the argument directory. The result is tracked as a
@@ -225,9 +225,9 @@ getDirectoryFiles x f = getDirAction $ GetDirFiles x f
 -- >    -- Return all directories in the /Users directory
 -- >    -- e.g. ["Emily","Henry","Neil"]
 getDirectoryDirs :: FilePath -> Action [FilePath]
-getDirectoryDirs x = getDirAction $ GetDirDirs x
+getDirectoryDirs = getDirAction . GetDirDirs
 
-getDirAction x = fmap fromGetDirectoryA $ apply1 x
+getDirAction = fmap fromGetDirectoryA . apply1
 
 getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
