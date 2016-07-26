@@ -91,7 +91,7 @@ data Trace = Trace {-# UNPACK #-} !BS.ByteString {-# UNPACK #-} !Float {-# UNPAC
     deriving Show
 
 instance NFData Trace where
-    rnf (Trace a b c) = rnf a `seq` rnf b `seq` rnf c
+    rnf x = x `seq` () -- all strict atomic fields
 
 newTrace :: String -> Double -> Double -> Trace
 newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFloat stop)
