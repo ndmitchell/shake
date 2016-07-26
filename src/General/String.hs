@@ -1,7 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module General.String(
-    BS, pack, unpack, pack_, unpack_,
     BSU, packU, unpackU, packU_, unpackU_, requireU
     ) where
 
@@ -38,18 +37,6 @@ instance NFData BSU where
 instance Show BSU where
     show = unpackU
 
-
-pack :: String -> BS
-pack = pack_ . BS.pack
-
-unpack :: BS -> String
-unpack = BS.unpack . unpack_
-
-pack_ :: BS.ByteString -> BS
-pack_ = BS
-
-unpack_ :: BS -> BS.ByteString
-unpack_ (BS x) = x
 
 packU :: String -> BSU
 packU = packU_ . UTF8.fromString
