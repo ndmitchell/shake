@@ -22,8 +22,10 @@ import qualified Data.HashSet as Set
 import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.Internal.FilePattern
@@ -111,20 +113,22 @@ instance Binary GetDirectoryQ where
     put (GetDirDirs x) = putWord8 2 >> put x
 
 
+queryRule :: (ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
+queryRule query = addBuiltinRule
+    (\k old _ -> liftIO $ do
+        new <- query k
+        return $ RunResult (if Just new == old then ChangedNothing else ChangedRecomputeDiff) new)
+    (\k old -> do
+        new <- query k
+        return $ if old == new then Nothing else Just $ show new)
+
+
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    addLegacyRule defaultLegacyRule
-        {storedValue = \(DoesFileExistQ x) -> Just . DoesFileExistA <$> IO.doesFileExist x
-        ,executeRule = \(DoesFileExistQ x) -> liftIO $ DoesFileExistA <$> IO.doesFileExist x}
-    addLegacyRule defaultLegacyRule
-        {storedValue = \(DoesDirectoryExistQ x) -> Just . DoesDirectoryExistA <$> IO.doesDirectoryExist x
-        ,executeRule = \(DoesDirectoryExistQ x) -> liftIO $ DoesDirectoryExistA <$> IO.doesDirectoryExist x}
-    addLegacyRule defaultLegacyRule
-        {storedValue = \(GetEnvQ x) -> Just . GetEnvA <$> IO.lookupEnv x
-        ,executeRule = \(GetEnvQ x) -> liftIO $ GetEnvA <$> IO.lookupEnv x}
-    addLegacyRule defaultLegacyRule
-        {storedValue = \x -> Just <$> getDir x
-        ,executeRule = \x -> liftIO $ getDir x}
+    queryRule (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
+    queryRule (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
+    queryRule (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
+    queryRule getDir
 
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
