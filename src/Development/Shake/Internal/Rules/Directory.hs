@@ -238,13 +238,14 @@ getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- but raises an error on Linux. We smooth out the difference.
 getDirectoryContentsIO dir = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if dir == "" then "." else dir
 
+getDirectoryDirsIO :: FilePath -> IO [FilePath]
+getDirectoryDirsIO dir = filterM f =<< getDirectoryContentsIO dir
+    where f x = IO.doesDirectoryExist $ dir </> x
+
 
 getDir :: GetDirectoryQ -> IO GetDirectoryA
 getDir GetDir{..} = GetDirectoryA <$> getDirectoryContentsIO dir
-
-getDir GetDirDirs{..} = fmap GetDirectoryA $ filterM f =<< getDirectoryContentsIO dir
-    where f x = IO.doesDirectoryExist $ dir </> x
-
+getDir GetDirDirs{..} = GetDirectoryA <$> getDirectoryDirsIO dir
 getDir GetDirFiles{..} = GetDirectoryA <$> getDirectoryFilesIO dir pat
 
 
