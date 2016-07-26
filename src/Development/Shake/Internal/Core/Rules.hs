@@ -228,7 +228,7 @@ addLegacyRule (b :: LegacyRule key value) = do
     let k = typeRep (Proxy :: Proxy key)
     newRules mempty{builtinRules = Map.singleton k $ convertLegacy opts b}
 
-
+-- | TODO: Document me.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRun key value -> BuiltinLint key value -> Rules ()
 addBuiltinRule (run :: BuiltinRun key value) lint = do
     let k = Proxy :: Proxy key

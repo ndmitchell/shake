@@ -34,6 +34,7 @@ import Prelude
 newtype Action a = Action {fromAction :: RAW Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO, Typeable)
 
+-- | How has a rule changed.
 data RunChanged
     = ChangedNothing -- ^ Nothing has changed
     | ChangedStore -- ^ The value in the Store has changed, but in a way that should be considered equal
@@ -44,6 +45,7 @@ data RunChanged
 instance NFData RunChanged where rnf x = x `seq` ()
 
 
+-- | The result of 'BuiltinRun'.
 data RunResult value = RunResult
     {runChanged :: RunChanged
         -- ^ Have the required dependencies of this action changed? Use 'True' to use the dependencies this time
