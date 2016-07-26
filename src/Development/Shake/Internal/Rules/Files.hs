@@ -225,5 +225,3 @@ convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
                     let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ RunResult c v
-
-
