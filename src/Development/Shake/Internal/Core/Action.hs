@@ -225,7 +225,7 @@ trackCheckUsed = do
                 ""
 
 
--- | Track that a key has been changed by the action preceeding it.
+-- | Track that a key has been changed by the action preceding it.
 trackChange :: ShakeValue key => key -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
@@ -252,5 +252,3 @@ trackAllow (test :: key -> Bool) = Action $ modifyRW $ \s -> s{localTrackAllows 
     where
         tk = typeRep (Proxy :: Proxy key)
         f k = typeKey k == tk && test (fromKey k)
-
-
