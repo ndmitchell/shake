@@ -59,15 +59,16 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
-    addLegacyRule LegacyRule
-        {storedValue=filesStoredValue opts
-        ,equalValue=filesEqualValue opts
-        ,executeRule = \(k :: FilesQ) -> do
-            rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
-            case userRuleMatch rules ($ k) of
-                    [r] -> r
-                    rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
-        }
+    let (run, lint) = convertLegacy LegacyRule
+            {storedValue=filesStoredValue opts
+            ,equalValue=filesEqualValue opts
+            ,executeRule = \(k :: FilesQ) -> do
+                rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
+                case userRuleMatch rules ($ k) of
+                        [r] -> r
+                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
+            }
+    addBuiltinRule run lint
 
 
 
@@ -170,14 +171,6 @@ getFileTimes name xs = do
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
                     concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
-
-
-
--- | Add a builtin rule type.
-addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
-addLegacyRule b = do
-    let (run, lint) = convertLegacy b
-    addBuiltinRule run lint
 
 
 -- | TODO: Docs
