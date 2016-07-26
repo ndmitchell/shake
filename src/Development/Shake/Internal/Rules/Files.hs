@@ -176,8 +176,7 @@ getFileTimes name xs = do
 -- | Add a builtin rule type.
 addLegacyRule :: (ShakeValue key, ShakeValue value) => LegacyRule key value -> Rules ()
 addLegacyRule b = do
-    opts <- getShakeOptionsRules
-    let (run, lint) = convertLegacy opts b
+    let (run, lint) = convertLegacy b
     addBuiltinRule run lint
 
 
@@ -196,8 +195,8 @@ data LegacyRule key value = LegacyRule
     }
 
 
-convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => ShakeOptions -> LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
-convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
+convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
+convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
     where
         builtinLint k v = do
             now <- storedValue k
