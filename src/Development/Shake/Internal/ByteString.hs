@@ -1,5 +1,5 @@
 
-module Development.Shake.Internal.ByteString(parseMakefile, linesCR) where
+module Development.Shake.Internal.ByteString(parseMakefile) where
 
 import qualified Data.ByteString.Char8 as BS
 import Data.Char
