@@ -206,17 +206,7 @@ convertLegacy opt@ShakeOptions{..} LegacyRule{..} = (builtinRun, builtinLint)
                 Just now | equalValue v now == EqualCheap -> Nothing
                          | otherwise -> Just $ show now
 
-        builtinRun
-            | shakeAssume == Just AssumeSkip = \k old dirtyChildren -> case old of
-                Nothing -> rebuild k old
-                Just v -> return $ RunResult ChangedNothing v
-            | shakeAssume == Just AssumeDirty = \k old _ -> rebuild k old
-            | shakeAssume == Just AssumeClean = \k old _ -> do
-                v <- liftIO $ storedValue k
-                case v of
-                    Just v -> return $ RunResult ChangedStore v
-                    Nothing -> rebuild k old
-            | otherwise = \k old dirtyChildren -> case old of
+        builtinRun k old dirtyChildren = case old of
                 Just old | not dirtyChildren -> do
                     v <- liftIO $ storedValue k
                     case v of
