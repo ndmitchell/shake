@@ -65,8 +65,8 @@ main = do
             -- Diagnostics
             cmd "ls -l .shake* build/.ninja*"
             cmd "shake -VV"
-            shakeNone <- cmd "shake --always-make --skip-commands --timings"
-            putStrLn $ "--always-make --skip-commands took " ++ ms shakeNone
+            shakeNone <- cmd "shake --rebuild-now --skip-commands --timings"
+            putStrLn $ "--rebuild-now --skip-commands took " ++ ms shakeNone
 
             putStrLn $ "Ninja was " ++ ms ninjaFull ++ " then " ++ ms ninjaZero
             putStrLn $ "Shake was " ++ ms shakeFull ++ " then " ++ ms shakeZero
