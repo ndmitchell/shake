@@ -40,7 +40,7 @@ Shake is a Haskell package focused on providing build-system functionality. Sinc
 
 #### Q: Why is there a `shake` executable?
 
-Most users will write their own Haskell file and compile it to produce an executable that is their build tool. The `shake` executable is there to [run the demo](Demo.md), run [Ninja build files](Ninja.md) and will also run a `Shakefile.hs` if present. (The `shake` executable can also run a very small subset Makefiles -- but more as a demo, not a supported feature.)
+Most users will write their own Haskell file and compile it to produce an executable that is their build tool. The `shake` executable is there to [run the demo](Demo.md), run [Ninja build files](Ninja.md) and will also run a `Shakefile.hs` if present.
 
 #### Q: Can file patterns overlap?
 

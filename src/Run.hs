@@ -1,13 +1,11 @@
 
 module Run(main) where
 
-import Development.Make.All
 import Development.Ninja.All
 import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
 import General.Timing(resetTimings)
-import Control.Applicative
 import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
@@ -15,7 +13,6 @@ import qualified System.Directory as IO
 import System.Console.GetOpt
 import System.Process
 import System.Exit
-import Prelude
 
 
 main :: IO ()
@@ -38,14 +35,11 @@ main = do
                     makefile <- case reverse [x | UseMakefile x <- opts] of
                         x:_ -> return x
                         _ -> do
-                            res <- findFile ["makefile","Makefile","build.ninja"]
+                            res <- findFile ["build.ninja"]
                             case res of
                                 Just x -> return x
-                                Nothing -> errorIO "Could not find `makefile', `Makefile' or `build.ninja'"
-                    case () of
-                        _ | takeExtension makefile == ".ninja" -> runNinja makefile targets tool
-                        _ | isJust tool -> error "--tool flag is not supported without a .ninja Makefile"
-                        _ -> Just <$> runMakefile makefile targets
+                                Nothing -> errorIO "Could not find `build.ninja'"
+                    runNinja makefile targets tool
 
 
 data Flag = UseMakefile FilePath

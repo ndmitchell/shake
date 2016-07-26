@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Remove support for running Makefile scripts
     Add getShakeOptionsRules, to get ShakeOptions in Rules
     #479, improve the robustness of the Pool tests
     #481, document how to raise errors in Action

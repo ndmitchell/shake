@@ -39,10 +39,6 @@ extra-source-files:
     src/Test/C/constants.c
     src/Test/C/constants.h
     src/Test/C/main.c
-    src/Test/MakeTutor/Makefile
-    src/Test/MakeTutor/hellofunc.c
-    src/Test/MakeTutor/hellomake.c
-    src/Test/MakeTutor/hellomake.h
     src/Test/Tar/list.txt
     src/Test/Ninja/*.ninja
     src/Test/Ninja/subdir/*.ninja
@@ -209,11 +205,6 @@ executable shake
         build-depends: unix
 
     other-modules:
-        Development.Make.All
-        Development.Make.Env
-        Development.Make.Parse
-        Development.Make.Rules
-        Development.Make.Type
         Development.Ninja.All
         Development.Ninja.Env
         Development.Ninja.Lexer
@@ -316,11 +307,6 @@ test-suite shake-test
         build-depends: unix
 
     other-modules:
-        Development.Make.All
-        Development.Make.Env
-        Development.Make.Parse
-        Development.Make.Rules
-        Development.Make.Type
         Development.Ninja.All
         Development.Ninja.Env
         Development.Ninja.Lexer
@@ -397,7 +383,6 @@ test-suite shake-test
         Test.Journal
         Test.Lint
         Test.Live
-        Test.Makefile
         Test.Manual
         Test.Match
         Test.Monad
