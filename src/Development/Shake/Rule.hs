@@ -3,9 +3,11 @@
 --   Most users will find the built-in set of rules sufficient.
 module Development.Shake.Rule(
     LegacyRule(..), EqualCost(..), addLegacyRule, defaultLegacyRule, addUserRule, apply, apply1,
+    addBuiltinRule, RunResult(..), RunChanged(..),
     trackUse, trackChange, trackAllow
     ) where
 
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
