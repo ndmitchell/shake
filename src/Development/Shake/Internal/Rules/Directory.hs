@@ -236,7 +236,7 @@ getDirAction x = do GetDirectoryA y <- apply1 x; return y
 getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
 -- but raises an error on Linux. We smooth out the difference.
-getDirectoryContentsIO x = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if x == "" then "." else x
+getDirectoryContentsIO dir = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if dir == "" then "." else dir
 
 
 getDir :: GetDirectoryQ -> IO GetDirectoryA
