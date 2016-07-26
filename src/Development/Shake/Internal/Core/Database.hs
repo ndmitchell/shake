@@ -20,7 +20,6 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.Types
-import Development.Shake.Internal.Special
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
@@ -390,7 +389,7 @@ checkValid Database{..} check missing = do
         (key, Ready Result{..}) -> do
             good <- check key result
             diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
-            return $ [(key, result, now) | not $ specialAlwaysRebuilds result, Just now <- [good]] ++ seen
+            return $ [(key, result, now) | Just now <- [good]] ++ seen
         _ -> return seen
     unless (null bad) $ do
         let n = length bad
