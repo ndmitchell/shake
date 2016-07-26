@@ -162,6 +162,7 @@ library
         General.FileLock
         General.Ids
         General.Intern
+        General.ListBuilder
         General.Process
         General.String
         General.Template
