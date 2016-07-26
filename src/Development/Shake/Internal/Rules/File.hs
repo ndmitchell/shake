@@ -149,17 +149,17 @@ needBS xs = (apply $ map (FileQ . fileNameFromByteString) xs :: Action [FileA]) 
 needed :: [FilePath] -> Action ()
 needed xs = do
     opts <- getShakeOptions
-    if isNothing $ shakeLint opts then need xs else neededCheck $ map packU xs
+    if isNothing $ shakeLint opts then need xs else neededCheck $ map fileNameFromString xs
 
 
 neededBS :: [BS.ByteString] -> Action ()
 neededBS xs = do
     opts <- getShakeOptions
-    if isNothing $ shakeLint opts then needBS xs else neededCheck $ map packU_ xs
+    if isNothing $ shakeLint opts then needBS xs else neededCheck $ map fileNameFromByteString xs
 
 
 neededCheck :: [FileName] -> Action ()
-neededCheck (map (packU_ . filepathNormalise . unpackU_) -> xs) = do
+neededCheck xs = do
     opts <- getShakeOptions
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply $ map FileQ xs :: Action [FileA]
