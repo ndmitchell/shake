@@ -153,6 +153,7 @@ library
         General.Binary
         General.Cleanup
         General.Concurrent
+        General.Encoder
         General.Extra
         General.FileLock
         General.Ids
@@ -247,6 +248,7 @@ executable shake
         General.Binary
         General.Cleanup
         General.Concurrent
+        General.Encoder
         General.Extra
         General.FileLock
         General.Ids
@@ -350,6 +352,7 @@ test-suite shake-test
         General.Binary
         General.Cleanup
         General.Concurrent
+        General.Encoder
         General.Extra
         General.FileLock
         General.Ids
