@@ -5,7 +5,7 @@ module General.Encoder(
     ) where
 
 import Data.Word
-import Data.List
+import Data.List.Extra
 import Control.Monad
 import Foreign.Storable
 import Data.Tuple.Extra
