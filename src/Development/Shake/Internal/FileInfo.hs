@@ -38,7 +38,7 @@ import System.Posix.Files.ByteString
 
 -- A piece of file information, where 0 and 1 are special (see fileInfo* functions)
 newtype FileInfo a = FileInfo Word32
-    deriving (Typeable,Hashable,Binary,NFData)
+    deriving (Typeable,Hashable,Binary,Storable,NFData)
 
 fileInfoEq, fileInfoNeq :: FileInfo a
 fileInfoEq  = FileInfo 0   -- Equal to everything

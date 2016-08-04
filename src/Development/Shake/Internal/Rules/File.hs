@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns, RecordWildCards #-}
+{-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances #-}
 
 module Development.Shake.Internal.Rules.File(
     need, needBS, needed, neededBS, want,
@@ -21,6 +21,8 @@ import Data.Bits
 import Data.Maybe
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
+import Foreign.Storable
+import General.Encoder
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
@@ -43,9 +45,13 @@ infix 1 %>, ?>, |%>, ~>
 
 
 newtype FileQ = FileQ {fromFileQ :: FileName}
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show FileQ where show (FileQ x) = fileNameToString x
+
+instance Encoder [FileQ] where
+    encode = encode . map fromFileQ
+    decode = map FileQ . decode
 
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
@@ -63,6 +69,19 @@ instance Binary FileA where
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
+instance Storable FileA where
+    sizeOf _ = 4 * 3 -- 4 Word32's
+    alignment _ = alignment (undefined :: ModTime)
+    peekByteOff p i = FileA <$> peekByteOff p i <*> peekByteOff p (i+4) <*> peekByteOff p (i+8)
+    pokeByteOff p i (FileA a b c) = pokeByteOff p i a >> pokeByteOff p (i+4) b >> pokeByteOff p (i+8) c
+
+instance Encoder FileA where
+    encode = encodeStorable
+    decode = decodeStorable
+
+instance Encoder [FileA] where
+    encode = encodeStorableList
+    decode = decodeStorableList
 
 data FileResult = Phony (Action ()) | One (Action ())
 

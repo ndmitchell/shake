@@ -48,6 +48,7 @@ import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
+import General.Encoder
 import qualified Data.HashMap.Strict as Map
 
 
@@ -56,13 +57,13 @@ forwards :: IORef (Map.HashMap ForwardQ (Action ()))
 forwards = unsafePerformIO $ newIORef Map.empty
 
 newtype ForwardQ = ForwardQ String
-    deriving (Hashable,Typeable,Eq,NFData,Binary)
+    deriving (Hashable,Typeable,Eq,NFData,Binary,Encoder)
 
 instance Show ForwardQ where
     show (ForwardQ x) = x
 
 newtype ForwardA = ForwardA ()
-    deriving (Hashable,Typeable,Eq,NFData,Binary,Show)
+    deriving (Hashable,Typeable,Eq,NFData,Binary,Encoder,Show)
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()

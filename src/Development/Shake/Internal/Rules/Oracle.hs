@@ -10,15 +10,16 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
+import General.Encoder
 import Control.Applicative
 import Prelude
 
 
 -- Use short type names, since the names appear in the Haddock, and are too long if they are in full
 newtype OracleQ question = OracleQ question
-    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 newtype OracleA answer = OracleA answer
-    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 
 -- | Add extra information which rules can depend on.
@@ -26,7 +27,7 @@ newtype OracleA answer = OracleA answer
 --   As an example, we can define an oracle allowing you to depend on the current version of GHC:
 --
 -- @
--- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 -- rules = do
 --     'addOracle' $ \\(GhcVersion _) -> fmap 'Development.Shake.fromStdout' $ 'Development.Shake.cmd' \"ghc --numeric-version\" :: Action String
 --     ... rules ...
@@ -51,8 +52,8 @@ newtype OracleA answer = OracleA answer
 --   As a more complex example, consider tracking Haskell package versions:
 --
 -- @
--- newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
--- newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+-- newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 --
 -- rules = do
 --     getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do

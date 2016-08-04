@@ -31,6 +31,7 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.Internal.FilePattern
 import General.Extra
+import General.Encoder
 import Prelude
 
 
@@ -38,64 +39,64 @@ import Prelude
 -- KEY/VALUE TYPES
 
 newtype DoesFileExistQ = DoesFileExistQ FilePath
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show DoesFileExistQ where
     show (DoesFileExistQ a) = "doesFileExist " ++ wrapQuote a
 
 newtype DoesFileExistA = DoesFileExistA {fromDoesFileExistA :: Bool}
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show DoesFileExistA where
     show (DoesFileExistA a) = show a
 
 
 newtype DoesDirectoryExistQ = DoesDirectoryExistQ FilePath
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show DoesDirectoryExistQ where
     show (DoesDirectoryExistQ a) = "doesDirectoryExist " ++ wrapQuote a
 
 newtype DoesDirectoryExistA = DoesDirectoryExistA {fromDoesDirectoryExistA :: Bool}
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show DoesDirectoryExistA where
     show (DoesDirectoryExistA a) = show a
 
 
 newtype GetEnvQ = GetEnvQ String
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show GetEnvQ where
     show (GetEnvQ a) = "getEnv " ++ wrapQuote a
 
 newtype GetEnvA = GetEnvA {fromGetEnvA :: Maybe String}
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show GetEnvA where
     show (GetEnvA a) = maybe "<unset>" wrapQuote a
 
 
 newtype GetDirectoryContentsQ = GetDirectoryContentsQ FilePath
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show GetDirectoryContentsQ where
     show (GetDirectoryContentsQ dir) = "getDirectoryContents " ++ wrapQuote dir
 
 newtype GetDirectoryFilesQ = GetDirectoryFilesQ (FilePath, [FilePattern])
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show GetDirectoryFilesQ where
     show (GetDirectoryFilesQ (dir, pat)) = "getDirectoryFiles " ++ wrapQuote dir ++ " [" ++ unwords (map wrapQuote pat) ++ "]"
 
 newtype GetDirectoryDirsQ = GetDirectoryDirsQ FilePath
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show GetDirectoryDirsQ where
     show (GetDirectoryDirsQ dir) = "getDirectoryDirs " ++ wrapQuote dir
 
 newtype GetDirectoryA = GetDirectoryA {fromGetDirectoryA :: [FilePath]}
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show GetDirectoryA where
     show (GetDirectoryA xs) = unwords $ map wrapQuote xs

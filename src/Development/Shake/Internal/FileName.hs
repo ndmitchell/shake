@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 
 module Development.Shake.Internal.FileName(
     FileName,
@@ -13,6 +13,7 @@ import Development.Shake.Classes
 import qualified System.FilePath as Native
 import System.Info.Extra
 import Data.List
+import General.Encoder
 
 
 ---------------------------------------------------------------------
@@ -21,13 +22,17 @@ import Data.List
 
 -- | UTF8 ByteString
 newtype FileName = FileName BS.ByteString
-    deriving (Hashable, Binary, Eq)
+    deriving (Hashable, Binary, Encoder, Eq)
 
 instance NFData FileName where
     rnf (FileName x) = x `seq` ()
 
 instance Show FileName where
     show = fileNameToString
+
+instance Encoder [FileName] where
+    encode = encode . map (\(FileName x) -> x)
+    decode = map FileName . decode
 
 fileNameToString :: FileName -> FilePath
 fileNameToString = UTF8.toString . fileNameToByteString

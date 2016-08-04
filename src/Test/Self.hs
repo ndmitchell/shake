@@ -6,6 +6,7 @@ import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Test.Type
+import General.Encoder
 
 import Control.Applicative
 import Control.Monad.Extra
@@ -16,8 +17,8 @@ import Data.Version.Extra
 import Prelude
 
 
-newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
-newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 
 main = shaken noTest $ \args obj -> do

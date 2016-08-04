@@ -12,6 +12,7 @@ import Data.List.Extra
 import System.Directory
 import Control.Applicative
 import Data.Typeable.Extra
+import General.Encoder
 import Prelude
 
 import Development.Shake.Internal.Value
@@ -33,12 +34,12 @@ infix 1 &?>, &%>
 
 
 newtype FilesQ = FilesQ [FileQ]
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 
 
 newtype FilesA = FilesA [FileA]
-    deriving (Typeable,Eq,Hashable,Binary,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . show) xs
 

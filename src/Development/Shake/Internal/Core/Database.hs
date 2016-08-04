@@ -15,6 +15,7 @@ module Development.Shake.Internal.Core.Database(
 
 import Development.Shake.Classes
 import General.Binary
+import General.Encoder
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
@@ -51,7 +52,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
-newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,NFData,Hashable,Typeable)
+newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,Encoder,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
 
@@ -438,7 +439,7 @@ lookupDependencies Database{..} k =
 
 -- To simplify journaling etc we smuggle the Step in the database, with a special StepKey
 newtype StepKey = StepKey ()
-    deriving (Show,Eq,Typeable,Hashable,Binary,NFData)
+    deriving (Show,Eq,Typeable,Hashable,Binary,Encoder,NFData)
 
 stepKey :: Key
 stepKey = newKey $ StepKey ()

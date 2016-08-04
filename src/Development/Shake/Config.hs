@@ -34,6 +34,7 @@ import qualified Data.ByteString.UTF8 as UTF8
 import Control.Applicative
 import Data.Tuple.Extra
 import Data.List
+import General.Encoder
 import Prelude
 
 
@@ -56,9 +57,9 @@ readConfigFileWithEnv vars file = do
     return $ Map.fromList $ map (UTF8.toString *** UTF8.toString) $ Map.toList mp
 
 
-newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
-newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
 
 
 -- | Specify the file to use with 'getConfig'.
