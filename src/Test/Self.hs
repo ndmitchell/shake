@@ -6,7 +6,6 @@ import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Test.Type
-import General.Encoder
 
 import Control.Applicative
 import Control.Monad.Extra

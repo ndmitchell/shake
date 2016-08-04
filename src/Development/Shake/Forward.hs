@@ -48,7 +48,6 @@ import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
-import General.Encoder
 import qualified Data.HashMap.Strict as Map
 
 

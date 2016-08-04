@@ -13,7 +13,6 @@ import Development.Shake.Classes
 import qualified System.FilePath as Native
 import System.Info.Extra
 import Data.List
-import General.Encoder
 
 
 ---------------------------------------------------------------------

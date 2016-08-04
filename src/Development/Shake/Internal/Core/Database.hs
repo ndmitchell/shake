@@ -15,7 +15,6 @@ module Development.Shake.Internal.Core.Database(
 
 import Development.Shake.Classes
 import General.Binary
-import General.Encoder
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors

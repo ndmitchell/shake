@@ -31,7 +31,6 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.Internal.FilePattern
 import General.Extra
-import General.Encoder
 import Prelude
 
 

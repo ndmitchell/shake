@@ -34,7 +34,6 @@ import qualified Data.ByteString.UTF8 as UTF8
 import Control.Applicative
 import Data.Tuple.Extra
 import Data.List
-import General.Encoder
 import Prelude
 
 

@@ -24,7 +24,7 @@ import Data.Binary.Get
 import Data.Binary.Put
 import Data.Time
 import Data.Char
-import Development.Shake.Classes
+import Development.Shake.Classes hiding (Encoder(..))
 import Numeric
 import System.Directory
 import System.Exit

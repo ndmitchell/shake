@@ -8,7 +8,6 @@ import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Classes
-import General.Encoder
 
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
