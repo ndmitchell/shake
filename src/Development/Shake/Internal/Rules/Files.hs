@@ -68,7 +68,7 @@ defaultRuleFiles = do
                         [r] -> r
                         rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
             }
-    addBuiltinRule run lint
+    addBuiltinRule lint run
 
 
 

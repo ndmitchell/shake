@@ -194,8 +194,8 @@ noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
 -- | TODO: Document me.
-addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRun key value -> BuiltinLint key value -> Rules ()
-addBuiltinRule (run :: BuiltinRun key value) lint = do
+addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRule lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
     liftIO $ registerWitness k v

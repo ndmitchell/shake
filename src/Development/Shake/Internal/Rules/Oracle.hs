@@ -74,13 +74,11 @@ addOracle :: (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Acti
 addOracle = f where
     f :: forall q a . (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
     f act = do
-        addBuiltinRule
-            (\(OracleQ q) old _ -> do
-                new <- OracleA <$> act q
-                return $ RunResult
-                    (if old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
-                    new)
-            (\_ _ -> return Nothing)
+        addBuiltinRule noLint $ \(OracleQ q) old _ -> do
+            new <- OracleA <$> act q
+            return $ RunResult
+                (if old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
+                new
         return askOracle
 
 

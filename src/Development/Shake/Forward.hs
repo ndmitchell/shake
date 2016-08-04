@@ -75,16 +75,15 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    addBuiltinRule
-        (\k old dirty -> case old of
+    addBuiltinRule noLint $ \k old dirty ->
+        case old of
             Just old | not dirty -> return $ RunResult ChangedNothing old
             _ -> do
                 res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
                 case res of
                     Nothing -> liftIO $ errorIO "Failed to find action name"
                     Just act -> act
-                return $ RunResult ChangedRecomputeSame $ ForwardA ())
-        (\_ _ -> return Nothing)
+                return $ RunResult ChangedRecomputeSame $ ForwardA ()
     action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.

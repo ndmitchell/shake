@@ -132,7 +132,7 @@ defaultRuleFile = do
                     Just now -> case fileEqualValue opts v now of
                         EqualCheap -> return Nothing
                         _ -> return $ Just $ show now
-    addBuiltinRule run lint
+    addBuiltinRule lint run
 
 
 fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)

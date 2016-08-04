@@ -39,6 +39,5 @@ alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
-    addBuiltinRule
-        (\AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff $ AlwaysRerunA ())
-        (\_ _ -> return Nothing)
+    addBuiltinRule noLint $
+        \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff $ AlwaysRerunA ()
