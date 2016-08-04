@@ -3,7 +3,7 @@
 --   Most users will find the built-in set of rules sufficient.
 module Development.Shake.Rule(
     addUserRule, apply, apply1,
-    addBuiltinRule, RunResult(..), RunChanged(..), BuiltinRun, BuiltinLint,
+    addBuiltinRule, RunResult(..), RunChanged(..), BuiltinRun, BuiltinLint, noLint,
     trackUse, trackChange, trackAllow
     ) where
 

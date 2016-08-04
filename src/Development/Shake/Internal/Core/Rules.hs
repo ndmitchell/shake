@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    addBuiltinRule,
+    addBuiltinRule, noLint,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -188,6 +188,10 @@ instance Monoid a => Monoid (Rules a) where
 --   Rules have priority 1 by default, which can be modified with 'priority'.
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_ $ UserRule r}
+
+-- | A suitable 'BuiltinLint' that requires no operation
+noLint :: BuiltinLint key value
+noLint _ _ = return Nothing
 
 -- | TODO: Document me.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinRun key value -> BuiltinLint key value -> Rules ()
