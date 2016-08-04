@@ -15,6 +15,7 @@ import Data.Char
 import Data.Word
 import Numeric
 import System.IO
+import Foreign
 
 #if defined(PORTABLE)
 import System.IO.Error
@@ -27,7 +28,6 @@ import System.Time
 #elif defined(mingw32_HOST_OS)
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
-import Foreign
 import Foreign.C.Types
 import Foreign.C.String
 
