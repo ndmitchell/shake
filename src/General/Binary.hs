@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module General.Binary(
+    Store(..), newStore,
     BinaryWith(..), module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
@@ -8,10 +9,30 @@ module General.Binary(
 import Control.Applicative
 import Control.Monad
 import Data.Binary
+import Data.Binary.Put
+import Data.Binary.Get
+import Data.Binary.Builder
 import Data.List
 import Foreign
 import System.IO.Unsafe as U
+import qualified Data.ByteString.Lazy as LBS
 
+---------------------------------------------------------------------
+-- STORE TYPE
+
+data Store v = Store
+    {store :: v -> Builder
+    ,unstore :: LBS.ByteString -> v
+    }
+
+newStore :: Binary a => Store a
+newStore = Store
+    (execPut . put)
+    (runGet get)
+
+
+---------------------------------------------------------------------
+-- BINARYWITH
 
 class BinaryWith ctx a where
     putWith :: ctx -> a -> Put
