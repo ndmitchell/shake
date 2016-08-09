@@ -16,8 +16,8 @@ import Data.Version.Extra
 import Prelude
 
 
-newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
-newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 
 main = shaken noTest $ \args obj -> do

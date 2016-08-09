@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Classes
 import qualified System.FilePath as Native
+import General.Encoder
 import System.Info.Extra
 import Data.List
 

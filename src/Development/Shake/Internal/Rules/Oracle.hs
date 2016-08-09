@@ -10,6 +10,7 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
+import General.Encoder
 import Control.Applicative
 import Prelude
 
