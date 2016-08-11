@@ -141,16 +141,16 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 when (countDistinct*2 > countItems || witnessOld /= witnessNew) $ do
                     addTiming "Database compression"
                     resetChunksCompact h $ \out -> do
-                        out $ LBS.fromStrict ver
-                        out $ LBS.fromStrict witnessNew
+                        out $ LBS.fromChunks [ver]
+                        out $ LBS.fromChunks [witnessNew]
                         Ids.forWithKeyM_ ids $ \i (k,v) -> out $ toLazyByteString $ save k i v
                 Just <$> Ids.for ids snd
 
         ids <- case ids of
             Just ids -> return ids
             Nothing -> do
-                writeChunk h $ LBS.fromStrict ver
-                writeChunk h $ LBS.fromStrict witnessNew
+                writeChunk h $ LBS.fromChunks [ver]
+                writeChunk h $ LBS.fromChunks [witnessNew]
                 Ids.empty
 
         addTiming "With database"
@@ -180,7 +180,7 @@ getWitness bs mp
                     Just f -> f bs2
     where
         limit = fromIntegral (maxBound :: Word16)
-        ws :: [BS.ByteString] = decode $ LBS.fromStrict bs
+        ws :: [BS.ByteString] = decode $ LBS.fromChunks [bs]
         mp2 = Map.fromList [(keyName k, (k, v)) | (k,v) <- Map.toList mp]
         ind = fastAt [ case Map.lookup w mp2 of
                             Nothing -> error $ "Witness type has disappeared, " ++ UTF8.toString w

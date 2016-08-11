@@ -59,7 +59,7 @@ readChunkMax Chunks{..} mx = withMVar chunksHandle $ \h -> do
 writeChunkDirect :: Handle -> LBS.ByteString -> IO ()
 writeChunkDirect h x = do
     n <- bsFromWord32 (fromIntegral $ LBS.length x :: Word32)
-    LBS.hPut h $ LBS.fromStrict n `LBS.append` x
+    LBS.hPut h $ LBS.fromChunks [n] `LBS.append` x
 
 
 -- | If 'writeChunks' and any of the reopen operations are interleaved it will cause issues.

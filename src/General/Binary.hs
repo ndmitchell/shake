@@ -17,6 +17,9 @@ import System.IO.Unsafe as U
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.Functor
+import Prelude
+
 
 ---------------------------------------------------------------------
 -- STORE TYPE
@@ -27,7 +30,7 @@ data Store v = Store
     }
 
 newStore :: (a -> Put) -> (Get a) -> Store a
-newStore put get = Store (execPut . put) (runGet get . LBS.fromStrict)
+newStore put get = Store (execPut . put) (runGet get . LBS.fromChunks . return)
 
 unsafeSplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
 unsafeSplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
