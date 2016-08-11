@@ -1,8 +1,8 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ExplicitForAll, ScopedTypeVariables #-}
 
 module General.Binary(
-    BinaryEx(..), newBinaryEx,
-    binarySplit,
+    BinaryEx(..), newBinaryEx, encode', decode',
+    binarySplit, unsafeBinarySplit, binaryCreate,
     module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
@@ -18,6 +18,7 @@ import Foreign.Ptr
 import Foreign.Marshal.Alloc
 import System.IO.Unsafe as U
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor
@@ -36,12 +37,23 @@ data BinaryEx v = BinaryEx
 newBinaryEx :: (a -> Put) -> (Get a) -> BinaryEx a
 newBinaryEx put get = BinaryEx (execPut . put) (runGet get . LBS.fromChunks . return)
 
-binarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
-binarySplit bs | BS.length bs < n = error "Reading from ByteString, insufficient left"
-               | otherwise = (v, BS.unsafeDrop (sizeOf v) bs)
-    where
-        v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
-        n = sizeOf v
+binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
+binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"
+               | otherwise = unsafeBinarySplit bs
+
+unsafeBinarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
+unsafeBinarySplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
+    where v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
+
+binaryCreate :: Storable a => a -> BS.ByteString
+binaryCreate x = unsafePerformIO $ BS.create (sizeOf x) $ \ptr -> poke (castPtr ptr) x
+
+encode' :: Binary a => a -> BS.ByteString
+encode' = LBS.toStrict . encode
+
+decode' :: Binary a => BS.ByteString -> a
+decode' = decode . LBS.fromChunks . return
+
 
 ---------------------------------------------------------------------
 -- BINARY
