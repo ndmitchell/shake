@@ -15,6 +15,7 @@ import Data.Binary.Builder
 import Data.List
 import Foreign
 import System.IO.Unsafe as U
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 ---------------------------------------------------------------------
@@ -22,13 +23,11 @@ import qualified Data.ByteString.Lazy as LBS
 
 data Store v = Store
     {store :: v -> Builder
-    ,unstore :: LBS.ByteString -> v
+    ,unstore :: BS.ByteString -> v
     }
 
-newStore :: Binary a => Store a
-newStore = Store
-    (execPut . put)
-    (runGet get)
+newStore :: (a -> Put) -> (Get a) -> Store a
+newStore put get = Store (execPut . put) (runGet get . LBS.fromStrict)
 
 
 ---------------------------------------------------------------------
