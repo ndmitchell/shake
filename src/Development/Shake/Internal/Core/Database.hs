@@ -454,9 +454,12 @@ fromStepResult = fromValue . result
 withDatabase :: ShakeOptions -> (IO String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
     registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
-    witness <- currentWitness
+    witness <- currentWitness2
+    witness <- return $ Map.fromList
+        [ (t, newStore (putDatabase putKey putValue) (getDatabase getKey getValue))
+        | ((t,_),(putKey,getKey,putValue,getValue)) <- Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
-        journal <- return $ \i k v -> journal i (k, Loaded v)
+        journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
 
         xs <- Ids.toList status
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
@@ -477,6 +480,18 @@ withDatabase opts diagnostic act = do
         lock <- newLock
         act Database{..}
 
+
+putDatabase :: (Key -> Put) -> (Value -> Put) -> ((Key, Status) -> Put)
+putDatabase putKey putValue (key, Loaded (Result x1 x2 x3 x4 x5 x6)) = do
+    putKey key
+    putValue x1
+    put x2 >> put x3 >> put (BinList $ map (BinList . fromDepends) x4) >> put (BinFloat x5) >> put (BinList x6)
+putDatabase _ _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
+
+getDatabase :: Get Key -> Get Value -> Get (Key, Status)
+getDatabase getKey getValue =
+    (\key x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> (key, Loaded (Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6))) <$>
+        getKey <*> getValue <*> get <*> get <*> get <*> get <*> get
 
 instance BinaryWith Witness Result where
     putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map (BinList . fromDepends) x4) >> put (BinFloat x5) >> put (BinList x6)
