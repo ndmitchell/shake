@@ -6,6 +6,7 @@ module General.Extra(
     wrapQuote, wrapBracket, showBracket,
     withs,
     maximum', maximumBy',
+    fastAt,
     isAsyncException
     ) where
 
@@ -18,6 +19,9 @@ import System.IO.Unsafe
 import System.Random
 import System.Exit
 import Control.Concurrent
+import Data.Primitive.Array
+import Control.Monad
+import Control.Monad.ST
 import GHC.Conc
 
 
@@ -49,6 +53,20 @@ wrapBracket xs | any isSpace xs = "(" ++ xs ++ ")"
 -- | Alias for @wrapBracket . show@.
 showBracket :: Show a => a -> String
 showBracket = wrapBracket . show
+
+
+-- | Version of '!!' which is fast and returns 'Nothing' if the index is not present.
+fastAt :: [a] -> (Int -> Maybe a)
+fastAt xs = \i -> if i < 0 || i >= n then Nothing else Just $ indexArray arr i
+    where
+        n = length xs
+        arr = runST $ do
+            let n = length xs
+            arr <- newArray n undefined
+            forM_ (zip [0..] xs) $ \(i,x) ->
+                writeArray arr i x
+            unsafeFreezeArray arr
+
 
 ---------------------------------------------------------------------
 -- System.Info
