@@ -7,6 +7,7 @@ module General.Intern(
 
 import General.Binary
 import Development.Shake.Classes
+import Foreign.Storable
 import Prelude hiding (lookup)
 import qualified Data.HashMap.Strict as Map
 import Data.List(foldl')
@@ -16,7 +17,7 @@ import Data.List(foldl')
 data Intern a = Intern {-# UNPACK #-} !Word32 !(Map.HashMap a Id)
 
 newtype Id = Id Word32
-    deriving (Eq,Hashable,Binary,Show,NFData)
+    deriving (Eq,Hashable,Binary,Show,NFData,Storable)
 
 instance BinaryWith w Id where
     putWith ctx = put
