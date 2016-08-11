@@ -182,7 +182,7 @@ getWitness bs mp
                     Just f -> f bs2
     where
         limit = fromIntegral (maxBound :: Word16)
-        ws :: [BS.ByteString] = decode $ LBS.fromChunks [bs]
+        ws :: [BS.ByteString] = decode' bs
         mp2 = Map.fromList [(keyName k, (k, v)) | (k,v) <- Map.toList mp]
         ind = fastAt [ case Map.lookup w mp2 of
                             Nothing -> error $ "Witness type has disappeared, " ++ UTF8.toString w
@@ -194,7 +194,7 @@ getWitness bs mp
 
 
 putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (BinaryEx v) -> (BS.ByteString, k -> Id -> v -> Builder)
-putWitness mp = (LBS.toStrict $ encode (ws :: [BS.ByteString]), \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
+putWitness mp = (encode' (ws :: [BS.ByteString]), \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map keyName $ Map.keys mp
         wsMp = Map.fromList $ zip ws [fromIntegral 0 :: Word16 ..]
