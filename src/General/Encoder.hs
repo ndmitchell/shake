@@ -14,6 +14,9 @@ import System.IO.Unsafe
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
+import Data.Functor
+import Prelude
+
 
 -- forM for zipWith
 for2M_ as bs f = zipWithM_ f as bs

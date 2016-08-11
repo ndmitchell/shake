@@ -20,6 +20,8 @@ import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary
+import Data.Functor
+import Prelude
 
 
 data Chunks = Chunks
