@@ -157,6 +157,7 @@ modifyRules f (Rules r) = Rules $ censor f r
 
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, Map.HashMap TypeRep UserRule_)
 runRules opts (Rules r) = do
+    clearWitness
     SRules{..} <- runReaderT (execWriterT r) opts
     return (runListBuilder actions, builtinRules, userRules)
 
