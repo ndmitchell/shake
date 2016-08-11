@@ -27,7 +27,7 @@ newtype OracleA answer = OracleA answer
 --   As an example, we can define an oracle allowing you to depend on the current version of GHC:
 --
 -- @
--- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+-- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 -- rules = do
 --     'addOracle' $ \\(GhcVersion _) -> fmap 'Development.Shake.fromStdout' $ 'Development.Shake.cmd' \"ghc --numeric-version\" :: Action String
 --     ... rules ...
@@ -52,8 +52,8 @@ newtype OracleA answer = OracleA answer
 --   As a more complex example, consider tracking Haskell package versions:
 --
 -- @
--- newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
--- newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+-- newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 --
 -- rules = do
 --     getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
