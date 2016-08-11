@@ -456,7 +456,7 @@ withDatabase opts diagnostic act = do
     registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
     witness <- currentWitness2
     witness <- return $ Map.fromList
-        [ (t, newStore (putDatabase putKey putValue) (getDatabase getKey getValue))
+        [ (t, newBinaryEx (putDatabase putKey putValue) (getDatabase getKey getValue))
         | ((t,_),(putKey,getKey,putValue,getValue)) <- Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)

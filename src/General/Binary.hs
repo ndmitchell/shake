@@ -1,7 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module General.Binary(
-    Store(..), newStore, unsafeSplit,
+    BinaryEx(..), newBinaryEx,
+    unsafeSplit,
     module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
@@ -24,13 +25,14 @@ import Prelude
 ---------------------------------------------------------------------
 -- STORE TYPE
 
-data Store v = Store
-    {store :: v -> Builder
-    ,unstore :: BS.ByteString -> v
+-- | An explicit and more efficient version of Binary
+data BinaryEx v = BinaryEx
+    {putEx :: v -> Builder
+    ,getEx :: BS.ByteString -> v
     }
 
-newStore :: (a -> Put) -> (Get a) -> Store a
-newStore put get = Store (execPut . put) (runGet get . LBS.fromChunks . return)
+newBinaryEx :: (a -> Put) -> (Get a) -> BinaryEx a
+newBinaryEx put get = BinaryEx (execPut . put) (runGet get . LBS.fromChunks . return)
 
 unsafeSplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
 unsafeSplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
