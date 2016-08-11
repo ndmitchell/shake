@@ -13,15 +13,10 @@ import Control.Monad.Extra
 import Control.Exception.Extra
 import System.IO
 import System.Directory
-import Foreign.Ptr
-import Foreign.Storable
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Unsafe as BS
-import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary
-import Data.Functor
-import Prelude
+import General.Binary
 
 
 data Chunks = Chunks
@@ -34,14 +29,6 @@ data Chunks = Chunks
 ---------------------------------------------------------------------
 -- READ/WRITE OPERATIONS
 
--- | Assumes the BS is at least 4 bytes long, or we might buffer overflow (checked before calling)
-bsToWord32 :: BS.ByteString -> IO Word32
-bsToWord32 bs = BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
-
-bsFromWord32 :: Word32 -> IO BS.ByteString
-bsFromWord32 w = BS.create 4 $ \ptr -> poke (castPtr ptr) w
-
-
 readChunk :: Chunks -> IO (Either BS.ByteString BS.ByteString)
 readChunk c = readChunkMax c maxBound
 
@@ -53,13 +40,13 @@ readChunkMax Chunks{..} mx = withMVar chunksHandle $ \h -> do
             return $ Left x
     n <- BS.hGet h 4
     if BS.length n < 4 then slop n else do
-        count <- fromIntegral . min mx <$> bsToWord32 n
+        let count = fromIntegral $ min mx $ fst $ unsafeBinarySplit n
         v <- BS.hGet h count
         if BS.length v < count then slop (n `BS.append` v) else return $ Right v
 
 writeChunkDirect :: Handle -> LBS.ByteString -> IO ()
 writeChunkDirect h x = do
-    n <- bsFromWord32 (fromIntegral $ LBS.length x :: Word32)
+    let n = binaryCreate (fromIntegral $ LBS.length x :: Word32)
     LBS.hPut h $ LBS.fromChunks [n] `LBS.append` x
 
 
