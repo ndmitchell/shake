@@ -493,17 +493,6 @@ getDatabase getKey getValue =
     (\key x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> (key, Loaded (Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6))) <$>
         getKey <*> getValue <*> get <*> get <*> get <*> get <*> get
 
-instance BinaryWith Witness Result where
-    putWith ws (Result x1 x2 x3 x4 x5 x6) = putWith ws x1 >> put x2 >> put x3 >> put (BinList $ map (BinList . fromDepends) x4) >> put (BinFloat x5) >> put (BinList x6)
-    getWith ws = (\x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6) <$>
-        getWith ws <*> get <*> get <*> get <*> get <*> get
-
 instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
     get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
-
--- | The Status wrapper over Value is to deforest the Map, avoiding one additional traversal.
-instance BinaryWith Witness Status where
-    putWith ctx (Loaded x) = putWith ctx x
-    putWith ctx x = err $ "putWith, Cannot write Status with constructor " ++ statusType x
-    getWith ctx = Loaded <$> getWith ctx

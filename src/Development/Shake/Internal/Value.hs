@@ -7,7 +7,7 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Internal.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
-    Witness, currentWitness, currentWitness2, clearWitness, registerWitness,
+    currentWitness2, clearWitness, registerWitness,
     ShakeValue
     ) where
 
@@ -18,10 +18,8 @@ import Data.Typeable.Extra
 
 import Data.Bits
 import Data.IORef
-import Data.List.Extra
 import Data.Maybe
 import qualified Data.HashMap.Strict as Map
-import qualified Data.ByteString.Char8 as BS
 import System.IO.Unsafe
 import Unsafe.Coerce
 
@@ -62,7 +60,7 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
 newtype Key = Key Value
-    deriving (Eq,Hashable,NFData,BinaryWith Witness)
+    deriving (Eq,Hashable,NFData)
 
 data Value = forall a . Value
     {valueType :: TypeRep
@@ -125,84 +123,16 @@ instance Eq Value where
 witness2 :: IORef (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key, Value -> Put, Get Value))
 witness2 = unsafePerformIO $ newIORef Map.empty
 
-{-# NOINLINE witness #-}
-witness :: IORef (Map.HashMap TypeRep (Get Value))
-witness = unsafePerformIO $ newIORef Map.empty
-
 clearWitness :: IO ()
 clearWitness = writeIORef witness2 Map.empty
 
 registerWitness :: (ShakeValue k, ShakeValue v) => Proxy k -> Proxy v -> IO ()
-registerWitness k v = do
-    registerWitness1 k v
-    registerWitness2 k v
-
-registerWitness1 k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
-    where f (x :: Proxy (a :: *)) = Map.insert (typeRep x) (do v <- get; return $ newValue (v :: a))
-
-registerWitness2 (k :: Proxy (k :: *)) (v :: Proxy (v :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
+registerWitness (k :: Proxy (k :: *)) (v :: Proxy (v :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
     where f = Map.insert (typeRep k, typeRep v)
                 (\k -> put (fromKey k :: k)
                 ,do k <- get; return $ newKey (k :: k)
                 ,\v -> put (fromValue v :: v)
                 ,do v <- get; return $ newValue (v :: v))
 
-
--- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
--- elements were added and stable between program executions.
--- Don't rely on the hashmap order since that might not be stable, if hashes clash.
-toStableList :: Ord k => Map.HashMap k v -> [(k,v)]
-toStableList = sortOn fst . Map.toList
-
-
-data Witness = Witness
-    {typeNames :: [String] -- the canonical data, the names of the types
-    ,witnessIn :: Map.HashMap Word16 (Get Value) -- for reading in, the find the values (some may be missing)
-    ,witnessOut :: Map.HashMap TypeRep Word16 -- for writing out, find the value
-    }
-
-instance Eq Witness where
-    -- Type names are produced by toStableList so should to remain consistent
-    -- regardless of the order of registerWitness calls.
-    a == b = typeNames a == typeNames b
-
-currentWitness :: IO Witness
-currentWitness = do
-    ws <- readIORef witness
-    let (ks,vs) = unzip $ toStableList ws
-    return $ Witness (map show ks) (Map.fromList $ zip [0..] vs) (Map.fromList $ zip ks [0..])
-
 currentWitness2 :: IO (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key, Value -> Put, Get Value))
 currentWitness2 = readIORef witness2
-
-
-instance Binary Witness where
-    put (Witness ts _ _) = put $ BS.unlines $ map BS.pack ts
-    get = do
-        ts <- fmap (map BS.unpack . BS.lines) get
-        let ws = toStableList $ unsafePerformIO $ readIORefAfter ts witness
-        let (is,ks,vs) = unzip3 [(i,k,v) | (i,t) <- zip [0..] ts, (k,v):_ <- [filter ((==) t . show . fst) ws]]
-        return $ Witness ts (Map.fromList $ zip is vs) (Map.fromList $ zip ks is)
-        where
-            -- Read an IORef after examining a variable, used to avoid GHC over-optimisation
-            {-# NOINLINE readIORefAfter #-}
-            readIORefAfter :: a -> IORef b -> IO b
-            readIORefAfter v ref = v `seq` readIORef ref
-
-
-instance BinaryWith Witness Value where
-    putWith ws Value{..} = do
-        let msg = "no witness for " ++ show valueType
-        put $ fromMaybe (error msg) $ Map.lookup valueType (witnessOut ws)
-        valuePut value
-
-    getWith ws = do
-        h <- get
-        case Map.lookup h $ witnessIn ws of
-            Nothing | h >= 0 && h < genericLength (typeNames ws) -> error $
-                "Failed to find a type " ++ (typeNames ws !! fromIntegral h) ++ " which is stored in the database.\n" ++
-                "The most likely cause is that your build tool has changed significantly."
-            Nothing -> error $
-                -- should not happen, unless proper data corruption
-                "Corruption when reading Value, got type " ++ show h ++ ", but should be in range 0.." ++ show (length (typeNames ws) - 1)
-            Just get -> get
