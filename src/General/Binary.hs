@@ -49,7 +49,7 @@ binaryCreate :: Storable a => a -> BS.ByteString
 binaryCreate x = unsafePerformIO $ BS.create (sizeOf x) $ \ptr -> poke (castPtr ptr) x
 
 encode' :: Binary a => a -> BS.ByteString
-encode' = LBS.toStrict . encode
+encode' = BS.concat . LBS.toChunks . encode
 
 decode' :: Binary a => BS.ByteString -> a
 decode' = decode . LBS.fromChunks . return
