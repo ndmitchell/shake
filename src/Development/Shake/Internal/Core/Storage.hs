@@ -38,6 +38,8 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString as BS8
+import Data.Functor
+import Prelude
 
 
 -- Increment every time the on-disk format/semantics change,
