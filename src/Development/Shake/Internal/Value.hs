@@ -7,7 +7,7 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Internal.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
-    Witness, currentWitness, registerWitness,
+    Witness, currentWitness, currentWitness2, clearWitness, registerWitness,
     ShakeValue
     ) where
 
@@ -120,13 +120,32 @@ instance Eq Value where
 ---------------------------------------------------------------------
 -- BINARY INSTANCES
 
+-- FIXME: These witnesses should be stored in the Rules type, not a global IORef
+{-# NOINLINE witness2 #-}
+witness2 :: IORef (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key, Value -> Put, Get Value))
+witness2 = unsafePerformIO $ newIORef Map.empty
+
 {-# NOINLINE witness #-}
 witness :: IORef (Map.HashMap TypeRep (Get Value))
 witness = unsafePerformIO $ newIORef Map.empty
 
+clearWitness :: IO ()
+clearWitness = writeIORef witness2 Map.empty
+
 registerWitness :: (ShakeValue k, ShakeValue v) => Proxy k -> Proxy v -> IO ()
-registerWitness k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
+registerWitness k v = do
+    registerWitness1 k v
+    registerWitness2 k v
+
+registerWitness1 k v = atomicModifyIORef witness $ \mp -> (f k $ f v mp, ())
     where f (x :: Proxy (a :: *)) = Map.insert (typeRep x) (do v <- get; return $ newValue (v :: a))
+
+registerWitness2 (k :: Proxy (k :: *)) (v :: Proxy (v :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
+    where f = Map.insert (typeRep k, typeRep v)
+                (\k -> put (fromKey k :: k)
+                ,do k <- get; return $ newKey (k :: k)
+                ,\v -> put (fromValue v :: v)
+                ,do v <- get; return $ newValue (v :: v))
 
 
 -- Produce a list in a predictable order from a Map TypeRep, which should be consistent regardless of the order
@@ -152,6 +171,9 @@ currentWitness = do
     ws <- readIORef witness
     let (ks,vs) = unzip $ toStableList ws
     return $ Witness (map show ks) (Map.fromList $ zip [0..] vs) (Map.fromList $ zip ks [0..])
+
+currentWitness2 :: IO (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key, Value -> Put, Get Value))
+currentWitness2 = readIORef witness2
 
 
 instance Binary Witness where
