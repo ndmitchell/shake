@@ -13,7 +13,9 @@ import Data.Binary.Put
 import Data.Binary.Get
 import Data.Binary.Builder
 import Data.List
-import Foreign
+import Foreign.Storable
+import Foreign.Ptr
+import Foreign.Marshal.Alloc
 import System.IO.Unsafe as U
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
