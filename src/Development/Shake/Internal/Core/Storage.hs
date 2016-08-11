@@ -24,7 +24,7 @@ import Data.Monoid
 import Data.Either.Extra
 import Data.Time
 import Data.Char
-import Development.Shake.Classes hiding (Encoder(..))
+import Development.Shake.Classes
 import Numeric
 import General.Extra
 import Data.List.Extra
