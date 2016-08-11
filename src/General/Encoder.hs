@@ -21,7 +21,6 @@ import Prelude
 -- forM for zipWith
 for2M_ as bs f = zipWithM_ f as bs
 
-
 ---------------------------------------------------------------------
 -- BINARY SERIALISATION
 
