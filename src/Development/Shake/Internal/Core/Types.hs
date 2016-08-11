@@ -58,7 +58,7 @@ data RunResult value = RunResult
     } deriving Functor
 
 instance NFData value => NFData (RunResult value) where
-    rnf (RunResult x1 x2 x3) = rnf x1 `seq` rnf x2 `seq` rnf x3
+    rnf (RunResult x1 x2 x3) = rnf x1 `seq` x2 `seq` rnf x3
 
 
 -- | How to run a rule.
