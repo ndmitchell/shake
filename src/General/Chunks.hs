@@ -34,6 +34,7 @@ data Chunks = Chunks
 ---------------------------------------------------------------------
 -- READ/WRITE OPERATIONS
 
+-- | Assumes the BS is at least 4 bytes long, or we might buffer overflow (checked before calling)
 bsToWord32 :: BS.ByteString -> IO Word32
 bsToWord32 bs = BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
 
