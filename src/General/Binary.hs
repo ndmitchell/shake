@@ -2,7 +2,7 @@
 
 module General.Binary(
     BinaryEx(..), newBinaryEx,
-    unsafeSplit,
+    binarySplit,
     module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
@@ -36,9 +36,12 @@ data BinaryEx v = BinaryEx
 newBinaryEx :: (a -> Put) -> (Get a) -> BinaryEx a
 newBinaryEx put get = BinaryEx (execPut . put) (runGet get . LBS.fromChunks . return)
 
-unsafeSplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
-unsafeSplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
-    where v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
+binarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
+binarySplit bs | BS.length bs < n = error "Reading from ByteString, insufficient left"
+               | otherwise = (v, BS.unsafeDrop (sizeOf v) bs)
+    where
+        v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
+        n = sizeOf v
 
 ---------------------------------------------------------------------
 -- BINARY

@@ -174,7 +174,7 @@ getWitness :: Show k => BS.ByteString -> Map.HashMap k (BinaryEx v) -> (BS.ByteS
 getWitness bs mp
     | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
     | otherwise = \bs ->
-            let (k :: Word16,bs2) = unsafeSplit bs
+            let (k :: Word16,bs2) = binarySplit bs
             in case ind (fromIntegral k) of
                     Nothing -> error $ "Witness type out of bounds, " ++ show k
                     Just f -> f bs2
@@ -185,7 +185,7 @@ getWitness bs mp
         ind = fastAt [ case Map.lookup w mp2 of
                             Nothing -> error $ "Witness type has disappeared, " ++ UTF8.toString w
                             Just (k, BinaryEx{..}) -> \bs ->
-                                let (i, bs2) = unsafeSplit bs
+                                let (i, bs2) = binarySplit bs
                                     v = getEx bs2
                                 in (k, i, v)
                      | w <- ws]
