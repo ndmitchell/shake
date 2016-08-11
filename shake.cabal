@@ -151,6 +151,7 @@ library
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
+        General.Chunks
         General.Cleanup
         General.Concurrent
         General.Encoder
@@ -246,6 +247,7 @@ executable shake
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
+        General.Chunks
         General.Cleanup
         General.Concurrent
         General.Encoder
@@ -350,6 +352,7 @@ test-suite shake-test
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
+        General.Chunks
         General.Cleanup
         General.Concurrent
         General.Encoder
