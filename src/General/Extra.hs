@@ -1,10 +1,12 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module General.Extra(
     getProcessorCount,
     randomElem,
     wrapQuote, wrapBracket, showBracket,
     withs,
-    maximum', maximumBy'
+    maximum', maximumBy',
+    isAsyncException
     ) where
 
 import Control.Exception.Extra
@@ -14,6 +16,7 @@ import System.Environment.Extra
 import System.IO.Extra
 import System.IO.Unsafe
 import System.Random
+import System.Exit
 import Control.Concurrent
 import GHC.Conc
 
@@ -83,3 +86,14 @@ randomElem xs = do
 withs :: [(a -> r) -> r] -> ([a] -> r) -> r
 withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
+
+
+---------------------------------------------------------------------
+-- Control.Exception
+
+-- | Is the exception asynchronous, not a "coding error" that should be ignored
+isAsyncException :: SomeException -> Bool
+isAsyncException e
+    | Just (_ :: AsyncException) <- fromException e = True
+    | Just (_ :: ExitCode) <- fromException e = True
+    | otherwise = False
