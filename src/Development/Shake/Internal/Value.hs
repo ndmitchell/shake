@@ -95,8 +95,9 @@ castValue Value{..}
     | valueType == typeRep (Proxy :: Proxy a) = Just $ unsafeCoerce value
     | otherwise = Nothing
 
-fromValue :: Typeable a => Value -> a
-fromValue = fromMaybe (err "fromValue, bad cast") . castValue
+fromValue :: forall a . Typeable a => Value -> a
+fromValue v = fromMaybe (err msg) $ castValue v
+    where msg = "fromValue, bad cast, have " ++ show (valueType v) ++ ", wanted " ++ show (typeRep (Proxy :: Proxy a))
 
 instance Show Key where
     show (Key a) = show a
