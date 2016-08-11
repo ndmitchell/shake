@@ -5,6 +5,7 @@ module General.Ids(
     Ids, Id,
     empty, insert, lookup,
     null, size, sizeUpperBound,
+    forWithKeyM_, for,
     toList, toMap
     ) where
 
@@ -12,7 +13,7 @@ import Data.IORef.Extra
 import Data.Primitive.Array
 import Control.Exception
 import General.Intern(Id(..))
-import Control.Monad
+import Control.Monad.Extra
 import Data.Maybe
 import Data.Functor
 import qualified Data.HashMap.Strict as Map
@@ -59,6 +60,29 @@ toMap :: Ids a -> IO (Map.HashMap Id a)
 toMap ids = do
     mp <- Map.fromList <$> toListUnsafe ids
     return $! mp
+
+forWithKeyM_ :: Ids a -> (Id -> a -> IO ()) -> IO ()
+forWithKeyM_ (Ids ref) f = do
+    S{..} <- readIORef ref
+    let go !i | i >= used = return ()
+              | otherwise = do
+                v <- readArray values i
+                whenJust v $ f $ Id $ fromIntegral i
+                go $ i+1
+    go 0
+
+for :: Ids a -> (a -> b) -> IO (Ids b)
+for (Ids ref) f = do
+    S{..} <- readIORef ref
+    values2 <- newArray capacity Nothing
+    let go !i | i >= used = return ()
+              | otherwise = do
+                v <- readArray values i
+                whenJust v $ \v -> writeArray values2 i $ Just $ f v
+                go $ i+1
+    go 0
+    Ids <$> newIORef (S capacity used values2)
+
 
 toListUnsafe :: Ids a -> IO [(Id, a)]
 toListUnsafe (Ids ref) = do
