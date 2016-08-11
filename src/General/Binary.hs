@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module General.Binary(
-    Store(..), newStore,
+    Store(..), newStore, unsafeSplit,
     BinaryWith(..), module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
@@ -16,6 +16,7 @@ import Data.List
 import Foreign
 import System.IO.Unsafe as U
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Lazy as LBS
 
 ---------------------------------------------------------------------
@@ -29,6 +30,9 @@ data Store v = Store
 newStore :: (a -> Put) -> (Get a) -> Store a
 newStore put get = Store (execPut . put) (runGet get . LBS.fromStrict)
 
+unsafeSplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
+unsafeSplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
+    where v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
 
 ---------------------------------------------------------------------
 -- BINARYWITH
