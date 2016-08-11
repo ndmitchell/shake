@@ -49,6 +49,7 @@ import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
 import General.Encoder
+import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
 
 
@@ -78,13 +79,13 @@ forwardRule :: Action () -> Rules ()
 forwardRule act = do
     addBuiltinRule noLint $ \k old dirty ->
         case old of
-            Just old | not dirty -> return $ RunResult ChangedNothing old
+            Just old | not dirty -> return $ RunResult ChangedNothing old $ ForwardA ()
             _ -> do
                 res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
                 case res of
                     Nothing -> liftIO $ errorIO "Failed to find action name"
                     Just act -> act
-                return $ RunResult ChangedRecomputeSame $ ForwardA ()
+                return $ RunResult ChangedRecomputeSame BS.empty $ ForwardA ()
     action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.

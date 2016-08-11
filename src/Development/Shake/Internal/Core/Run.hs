@@ -31,6 +31,7 @@ import System.Directory
 import System.IO.Extra
 import System.Time.Extra
 import Numeric.Extra
+import qualified Data.ByteString as BS
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
@@ -210,7 +211,7 @@ applyKeyValue ks = do
     return vs
 
 
-runKey :: Global -> Stack -> Step -> Key -> Maybe Result -> Bool -> Capture (Either SomeException (Bool, Result))
+runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> Bool -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChildren continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
@@ -230,12 +231,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                 continue . Left . toException =<< shakeException global (showStack stack) e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ (,) (runChanged == ChangedStore) r{result = runValue}
+                    continue $ Right (runChanged == ChangedStore, runStore, r{result = runValue})
                 | otherwise -> do
                     dur <- time
                     let c | Just r <- r, runChanged == ChangedRecomputeSame = changed r
                           | otherwise = step
-                    continue $ Right $ (,) True $ Result
+                    continue $ Right $ (,,) True runStore $ Result
                         {result = runValue
                         ,changed = c
                         ,built = step

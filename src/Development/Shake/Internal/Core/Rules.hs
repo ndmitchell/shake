@@ -200,7 +200,7 @@ addBuiltinRule lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
     liftIO $ registerWitness k v
-    let run_ k v b = fmap (fmap newValue) $ run (fromKey k) (fmap fromValue v) b
+    let run_ k v b = fmap (fmap newValue) $ run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
     newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v)}
 

@@ -32,6 +32,7 @@ import Development.Shake.FilePath
 import Development.Shake.Internal.FilePattern
 import General.Extra
 import General.Encoder
+import General.Binary
 import Prelude
 
 
@@ -112,7 +113,7 @@ queryRule query = addBuiltinRule
         return $ if old == new then Nothing else Just $ show new)
     (\k old _ -> liftIO $ do
         new <- query k
-        return $ RunResult (if Just new == old then ChangedNothing else ChangedRecomputeDiff) new)
+        return $ RunResult (if Just new == fmap decode' old then ChangedNothing else ChangedRecomputeDiff) (encode' new) new)
 
 
 defaultRuleDirectory :: Rules ()

@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards, ConstraintKinds #-}
+{-# LANGUAGE RecordWildCards, ConstraintKinds, ViewPatterns #-}
 
 module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>), defaultRuleFiles
@@ -13,6 +13,7 @@ import System.Directory
 import Control.Applicative
 import Data.Typeable.Extra
 import General.Encoder
+import General.Binary
 import Prelude
 
 import Development.Shake.Internal.Value
@@ -199,7 +200,7 @@ convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
                 Just now | equalValue v now == EqualCheap -> Nothing
                          | otherwise -> Just $ show now
 
-        builtinRun k old dirtyChildren = case old of
+        builtinRun k (fmap decode' -> old) dirtyChildren = case old of
                 Just old | not dirtyChildren -> do
                     v <- liftIO $ storedValue k
                     case v of
@@ -207,8 +208,8 @@ convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
                             let e = equalValue old v
                             case e of
                                 NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ RunResult ChangedNothing v
-                                EqualExpensive -> return $ RunResult ChangedStore v
+                                EqualCheap -> return $ RunResult ChangedNothing (encode' v) v
+                                EqualExpensive -> return $ RunResult ChangedStore (encode' v) v
                         Nothing -> rebuild k $ Just old
                 _ -> rebuild k old
             where
@@ -217,4 +218,4 @@ convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
                     v <- executeRule k
                     let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
-                    return $ RunResult c v
+                    return $ RunResult c (encode' v) v

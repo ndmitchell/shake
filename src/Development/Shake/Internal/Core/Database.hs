@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns, DeriveFunctor #-}
 {-# LANGUAGE MultiParamTypeClasses, Rank2Types #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
@@ -37,10 +37,12 @@ import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
+import Foreign.Storable
 import Data.Typeable.Extra
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List
+import Data.Tuple.Extra
 import Data.Either.Extra
 import System.Time.Extra
 import Data.Monoid
@@ -52,7 +54,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
-newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,Encoder,NFData,Hashable,Typeable)
+newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,Storable,Encoder,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
 
@@ -108,26 +110,26 @@ data Database = Database
     ,intern :: InternDB
     ,status :: StatusDB
     ,step :: {-# UNPACK #-} !Step
-    ,journal :: Id -> Key -> Result -> IO ()
+    ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
     ,diagnostic :: IO String -> IO () -- ^ logging function
     }
 
 data Status
-    = Ready Result -- ^ I have a value
+    = Ready (Result Value) -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
-    | Loaded Result -- ^ Loaded from the database
-    | Waiting (Waiting Status) (Maybe Result) -- ^ Currently checking if I am valid or building
+    | Loaded (Result BS.ByteString) -- ^ Loaded from the database
+    | Waiting (Waiting Status) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
-data Result = Result
-    {result :: Value -- ^ the result associated with the Key
+data Result a = Result
+    {result :: a -- ^ the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
     ,depends :: [Depends] -- ^ dependencies (don't run them early)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
-    } deriving Show
+    } deriving (Show,Functor)
 
 
 statusType Ready{} = "Ready"
@@ -137,10 +139,10 @@ statusType Waiting{} = "Waiting"
 statusType Missing{} = "Missing"
 
 
-getResult :: Status -> Maybe Result
-getResult (Ready r) = Just r
-getResult (Loaded r) = Just r
-getResult (Waiting _ r) = r
+getResult :: Status -> Maybe (Result ())
+getResult (Ready r) = Just $ fmap (const ()) r
+getResult (Loaded r) = Just $ fmap (const ()) r
+getResult (Waiting _ r) = fmap (const ()) <$> r
 getResult _ = Nothing
 
 
@@ -160,9 +162,9 @@ newtype BuildKey = BuildKey
         :: Stack -- Given the current stack with the key added on
         -> Step -- And the current step
         -> Key -- The key to build
-        -> Maybe Result -- A previous result, or Nothing if never been built before
+        -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
         -> Bool -- True if any of the children were dirty
-        -> Capture (Either SomeException (Bool, Result))
+        -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
             -- Either an error, or a result.
             -- If the Bool is True you should rewrite the database entry.
     }
@@ -213,7 +215,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
             Ids.insert status i (k,v)
             return v
 
-        buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result])
+        buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result Value])
         buildMany stack is test fast slow = do
             let toAnswer v | Just v <- test v = Abort v
                 toAnswer (Ready v) = Continue v
@@ -241,7 +243,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
 
 
         -- | Given a Key and the list of dependencies yet to be checked, check them
-        check :: Stack -> Id -> Key -> Result -> [Depends] -> IO Status {- Ready | Waiting -}
+        check :: Stack -> Id -> Key -> Result BS.ByteString -> [Depends] -> IO Status {- Ready | Waiting -}
         check stack i k r [] = spawn False stack i k $ Just r
         check stack i k r (Depends ds:rest) = do
             let cont v = if isLeft v then spawn True stack i k $ Just r else check stack i k r rest
@@ -262,21 +264,21 @@ build pool Database{..} BuildKey{..} stack ks continue =
 
 
         -- | Given a Key, queue up execution and return waiting
-        spawn :: Bool -> Stack -> Id -> Key -> Maybe Result -> IO Status {- Waiting -}
+        spawn :: Bool -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
             addPoolLowPriority pool $ do
                 buildKey (addStack i k stack) step k r dirtyChildren $ \res -> do
-                    let status = either Error (Ready . snd) res
+                    let status = either Error (Ready . thd3) res
                     withLock lock $ do
                         i #= (k, status)
                         done status
                     case res of
-                        Right (write, r) -> do
+                        Right (write, bs, r) -> do
                             diagnostic $ return $
                                 "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
                                 " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                            when write $ journal i k r
+                            when write $ journal i k r{result=bs}
                         Left _ -> do
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
@@ -349,11 +351,11 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
 
 
 -- | Eliminate all errors from the database, pretending they don't exist
-resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result)
+resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result ())
 resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = map (Depends . filter (isJust . flip Map.lookup keep) . fromDepends) $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
-removeStep :: Map Id (Key, Result) -> Map Id (Key, Result)
+removeStep :: Map Id (Key, Result a) -> Map Id (Key, Result a)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
@@ -444,11 +446,11 @@ newtype StepKey = StepKey ()
 stepKey :: Key
 stepKey = newKey $ StepKey ()
 
-toStepResult :: Step -> Result
-toStepResult i = Result (newValue i) i i [] 0 []
+toStepResult :: Step -> Result BS.ByteString
+toStepResult i = Result (binaryCreate i) i i [] 0 []
 
-fromStepResult :: Result -> Step
-fromStepResult = fromValue . result
+fromStepResult :: Result BS.ByteString -> Step
+fromStepResult = fst . binarySplit . result
 
 
 withDatabase :: ShakeOptions -> (IO String -> IO ()) -> (Database -> IO a) -> IO a
@@ -456,7 +458,7 @@ withDatabase opts diagnostic act = do
     registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
     witness <- currentWitness2
     witness <- return $ Map.fromList
-        [ (t, newBinaryEx (putDatabase putKey putValue) (getDatabase getKey getValue))
+        [ (t, newBinaryEx (putDatabase putKey) (getDatabase getKey))
         | ((t,_),(putKey,getKey,putValue,getValue)) <- Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
@@ -481,17 +483,17 @@ withDatabase opts diagnostic act = do
         act Database{..}
 
 
-putDatabase :: (Key -> Put) -> (Value -> Put) -> ((Key, Status) -> Put)
-putDatabase putKey putValue (key, Loaded (Result x1 x2 x3 x4 x5 x6)) = do
+putDatabase :: (Key -> Put) -> ((Key, Status) -> Put)
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) = do
     putKey key
-    putValue x1
+    put x1
     put x2 >> put x3 >> put (BinList $ map (BinList . fromDepends) x4) >> put (BinFloat x5) >> put (BinList x6)
-putDatabase _ _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
+putDatabase _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
 
-getDatabase :: Get Key -> Get Value -> Get (Key, Status)
-getDatabase getKey getValue =
+getDatabase :: Get Key -> Get (Key, Status)
+getDatabase getKey =
     (\key x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> (key, Loaded (Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6))) <$>
-        getKey <*> getValue <*> get <*> get <*> get <*> get <*> get
+        getKey <*> get <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)

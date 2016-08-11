@@ -14,6 +14,7 @@ import Control.Applicative
 import Data.Typeable
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
+import qualified Data.ByteString as BS
 import System.Time.Extra
 
 import Development.Shake.Internal.Core.Pool
@@ -50,18 +51,18 @@ data RunResult value = RunResult
     {runChanged :: RunChanged
         -- ^ Have the required dependencies of this action changed? Use 'True' to use the dependencies this time
         --   around as the future dependencies. Use 'False' to keep the previous dependencies.
-    -- ,resultStore :: BS.ByteString
+    ,runStore :: BS.ByteString
         -- ^ Return the new value to store, and a 'True' if that value has changed from the argument store.
     ,runValue :: value
         -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
     } deriving Functor
 
 instance NFData value => NFData (RunResult value) where
-    rnf (RunResult x1 x2) = rnf x1 `seq` rnf x2
+    rnf (RunResult x1 x2 x3) = rnf x1 `seq` rnf x2 `seq` rnf x3
 
 
 -- | How to run a rule.
-type BuiltinRun key value = key -> Maybe value -> Bool -> Action (RunResult value)
+type BuiltinRun key value = key -> Maybe BS.ByteString -> Bool -> Action (RunResult value)
 
 -- | How to lint a rule.
 type BuiltinLint key value = key -> value -> IO (Maybe String)

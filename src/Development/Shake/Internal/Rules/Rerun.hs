@@ -8,6 +8,7 @@ import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Classes
+import qualified Data.ByteString as BS
 import General.Encoder
 
 
@@ -41,4 +42,4 @@ alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
     addBuiltinRule noLint $
-        \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff $ AlwaysRerunA ()
+        \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff BS.empty $ AlwaysRerunA ()
