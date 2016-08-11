@@ -47,7 +47,7 @@ instance Encoder [BS.ByteString] where
         for2M_ [4,8..] ns $ \i x -> pokeByteOff p i (fromIntegral x :: Word32)
         p <- return $ p `plusPtr` (4 + (n * 4))
         for2M_ (scanl (+) 0 ns) xs $ \i x -> BS.useAsCStringLen x $ \(bs, n) ->
-            BS.memcpy (castPtr bs) (p `plusPtr` i) n
+            BS.memcpy (castPtr bs) (p `plusPtr` i) (fromIntegral n)
         where ns = map BS.length xs
               n = length ns
 
