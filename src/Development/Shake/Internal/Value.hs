@@ -126,8 +126,8 @@ witness2 = unsafePerformIO $ newIORef Map.empty
 clearWitness :: IO ()
 clearWitness = writeIORef witness2 Map.empty
 
-registerWitness :: (ShakeValue k, ShakeValue v) => Proxy k -> Proxy v -> IO ()
-registerWitness (k :: Proxy (k :: *)) (v :: Proxy (v :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
+registerWitness :: ShakeValue k => Proxy k -> IO ()
+registerWitness (k :: Proxy (k :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
     where f = Map.insert (typeRep k)
                 (\k -> put (fromKey k :: k)
                 ,do k <- get; return $ newKey (k :: k))

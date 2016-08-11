@@ -455,7 +455,7 @@ fromStepResult = fst . binarySplit . result
 
 withDatabase :: ShakeOptions -> (IO String -> IO ()) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic act = do
-    registerWitness (Proxy :: Proxy StepKey) (Proxy :: Proxy Step)
+    registerWitness (Proxy :: Proxy StepKey)
     witness <- currentWitness2
     witness <- return $ Map.fromList
         [ (t, newBinaryEx (putDatabase putKey) (getDatabase getKey))
