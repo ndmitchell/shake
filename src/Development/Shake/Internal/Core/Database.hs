@@ -459,7 +459,7 @@ withDatabase opts diagnostic act = do
     witness <- currentWitness2
     witness <- return $ Map.fromList
         [ (t, newBinaryEx (putDatabase putKey) (getDatabase getKey))
-        | ((t,_),(putKey,getKey,putValue,getValue)) <- Map.toList witness]
+        | ((t,_),(putKey,getKey)) <- Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
 

@@ -120,7 +120,7 @@ instance Eq Value where
 
 -- FIXME: These witnesses should be stored in the Rules type, not a global IORef
 {-# NOINLINE witness2 #-}
-witness2 :: IORef (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key, Value -> Put, Get Value))
+witness2 :: IORef (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key))
 witness2 = unsafePerformIO $ newIORef Map.empty
 
 clearWitness :: IO ()
@@ -130,9 +130,7 @@ registerWitness :: (ShakeValue k, ShakeValue v) => Proxy k -> Proxy v -> IO ()
 registerWitness (k :: Proxy (k :: *)) (v :: Proxy (v :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
     where f = Map.insert (typeRep k, typeRep v)
                 (\k -> put (fromKey k :: k)
-                ,do k <- get; return $ newKey (k :: k)
-                ,\v -> put (fromValue v :: v)
-                ,do v <- get; return $ newValue (v :: v))
+                ,do k <- get; return $ newKey (k :: k))
 
-currentWitness2 :: IO (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key, Value -> Put, Get Value))
+currentWitness2 :: IO (Map.HashMap (TypeRep, TypeRep) (Key -> Put, Get Key))
 currentWitness2 = readIORef witness2
