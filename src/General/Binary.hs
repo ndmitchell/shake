@@ -13,7 +13,7 @@ import Data.Binary
 import Data.Binary.Put
 import Data.Binary.Get
 import qualified Data.Binary.Builder as Bin
-import Data.List
+import Data.List.Extra
 import Data.Tuple.Extra
 import Foreign.Storable
 import Foreign.Ptr
