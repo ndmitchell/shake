@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ExplicitForAll, ScopedTypeVariables #-}
 
 module General.Binary(
-    BinaryEx(..), newBinaryEx, encode', decode',
+    BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, unsafeBinarySplit, binaryCreate,
     module Data.Binary,
     BinList(..), BinFloat(..)
@@ -29,13 +29,13 @@ import Prelude
 -- STORE TYPE
 
 -- | An explicit and more efficient version of Binary
-data BinaryEx v = BinaryEx
-    {putEx :: v -> Builder
-    ,getEx :: BS.ByteString -> v
+data BinaryOp v = BinaryOp
+    {putOp :: v -> Builder
+    ,getOp :: BS.ByteString -> v
     }
 
-newBinaryEx :: (a -> Put) -> (Get a) -> BinaryEx a
-newBinaryEx put get = BinaryEx (execPut . put) (runGet get . LBS.fromChunks . return)
+newBinaryOp :: (a -> Put) -> (Get a) -> BinaryOp a
+newBinaryOp put get = BinaryOp (execPut . put) (runGet get . LBS.fromChunks . return)
 
 binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
 binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"

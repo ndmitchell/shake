@@ -64,7 +64,7 @@ withStorage
     :: (Show k, Eq k, Hashable k, Show v)
     => ShakeOptions                      -- ^ Storage options
     -> (IO String -> IO ())              -- ^ Logging function
-    -> Map.HashMap k (BinaryEx v)           -- ^ Witnesses
+    -> Map.HashMap k (BinaryOp v)           -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
@@ -172,7 +172,7 @@ keyName :: Show k => k -> BS.ByteString
 keyName = UTF8.fromString . show
 
 
-getWitness :: Show k => BS.ByteString -> Map.HashMap k (BinaryEx v) -> (BS.ByteString -> (k, Id, v))
+getWitness :: Show k => BS.ByteString -> Map.HashMap k (BinaryOp v) -> (BS.ByteString -> (k, Id, v))
 getWitness bs mp
     | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
     | otherwise = \bs ->
@@ -186,19 +186,19 @@ getWitness bs mp
         mp2 = Map.fromList [(keyName k, (k, v)) | (k,v) <- Map.toList mp]
         ind = fastAt [ case Map.lookup w mp2 of
                             Nothing -> error $ "Witness type has disappeared, " ++ UTF8.toString w
-                            Just (k, BinaryEx{..}) -> \bs ->
+                            Just (k, BinaryOp{..}) -> \bs ->
                                 let (i, bs2) = binarySplit bs
-                                    v = getEx bs2
+                                    v = getOp bs2
                                 in (k, i, v)
                      | w <- ws]
 
 
-putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (BinaryEx v) -> (BS.ByteString, k -> Id -> v -> Builder)
+putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
 putWitness mp = (encode' (ws :: [BS.ByteString]), \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map keyName $ Map.keys mp
         wsMp = Map.fromList $ zip ws [fromIntegral 0 :: Word16 ..]
-        mp2 = Map.mapWithKey (\k BinaryEx{..} -> let tag = putWord16host $ wsMp Map.! keyName k in \(Id w) v -> tag <> putWord32host w <> putEx v) mp
+        mp2 = Map.mapWithKey (\k BinaryOp{..} -> let tag = putWord16host $ wsMp Map.! keyName k in \(Id w) v -> tag <> putWord32host w <> putOp v) mp
 
 
 withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
