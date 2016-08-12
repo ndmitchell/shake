@@ -450,7 +450,7 @@ toStepResult :: Step -> Result BS.ByteString
 toStepResult i = Result (runBuilder $ putEx i) i i [] 0 []
 
 fromStepResult :: Result BS.ByteString -> Step
-fromStepResult = fst . binarySplit . result
+fromStepResult = getEx . result
 
 
 withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
