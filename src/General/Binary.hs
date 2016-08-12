@@ -2,7 +2,7 @@
 
 module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
-    binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit, binaryCreate,
+    binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList, putList, getList, putN, getN
     ) where
@@ -57,9 +57,6 @@ binarySplit3 bs | BS.length bs < sizeOf (undefined :: a) + sizeOf (undefined :: 
 unsafeBinarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
 unsafeBinarySplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
     where v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
-
-binaryCreate :: Storable a => a -> BS.ByteString
-binaryCreate x = unsafePerformIO $ BS.create (sizeOf x) $ \ptr -> poke (castPtr ptr) x
 
 encode' :: Binary a => a -> BS.ByteString
 encode' = BS.concat . LBS.toChunks . encode
