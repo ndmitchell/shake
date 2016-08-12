@@ -211,7 +211,7 @@ getList :: BS.ByteString -> [BS.ByteString]
 getList bs
     | len == 0 = []
     | len >= 4
-    , (n :: Word32, bs) <- binarySplit bs
+    , (n :: Word32, bs) <- unsafeBinarySplit bs
     , n <- fromIntegral n
     , (len - 4) >= n
     = BS.unsafeTake n bs : getList (BS.unsafeDrop n bs)
