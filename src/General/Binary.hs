@@ -8,9 +8,10 @@ module General.Binary(
     ) where
 
 import Control.Monad
-import Data.Binary
-import Data.Binary.Put
-import Data.Binary.Get
+import Data.Binary(Binary, encode, decode)
+import Data.Binary.Put(Put, execPut)
+import Data.Binary.Get(Get, runGet)
+import Data.Word
 import qualified Data.Binary.Builder as Bin
 import Data.List.Extra
 import Data.Tuple.Extra
