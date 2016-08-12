@@ -182,7 +182,7 @@ putExStorableList xs = Builder (n * length xs) $ \ptr i ->
 getExStorableList :: forall a . Storable a => BS.ByteString -> [a]
 getExStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
     let (d,m) = size `divMod` n in
-    if m /= 0 then error "size mismatch" else forM [0..d-1] $ \i -> peekElemOff (castPtr p) d
+    if m /= 0 then error "size mismatch" else forM [0..d-1] $ \i -> peekElemOff (castPtr p) i
     where n = sizeOf (undefined :: a)
 
 ---------------------------------------------------------------------
