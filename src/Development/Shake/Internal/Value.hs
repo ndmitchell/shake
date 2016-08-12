@@ -55,56 +55,56 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 
 -- We deliberately avoid Typeable instances on Key/Value to stop them accidentally
 -- being used inside themselves
-newtype Key = Key Value
-    deriving (Eq,Hashable,NFData)
-
-data Value = forall a . Value
-    {valueType :: TypeRep
-    ,valueShow :: a -> String
-    ,valueEq :: a -> a -> Bool
-    ,valueRnf :: a -> ()
-    ,valueHash :: Int -> a -> Int
-    ,value :: a
+data Key = forall a . Key
+    {keyType :: TypeRep
+    ,keyShow :: a -> String
+    ,keyEq :: a -> a -> Bool
+    ,keyRnf :: a -> ()
+    ,keyHash :: Int -> a -> Int
+    ,keyValue :: a
     }
 
+newtype Value = Value Key
+    deriving (Eq,Hashable,NFData)
 
-newKey :: ShakeValue a => a -> Key
-newKey = Key . newValue
 
-newValue :: forall a . ShakeValue a => a -> Value
-newValue = Value (typeRep (Proxy :: Proxy a)) show (==) rnf hashWithSalt
+newKey :: forall a . ShakeValue a => a -> Key
+newKey = Key (typeRep (Proxy :: Proxy a)) show (==) rnf hashWithSalt
+
+newValue :: ShakeValue a => a -> Value
+newValue = Value . newKey
 
 typeKey :: Key -> TypeRep
-typeKey (Key v) = typeValue v
+typeKey Key{..} = keyType
 
 typeValue :: Value -> TypeRep
-typeValue Value{..} = valueType
+typeValue (Value k) = typeKey k
 
-fromKey :: Typeable a => Key -> a
-fromKey (Key v) = fromValue v
-
-castValue :: forall a . Typeable a => Value -> Maybe a
-castValue Value{..}
-    | valueType == typeRep (Proxy :: Proxy a) = Just $ unsafeCoerce value
+castKey :: forall a . Typeable a => Key -> Maybe a
+castKey Key{..}
+    | keyType == typeRep (Proxy :: Proxy a) = Just $ unsafeCoerce keyValue
     | otherwise = Nothing
 
-fromValue :: forall a . Typeable a => Value -> a
-fromValue v = fromMaybe (err msg) $ castValue v
-    where msg = "fromValue, bad cast, have " ++ show (valueType v) ++ ", wanted " ++ show (typeRep (Proxy :: Proxy a))
+fromKey :: forall a . Typeable a => Key -> a
+fromKey v = fromMaybe (err msg) $ castKey v
+    where msg = "fromKey, bad cast, have " ++ show (keyType v) ++ ", wanted " ++ show (typeRep (Proxy :: Proxy a))
 
-instance Show Key where
-    show (Key a) = show a
+fromValue :: Typeable a => Value -> a
+fromValue (Value k) = fromKey k
 
 instance Show Value where
-    show Value{..} = valueShow value
+    show (Value a) = show a
 
-instance NFData Value where
-    rnf Value{..} = valueRnf value
+instance Show Key where
+    show Key{..} = keyShow keyValue
 
-instance Hashable Value where
-    hashWithSalt salt Value{..} = hashWithSalt salt valueType `xor` valueHash salt value
+instance NFData Key where
+    rnf Key{..} = keyRnf keyValue
 
-instance Eq Value where
-    Value{valueType=at,value=a,valueEq=eq} == Value{valueType=bt,value=b}
+instance Hashable Key where
+    hashWithSalt salt Key{..} = hashWithSalt salt keyType `xor` keyHash salt keyValue
+
+instance Eq Key where
+    Key{keyType=at,keyValue=a,keyEq=eq} == Key{keyType=bt,keyValue=b}
         | at /= bt = False
         | otherwise = eq a (unsafeCoerce b)
