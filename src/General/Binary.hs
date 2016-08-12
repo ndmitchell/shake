@@ -160,6 +160,10 @@ instance BinaryEx Int where
     putEx = putExStorable
     getEx = getExStorable
 
+instance BinaryEx Float where
+    putEx = putExStorable
+    getEx = getExStorable
+
 
 putExStorable :: forall a . Storable a => a -> Builder
 putExStorable x = Builder (sizeOf x) $ \p i -> pokeByteOff p i x
