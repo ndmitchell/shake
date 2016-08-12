@@ -112,7 +112,7 @@ instance BinaryEx [BS.ByteString] where
         for2M_ [4+i,8+i..] ns $ \i x -> pokeByteOff p i (fromIntegral x :: Word32)
         p <- return $ p `plusPtr` (i + 4 + (n * 4))
         for2M_ (scanl (+) 0 ns) xs $ \i x -> BS.useAsCStringLen x $ \(bs, n) ->
-            BS.memcpy (castPtr bs) (p `plusPtr` i) (fromIntegral n)
+            BS.memcpy (p `plusPtr` i) (castPtr bs) (fromIntegral n)
         where ns = map BS.length xs
               n = length ns
 
