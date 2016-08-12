@@ -4,7 +4,7 @@ module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit, binaryCreate,
     Builder(..), runBuilder, sizeBuilder,
-    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList, putList, getList,
+    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList, putList, getList, putN, getN,
     BinList(..), BinFloat(..)
     ) where
 
@@ -215,6 +215,21 @@ getList bs
     , n <- fromIntegral n
     , (len - 4) >= n
     = BS.unsafeTake n bs : getList (BS.unsafeDrop n bs)
+    | otherwise = error "getList, corrupted binary"
+    where len = BS.length bs
+
+putN :: Builder -> Builder
+putN (Builder n old) = Builder (n+4) $ \p i -> do
+    pokeByteOff p i (fromIntegral n :: Word32)
+    old p $ i+4
+
+getN :: BS.ByteString -> (BS.ByteString, BS.ByteString)
+getN bs
+    | len >= 4
+    , (n :: Word32, bs) <- unsafeBinarySplit bs
+    , n <- fromIntegral n
+    , (len - 4) >= n
+    = (BS.unsafeTake n bs, BS.unsafeDrop n bs)
     | otherwise = error "getList, corrupted binary"
     where len = BS.length bs
 
