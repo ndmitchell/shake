@@ -164,7 +164,7 @@ runRules opts (Rules r) = do
 data SRules = SRules
     {actions :: !(ListBuilder (Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
-    ,userRules :: !(Map.HashMap TypeRep{-k-} UserRule_) -- higher fst is higher priority
+    ,userRules :: !(Map.HashMap TypeRep{-k-} UserRule_)
     }
 
 instance Monoid SRules where
