@@ -14,8 +14,8 @@ import Control.Exception.Extra
 import System.IO
 import System.Directory
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.Word
+import Data.Monoid
 import General.Binary
 
 
@@ -44,14 +44,13 @@ readChunkMax Chunks{..} mx = withMVar chunksHandle $ \h -> do
         v <- BS.hGet h count
         if BS.length v < count then slop (n `BS.append` v) else return $ Right v
 
-writeChunkDirect :: Handle -> LBS.ByteString -> IO ()
-writeChunkDirect h x = do
-    let n = binaryCreate (fromIntegral $ LBS.length x :: Word32)
-    LBS.hPut h $ LBS.fromChunks [n] `LBS.append` x
+writeChunkDirect :: Handle -> Builder -> IO ()
+writeChunkDirect h x = bs `seq` BS.hPut h bs
+    where bs = runBuilder $ putEx (fromIntegral $ sizeBuilder x :: Word32) <> x
 
 
 -- | If 'writeChunks' and any of the reopen operations are interleaved it will cause issues.
-writeChunks :: Chunks -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
+writeChunks :: Chunks -> ((Builder -> IO ()) -> IO a) -> IO a
 -- We avoid calling flush too often on SSD drives, as that can be slow
 -- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
 -- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
@@ -74,14 +73,14 @@ writeChunks Chunks{..} act = withMVar chunksHandle $ \h -> do
         whileM $ join $ readChan chan
 
     (act $ \s -> do
-            evaluate $ LBS.length s -- ensure exceptions occur on this thread
-            writeChan chan $ writeChunkDirect h s >> tryPutMVar kick () >> return True)
+            out <- evaluate $ writeChunkDirect h s -- ensure exceptions occur on this thread
+            writeChan chan $ out >> tryPutMVar kick () >> return True)
         `finally` do
             maybe (return ()) killThread flusher
             writeChan chan $ return False
             waitBarrier died
 
-writeChunk :: Chunks -> LBS.ByteString -> IO ()
+writeChunk :: Chunks -> Builder -> IO ()
 writeChunk Chunks{..} x = withMVar chunksHandle $ \h -> writeChunkDirect h x
 
 
@@ -110,7 +109,7 @@ withChunks file flush act = do
 
 
 -- | The file is being compacted, if the process fails, use a backup.
-resetChunksCompact :: Chunks -> ((LBS.ByteString -> IO ()) -> IO a) -> IO a
+resetChunksCompact :: Chunks -> ((Builder -> IO ()) -> IO a) -> IO a
 resetChunksCompact Chunks{..} act = mask $ \restore -> do
     h <- takeMVar chunksHandle
     flip onException (putMVar chunksHandle h) $ restore $ do

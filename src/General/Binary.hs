@@ -3,7 +3,7 @@
 module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, unsafeBinarySplit, binaryCreate,
-    Builder(..), runBuilder,
+    Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList,
     BinList(..), BinFloat(..)
     ) where
@@ -68,11 +68,11 @@ for2M_ as bs f = zipWithM_ f as bs
 
 data Builder = Builder {-# UNPACK #-} !Int (forall a . Ptr a -> Int -> IO ())
 
+sizeBuilder :: Builder -> Int
+sizeBuilder (Builder i _) = i
+
 runBuilder :: Builder -> BS.ByteString
-runBuilder (Builder i f) = unsafePerformIO $ do
-    bs <- BS.create i $ \ptr -> f ptr 0
-    -- print ("runBuilder", BS.unpack bs)
-    return bs
+runBuilder (Builder i f) = unsafePerformIO $ BS.create i $ \ptr -> f ptr 0
 
 instance Monoid Builder where
     mempty = Builder 0 $ \_ _ -> return ()

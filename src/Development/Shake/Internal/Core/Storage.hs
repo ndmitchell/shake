@@ -35,7 +35,6 @@ import System.FilePath
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.HashMap.Strict as Map
 
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString as BS8
 import Data.Functor
@@ -145,22 +144,22 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 when (countDistinct*2 > countItems || witnessOld /= witnessNew) $ do
                     addTiming "Database compression"
                     resetChunksCompact h $ \out -> do
-                        out $ LBS.fromChunks [ver]
-                        out $ LBS.fromChunks [witnessNew]
-                        Ids.forWithKeyM_ ids $ \i (k,v) -> out $ LBS.fromChunks [runBuilder $ save k i v]
+                        out $ putEx ver
+                        out $ putEx witnessNew
+                        Ids.forWithKeyM_ ids $ \i (k,v) -> out $ save k i v
                 Just <$> Ids.for ids snd
 
         ids <- case ids of
             Just ids -> return ids
             Nothing -> do
-                writeChunk h $ LBS.fromChunks [ver]
-                writeChunk h $ LBS.fromChunks [witnessNew]
+                writeChunk h $ putEx ver
+                writeChunk h $ putEx witnessNew
                 Ids.empty
 
         addTiming "With database"
         writeChunks h $ \out -> do
             act ids $ \k i v -> do
-                out $ LBS.fromChunks [runBuilder $ save k i v]
+                out $ save k i v
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime
