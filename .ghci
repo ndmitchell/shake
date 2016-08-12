@@ -46,7 +46,7 @@ let _ghci_make name flags =
 :{
 :def benchmark \x -> return $ unlines
         [_ghci_make "benchmark" "-O2 -threaded"
-        ,":!timer .hpc\\benchmark\\shake " ++ x
+        ,":!ptime .hpc\\benchmark\\shake " ++ x
         ,"putStrLn \"\""]
 :}
 
