@@ -16,12 +16,6 @@ newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
 instance Show AlwaysRerunQ where show _ = "alwaysRerun"
 
-newtype AlwaysRerunA = AlwaysRerunA ()
-    deriving (Typeable,Hashable,Binary,Encoder,NFData)
-instance Show AlwaysRerunA where show _ = "<none>"
-instance Eq AlwaysRerunA where a == b = False
-
-
 -- | Always rerun the associated action. Useful for defining rules that query
 --   the environment. For example:
 --
@@ -37,9 +31,9 @@ instance Eq AlwaysRerunA where a == b = False
 --   Note that 'alwaysRerun' is applied when a rule is executed. Modifying an existing rule
 --   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
 alwaysRerun :: Action ()
-alwaysRerun = do AlwaysRerunA _ <- apply1 $ AlwaysRerunQ (); return ()
+alwaysRerun = apply1 $ AlwaysRerunQ ()
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
     addBuiltinRule noLint $
-        \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff BS.empty $ AlwaysRerunA ()
+        \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff BS.empty ()
