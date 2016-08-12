@@ -7,7 +7,6 @@ This module implements the Key/Value types, to abstract over hetrogenous data ty
 module Development.Shake.Internal.Value(
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
-    currentWitness2, clearWitness, registerWitness,
     ShakeValue
     ) where
 
@@ -17,10 +16,7 @@ import Development.Shake.Internal.Errors
 import Data.Typeable.Extra
 
 import Data.Bits
-import Data.IORef
 import Data.Maybe
-import qualified Data.HashMap.Strict as Map
-import System.IO.Unsafe
 import Unsafe.Coerce
 
 -- | Define an alias for the six type classes required for things involved in Shake rules.
@@ -112,24 +108,3 @@ instance Eq Value where
     Value{valueType=at,value=a,valueEq=eq} == Value{valueType=bt,value=b}
         | at /= bt = False
         | otherwise = eq a (unsafeCoerce b)
-
-
----------------------------------------------------------------------
--- BINARY INSTANCES
-
--- FIXME: These witnesses should be stored in the Rules type, not a global IORef
-{-# NOINLINE witness2 #-}
-witness2 :: IORef (Map.HashMap TypeRep (Key -> Put, Get Key))
-witness2 = unsafePerformIO $ newIORef Map.empty
-
-clearWitness :: IO ()
-clearWitness = writeIORef witness2 Map.empty
-
-registerWitness :: ShakeValue k => Proxy k -> IO ()
-registerWitness (k :: Proxy (k :: *)) = atomicModifyIORef witness2 $ \mp -> (f mp, ())
-    where f = Map.insert (typeRep k)
-                (\k -> put (fromKey k :: k)
-                ,do k <- get; return $ newKey (k :: k))
-
-currentWitness2 :: IO (Map.HashMap TypeRep (Key -> Put, Get Key))
-currentWitness2 = readIORef witness2

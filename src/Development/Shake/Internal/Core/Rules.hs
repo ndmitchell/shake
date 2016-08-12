@@ -158,7 +158,6 @@ modifyRules f (Rules r) = Rules $ censor f r
 
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, Map.HashMap TypeRep UserRule_)
 runRules opts (Rules r) = do
-    clearWitness
     SRules{..} <- runReaderT (execWriterT r) opts
     return (runListBuilder actions, builtinRules, userRules)
 
@@ -200,7 +199,6 @@ addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinLint key value ->
 addBuiltinRule lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
-    liftIO $ registerWitness k
     let run_ k v b = fmap (fmap newValue) $ run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
     let binary = (\x -> put (fromKey x :: key), fmap (\x -> newKey (x :: key)) get)
