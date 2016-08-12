@@ -141,7 +141,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 countDistinct <- Ids.sizeUpperBound ids
                 diagnostic $ return $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
 
-                when (countDistinct*2 > countItems || witnessOld /= witnessNew) $ do
+                when (countItems > countDistinct*2 || witnessOld /= witnessNew) $ do
                     addTiming "Database compression"
                     resetChunksCompact h $ \out -> do
                         out $ putEx ver
