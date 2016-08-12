@@ -31,7 +31,7 @@ import qualified Development.Ninja.Parse as Ninja
 import qualified Development.Ninja.Env as Ninja
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.UTF8 as UTF8
-import General.Encoder
+import General.Binary
 import Control.Applicative
 import Data.Tuple.Extra
 import Data.List

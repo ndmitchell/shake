@@ -9,7 +9,7 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Classes
 import qualified Data.ByteString as BS
-import General.Encoder
+import General.Binary
 
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()

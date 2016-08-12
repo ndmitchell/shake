@@ -22,8 +22,7 @@ import Data.Maybe
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 import Foreign.Storable
-import General.Encoder
-import General.Binary hiding (encode, decode)
+import General.Binary
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules

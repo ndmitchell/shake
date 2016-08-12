@@ -3,6 +3,7 @@
 module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, unsafeBinarySplit, binaryCreate,
+    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList,
     module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
@@ -22,6 +23,7 @@ import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor
+import General.Encoder
 import Prelude
 
 

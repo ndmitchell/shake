@@ -12,7 +12,6 @@ import Data.List.Extra
 import System.Directory
 import Control.Applicative
 import Data.Typeable.Extra
-import General.Encoder
 import General.Binary
 import Prelude
 

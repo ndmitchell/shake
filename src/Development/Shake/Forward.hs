@@ -48,7 +48,7 @@ import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
-import General.Encoder
+import General.Binary
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
 
