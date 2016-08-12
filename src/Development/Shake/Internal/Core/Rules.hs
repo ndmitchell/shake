@@ -18,6 +18,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
+import Data.Binary
 import Data.Typeable.Extra
 import Data.Function
 import Data.List.Extra
@@ -26,7 +27,6 @@ import Data.Maybe
 import System.IO.Extra
 import Data.Monoid
 import General.ListBuilder
-import General.Binary
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad

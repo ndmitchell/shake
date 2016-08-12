@@ -12,6 +12,7 @@ import Control.DeepSeq
 import Control.Monad.IO.Class
 import Control.Applicative
 import Data.Typeable
+import Data.Binary
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
 import qualified Data.ByteString as BS
@@ -23,7 +24,6 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
 import General.Cleanup
-import General.Binary
 import Prelude
 
 

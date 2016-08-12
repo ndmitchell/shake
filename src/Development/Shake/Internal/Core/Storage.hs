@@ -24,6 +24,7 @@ import Data.Monoid
 import Data.Either.Extra
 import Data.Time
 import Data.Char
+import Data.Word
 import Development.Shake.Classes
 import Numeric
 import General.Extra

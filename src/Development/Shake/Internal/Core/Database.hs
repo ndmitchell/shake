@@ -24,6 +24,8 @@ import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
 import qualified Data.ByteString.Char8 as BS
+import Data.Word
+import Data.Binary
 import General.Extra
 import qualified General.Intern as Intern
 import General.Intern(Id, Intern)

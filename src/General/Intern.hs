@@ -5,9 +5,9 @@ module General.Intern(
     empty, insert, add, lookup, toList, fromList
     ) where
 
-import General.Binary
 import Development.Shake.Classes
 import Foreign.Storable
+import Data.Word
 import Prelude hiding (lookup)
 import qualified Data.HashMap.Strict as Map
 import Data.List(foldl')

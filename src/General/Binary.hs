@@ -4,7 +4,6 @@ module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, unsafeBinarySplit, binaryCreate,
     BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList,
-    module Data.Binary,
     BinList(..), BinFloat(..)
     ) where
 

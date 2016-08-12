@@ -10,7 +10,6 @@ module Development.Shake.Internal.Value(
     ShakeValue
     ) where
 
-import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Internal.Errors
 import Data.Typeable.Extra
