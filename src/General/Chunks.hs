@@ -15,7 +15,7 @@ import System.IO
 import System.Directory
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.Binary
+import Data.Word
 import General.Binary
 
 
