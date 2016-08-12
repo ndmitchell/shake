@@ -79,7 +79,7 @@ class BinaryEx a where
     getEx :: BS.ByteString -> a
 
 instance BinaryEx BS.ByteString where
-    putEx x = Builder n $ \ptr i -> BS.useAsCString x $ \bs -> BS.memcpy (castPtr bs) (ptr `plusPtr` i) (fromIntegral n)
+    putEx x = Builder n $ \ptr i -> BS.useAsCString x $ \bs -> BS.memcpy (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
         where n = BS.length x
     getEx = id
 
