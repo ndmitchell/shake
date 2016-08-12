@@ -54,7 +54,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
-newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,Storable,Encoder,NFData,Hashable,Typeable)
+newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,Storable,BinaryEx,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
 
@@ -441,7 +441,7 @@ lookupDependencies Database{..} k =
 
 -- To simplify journaling etc we smuggle the Step in the database, with a special StepKey
 newtype StepKey = StepKey ()
-    deriving (Show,Eq,Typeable,Hashable,Binary,Encoder,NFData)
+    deriving (Show,Eq,Typeable,Hashable,Binary,BinaryEx,NFData)
 
 stepKey :: Key
 stepKey = newKey $ StepKey ()

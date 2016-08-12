@@ -57,9 +57,9 @@ readConfigFileWithEnv vars file = do
     return $ Map.fromList $ map (UTF8.toString *** UTF8.toString) $ Map.toList mp
 
 
-newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
-newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,Encoder,NFData)
+newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
 
 -- | Specify the file to use with 'getConfig'.

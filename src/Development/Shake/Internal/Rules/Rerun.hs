@@ -13,7 +13,7 @@ import General.Encoder
 
 
 newtype AlwaysRerunQ = AlwaysRerunQ ()
-    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 instance Show AlwaysRerunQ where show _ = "alwaysRerun"
 
 -- | Always rerun the associated action. Useful for defining rules that query

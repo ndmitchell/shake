@@ -22,7 +22,7 @@ import Data.List
 
 -- | UTF8 ByteString
 newtype FileName = FileName BS.ByteString
-    deriving (Hashable, Binary, Encoder, Eq)
+    deriving (Hashable, Binary, BinaryEx, Eq)
 
 instance NFData FileName where
     rnf (FileName x) = x `seq` ()
@@ -30,9 +30,9 @@ instance NFData FileName where
 instance Show FileName where
     show = fileNameToString
 
-instance Encoder [FileName] where
-    encode = encode . map (\(FileName x) -> x)
-    decode = map FileName . decode
+instance BinaryEx [FileName] where
+    putEx = putEx . map (\(FileName x) -> x)
+    getEx = map FileName . getEx
 
 fileNameToString :: FileName -> FilePath
 fileNameToString = UTF8.toString . fileNameToByteString

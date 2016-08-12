@@ -35,12 +35,12 @@ infix 1 &?>, &%>
 
 
 newtype FilesQ = FilesQ [FileQ]
-    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
 
 
 newtype FilesA = FilesA [FileA]
-    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
 instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . show) xs
 

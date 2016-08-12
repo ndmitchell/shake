@@ -46,13 +46,13 @@ infix 1 %>, ?>, |%>, ~>
 
 
 newtype FileQ = FileQ {fromFileQ :: FileName}
-    deriving (Typeable,Eq,Hashable,Binary,Encoder,NFData)
+    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
 instance Show FileQ where show (FileQ x) = fileNameToString x
 
-instance Encoder [FileQ] where
-    encode = encode . map fromFileQ
-    decode = map FileQ . decode
+instance BinaryEx [FileQ] where
+    putEx = putEx . map fromFileQ
+    getEx = map FileQ . getEx
 
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
@@ -76,13 +76,13 @@ instance Storable FileA where
     peekByteOff p i = FileA <$> peekByteOff p i <*> peekByteOff p (i+4) <*> peekByteOff p (i+8)
     pokeByteOff p i (FileA a b c) = pokeByteOff p i a >> pokeByteOff p (i+4) b >> pokeByteOff p (i+8) c
 
-instance Encoder FileA where
-    encode = encodeStorable
-    decode = decodeStorable
+instance BinaryEx FileA where
+    putEx = putExStorable
+    getEx = getExStorable
 
-instance Encoder [FileA] where
-    encode = encodeStorableList
-    decode = decodeStorableList
+instance BinaryEx [FileA] where
+    putEx = putExStorableList
+    getEx = getExStorableList
 
 data FileResult = Phony (Action ()) | One (Action ())
 

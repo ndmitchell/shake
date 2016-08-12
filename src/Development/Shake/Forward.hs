@@ -58,7 +58,7 @@ forwards :: IORef (Map.HashMap ForwardQ (Action ()))
 forwards = unsafePerformIO $ newIORef Map.empty
 
 newtype ForwardQ = ForwardQ String
-    deriving (Hashable,Typeable,Eq,NFData,Binary,Encoder)
+    deriving (Hashable,Typeable,Eq,NFData,Binary,BinaryEx)
 
 instance Show ForwardQ where
     show (ForwardQ x) = x
