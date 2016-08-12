@@ -26,6 +26,7 @@ import Data.Maybe
 import System.IO.Extra
 import Data.Monoid
 import General.ListBuilder
+import General.Binary
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad
@@ -202,7 +203,8 @@ addBuiltinRule lint (run :: BuiltinRun key value) = do
     liftIO $ registerWitness k
     let run_ k v b = fmap (fmap newValue) $ run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v)}
+    let binary = (\x -> put (fromKey x :: key), fmap (\x -> newKey (x :: key)) get)
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v) binary}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.

@@ -23,6 +23,7 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Types
 import General.Cleanup
+import General.Binary
 import Prelude
 
 
@@ -71,6 +72,7 @@ data BuiltinRule = BuiltinRule
     {builtinRun :: BuiltinRun Key Value
     ,builtinLint :: BuiltinLint Key Value
     ,builtinResult :: TypeRep
+    ,builtinKey :: (Key -> Put, Get Key)
     }
 
 
