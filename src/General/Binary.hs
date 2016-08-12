@@ -4,14 +4,15 @@ module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
-    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList, putList, getList, putN, getN
+    BinaryEx(..),
+    putExStorable, getExStorable, putExStorableList, getExStorableList,
+    putExList, getExList, putExN, getExN
     ) where
 
 import Control.Monad
-import Data.Binary(Binary, encode, decode)
-import Data.Binary.Put(Put, execPut)
-import Data.Binary.Get(Get, runGet)
-import Data.Word
+import Data.Binary
+import Data.Binary.Put
+import Data.Binary.Get
 import qualified Data.Binary.Builder as Bin
 import Data.List.Extra
 import Data.Tuple.Extra
@@ -194,8 +195,8 @@ getExStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) 
 -- repeating:
 --     Word32, length of BS
 --     BS
-putList :: [Builder] -> Builder
-putList xs = Builder (sum $ map (\b -> sizeBuilder b + 4) xs) $ \p i -> do
+putExList :: [Builder] -> Builder
+putExList xs = Builder (sum $ map (\b -> sizeBuilder b + 4) xs) $ \p i -> do
     let go i [] = return ()
         go i (Builder n b:xs) = do
             pokeByteOff p i (fromIntegral n :: Word32)
@@ -203,24 +204,24 @@ putList xs = Builder (sum $ map (\b -> sizeBuilder b + 4) xs) $ \p i -> do
             go (i+4+n) xs
     go i xs
 
-getList :: BS.ByteString -> [BS.ByteString]
-getList bs
+getExList :: BS.ByteString -> [BS.ByteString]
+getExList bs
     | len == 0 = []
     | len >= 4
     , (n :: Word32, bs) <- unsafeBinarySplit bs
     , n <- fromIntegral n
     , (len - 4) >= n
-    = BS.unsafeTake n bs : getList (BS.unsafeDrop n bs)
+    = BS.unsafeTake n bs : getExList (BS.unsafeDrop n bs)
     | otherwise = error "getList, corrupted binary"
     where len = BS.length bs
 
-putN :: Builder -> Builder
-putN (Builder n old) = Builder (n+4) $ \p i -> do
+putExN :: Builder -> Builder
+putExN (Builder n old) = Builder (n+4) $ \p i -> do
     pokeByteOff p i (fromIntegral n :: Word32)
     old p $ i+4
 
-getN :: BS.ByteString -> (BS.ByteString, BS.ByteString)
-getN bs
+getExN :: BS.ByteString -> (BS.ByteString, BS.ByteString)
+getExN bs
     | len >= 4
     , (n :: Word32, bs) <- unsafeBinarySplit bs
     , n <- fromIntegral n

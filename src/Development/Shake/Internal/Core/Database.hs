@@ -484,16 +484,16 @@ withDatabase opts diagnostic witness act = do
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
 putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
-    putN (putKey key) <> putN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putN (putEx x4) <> putEx x6
+    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putExN (putEx x4) <> putEx x6
 putDatabase _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
 
 
 getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)
 getDatabase getKey bs
-    | (key, bs) <- getN bs
-    , (x1, bs) <- getN bs
+    | (key, bs) <- getExN bs
+    , (x1, bs) <- getExN bs
     , (x2, x3, x5, bs) <- binarySplit3 bs
-    , (x4, x6) <- getN bs
+    , (x4, x6) <- getExN bs
     = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
 
 instance BinaryEx Depends where
@@ -501,13 +501,13 @@ instance BinaryEx Depends where
     getEx = Depends . getExStorableList
 
 instance BinaryEx [Depends] where
-    putEx = putList . map putEx
-    getEx = map getEx . getList
+    putEx = putExList . map putEx
+    getEx = map getEx . getExList
 
 instance BinaryEx Trace where
     putEx (Trace a b c) = putEx b <> putEx c <> putEx a
     getEx x | (b,c,a) <- binarySplit2 x = Trace a b c
 
 instance BinaryEx [Trace] where
-    putEx = putList . map putEx
-    getEx = map getEx . getList
+    putEx = putExList . map putEx
+    getEx = map getEx . getExList
