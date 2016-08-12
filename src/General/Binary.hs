@@ -2,7 +2,7 @@
 
 module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
-    binarySplit, unsafeBinarySplit, binaryCreate,
+    binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit, binaryCreate,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList, putList, getList,
     BinList(..), BinFloat(..)
@@ -46,6 +46,15 @@ newBinaryOp put get = BinaryOp
 binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
 binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"
                | otherwise = unsafeBinarySplit bs
+
+binarySplit2 :: forall a b . (Storable a, Storable b) => BS.ByteString -> (a, b, BS.ByteString)
+binarySplit2 bs | BS.length bs < sizeOf (undefined :: a) + sizeOf (undefined :: b) = error "Reading from ByteString, insufficient left"
+                | (a,bs) <- unsafeBinarySplit bs, (b,bs) <- unsafeBinarySplit bs = (a,b,bs)
+
+binarySplit3 :: forall a b c . (Storable a, Storable b, Storable c) => BS.ByteString -> (a, b, c, BS.ByteString)
+binarySplit3 bs | BS.length bs < sizeOf (undefined :: a) + sizeOf (undefined :: b) + sizeOf (undefined :: c) = error "Reading from ByteString, insufficient left"
+                | (a,bs) <- unsafeBinarySplit bs, (b,bs) <- unsafeBinarySplit bs, (c,bs) <- unsafeBinarySplit bs = (a,b,c,bs)
+
 
 unsafeBinarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
 unsafeBinarySplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
