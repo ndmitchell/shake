@@ -447,7 +447,7 @@ stepKey :: Key
 stepKey = newKey $ StepKey ()
 
 toStepResult :: Step -> Result BS.ByteString
-toStepResult i = Result (binaryCreate i) i i [] 0 []
+toStepResult i = Result (runBuilder $ putEx i) i i [] 0 []
 
 fromStepResult :: Result BS.ByteString -> Step
 fromStepResult = fst . binarySplit . result
