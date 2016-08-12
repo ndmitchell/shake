@@ -128,6 +128,10 @@ instance BinaryEx Bool where
     putEx True = mempty
     getEx = BS.null
 
+instance BinaryEx Word16 where
+    putEx = putExStorable
+    getEx = getExStorable
+
 instance BinaryEx Word32 where
     putEx = putExStorable
     getEx = getExStorable
