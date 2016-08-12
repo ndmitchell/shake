@@ -1,4 +1,5 @@
 
+-- | List type that supports O(1) amortized 'cons', 'snoc', 'uncons' and 'isEmpty'.
 module General.Bilist(
     Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
