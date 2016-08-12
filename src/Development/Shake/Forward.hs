@@ -63,9 +63,6 @@ newtype ForwardQ = ForwardQ String
 instance Show ForwardQ where
     show (ForwardQ x) = x
 
-newtype ForwardA = ForwardA ()
-    deriving (Hashable,Typeable,Eq,NFData,Binary,Encoder,Show)
-
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()
 shakeForward opts act = shake (forwardOptions opts) (forwardRule act)
@@ -79,13 +76,13 @@ forwardRule :: Action () -> Rules ()
 forwardRule act = do
     addBuiltinRule noLint $ \k old dirty ->
         case old of
-            Just old | not dirty -> return $ RunResult ChangedNothing old $ ForwardA ()
+            Just old | not dirty -> return $ RunResult ChangedNothing old ()
             _ -> do
                 res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
                 case res of
                     Nothing -> liftIO $ errorIO "Failed to find action name"
                     Just act -> act
-                return $ RunResult ChangedRecomputeSame BS.empty $ ForwardA ()
+                return $ RunResult ChangedRecomputeSame BS.empty ()
     action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
@@ -98,7 +95,7 @@ cacheAction :: String -> Action () -> Action ()
 cacheAction name action = do
     let key = ForwardQ name
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key action mp, ())
-    _ :: [ForwardA] <- apply [key]
+    _ :: [()] <- apply [key]
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
 
 -- | Apply caching to an external command.
