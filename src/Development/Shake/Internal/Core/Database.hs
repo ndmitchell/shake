@@ -453,13 +453,12 @@ fromStepResult :: Result BS.ByteString -> Step
 fromStepResult = fst . binarySplit . result
 
 
-withDatabase :: ShakeOptions -> (IO String -> IO ()) -> (Database -> IO a) -> IO a
-withDatabase opts diagnostic act = do
-    registerWitness (Proxy :: Proxy StepKey)
-    witness <- currentWitness2
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (Key -> Put, Get Key) -> (Database -> IO a) -> IO a
+withDatabase opts diagnostic witness act = do
+    let step = (typeRep (Proxy :: Proxy StepKey), (\_ -> return (), return stepKey))
     witness <- return $ Map.fromList
         [ (t, newBinaryEx (putDatabase putKey) (getDatabase getKey))
-        | (t,(putKey,getKey)) <- Map.toList witness]
+        | (t,(putKey,getKey)) <- step : Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
 

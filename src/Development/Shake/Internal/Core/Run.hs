@@ -90,7 +90,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
             diagnostic $ return "Starting run 3"
-            withDatabase opts diagnostic $ \database -> do
+            withDatabase opts diagnostic (Map.map builtinKey ruleinfo) $ \database -> do
                 wait <- newBarrier
                 let getProgress = do
                         failure <- fmap fst <$> readIORef except
