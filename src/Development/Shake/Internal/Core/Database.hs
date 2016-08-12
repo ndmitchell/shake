@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns, DeriveFunctor #-}
-{-# LANGUAGE MultiParamTypeClasses, Rank2Types #-}
+{-# LANGUAGE MultiParamTypeClasses, Rank2Types, FlexibleInstances #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(
@@ -25,7 +25,6 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
-import Data.Binary
 import General.Extra
 import qualified General.Intern as Intern
 import General.Intern(Id, Intern)
@@ -458,7 +457,7 @@ withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (BinaryOp Ke
 withDatabase opts diagnostic witness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
     witness <- return $ Map.fromList
-        [ (t, newBinaryOp (putDatabase putOp) (getDatabase getOp))
+        [ (t, BinaryOp (putDatabase putOp) (getDatabase getOp))
         | (t,BinaryOp{..}) <- step : Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
@@ -483,18 +482,29 @@ withDatabase opts diagnostic witness act = do
         act Database{..}
 
 
-putDatabase :: (Key -> Builder) -> ((Key, Status) -> Put)
-putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) = do
-    put $ runBuilder $ putKey key
-    put x1
-    put x2 >> put x3 >> put (BinList $ map (BinList . fromDepends) x4) >> put (BinFloat x5) >> put (BinList x6)
+putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
+    putList [putKey key, putEx x1, putEx x2, putEx x3, putEx x4, putEx x5, putEx x6]
 putDatabase _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
 
-getDatabase :: (BS.ByteString -> Key) -> Get (Key, Status)
-getDatabase getKey =
-    (\key x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> (getKey key, Loaded (Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6))) <$>
-        get <*> get <*> get <*> get <*> get <*> get <*> get
 
-instance Binary Trace where
-    put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
-    get = (\a (BinFloat b) (BinFloat c) -> Trace a b c) <$> get <*> get <*> get
+getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)
+getDatabase getKey bs =
+    let [a1, a2, a3, a4, a5, a6, a7] = getList bs
+    in (getKey a1, Loaded (Result (getEx a2) (getEx a3) (getEx a4) (getEx a5) (getEx a6) (getEx a7)))
+
+instance BinaryEx Depends where
+    putEx (Depends xs) = putExStorableList xs
+    getEx = Depends . getExStorableList
+
+instance BinaryEx [Depends] where
+    putEx = putList . map putEx
+    getEx = map getEx . getList
+
+instance BinaryEx Trace where
+    putEx (Trace a b c) = putEx b <> putEx c <> putEx a
+    getEx x | (b,x) <- binarySplit x, (c,x) <- binarySplit x = Trace x b c
+
+instance BinaryEx [Trace] where
+    putEx = putList . map putEx
+    getEx = map getEx . getList
