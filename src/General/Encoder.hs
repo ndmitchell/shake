@@ -1,7 +1,8 @@
 {-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections, ScopedTypeVariables, FlexibleInstances #-}
 
 module General.Encoder(
-    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList,
+    BinaryEx(..), Builder(..),
+    putExStorable, getExStorable, putExStorableList, getExStorableList
     ) where
 
 import Data.Word

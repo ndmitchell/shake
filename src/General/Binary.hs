@@ -12,7 +12,7 @@ import Control.Monad
 import Data.Binary
 import Data.Binary.Put
 import Data.Binary.Get
-import Data.Binary.Builder
+import Data.Binary.Builder as Bin
 import Data.List
 import Foreign.Storable
 import Foreign.Ptr
@@ -32,7 +32,7 @@ import Prelude
 
 -- | An explicit and more efficient version of Binary
 data BinaryOp v = BinaryOp
-    {putOp :: v -> Builder
+    {putOp :: v -> Bin.Builder
     ,getOp :: BS.ByteString -> v
     }
 
