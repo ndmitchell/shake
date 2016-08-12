@@ -63,21 +63,25 @@ data Key = forall a . Key
     ,keyValue :: a
     }
 
-newtype Value = Value Key
-    deriving NFData
+data Value = forall a . Value
+    {valueType :: TypeRep
+    ,valueShow :: a -> String
+    ,valueRnf :: a -> ()
+    ,valueValue :: a
+    }
 
 
 newKey :: forall a . ShakeValue a => a -> Key
 newKey = Key (typeRep (Proxy :: Proxy a)) show rnf (==) hashWithSalt
 
-newValue :: ShakeValue a => a -> Value
-newValue = Value . newKey
+newValue :: forall a . ShakeValue a => a -> Value
+newValue = Value (typeRep (Proxy :: Proxy a)) show rnf
 
 typeKey :: Key -> TypeRep
 typeKey Key{..} = keyType
 
 typeValue :: Value -> TypeRep
-typeValue (Value k) = typeKey k
+typeValue Value{..} = valueType
 
 fromKey :: forall a . Typeable a => Key -> a
 fromKey Key{..}
@@ -85,17 +89,23 @@ fromKey Key{..}
     | otherwise = err $ "fromKey, bad cast, have " ++ show keyType ++ ", wanted " ++ show resType
     where resType = typeRep (Proxy :: Proxy a)
 
-fromValue :: Typeable a => Value -> a
-fromValue (Value k) = fromKey k
-
-instance Show Value where
-    show (Value a) = show a
+fromValue :: forall a . Typeable a => Value -> a
+fromValue Value{..}
+    | valueType == resType = unsafeCoerce valueValue
+    | otherwise = err $ "fromValue, bad cast, have " ++ show valueType ++ ", wanted " ++ show resType
+    where resType = typeRep (Proxy :: Proxy a)
 
 instance Show Key where
     show Key{..} = keyShow keyValue
 
+instance Show Value where
+    show Value{..} = valueShow valueValue
+
 instance NFData Key where
     rnf Key{..} = keyRnf keyValue
+
+instance NFData Value where
+    rnf Value{..} = valueRnf valueValue
 
 instance Hashable Key where
     hashWithSalt salt Key{..} = hashWithSalt salt keyType `xor` keyHash salt keyValue
