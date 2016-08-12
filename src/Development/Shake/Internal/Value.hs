@@ -68,7 +68,6 @@ data Value = forall a . Value
     ,valueEq :: a -> a -> Bool
     ,valueRnf :: a -> ()
     ,valueHash :: Int -> a -> Int
-    ,valuePut :: a -> Put
     ,value :: a
     }
 
@@ -77,7 +76,7 @@ newKey :: ShakeValue a => a -> Key
 newKey = Key . newValue
 
 newValue :: forall a . ShakeValue a => a -> Value
-newValue = Value (typeRep (Proxy :: Proxy a)) show (==) rnf hashWithSalt put
+newValue = Value (typeRep (Proxy :: Proxy a)) show (==) rnf hashWithSalt
 
 typeKey :: Key -> TypeRep
 typeKey (Key v) = typeValue v
