@@ -16,7 +16,6 @@ import Development.Shake.Internal.Errors
 import Data.Typeable.Extra
 
 import Data.Bits
-import Data.Maybe
 import Unsafe.Coerce
 
 -- | Define an alias for the six type classes required for things involved in Shake rules.
@@ -80,14 +79,11 @@ typeKey Key{..} = keyType
 typeValue :: Value -> TypeRep
 typeValue (Value k) = typeKey k
 
-castKey :: forall a . Typeable a => Key -> Maybe a
-castKey Key{..}
-    | keyType == typeRep (Proxy :: Proxy a) = Just $ unsafeCoerce keyValue
-    | otherwise = Nothing
-
 fromKey :: forall a . Typeable a => Key -> a
-fromKey v = fromMaybe (err msg) $ castKey v
-    where msg = "fromKey, bad cast, have " ++ show (keyType v) ++ ", wanted " ++ show (typeRep (Proxy :: Proxy a))
+fromKey Key{..}
+    | keyType == resType = unsafeCoerce keyValue
+    | otherwise = err $ "fromKey, bad cast, have " ++ show keyType ++ ", wanted " ++ show resType
+    where resType = typeRep (Proxy :: Proxy a)
 
 fromValue :: Typeable a => Value -> a
 fromValue (Value k) = fromKey k
