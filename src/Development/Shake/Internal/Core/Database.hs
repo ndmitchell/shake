@@ -54,7 +54,7 @@ type Map = Map.HashMap
 ---------------------------------------------------------------------
 -- UTILITY TYPES
 
-newtype Step = Step Word32 deriving (Eq,Ord,Show,Binary,Storable,BinaryEx,NFData,Hashable,Typeable)
+newtype Step = Step Word32 deriving (Eq,Ord,Show,Storable,BinaryEx,NFData,Hashable,Typeable)
 
 incStep (Step i) = Step $ i + 1
 
