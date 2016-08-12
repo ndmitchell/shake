@@ -88,7 +88,8 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
         -- check the version information matches
         let ver = BS.pack $ databaseVersion shakeVersion
         oldVer <- readChunkMax h $ fromIntegral $ BS.length ver + 100000
-        when (not shakeVersionIgnore && Right ver /= oldVer && oldVer /= Left BS.empty) $ do
+        let verEq = Right ver == oldVer
+        when (not shakeVersionIgnore && not verEq && oldVer /= Left BS.empty) $ do
             let limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
             let disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
             outputErr $ unlines
@@ -141,7 +142,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 countDistinct <- Ids.sizeUpperBound ids
                 diagnostic $ return $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
 
-                when (countItems > countDistinct*2 || witnessOld /= witnessNew) $ do
+                when (countItems > countDistinct*2 || not verEq || witnessOld /= witnessNew) $ do
                     addTiming "Database compression"
                     resetChunksCompact h $ \out -> do
                         out $ putEx ver
