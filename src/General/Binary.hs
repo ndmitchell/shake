@@ -3,6 +3,7 @@
 module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, unsafeBinarySplit, binaryCreate,
+    Builder(..), runBuilder,
     BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList,
     BinList(..), BinFloat(..)
     ) where
@@ -32,12 +33,14 @@ import Prelude
 
 -- | An explicit and more efficient version of Binary
 data BinaryOp v = BinaryOp
-    {putOp :: v -> Bin.Builder
+    {putOp :: v -> Builder
     ,getOp :: BS.ByteString -> v
     }
 
 newBinaryOp :: (a -> Put) -> (Get a) -> BinaryOp a
-newBinaryOp put get = BinaryOp (execPut . put) (runGet get . LBS.fromChunks . return)
+newBinaryOp put get = BinaryOp
+    (putEx . Bin.toLazyByteString . execPut . put)
+    (runGet get . LBS.fromChunks . return)
 
 binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
 binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"
@@ -64,6 +67,12 @@ for2M_ as bs f = zipWithM_ f as bs
 -- BINARY SERIALISATION
 
 data Builder = Builder {-# UNPACK #-} !Int (forall a . Ptr a -> Int -> IO ())
+
+runBuilder :: Builder -> BS.ByteString
+runBuilder (Builder i f) = unsafePerformIO $ do
+    bs <- BS.create i $ \ptr -> f ptr 0
+    -- print ("runBuilder", BS.unpack bs)
+    return bs
 
 instance Monoid Builder where
     mempty = Builder 0 $ \_ _ -> return ()

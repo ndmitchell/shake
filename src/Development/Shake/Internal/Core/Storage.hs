@@ -29,7 +29,6 @@ import Development.Shake.Classes
 import Numeric
 import General.Extra
 import Data.List.Extra
-import Data.Binary.Builder
 import Data.Maybe
 import System.Directory
 import System.FilePath
@@ -148,7 +147,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                     resetChunksCompact h $ \out -> do
                         out $ LBS.fromChunks [ver]
                         out $ LBS.fromChunks [witnessNew]
-                        Ids.forWithKeyM_ ids $ \i (k,v) -> out $ toLazyByteString $ save k i v
+                        Ids.forWithKeyM_ ids $ \i (k,v) -> out $ LBS.fromChunks [runBuilder $ save k i v]
                 Just <$> Ids.for ids snd
 
         ids <- case ids of
@@ -161,7 +160,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
         addTiming "With database"
         writeChunks h $ \out -> do
             act ids $ \k i v -> do
-                out $ toLazyByteString $ save k i v
+                out $ LBS.fromChunks [runBuilder $ save k i v]
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime
@@ -201,7 +200,7 @@ putWitness mp = (encode' (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (err
     where
         ws = sort $ map keyName $ Map.keys mp
         wsMp = Map.fromList $ zip ws [fromIntegral 0 :: Word16 ..]
-        mp2 = Map.mapWithKey (\k BinaryOp{..} -> let tag = putWord16host $ wsMp Map.! keyName k in \(Id w) v -> tag <> putWord32host w <> putOp v) mp
+        mp2 = Map.mapWithKey (\k BinaryOp{..} -> let tag = putEx $ wsMp Map.! keyName k in \(Id w) v -> tag <> putEx w <> putOp v) mp
 
 
 withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
