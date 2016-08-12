@@ -83,6 +83,16 @@ instance BinaryEx BS.ByteString where
         where n = BS.length x
     getEx = id
 
+instance BinaryEx LBS.ByteString where
+    putEx x = Builder (fromIntegral $ LBS.length x) $ \ptr i -> do
+        let go i [] = return ()
+            go i (x:xs) = do
+                let n = BS.length x
+                BS.useAsCString x $ \bs -> BS.memcpy (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
+                go (i+n) xs
+        go i $ LBS.toChunks x
+    getEx = LBS.fromChunks . return
+
 instance BinaryEx [BS.ByteString] where
     -- Format:
     -- n :: Word32 - number of strings
