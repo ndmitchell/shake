@@ -65,7 +65,7 @@ data Key = forall a . Key
     }
 
 newtype Value = Value Key
-    deriving (Eq,Hashable,NFData)
+    deriving NFData
 
 
 newKey :: forall a . ShakeValue a => a -> Key
