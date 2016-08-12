@@ -4,7 +4,7 @@ module General.Binary(
     BinaryOp(..), newBinaryOp, encode', decode',
     binarySplit, unsafeBinarySplit, binaryCreate,
     Builder(..), runBuilder, sizeBuilder,
-    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList,
+    BinaryEx(..), putExStorable, getExStorable, putExStorableList, getExStorableList, putList, getList,
     BinList(..), BinFloat(..)
     ) where
 
@@ -184,6 +184,31 @@ getExStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) 
     let (d,m) = size `divMod` n in
     if m /= 0 then error "size mismatch" else forM [0..d-1] $ \i -> peekElemOff (castPtr p) i
     where n = sizeOf (undefined :: a)
+
+
+-- repeating:
+--     Word32, length of BS
+--     BS
+putList :: [Builder] -> Builder
+putList xs = Builder (sum $ map (\b -> sizeBuilder b + 4) xs) $ \p i -> do
+    let go i [] = return ()
+        go i (Builder n b:xs) = do
+            pokeByteOff p i (fromIntegral n :: Word32)
+            b p (i+4)
+            go (i+4+n) xs
+    go i xs
+
+getList :: BS.ByteString -> [BS.ByteString]
+getList bs
+    | len == 0 = []
+    | len >= 4
+    , (n :: Word32, bs) <- binarySplit bs
+    , n <- fromIntegral n
+    , (len - 4) >= n
+    = BS.unsafeTake n bs : getList (BS.unsafeDrop n bs)
+    | otherwise = error "getList, corrupted binary"
+    where len = BS.length bs
+
 
 ---------------------------------------------------------------------
 -- BINARY
