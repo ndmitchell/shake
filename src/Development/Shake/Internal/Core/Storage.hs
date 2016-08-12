@@ -102,6 +102,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             corrupt
 
         let (witnessNew, save) = putWitness witness
+        evaluate save
         witnessOld <- readChunk h
         ids <- case witnessOld of
             Left _ -> do
@@ -117,6 +118,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 return Nothing) $ do
 
                 let load = getWitness witnessOld witness
+                evaluate load
                 ids <- Ids.empty
                 let go !i = do
                         v <- readChunk h
@@ -176,7 +178,7 @@ keyName = UTF8.fromString . show
 getWitness :: Show k => BS.ByteString -> Map.HashMap k (BinaryOp v) -> (BS.ByteString -> (k, Id, v))
 getWitness bs mp
     | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
-    | otherwise = \bs ->
+    | otherwise = ind `seq` mp2 `seq` \bs ->
             let (k :: Word16,bs2) = binarySplit bs
             in case ind (fromIntegral k) of
                     Nothing -> error $ "Witness type out of bounds, " ++ show k
@@ -195,7 +197,7 @@ getWitness bs mp
 
 
 putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
-putWitness mp = (encode' (ws :: [BS.ByteString]), \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
+putWitness mp = (encode' (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map keyName $ Map.keys mp
         wsMp = Map.fromList $ zip ws [fromIntegral 0 :: Word16 ..]
