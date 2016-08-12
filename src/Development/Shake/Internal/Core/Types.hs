@@ -12,7 +12,7 @@ import Control.DeepSeq
 import Control.Monad.IO.Class
 import Control.Applicative
 import Data.Typeable
-import Data.Binary
+import General.Binary
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
 import qualified Data.ByteString as BS
@@ -72,7 +72,7 @@ data BuiltinRule = BuiltinRule
     {builtinRun :: BuiltinRun Key Value
     ,builtinLint :: BuiltinLint Key Value
     ,builtinResult :: TypeRep
-    ,builtinKey :: (Key -> Put, Get Key)
+    ,builtinKey :: BinaryOp Key
     }
 
 

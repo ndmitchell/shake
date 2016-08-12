@@ -19,6 +19,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 import Data.Binary
+import General.Binary
 import Data.Typeable.Extra
 import Data.Function
 import Data.List.Extra
@@ -201,7 +202,7 @@ addBuiltinRule lint (run :: BuiltinRun key value) = do
         v = Proxy :: Proxy value
     let run_ k v b = fmap (fmap newValue) $ run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
-    let binary = (\x -> put (fromKey x :: key), fmap (\x -> newKey (x :: key)) get)
+    let binary = newBinaryOp (\x -> put (fromKey x :: key)) (fmap (\x -> newKey (x :: key)) get)
     newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v) binary}
 
 

@@ -454,12 +454,12 @@ fromStepResult :: Result BS.ByteString -> Step
 fromStepResult = fst . binarySplit . result
 
 
-withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (Key -> Put, Get Key) -> (Database -> IO a) -> IO a
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic witness act = do
-    let step = (typeRep (Proxy :: Proxy StepKey), (\_ -> return (), return stepKey))
+    let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
     witness <- return $ Map.fromList
-        [ (t, newBinaryOp (putDatabase putKey) (getDatabase getKey))
-        | (t,(putKey,getKey)) <- step : Map.toList witness]
+        [ (t, newBinaryOp (putDatabase putOp) (getDatabase getOp))
+        | (t,BinaryOp{..}) <- step : Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
 
@@ -483,17 +483,17 @@ withDatabase opts diagnostic witness act = do
         act Database{..}
 
 
-putDatabase :: (Key -> Put) -> ((Key, Status) -> Put)
+putDatabase :: (Key -> Builder) -> ((Key, Status) -> Put)
 putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) = do
-    putKey key
+    put $ runBuilder $ putKey key
     put x1
     put x2 >> put x3 >> put (BinList $ map (BinList . fromDepends) x4) >> put (BinFloat x5) >> put (BinList x6)
 putDatabase _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
 
-getDatabase :: Get Key -> Get (Key, Status)
+getDatabase :: (BS.ByteString -> Key) -> Get (Key, Status)
 getDatabase getKey =
-    (\key x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> (key, Loaded (Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6))) <$>
-        getKey <*> get <*> get <*> get <*> get <*> get <*> get
+    (\key x1 x2 x3 (BinList x4) (BinFloat x5) (BinList x6) -> (getKey key, Loaded (Result x1 x2 x3 (map (Depends . fromBinList) x4) x5 x6))) <$>
+        get <*> get <*> get <*> get <*> get <*> get <*> get
 
 instance Binary Trace where
     put (Trace a b c) = put a >> put (BinFloat b) >> put (BinFloat c)
