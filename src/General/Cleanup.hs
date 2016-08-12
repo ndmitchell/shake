@@ -5,7 +5,6 @@ module General.Cleanup(
     ) where
 
 import Control.Exception as E
-import Control.Monad
 import qualified Data.HashMap.Strict as Map
 import Data.Function
 import Data.IORef
@@ -27,12 +26,9 @@ withCleanup act = do
         mapM_ snd $ sortBy (compare `on` negate . fst) $ Map.toList items
 
 
--- | Add a cleanup action to a 'Cleanup' scope. If the return action is not run by the time
---   'withCleanup' terminates then it will be run then. The argument 'Bool' is 'True' to say
---   run the action, 'False' to say ignore the action (and never run it).
-addCleanup :: Cleanup -> IO () -> IO (Bool -> IO ())
+-- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove that action.
+--   If not removed by the time 'withCleanup' terminates then the cleanup action will be run then.
+addCleanup :: Cleanup -> IO () -> IO (IO ())
 addCleanup (Cleanup ref) act = atomicModifyIORef ref $ \s -> let i = unique s in
-    (,) (S (unique s + 1) (Map.insert i act $ items s)) $ \b ->
-        join $ atomicModifyIORef ref $ \s -> case Map.lookup i $ items s of
-            Nothing -> (s, return ())
-            Just act -> (s{items = Map.delete i $ items s}, when b act)
+    (,) (S (unique s + 1) (Map.insert i act $ items s)) $
+        atomicModifyIORef ref $ \s -> (s{items = Map.delete i $ items s}, ())

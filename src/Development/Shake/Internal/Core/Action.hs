@@ -46,9 +46,9 @@ runAction g l (Action x) = runRAW g l x
 actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act clean = do
     cleanup <- Action $ getsRO globalCleanup
-    clean <- liftIO $ addCleanup cleanup $ void clean
-    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (clean True) >> throwRAW e
-    liftIO $ clean runOnSuccess
+    undo <- liftIO $ addCleanup cleanup $ void clean
+    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ undo >> clean) >> throwRAW e
+    liftIO $ mask_ $ undo >> when runOnSuccess (void clean)
     return res
 
 -- | If an exception is raised by the 'Action', perform some 'IO'.
