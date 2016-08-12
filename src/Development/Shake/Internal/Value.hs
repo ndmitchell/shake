@@ -58,8 +58,8 @@ type ShakeValue a = (Show a, Typeable a, Eq a, Hashable a, Binary a, NFData a)
 data Key = forall a . Key
     {keyType :: TypeRep
     ,keyShow :: a -> String
-    ,keyEq :: a -> a -> Bool
     ,keyRnf :: a -> ()
+    ,keyEq :: a -> a -> Bool
     ,keyHash :: Int -> a -> Int
     ,keyValue :: a
     }
@@ -69,7 +69,7 @@ newtype Value = Value Key
 
 
 newKey :: forall a . ShakeValue a => a -> Key
-newKey = Key (typeRep (Proxy :: Proxy a)) show (==) rnf hashWithSalt
+newKey = Key (typeRep (Proxy :: Proxy a)) show rnf (==) hashWithSalt
 
 newValue :: ShakeValue a => a -> Value
 newValue = Value . newKey
