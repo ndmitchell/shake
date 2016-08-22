@@ -152,7 +152,7 @@ defaultRuleFile = do
                     Just now -> case fileEqualValue opts v now of
                         EqualCheap -> return Nothing
                         _ -> return $ Just $ show now
-    addBuiltinRuleEx newBinaryOpEx lint run
+    addBuiltinRuleEx newBinaryOp lint run
 
 
 fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)

@@ -35,5 +35,5 @@ alwaysRerun = apply1 $ AlwaysRerunQ ()
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun = do
-    addBuiltinRuleEx newBinaryOpEx noLint $
+    addBuiltinRuleEx newBinaryOp noLint $
         \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff BS.empty ()

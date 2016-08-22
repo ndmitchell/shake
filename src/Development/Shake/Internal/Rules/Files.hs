@@ -69,7 +69,7 @@ defaultRuleFiles = do
                         [r] -> r
                         rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
             }
-    addBuiltinRuleEx newBinaryOpEx lint run
+    addBuiltinRuleEx newBinaryOp lint run
 
 
 
