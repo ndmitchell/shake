@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    addBuiltinRule, noLint,
+    addBuiltinRule, addBuiltinRuleEx, noLint,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -197,13 +197,17 @@ noLint _ _ = return Nothing
 
 -- | TODO: Document me.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule lint (run :: BuiltinRun key value) = do
+addBuiltinRule = addBuiltinRuleEx (newBinaryOp put get)
+
+-- | Initial version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
+addBuiltinRuleEx :: (ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleEx binary lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
     let run_ k v b = fmap (fmap newValue) $ run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
-    let binary = newBinaryOp (\x -> put (fromKey x :: key)) (fmap (\x -> newKey (x :: key)) get)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v) binary}
+    let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v) binary_}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
