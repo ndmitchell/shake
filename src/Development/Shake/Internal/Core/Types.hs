@@ -61,7 +61,7 @@ instance NFData value => NFData (RunResult value) where
     rnf (RunResult x1 x2 x3) = rnf x1 `seq` x2 `seq` rnf x3
 
 
---   Define a rule between @key@ and @value@. A rule for a class of artifacts (e.g. /files/) provides:
+-- | Define a rule between @key@ and @value@. A rule for a class of artifacts (e.g. /files/) provides:
 --
 -- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
 --
