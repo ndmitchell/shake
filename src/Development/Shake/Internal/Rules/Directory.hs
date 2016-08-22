@@ -105,26 +105,28 @@ instance Show GetDirectoryA where
 ---------------------------------------------------------------------
 -- RULE DEFINITIONS
 
-queryRule :: (BinaryEx key, BinaryEx value, ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
-queryRule query = addBuiltinRuleEx newBinaryOp
+queryRule :: (BinaryEx key, BinaryEx witness, Eq witness, ShakeValue key, ShakeValue value)
+          => (value -> witness) -> (key -> IO value) -> Rules ()
+queryRule witness query = addBuiltinRuleEx newBinaryOp
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)
     (\k old _ -> liftIO $ do
         new <- query k
+        let wnew = witness new
         return $ case old of
-            Just old | let o = getEx old, new == o -> RunResult ChangedNothing old o
-            _ -> RunResult ChangedRecomputeDiff (runBuilder $ putEx new) new)
+            Just old | wnew == getEx old -> RunResult ChangedNothing old new
+            _ -> RunResult ChangedRecomputeDiff (runBuilder $ putEx wnew) new)
 
 
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
-    queryRule (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
-    queryRule (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
-    queryRule (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
-    queryRule (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
-    queryRule (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
-    queryRule (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
+    queryRule id (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
+    queryRule id (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
+    queryRule id (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
+    queryRule id (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
+    queryRule id (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
+    queryRule id (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
 
 
 ---------------------------------------------------------------------
