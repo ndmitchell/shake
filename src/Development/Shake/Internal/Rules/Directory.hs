@@ -105,8 +105,8 @@ instance Show GetDirectoryA where
 ---------------------------------------------------------------------
 -- RULE DEFINITIONS
 
-queryRule :: (ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
-queryRule query = addBuiltinRule
+queryRule :: (BinaryEx key, ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
+queryRule query = addBuiltinRuleEx newBinaryOpEx
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)
