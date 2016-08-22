@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
 
 module General.Binary(
-    BinaryOp(..), newBinaryOp, encode', decode',
+    BinaryOp(..), newBinaryOp, newBinaryOpEx, encode', decode',
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..),
@@ -37,6 +37,9 @@ data BinaryOp v = BinaryOp
     {putOp :: v -> Builder
     ,getOp :: BS.ByteString -> v
     }
+
+newBinaryOpEx :: BinaryEx a => BinaryOp a
+newBinaryOpEx = BinaryOp putEx getEx
 
 newBinaryOp :: (a -> Put) -> (Get a) -> BinaryOp a
 newBinaryOp put get = BinaryOp
