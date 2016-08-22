@@ -2,8 +2,14 @@
 -- | This module is used for defining new types of rules for Shake build systems.
 --   Most users will find the built-in set of rules sufficient.
 module Development.Shake.Rule(
-    addUserRule, apply, apply1,
-    addBuiltinRule, RunResult(..), RunChanged(..), BuiltinRun, BuiltinLint, noLint,
+    -- * Builtin rules
+    -- ** Defining
+    BuiltinLint, noLint, BuiltinRun, RunChanged(..), RunResult(..), addBuiltinRule,
+    -- ** Running
+    apply, apply1,
+    -- * User rules
+    UserRule(..), addUserRule, getUserRules, userRuleMatch,
+    -- * Lint integration
     trackUse, trackChange, trackAllow
     ) where
 

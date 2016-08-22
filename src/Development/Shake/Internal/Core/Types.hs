@@ -38,10 +38,10 @@ newtype Action a = Action {fromAction :: RAW Global Local a}
 
 -- | How has a rule changed.
 data RunChanged
-    = ChangedNothing -- ^ Nothing has changed
-    | ChangedStore -- ^ The value in the Store has changed, but in a way that should be considered equal
-    | ChangedRecomputeSame -- ^ I recomputed the value and it was the same
-    | ChangedRecomputeDiff -- ^ I recomputed the value and it was different
+    = ChangedNothing -- ^ Nothing has changed.
+    | ChangedStore -- ^ The persisted value has changed, but in a way that should be considered identical.
+    | ChangedRecomputeSame -- ^ I recomputed the value and it was the same.
+    | ChangedRecomputeDiff -- ^ I recomputed the value and it was different.
       deriving (Eq,Show)
 
 instance NFData RunChanged where rnf x = x `seq` ()
@@ -50,22 +50,36 @@ instance NFData RunChanged where rnf x = x `seq` ()
 -- | The result of 'BuiltinRun'.
 data RunResult value = RunResult
     {runChanged :: RunChanged
-        -- ^ Have the required dependencies of this action changed? Use 'True' to use the dependencies this time
-        --   around as the future dependencies. Use 'False' to keep the previous dependencies.
+        -- ^ What has changed from the previous time.
     ,runStore :: BS.ByteString
-        -- ^ Return the new value to store, and a 'True' if that value has changed from the argument store.
+        -- ^ Return the new value to store. Often a serialised version of 'runValue'.
     ,runValue :: value
-        -- ^ Return the produced value and a 'True' if that value has changed in a meaningful way from last time.
+        -- ^ Return the produced value.
     } deriving Functor
 
 instance NFData value => NFData (RunResult value) where
     rnf (RunResult x1 x2 x3) = rnf x1 `seq` x2 `seq` rnf x3
 
 
--- | How to run a rule.
+--   Define a rule between @key@ and @value@. A rule for a class of artifacts (e.g. /files/) provides:
+--
+-- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
+--
+-- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
+--
+-- * How to persist the state of an artifact, using the 'ByteString' values, e.g. seralised @value@.
+--
+--   The arguments comprise the @key@, the value of the previous serialisation or 'Nothing' if the rule
+--   has not been run previously, and 'True' to indicate the dependencies have changed or 'False' that
+--   they have not.
 type BuiltinRun key value = key -> Maybe BS.ByteString -> Bool -> Action (RunResult value)
 
--- | How to lint a rule.
+-- | The action performed by @--lint@ for a given @key@/@value@ pair.
+--   At the end of the build the lint action will be called for each @key@ that was built this run,
+--   passing the @value@ it produced. Return 'Nothing' to indicate the value has not changed and
+--   is acceptable, or 'Just' an error message to indicate failure.
+--
+--   For builtin rules where the value is expected to change use 'Development.Shake.Rules.noLint'.
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 data BuiltinRule = BuiltinRule

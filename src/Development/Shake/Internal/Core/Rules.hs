@@ -44,80 +44,6 @@ import Prelude
 ---------------------------------------------------------------------
 -- RULES
 
---   Define a pair of types that can be used by Shake rules.
---   To import all the type classes required see "Development.Shake.Classes".
---
---   A 'Rule' instance for a class of artifacts (e.g. /files/) provides:
---
--- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
---
--- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
---
--- * A way to compare two states of the same individual artifact, with 'equalValue' returning either
---   'EqualCheap' or 'NotEqual'.
---
--- * A way to query the current state of an artifact, with 'storedValue' returning the current state,
---   or 'Nothing' if there is no current state (e.g. the file does not exist).
---
---   Checking if an artifact needs to be built consists of comparing two @value@s
---   of the same @key@ with 'equalValue'. The first value is obtained by applying
---   'storedValue' to the @key@ and the second is the value stored in the build
---   database after the last successful build.
---
---   As an example, below is a simplified rule for building files, where files are identified
---   by a 'FilePath' and their state is identified by a hash of their contents
---   (the builtin functions 'Development.Shake.need' and 'Development.Shake.%>'
---   provide a similar rule).
---
--- @
--- newtype File = File FilePath deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
--- newtype Modtime = Modtime Double deriving (Show, Typeable, Eq, Hashable, Binary, NFData)
--- getFileModtime file = ...
---
--- addBuiltinRule Builtininstance Rule File Modtime where
---     storedValue _ (File x) = do
---         exists <- System.Directory.doesFileExist x
---         if exists then Just \<$\> getFileModtime x else return Nothing
---     equalValue _ _ t1 t2 =
---         if t1 == t2 then EqualCheap else NotEqual
--- @
---
---   This example instance means:
---
--- * A value of type @File@ uniquely identifies a generated file.
---
--- * A value of type @Modtime@ will be used to check if a file is up-to-date.
---
---   It is important to distinguish 'Rule' instances from actual /rules/. 'Rule'
---   instances are one component required for the creation of rules.
---   Actual /rules/ are functions from a @key@ to an 'Action'; they are
---   added to 'Rules' using the 'rule' function.
---
---   A rule can be created for the instance above with:
---
--- @
--- -- Compile foo files; for every foo output file there must be a
--- -- single input file named \"filename.foo\".
--- compileFoo :: 'Rules' ()
--- compileFoo = 'rule' (Just . compile)
---     where
---         compile :: File -> 'Action' Modtime
---         compile (File outputFile) = do
---             -- figure out the name of the input file
---             let inputFile = outputFile '<.>' \"foo\"
---             'unit' $ 'Development.Shake.cmd' \"fooCC\" inputFile outputFile
---             -- return the (new) file modtime of the output file:
---             getFileModtime outputFile
--- @
---
---   /Note:/ In this example, the timestamps of the input files are never
---   used, let alone compared to the timestamps of the ouput files.
---   Dependencies between output and input files are /not/ expressed by
---   'Rule' instances. Dependencies are created automatically by 'apply'.
---
---   For rules whose values are not stored externally,
---   'storedValue' should return 'Just' with a sentinel value
---   and 'equalValue' should always return 'EqualCheap' for that sentinel.
 
 
 getUserRules :: Typeable a => Action (UserRule a)
@@ -195,11 +121,12 @@ instance Monoid a => Monoid (Rules a) where
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_ $ UserRule r}
 
--- | A suitable 'BuiltinLint' that requires no operation
+-- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
--- | TODO: Document me.
+-- | Add a builtin rule, comprising of a lint rule and an action. Each builtin rule must be identified by
+--   a unique key.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = addBuiltinRuleEx $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
