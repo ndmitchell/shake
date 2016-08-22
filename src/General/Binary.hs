@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
 
 module General.Binary(
-    BinaryOp(..), newBinaryOp, newBinaryOpEx,
+    BinaryOp(..), newBinaryOpEx,
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..),
@@ -11,9 +11,6 @@ module General.Binary(
 
 import Control.Monad
 import Data.Binary
-import Data.Binary.Put
-import Data.Binary.Get
-import qualified Data.Binary.Builder as Bin
 import Data.List.Extra
 import Data.Tuple.Extra
 import Foreign.Storable
@@ -40,11 +37,6 @@ data BinaryOp v = BinaryOp
 
 newBinaryOpEx :: BinaryEx a => BinaryOp a
 newBinaryOpEx = BinaryOp putEx getEx
-
-newBinaryOp :: (a -> Put) -> (Get a) -> BinaryOp a
-newBinaryOp put get = BinaryOp
-    (putEx . Bin.toLazyByteString . execPut . put)
-    (runGet get . LBS.fromChunks . return)
 
 binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
 binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"

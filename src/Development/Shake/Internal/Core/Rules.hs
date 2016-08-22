@@ -27,6 +27,10 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import System.IO.Extra
 import Data.Monoid
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Binary.Builder as Bin
+import Data.Binary.Put
+import Data.Binary.Get
 import General.ListBuilder
 
 import Development.Shake.Internal.Core.Types
@@ -197,7 +201,10 @@ noLint _ _ = return Nothing
 
 -- | TODO: Document me.
 addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule = addBuiltinRuleEx (newBinaryOp put get)
+addBuiltinRule = addBuiltinRuleEx $ BinaryOp
+    (putEx . Bin.toLazyByteString . execPut . put)
+    (runGet get . LBS.fromChunks . return)
+
 
 -- | Initial version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
 addBuiltinRuleEx :: (ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
