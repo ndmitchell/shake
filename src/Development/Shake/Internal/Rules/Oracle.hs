@@ -17,9 +17,9 @@ import Prelude
 
 -- Use short type names, since the names appear in the Haddock, and are too long if they are in full
 newtype OracleQ question = OracleQ question
-    deriving (Show,Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 newtype OracleA answer = OracleA answer
-    deriving (Show,Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 
 -- | Add extra information which rules can depend on.
