@@ -31,7 +31,6 @@ import qualified Development.Ninja.Parse as Ninja
 import qualified Development.Ninja.Env as Ninja
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.UTF8 as UTF8
-import General.Binary
 import Control.Applicative
 import Data.Tuple.Extra
 import Data.List
@@ -57,9 +56,9 @@ readConfigFileWithEnv vars file = do
     return $ Map.fromList $ map (UTF8.toString *** UTF8.toString) $ Map.toList mp
 
 
-newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
-newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 
 -- | Specify the file to use with 'getConfig'.

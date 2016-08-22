@@ -48,7 +48,6 @@ import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
-import General.Binary
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
 
@@ -58,7 +57,7 @@ forwards :: IORef (Map.HashMap ForwardQ (Action ()))
 forwards = unsafePerformIO $ newIORef Map.empty
 
 newtype ForwardQ = ForwardQ String
-    deriving (Hashable,Typeable,Eq,NFData,Binary,BinaryEx)
+    deriving (Hashable,Typeable,Eq,NFData,Binary)
 
 instance Show ForwardQ where
     show (ForwardQ x) = x
