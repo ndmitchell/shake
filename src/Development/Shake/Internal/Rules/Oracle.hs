@@ -10,7 +10,9 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
-import General.Binary
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Binary
 import Control.Applicative
 import Prelude
 
@@ -82,6 +84,12 @@ addOracle = f where
                 (encode' new)
                 new
         return askOracle
+
+    encode' :: Binary a => a -> BS.ByteString
+    encode' = BS.concat . LBS.toChunks . encode
+
+    decode' :: Binary a => BS.ByteString -> a
+    decode' = decode . LBS.fromChunks . return
 
 
 -- | Get information previously added with 'addOracle'. The question/answer types must match those provided

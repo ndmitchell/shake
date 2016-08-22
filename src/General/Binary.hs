@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
 
 module General.Binary(
-    BinaryOp(..), newBinaryOp, newBinaryOpEx, encode', decode',
+    BinaryOp(..), newBinaryOp, newBinaryOpEx,
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..),
@@ -62,12 +62,6 @@ binarySplit3 bs | BS.length bs < sizeOf (undefined :: a) + sizeOf (undefined :: 
 unsafeBinarySplit :: Storable a => BS.ByteString -> (a, BS.ByteString)
 unsafeBinarySplit bs = (v, BS.unsafeDrop (sizeOf v) bs)
     where v = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> peek (castPtr ptr)
-
-encode' :: Binary a => a -> BS.ByteString
-encode' = BS.concat . LBS.toChunks . encode
-
-decode' :: Binary a => BS.ByteString -> a
-decode' = decode . LBS.fromChunks . return
 
 
 -- forM for zipWith
