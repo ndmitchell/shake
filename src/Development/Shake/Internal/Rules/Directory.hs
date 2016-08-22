@@ -105,14 +105,16 @@ instance Show GetDirectoryA where
 ---------------------------------------------------------------------
 -- RULE DEFINITIONS
 
-queryRule :: (BinaryEx key, ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
+queryRule :: (BinaryEx key, BinaryEx value, ShakeValue key, ShakeValue value) => (key -> IO value) -> Rules ()
 queryRule query = addBuiltinRuleEx newBinaryOpEx
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)
     (\k old _ -> liftIO $ do
         new <- query k
-        return $ RunResult (if Just new == fmap decode' old then ChangedNothing else ChangedRecomputeDiff) (encode' new) new)
+        return $ case old of
+            Just old | let o = getEx old, new == o -> RunResult ChangedNothing old o
+            _ -> RunResult ChangedRecomputeDiff (runBuilder $ putEx new) new)
 
 
 defaultRuleDirectory :: Rules ()

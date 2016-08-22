@@ -189,7 +189,7 @@ data LegacyRule key value = LegacyRule
     }
 
 
-convertLegacy :: forall k v . (ShakeValue k, ShakeValue v) => LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
+convertLegacy :: forall k v . (BinaryEx v, ShakeValue k, ShakeValue v) => LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
 convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
     where
         builtinLint k v = do
@@ -199,7 +199,7 @@ convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
                 Just now | equalValue v now == EqualCheap -> Nothing
                          | otherwise -> Just $ show now
 
-        builtinRun k (fmap decode' -> old) dirtyChildren = case old of
+        builtinRun k (fmap getEx -> old) dirtyChildren = case old of
                 Just old | not dirtyChildren -> do
                     v <- liftIO $ storedValue k
                     case v of
@@ -207,8 +207,8 @@ convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
                             let e = equalValue old v
                             case e of
                                 NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ RunResult ChangedNothing (encode' v) v
-                                EqualExpensive -> return $ RunResult ChangedStore (encode' v) v
+                                EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
+                                EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
                         Nothing -> rebuild k $ Just old
                 _ -> rebuild k old
             where
@@ -217,4 +217,4 @@ convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
                     v <- executeRule k
                     let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
-                    return $ RunResult c (encode' v) v
+                    return $ RunResult c (runBuilder $ putEx v) v

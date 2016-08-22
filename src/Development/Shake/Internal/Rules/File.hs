@@ -101,7 +101,7 @@ defaultRuleFile = do
     let isFileANeq (FileA x1 x2 x3) = isFileInfoNeq x1 && isFileInfoNeq x2 && isFileInfoNeq x3
     getRebuild <- return $ getRebuild opts
 
-    let run o@(FileQ x) (fmap decode' -> old) dirty = do
+    let run o@(FileQ x) (fmap getEx -> old) dirty = do
             let rebuild = do
                     putWhen Chatty $ "# " ++ show o
                     x <- return $ fileNameToString x
@@ -114,32 +114,32 @@ defaultRuleFile = do
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
                             let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            return $ RunResult b (encode' new) new
+                            return $ RunResult b (runBuilder $ putEx new) new
                         Just (Phony act) -> do
                             act
                             let new = FileA fileInfoNeq fileInfoNeq fileInfoNeq
-                            return $ RunResult ChangedRecomputeDiff (encode' new) new
+                            return $ RunResult ChangedRecomputeDiff (runBuilder $ putEx new) new
                         Just (One act) -> do
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
                             let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            return $ RunResult b (encode' new) new
+                            return $ RunResult b (runBuilder $ putEx new) new
             let r = getRebuild $ fileNameToString x
             case old of
                 _ | r == RebuildNow -> rebuild
-                Just old | r == RebuildLater -> return $ RunResult ChangedNothing (encode' old) old
+                Just old | r == RebuildLater -> return $ RunResult ChangedNothing (runBuilder $ putEx old) old
                 _ | r == RebuildNever -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
-                        Just now -> return $ RunResult ChangedStore (encode' now) now
+                        Just now -> return $ RunResult ChangedStore (runBuilder $ putEx now) now
                 Just old | not dirty, not $ isFileANeq old -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
                         Just now -> case fileEqualValue opts old now of
-                            EqualCheap -> return $ RunResult ChangedNothing (encode' now) now
-                            EqualExpensive -> return $ RunResult ChangedStore (encode' now) now
+                            EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx now) now
+                            EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx now) now
                             NotEqual -> rebuild
                 _ -> rebuild
 
