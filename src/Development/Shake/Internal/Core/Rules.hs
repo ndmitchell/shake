@@ -44,8 +44,8 @@ import Prelude
 ---------------------------------------------------------------------
 -- RULES
 
-
-
+-- | Get the 'UserRule' value at a given type. This 'UserRule' will capture
+--   all rules added, along with things such as 'priority' and 'alternatives'.
 getUserRules :: Typeable a => Action (UserRule a)
 getUserRules = f where
     f :: forall a . Typeable a => Action (UserRule a)
@@ -60,7 +60,9 @@ getUserRules = f where
 getShakeOptionsRules :: Rules ShakeOptions
 getShakeOptionsRules = Rules $ lift ask
 
--- | Rules might be able to be optimised in some cases
+-- | Give a 'UserRule', and a function that tests a given rule, return the most important values
+--   that match. In most cases the caller will raise an error if the rule matching returns anything
+--   other than a singleton.
 userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]
 userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap test u) ++ [[]]
     where
@@ -114,10 +116,7 @@ instance Monoid a => Monoid (Rules a) where
     mappend = liftA2 mappend
 
 
--- | Add a rule to build a key, returning an appropriate 'Action' if the @key@ matches,
---   or 'Nothing' otherwise.
---   All rules at a given priority must be disjoint on all used @key@ values, with at most one match.
---   Rules have priority 1 by default, which can be modified with 'priority'.
+-- | Add a value of type 'UserRule'.
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_ $ UserRule r}
 

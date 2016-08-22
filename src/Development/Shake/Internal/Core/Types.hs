@@ -92,22 +92,19 @@ data BuiltinRule = BuiltinRule
 
 data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
 
--- | A 'Match' data type, representing user-defined rules associated with a particular type.
---   As an example '?>' and '*>' will add entries to the 'Match' data type.
---
---   /Semantics/
---
+-- | A 'UserRule' data type, representing user-defined rules associated with a particular type.
+--   As an example 'Development.Shake.?>' and 'Development.Shake.%>' will add entries to the 'UserRule' data type.
+data UserRule a
 -- > priority p1 (priority p2 x) == priority p1 x
 -- > priority p (x `ordered` y) = priority p x `ordered` priority p y
 -- > priority p (x `unordered` y) = priority p x `unordered` priority p y
 -- > ordered is associative
 -- > unordered is associative and commutative
 -- > alternative does not obey priorities, until picking the best one
-data UserRule a
     = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> 'Rules' ()@.
-    | Unordered [UserRule a] -- ^ Rules combined with the 'Monad'/'Monoid'.
+    | Unordered [UserRule a] -- ^ Rules combined with the 'Monad'\/'Monoid'.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
-    | Alternative (UserRule a) -- ^ Rule defined under 'alternative', matched in order.
+    | Alternative (UserRule a) -- ^ Rule defined under 'alternatives', matched in order.
       deriving (Eq,Show,Functor,Typeable)
 
 
