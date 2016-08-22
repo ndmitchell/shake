@@ -121,12 +121,14 @@ queryRule witness query = addBuiltinRuleEx newBinaryOp
 
 defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
+    -- for things we are always going to rerun, and which might take up a lot of memory to store,
+    -- we only store their hash, so we can compute change, but not know what changed happened
     queryRule id (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
     queryRule id (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
-    queryRule id (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
-    queryRule id (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
-    queryRule id (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
-    queryRule id (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
+    queryRule hash (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
+    queryRule hash (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
+    queryRule hash (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
+    queryRule hash (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
 
 
 ---------------------------------------------------------------------
