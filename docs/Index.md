@@ -57,6 +57,7 @@ Several open-source projects make key use of Shake:
 * [ghc-make](https://github.com/ndmitchell/ghc-make) uses Shake to build programs with GHC, speeding up checking if the build is clean.
 * [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) is in the process of migrating to a Shake-based build system.
 * [shake-install](https://github.com/alphaHeavy/shake-install) helps build a set of cabal packages in the correct order.
+* [OpenSUSE Haskell packaging](https://github.com/opensuse-haskell) makes use of Shake to [convert a Stack project to OBS](https://github.com/opensuse-haskell/cabal2obs).
 
 And finally, here are a few tutorials and blog posts:
 
