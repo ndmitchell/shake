@@ -127,7 +127,14 @@ defaultRuleFile = do
             let r = getRebuild $ fileNameToString x
             case old of
                 _ | r == RebuildNow -> rebuild
-                Just old | r == RebuildLater -> return $ RunResult ChangedNothing (runBuilder $ putEx old) old
+                _ | r == RebuildLater -> case old of
+                    Just old -> return $ RunResult ChangedNothing (runBuilder $ putEx old) old
+                    Nothing -> do
+                        -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
+                        now <- liftIO $ fileStoredValue opts o
+                        case now of
+                            Nothing -> rebuild
+                            Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx now) now
                 _ | r == RebuildNever -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
