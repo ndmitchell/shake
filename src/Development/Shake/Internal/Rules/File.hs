@@ -33,6 +33,7 @@ import Development.Shake.Internal.FileName
 import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.Types
 import Development.Shake.Internal.Errors
