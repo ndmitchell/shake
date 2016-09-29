@@ -236,7 +236,7 @@ defaultRuleFile = do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
-                        Just now -> return $ RunResult ChangedStore (runBuilder $ putEx now) now
+                        Just now -> retNew ChangedStore $ ResultDirect now
                 Just (ResultDirect old) | not dirty -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
