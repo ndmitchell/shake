@@ -19,7 +19,7 @@ import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Storage
-import Development.Shake.Internal.Types
+import Development.Shake.Internal.Options
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous

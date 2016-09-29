@@ -27,7 +27,7 @@ import Development.Shake.Classes
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
-import Development.Shake.Internal.Types
+import Development.Shake.Internal.Options
 
 
 infix 1 &?>, &%>

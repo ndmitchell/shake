@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
 
 -- | Types exposed to the user
-module Development.Shake.Internal.Types(
+module Development.Shake.Internal.Options(
     Progress(..), Verbosity(..), Rebuild(..), Lint(..), Change(..),
     ShakeOptions(..), shakeOptions,
     -- Internal stuff

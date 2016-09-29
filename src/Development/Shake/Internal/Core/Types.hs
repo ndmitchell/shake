@@ -22,7 +22,7 @@ import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
-import Development.Shake.Internal.Types
+import Development.Shake.Internal.Options
 import General.Cleanup
 import Prelude
 

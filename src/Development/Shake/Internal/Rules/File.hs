@@ -36,7 +36,7 @@ import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.FileInfo
-import Development.Shake.Internal.Types
+import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong

@@ -13,7 +13,7 @@ module Development.Shake.Internal.Core.Storage(
 import General.Chunks
 import General.Binary
 import General.Intern
-import Development.Shake.Internal.Types
+import Development.Shake.Internal.Options
 import General.Timing
 import General.FileLock
 import qualified General.Ids as Ids

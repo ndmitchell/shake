@@ -2,7 +2,7 @@
 -- | The main entry point that calls all the default rules
 module Development.Shake.Internal.Shake(shake) where
 
-import Development.Shake.Internal.Types
+import Development.Shake.Internal.Options
 import General.Timing
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
