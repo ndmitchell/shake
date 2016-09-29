@@ -177,18 +177,17 @@ storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
 defaultRuleFile :: Rules ()
 defaultRuleFile = do
     opts@ShakeOptions{..} <- getShakeOptionsRules
-    let isFileANeq (FileA x1 x2 x3) = isFileInfoNeq x1 && isFileInfoNeq x2 && isFileInfoNeq x3
     let rebuildFlags = shakeRebuildApply opts
 
     -- value returned is only useful for linting
     let run o@(FileQ x) oldBin@(fmap getEx -> old) dirty = do
             -- no need to link check forward files
             -- but more than that, it goes wrong if you do, see #427
-            let asLint (ResultDirect x) = x
-                asLint x = FileA fileInfoNeq fileInfoNeq fileInfoNeq
-            let retNew :: RunChanged -> Result -> Action (RunResult FileA)
+            let asLint (ResultDirect x) = Just x
+                asLint x = Nothing
+            let retNew :: RunChanged -> Result -> Action (RunResult (Maybe FileA))
                 retNew c v = return $ RunResult c (runBuilder $ putEx v) (asLint v)
-            let retOld :: RunChanged -> Action (RunResult FileA)
+            let retOld :: RunChanged -> Action (RunResult (Maybe FileA))
                 retOld c = return $ RunResult c (fromJust oldBin) $ asLint $ fromJust old
 
             let rebuild = do
@@ -248,15 +247,14 @@ defaultRuleFile = do
                 Just (ResultForward old) | not dirty -> retOld ChangedNothing
                 _ -> rebuild
 
-    let lint k v
-            | isFileANeq v = return Nothing
-            | otherwise = do
-                now <- fileStoredValue opts k
-                case now of
-                    Nothing -> return $ Just "<missing>"
-                    Just now -> case fileEqualValue opts v now of
-                        EqualCheap -> return Nothing
-                        _ -> return $ Just $ show now
+    let lint k Nothing = return Nothing
+        lint k (Just v) = do
+            now <- fileStoredValue opts k
+            case now of
+                Nothing -> return $ Just "<missing>"
+                Just now -> case fileEqualValue opts v now of
+                    EqualCheap -> return Nothing
+                    _ -> return $ Just $ show now
     addBuiltinRuleEx newBinaryOp lint run
 
 
