@@ -85,35 +85,38 @@ instance BinaryEx [FileA] where
     putEx = putExStorableList
     getEx = getExStorableList
 
-data FileResult = Phony (Action ()) | One (Action ()) | Forward (Action FileA)
+data Mode
+    = ModePhony (Action ()) -- ^ An action with no file value
+    | ModeDirect (Action ()) -- ^ An action that produces a file
+    | ModeForward (Action FileA) -- ^ An action that looks up a file someone else produced
 
-data FileExA
-    = FilePhony
-    | FileOne FileA
-    | FileFwd FileA
+data Result
+    = ResultPhony
+    | ResultDirect FileA
+    | ResultForward FileA
 
-fromFileExA :: FileExA -> FileA
-fromFileExA FilePhony = FileA fileInfoNeq fileInfoNeq fileInfoNeq
-fromFileExA (FileOne x) = x
-fromFileExA (FileFwd x) = x
+fromResult :: Result -> FileA
+fromResult ResultPhony = FileA fileInfoNeq fileInfoNeq fileInfoNeq
+fromResult (ResultDirect x) = x
+fromResult (ResultForward x) = x
 
-instance BinaryEx FileExA where
-    putEx FilePhony = mempty
-    putEx (FileOne x) = putEx x
-    putEx (FileFwd x) = putEx (0 :: Word8) <> putEx x
+instance BinaryEx Result where
+    putEx ResultPhony = mempty
+    putEx (ResultDirect x) = putEx x
+    putEx (ResultForward x) = putEx (0 :: Word8) <> putEx x
 
     getEx x = case BS.length x of
-        0 -> FilePhony
-        12 -> FileOne $ getEx x
-        13 -> FileFwd $ getEx (BS.tail x)
+        0 -> ResultPhony
+        12 -> ResultDirect $ getEx x
+        13 -> ResultForward $ getEx (BS.tail x)
 
-newtype FileRule = FileRule (FilePath -> Maybe FileResult)
+newtype FileRule = FileRule (FilePath -> Maybe Mode)
     deriving Typeable
 
 
 -- | Internal method for adding forwarding actions
 fileForward :: (FilePath -> Maybe (Action FileA)) -> Rules ()
-fileForward act = addUserRule $ FileRule $ fmap Forward . act 
+fileForward act = addUserRule $ FileRule $ fmap ModeForward . act 
 
 
 defaultRuleFile = do
@@ -123,10 +126,10 @@ defaultRuleFile = do
 
     -- value returned is only useful for linting
     let run o@(FileQ x) oldBin@(fmap getEx -> old) dirty = do
-            let retNew :: RunChanged -> FileExA -> Action (RunResult FileA)
-                retNew c v = return $ RunResult c (runBuilder $ putEx v) (fromFileExA v)
+            let retNew :: RunChanged -> Result -> Action (RunResult FileA)
+                retNew c v = return $ RunResult c (runBuilder $ putEx v) (fromResult v)
             let retOld :: RunChanged -> Action (RunResult FileA)
-                retOld c = return $ RunResult c (fromJust oldBin) $ fromFileExA $ fromJust old
+                retOld c = return $ RunResult c (fromJust oldBin) $ fromResult $ fromJust old
 
             let rebuild = do
                     -- actually run the rebuild
@@ -140,20 +143,20 @@ defaultRuleFile = do
                     case act of
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                            let b = case old of Just old | fileEqualValue opts (fromFileExA old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            retNew b $ FileOne new
-                        Just (Forward act) -> do
+                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ ResultDirect new
+                        Just (ModeForward act) -> do
                             new <- act
-                            let b = case old of Just old | fileEqualValue opts (fromFileExA old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            retNew b $ FileFwd new
-                        Just (Phony act) -> do
+                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ ResultForward new
+                        Just (ModePhony act) -> do
                             act
-                            retNew ChangedRecomputeDiff FilePhony
-                        Just (One act) -> do
+                            retNew ChangedRecomputeDiff ResultPhony
+                        Just (ModeDirect act) -> do
                             act
                             new :: FileA <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
-                            let b = case old of Just old | fileEqualValue opts (fromFileExA old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            retNew b $ FileOne new
+                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ ResultDirect new
 
             -- for One, rebuild makes perfect sense
             -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
@@ -168,21 +171,21 @@ defaultRuleFile = do
                         now <- liftIO $ fileStoredValue opts o
                         case now of
                             Nothing -> rebuild
-                            Just now -> do alwaysRerun; retNew ChangedStore $ FileOne now
+                            Just now -> do alwaysRerun; retNew ChangedStore $ ResultDirect now
                 _ | r == RebuildNever -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
                         Just now -> return $ RunResult ChangedStore (runBuilder $ putEx now) now
-                Just (FileOne old) | not dirty -> do
+                Just (ResultDirect old) | not dirty -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
                         Just now -> case fileEqualValue opts old now of
-                            EqualCheap -> retNew ChangedNothing $ FileOne now
-                            EqualExpensive -> retNew ChangedStore $ FileOne now
+                            EqualCheap -> retNew ChangedNothing $ ResultDirect now
+                            EqualExpensive -> retNew ChangedStore $ ResultDirect now
                             NotEqual -> rebuild
-                Just (FileFwd old) | not dirty -> retOld ChangedNothing
+                Just (ResultForward old) | not dirty -> retOld ChangedNothing
                 _ -> rebuild
 
     let lint k v
@@ -335,7 +338,7 @@ want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule $ FileRule $ \x -> if not $ test x then Nothing else Just $ One $ do
+root help test act = addUserRule $ FileRule $ \x -> if not $ test x then Nothing else Just $ ModeDirect $ do
     liftIO $ createDirectoryIfMissing True $ takeDirectory x
     act x
 
@@ -363,7 +366,7 @@ phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else 
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ FileRule $ fmap Phony . act
+phonys act = addUserRule $ FileRule $ fmap ModePhony . act
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
