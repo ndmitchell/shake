@@ -94,10 +94,11 @@ ps &%> act
         "All patterns to &%> must have the same number and position of // and * wildcards" :
         ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = do
-        forM_ ps $ \p ->
-            p %> \file -> do
-                _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
-                return ()
+        forM_ (zip [0..] ps) $ \(i,p) ->
+            (if simple p then id else priority 0.5) $
+                fileForward $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
+                    FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
+                    return $ res !! i
         (if all simple ps then id else priority 0.5) $
             addUserRule $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
@@ -127,11 +128,10 @@ ps &%> act
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (&?>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
 (&?>) test act = priority 0.5 $ do
-    let norm = toStandard . normaliseEx
     let inputOutput suf inp out =
             ["Input" ++ suf ++ ":", "  " ++ inp] ++
             ["Output" ++ suf ++ ":"] ++ map ("  "++) out
-    let normTest = fmap (map norm) . test
+    let normTest = fmap (map $ toStandard . normaliseEx) . test
     let checkedTest x = case normTest x of
             Nothing -> Nothing
             Just ys | x `notElem` ys -> error $ unlines $
@@ -143,11 +143,11 @@ ps &%> act
                 inputOutput "2" bad (fromMaybe ["Nothing"] $ normTest bad)
             Just ys -> Just ys
 
-    isJust . checkedTest ?> \x -> do
-        -- FIXME: Could optimise this test by calling rule directly and returning FileA Eq Eq Eq
-        --        But only saves noticable time on uncommon Change modes
-        _ :: FilesA <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) $ fromJust $ test x
-        return ()
+    fileForward $ \x -> case checkedTest x of
+        Nothing -> Nothing
+        Just ys -> Just $ do
+            FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) ys
+            return $ res !! fromJust (elemIndex x ys)
 
     addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
         case checkedTest x of
