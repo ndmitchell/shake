@@ -89,6 +89,7 @@ defaultRuleFiles = do
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
 (&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+[p] &%> act = p %> act . return
 ps &%> act
     | not $ compatible ps = error $ unlines $
         "All patterns to &%> must have the same number and position of // and * wildcards" :
