@@ -182,10 +182,14 @@ defaultRuleFile = do
 
     -- value returned is only useful for linting
     let run o@(FileQ x) oldBin@(fmap getEx -> old) dirty = do
+            -- no need to link check forward files
+            -- but more than that, it goes wrong if you do, see #427
+            let asLint (ResultDirect x) = x
+                asLint x = FileA fileInfoNeq fileInfoNeq fileInfoNeq
             let retNew :: RunChanged -> Result -> Action (RunResult FileA)
-                retNew c v = return $ RunResult c (runBuilder $ putEx v) (fromResult v)
+                retNew c v = return $ RunResult c (runBuilder $ putEx v) (asLint v)
             let retOld :: RunChanged -> Action (RunResult FileA)
-                retOld c = return $ RunResult c (fromJust oldBin) $ fromResult $ fromJust old
+                retOld c = return $ RunResult c (fromJust oldBin) $ asLint $ fromJust old
 
             let rebuild = do
                     -- actually run the rebuild
