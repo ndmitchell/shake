@@ -174,7 +174,6 @@ getFileTimes name xs = do
                     concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
 
 
--- | TODO: Docs
 data LegacyRule key value = LegacyRule
     {storedValue :: key -> IO (Maybe value)
         -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
