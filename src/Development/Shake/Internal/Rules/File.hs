@@ -7,7 +7,7 @@ module Development.Shake.Internal.Rules.File(
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     -- * Internal only
-    FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), getRebuild
+    FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
 
 import Control.Applicative
@@ -15,13 +15,14 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
 import Data.Typeable
-import Data.Tuple.Extra
-import Data.List.Extra
+import Data.List
 import Data.Bits
 import Data.Maybe
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
 import Foreign.Storable
+import Data.Word
+import Data.Monoid
 import General.Binary
 
 import Development.Shake.Internal.Core.Types
@@ -30,10 +31,10 @@ import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Action hiding (trackAllow)
 import qualified Development.Shake.Internal.Core.Action as S
 import Development.Shake.Internal.FileName
+import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Classes
 import Development.Shake.FilePath(toStandard)
 import Development.Shake.Internal.FilePattern
-import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.Types
 import Development.Shake.Internal.Errors
@@ -84,26 +85,51 @@ instance BinaryEx [FileA] where
     putEx = putExStorableList
     getEx = getExStorableList
 
-data FileResult = Phony (Action ()) | One (Action ())
+data FileResult = Phony (Action ()) | One (Action ()) | Forward (Action FileA)
+
+data FileExA
+    = FilePhony
+    | FileOne FileA
+    | FileFwd FileA
+
+fromFileExA :: FileExA -> FileA
+fromFileExA FilePhony = FileA fileInfoNeq fileInfoNeq fileInfoNeq
+fromFileExA (FileOne x) = x
+fromFileExA (FileFwd x) = x
+
+instance BinaryEx FileExA where
+    putEx FilePhony = mempty
+    putEx (FileOne x) = putEx x
+    putEx (FileFwd x) = putEx (0 :: Word8) <> putEx x
+
+    getEx x = case BS.length x of
+        0 -> FilePhony
+        12 -> FileOne $ getEx x
+        13 -> FileFwd $ getEx (BS.tail x)
 
 newtype FileRule = FileRule (FilePath -> Maybe FileResult)
     deriving Typeable
 
 
-getRebuild :: ShakeOptions -> (FilePath -> Rebuild)
-getRebuild ShakeOptions{shakeRebuild=rs}
-    | null rs = const RebuildNormal
-    | otherwise = \x -> fromMaybe RebuildNormal $ firstJust (\(r,pat) -> if pat x then Just r else Nothing) rs2
-        where rs2 = map (second (?==)) $ reverse rs
+-- | Internal method for adding forwarding actions
+fileForward :: (FilePath -> Maybe (Action FileA)) -> Rules ()
+fileForward act = addUserRule $ FileRule $ fmap Forward . act 
 
 
 defaultRuleFile = do
     opts@ShakeOptions{..} <- getShakeOptionsRules
     let isFileANeq (FileA x1 x2 x3) = isFileInfoNeq x1 && isFileInfoNeq x2 && isFileInfoNeq x3
-    getRebuild <- return $ getRebuild opts
+    let rebuildFlags = shakeRebuildApply opts
 
-    let run o@(FileQ x) (fmap getEx -> old) dirty = do
+    -- value returned is only useful for linting
+    let run o@(FileQ x) oldBin@(fmap getEx -> old) dirty = do
+            let retNew :: RunChanged -> FileExA -> Action (RunResult FileA)
+                retNew c v = return $ RunResult c (runBuilder $ putEx v) (fromFileExA v)
+            let retOld :: RunChanged -> Action (RunResult FileA)
+                retOld c = return $ RunResult c (fromJust oldBin) $ fromFileExA $ fromJust old
+
             let rebuild = do
+                    -- actually run the rebuild
                     putWhen Chatty $ "# " ++ show o
                     x <- return $ fileNameToString x
                     rules <- getUserRules
@@ -114,41 +140,49 @@ defaultRuleFile = do
                     case act of
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                            let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            return $ RunResult b (runBuilder $ putEx new) new
+                            let b = case old of Just old | fileEqualValue opts (fromFileExA old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ FileOne new
+                        Just (Forward act) -> do
+                            new <- act
+                            let b = case old of Just old | fileEqualValue opts (fromFileExA old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ FileFwd new
                         Just (Phony act) -> do
                             act
-                            let new = FileA fileInfoNeq fileInfoNeq fileInfoNeq
-                            return $ RunResult ChangedRecomputeDiff (runBuilder $ putEx new) new
+                            retNew ChangedRecomputeDiff FilePhony
                         Just (One act) -> do
                             act
-                            new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
-                            let b = case old of Just old | fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            return $ RunResult b (runBuilder $ putEx new) new
-            let r = getRebuild $ fileNameToString x
+                            new :: FileA <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
+                            let b = case old of Just old | fileEqualValue opts (fromFileExA old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ FileOne new
+
+            -- for One, rebuild makes perfect sense
+            -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
+            -- for Phony, it doesn't make that much sense, but probably isn't harmful?
+            let r = rebuildFlags $ fileNameToString x
             case old of
                 _ | r == RebuildNow -> rebuild
                 _ | r == RebuildLater -> case old of
-                    Just old -> return $ RunResult ChangedNothing (runBuilder $ putEx old) old
+                    Just old -> retOld ChangedNothing
                     Nothing -> do
                         -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
                         now <- liftIO $ fileStoredValue opts o
                         case now of
                             Nothing -> rebuild
-                            Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx now) now
+                            Just now -> do alwaysRerun; retNew ChangedStore $ FileOne now
                 _ | r == RebuildNever -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
                         Just now -> return $ RunResult ChangedStore (runBuilder $ putEx now) now
-                Just old | not dirty, not $ isFileANeq old -> do
+                Just (FileOne old) | not dirty -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
                         Just now -> case fileEqualValue opts old now of
-                            EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx now) now
-                            EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx now) now
+                            EqualCheap -> retNew ChangedNothing $ FileOne now
+                            EqualExpensive -> retNew ChangedStore $ FileOne now
                             NotEqual -> rebuild
+                Just (FileFwd old) | not dirty -> retOld ChangedNothing
                 _ -> rebuild
 
     let lint k v
@@ -329,8 +363,7 @@ phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else 
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ FileRule $ \x -> fmap Phony $ act x
-
+phonys act = addUserRule $ FileRule $ fmap Phony . act
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.

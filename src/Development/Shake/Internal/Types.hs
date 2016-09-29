@@ -3,11 +3,15 @@
 -- | Types exposed to the user
 module Development.Shake.Internal.Types(
     Progress(..), Verbosity(..), Rebuild(..), Lint(..), Change(..),
-    ShakeOptions(..), shakeOptions
+    ShakeOptions(..), shakeOptions,
+    -- Internal stuff
+    shakeRebuildApply
     ) where
 
 import Data.Data
-import Data.List
+import Data.List.Extra
+import Data.Tuple.Extra
+import Data.Maybe
 import Data.Dynamic
 import qualified Data.HashMap.Strict as HashMap
 import Development.Shake.Internal.Progress
@@ -238,3 +242,12 @@ data Verbosity
     | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
+
+
+
+-- | Apply the 'shakeRebuild' flags to a file, determining the desired behaviour
+shakeRebuildApply :: ShakeOptions -> (FilePath -> Rebuild)
+shakeRebuildApply ShakeOptions{shakeRebuild=rs}
+    | null rs = const RebuildNormal
+    | otherwise = \x -> fromMaybe RebuildNormal $ firstJust (\(r,pat) -> if pat x then Just r else Nothing) rs2
+        where rs2 = map (second (?==)) $ reverse rs
