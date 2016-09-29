@@ -45,18 +45,42 @@ import System.IO.Unsafe(unsafeInterleaveIO)
 
 infix 1 %>, ?>, |%>, ~>
 
+---------------------------------------------------------------------
+-- TYPES
 
+-- | The unique key we use to index File rules, to avoid name clashes.
 newtype FileQ = FileQ {fromFileQ :: FileName}
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+
+-- | Raw information about a file.
+data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
+    deriving (Typeable,Eq)
+
+-- | The types of file rule that occur.
+data Mode
+    = ModePhony (Action ()) -- ^ An action with no file value
+    | ModeDirect (Action ()) -- ^ An action that produces this file
+    | ModeForward (Action FileA) -- ^ An action that looks up a file someone else produced
+
+-- | The results of the various 'Mode' rules.
+data Result
+    = ResultPhony
+    | ResultDirect FileA
+    | ResultForward FileA
+
+-- | The use rules we use.
+newtype FileRule = FileRule (FilePath -> Maybe Mode)
+    deriving Typeable
+
+
+---------------------------------------------------------------------
+-- INSTANCES
 
 instance Show FileQ where show (FileQ x) = fileNameToString x
 
 instance BinaryEx [FileQ] where
     putEx = putEx . map fromFileQ
     getEx = map FileQ . getEx
-
-data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
-    deriving (Typeable,Eq)
 
 instance Hashable FileA where
     hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
@@ -85,16 +109,6 @@ instance BinaryEx [FileA] where
     putEx = putExStorableList
     getEx = getExStorableList
 
-data Mode
-    = ModePhony (Action ()) -- ^ An action with no file value
-    | ModeDirect (Action ()) -- ^ An action that produces a file
-    | ModeForward (Action FileA) -- ^ An action that looks up a file someone else produced
-
-data Result
-    = ResultPhony
-    | ResultDirect FileA
-    | ResultForward FileA
-
 fromResult :: Result -> FileA
 fromResult ResultPhony = FileA fileInfoNeq fileInfoNeq fileInfoNeq
 fromResult (ResultDirect x) = x
@@ -110,15 +124,57 @@ instance BinaryEx Result where
         12 -> ResultDirect $ getEx x
         13 -> ResultForward $ getEx (BS.tail x)
 
-newtype FileRule = FileRule (FilePath -> Maybe Mode)
-    deriving Typeable
+
+---------------------------------------------------------------------
+-- FILE CHECK QUERIES
+
+-- | An equality check and a cost.
+data EqualCost
+    = EqualCheap -- ^ The equality check was cheap.
+    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
+    | NotEqual -- ^ The values are not equal.
+      deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
+
+fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
+fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
+    res <- getFileInfo x
+    case res of
+        Nothing -> return Nothing
+        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
+        Just (time,size) -> do
+            hash <- unsafeInterleaveIO $ getFileHash x
+            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
 
 
--- | Internal method for adding forwarding actions
-fileForward :: (FilePath -> Maybe (Action FileA)) -> Rules ()
-fileForward act = addUserRule $ FileRule $ fmap ModeForward . act 
+fileEqualValue :: ShakeOptions -> FileA -> FileA -> EqualCost
+fileEqualValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
+    ChangeModtime -> bool $ x1 == y1
+    ChangeDigest -> bool $ x2 == y2 && x3 == y3
+    ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
+    _ | x1 == y1 -> EqualCheap
+      | x2 == y2 && x3 == y3 -> EqualExpensive
+      | otherwise -> NotEqual
+    where bool b = if b then EqualCheap else NotEqual
 
 
+-- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
+storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
+{-
+storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
+    when (shakeCreationCheck opts) $ do
+        whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
+    return $ FileA fileInfoEq fileInfoEq fileInfoEq
+-}
+storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
+    where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
+          err = msg ++ "\n  " ++ fileNameToString (fromFileQ x)
+          opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
+
+
+---------------------------------------------------------------------
+-- THE DEFAULT RULE
+
+defaultRuleFile :: Rules ()
 defaultRuleFile = do
     opts@ShakeOptions{..} <- getShakeOptionsRules
     let isFileANeq (FileA x1 x2 x3) = isFileInfoNeq x1 && isFileInfoNeq x2 && isFileInfoNeq x3
@@ -200,48 +256,12 @@ defaultRuleFile = do
     addBuiltinRuleEx newBinaryOp lint run
 
 
-fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
-fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
-    res <- getFileInfo x
-    case res of
-        Nothing -> return Nothing
-        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
-        Just (time,size) -> do
-            hash <- unsafeInterleaveIO $ getFileHash x
-            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+---------------------------------------------------------------------
+-- OPTIONS ON TOP
 
-
--- | An equality check and a cost.
-data EqualCost
-    = EqualCheap -- ^ The equality check was cheap.
-    | EqualExpensive -- ^ The equality check was expensive, as the results are not trivially equal.
-    | NotEqual -- ^ The values are not equal.
-      deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
-
-fileEqualValue :: ShakeOptions -> FileA -> FileA -> EqualCost
-fileEqualValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = case c of
-    ChangeModtime -> bool $ x1 == y1
-    ChangeDigest -> bool $ x2 == y2 && x3 == y3
-    ChangeModtimeOrDigest -> bool $ x1 == y1 && x2 == y2 && x3 == y3
-    _ | x1 == y1 -> EqualCheap
-      | x2 == y2 && x3 == y3 -> EqualExpensive
-      | otherwise -> NotEqual
-    where bool b = if b then EqualCheap else NotEqual
-
-
--- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
-storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
-{-
-storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
-    when (shakeCreationCheck opts) $ do
-        whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
-    return $ FileA fileInfoEq fileInfoEq fileInfoEq
--}
-storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
-    where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
-          err = msg ++ "\n  " ++ fileNameToString (fromFileQ x)
-          opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
-
+-- | Internal method for adding forwarding actions
+fileForward :: (FilePath -> Maybe (Action FileA)) -> Rules ()
+fileForward act = addUserRule $ FileRule $ fmap ModeForward . act 
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
