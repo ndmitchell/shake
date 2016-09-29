@@ -5,7 +5,7 @@ module Development.Shake.Internal.Options(
     Progress(..), Verbosity(..), Rebuild(..), Lint(..), Change(..),
     ShakeOptions(..), shakeOptions,
     -- Internal stuff
-    shakeRebuildApply
+    shakeRebuildApply, shakeAbbreviationsApply
     ) where
 
 import Data.Data
@@ -251,3 +251,16 @@ shakeRebuildApply ShakeOptions{shakeRebuild=rs}
     | null rs = const RebuildNormal
     | otherwise = \x -> fromMaybe RebuildNormal $ firstJust (\(r,pat) -> if pat x then Just r else Nothing) rs2
         where rs2 = map (second (?==)) $ reverse rs
+
+
+shakeAbbreviationsApply :: ShakeOptions -> String -> String
+shakeAbbreviationsApply ShakeOptions{shakeAbbreviations=abbrev}
+    | null abbrev = id
+    | otherwise = f
+        where
+            -- order so longer abbreviations are preferred
+            ordAbbrev = sortOn (negate . length . fst) abbrev
+
+            f [] = []
+            f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
+            f (x:xs) = x : f xs

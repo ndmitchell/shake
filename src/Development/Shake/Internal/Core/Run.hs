@@ -68,14 +68,14 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     let diagnostic | shakeVerbosity < Diagnostic = const $ return ()
                    | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
-    let output v = outputLocked v . abbreviate shakeAbbreviations
+    let output v = outputLocked v . shakeAbbreviationsApply opts
     diagnostic $ return "Starting run"
 
     except <- newIORef (Nothing :: Maybe (String, ShakeException))
     let raiseError err
             | not shakeStaunch = throwIO err
             | otherwise = do
-                let named = abbreviate shakeAbbreviations . shakeExceptionTarget
+                let named = shakeAbbreviationsApply opts . shakeExceptionTarget
                 atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                 -- no need to print exceptions here, they get printed when they are wrapped
 
@@ -162,18 +162,6 @@ lineBuffering act = do
     act `finally` do
         hSetBuffering stdout out
         hSetBuffering stderr err
-
-
-abbreviate :: [(String,String)] -> String -> String
-abbreviate [] = id
-abbreviate abbrev = f
-    where
-        -- order so longer abbreviations are preferred
-        ordAbbrev = sortOn (negate . length . fst) abbrev
-
-        f [] = []
-        f x | (to,rest):_ <- [(to,rest) | (from,to) <- ordAbbrev, Just rest <- [stripPrefix from x]] = to ++ f rest
-        f (x:xs) = x : f xs
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
