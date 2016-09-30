@@ -109,10 +109,10 @@ instance BinaryEx [FileA] where
     putEx = putExStorableList
     getEx = getExStorableList
 
-fromResult :: Result -> FileA
-fromResult ResultPhony = FileA fileInfoNeq fileInfoNeq fileInfoNeq
-fromResult (ResultDirect x) = x
-fromResult (ResultForward x) = x
+fromResult :: Result -> Maybe FileA
+fromResult ResultPhony = Nothing
+fromResult (ResultDirect x) = Just x
+fromResult (ResultForward x) = Just x
 
 instance BinaryEx Result where
     putEx ResultPhony = mempty
@@ -200,7 +200,11 @@ defaultRuleFile = do
                         [r] -> return $ Just r
                         rs  -> liftIO $ errorMultipleRulesMatch (typeOf o) (show o) (length rs)
                     let answer ctor new = do
-                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            let b = case () of
+                                        _ | Just old <- old
+                                          , Just old <- fromResult old
+                                          , fileEqualValue opts old new /= NotEqual -> ChangedRecomputeSame
+                                        _ -> ChangedRecomputeDiff
                             retNew b $ ctor new
                     case act of
                         Nothing -> do
