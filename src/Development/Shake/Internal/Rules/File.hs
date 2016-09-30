@@ -199,23 +199,22 @@ defaultRuleFile = do
                         [] -> return Nothing
                         [r] -> return $ Just r
                         rs  -> liftIO $ errorMultipleRulesMatch (typeOf o) (show o) (length rs)
+                    let answer ctor new = do
+                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
+                            retNew b $ ctor new
                     case act of
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            retNew b $ ResultDirect new
+                            answer ResultDirect new
                         Just (ModeForward act) -> do
-                            new <- act
-                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            retNew b $ ResultForward new
+                            answer ResultForward =<< act
+                        Just (ModeDirect act) -> do
+                            act
+                            new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
+                            answer ResultDirect new
                         Just (ModePhony act) -> do
                             act
                             retNew ChangedRecomputeDiff ResultPhony
-                        Just (ModeDirect act) -> do
-                            act
-                            new :: FileA <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
-                            let b = case old of Just old | fileEqualValue opts (fromResult old) new /= NotEqual -> ChangedRecomputeSame; _ -> ChangedRecomputeDiff
-                            retNew b $ ResultDirect new
 
             -- for One, rebuild makes perfect sense
             -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
