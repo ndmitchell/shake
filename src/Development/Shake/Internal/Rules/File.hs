@@ -158,15 +158,15 @@ fileEqualValue ShakeOptions{shakeChange=c} (FileA x1 x2 x3) (FileA y1 y2 y3) = c
 
 
 -- | Arguments: options; is the file an input; a message for failure if the file does not exist; filename
-storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO FileA
+storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO (Maybe FileA)
 {-
 storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
     when (shakeCreationCheck opts) $ do
         whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
     return $ FileA fileInfoEq fileInfoEq fileInfoEq
 -}
-storedValueError opts input msg x = fromMaybe def <$> fileStoredValue opts2 x
-    where def = if shakeCreationCheck opts || input then error err else FileA fileInfoNeq fileInfoNeq fileInfoNeq
+storedValueError opts input msg x = maybe def Just <$> fileStoredValue opts2 x
+    where def = if shakeCreationCheck opts || input then error err else Nothing
           err = msg ++ "\n  " ++ fileNameToString (fromFileQ x)
           opts2 = if not input && shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
 
@@ -209,13 +209,15 @@ defaultRuleFile = do
                     case act of
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                            answer ResultDirect new
+                            answer ResultDirect $ fromJust new
                         Just (ModeForward act) -> do
                             answer ResultForward =<< act
                         Just (ModeDirect act) -> do
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
-                            answer ResultDirect new
+                            case new of
+                                Nothing -> retNew ChangedRecomputeDiff ResultPhony
+                                Just new -> answer ResultDirect new
                         Just (ModePhony act) -> do
                             act
                             retNew ChangedRecomputeDiff ResultPhony
