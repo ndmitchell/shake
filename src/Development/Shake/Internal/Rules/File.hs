@@ -143,7 +143,7 @@ fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
         Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNeq
         Just (time,size) -> do
             hash <- unsafeInterleaveIO $ getFileHash x
-            return $ Just $ FileA (if c == ChangeDigest then fileInfoNeq else time) size hash
+            return $ Just $ FileA time size hash
 
 
 fileEqualValue :: ShakeOptions -> FileA -> FileA -> EqualCost
