@@ -258,6 +258,10 @@ defaultRuleFile = do
     addBuiltinRuleEx newBinaryOp lint run
 
 
+apply_ :: (a -> FileName) -> [a] -> Action [Maybe FileA]
+apply_ f = apply . map (FileQ . f)
+
+
 ---------------------------------------------------------------------
 -- OPTIONS ON TOP
 
@@ -284,10 +288,10 @@ fileForward act = addUserRule $ FileRule $ fmap ModeForward . act
 --   environment variables (e.g. @$HOME@ - use 'getEnv' to expand them) or directories (directories cannot be
 --   tracked directly - track files within the directory instead).
 need :: [FilePath] -> Action ()
-need xs = (apply $ map (FileQ . fileNameFromString) xs :: Action [FileA]) >> return ()
+need = void . apply_ fileNameFromString
 
 needBS :: [BS.ByteString] -> Action ()
-needBS xs = (apply $ map (FileQ . fileNameFromByteString) xs :: Action [FileA]) >> return ()
+needBS = void . apply_ fileNameFromByteString
 
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
@@ -308,9 +312,9 @@ neededCheck :: [FileName] -> Action ()
 neededCheck xs = do
     opts <- getShakeOptions
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
-    post <- apply $ map FileQ xs :: Action [FileA]
+    post <- apply_ id xs
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, b) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
+              | (x, a, Just b) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
