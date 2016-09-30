@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.Internal.FileInfo(
-    FileInfo, fileInfoEq, fileInfoNeq, isFileInfoNeq,
+    FileInfo, fileInfoNeq, isFileInfoNeq,
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
     ) where
@@ -40,8 +40,7 @@ import System.Posix.Files.ByteString
 newtype FileInfo a = FileInfo Word32
     deriving (Typeable,Hashable,Binary,Storable,NFData)
 
-fileInfoEq, fileInfoNeq :: FileInfo a
-fileInfoEq  = FileInfo 0   -- Equal to everything
+fileInfoNeq :: FileInfo a
 fileInfoNeq = FileInfo 1   -- Equal to nothing
 
 fileInfo :: Word32 -> FileInfo a
