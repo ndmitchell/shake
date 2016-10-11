@@ -442,21 +442,41 @@ parallel acts = Action $ do
     -- number of items still to complete, or Nothing for has completed (by either failure or completion)
     todo :: Var (Maybe Int) <- liftIO $ newVar $ Just $ length acts
     -- a list of refs where the results go
-    results :: [IORef (Maybe (Either SomeException a))] <- liftIO $ replicateM (length acts) $ newIORef Nothing
+    results :: [IORef (Maybe (Either SomeException (Local, a)))] <- liftIO $ replicateM (length acts) $ newIORef Nothing
 
-    captureRAW $ \continue -> do
+    (locals, results) <- captureRAW $ \continue -> do
         let resume = do
                 res <- liftIO $ sequence . catMaybes <$> mapM readIORef results
-                continue res
+                continue $ fmap unzip res
 
         liftIO $ forM_ (zip acts results) $ \(act, result) -> do
-            let act2 = ifM (liftIO $ isJust <$> readVar todo) act (fail "")
+            let act2 = do
+                    b <- liftIO $ isJust <$> readVar todo
+                    when (not b) $ fail "parallel, one has already failed"
+                    res <- act
+                    old <- Action getRW
+                    return (old, res)
             addPoolMediumPriority globalPool $ runAction global local act2 $ \res -> do
                 writeIORef result $ Just res
                 modifyVar_ todo $ \v -> case v of
                     Nothing -> return Nothing
                     Just i | i == 1 || isLeft res -> do resume; return Nothing
                     Just i -> return $ Just $ i - 1
+
+    -- don't construct with RecordWildCards so any new fields raise an error
+    modifyRW $ \root -> Local
+        -- immutable/stack that need copying
+        {localStack = localStack root
+        ,localVerbosity = localVerbosity root
+        ,localBlockApply = localBlockApply root
+        -- mutable locals that need integrating
+        ,localDepends = localDepends root ++ concatMap localDepends locals
+        ,localDiscount = localDiscount root + maximum (0:map localDiscount locals)
+        ,localTraces = localTraces root ++ concatMap localTraces locals
+        ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows locals
+        ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed locals
+        }
+    return results
 
 
 -- | Run an action but do not depend on anything the action uses.

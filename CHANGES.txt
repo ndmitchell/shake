@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #488, make sure parallel tracks dependencies
     #436, remove Assume, switch to Rebuild
     #419, remove --assume-old and --assume-new, which never worked
     Remove support for running Makefile scripts
