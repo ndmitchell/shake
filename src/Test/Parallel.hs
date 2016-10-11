@@ -12,6 +12,11 @@ import Data.IORef
 main = shakenCwd test $ \args obj -> do
     want args
 
+    obj "AB.txt" %> \out -> do
+        -- need [obj "A.txt", obj "B.txt"]
+        (text1,text2) <- readFile' (obj "A.txt") `par` readFile' (obj "B.txt")
+        writeFile' out $ text1 ++ text2
+
     phony "cancel" $ do
         writeFile' (obj "cancel") ""
         done <- liftIO $ newIORef 0
@@ -34,6 +39,14 @@ main = shakenCwd test $ \args obj -> do
 
 
 test build obj = do
+    writeFile (obj "A.txt") "AAA"
+    writeFile (obj "B.txt") "BBB"
+    build ["AB.txt","--sleep"]
+    assertContents (obj "AB.txt") "AAABBB"
+    appendFile (obj "A.txt") "aaa"
+    build ["AB.txt"]
+    assertContents (obj "AB.txt") "AAAaaaBBB"
+
     assertException ["boom"] $ build ["cancel","-j1","--quiet"]
     assertContents (obj "cancel") "xx"
     build ["parallel","-j1"]
