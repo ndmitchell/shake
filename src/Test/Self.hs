@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, TypeFamilies #-}
 
 module Test.Self(main) where
 
@@ -19,6 +19,8 @@ import Prelude
 newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
+type instance RuleResult GhcPkg = [String]
+type instance RuleResult GhcFlags = [String]
 
 main = shaken noTest $ \args obj -> do
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext

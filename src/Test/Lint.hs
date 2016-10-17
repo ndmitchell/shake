@@ -1,7 +1,9 @@
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
 
 module Test.Lint(main) where
 
 import Development.Shake
+import Development.Shake.Classes
 import Development.Shake.FilePath
 import Test.Type
 import Control.Exception
@@ -9,17 +11,20 @@ import System.Directory as IO
 import System.Info.Extra
 import Control.Monad.Extra
 
+newtype Zero = Zero () deriving (Eq, Show, NFData, Hashable, Binary)
+
+type instance RuleResult Zero = Zero
 
 main = shaken test $ \args obj -> do
     want $ map obj args
 
-    addOracle $ \() -> do
+    addOracle $ \Zero{} -> do
         liftIO $ createDirectoryIfMissing True $ obj "dir"
         liftIO $ setCurrentDirectory $ obj "dir"
-        return ()
+        return $ Zero ()
 
     obj "changedir" %> \out -> do
-        () <- askOracle ()
+        Zero () <- askOracle $ Zero ()
         writeFile' out ""
 
     obj "pause.*" %> \out -> do

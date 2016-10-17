@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances #-}
+{-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances, TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.File(
     need, needBS, needed, neededBS, want,
@@ -47,6 +47,8 @@ infix 1 %>, ?>, |%>, ~>
 
 ---------------------------------------------------------------------
 -- TYPES
+
+type instance RuleResult FileQ = Maybe FileA
 
 -- | The unique key we use to index File rules, to avoid name clashes.
 newtype FileQ = FileQ {fromFileQ :: FileName}

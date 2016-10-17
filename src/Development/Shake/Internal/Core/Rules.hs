@@ -1,10 +1,11 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    addBuiltinRule, addBuiltinRuleEx, noLint,
+    RuleResult, addBuiltinRule, addBuiltinRuleEx, noLint,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -124,16 +125,18 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
+type family RuleResult key = value
+
 -- | Add a builtin rule, comprising of a lint rule and an action. Each builtin rule must be identified by
 --   a unique key.
-addBuiltinRule :: (ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRule :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = addBuiltinRuleEx $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
 
 
 -- | Initial version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
-addBuiltinRuleEx :: (ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleEx binary lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value

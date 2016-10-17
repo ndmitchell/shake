@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | A module for producing forward-defined build systems, in contrast to standard backwards-defined
 --   build systems such as shake. Based around ideas from <https://code.google.com/p/fabricate/ fabricate>.
@@ -58,6 +59,8 @@ forwards = unsafePerformIO $ newIORef Map.empty
 
 newtype ForwardQ = ForwardQ String
     deriving (Hashable,Typeable,Eq,NFData,Binary)
+
+type instance RuleResult ForwardQ = ()
 
 instance Show ForwardQ where
     show (ForwardQ x) = x

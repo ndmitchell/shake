@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.Rerun(
     defaultRuleRerun, alwaysRerun
@@ -15,6 +16,9 @@ import General.Binary
 newtype AlwaysRerunQ = AlwaysRerunQ ()
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 instance Show AlwaysRerunQ where show _ = "alwaysRerun"
+
+type instance RuleResult AlwaysRerunQ = ()
+
 
 -- | Always rerun the associated action. Useful for defining rules that query
 --   the environment. For example:

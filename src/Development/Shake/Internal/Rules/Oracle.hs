@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, ConstraintKinds #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances, TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.Oracle(
     addOracle, askOracle, askOracleWith
@@ -23,6 +23,8 @@ newtype OracleQ question = OracleQ question
 newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
+type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
+
 
 -- | Add extra information which rules can depend on.
 --   An oracle is a function from a question type @q@, to an answer type @a@.
@@ -30,6 +32,7 @@ newtype OracleA answer = OracleA answer
 --
 -- @
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- type instance RuleResult GhcVersion = String
 -- rules = do
 --     'addOracle' $ \\(GhcVersion _) -> fmap 'Development.Shake.fromStdout' $ 'Development.Shake.cmd' \"ghc --numeric-version\" :: Action String
 --     ... rules ...
@@ -40,6 +43,8 @@ newtype OracleA answer = OracleA answer
 --
 -- * We define @GhcVersion@ with a @newtype@ around @()@, allowing the use of @GeneralizedNewtypeDeriving@.
 --   All the necessary type classes are exported from "Development.Shake.Classes".
+--
+-- * The @type instance@ requires the extension @TypeFamilies@.
 --
 -- * Each call to 'addOracle' must use a different type of question.
 --
@@ -55,7 +60,9 @@ newtype OracleA answer = OracleA answer
 --
 -- @
 -- newtype GhcPkgList = GhcPkgList () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- type instance RuleResult GhcPkgList = [(String, String)]
 -- newtype GhcPkgVersion = GhcPkgVersion String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+-- type instance RuleResult GhcPkgVersion = Maybe String
 --
 -- rules = do
 --     getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
@@ -73,9 +80,9 @@ newtype OracleA answer = OracleA answer
 --
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
-addOracle :: (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
+addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
 addOracle = f where
-    f :: forall q a . (ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
+    f :: forall q a . (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
     f act = do
         addBuiltinRule noLint $ \(OracleQ q) old _ -> do
             new <- OracleA <$> act q
@@ -94,10 +101,10 @@ addOracle = f where
 
 -- | Get information previously added with 'addOracle'. The question/answer types must match those provided
 --   to 'addOracle'.
-askOracle :: (ShakeValue q, ShakeValue a) => q -> Action a
+askOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> Action a
 askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answer
 
 -- | Get information previously added with 'addOracle'. The second argument is not used, but can
 --   be useful to fix the answer type, avoiding ambiguous type error messages.
-askOracleWith :: (ShakeValue q, ShakeValue a) => q -> a -> Action a
+askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
 askOracleWith question _ = askOracle question

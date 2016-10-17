@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, FlexibleContexts, TypeFamilies #-}
 
 module Test.Oracle(main) where
 
@@ -6,13 +6,19 @@ import Development.Shake
 import Test.Type
 import Control.Monad
 
+type instance RuleResult String = Bool
+type instance RuleResult Bool = String
+type instance RuleResult Int = String
+type instance RuleResult () = String
+
 
 main = shakenCwd test $ \args obj -> do
-    let f name lhs rhs = (,) name
+    let f :: (ShakeValue q, ShakeValue (RuleResult q)) => String -> q -> RuleResult q -> (String, (Rules (), Rules ()))
+        f name lhs rhs = (,) name
             (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
             ,let o = obj name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
     let tbl = [f "str-bool" "" True
-              ,f "str-int" "" (0::Int)
+              -- ,f "str-int" "" (0::Int)
               ,f "bool-str" True ""
               ,f "int-str" (0::Int) ""]
 
@@ -37,7 +43,7 @@ test build obj = do
     -- check adding/removing redundant oracles does not trigger a rebuild
     build ["@foo","%newer","+str-bool"]
     assertContents (obj "unit.txt") "test"
-    build ["@foo","%newer","+str-int"]
+    build ["@foo","%newer","+int-str"]
     assertContents (obj "unit.txt") "test"
     build ["@foo","%newer"]
     assertContents (obj "unit.txt") "test"
@@ -51,13 +57,14 @@ test build obj = do
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
 
-    build ["+str-int","*str-int"]
-    errors ["*str-int"] -- Building with an an Oracle that has been removed
+    build ["+str-bool","*str-bool"]
+    errors ["*str-bool"] -- Building with an an Oracle that has been removed
         "missing a call to addOracle"
 
-    errors ["*str-bool"] -- Building with an Oracle that I know nothing about
+    errors ["*bool-str"] -- Building with an Oracle that I know nothing about
         "missing a call to addOracle"
 
+{-
     build ["+str-int","*str-int"]
     errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
         "askOracle is used at the wrong type"
@@ -67,11 +74,13 @@ test build obj = do
 
     errors ["+str-int","*str-bool"] -- Using an Oracle at the wrong answer type
         "askOracle is used at the wrong type"
-
-    errors ["+str-int","+str-int"] -- Two Oracles work if they aren't used
+-}
+    errors ["+str-bool","+str-bool"] -- Two Oracles work if they aren't used
         "" -- TODO: Should they?
-    errors ["+str-int","+str-int","*str-int"] -- Two Oracles fail if they are used
+    errors ["+str-bool","+str-bool","*str-bool"] -- Two Oracles fail if they are used
         "Internal error" -- TODO: "Only one call to addOracle is allowed"
 
+{-
     errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
         "Internal error" -- TODO: "Only one call to addOracle is allowed"
+-}

@@ -55,7 +55,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
         let (imports,rest) = partition ("import " `isPrefixOf`) $ showCode src
         writeFileChanged out $ unlines $
             ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, MultiParamTypeClasses, ExtendedDefaultRules, GeneralizedNewtypeDeriving #-}"
-            ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables, ConstraintKinds #-}"
+            ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables, ConstraintKinds, FlexibleContexts, TypeFamilies #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"
             ,"import Control.Applicative"
@@ -300,7 +300,7 @@ whitelist x | null x || isFilePath x || isCmdFlags x || isEnvVar x || isProgram 
 whitelist x | elem x $ words $
     "newtype do a q m c x value key os contents clean _make " ++
     ".. /. // \\ //* dir/*/* dir " ++
-    "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable SetConsoleTitle " ++
+    "ConstraintKinds TemplateHaskell GeneralizedNewtypeDeriving DeriveDataTypeable TypeFamilies SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath run " ++
     "NoProgress Error src about://tracing " ++
     ".make/i586-linux-gcc/output build " ++
@@ -315,6 +315,7 @@ whitelist x | elem x $ words $
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
     ,"shake-progress"
+    ,"type instance"
     ,"1m25s (15%)"
     ,"3m12s (82%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""

@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards, FlexibleContexts #-}
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds, TypeFamilies #-}
 
 -- | Both System.Directory and System.Environment wrappers
 module Development.Shake.Internal.Rules.Directory(
@@ -38,6 +38,8 @@ import Prelude
 ---------------------------------------------------------------------
 -- KEY/VALUE TYPES
 
+type instance RuleResult DoesFileExistQ = DoesFileExistA
+
 newtype DoesFileExistQ = DoesFileExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
@@ -50,6 +52,7 @@ newtype DoesFileExistA = DoesFileExistA {fromDoesFileExistA :: Bool}
 instance Show DoesFileExistA where
     show (DoesFileExistA a) = show a
 
+type instance RuleResult DoesDirectoryExistQ = DoesDirectoryExistA
 
 newtype DoesDirectoryExistQ = DoesDirectoryExistQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
@@ -64,6 +67,8 @@ instance Show DoesDirectoryExistA where
     show (DoesDirectoryExistA a) = show a
 
 
+type instance RuleResult GetEnvQ = GetEnvA
+
 newtype GetEnvQ = GetEnvQ String
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
@@ -76,6 +81,10 @@ newtype GetEnvA = GetEnvA {fromGetEnvA :: Maybe String}
 instance Show GetEnvA where
     show (GetEnvA a) = maybe "<unset>" wrapQuote a
 
+
+type instance RuleResult GetDirectoryContentsQ = GetDirectoryA
+type instance RuleResult GetDirectoryFilesQ = GetDirectoryA
+type instance RuleResult GetDirectoryDirsQ = GetDirectoryA
 
 newtype GetDirectoryContentsQ = GetDirectoryContentsQ FilePath
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
@@ -105,7 +114,7 @@ instance Show GetDirectoryA where
 ---------------------------------------------------------------------
 -- RULE DEFINITIONS
 
-queryRule :: (BinaryEx key, BinaryEx witness, Eq witness, ShakeValue key, ShakeValue value)
+queryRule :: (RuleResult key ~ value, BinaryEx key, BinaryEx witness, Eq witness, ShakeValue key, ShakeValue value)
           => (value -> witness) -> (key -> IO value) -> Rules ()
 queryRule witness query = addBuiltinRuleEx newBinaryOp
     (\k old -> do

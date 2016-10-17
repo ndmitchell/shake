@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving, TypeFamilies #-}
 
 -- | A module for parsing and using config files in a Shake build system. Config files
 --   consist of variable bindings, for example:
@@ -59,6 +59,9 @@ readConfigFileWithEnv vars file = do
 newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 newtype ConfigKeys = ConfigKeys () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
+
+type instance RuleResult Config = Maybe String
+type instance RuleResult ConfigKeys = [String]
 
 
 -- | Specify the file to use with 'getConfig'.

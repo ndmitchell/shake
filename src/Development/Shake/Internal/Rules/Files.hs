@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE RecordWildCards, ConstraintKinds, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, ConstraintKinds, ViewPatterns, TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>), defaultRuleFiles
@@ -32,6 +32,8 @@ import Development.Shake.Internal.Options
 
 infix 1 &?>, &%>
 
+
+type instance RuleResult FilesQ = FilesA
 
 newtype FilesQ = FilesQ [FileQ]
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)

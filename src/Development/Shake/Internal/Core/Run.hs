@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, ViewPatterns #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(
     run,
@@ -167,7 +168,7 @@ lineBuffering act = do
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'addUserRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: (ShakeValue key, ShakeValue value) => [key] -> Action [value]
+apply :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => [key] -> Action [value]
 apply = applyForall
 
 -- We don't want the forall in the Haddock docs
@@ -254,7 +255,7 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
-apply1 :: (ShakeValue key, ShakeValue value) => key -> Action value
+apply1 :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => key -> Action value
 apply1 = fmap head . apply . return
 
 
