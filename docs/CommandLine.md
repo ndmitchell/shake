@@ -31,7 +31,7 @@ These options control what gets printed to the console. All output produced by S
 
 * `--color, --colour` -- colorize the output, implemented via `shakeOutput`.
 * `-a FULL=SHORT, --abbrev=FULL=SHORT` -- use abbreviation in status messages. Adds to the `shakeAbbreviations` field. A list of substrings that should be abbreviated in status messages, and their corresponding abbreviation. Commonly used to replace the long paths (e.g. `.make/i586-linux-gcc/output`) with an abbreviation (e.g. `$OUT`).
-* `-d[=FILE], --debug[=FILE]` -- print lots of debugging information, optionally to a file.
+* `-d[ FILE], --debug[=FILE]` -- print lots of debugging information, optionally to a file.
 * `-q, --quiet` -- don't print much, decreases the `shakeVerbosity` level.
 * `-s, --silent` -- don't print anything, sets the `shakeVerbosity` level to `Silent`.
 * `-V, --verbose, --trace` -- print more information, increases the `shakeVerbosity` level each time the flag appears, to `-VVV` gives `Diagnostic` verbosity level.
@@ -41,9 +41,9 @@ These options control what gets printed to the console. All output produced by S
 
 Shake can generate a number of different reports to help examine additional aspects of a build system.
 
-* `-r[=FILE], --report[=FILE], --profile[=FILE]` -- generate a profile report to `FILE`, defaults to `report.html`, sets `shakeReport`. The report extension determines the type of data that is written, for example `.html` for an HTML report, or `.json` for the raw JSON data. Pass `-` as `FILE` to print a summary report to the console. To interpret the reports and for future settings see the [profiling page](Profiling.md). Can be disabled with `--no-reports`.
+* `-r[ FILE], --report[=FILE], --profile[=FILE]` -- generate a profile report to `FILE`, defaults to `report.html`, sets `shakeReport`. The report extension determines the type of data that is written, for example `.html` for an HTML report, or `.json` for the raw JSON data. Pass `-` as `FILE` to print a summary report to the console. To interpret the reports and for future settings see the [profiling page](Profiling.md). Can be disabled with `--no-reports`.
 * `--live[=FILE]` -- list the files that are still "live" to `FILE`, defaults to `live.txt`, sets `shakeLiveFiles`. After the build system completes, write a list of all files which were live in that run, i.e. those which Shake checked were valid or rebuilt. Produces best answers if nothing rebuilds.
-* `-p[=N], --progress[=N]` -- show progress messages every `N` seconds, defaulting to 5 seconds. Sets `shakeProgress` to `progressSimple`. Progress messages will be shown in the window titlebar. Can be disabled by passing `--no-progress`.
+* `-p[N], --progress[=N]` -- show progress messages every `N` seconds, defaulting to 5 seconds. Sets `shakeProgress` to `progressSimple`. Progress messages will be shown in the window titlebar. Can be disabled by passing `--no-progress`.
 * `--storage` -- write a storage log to the next to a file location controlled by `shakeFiles`/`--metadata`. This storage log will be written to occasionally -- whenever a partially truncated database is found, or when the database is compacted. Generally useful only for debugging.
 
 ## Linting
@@ -57,7 +57,7 @@ Shake can perform additional checks on an execution using linting.
 
 Finally there are some general settings, which control miscellaneous features of Shake.
 
-* `-j[=N], --jobs[=N]` -- allow `N` jobs/threads to run at, sets `shakeThreads`. Defaults to 1 thread if the flag is omitted, or the number of CPUs if passing `-j` with no argument value.
+* `-j[N], --jobs[=N]` -- allow `N` jobs/threads to run at, sets `shakeThreads`. Defaults to 1 thread if the flag is omitted, or the number of CPUs if passing `-j` with no argument value.
 * `-m PREFIX, --metadata=PREFIX` -- prefix for storing Shake produced metadata files, sets `shakeFiles`. Generally this setting should be controlled in the code.
 * `--flush=N` -- sets `shakeFlush`, defaults to `--flush=10`. How often to flush Shake metadata files in seconds. It is possible that on abnormal termination (not Haskell exceptions but killing processes) that any rules that completed in the last `N` seconds will be lost. Flushing can be disabled entirely with `--never-flush`, if you like living on the edge.
 * `-C DIRECTORY`, `--directory=DIRECTORY` -- change to `DIRECTORY` before doing anything.
