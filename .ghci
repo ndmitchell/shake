@@ -9,8 +9,8 @@
 :def docs_ const $ return $ unlines [":!cabal haddock"]
 :def docs const $ return $ unlines [":docs_",":!start dist\\doc\\html\\shake\\Development-Shake.html"]
 
-:def hlint_ const $ return ":!hlint src --report"
-:def hlint const $ return $ unlines [":hlint_",":!start report.html"]
+:def hlint_ const $ return ":!hlint src --report=hlint.html"
+:def hlint const $ return $ unlines [":hlint_",":!start hlint.html"]
 
 :def travis const $ return ":!ghc -fno-code travis.hs"
 
