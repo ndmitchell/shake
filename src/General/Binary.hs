@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
+{-# LANGUAGE FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
 
 module General.Binary(
     BinaryOp(..), newBinaryOp,

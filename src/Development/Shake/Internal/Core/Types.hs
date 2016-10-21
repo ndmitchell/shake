@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, DeriveDataTypeable #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, DeriveFunctor #-}
+{-# LANGUAGE ExistentialQuantification, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),

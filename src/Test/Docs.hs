@@ -54,7 +54,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
 
         let (imports,rest) = partition ("import " `isPrefixOf`) $ showCode src
         writeFileChanged out $ unlines $
-            ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, MultiParamTypeClasses, ExtendedDefaultRules, GeneralizedNewtypeDeriving #-}"
+            ["{-# LANGUAGE DeriveDataTypeable, RankNTypes, ExtendedDefaultRules, GeneralizedNewtypeDeriving #-}"
             ,"{-# LANGUAGE NoMonomorphismRestriction, ScopedTypeVariables, ConstraintKinds, FlexibleContexts, TypeFamilies #-}"
             ,"{-# OPTIONS_GHC -w #-}"
             ,"module " ++ takeBaseName out ++ "() where"

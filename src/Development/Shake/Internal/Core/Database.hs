@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns, DeriveFunctor #-}
-{-# LANGUAGE MultiParamTypeClasses, Rank2Types, FlexibleInstances #-}
+{-# LANGUAGE Rank2Types, FlexibleInstances #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(

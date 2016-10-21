@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables, MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | A module for producing forward-defined build systems, in contrast to standard backwards-defined

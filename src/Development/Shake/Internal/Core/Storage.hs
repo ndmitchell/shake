@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, PatternGuards, RecordWildCards, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards, RecordWildCards, FlexibleInstances #-}
 {-# LANGUAGE BangPatterns #-}
 {-
 This module stores the meta-data so its very important its always accurate

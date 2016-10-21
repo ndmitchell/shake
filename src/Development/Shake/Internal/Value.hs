@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds, KindSignatures #-}
+{-# LANGUAGE ConstraintKinds, KindSignatures #-}
 
 {- |
 This module implements the Key/Value types, to abstract over hetrogenous data types.

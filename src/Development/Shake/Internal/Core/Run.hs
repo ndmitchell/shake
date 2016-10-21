@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds, ViewPatterns #-}
+{-# LANGUAGE ExistentialQuantification, ConstraintKinds, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(

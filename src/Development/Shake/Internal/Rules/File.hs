@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances, TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.File(

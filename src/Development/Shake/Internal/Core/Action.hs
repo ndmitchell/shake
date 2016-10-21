@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, DeriveDataTypeable #-}
-{-# LANGUAGE ExistentialQuantification, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,

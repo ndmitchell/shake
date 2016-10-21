@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards, FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, RecordWildCards, FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds, TypeFamilies #-}
 
 -- | Both System.Directory and System.Environment wrappers
