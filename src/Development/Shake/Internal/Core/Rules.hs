@@ -125,7 +125,7 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
-type family RuleResult key = value
+type family RuleResult key -- = value
 
 -- | Add a builtin rule, comprising of a lint rule and an action. Each builtin rule must be identified by
 --   a unique key.
