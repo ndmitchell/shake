@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Test.Lint(main) where
 
@@ -11,7 +11,7 @@ import System.Directory as IO
 import System.Info.Extra
 import Control.Monad.Extra
 
-newtype Zero = Zero () deriving (Eq, Show, NFData, Hashable, Binary)
+newtype Zero = Zero () deriving (Eq, Show, NFData, Typeable, Hashable, Binary)
 
 type instance RuleResult Zero = Zero
 
