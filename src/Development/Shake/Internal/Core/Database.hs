@@ -140,9 +140,9 @@ statusType Missing{} = "Missing"
 
 
 getResult :: Status -> Maybe (Result ())
-getResult (Ready r) = Just $ fmap (const ()) r
-getResult (Loaded r) = Just $ fmap (const ()) r
-getResult (Waiting _ r) = fmap (const ()) <$> r
+getResult (Ready r) = Just $ void r
+getResult (Loaded r) = Just $ void r
+getResult (Waiting _ r) = void <$> r
 getResult _ = Nothing
 
 
