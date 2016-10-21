@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, PatternGuards, RecordWildCards, FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables, RecordWildCards, FlexibleInstances #-}
 {-# LANGUAGE BangPatterns #-}
 {-
 This module stores the meta-data so its very important its always accurate
@@ -199,7 +199,7 @@ putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (BinaryOp v) -> (BS.By
 putWitness mp = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map keyName $ Map.keys mp
-        wsMp = Map.fromList $ zip ws [fromIntegral 0 :: Word16 ..]
+        wsMp = Map.fromList $ zip ws [0 :: Word16 ..]
         mp2 = Map.mapWithKey (\k BinaryOp{..} -> let tag = putEx $ wsMp Map.! keyName k in \(Id w) v -> tag <> putEx w <> putOp v) mp
 
 

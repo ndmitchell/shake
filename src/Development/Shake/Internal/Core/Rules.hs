@@ -1,5 +1,5 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes, ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 

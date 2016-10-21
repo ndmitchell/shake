@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 
 module General.ListBuilder(
     ListBuilder, runListBuilder, newListBuilder

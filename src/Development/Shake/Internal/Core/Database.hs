@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, PatternGuards, ViewPatterns, DeriveFunctor #-}
+{-# LANGUAGE RecordWildCards, PatternGuards, DeriveFunctor #-}
 {-# LANGUAGE Rank2Types, FlexibleInstances #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
