@@ -4,7 +4,6 @@ module General.Template(runTemplate) where
 
 import System.FilePath.Posix
 import Control.Exception.Extra
-import Control.Monad
 import Control.Monad.IO.Class
 import Data.Char
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -24,7 +23,7 @@ libraries =
 --
 -- * <link href="foo" rel="stylesheet" type="text/css" /> ==> <style type="text/css">[[foo]]</style>
 runTemplate :: MonadIO m => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
-runTemplate ask = liftM LBS.unlines . mapM f . LBS.lines
+runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
     where
         link = LBS.pack "<link href=\""
         script = LBS.pack "<script src=\""
