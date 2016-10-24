@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE PatternGuards, FlexibleContexts, TypeFamilies, ConstraintKinds #-}
 
 module Test.Oracle(main) where
 
