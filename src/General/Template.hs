@@ -22,7 +22,7 @@ libraries =
 -- * <script src="foo"></script> ==> <script>[[foo]]</script>
 --
 -- * <link href="foo" rel="stylesheet" type="text/css" /> ==> <style type="text/css">[[foo]]</style>
-runTemplate :: MonadIO m => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
+runTemplate :: (Functor m, MonadIO m) => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
 runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
     where
         link = LBS.pack "<link href=\""
