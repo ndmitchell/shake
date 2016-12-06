@@ -71,6 +71,7 @@ source-repository head
 
 flag portable
     default: False
+    manual: True
     description: Obtain FileTime using portable functions
 
 library
