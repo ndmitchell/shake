@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Permit process-1.4.3.0 and above
     #495, remove dangling link from LICENSE
     #488, make sure parallel tracks dependencies
     #436, remove Assume, switch to Rebuild

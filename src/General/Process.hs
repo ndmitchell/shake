@@ -130,8 +130,9 @@ abort pid = do
     -- seems to happen with some GHC 7.2 compiled binaries with FFI etc
     terminateProcess pid
 
-withCreateProcess :: CreateProcess -> ((Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO a) -> IO a
-withCreateProcess cp act = mask $ \restore -> do
+-- FIXME: There is a new withCreateProcess in process-1.4.3.0 which is probably better than ours...
+withCreateProcessOld :: CreateProcess -> ((Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO a) -> IO a
+withCreateProcessOld cp act = mask $ \restore -> do
     ans@(inh, outh, errh, pid) <- createProcess cp
     onException (restore $ act ans) $ do
         mapM_ (`whenJust` hClose) [inh, outh, errh]
@@ -157,7 +158,7 @@ process po = do
         let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
                  ,std_in = fst $ stdIn inHandle poStdin
                  ,std_out = stdStream outHandle poStdout poStderr, std_err = stdStream outHandle poStderr poStdout}
-        withCreateProcess cp $ \(inh, outh, errh, pid) ->
+        withCreateProcessOld cp $ \(inh, outh, errh, pid) ->
             withTimeout poTimeout (abort pid) $ do
 
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++
