@@ -343,7 +343,7 @@ trackRead = mapM_ (trackUse . FileQ . fileNameFromString)
 trackWrite :: [FilePath] -> Action ()
 trackWrite = mapM_ (trackChange . FileQ . fileNameFromString)
 
--- | Allow accessing a file in this rule, ignoring any 'trackRead' / 'trackWrite' calls matching
+-- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
