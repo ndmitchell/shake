@@ -387,8 +387,8 @@ newtype Stdouterr a = Stdouterr {fromStdouterr :: a}
 newtype Exit = Exit {fromExit :: ExitCode}
 
 -- | Collect the 'ProcessHandle' of the process.
---   If you do collect the process handle, the command will run asyncronously and the call to 'cmd'/'command'
---   will return as soon as the process is spawned. Any 'Stdout'\/'Stderr' captures will return empty strings.
+--   If you do collect the process handle, the command will run asyncronously and the call to 'cmd' / 'command'
+--   will return as soon as the process is spawned. Any 'Stdout' / 'Stderr' captures will return empty strings.
 newtype Process = Process {fromProcess :: ProcessHandle}
 
 -- | Collect the time taken to execute the process. Can be used in conjunction with 'CmdLine' to
