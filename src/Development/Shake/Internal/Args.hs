@@ -208,7 +208,7 @@ showOptDescr xs = concat
     , let nargs = length args]
     where short NoArg{} x = "-" ++ [x]
           short (ReqArg _ b) x = "-" ++ [x] ++ " " ++ b
-          short (OptArg _ b) x = "-" ++ [x] ++ "[=" ++ b ++ "]"
+          short (OptArg _ b) x = "-" ++ [x] ++ "[" ++ b ++ "]"
           long NoArg{} x = "--" ++ x
           long (ReqArg _ b) x = "--" ++ x ++ "=" ++ b
           long (OptArg _ b) x = "--" ++ x ++ "[=" ++ b ++ "]"
