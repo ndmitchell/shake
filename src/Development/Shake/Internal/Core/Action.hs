@@ -69,7 +69,7 @@ actionFinally = actionBoom True
 getShakeOptions :: Action ShakeOptions
 getShakeOptions = Action $ getsRO globalOptions
 
--- | Get an item from 'shakeExtras', using the requested type as the key. Fails
+-- | Get an item from 'shakeExtra', using the requested type as the key. Fails
 -- if the value found at this key does not match the requested type.
 getShakeExtra :: forall a. Typeable a => Action (Maybe a)
 getShakeExtra = do
