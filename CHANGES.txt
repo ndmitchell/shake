@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #503, add getShakeExtra/addShakeExtra
     #492, fix the single letter flag documentation
     Expose 'Process' from Development.Shake
     Permit process-1.4.3.0 and above

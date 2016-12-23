@@ -4,7 +4,8 @@
 
 module Development.Shake.Internal.Core.Run(
     run,
-    Action, actionOnException, actionFinally, apply, apply1, traced, getShakeOptions, getProgress,
+    Action, actionOnException, actionFinally, apply, apply1, traced,
+    getShakeOptions, getProgress, getShakeExtra,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
     newCache, newCacheIO,
