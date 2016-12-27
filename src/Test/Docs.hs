@@ -332,4 +332,6 @@ whitelist x = x `elem`
     ,"cmd \"gcc -o\" [out] os"
     ,"[item1,item2,item2]"
     ,"$(LitE . StringL . loc_filename <$> location)"
+    ,"-d[ FILE], --debug[=FILE]"
+    ,"-r[ FILE], --report[=FILE], --profile[=FILE]"
     ]
