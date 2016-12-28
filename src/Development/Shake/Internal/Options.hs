@@ -160,11 +160,10 @@ data ShakeOptions = ShakeOptions
         --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
     ,shakeExtra :: Map.HashMap TypeRep Dynamic
-        -- ^ This a map which can be used to store arbitrary extra
-        --   information that a user may need when writing rules.  The
-        --   correct way to use this is to define a (hidden) newtype to
-        --   use as a key, so that conflicts cannot occur.
+        -- ^ This a map which can be used to store arbitrary extra information that a user may need when writing rules.
+        --   The key of each entry must be the 'dynTypeRep' of the value.
         --   Insert values using 'addShakeExtra' and retrieve them using 'getShakeExtra'.
+        --   The correct way to use this field is to define a hidden newtype for the key, so that conflicts cannot occur.
     }
     deriving Typeable
 
