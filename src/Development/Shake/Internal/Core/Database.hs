@@ -457,10 +457,10 @@ withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (BinaryOp Ke
 withDatabase opts diagnostic witness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
     witness <- return $ Map.fromList
-        [ (t, BinaryOp (putDatabase putOp) (getDatabase getOp))
+        [ (QTypeRep t, BinaryOp (putDatabase putOp) (getDatabase getOp))
         | (t,BinaryOp{..}) <- step : Map.toList witness]
     withStorage opts diagnostic witness $ \status journal -> do
-        journal <- return $ \i k v -> journal (typeKey k) i (k, Loaded v)
+        journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
         xs <- Ids.toList status
         let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]

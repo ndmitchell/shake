@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #506, allow duplicate type names in different modules
     #503, require shakeExtra to obey the sensible invariants
     #503, add getShakeExtra/addShakeExtra
     #492, fix the single letter flag documentation
