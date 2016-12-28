@@ -23,6 +23,7 @@ import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
 import Data.Hashable
+import Data.Typeable.Extra
 import Data.Dynamic
 import Prelude
 
