@@ -3,7 +3,7 @@
 
 module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,
-    getShakeOptions, getShakeExtra, getProgress, runAfter,
+    getShakeOptions, getProgress, runAfter,
     trackUse, trackChange, trackAllow, trackCheckUsed,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     blockApply, unsafeAllowApply,
@@ -16,13 +16,11 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.DeepSeq
 import Data.Typeable.Extra
-import Data.Dynamic (fromDynamic, dynTypeRep)
 import Data.Function
 import Data.Either.Extra
 import Data.Maybe
 import Data.IORef
 import Data.List
-import qualified Data.HashMap.Strict as Map
 import System.IO.Extra
 
 import Development.Shake.Internal.Core.Database
@@ -69,20 +67,6 @@ actionFinally = actionBoom True
 getShakeOptions :: Action ShakeOptions
 getShakeOptions = Action $ getsRO globalOptions
 
--- | Get an item from 'shakeExtra', using the requested type as the key. Fails
--- if the value found at this key does not match the requested type.
-getShakeExtra :: forall a. Typeable a => Action (Maybe a)
-getShakeExtra = do
-    mx <- Map.lookup rep . shakeExtra <$> getShakeOptions
-    case mx of
-      Just dyn
-        | Just x <- fromDynamic dyn -> return $ Just x
-        | otherwise ->
-          let err = "getShakeExtra: Key "++show rep++" had value of unexpected type "++show (dynTypeRep dyn)
-          in fail err
-      Nothing -> return Nothing
-  where
-    rep = typeRep (Proxy :: Proxy a)
 
 -- | Get the current 'Progress' structure, as would be returned by 'shakeProgress'.
 getProgress :: Action Progress

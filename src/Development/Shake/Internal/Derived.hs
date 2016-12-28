@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Development.Shake.Internal.Derived(
     copyFile', copyFileChanged,
@@ -5,6 +6,7 @@ module Development.Shake.Internal.Derived(
     writeFile', writeFileLines, writeFileChanged,
     withTempFile, withTempDir,
     getHashedShakeVersion,
+    getShakeExtra,
     apply1,
     par, forP
     ) where
@@ -16,9 +18,12 @@ import System.Directory
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
 import Development.Shake.Internal.Core.Run
+import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString as BS
+import qualified Data.HashMap.Strict as Map
 import Data.Hashable
+import Data.Dynamic
 import Prelude
 
 
@@ -41,6 +46,25 @@ getHashedShakeVersion :: [FilePath] -> IO String
 getHashedShakeVersion files = do
     hashes <- mapM (fmap (hashWithSalt 0) . BS.readFile) files
     return $ "hash-" ++ show (hashWithSalt 0 hashes)
+
+
+-- | Get an item from 'shakeExtra', using the requested type as the key. Fails
+-- if the value found at this key does not match the requested type.
+getShakeExtra :: Typeable a => Action (Maybe a)
+getShakeExtra = getShakeExtraForall
+
+getShakeExtraForall :: forall a . Typeable a => Action (Maybe a)
+getShakeExtraForall = do
+    mx <- Map.lookup rep . shakeExtra <$> getShakeOptions
+    case mx of
+      Just dyn
+        | Just x <- fromDynamic dyn -> return $ Just x
+        | otherwise ->
+          let err = "getShakeExtra: Key "++show rep++" had value of unexpected type "++show (dynTypeRep dyn)
+          in fail err
+      Nothing -> return Nothing
+  where
+    rep = typeRep (Proxy :: Proxy a)
 
 
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
