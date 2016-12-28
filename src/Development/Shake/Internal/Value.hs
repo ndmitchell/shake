@@ -1,8 +1,9 @@
 {-# LANGUAGE ExistentialQuantification, RecordWildCards, ScopedTypeVariables #-}
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds, GeneralizedNewtypeDeriving #-}
 
 -- | This module implements the Key/Value types, to abstract over hetrogenous data types.
 module Development.Shake.Internal.Value(
+    QTypeRep(..),
     Value, newValue, fromValue, typeValue,
     Key, newKey, fromKey, typeKey,
     ShakeValue
@@ -12,8 +13,19 @@ import Development.Shake.Classes
 import Development.Shake.Internal.Errors
 import Data.Typeable.Extra
 
+import Numeric
 import Data.Bits
 import Unsafe.Coerce
+
+
+-- | Like TypeRep, but the Show includes enough information to be unique
+--   so I can rely on @a == b === show a == show b@.
+newtype QTypeRep = QTypeRep {fromQTypeRep :: TypeRep}
+    deriving (Eq,Hashable)
+
+instance Show QTypeRep where
+    show (QTypeRep x) = show x ++ " {" ++ showHex (abs $ hashWithSalt 0 x) "" ++ "}"
+
 
 -- | Define an alias for the six type classes required for things involved in Shake rules.
 --   Using this alias requires the @ConstraintKinds@ extension.
