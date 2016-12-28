@@ -27,6 +27,7 @@ import Data.Function
 import Data.Either.Extra
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
+import Data.Dynamic
 import Data.Maybe
 import Data.IORef
 import System.Directory
@@ -83,6 +84,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
 
     curdir <- getCurrentDirectory
     diagnostic $ return "Starting run 2"
+    checkShakeExtra shakeExtra
 
     after <- newIORef []
     absent <- newIORef []
@@ -141,6 +143,16 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id
                         putWhen Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
             sequence_ . reverse =<< readIORef after
+
+
+checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
+checkShakeExtra mp = do
+    let bad = [(k,t) | (k,v) <- Map.toList mp, let t = dynTypeRep v, t /= k]
+    case bad of
+        (k,t):xs -> errorStructured "Invalid Map in shakeExtra"
+            [("Key",Just $ show k),("Value type",Just $ show t)]
+            (if null xs then "" else "Plus " ++ show (length xs) ++ " other keys")
+        _ -> return ()
 
 
 lintCurrentDirectory :: FilePath -> String -> IO ()

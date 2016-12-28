@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #503, require shakeExtra to obey the sensible invariants
     #503, add getShakeExtra/addShakeExtra
     #492, fix the single letter flag documentation
     Expose 'Process' from Development.Shake
