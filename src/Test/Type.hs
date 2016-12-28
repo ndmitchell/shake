@@ -1,7 +1,9 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Test.Type(sleep, module Test.Type) where
 
 import Development.Shake hiding (copyFileChanged)
+import Development.Shake.Classes
 import Development.Shake.Forward
 import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import Development.Shake.Internal.FileName
@@ -14,6 +16,7 @@ import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.List
 import Data.Maybe
+import Data.Typeable
 import qualified Data.ByteString as BS
 import System.Directory.Extra as IO
 import System.Environment.Extra
@@ -240,3 +243,21 @@ copyFileChanged old new = do
     good <- IO.doesFileExist new
     good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
     unless good $ copyFile old new
+
+---------------------------------------------------------------------
+-- TEST MATERIAL
+-- Some errors require multiple modules to replicate (e.g. #506), so put that here
+
+newtype BinarySentinel a = BinarySentinel ()
+    deriving (Eq,Show,NFData,Typeable,Hashable)
+
+instance forall a . Typeable a => Binary (BinarySentinel a) where
+    put (BinarySentinel x) = put $ show (typeRep (Proxy :: Proxy a))
+    get = do
+        x <- get
+        let want = show (typeRep (Proxy :: Proxy a))
+        if x == want then return $ BinarySentinel () else
+            error $ "BinarySentinel failed, got " ++ show x ++ " but wanted " ++ show want
+
+newtype RandomType = RandomType (BinarySentinel ())
+    deriving (Eq,Show,NFData,Typeable,Hashable,Binary)

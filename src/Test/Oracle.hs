@@ -1,9 +1,11 @@
-{-# LANGUAGE PatternGuards, FlexibleContexts, TypeFamilies, ConstraintKinds #-}
+{-# LANGUAGE PatternGuards, FlexibleContexts, TypeFamilies, ConstraintKinds, GeneralizedNewtypeDeriving #-}
 
 module Test.Oracle(main) where
 
 import Development.Shake
-import Test.Type
+import Development.Shake.Classes
+import Test.Type hiding (RandomType)
+import qualified Test.Type as T
 import Control.Monad
 
 type instance RuleResult String = Bool
@@ -11,8 +13,19 @@ type instance RuleResult Bool = String
 type instance RuleResult Int = String
 type instance RuleResult () = String
 
+newtype RandomType = RandomType (BinarySentinel String)
+    deriving (Eq,Show,NFData,Typeable,Hashable,Binary)
+
+type instance RuleResult RandomType = ()
+type instance RuleResult T.RandomType = ()
 
 main = shakenCwd test $ \args obj -> do
+    addOracle $ \(T.RandomType _) -> return ()
+    addOracle $ \(RandomType _) -> return ()
+    action $ do
+        askOracle $ T.RandomType $ BinarySentinel ()
+        askOracle $ RandomType $ BinarySentinel ()
+
     let f :: (ShakeValue q, ShakeValue (RuleResult q)) => String -> q -> RuleResult q -> (String, (Rules (), Rules ()))
         f name lhs rhs = (,) name
             (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
