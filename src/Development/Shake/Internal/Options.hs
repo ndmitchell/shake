@@ -164,6 +164,7 @@ data ShakeOptions = ShakeOptions
         --   information that a user may need when writing rules.  The
         --   correct way to use this is to define a (hidden) newtype to
         --   use as a key, so that conflicts cannot occur.
+        --   Insert values using 'addShakeExtra' and retrieve them using 'getShakeExtra'.
     }
     deriving Typeable
 
