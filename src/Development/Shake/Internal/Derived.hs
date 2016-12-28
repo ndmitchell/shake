@@ -6,7 +6,7 @@ module Development.Shake.Internal.Derived(
     writeFile', writeFileLines, writeFileChanged,
     withTempFile, withTempDir,
     getHashedShakeVersion,
-    getShakeExtra,
+    getShakeExtra, addShakeExtra,
     apply1,
     par, forP
     ) where
@@ -63,6 +63,10 @@ getShakeExtraForall = do
             | otherwise -> fail $
                 "getShakeExtra: Key " ++ show want ++ " had value of unexpected type " ++ show (dynTypeRep dyn)
         Nothing -> return Nothing
+
+-- | Add a properly structued value to 'shakeExtra' which can be retrieved with 'getShakeExtra'.
+addShakeExtra :: Typeable a => a -> Map.HashMap TypeRep Dynamic -> Map.HashMap TypeRep Dynamic
+addShakeExtra x = Map.insert (typeOf x) (toDyn x)
 
 
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
