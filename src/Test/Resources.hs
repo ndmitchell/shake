@@ -17,8 +17,8 @@ main = shakenCwd test $ \args obj -> do
     do
         r1 <- newResource "test" 2
         r2 <- newResource "special" 67
-        unless (r1 < r2 || r2 < r1) $ error "Resources should have a good ordering"
-        unless ("special" `isInfixOf` show r2) $ error "Resource should contain their name when shown"
+        unless (r1 < r2 || r2 < r1) $ fail "Resources should have a good ordering"
+        unless ("special" `isInfixOf` show r2) $ fail "Resource should contain their name when shown"
 
     -- test you are capped to a maximum value
     do
@@ -29,7 +29,7 @@ main = shakenCwd test $ \args obj -> do
         obj "c_*.txt" %> \out ->
             withResource res 1 $ do
                 old <- liftIO $ atomicModifyIORef inside $ \i -> (i+1,i)
-                when (old >= cap) $ error "Too many resources in use at one time"
+                when (old >= cap) $ fail "Too many resources in use at one time"
                 liftIO $ sleep 0.1
                 liftIO $ atomicModifyIORef inside $ \i -> (i-1,i)
                 writeFile' out ""
@@ -43,7 +43,7 @@ main = shakenCwd test $ \args obj -> do
         obj "s_done" %> \out -> do
             need [obj "s_lock1",obj "s_lock2"]
             done <- liftIO $ readIORef done
-            when (done < 10) $ error "Not all managed to schedule while waiting"
+            when (done < 10) $ fail "Not all managed to schedule while waiting"
             writeFile' out ""
         obj "s_lock*" %> \out -> do
             withResource lock 1 $ liftIO $ sleep 0.5
