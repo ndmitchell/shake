@@ -13,7 +13,7 @@ import Data.List.Extra
 import Data.Tuple.Extra
 import Data.Maybe
 import Data.Dynamic
-import qualified Data.HashMap.Strict as HashMap
+import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.Progress
 import Development.Shake.Internal.FilePattern
 import qualified Data.ByteString.Char8 as BS
@@ -159,7 +159,7 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to writing using 'putStrLn'. A function called to output messages from Shake, along with the 'Verbosity' at
         --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
-    ,shakeExtra :: HashMap.HashMap TypeRep Dynamic
+    ,shakeExtra :: Map.HashMap TypeRep Dynamic
         -- ^ This a map which can be used to store arbitrary extra
         --   information that a user may need when writing rules.  The
         --   correct way to use this is to define a (hidden) newtype to
@@ -174,7 +174,7 @@ shakeOptions = ShakeOptions
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
-    HashMap.empty
+    Map.empty
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
@@ -213,7 +213,7 @@ instance Show ShakeOptions where
                 | Just x <- cast x = show (x :: [(String,String)])
                 | Just x <- cast x = show (x :: Hidden (IO Progress -> IO ()))
                 | Just x <- cast x = show (x :: Hidden (Verbosity -> String -> IO ()))
-                | Just x <- cast x = show (x :: Hidden (HashMap.HashMap TypeRep Dynamic))
+                | Just x <- cast x = show (x :: Hidden (Map.HashMap TypeRep Dynamic))
                 | Just x <- cast x = show (x :: [CmdOption])
                 | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
