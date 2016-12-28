@@ -16,7 +16,7 @@ import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.List
 import Data.Maybe
-import Data.Typeable
+import Data.Typeable.Extra
 import qualified Data.ByteString as BS
 import System.Directory.Extra as IO
 import System.Environment.Extra
