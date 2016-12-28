@@ -55,16 +55,14 @@ getShakeExtra = getShakeExtraForall
 
 getShakeExtraForall :: forall a . Typeable a => Action (Maybe a)
 getShakeExtraForall = do
-    mx <- Map.lookup rep . shakeExtra <$> getShakeOptions
-    case mx of
-      Just dyn
-        | Just x <- fromDynamic dyn -> return $ Just x
-        | otherwise ->
-          let err = "getShakeExtra: Key "++show rep++" had value of unexpected type "++show (dynTypeRep dyn)
-          in fail err
-      Nothing -> return Nothing
-  where
-    rep = typeRep (Proxy :: Proxy a)
+    let want = typeRep (Proxy :: Proxy a)
+    extra <- shakeExtra <$> getShakeOptions
+    case Map.lookup want extra of
+        Just dyn
+            | Just x <- fromDynamic dyn -> return $ Just x
+            | otherwise -> fail $
+                "getShakeExtra: Key " ++ show want ++ " had value of unexpected type " ++ show (dynTypeRep dyn)
+        Nothing -> return Nothing
 
 
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
