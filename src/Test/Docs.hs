@@ -65,6 +65,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"import Data.ByteString(ByteString)"
             ,"import Data.Char"
             ,"import Data.Data"
+            ,"import Data.Dynamic"
             ,"import Data.List.Extra"
             ,"import System.Time.Extra"
             ,"import Data.Maybe"
