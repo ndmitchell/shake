@@ -156,7 +156,7 @@ import Development.Shake.Internal.Rules.Rerun
 --
 --   For large build systems the choice of GHC flags can have a significant impact. We recommend:
 --
--- > ghc --make MyBuildSystem -rtsopts -with-rtsopts=-I0
+-- > ghc --make MyBuildSystem -threaded -rtsopts "-with-rtsopts=-I0 -qg qb"
 --
 --   * @-rtsopts@: Allow the setting of further GHC options at runtime.
 --
