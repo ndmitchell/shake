@@ -436,7 +436,7 @@ newCache = liftIO . newCacheIO
 --   Unsafe as it allows the 'shakeThreads' limit to be exceeded.
 --   You cannot depend on a rule (e.g. 'need') while the extra thread is executing.
 --   If the rule blocks (e.g. calls 'withResource') then the extra thread may be used by some other action.
---   Only really suitable for calling 'cmd'/'command'.
+--   Only really suitable for calling 'cmd' / 'command'.
 unsafeExtraThread :: Action a -> Action a
 unsafeExtraThread act = Action $ do
     Global{..} <- getRO
