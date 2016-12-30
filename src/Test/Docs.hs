@@ -78,6 +78,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             ,"import System.Console.GetOpt"
             ,"import System.Directory(setCurrentDirectory)"
             ,"import qualified System.Directory"
+            ,"import System.Environment(lookupEnv)"
             ,"import System.Process"
             ,"import System.Exit"
             ,"import Control.Applicative"
@@ -311,7 +312,7 @@ whitelist x | elem x $ words $
     "_shake _shake/build manual chrome://tracing/ compdb " ++
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
-    "*> BuiltinRun BuiltinLint"
+    "*> BuiltinRun BuiltinLint RuleResult"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
@@ -320,6 +321,7 @@ whitelist x = x `elem`
     ,"1m25s (15%)"
     ,"3m12s (82%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
+    ,"ghc --make MyBuildSystem -threaded -rtsopts \"-with-rtsopts=-I0 -qg qb\""
     ,"# command-name (for file-name)"
     ,"<i>build rules</i>"
     ,"<i>actions</i>"
