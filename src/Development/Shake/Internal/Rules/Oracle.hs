@@ -106,5 +106,7 @@ askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answ
 
 -- | Get information previously added with 'addOracle'. The second argument is not used, but can
 --   be useful to fix the answer type, avoiding ambiguous type error messages.
+--
+--   Since the 'RuleResult' type family now fixes the result type, 'askOracle' should be used instead.
 askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
 askOracleWith question _ = askOracle question
