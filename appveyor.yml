@@ -19,5 +19,4 @@ environment:
 test_script:
 - stack init
 - stack setup > nul
-- echo "" | stack --no-terminal build
-- stack test
+- echo "" | stack --no-terminal test
