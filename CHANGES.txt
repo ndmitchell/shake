@@ -5,9 +5,7 @@ Changelog for Shake
     #503, add getShakeExtra/addShakeExtra
     #492, fix the single letter flag documentation
     Expose 'Process' from Development.Shake
-    #513, permit process-1.4.3.0 and above
     #495, remove dangling link from LICENSE
-    #488, make sure parallel tracks dependencies
     #436, remove Assume, switch to Rebuild
     #419, remove --assume-old and --assume-new, which never worked
     Remove support for running Makefile scripts
@@ -21,6 +19,9 @@ Changelog for Shake
     Delete the deprecated defaultRule
     IMPORTANT: Incompatible on disk format change
     #428, don't persist errors to the database
+0.15.11
+    #488, make sure parallel tracks dependencies
+    #513, permit process-1.4.3.0 and above
 0.15.10
     #465, fix phony names which clash with directories
 0.15.9
