@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #513, permit process-1.4.3.0 and above
 0.15.10
     #465, fix phony names which clash with directories
 0.15.9
