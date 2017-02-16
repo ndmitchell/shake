@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
+{-# LANGUAGE FlexibleInstances, GADTs, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, MultiParamTypeClasses, NamedFieldPuns #-}
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
@@ -10,7 +10,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd, unit, CmdArguments, (:->),
+    command, command_, cmd, cmd_, unit, CmdArguments, (:->),
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
@@ -560,6 +560,15 @@ type a :-> t = a
 -- @
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
+
+class Unit a
+instance {-# OVERLAPPING #-} Unit b => Unit (a -> b)
+instance {-# OVERLAPPABLE #-} a ~ () => Unit (m a)
+
+-- | See 'cmd'. Same as 'cmd' except with a unit result.
+-- 'cmd' is to 'cmd_' as 'command' is to 'command_'.
+cmd_ :: (CmdArguments args, Unit args) => args :-> Action ()
+cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where cmdArguments :: [Either CmdOption String] -> t
