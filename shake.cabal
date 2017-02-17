@@ -246,6 +246,7 @@ executable shake
         Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Options
         Development.Shake.Internal.Value
+        Development.Shake.Internal.Unit
         General.Bilist
         General.Binary
         General.Chunks
@@ -350,6 +351,7 @@ test-suite shake-test
         Development.Shake.Internal.Options
         Development.Shake.Util
         Development.Shake.Internal.Value
+        Development.Shake.Internal.Unit
         General.Bilist
         General.Binary
         General.Chunks
