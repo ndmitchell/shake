@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GADTs, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, MultiParamTypeClasses, NamedFieldPuns #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
