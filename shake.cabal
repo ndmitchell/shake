@@ -149,6 +149,7 @@ library
         Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Core.Types
         Development.Shake.Internal.Options
+        Development.Shake.Internal.Unit
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary

@@ -45,6 +45,7 @@ import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived
+import Development.Shake.Internal.Unit
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -560,10 +561,6 @@ type a :-> t = a
 -- @
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
-
-class Unit a
-instance {-# OVERLAPPING #-} Unit b => Unit (a -> b)
-instance {-# OVERLAPPABLE #-} a ~ () => Unit (m a)
 
 -- | See 'cmd'. Same as 'cmd' except with a unit result.
 -- 'cmd' is to 'cmd_' as 'command' is to 'command_'.

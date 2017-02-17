@@ -63,7 +63,7 @@ module Development.Shake(
     -- ** Verbosity
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     -- * Running commands
-    command, command_, cmd, unit,
+    command, command_, cmd, cmd_, unit,
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
