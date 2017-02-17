@@ -29,7 +29,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
         need ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
-        unit $ cmd (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup.hs configure"
+        cmd_ (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup.hs configure"
             ["--builddir=" ++ obj "dist","--user"]
             -- package-db is very sensitive, see #267
             ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
@@ -139,7 +139,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
-        unit $ cmd "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
+        cmd_ "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
         writeFile' out ""
 
 

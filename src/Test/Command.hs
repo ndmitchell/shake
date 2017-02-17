@@ -109,14 +109,14 @@ main = shakenCwd test $ \args obj -> do
 
     "path" !> do
         let path = AddPath [dropTrailingPathSeparator $ obj "helper"] []
-        unit $ cmd $ obj "helper/shake_helper"
-        unit $ cmd $ obj "helper/shake_helper" <.> exe
-        unit $ cmd path Shell "shake_helper"
-        unit $ cmd path "shake_helper"
+        cmd_ $ obj "helper/shake_helper"
+        cmd_ $ obj "helper/shake_helper" <.> exe
+        cmd_ path Shell "shake_helper"
+        cmd_ path "shake_helper"
 
     "file" !> do
         let file = obj "file.txt"
-        unit $ cmd helper (FileStdout file) (FileStderr file) (EchoStdout False) (EchoStderr False) (WithStderr False) "ofoo ebar obaz"
+        cmd_ helper (FileStdout file) (FileStderr file) (EchoStdout False) (EchoStderr False) (WithStderr False) "ofoo ebar obaz"
         liftIO $ assertContents file "foo\nbar\nbaz\n"
         liftIO $ waits $ \w -> do
             Stderr err <- cmd helper (FileStdout file) (FileStderr file) ["ofoo",w,"ebar",w,"obaz"]
