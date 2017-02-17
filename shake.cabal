@@ -116,13 +116,6 @@ library
         Development.Shake.Rule
         Development.Shake.Util
 
-    if impl(ghc >= 7.8)
-        other-modules:
-            Development.Shake.Internal.UnitNewGHC
-    else
-        other-modules:
-            Development.Shake.Internal.UnitOldGHC
-
     other-modules:
         Development.Ninja.Env
         Development.Ninja.Lexer
