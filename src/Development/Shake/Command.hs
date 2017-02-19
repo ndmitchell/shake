@@ -10,7 +10,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd, unit, CmdArguments, (:->),
+    command, command_, cmd, cmd_, unit, CmdArguments, (:->),
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
@@ -45,6 +45,7 @@ import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived
+import Development.Shake.Internal.Unit
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -560,6 +561,11 @@ type a :-> t = a
 -- @
 cmd :: CmdArguments args => args :-> Action r
 cmd = cmdArguments []
+
+-- | See 'cmd'. Same as 'cmd' except with a unit result.
+-- 'cmd' is to 'cmd_' as 'command' is to 'command_'.
+cmd_ :: (CmdArguments args, Unit args) => args :-> Action ()
+cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where cmdArguments :: [Either CmdOption String] -> t
