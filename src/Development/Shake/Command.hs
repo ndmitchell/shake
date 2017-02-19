@@ -1,4 +1,11 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
+{-# LANGUAGE GADTs #-}
+
+#if __GLASGOW_HASKELL__ < 710
+{-# LANGUAGE OverlappingInstances #-}
+#endif
+
 
 -- | This module provides functions for calling command line programs, primarily
 --   'command' and 'cmd'. As a simple example:
@@ -45,7 +52,6 @@ import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived
-import Development.Shake.Internal.Unit
 
 ---------------------------------------------------------------------
 -- ACTUAL EXECUTION
@@ -417,6 +423,18 @@ instance CmdString () where cmdString = (Unit, \Unit -> ())
 instance CmdString String where cmdString = (Str "", \(Str x) -> x)
 instance CmdString BS.ByteString where cmdString = (BS BS.empty, \(BS x) -> x)
 instance CmdString LBS.ByteString where cmdString = (LBS LBS.empty, \(LBS x) -> x)
+
+
+#if __GLASGOW_HASKELL__ >= 710
+class Unit a
+instance {-# OVERLAPPING #-} Unit b => Unit (a -> b)
+instance {-# OVERLAPPABLE #-} a ~ () => Unit (m a)
+#else
+class Unit a
+instance Unit b => Unit (a -> b)
+instance a ~ () => Unit (m a)
+#endif
+
 
 -- | A class for specifying what results you want to collect from a process.
 --   Values are formed of 'Stdout', 'Stderr', 'Exit' and tuples of those.
