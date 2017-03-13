@@ -416,7 +416,7 @@ Now we define a list of patterns that are matched, and get a list of output file
 
 #### Changing build rules
 
-Shake build systems are set up to rebuild files when the dependencies change, but mostly assume that the build rules themselves do not change. To minimise the impact of build rule changes there are three approaches:
+Shake build systems are set up to rebuild files when the dependencies change, but mostly assume that the build rules themselves do not change (including both the code and the shell commands contained within). To minimise the impact of build rule changes there are three approaches:
 
 _Use configuration files:_ Most build information, such as which files a C file includes, can be computed from source files. Where such information is not available, such as which C files should be linked together to form an executable, use configuration files to provide the information. The rule for linking can use these configuration files, which can be properly tracked. Moving any regularly changing configuration into separate files will significantly reduce the number of build system changes.
 
