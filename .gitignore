@@ -1,5 +1,7 @@
+/TAGS
 /*.nix
 /dist/
+/dist-newstyle/
 /output/
 /.hpc/
 /misc/win7-taskbar/Taskbar.suo
