@@ -118,6 +118,9 @@ shakeArgsWith baseOpts userOptions rules = do
                                                   shakeLintInside oshakeOpts
                                ,shakeLintIgnore = map toStandard $
                                                   shakeLintIgnore oshakeOpts
+                               ,shakeOutput     = if shakeColor oshakeOpts
+                                                  then outputColor (shakeOutput oshakeOpts)
+                                                  else shakeOutput oshakeOpts
                                }
 
     errs <- return $ errs ++ flagsError
@@ -176,7 +179,7 @@ shakeArgsWith baseOpts userOptions rules = do
         if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
             either throwIO return res
          else
-            let esc code = if Color `elem` flagsExtra then escape code else id
+            let esc = if shakeColor shakeOpts then escape else flip const
             in case res of
                 Left err ->
                     if Exception `elem` flagsExtra then
@@ -232,7 +235,6 @@ data Extra = ChangeDirectory FilePath
            | Version
            | NumericVersion
            | PrintDirectory Bool
-           | Color
            | Help
            | Sleep
            | NoTime
@@ -252,6 +254,8 @@ unescape [] = []
 escape :: String -> String -> String
 escape code x = "\ESC[" ++ code ++ "m" ++ x ++ "\ESC[0m"
 
+outputColor :: (Verbosity -> String -> IO ()) -> Verbosity -> String -> IO ()
+outputColor output v msg = output v $ escape "34" msg
 
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
@@ -259,7 +263,8 @@ shakeOptsEx =
     [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,no  $ Option ""  ["no-build"] (NoArg $ Right ([NoBuild], id)) "Don't build anything."
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
-    ,yes $ Option ""  ["color","colour"] (NoArg $ Right ([Color], \s -> s{shakeOutput=outputColor (shakeOutput s)})) "Colorize the output."
+    ,yes $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
+    ,no  $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
     ,no  $ Option ""  ["demo"] (NoArg $ Right ([Demo], id)) "Run in demo mode."
     ,yes $ Option ""  ["digest"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeDigest})) "Files change when digest changes."
@@ -331,8 +336,6 @@ shakeOptsEx =
         outputDebug output (Just file) = \v msg -> do
             when (v /= Diagnostic) $ output v msg
             appendFile file $ unescape msg ++ "\n"
-
-        outputColor output v msg = output v $ escape "34" msg
 
         prog i p = do
             program <- progressProgram

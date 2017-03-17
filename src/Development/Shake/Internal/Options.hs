@@ -150,6 +150,8 @@ data ShakeOptions = ShakeOptions
         --   i.e. those which Shake checked were valid or rebuilt. Produces best answers if nothing rebuilds.
     ,shakeVersionIgnore :: Bool
         -- ^ Defaults to 'False'. Ignore any differences in 'shakeVersion'.
+    ,shakeColor :: Bool
+        -- ^ Whether to colorize the output.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -171,7 +173,7 @@ data ShakeOptions = ShakeOptions
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
     ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) [] [] False True False
-    True ChangeModtime True [] False
+    True ChangeModtime True [] False True
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     Map.empty
@@ -181,18 +183,18 @@ fieldsShakeOptions =
     ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
     ,"shakeFlush", "shakeRebuild", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
-    ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeExtra"]
+    ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeColor", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromHidden y1) (fromHidden y2) (fromHidden y3)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 y1 y2 y3 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 (fromHidden y1) (fromHidden y2) (fromHidden y3)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 y1 y2 y3) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
-        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k`
         Hidden y1 `k` Hidden y2 `k` Hidden y3
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
