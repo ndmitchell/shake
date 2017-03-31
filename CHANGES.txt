@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #523, #524, make sure phony doesn't run its dependencies first
     #515, add cmd_ function
     #506, allow duplicate type names in different modules
     #503, require shakeExtra to obey the sensible invariants

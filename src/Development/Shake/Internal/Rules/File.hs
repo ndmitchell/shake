@@ -221,6 +221,11 @@ defaultRuleFile = do
                                 Nothing -> retNew ChangedRecomputeDiff ResultPhony
                                 Just new -> answer ResultDirect new
                         Just (ModePhony act) -> do
+                            -- See #523 and #524
+                            -- Shake runs the dependencies first, but stops when one has changed.
+                            -- We don't want to run the existing deps first if someone changes the build system,
+                            -- so insert a fake dependency that cuts the process dead.
+                            alwaysRerun
                             act
                             retNew ChangedRecomputeDiff ResultPhony
 
