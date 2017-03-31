@@ -83,6 +83,12 @@ main = shaken test $ \args obj -> do
     phony (obj "foo") $ do
         liftIO $ createDirectoryIfMissing True $ obj "foo"
 
+    phony "ordering2" $ do
+        liftIO $ appendFile (obj "order.log") "X"
+    phony "ordering" $ do
+        liftIO $ appendFile (obj "order.log") "Y"
+        need ["ordering2"]
+
 test build obj = do
     writeFile (obj "A.txt") "AAA"
     writeFile (obj "B.txt") "BBB"
@@ -185,3 +191,10 @@ test build obj = do
     build ["foo"]
 
     build [] -- should say "no want/action statements, nothing to do" (checked manually)
+
+    -- #523, #524 - phony children should not run first
+    writeFile (obj "order.log") ""
+    build ["!ordering"]
+    assertContents (obj "order.log") "YX"
+    build ["!ordering"]
+    assertContents (obj "order.log") "YXYX"
