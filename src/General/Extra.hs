@@ -19,10 +19,12 @@ import System.IO.Unsafe
 import System.Random
 import System.Exit
 import Control.Concurrent
+import Data.Functor
 import Data.Primitive.Array
 import Control.Monad
 import Control.Monad.ST
 import GHC.Conc
+import Prelude
 
 
 ---------------------------------------------------------------------
