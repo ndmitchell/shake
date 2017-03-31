@@ -175,7 +175,7 @@ getExStorable = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
 
 putExStorableList :: forall a . Storable a => [a] -> Builder
 putExStorableList xs = Builder (n * length xs) $ \ptr i ->
-    for2M_ [i,i+n..] xs $ \i x -> pokeByteOff (castPtr ptr) i x
+    for2M_ [i,i+n..] xs $ \i x -> pokeByteOff ptr i x
     where n = sizeOf (undefined :: a)
 
 getExStorableList :: forall a . Storable a => BS.ByteString -> [a]

@@ -67,6 +67,6 @@ data Build = Build
     ,buildBind :: [(Str,Str)]
     } deriving Show
 
-data Rule = Rule
+newtype Rule = Rule
     {ruleBind :: [(Str,Expr)]
     } deriving Show

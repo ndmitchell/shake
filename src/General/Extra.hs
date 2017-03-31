@@ -23,7 +23,7 @@ import Data.Functor
 import Data.Primitive.Array
 import Control.Monad
 import Control.Monad.ST
-import GHC.Conc
+import GHC.Conc(getNumProcessors)
 import Prelude
 
 
@@ -80,7 +80,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
     where
         act =
             if rtsSupportsBoundThreads then
-                fmap fromIntegral $ getNumProcessors
+                fromIntegral <$> getNumProcessors
             else
                 handle_ (const $ return 1) $ do
                     env <- lookupEnv "NUMBER_OF_PROCESSORS"

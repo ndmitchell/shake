@@ -78,7 +78,7 @@ result :: Word32 -> Word32 -> IO (Maybe (ModTime, FileSize))
 result x y = do
     x <- evaluate $ fileInfo x
     y <- evaluate $ fileInfo y
-    return $! Just (x, y)
+    return $ Just (x, y)
 
 
 getFileInfo :: FileName -> IO (Maybe (ModTime, FileSize))
