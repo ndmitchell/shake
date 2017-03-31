@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, PatternGuards, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
 {-# LANGUAGE ExistentialQuantification, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Internal.Core.Types(

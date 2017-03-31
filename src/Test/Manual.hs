@@ -14,7 +14,7 @@ test build obj = do
     -- we use .git as our destination, despite not being a real git repo
     -- so that search tools ignore it, and I don't get dupes for every source file
     let dest = obj ".git"
-    copyDirectoryChanged "docs/manual" $ dest
+    copyDirectoryChanged "docs/manual" dest
     copyDirectoryChanged "src/Development" $ dest </> "Development"
     copyDirectoryChanged "src/General" $ dest </> "General"
     copyFileChanged "src/Paths.hs" $ dest </> "Paths_shake.hs"

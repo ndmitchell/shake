@@ -56,7 +56,7 @@ main = shaken test $ \args obj -> do
         writeFile' (obj "threads.txt") $ show $ shakeThreads x
 
     phony ("slash" </> "platform") $ return ()
-    phony ("slash/forward") $ return ()
+    phony "slash/forward" $ return ()
 
     obj "dummer.txt" %> \out -> do
         need ["dummy","dummy"]

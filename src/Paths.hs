@@ -1,6 +1,6 @@
 -- | Fake cabal module for local building
 
-module Paths_shake where
+module Paths_shake(getDataFileName, version) where
 
 import Data.Version.Extra
 import System.IO.Unsafe

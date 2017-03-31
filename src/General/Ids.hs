@@ -22,7 +22,7 @@ import GHC.IO(IO(..))
 import GHC.Exts(RealWorld)
 
 
-data Ids a = Ids (IORef (S a))
+newtype Ids a = Ids (IORef (S a))
 
 data S a = S
     {capacity :: {-# UNPACK #-} !Int -- ^ Number of entries in values, initially 0

@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Development.Shake.Internal.CmdOption where
+module Development.Shake.Internal.CmdOption(CmdOption(..)) where
 
 import Data.Data
 import qualified Data.ByteString.Lazy.Char8 as LBS
