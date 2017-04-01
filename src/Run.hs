@@ -24,8 +24,7 @@ main = do
         ,"Shakefile.hs","Shakefile.lhs"]
     case hsExe of
         Just file -> do
-            (prog,args) <- return $
-                if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
+            (prog,args) <- selectProg file args
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
         Nothing -> 
@@ -51,3 +50,21 @@ flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "R
 
 findFile :: [FilePath] -> IO (Maybe FilePath)
 findFile = findM (fmap (either (const False) id) . try_ . IO.doesFileExist)
+
+selectProg :: FilePath -> [String] -> IO (FilePath, [String])
+selectProg file args = if takeExtension file `elem` [".hs",".lhs"]
+    then buildShakefile file args
+    else return (toNative file, args)
+
+buildShakefile :: FilePath -> [String] -> IO (FilePath, [String])
+buildShakefile file args =
+    let binTarget = ".shake" </> file -<.> exe
+    in doBuild binTarget file >> return (toNative binTarget, args)
+
+doBuild :: FilePath -> FilePath -> IO ()
+doBuild target file = shake shakeOptions { shakeFiles = ".shake" } $ do
+    want [target]
+    target %> \out -> do
+        need [file]
+        () <- cmd ["ghc", file, "-o", out]
+        removeFilesAfter "." [file <.> "o", file <.> "hi"]
