@@ -87,10 +87,6 @@ getDeps file = do
     () <- cmd ["ghc", "-M", "-dep-suffix=.", file]
     makefile <- liftIO $ readFile "Makefile"
 
---    let noComments = filter (\(x:xs) -> x /= '#') (lines makefile)
---    let onlyHs = filter (isSuffixOf ".hs") noComments
---    let deps = map ((dropWhile isSpace) . (drop 1) . (dropWhile (\x -> x /= ':'))) onlyHs
-
     --parse the generated makefile into .hs dependencies
     let mkfLines = lines makefile
     let dropComments = map (takeWhile (\x -> x /= '#'))
