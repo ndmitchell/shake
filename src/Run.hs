@@ -10,7 +10,6 @@ import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
 import Data.Char
-import Data.String
 import Data.List
 import qualified System.Directory as IO
 import System.Console.GetOpt
