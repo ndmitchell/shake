@@ -96,5 +96,5 @@ getDeps file = do
     let onlyHs = filter (isSuffixOf ".hs")
     let dropTarget = map ((drop 1) . (dropWhile (\x -> x /= ':')))
     let dropDups = map head . group . sort
-    let parse = dropDups . trimLeft . dropTarget . onlyHs . trimRight . dropEmpty . dropComments
+    let parse = dropDups . trimLeft . dropTarget . onlyHs . dropEmpty . trimRight . dropComments
     return $ parse mkfLines
