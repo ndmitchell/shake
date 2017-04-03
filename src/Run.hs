@@ -2,6 +2,7 @@
 module Run(main) where
 
 import Development.Ninja.All
+import Development.Shake.Util
 import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
@@ -58,14 +59,6 @@ selectProg file = if takeExtension file `elem` [".hs",".lhs"]
     then buildShakefile file
     else return $ toNative file
 
-{-
-buildShakefile :: FilePath -> IO FilePath
-buildShakefile shakefile = do
-    let shakefileBin = ".shake" </> shakefile -<.> exe
-    () <- cmd ["ghc", "--make", shakefile, "-outputdir", ".shake"]
-    return $ toNative shakefileBin
--}
-
 buildShakefile :: FilePath -> IO FilePath
 buildShakefile shakefile = do
     let shakefileBin = ".shake" </> shakefile -<.> exe
@@ -77,23 +70,7 @@ doBuild file target = shake shakeOptions { shakeFiles = ".shake" } $ do
     want [target]
 
     target %> \out -> do
-        deps <- getDeps file
-        need deps
+        let makefile = ".shake" </> "Makefile"
+        () <- cmd ["ghc", "-M", "-dep-makefile", makefile, "-dep-suffix=.", file]
+        needMakefileDependencies makefile
         cmd ["ghc", "--make", file, "-o", target, "-outputdir", ".shake"]
-
-getDeps :: FilePath -> Action [FilePath]
-getDeps file = do
-    () <- cmd ["ghc", "-M", "-dep-suffix=.", file]
-    makefile <- liftIO $ readFile "Makefile"
-
-    --parse the generated makefile into .hs dependencies
-    let mkfLines = lines makefile
-    let dropComments = map (takeWhile (\x -> x /= '#'))
-    let dropEmpty = filter (\x -> length x > 0)
-    let trimLeft = map (dropWhile isSpace)
-    let trimRight = reverse . trimLeft . reverse
-    let onlyHs = filter (isSuffixOf ".hs")
-    let dropTarget = map ((drop 1) . (dropWhile (\x -> x /= ':')))
-    let dropDups = map head . group . sort
-    let parse = dropDups . trimLeft . dropTarget . onlyHs . dropEmpty . trimRight . dropComments
-    return $ parse mkfLines
