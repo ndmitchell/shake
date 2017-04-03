@@ -10,8 +10,6 @@ import General.Timing(resetTimings)
 import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
-import Data.Char
-import Data.List
 import qualified System.Directory as IO
 import System.Console.GetOpt
 import System.Process
