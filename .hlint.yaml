@@ -1,0 +1,30 @@
+# HLint configuration file
+# https://github.com/ndmitchell/hlint
+##########################
+
+# Warnings currently triggered by the code
+- ignore: {name: "Use fmap"}
+- ignore: {name: "Reduce duplication"}
+- ignore: {name: "Use uncurry"}
+- ignore: {name: "Use isAsciiLower"}
+- ignore: {name: "Use isAsciiUpper"}
+- ignore: {name: "Use isDigit"}
+- ignore: {name: "Use let"}
+- ignore: {name: "Use &&&"}
+- ignore: {name: "Use fromMaybe"}
+- ignore: {name: "Redundant castPtr"}
+- ignore: {name: "Use module export list"}
+- ignore: {name: "Use section"}
+- ignore: {name: "Use Just"}
+- ignore: {name: "Unused LANGUAGE pragma"}
+- ignore: {name: "Redundant if"}
+- ignore: {name: "Use <$>"}
+- ignore: {name: "Redundant do"}
+- ignore: {name: "Move brackets to avoid $"}
+- ignore: {name: "Use isNothing"}
+- ignore: {name: "Redundant $"}
+- ignore: {name: "Use unless"}
+- ignore: {name: "Use camelCase"}
+- ignore: {name: "Use null"}
+- ignore: {name: "Redundant lambda"}
+- ignore: {name: "Avoid lambda"}
