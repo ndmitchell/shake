@@ -1,0 +1,12 @@
+# Weeder configuration file
+# https://github.com/ndmitchell/weeder
+##########################
+
+# There are lots of internals of Shake want to test, but don't want to expose
+- message: Module reused between components
+
+# There are a few general modules that offer a complete interface,
+# but only a subset is used by Shake
+- message:
+  - name: Weeds exported
+  - module: [General.Bilist, General.Ids, General.Intern]
