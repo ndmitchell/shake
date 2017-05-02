@@ -30,7 +30,7 @@ getMode = do
         [] -> return Release
         [x] | Just x <- lookup (lower x) $ map (lower . show &&& id) modes -> return x
             | otherwise -> fail $ "Couldn't recognise argument, got " ++ x ++ ", wanted " ++ show modes
-        _ -> fail $ "Only allowed at most one command line argument"
+        _ -> fail "Only allowed at most one command line argument"
 
 
 main :: IO ()
