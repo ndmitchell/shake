@@ -158,8 +158,8 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 Ids.empty
 
         addTiming "With database"
-        writeChunks h $ \out -> do
-            act ids $ \k i v -> do
+        writeChunks h $ \out ->
+            act ids $ \k i v ->
                 out $ save k i v
     where
         unexpected x = when shakeStorageLog $ do
