@@ -465,8 +465,8 @@ parallel acts = Action $ do
 
         liftIO $ forM_ (zip acts results) $ \(act, result) -> do
             let act2 = do
-                    b <- liftIO $ isJust <$> readVar todo
-                    when (not b) $ fail "parallel, one has already failed"
+                    whenM (liftIO $ isNothing <$> readVar todo) $
+                        fail "parallel, one has already failed"
                     res <- act
                     old <- Action getRW
                     return (old, res)

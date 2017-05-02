@@ -18,5 +18,4 @@
 - ignore: {name: "Use section"}
 - ignore: {name: "Redundant if"}
 - ignore: {name: "Move brackets to avoid $"}
-- ignore: {name: "Use unless"}
 - ignore: {name: "Redundant lambda"}
