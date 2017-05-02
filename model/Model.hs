@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ViewPatterns, TypeOperators #-}
+{-# LANGUAGE ViewPatterns, TypeOperators #-}
 
 module Model(props) where
 
@@ -82,7 +82,7 @@ model3 rule k old = second (<> old) $ runCache (run k) mempty
                 (_, Left v ) -> return (v, [])
                 (Nothing, Right a) -> actMT run a
                 (Just o@(_, ds), Right a) -> do
-                    b <- andM [fmap (== dv) $ run dk | (dk,dv) <- ds]
+                    b <- andM [(== dv) <$> run dk | (dk,dv) <- ds]
                     if b then return o else actMT run a
 
 
@@ -100,7 +100,7 @@ model4 rule k old = second (<> old) $ runCache (run k) mempty
             case (old ! k, rule k) of
                 (Nothing, (_, a)) -> actMT run a
                 (Just o@(ov, ds), (v, a)) -> do
-                    b <- andM $ return (v == ov) : [fmap (== dv) $ run dk | (dk,dv) <- ds]
+                    b <- andM $ return (v == ov) : [(== dv) <$> run dk | (dk,dv) <- ds]
                     if b then return o else actMT run a
 
 
@@ -121,7 +121,7 @@ model5 rule k (succ -> t, old) =
                     (v,trace) <- actMT (fmap dbValue . run) a
                     return $ DB v t t (map fst trace)
                 (Just o, (v, a)) -> do
-                    b <- andM $ return (v == dbValue o) : [fmap ((<= dbBuilt o) . dbChanged) $ run dk | dk <- dbDepends o]
+                    b <- andM $ return (v == dbValue o) : [(<= dbBuilt o) . dbChanged <$> run dk | dk <- dbDepends o]
                     if b then return o else do
                         (v,trace) <- actMT (fmap dbValue . run) a
                         return $ DB v t (if v == dbValue o then dbChanged o else t) (map fst trace)
@@ -147,7 +147,7 @@ model6 rule k (succ -> t, old) =
                     (v,trace) <- actMT grab a
                     return $ DB v t t (map (snd . fst) trace)
                 (Just o, (v, a)) -> do
-                    b <- andM $ return (v == dbValue o) : [fmap ((<= dbBuilt o) . dbChanged) $ run dk | dk <- dbDepends o]
+                    b <- andM $ return (v == dbValue o) : [(<= dbBuilt o) . dbChanged <$> run dk | dk <- dbDepends o]
                     if b then return o else do
                         (v,trace) <- actMT grab a
                         return $ DB v t (if v == dbValue o then dbChanged o else t) (map (snd . fst) trace)

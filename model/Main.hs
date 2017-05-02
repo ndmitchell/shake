@@ -6,7 +6,7 @@ import Control.Monad
 import Test.QuickCheck
 
 main :: IO ()
-main = do
+main =
     forM_ props $ \(name,prop) -> do
         putStrLn $ "Testing " ++ name
         quickCheck prop
