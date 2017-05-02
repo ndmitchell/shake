@@ -3,7 +3,7 @@
 -- {-# OPTIONS_GHC -ddump-simpl #-}
 
 -- | Lexing is a slow point, the code below is optimised
-module Development.Ninja.Lexer(Lexeme(..), lexer, lexerFile) where
+module Development.Ninja.Lexer(Lexeme(..), lexerFile) where
 
 import Control.Applicative
 import Data.Tuple.Extra
