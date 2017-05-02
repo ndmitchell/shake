@@ -14,7 +14,6 @@
 - ignore: {name: "Use fromMaybe"}
 - ignore: {name: "Use module export list"}
 - ignore: {name: "Use section"}
-- ignore: {name: "Use Just"}
 - ignore: {name: "Unused LANGUAGE pragma"}
 - ignore: {name: "Redundant if"}
 - ignore: {name: "Use <$>"}
