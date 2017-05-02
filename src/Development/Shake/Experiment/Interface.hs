@@ -106,7 +106,7 @@ decodeStorable = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) ->
 
 encodeStorableList :: forall a . Storable a => [a] -> BS.ByteString
 encodeStorableList = \xs -> BS.unsafeCreate (n * length xs) $ \p ->
-    for2M_ [0,n..] xs $ \i x -> pokeByteOff (castPtr p) i x
+    for2M_ [0,n..] xs $ \i x -> pokeByteOff p i x
     where n = sizeOf (undefined :: a)
 
 decodeStorableList :: forall a . Storable a => BS.ByteString -> [a]

@@ -12,7 +12,6 @@
 - ignore: {name: "Use let"}
 - ignore: {name: "Use &&&"}
 - ignore: {name: "Use fromMaybe"}
-- ignore: {name: "Redundant castPtr"}
 - ignore: {name: "Use module export list"}
 - ignore: {name: "Use section"}
 - ignore: {name: "Use Just"}
