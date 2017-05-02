@@ -20,7 +20,6 @@
 - ignore: {name: "Use <$>"}
 - ignore: {name: "Move brackets to avoid $"}
 - ignore: {name: "Use isNothing"}
-- ignore: {name: "Redundant $"}
 - ignore: {name: "Use unless"}
 - ignore: {name: "Use camelCase"}
 - ignore: {name: "Use null"}

@@ -238,7 +238,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                     dur <- time
                     let c | Just r <- r, runChanged == ChangedRecomputeSame = changed r
                           | otherwise = step
-                    continue $ Right $ (,,) True runStore $ Result
+                    continue $ Right $ (,,) True runStore Result
                         {result = runValue
                         ,changed = c
                         ,built = step
