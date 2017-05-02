@@ -25,11 +25,11 @@ newtype Str0 = Str0 Str -- null terminated
 
 type S = Ptr Word8
 
-chr :: S -> Char
-chr x = Internal.w2c $ unsafePerformIO $ peek x
+char :: S -> Char
+char x = Internal.w2c $ unsafePerformIO $ peek x
 
-inc :: S -> S
-inc x = x `plusPtr` 1
+next :: S -> S
+next x = x `plusPtr` 1
 
 {-# INLINE dropWhile0 #-}
 dropWhile0 :: (Char -> Bool) -> Str0 -> Str0
@@ -49,8 +49,8 @@ break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
             return $! Ptr end `minusPtr` start
 
         go s@(Ptr a) | c == '\0' || f c = a
-                     | otherwise = go (inc s)
-            where c = chr s
+                     | otherwise = go (next s)
+            where c = char s
 
 {-# INLINE break00 #-}
 -- The predicate must return true for '\0'
@@ -63,8 +63,8 @@ break00 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
             return $! Ptr end `minusPtr` start
 
         go s@(Ptr a) | f c = a
-                     | otherwise = go (inc s)
-            where c = chr s
+                     | otherwise = go (next s)
+            where c = char s
 
 head0 :: Str0 -> Char
 head0 (Str0 x) = Internal.w2c $ BS.unsafeHead x
