@@ -1,6 +1,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
-module Test.Type(sleep, module Test.Type) where
+module Test.Type(
+    sleep, sleepFileTime, sleepFileTimeCalibrate,
+    shaken, shakenCwd, unobj,
+    noTest, hasTracker,
+    copyDirectoryChanged, copyFileChanged,
+    assertWithin,
+    assertBool, assertBoolIO, assertException,
+    assertContents, assertContentsUnordered, assertContentsWords,
+    assertExists, assertMissing,
+    (===),
+    BinarySentinel(..), RandomType(..),
+    ) where
 
 import Development.Shake hiding (copyFileChanged)
 import Development.Shake.Classes
@@ -162,12 +173,6 @@ assertContentsOn f file want = do
 
 assertContentsWords :: FilePath -> String -> IO ()
 assertContentsWords = assertContentsOn (unwords . words)
-
-
-assertContentsInfix :: FilePath -> String -> IO ()
-assertContentsInfix file want = do
-    got <- IO.readFile' file
-    assertBool (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (anywhere): " ++ want ++ "\nGOT: " ++ got
 
 assertContentsUnordered :: FilePath -> [String] -> IO ()
 assertContentsUnordered file xs = assertContentsOn (unlines . sort . lines) file (unlines xs)
