@@ -12,9 +12,6 @@
 - ignore: {name: "Use fmap"}
 - ignore: {name: "Reduce duplication"}
 - ignore: {name: "Use uncurry"}
-- ignore: {name: "Use isAsciiLower"}
-- ignore: {name: "Use isAsciiUpper"}
-- ignore: {name: "Use isDigit"}
 - ignore: {name: "Use let"}
 - ignore: {name: "Use &&&"}
 - ignore: {name: "Use fromMaybe"}

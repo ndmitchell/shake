@@ -7,6 +7,7 @@ module Development.Ninja.Lexer(Lexeme(..), lexerFile) where
 
 import Control.Applicative
 import Data.Tuple.Extra
+import Data.Char
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Unsafe as BS
 import Development.Ninja.Type
@@ -95,7 +96,7 @@ data Lexeme
       deriving Show
 
 isVar, isVarDot :: Char -> Bool
-isVar x = x == '-' || x == '_' || (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z') || (x >= '0' && x <= '9')
+isVar x = x == '-' || x == '_' || isAsciiLower x || isAsciiUpper x || isDigit x
 isVarDot x = x == '.' || isVar x
 
 endsDollar :: Str -> Bool
