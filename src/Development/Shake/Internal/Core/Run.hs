@@ -228,7 +228,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         when (Just LintFSATrace == shakeLint) trackCheckUsed
         Action $ fmap ((,) res) getRW) $ \x -> case x of
             Left e -> do
-                e <- if shakeLint == Nothing then return e else handle return $
+                e <- if isNothing shakeLint then return e else handle return $
                     do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
                 continue . Left . toException =<< shakeException global (showStack stack) e
             Right (RunResult{..}, Local{..})
