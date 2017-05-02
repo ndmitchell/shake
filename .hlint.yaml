@@ -17,7 +17,6 @@
 - ignore: {name: "Use fromMaybe"}
 - ignore: {name: "Use section"}
 - ignore: {name: "Redundant if"}
-- ignore: {name: "Use <$>"}
 - ignore: {name: "Move brackets to avoid $"}
 - ignore: {name: "Use isNothing"}
 - ignore: {name: "Use unless"}

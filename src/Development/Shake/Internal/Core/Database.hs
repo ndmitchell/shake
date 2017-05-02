@@ -75,7 +75,7 @@ addStack :: Id -> Key -> Stack -> Stack
 addStack x key (Stack xs set) = Stack ((x,key):xs) (Set.insert x set)
 
 topStack :: Stack -> Maybe Key
-topStack (Stack xs _) = fmap snd $ listToMaybe xs
+topStack (Stack xs _) = snd <$> listToMaybe xs
 
 checkStack :: [Id] -> Stack -> Maybe (Id,Key)
 checkStack new (Stack xs set)
