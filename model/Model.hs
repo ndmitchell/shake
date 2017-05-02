@@ -42,7 +42,7 @@ prop1 = ["equivalent to model0" ~~
         ]
 
 
-type Database0 k v = k |-> v
+type Database0 k v = k :-> v
 
 -- model1 + persistent caching
 -- Prove:
@@ -65,7 +65,7 @@ prop2 = ["equivalent to model1 with no state" ~~
         ]
 
 
-type Database1 k v = k |-> (v,[(k,v)])
+type Database1 k v = k :-> (v,[(k,v)])
 
 -- | model2 + visibly changing world
 --   A key may either produce a potentially changing value, or have a rule to generate it.
@@ -105,7 +105,7 @@ model4 rule k old = second (<> old) $ runCache (run k) mempty
 
 
 data DB k v = DB {dbValue :: v, dbBuilt :: T, dbChanged :: T, dbDepends :: [k]}
-type Database2 k v = (T, k |-> DB k v)
+type Database2 k v = (T, k :-> DB k v)
 
 -- | model4 + optimised storage
 -- Prove:
