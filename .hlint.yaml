@@ -19,5 +19,4 @@
 - ignore: {name: "Redundant if"}
 - ignore: {name: "Move brackets to avoid $"}
 - ignore: {name: "Use unless"}
-- ignore: {name: "Use camelCase"}
 - ignore: {name: "Redundant lambda"}

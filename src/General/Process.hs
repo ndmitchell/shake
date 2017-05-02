@@ -22,7 +22,6 @@ import System.Time.Extra
 import Data.Unique
 import Data.IORef
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Internal as BS(createAndTrim)
 import qualified Data.ByteString.Lazy as LBS
 import General.Extra
 import Prelude
@@ -182,7 +181,7 @@ process po = do
                             DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
                             DestBytes x -> addBuffer x
                         forkWait $ whileM $ do
-                            src <- bs_hGetSome h 4096
+                            src <- BS.hGetSome h 4096
                             mapM_ ($ src) dest
                             notM $ hIsEOF h
                      else if isTied then do
@@ -214,12 +213,3 @@ process po = do
                     whenJust outh hClose
                     whenJust errh hClose
                     return (pid, res)
-
-
----------------------------------------------------------------------
--- COMPATIBILITY
-
--- available in bytestring-0.9.1.10 and above
--- implementation copied below
-bs_hGetSome :: Handle -> Int -> IO BS.ByteString
-bs_hGetSome h i = BS.createAndTrim i $ \p -> hGetBufSome h p i

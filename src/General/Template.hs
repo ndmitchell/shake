@@ -28,8 +28,8 @@ runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
         link = LBS.pack "<link href=\""
         script = LBS.pack "<script src=\""
 
-        f x | Just file <- lbs_stripPrefix script y = do res <- grab file; return $ LBS.pack "<script>\n" `LBS.append` res `LBS.append` LBS.pack "\n</script>"
-            | Just file <- lbs_stripPrefix link y = do res <- grab file; return $ LBS.pack "<style type=\"text/css\">\n" `LBS.append` res `LBS.append` LBS.pack "\n</style>"
+        f x | Just file <- LBS.stripPrefix script y = do res <- grab file; return $ LBS.pack "<script>\n" `LBS.append` res `LBS.append` LBS.pack "\n</script>"
+            | Just file <- LBS.stripPrefix link y = do res <- grab file; return $ LBS.pack "<style type=\"text/css\">\n" `LBS.append` res `LBS.append` LBS.pack "\n</style>"
             | otherwise = return x
             where
                 y = LBS.dropWhile isSpace x
@@ -39,8 +39,3 @@ runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
             Just act -> liftIO $ LBS.readFile =<< act
             Nothing -> liftIO $ errorIO $ "Template library, unknown library: " ++ o
         asker x = ask x
-
-
-lbs_stripPrefix :: LBS.ByteString -> LBS.ByteString -> Maybe LBS.ByteString
-lbs_stripPrefix prefix text = if a == prefix then Just b else Nothing
-    where (a,b) = LBS.splitAt (LBS.length prefix) text
