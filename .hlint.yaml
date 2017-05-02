@@ -22,6 +22,5 @@
 - ignore: {name: "Use isNothing"}
 - ignore: {name: "Use unless"}
 - ignore: {name: "Use camelCase"}
-- ignore: {name: "Use null"}
 - ignore: {name: "Redundant lambda"}
 - ignore: {name: "Avoid lambda"}

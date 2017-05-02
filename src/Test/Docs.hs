@@ -279,7 +279,7 @@ isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `el
 
 isCmdFlag :: String -> Bool
 isCmdFlag "+RTS" = True
-isCmdFlag x = length a >= 1 && length a <= 2 && all (\x -> isAlphaNum x || x `elem` "-=/_[]") b
+isCmdFlag x = length a `elem` [1,2] && all (\x -> isAlphaNum x || x `elem` "-=/_[]") b
     where (a,b) = span (== '-') x
 
 isCmdFlags :: String -> Bool
