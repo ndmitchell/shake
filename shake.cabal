@@ -229,13 +229,11 @@ executable shake
         Development.Shake.Internal.FileInfo
         Development.Shake.FilePath
         Development.Shake.Internal.FilePattern
-        Development.Shake.Forward
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
-        Development.Shake.Rule
         Development.Shake.Internal.Rules.Directory
         Development.Shake.Internal.Rules.File
         Development.Shake.Internal.Rules.Files
