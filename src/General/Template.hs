@@ -45,7 +45,7 @@ runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
 -- COMPATIBILITY
 
 -- available in bytestring-0.10.8.0, GHC 8.0 and above
--- implementation copied below
+-- alternative implementation below
 lbsStripPrefix :: LBS.ByteString -> LBS.ByteString -> Maybe LBS.ByteString
 lbsStripPrefix prefix text = if a == prefix then Just b else Nothing
     where (a,b) = LBS.splitAt (LBS.length prefix) text
