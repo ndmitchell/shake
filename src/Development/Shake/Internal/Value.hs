@@ -4,7 +4,7 @@
 -- | This module implements the Key/Value types, to abstract over hetrogenous data types.
 module Development.Shake.Internal.Value(
     QTypeRep(..),
-    Value, newValue, fromValue, typeValue,
+    Value, newValue, fromValue,
     Key, newKey, fromKey, typeKey,
     ShakeValue
     ) where
@@ -88,9 +88,6 @@ newValue = Value (typeRep (Proxy :: Proxy a)) show rnf
 
 typeKey :: Key -> TypeRep
 typeKey Key{..} = keyType
-
-typeValue :: Value -> TypeRep
-typeValue Value{..} = valueType
 
 fromKey :: forall a . Typeable a => Key -> a
 fromKey Key{..}
