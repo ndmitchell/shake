@@ -1,4 +1,5 @@
 {-# LANGUAGE Rank2Types, DeriveFunctor, TupleSections, ScopedTypeVariables, FlexibleInstances #-}
+{-# ANN module "HLint: ignore" #-}
 
 -- | Proposed new interface for defining custom rules. There are two types of rules:
 --
