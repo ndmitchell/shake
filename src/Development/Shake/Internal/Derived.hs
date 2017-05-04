@@ -80,9 +80,13 @@ copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
-    liftIO $ createDirectoryIfMissing True $
-      (if isWindows then FW.takeDirectory else FP.takeDirectory) new
+    createDirIfMissing new
     liftIO $ copyFile old new
+
+createDirIfMissing :: FilePath -> Action()
+createDirIfMissing new =
+   liftIO $ createDirectoryIfMissing True $
+          (if isWindows then FW.takeDirectory else FP.takeDirectory) new
 
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
@@ -94,9 +98,8 @@ copyFileChanged old new = do
     -- the timestamp as well and thus no need to read the source file twice.
     unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
+        createDirIfMissing new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
-        liftIO $ createDirectoryIfMissing True $
-          (if isWindows then FW.takeDirectory else FP.takeDirectory) new
         liftIO $ copyFile old new
 
 
