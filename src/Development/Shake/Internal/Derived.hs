@@ -15,6 +15,9 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
+import System.FilePath.Posix as FP (takeDirectory)
+import System.FilePath.Windows as FW (takeDirectory)
+import System.Info.Extra (isWindows)
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
 import Development.Shake.Internal.Core.Run
@@ -72,15 +75,18 @@ addShakeExtra x = Map.insert (typeOf x) (toDyn x)
 
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
 --   The @old@ file will be tracked as a dependency.
+--   Also creates the new directory if necessary.
 copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
+    liftIO $ createDirectoryIfMissing True $
+      (if isWindows then FW.takeDirectory else FP.takeDirectory) new
     liftIO $ copyFile old new
-
 
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
+--   Also creates the new directory if necessary.
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
     need [old]
@@ -89,6 +95,8 @@ copyFileChanged old new = do
     unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
+        liftIO $ createDirectoryIfMissing True $
+          (if isWindows then FW.takeDirectory else FP.takeDirectory) new
         liftIO $ copyFile old new
 
 
