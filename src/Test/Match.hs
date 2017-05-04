@@ -8,7 +8,7 @@ import Test.Type
 
 main = shakenCwd test $ \args obj -> do
     want $ map obj args
-    let output x = \file -> writeFile' file x
+    let output x file = writeFile' file x
 
     ["or*","*or"] |%> output ""
 

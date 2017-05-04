@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances #-}
+{-# ANN module "HLint: ignore" #-}
 
 module Development.Shake.Experiment.Rules where
 

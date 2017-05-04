@@ -3,7 +3,7 @@
 module General.Extra(
     getProcessorCount,
     randomElem,
-    wrapQuote, wrapBracket, showBracket,
+    wrapQuote, showBracket,
     withs,
     maximum', maximumBy',
     fastAt,

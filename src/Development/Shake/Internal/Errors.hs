@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Errors(
     ShakeException(..),
     errorStructured, err,
-    errorNoRuleToBuildType, errorRuleTypeMismatch, errorIncompatibleRules,
+    errorNoRuleToBuildType, errorRuleTypeMismatch,
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
     errorDirectoryNotFile
     ) where
@@ -74,15 +74,6 @@ errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
     ,("_Rule_ _result_ type", Just $ show tvReal)
     ,("Requested _result_ type", Just $ show tvWant)]
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
-
--- TODO: Not used
-errorIncompatibleRules :: TypeRep -> TypeRep -> TypeRep -> IO a
-errorIncompatibleRules tk tv1 tv2 = if specialIsOracleKey tk then errorDuplicateOracle tk Nothing [tv1,tv2] else errorStructured
-    "Build system error - rule has multiple result types"
-    [("Key type", Just $ show tk)
-    ,("First result type", Just $ show tv1)
-    ,("Second result type", Just $ show tv2)]
-    "A function passed to rule/defaultRule has the wrong result type"
 
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
 errorMultipleRulesMatch tk k count

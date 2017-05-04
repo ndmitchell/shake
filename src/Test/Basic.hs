@@ -80,10 +80,10 @@ main = shaken test $ \args obj -> do
     obj "ids/out" %> \out -> do need =<< readFileLines (obj "ids/source"); writeFile' out ""
     obj "ids/*" %> \out -> do alwaysRerun; trace (takeFileName out); writeFile' out $ takeFileName out
 
-    phony (obj "foo") $ do
+    phony (obj "foo") $
         liftIO $ createDirectoryIfMissing True $ obj "foo"
 
-    phony "ordering2" $ do
+    phony "ordering2" $
         liftIO $ appendFile (obj "order.log") "X"
     phony "ordering" $ do
         liftIO $ appendFile (obj "order.log") "Y"

@@ -228,7 +228,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         when (Just LintFSATrace == shakeLint) trackCheckUsed
         Action $ fmap ((,) res) getRW) $ \x -> case x of
             Left e -> do
-                e <- if shakeLint == Nothing then return e else handle return $
+                e <- if isNothing shakeLint then return e else handle return $
                     do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
                 continue . Left . toException =<< shakeException global (showStack stack) e
             Right (RunResult{..}, Local{..})
@@ -238,7 +238,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                     dur <- time
                     let c | Just r <- r, runChanged == ChangedRecomputeSame = changed r
                           | otherwise = step
-                    continue $ Right $ (,,) True runStore $ Result
+                    continue $ Right $ (,,) True runStore Result
                         {result = runValue
                         ,changed = c
                         ,built = step
@@ -465,8 +465,8 @@ parallel acts = Action $ do
 
         liftIO $ forM_ (zip acts results) $ \(act, result) -> do
             let act2 = do
-                    b <- liftIO $ isJust <$> readVar todo
-                    when (not b) $ fail "parallel, one has already failed"
+                    whenM (liftIO $ isNothing <$> readVar todo) $
+                        fail "parallel, one has already failed"
                     res <- act
                     old <- Action getRW
                     return (old, res)

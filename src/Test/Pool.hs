@@ -12,7 +12,7 @@ import Control.Monad
 main = shakenCwd test $ \args obj -> return ()
 
 
-test build obj = do
+test build obj =
     forM_ [False,True] $ \deterministic -> do
         -- check that it aims for exactly the limit
         forM_ [1..6] $ \n -> do
@@ -51,8 +51,8 @@ test build obj = do
         -- check someone spawned when at zero todo still gets run
         done <- newBarrier
         runPool deterministic 1 $ \pool ->
-            addPoolMediumPriority pool $ do
-                addPoolMediumPriority pool $ do
+            addPoolMediumPriority pool $
+                addPoolMediumPriority pool $
                     signalBarrier done ()
         assertWithin 1 $ waitBarrier done
 
@@ -61,7 +61,7 @@ test build obj = do
         died <- newBarrier
         done <- newBarrier
         t <- forkIO $ flip finally (signalBarrier died ()) $ runPool deterministic 1 $ \pool ->
-            addPoolMediumPriority pool $ do
+            addPoolMediumPriority pool $
                 flip onException (signalBarrier done ()) $ do
                     killThread =<< waitBarrier thread
                     sleep 10

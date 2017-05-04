@@ -38,7 +38,7 @@ main = shakenCwd test $ \args obj -> do
     do
         done <- liftIO $ newIORef 0
         lock <- newResource "lock" 1
-        phony "schedule" $ do
+        phony "schedule" $
             need $ map (\x -> obj $ "s_" ++ x) $ "lock1":"done":["free" ++ show i | i <- [1..10]] ++ ["lock2"]
         obj "s_done" %> \out -> do
             need [obj "s_lock1",obj "s_lock2"]

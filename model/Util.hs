@@ -2,7 +2,7 @@
 
 module Util(
     Action(..), act, actM, actMT,
-    (|->)(..), -- GHC bug that I can't just export (|->)
+    (:->)(..), -- GHC bug that I can't just export (:->)
     (!), one,
     Cache, runCache, cache, askCache,
     T
@@ -46,23 +46,23 @@ actMT f (Need k c) = do
 ---------------------------------------------------------------------
 -- ASSOCIATION
 
-data k |-> v = Assoc [(k,v)]
+newtype k :-> v = Assoc [(k,v)]
 
-instance Monoid (k |-> v) where
+instance Monoid (k :-> v) where
     mempty = Assoc []
     mappend (Assoc a) (Assoc b) = Assoc $ a ++ b
 
-(!) :: Eq k => (k |-> v) -> k -> Maybe v
+(!) :: Eq k => (k :-> v) -> k -> Maybe v
 (!) (Assoc xs) k = lookup k xs
 
-one :: k -> v -> (k |-> v)
+one :: k -> v -> (k :-> v)
 one k v = Assoc [(k,v)]
 
 
 ---------------------------------------------------------------------
 -- CACHE
 
-newtype Cache k v a = Cache (State (k |-> v) a)
+newtype Cache k v a = Cache (State (k :-> v) a)
     deriving (Functor, Applicative, Monad)
 
 askCache :: Eq k => k -> Cache k v (Maybe v)
@@ -78,5 +78,5 @@ cache k act = do
             Cache $ modify $ mappend $ one k v
             return v
 
-runCache :: Cache k v a -> (k |-> v) -> (a, k |-> v)
+runCache :: Cache k v a -> (k :-> v) -> (a, k :-> v)
 runCache (Cache s) = runState s

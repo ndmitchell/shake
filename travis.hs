@@ -11,7 +11,7 @@ import Control.Monad
 import System.Process.Extra
 
 
-requiresShake = take 0 $ words "ghc-make shake-language-c"
+requiresShake = [] -- words "ghc-make shake-language-c"
 
 ms x = show $ ceiling $ x * 1000
 

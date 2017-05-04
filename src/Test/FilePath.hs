@@ -66,7 +66,7 @@ test build obj = do
         let y = norm x
             sep = Native.isPathSeparator
             noDrive = if isWindows then drop 1 else id
-            ps = [length y >= 1
+            ps = [y /= ""
                  ,null x || (sep (head x) == sep (head y) && sep (last x) == sep (last y))
                  ,not $ "/./" `isInfixOf` y
                  ,not isWindows || '\\' `notElem` y

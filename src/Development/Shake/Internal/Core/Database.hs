@@ -75,7 +75,7 @@ addStack :: Id -> Key -> Stack -> Stack
 addStack x key (Stack xs set) = Stack ((x,key):xs) (Set.insert x set)
 
 topStack :: Stack -> Maybe Key
-topStack (Stack xs _) = fmap snd $ listToMaybe xs
+topStack (Stack xs _) = snd <$> listToMaybe xs
 
 checkStack :: [Id] -> Stack -> Maybe (Id,Key)
 checkStack new (Stack xs set)
@@ -190,7 +190,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
-        whenJust (checkStack is stack) $ \(badId, badKey) -> do
+        whenJust (checkStack is stack) $ \(badId, badKey) ->
             -- everything else gets thrown via Left and can be Staunch'd
             -- recursion in the rules is considered a worse error, so fails immediately
             errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
@@ -267,7 +267,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
         spawn :: Bool -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
-            addPoolLowPriority pool $ do
+            addPoolLowPriority pool $
                 buildKey (addStack i k stack) step k r dirtyChildren $ \res -> do
                     let status = either Error (Ready . thd3) res
                     withLock lock $ do
@@ -279,7 +279,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
                                 "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
                                 " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                             when write $ journal i k r{result=bs}
-                        Left _ -> do
+                        Left _ ->
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
 
@@ -422,7 +422,7 @@ listLive Database{..} = do
 
 listDepends :: Database -> Depends -> IO [Key]
 listDepends Database{..} (Depends xs) =
-    withLock lock $ do
+    withLock lock $
         forM xs $ \x ->
             fst . fromJust <$> Ids.lookup status x
 

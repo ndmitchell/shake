@@ -212,7 +212,7 @@ defaultRuleFile = do
                         Nothing -> do
                             new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
                             answer ResultDirect $ fromJust new
-                        Just (ModeForward act) -> do
+                        Just (ModeForward act) ->
                             answer ResultForward =<< act
                         Just (ModeDirect act) -> do
                             act
