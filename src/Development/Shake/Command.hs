@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
 
 #if __GLASGOW_HASKELL__ < 710
 {-# LANGUAGE OverlappingInstances #-}
@@ -17,7 +17,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd, cmd_, unit, CmdArguments(..), IsCmdArgument(..), (:->),
+    command, command_, cmd, cmd_, unit, CmdArgument(..), CmdArguments(..), IsCmdArgument(..), (:->),
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
@@ -578,7 +578,7 @@ type a :-> t = a
 -- 'cmd' ('Cwd' \"generated\") 'Shell' \"gcc -c myfile.c\" :: IO ()
 -- @
 cmd :: CmdArguments args => args :-> Action r
-cmd = cmdArguments []
+cmd = cmdArguments mempty
 
 -- | See 'cmd'. Same as 'cmd' except with a unit result.
 -- 'cmd' is to 'cmd_' as 'command' is to 'command_'.
@@ -586,28 +586,31 @@ cmd_ :: (CmdArguments args, Unit args) => args :-> Action ()
 cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
-class CmdArguments t where cmdArguments :: [Either CmdOption String] -> t
+newtype CmdArgument = CmdArgument [Either CmdOption String]
+  deriving (Eq, Monoid, Show)
+
+-- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
+class CmdArguments t where cmdArguments :: CmdArgument -> t
 instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
-    cmdArguments xs x = cmdArguments $ xs ++ toCmdArgument x
+    cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
-    cmdArguments x = case partitionEithers x of
+    cmdArguments (CmdArgument x) = case partitionEithers x of
         (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicit "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdResult r => CmdArguments (IO r) where
-    cmdArguments x = case partitionEithers x of
+    cmdArguments (CmdArgument x) = case partitionEithers x of
         (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
-
-instance CmdArguments [Either CmdOption String] where
+instance CmdArguments CmdArgument where
     cmdArguments = id
 
--- | Class to convert an a  to an arguments of cmd
-class IsCmdArgument a where toCmdArgument :: a -> [Either CmdOption String]
-instance IsCmdArgument String where toCmdArgument = map Right . words
-instance IsCmdArgument [String] where toCmdArgument = map Right
-instance IsCmdArgument CmdOption where toCmdArgument = return . Left
-instance IsCmdArgument [CmdOption] where toCmdArgument = map Left
-instance IsCmdArgument a => IsCmdArgument (Maybe a) where toCmdArgument = maybe [] toCmdArgument
+-- | Class to convert an a  to a 'CmdArgument'
+class IsCmdArgument a where toCmdArgument :: a -> CmdArgument
+instance IsCmdArgument String where toCmdArgument = CmdArgument . map Right . words
+instance IsCmdArgument [String] where toCmdArgument = CmdArgument . map Right
+instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . return . Left
+instance IsCmdArgument [CmdOption] where toCmdArgument = CmdArgument . map Left
+instance IsCmdArgument a => IsCmdArgument (Maybe a) where toCmdArgument = maybe mempty toCmdArgument
 
 
 ---------------------------------------------------------------------
