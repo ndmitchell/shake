@@ -17,7 +17,7 @@
 --   The functions from this module are now available directly from "Development.Shake".
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
-    command, command_, cmd, cmd_, unit, CmdArguments, (:->),
+    command, command_, cmd, cmd_, unit, CmdArguments(..), IsCmdArgument(..), (:->),
     Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
@@ -144,7 +144,7 @@ commandExplicit funcName oopts results exe args = do
             | otherwise = act exe args
 
         shelled = runShell (unwords $ exe : args)
-                              
+
         ignore = map (?==) shakeLintIgnore
         ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
                                          , any (`isPrefixOf` x) shakeLintInside
@@ -587,8 +587,8 @@ cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where cmdArguments :: [Either CmdOption String] -> t
-instance (Arg a, CmdArguments r) => CmdArguments (a -> r) where
-    cmdArguments xs x = cmdArguments $ xs ++ arg x
+instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
+    cmdArguments xs x = cmdArguments $ xs ++ toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments x = case partitionEithers x of
         (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicit "cmd" opts a x xs
@@ -601,13 +601,13 @@ instance CmdResult r => CmdArguments (IO r) where
 instance CmdArguments [Either CmdOption String] where
     cmdArguments = id
 
-
-class Arg a where arg :: a -> [Either CmdOption String]
-instance Arg String where arg = map Right . words
-instance Arg [String] where arg = map Right
-instance Arg CmdOption where arg = return . Left
-instance Arg [CmdOption] where arg = map Left
-instance Arg a => Arg (Maybe a) where arg = maybe [] arg
+-- | Class to convert an a  to an arguments of cmd
+class IsCmdArgument a where toCmdArgument :: a -> [Either CmdOption String]
+instance IsCmdArgument String where toCmdArgument = map Right . words
+instance IsCmdArgument [String] where toCmdArgument = map Right
+instance IsCmdArgument CmdOption where toCmdArgument = return . Left
+instance IsCmdArgument [CmdOption] where toCmdArgument = map Left
+instance IsCmdArgument a => IsCmdArgument (Maybe a) where toCmdArgument = maybe [] toCmdArgument
 
 
 ---------------------------------------------------------------------
