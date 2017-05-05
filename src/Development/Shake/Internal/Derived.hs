@@ -15,9 +15,7 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
-import System.FilePath.Posix as FP (takeDirectory)
-import System.FilePath.Windows as FW (takeDirectory)
-import System.Info.Extra (isWindows)
+import System.FilePath (takeDirectory)
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
 import Development.Shake.Internal.Core.Run
@@ -80,13 +78,8 @@ copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
-    createDirIfMissing new
+    liftIO $ createDirectoryIfMissing True $ takeDirectory new
     liftIO $ copyFile old new
-
-createDirIfMissing :: FilePath -> Action()
-createDirIfMissing new =
-   liftIO $ createDirectoryIfMissing True $
-          (if isWindows then FW.takeDirectory else FP.takeDirectory) new
 
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
@@ -98,7 +91,7 @@ copyFileChanged old new = do
     -- the timestamp as well and thus no need to read the source file twice.
     unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
-        createDirIfMissing new
+        liftIO $ createDirectoryIfMissing True $ takeDirectory new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
         liftIO $ copyFile old new
 
