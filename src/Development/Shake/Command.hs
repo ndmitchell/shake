@@ -31,6 +31,7 @@ import Data.Char
 import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
+import Data.Monoid
 import System.Directory
 import System.Environment.Extra
 import System.Exit
