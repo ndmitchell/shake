@@ -591,7 +591,9 @@ newtype CmdArgument = CmdArgument [Either CmdOption String]
   deriving (Eq, Monoid, Show)
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
-class CmdArguments t where cmdArguments :: CmdArgument -> t
+class CmdArguments t where
+    -- | Arguments to cmd
+    cmdArguments :: CmdArgument -> t
 instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
@@ -605,8 +607,10 @@ instance CmdResult r => CmdArguments (IO r) where
 instance CmdArguments CmdArgument where
     cmdArguments = id
 
--- | Class to convert an a  to a 'CmdArgument'
-class IsCmdArgument a where toCmdArgument :: a -> CmdArgument
+-- | Class to convert an a  to a CmdArgument
+class IsCmdArgument a where
+    -- | Conversion to a CmdArgument
+    toCmdArgument :: a -> CmdArgument
 instance IsCmdArgument String where toCmdArgument = CmdArgument . map Right . words
 instance IsCmdArgument [String] where toCmdArgument = CmdArgument . map Right
 instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . return . Left
