@@ -15,6 +15,7 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
+import System.FilePath (takeDirectory)
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
 import Development.Shake.Internal.Core.Run
@@ -72,15 +73,17 @@ addShakeExtra x = Map.insert (typeOf x) (toDyn x)
 
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
 --   The @old@ file will be tracked as a dependency.
+--   Also creates the new directory if necessary.
 copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
+    liftIO $ createDirectoryIfMissing True $ takeDirectory new
     liftIO $ copyFile old new
-
 
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
+--   Also creates the new directory if necessary.
 copyFileChanged :: FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
     need [old]
@@ -88,6 +91,7 @@ copyFileChanged old new = do
     -- the timestamp as well and thus no need to read the source file twice.
     unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
+        liftIO $ createDirectoryIfMissing True $ takeDirectory new
         -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
         liftIO $ copyFile old new
 
@@ -136,6 +140,15 @@ withTempFile act = do
 
 -- | Create a temporary directory inside the system temporary directory.
 --   The directory will be deleted after the action completes.
+--
+--   Example:
+-- @
+--
+-- 'withTempDir' $ \mydir -> do
+--    putNormal $ "Temp directory is " ++ mydir
+--    liftIO $ writeFile (mydir </> "test.txt") "writing out a temp file"
+--
+-- @
 withTempDir :: (FilePath -> Action a) -> Action a
 withTempDir act = do
     (dir,del) <- liftIO newTempDir
