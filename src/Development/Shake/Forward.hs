@@ -103,7 +103,7 @@ cacheAction name action = do
 -- | Apply caching to an external command.
 cache :: (forall r . CmdArguments r => r) -> Action ()
 cache cmd = do
-    let (CmdArgument args) = cmd
+    let CmdArgument args = cmd
     let isDull ['-',x] = True; isDull _ = False
     let name = head $ filter (not . isDull) (drop 1 $ rights args) ++ ["unknown"]
     cacheAction ("command " ++ toStandard name ++ " #" ++ upper (showHex (abs $ hash $ show args) "")) cmd

@@ -143,11 +143,9 @@ withTempFile act = do
 --
 --   Example:
 -- @
---
 -- 'withTempDir' $ \mydir -> do
 --    putNormal $ "Temp directory is " ++ mydir
 --    liftIO $ writeFile (mydir </> "test.txt") "writing out a temp file"
---
 -- @
 withTempDir :: (FilePath -> Action a) -> Action a
 withTempDir act = do
