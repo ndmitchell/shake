@@ -1,5 +1,8 @@
 Changelog for Shake
 
+    #522, make copyFile create directories if necessary
+    #516, add an example for withTempDir
+    #514, expose more about cmd arguments
     #523, #524, make sure phony doesn't run its dependencies first
     #515, add cmd_ function
     #506, allow duplicate type names in different modules
