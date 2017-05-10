@@ -139,13 +139,12 @@ withTempFile act = do
 
 
 -- | Create a temporary directory inside the system temporary directory.
---   The directory will be deleted after the action completes.
+--   The directory will be deleted after the action completes. As an example:
 --
---   Example:
 -- @
--- 'withTempDir' $ \mydir -> do
---    putNormal $ "Temp directory is " ++ mydir
---    liftIO $ writeFile (mydir </> "test.txt") "writing out a temp file"
+-- 'withTempDir' $ \\mydir -> do
+--    'putNormal' $ \"Temp directory is \" ++ mydir
+--    'writeFile'' (mydir \</\> \"test.txt\") \"writing out a temp file\"
 -- @
 withTempDir :: (FilePath -> Action a) -> Action a
 withTempDir act = do
