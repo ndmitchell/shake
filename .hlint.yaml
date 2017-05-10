@@ -8,9 +8,6 @@
     - Development.Shake.Internal.Progress
     - Development.Shake.Internal.FileInfo
 
-# Not triggered by HEAD of HLint, remove once a release is made
-- ignore: {name: "Redundant do"}
-
 # Warnings currently triggered by the code
 - ignore: {name: "Use fmap"}
 - ignore: {name: "Reduce duplication"}
