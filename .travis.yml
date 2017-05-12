@@ -13,5 +13,4 @@ script:
 - (cd .fsatrace && make)
 - export PATH=$PATH:`pwd`/.fsatrace
 - fsatrace v - -- echo fsatrace works
-- HLINT_ARGUMENTS=--version
 - curl -sL https://raw.github.com/ndmitchell/neil/master/travis.sh | sh
