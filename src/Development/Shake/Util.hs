@@ -91,7 +91,7 @@ shakeArgsPruneWith opts prune flags act = do
             src <- lines <$> IO.readFile' file
             prune src
 
--- fmap is only an instance in later GHC versions, so fake our own version
+-- fmap is only an instance in later GHC 7.8 and above, so fake our own version
 fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
 fmapOptDescr f (Option a b argDescr c) = Option a b (fmapArgDescr f argDescr) c
 
