@@ -2,6 +2,7 @@
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
+    shakeTest,
     shaken, shakenCwd, unobj,
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChanged,
@@ -38,21 +39,31 @@ import System.Time.Extra
 import Prelude
 
 
+shakeTest
+    :: [OptDescr (Either String a)] -- ^ Arguments the test can accept
+    -> (([String] -> IO ()) -> IO ()) -- ^ The test driver
+    -> ([a] -> Rules ()) -- ^ The Shake script under test
+    -> IO () -- ^ Sleep function, driven by passing @--sleep@
+    -> IO ()
+shakeTest = undefined
+
 shaken, shakenCwd
     :: (([String] -> IO ()) -> (String -> String) -> IO ())
     -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shaken = shakenEx False
-shakenCwd = shakenEx True
+shaken = shakeExOld False
+shakenCwd = shakeExOld True
+shakeExOld b f g = shakenEx b [] f (const g)
 
 shakenEx
     :: Bool
+    -> [OptDescr (Either String a)]
     -> (([String] -> IO ()) -> (String -> String) -> IO ())
-    -> ([String] -> (String -> String) -> Rules ())
+    -> ([a] -> [String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shakenEx changeDir test rules sleeper = do
+shakenEx changeDir options test rules sleeper = do
     -- my debug getDataFileName (in Paths) uses a cache of the Cwd
     -- make sure we force the cache before changing directory
     getDataFileName ""
@@ -75,7 +86,7 @@ shakenEx changeDir test rules sleeper = do
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            change $ test (\args -> withArgs (name:args ++ extra) $ unchange $ shakenEx changeDir test rules sleeper) obj
+            change $ test (\args -> withArgs (name:args ++ extra) $ unchange $ shakenEx changeDir options test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":_ -> removeDirectoryRecursive out
@@ -84,7 +95,7 @@ shakenEx changeDir test rules sleeper = do
             del <- removeFilesRandom out
             threads <- randomRIO (1,4)
             putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
-            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules args (out++)
+            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules [] args (out++)
 
         args -> do
             t <- tracker
@@ -101,7 +112,7 @@ shakenEx changeDir test rules sleeper = do
                     (unchange $ removeDirectoryRecursive out)
                     opts
                     -- if you have passed sleep, supress the "no errors" warning
-                    (do rules files obj; when ("--sleep" `elem` args) $ action $ return ())
+                    (do rules [] files obj; when ("--sleep" `elem` args) $ action $ return ())
 
 
 tracker :: IO Lint
