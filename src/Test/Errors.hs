@@ -16,7 +16,7 @@ import Prelude
 
 
 -- The seq is just to "use" shakeTest for weeder while it gets rolled out properly
-main = seq shakeTest $ shakenCwd test $ \args obj -> do
+main = flip const shakeTest $ shakenCwd test $ \args obj -> do
     want args
     obj "norule" %> \_ ->
         need [obj "norule_isavailable"]
