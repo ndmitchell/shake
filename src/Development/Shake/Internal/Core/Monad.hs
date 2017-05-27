@@ -30,10 +30,6 @@ newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
 type Capture a = (a -> IO ()) -> IO ()
 
 
--- See https://ghc.haskell.org/trac/ghc/ticket/11555
-catchSafe :: IO a -> (SomeException -> IO a) -> IO a
-catchSafe = catch_
-
 -- | Run and then call a continuation.
 runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
 runRAW ro rw m k = do
@@ -41,7 +37,7 @@ runRAW ro rw m k = do
     handler <- newIORef $ k . Left
     -- see https://ghc.haskell.org/trac/ghc/ticket/11555
     fromRAW m `runReaderT` S handler ro rww `runContT` (k . Right)
-        `catchSafe` \e -> ($ e) =<< readIORef handler
+        `catch_` \e -> ($ e) =<< readIORef handler
 
 
 ---------------------------------------------------------------------
@@ -87,7 +83,7 @@ catchRAW m hdl = RAW $ ReaderT $ \s -> ContT $ \k -> do
     old <- readIORef $ handler s
     writeIORef (handler s) $ \e -> do
         writeIORef (handler s) old
-        fromRAW (hdl e) `runReaderT` s `runContT` k `catchSafe`
+        fromRAW (hdl e) `runReaderT` s `runContT` k `catch_`
             \e -> ($ e) =<< readIORef (handler s)
     fromRAW m `runReaderT` s `runContT` \v -> do
         writeIORef (handler s) old
@@ -124,5 +120,5 @@ captureRAW f = RAW $ ReaderT $ \s -> ContT $ \k -> do
         Left e -> old e
         Right v -> do
             writeIORef (handler s) old
-            k v `catchSafe` \e -> ($ e) =<< readIORef (handler s)
+            k v `catch_` \e -> ($ e) =<< readIORef (handler s)
             writeIORef (handler s) throwIO
