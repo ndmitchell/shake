@@ -17,7 +17,6 @@ module Test.Type(
 import Development.Shake hiding (copyFileChanged)
 import Development.Shake.Classes
 import Development.Shake.Forward
-import Development.Shake.Rule() -- ensure the module gets imported, and thus tested
 import Development.Shake.Internal.FileName
 import General.Extra
 import Development.Shake.Internal.FileInfo
