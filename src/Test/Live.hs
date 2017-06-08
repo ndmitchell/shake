@@ -5,8 +5,8 @@ import Development.Shake
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> do
-    want $ map obj args
+main = shakeTest_ test $ do
+    let obj = id
 
     obj "foo" %> \ out -> do
         need [obj "bar"]
@@ -16,7 +16,8 @@ main = shakenCwd test $ \args obj -> do
     obj "baz" %> \out -> writeFile' out ""
 
 
-test build obj = do
+test build = do
+    let obj = id
     build ["clean"]
     build ["foo","baz","--live=" ++ obj "live.txt"]
     assertContentsUnordered (obj "live.txt") $ map obj $ words "foo bar baz"
