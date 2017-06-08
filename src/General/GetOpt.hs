@@ -3,13 +3,15 @@ module General.GetOpt(
     OptDescr(..), ArgDescr(..),
     getOpt,
     fmapOptDescr,
-    showOptDescr
+    showOptDescr,
+    optionsEnumDesc
     ) where
 
 import qualified System.Console.GetOpt as O
 import System.Console.GetOpt hiding (getOpt)
 import Data.Either
-import Data.List
+import Data.List.Extra
+
 
 getOpt :: [OptDescr (Either String a)] -> [String] -> ([a], [String], [String])
 getOpt opts args = (flagGood, files, flagBad ++ errs)
@@ -38,3 +40,7 @@ showOptDescr xs = concat
           long NoArg{} x = "--" ++ x
           long (ReqArg _ b) x = "--" ++ x ++ "=" ++ b
           long (OptArg _ b) x = "--" ++ x ++ "[=" ++ b ++ "]"
+
+
+optionsEnumDesc :: Show a => [(a, String)] -> [OptDescr (Either String a)]
+optionsEnumDesc xs = [Option "" [lower $ show x] (NoArg $ Right x) d | (x,d) <- xs]
