@@ -197,21 +197,6 @@ shakeArgsWith baseOpts userOptions rules = do
         wrap = fmapOptDescr . fmap
 
 
-showOptDescr :: [OptDescr a] -> [String]
-showOptDescr xs = concat
-    [ if nargs <= 26 then ["  " ++ args ++ replicate (28 - nargs) ' ' ++ desc]
-                     else ["  " ++ args, replicate 30 ' ' ++ desc]
-    | Option s l arg desc <- xs
-    , let args = intercalate ", " $ map (short arg) s ++ map (long arg) l
-    , let nargs = length args]
-    where short NoArg{} x = "-" ++ [x]
-          short (ReqArg _ b) x = "-" ++ [x] ++ " " ++ b
-          short (OptArg _ b) x = "-" ++ [x] ++ "[" ++ b ++ "]"
-          long NoArg{} x = "--" ++ x
-          long (ReqArg _ b) x = "--" ++ x ++ "=" ++ b
-          long (OptArg _ b) x = "--" ++ x ++ "[=" ++ b ++ "]"
-
-
 fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
 fmapOptDescr f (Option a b c d) = Option a b (g c) d
     where g (NoArg a) = NoArg $ f a
