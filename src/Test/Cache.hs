@@ -7,8 +7,8 @@ import Data.Char
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> do
-    want $ map obj args
+main = shakeTest_ test $ do
+    let obj = id
     vowels <- newCache $ \file -> do
         src <- readFile' file
         liftIO $ appendFile (obj "trace.txt") "1"
@@ -17,7 +17,8 @@ main = shakenCwd test $ \args obj -> do
         writeFile' x . show =<< vowels (dropExtension x <.> "txt")
 
 
-test build obj = do
+test build = do
+    let obj = id
     writeFile (obj "trace.txt") ""
     writeFile (obj "vowels.txt") "abc123a"
     build ["vowels.out1","vowels.out2","-j3","--sleep"]
