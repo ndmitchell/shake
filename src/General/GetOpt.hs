@@ -10,7 +10,7 @@ module General.GetOpt(
 
 import qualified System.Console.GetOpt as O
 import System.Console.GetOpt hiding (getOpt)
-import qualified Data.Set as Set
+import qualified Data.HashSet as Set
 import Data.Maybe
 import Data.Either
 import Data.List.Extra
@@ -53,8 +53,8 @@ removeOverlap bad = mapMaybe f
         long  = Set.fromList $ concat [x | Option _ x _ _ <- bad]
         f (Option a b c d) | null a2 && null b2 = Nothing
                            | otherwise = Just $ Option a2 b2 c d
-            where a2 = filter (`Set.notMember` short) a
-                  b2 = filter (`Set.notMember` long) b
+            where a2 = filter (not . flip Set.member short) a
+                  b2 = filter (not . flip Set.member long) b
 
 optionsEnumDesc :: Show a => [(a, String)] -> [OptDescr (Either String a)]
 optionsEnumDesc xs = [Option "" [lower $ show x] (NoArg $ Right x) d | (x,d) <- xs]
