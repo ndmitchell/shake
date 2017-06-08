@@ -2,13 +2,13 @@ module Test.Progress(main) where
 
 import Development.Shake.Internal.Progress
 import Test.Type
-import System.Directory
+import System.Directory.Extra
 import System.FilePath
 import Data.Monoid
 import Prelude
 
 
-main = shaken test $ \args obj -> return ()
+main = shakeTest_ test $ return ()
 
 
 -- | Given a list of todo times, get out a list of how long is predicted
@@ -23,7 +23,7 @@ progEx mxDone todo = do
     return $ (0/0) : map ((/ resolution) . actualSecs) res
 
 
-test build obj = do
+test build = do
     -- perfect functions should match perfectly
     xs <- prog [10,9..1]
     drop 2 xs === [8,7..1]
@@ -57,6 +57,6 @@ test build obj = do
     xs <- prog [10,9,8,7,6.5,6,5.5,5]
     assertBool (last xs > 7.1) "Some discounting (factor=0 would give 7)"
 
-    xs <- getDirectoryContents "src/Test/Progress"
-    build $ ["--progress=replay=src/Test/Progress/" ++ x | x <- xs, takeExtension x == ".prog"] ++
-            ["--no-report","--report=-","--report=" ++ obj "progress.html"]
+    xs <- listFiles $ root </> "src/Test/Progress"
+    build $ ["--progress=replay=" ++ x | x <- xs, takeExtension x == ".prog"] ++
+            ["--no-report","--report=-","--report=" ++ "progress.html"]
