@@ -22,9 +22,10 @@ newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData
 type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
-main = shaken noTest $ \args obj -> do
+main = shakeTest_ noTest2 $ do
+    let obj = id
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
-    want $ if null args then [obj "Main" <.> exe] else args
+    want ["Main" <.> exe]
 
     -- fixup to cope with Cabal's generated files
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
@@ -57,21 +58,21 @@ main = shaken noTest $ \args obj -> do
         writeFileLines out ds
 
     obj "//*.dep" %> \out -> do
-        src <- readFile' $ "src" </> fixPaths (unobj $ out -<.> "hs")
+        src <- readFile' $ root </> "src" </> fixPaths (out -<.> "hs")
         let xs = hsImports src
-        xs <- filterM (doesFileExist . ("src" </>) . fixPaths . moduleToFile "hs") xs
+        xs <- filterM (doesFileExist . (\x -> root </> "src" </> x) . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
     [obj "//*.o",obj "//*.hi"] &%> \[out,_] -> do
         deps <- readFileLines $ out -<.> "deps"
-        let hs = "src" </> fixPaths (unobj $ out -<.> "hs")
+        let hs = root </> "src" </> fixPaths (out -<.> "hs")
         need $ hs : map (obj . moduleToFile "hi") deps
-        ghc $ ["-c",hs,"-isrc","-main-is","Run.main"
-              ,"-hide-all-packages","-odir=output/self","-hidir=output/self","-i=output/self"] ++
+        ghc $ ["-c",hs,"-i" ++ root </> "src","-main-is","Run.main"
+              ,"-hide-all-packages","-outputdir=."] ++
               ["-DPORTABLE","-fwarn-unused-imports"] -- to test one CPP branch
 
     obj ".pkgs" %> \out -> do
-        src <- readFile' "shake.cabal"
+        src <- readFile' $ root </> "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
 
 
