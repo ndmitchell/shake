@@ -5,10 +5,10 @@ import Development.Shake.Util
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> return ()
+main = shakeTest_ test $ return ()
 
 
-test build obj = do
+test build = do
     parseMakefile "" === []
     parseMakefile "a:b c\ndef : ee" === [("a",["b","c"]),("def",["ee"])]
     parseMakefile "a: #comment\n#comment : b\nc : d" === [("a",[]),("c",["d"])]
