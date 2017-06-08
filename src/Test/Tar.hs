@@ -2,12 +2,13 @@
 module Test.Tar(main) where
 
 import Development.Shake
+import System.FilePath
 import Test.Type
 
 
-main = shaken noTest $ \args obj -> do
-    want [obj "result.tar"]
-    obj "result.tar" %> \out -> do
-        contents <- readFileLines "src/Test/Tar/list.txt"
+main = shakeTest_ noTest2 $ do
+    want ["result.tar"]
+    "result.tar" %> \out -> do
+        contents <- fmap (map (root </>)) $ readFileLines $ root </> "src/Test/Tar/list.txt"
         need contents
         cmd "tar -cf" [out] contents
