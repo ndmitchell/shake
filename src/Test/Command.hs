@@ -21,10 +21,11 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Prelude
 
 
-main = shakenCwd test $ \args obj -> do
+main = shakeTest_ test $ do
+    let obj = id
     -- shake_helper must be in a subdirectory so we can test placing that subdir on the $PATH
     let helper = toNative $ obj "helper/shake_helper" <.> exe
-    let name !> test = do want [name | null args || name `elem` args]
+    let name !> test = do want [name]
                           name ~> do need [obj "helper/shake_helper" <.> exe]; test
 
     let helper_source = unlines
@@ -154,7 +155,7 @@ main = shakenCwd test $ \args obj -> do
         liftIO $ assertContents file "hello\n"
 
 
-test build obj = do
+test build = do
     -- reduce the overhead by running all the tests in parallel
     -- lint can make a big different to the command lines, so test with and without
     whenM hasTracker $
