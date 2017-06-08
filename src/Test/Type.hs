@@ -87,18 +87,22 @@ shakenEx reenter changeDir options test rules sleeper = do
     let obj x | changeDir = if null x then "." else x
               | otherwise = if "/" `isPrefixOf` x || null x then init out ++ x else out ++ x
     let change = if changeDir && not reenter then withCurrentDirectory out else id
-    let unchange act = do
-            new <- getCurrentDirectory
-            withCurrentDirectory cwd $ do act; createDirectoryIfMissing True new -- to deal with clean
-    createDirectoryIfMissing True out
+    let clean = (if changeDir then id else withCurrentDirectory out) $ do
+            now <- getCurrentDirectory
+            when (takeBaseName now /= name) $
+                fail $ "Clean went horribly wrong! Dangerous deleting: " ++ show now
+            withCurrentDirectory (now </> "..") $ do
+                removeDirectoryRecursive now
+                createDirectoryIfMissing True now
+    when (not reenter) $ createDirectoryIfMissing True out
     case args of
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            change $ test (\args -> withArgs (name:args ++ extra) $ shakenEx changeDir True options test rules sleeper) obj
+            change $ test (\args -> withArgs (name:args ++ extra) $ shakenEx True changeDir options test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
 
-        "clean":_ -> removeDirectoryRecursive out
+        "clean":_ -> change clean
 
         "perturb":args -> forever $ do
             del <- removeFilesRandom out
@@ -115,7 +119,6 @@ shakenEx reenter changeDir options test rules sleeper = do
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
-            let clean = unchange $ removeDirectoryRecursive out
             withArgs args $ do
                 let cleanOpt = optionsEnumDesc
                         [(Clean, "Clean before building.")
