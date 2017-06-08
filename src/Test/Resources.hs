@@ -11,9 +11,9 @@ import Control.Monad
 import Data.IORef
 
 
-main = shakenCwd test $ \args obj -> do
+main = shakeTest_ test $ do
+    let obj = id
     -- test I have good Ord and Show
-    want args
     do
         r1 <- newResource "test" 2
         r2 <- newResource "special" 67
@@ -62,7 +62,7 @@ main = shakenCwd test $ \args obj -> do
             writeFile' out ""
 
 
-test build obj = do
+test build = do
     build ["-j2","cap","--clean"]
     build ["-j4","cap","--clean"]
     build ["-j10","cap","--clean"]
