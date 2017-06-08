@@ -27,6 +27,7 @@ import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.List
 import Data.Maybe
+import Data.Either
 import Data.Typeable.Extra
 import qualified Data.ByteString as BS
 import System.Directory.Extra as IO
@@ -109,15 +110,16 @@ shakenEx changeDir options test rules sleeper = do
                 let cleanOpt = optionsEnumDesc
                         [(Clean, "Clean before building.")
                         ,(Sleep, "Pause before executing.")]
-                change $ shakeArgsWith opts cleanOpt $ \extra files -> do
-                    when (Clean `elem` extra) clean
-                    when (Sleep `elem` extra) sleeper
+                change $ shakeArgsWith opts (cleanOpt `mergeOptDescr` options) $ \extra files -> do
+                    let (extra1, extra2) = partitionEithers extra
+                    when (Clean `elem` extra1) clean
+                    when (Sleep `elem` extra1) sleeper
                     if "clean" `elem` files then
                         clean >> return Nothing
                     else return $ Just $ do
                         -- if you have passed sleep, supress the "no actions" warning
-                        when (Sleep `elem` extra) $ action $ return ()
-                        rules [] files obj
+                        when (Sleep `elem` extra1) $ action $ return ()
+                        rules extra2 files obj
 
 data Flags = Clean | Sleep deriving (Eq,Show)
 
