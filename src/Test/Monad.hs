@@ -11,7 +11,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 
 
-main = shakenCwd test $ \args obj -> return ()
+main = shakeTest_ test $ return ()
 
 
 run :: ro -> rw -> RAW ro rw a -> IO a
@@ -21,7 +21,7 @@ run ro rw m = do
     either throwIO return =<< readMVar res
 
 
-test build obj = do
+test build = do
     let conv x = either (Left . fromException) Right x :: Either (Maybe ArithException) Int
     let dump ro rw = do liftIO . (=== ro) =<< getRO; liftIO . (=== rw) =<< getRW
 
