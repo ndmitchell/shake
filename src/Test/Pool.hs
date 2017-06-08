@@ -9,10 +9,10 @@ import Control.Exception.Extra
 import Control.Monad
 
 
-main = shakenCwd test $ \args obj -> return ()
+main = shakeTest_ test $ return ()
 
 
-test build obj =
+test build =
     forM_ [False,True] $ \deterministic -> do
         -- check that it aims for exactly the limit
         forM_ [1..6] $ \n -> do
