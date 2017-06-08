@@ -7,6 +7,7 @@ import Test.Type
 import Data.List
 import Control.Monad
 import Control.Concurrent
+import General.GetOpt
 import Control.Exception.Extra hiding (assert)
 import System.Directory as IO
 import System.Time.Extra
@@ -14,10 +15,10 @@ import qualified System.IO.Extra as IO
 import Data.Functor
 import Prelude
 
+data Args = Die deriving (Eq,Enum,Bounded,Show)
 
--- The seq is just to "use" shakeTest for weeder while it gets rolled out properly
-main = flip const shakeTest $ shakenCwd test $ \args obj -> do
-    want args
+main = shakeTest optionsEnum test $ \args -> do
+    let obj = id
     obj "norule" %> \_ ->
         need [obj "norule_isavailable"]
 
@@ -92,7 +93,7 @@ main = flip const shakeTest $ shakenCwd test $ \args obj -> do
     phony "fail1" $ fail "die1"
     phony "fail2" $ fail "die2"
 
-    when ("die" `elem` args) $ action $ error "death error"
+    when (Die `elem` args) $ action $ error "death error"
 
     obj "fresh_dir" %> \out -> liftIO $ createDirectoryIfMissing True out
     obj "need_dir" %> \out -> do
@@ -125,7 +126,8 @@ main = flip const shakeTest $ shakenCwd test $ \args obj -> do
     phony "block" $
         liftIO $ putStrLn $ let x = x in x
 
-test build obj = do
+test build = do
+    let obj = id
     let crash args parts = assertException parts (build $ "--quiet" : args)
     build ["clean"]
     build ["--sleep"]
@@ -178,7 +180,7 @@ test build obj = do
     assertMissing src
     build ["tempdir"]
 
-    crash ["die"] ["Shake","action","death error"]
+    crash ["--die"] ["Shake","action","death error"]
 
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []
