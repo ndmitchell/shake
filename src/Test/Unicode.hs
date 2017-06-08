@@ -4,9 +4,9 @@ module Test.Unicode(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
+import General.GetOpt
 import Control.Exception.Extra
 import Control.Monad
-import System.Directory(createDirectoryIfMissing)
 
 
 -- | Decode a dull ASCII string to certain unicode points, necessary because
@@ -17,10 +17,15 @@ decode (':':')':xs) = '\x263A' : decode xs -- White Smiling Face
 decode (x:xs) = x : decode xs
 decode [] = []
 
+data Arg = Prefix String | Want String
+opts =
+    [Option "" ["prefix"] (ReqArg (Right . Prefix) "") ""
+    ,Option "" ["want"] (ReqArg (Right . Want) "") ""]
 
-main = shakenCwd test $ \xs obj -> do
-    let pre:args = map decode xs
-    want $ map obj args
+main = shakeTest opts test $ \xs -> do
+    let obj = id
+    let pre = last $ "" : [decode x | Prefix x <- xs :: [Arg]]
+    want [decode x | Want x <- xs]
 
     obj (pre ++ "dir/*") %> \out -> do
         let src = takeDirectory (takeDirectory out) </> takeFileName out
@@ -37,24 +42,24 @@ main = shakenCwd test $ \xs obj -> do
         writeFile' m2 $ show b
 
 
-test build obj = do
+test build = do
+    let obj = id
     build ["clean"]
     -- Useful, if the error message starts crashing...
     -- IO.hSetEncoding IO.stdout IO.char8
     -- IO.hSetEncoding IO.stderr IO.char8
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
-        createDirectoryIfMissing True $ obj ""
         let ext x = obj $ decode pre <.> x
         res <- try_ $ writeFile (ext "source") "x"
         case res of
             Left err ->
                 putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
             Right _ -> do
-                build [pre,pre <.> "out","--sleep"]
+                build ["--prefix=" ++ pre, "--want=" ++ pre <.> "out", "--sleep"]
                 assertContents (ext "out") $ "x" ++ "False"
                 writeFile (ext "source") "y"
-                build [pre,pre <.> "out","--sleep"]
+                build ["--prefix=" ++ pre, "--want=" ++ pre <.> "out", "--sleep"]
                 assertContents (ext "out") $ "y" ++ "False"
                 writeFile (ext "exist") ""
-                build [pre,pre <.> "out"]
+                build ["--prefix=" ++ pre, "--want=" ++ pre <.> "out"]
                 assertContents (ext "out") $ "y" ++ "True"
