@@ -9,8 +9,8 @@ import Control.Concurrent.Extra
 import Data.IORef
 
 
-main = shakenCwd test $ \args obj -> do
-    want args
+main = shakeTest_ test $ do
+    let obj = id
 
     obj "AB.txt" %> \out -> do
         -- need [obj "A.txt", obj "B.txt"]
@@ -38,7 +38,8 @@ main = shakenCwd test $ \args obj -> do
         writeFile' (obj "parallel") $ show peak
 
 
-test build obj = do
+test build = do
+    let obj = id
     writeFile (obj "A.txt") "AAA"
     writeFile (obj "B.txt") "BBB"
     build ["AB.txt","--sleep"]
