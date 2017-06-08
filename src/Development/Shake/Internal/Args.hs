@@ -105,8 +105,7 @@ shakeArgsWith :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String
 shakeArgsWith baseOpts userOptions rules = do
     addTiming "shakeArgsWith"
     args <- getArgs
-    let (flags,files,errs) = getOpt Permute opts args
-        (flagsError,flag1) = partitionEithers flags
+    let (flag1,files,errs) = getOpt opts args
         (self,user) = partitionEithers flag1
         (flagsExtra,flagsShake) = first concat $ unzip self
         progressReplays = [x | ProgressReplay x <- flagsExtra]
@@ -120,7 +119,6 @@ shakeArgsWith baseOpts userOptions rules = do
                                                   shakeLintIgnore oshakeOpts
                                }
 
-    errs <- return $ errs ++ flagsError
     when (errs /= []) $ do
         putStr $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
         showHelp

@@ -98,7 +98,7 @@ shakenEx changeDir options test rules sleeper = do
 
         args -> do
             t <- tracker
-            let (_,files,_) = getOpt Permute [] args
+            let (_,files,_) = getOpt [] args
             opts <- return $ shakeOptions
                 {shakeFiles = obj ""
                 ,shakeReport = [obj "report.html"]}
