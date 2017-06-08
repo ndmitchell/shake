@@ -11,7 +11,8 @@ import Data.Maybe
 import System.Directory
 
 
-main = shakenCwd test $ \args obj -> do
+main = shakeTest_ test $ do
+    let obj = id
     want $ map obj ["hsflags.var","cflags.var","none.var","keys"]
     usingConfigFile $ obj "config"
     obj "*.var" %> \out -> do
@@ -23,7 +24,8 @@ main = shakenCwd test $ \args obj -> do
         liftIO . writeFile out . unwords =<< getConfigKeys
 
 
-test build obj = do
+test build = do
+    let obj = id
     build ["clean"]
     createDirectoryIfMissing True $ obj ""
     writeFile (obj "config") $ unlines
