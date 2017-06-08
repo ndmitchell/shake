@@ -188,8 +188,7 @@ shakeArgsWith baseOpts userOptions rules = do
                         time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
                     putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
-        opts = removeOverlap userOptions (map (fmapOptDescr Left . snd) shakeOptsEx) ++
-               map (fmapOptDescr Right) userOptions
+        opts = removeOverlap userOptions (map snd shakeOptsEx) `mergeOptDescr` userOptions
         showHelp = do
             progName <- getProgName
             putStr $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts

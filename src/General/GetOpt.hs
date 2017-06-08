@@ -4,6 +4,7 @@ module General.GetOpt(
     getOpt,
     fmapOptDescr,
     showOptDescr,
+    mergeOptDescr,
     removeOverlap,
     optionsEnumDesc
     ) where
@@ -55,6 +56,9 @@ removeOverlap bad = mapMaybe f
                            | otherwise = Just $ Option a2 b2 c d
             where a2 = filter (not . flip Set.member short) a
                   b2 = filter (not . flip Set.member long) b
+
+mergeOptDescr :: [OptDescr (Either String a)] -> [OptDescr (Either String b)] -> [OptDescr (Either String (Either a b))]
+mergeOptDescr xs ys = map (fmapOptDescr Left) xs ++ map (fmapOptDescr Right) ys
 
 optionsEnumDesc :: Show a => [(a, String)] -> [OptDescr (Either String a)]
 optionsEnumDesc xs = [Option "" [lower $ show x] (NoArg $ Right x) d | (x,d) <- xs]
