@@ -7,7 +7,7 @@ import Test.Type
 import Data.List
 import Data.Function
 import Control.Monad
-import System.Directory(getCurrentDirectory, setCurrentDirectory, createDirectory, createDirectoryIfMissing)
+import System.Directory(getCurrentDirectory, createDirectory, createDirectoryIfMissing)
 import qualified System.Directory as IO
 import qualified System.IO.Extra as IO
 
@@ -26,9 +26,9 @@ showEsc = concatMap f
           f x = [x]
 
 
-main = shakenCwd test $ \args obj -> do
+main = shakeTest_ test $ do
     let unobj = id
-    want $ map obj args
+    let obj = id
     obj "*.contents" %> \out ->
         writeFileLines out =<< getDirectoryContents (obj $ readEsc $ dropExtension $ unobj out)
     obj "*.dirs" %> \out ->
@@ -47,16 +47,15 @@ main = shakenCwd test $ \args obj -> do
 
     obj "dots" %> \out -> do
         cwd <- liftIO getCurrentDirectory
-        liftIO $ setCurrentDirectory $ obj ""
         b1 <- liftM2 (==) (getDirectoryContents ".") (getDirectoryContents "")
         b2 <- liftM2 (==) (getDirectoryDirs ".") (getDirectoryDirs "")
         b3 <- liftM2 (==) (getDirectoryFiles "." ["*.txt"]) (getDirectoryFiles "" ["*.txt"])
         b4 <- liftM2 (==) (getDirectoryFiles "." ["C.txt/*.txt"]) (getDirectoryFiles "" ["C.txt/*.txt"])
         b5 <- liftM2 (==) (getDirectoryFiles "." ["//*.txt"]) (getDirectoryFiles "" ["//*.txt"])
-        liftIO $ setCurrentDirectory cwd
         writeFileLines out $ map show [b1,b2,b3,b4,b5]
 
-test build obj = do
+test build = do
+    let obj = id
     let demand x ys = let f = showEsc x in do build [f]; assertContents (obj f) $ unlines $ words ys
     build ["clean"]
     demand " *.txt.files" ""
