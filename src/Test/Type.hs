@@ -4,6 +4,7 @@ module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     shakeTest, shakeTest_,
     shaken, shakenCwd, unobj,
+    root,
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChanged,
     assertWithin,
@@ -135,6 +136,9 @@ shakenEx reenter changeDir options test rules sleeper = do
                         rules extra2 files obj
 
 data Flags = Clean | Sleep deriving (Eq,Show)
+
+root :: FilePath
+root = "../.."
 
 tracker :: IO Lint
 tracker = do
