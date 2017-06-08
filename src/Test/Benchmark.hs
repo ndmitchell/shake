@@ -1,18 +1,22 @@
 
 module Test.Benchmark(main) where
 
+import General.GetOpt
+import Text.Read
 import Development.Shake
 import Test.Type
-import Data.List
 import Development.Shake.FilePath
 
 
+data Opts = Depth Int | Breadth Int
+opts = [Option "" ["depth"  ] (ReqArg (fmap Depth   . readEither) "INT") ""
+       ,Option "" ["breadth"] (ReqArg (fmap Breadth . readEither) "INT") ""]
+
 -- | Given a breadth and depth come up with a set of build files
-main = shakenCwd test $ \args obj -> do
-    let get ty = head $ [read $ drop (length ty + 1) a | a <- args, (ty ++ "=") `isPrefixOf` a] ++
-                        error ("Could not find argument, expected " ++ ty ++ "=Number")
-        depth = get "depth"
-        breadth = get "breadth"
+main = shakeTest test opts $ \opts -> do
+    let obj = id
+    let depth   = last $ error "Missing --depth"   : [x | Depth   x <- opts]
+    let breadth = last $ error "Missing --breadth" : [x | Breadth x <- opts]
 
     want [obj $ "0." ++ show i | i <- [1..breadth]]
     obj "*" %> \out -> do
@@ -20,8 +24,8 @@ main = shakenCwd test $ \args obj -> do
         need [obj $ show (d + 1) ++ "." ++ show i | d < depth, i <- [1..breadth]]
         writeFile' out ""
 
-test build obj = do
+test build = do
     -- these help to test the stack limit
     build ["clean"]
-    build ["breadth=75","depth=75"]
-    build ["breadth=75","depth=75"]
+    build ["--breadth=75","--depth=75"]
+    build ["--breadth=75","--depth=75"]
