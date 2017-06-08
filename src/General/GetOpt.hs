@@ -4,11 +4,14 @@ module General.GetOpt(
     getOpt,
     fmapOptDescr,
     showOptDescr,
+    removeOverlap,
     optionsEnumDesc
     ) where
 
 import qualified System.Console.GetOpt as O
 import System.Console.GetOpt hiding (getOpt)
+import qualified Data.Set as Set
+import Data.Maybe
 import Data.Either
 import Data.List.Extra
 
@@ -41,6 +44,17 @@ showOptDescr xs = concat
           long (ReqArg _ b) x = "--" ++ x ++ "=" ++ b
           long (OptArg _ b) x = "--" ++ x ++ "[=" ++ b ++ "]"
 
+
+-- | Remove flags from the first field that are present in the second
+removeOverlap :: [OptDescr b] -> [OptDescr a] -> [OptDescr a]
+removeOverlap bad = mapMaybe f
+    where
+        short = Set.fromList $ concat [x | Option x _ _ _ <- bad]
+        long  = Set.fromList $ concat [x | Option _ x _ _ <- bad]
+        f (Option a b c d) | null a2 && null b2 = Nothing
+                           | otherwise = Just $ Option a2 b2 c d
+            where a2 = filter (`Set.notMember` short) a
+                  b2 = filter (`Set.notMember` long) b
 
 optionsEnumDesc :: Show a => [(a, String)] -> [OptDescr (Either String a)]
 optionsEnumDesc xs = [Option "" [lower $ show x] (NoArg $ Right x) d | (x,d) <- xs]

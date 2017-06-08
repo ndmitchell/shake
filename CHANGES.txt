@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow user arguments to replace builtin arguments
     #522, make copyFile create directories if necessary
     #516, add an example for withTempDir
     #514, expose more about cmd arguments
