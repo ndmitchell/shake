@@ -6,8 +6,9 @@ import Development.Shake
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> do
-    if null args then want [obj "Out.txt",obj "Out2.txt"] else want $ map obj args
+main = shakeTest_ test $ do
+    let obj = id
+    want [obj "Out.txt",obj "Out2.txt"]
 
     obj "Out.txt" %> \out -> do
         txt <- readFile' $ obj "In.txt"
@@ -32,7 +33,8 @@ main = shakenCwd test $ \args obj -> do
         forM_ outs $ \out -> writeFile' out "rewrite"
 
 
-test build obj = do
+test build = do
+    let obj = id
     let outs = take 1 $ map obj ["Out.txt","Out1.txt","Out2.txt"]
     let writeOut x = forM_ outs $ \out -> writeFile out x
     let writeIn = writeFile (obj "In.txt")
