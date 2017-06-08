@@ -10,7 +10,7 @@ import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
 import qualified System.Directory as IO
-import System.Console.GetOpt
+import General.GetOpt
 import System.Process
 import System.Exit
 

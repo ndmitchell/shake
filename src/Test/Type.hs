@@ -32,7 +32,7 @@ import qualified Data.ByteString as BS
 import System.Directory.Extra as IO
 import System.Environment.Extra
 import System.Random
-import System.Console.GetOpt
+import General.GetOpt
 import System.IO.Extra as IO
 import System.Time.Extra
 import Prelude

@@ -11,6 +11,7 @@ import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
 import Development.Shake.Internal.Shake
 import General.Timing
+import General.GetOpt
 
 import Data.Tuple.Extra
 import Control.Concurrent
@@ -21,7 +22,6 @@ import Data.Either
 import Data.List
 import Data.Maybe
 import Data.Version(showVersion)
-import System.Console.GetOpt
 import System.Directory
 import System.Environment
 import System.Exit

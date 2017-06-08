@@ -157,6 +157,7 @@ library
         General.Concurrent
         General.Extra
         General.FileLock
+        General.GetOpt
         General.Ids
         General.Intern
         General.ListBuilder
@@ -250,6 +251,7 @@ executable shake
         General.Cleanup
         General.Concurrent
         General.Extra
+        General.GetOpt
         General.FileLock
         General.Ids
         General.Intern
@@ -357,6 +359,7 @@ test-suite shake-test
         General.Extra
         General.FileLock
         General.Ids
+        General.GetOpt
         General.Intern
         General.ListBuilder
         General.Process

@@ -12,7 +12,7 @@ import qualified General.Makefile as BS
 import Data.Tuple.Extra
 import Control.Applicative
 import Data.List
-import System.Console.GetOpt
+import General.GetOpt
 import Data.IORef
 import Data.Maybe
 import Control.Monad.Extra
