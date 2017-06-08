@@ -6,18 +6,16 @@ import Test.Type
 
 
 main = shakeTest_ test $ do
-    let obj = id
-
-    obj "in.txt" %> \out -> do
+    "in.txt" %> \out -> do
         a <- getVerbosity
         b <- withVerbosity Normal getVerbosity
         writeFile' out $ unwords $ map show [a,b]
 
-    obj "out.txt" %> \out -> do
+    "out.txt" %> \out -> do
         x <- getVerbosity
         ys <- withVerbosity Loud $ do
             a <- getVerbosity
-            need [obj "in.txt"] -- make sure the inherited verbosity does not get passed along
+            need ["in.txt"] -- make sure the inherited verbosity does not get passed along
             b <- getVerbosity
             c <- quietly getVerbosity
             d <- fmap shakeVerbosity getShakeOptions
@@ -26,15 +24,14 @@ main = shakeTest_ test $ do
         writeFile' out $ unwords $ map show $ [x] ++ ys ++ [z]
 
 test build = do
-    let obj = id
     build ["out.txt","--clean"]
-    assertContents (obj "in.txt") "Normal Normal"
-    assertContents (obj "out.txt") "Normal Loud Loud Quiet Normal Normal"
+    assertContents "in.txt" "Normal Normal"
+    assertContents "out.txt" "Normal Loud Loud Quiet Normal Normal"
 
     build ["out.txt","--clean","--verbose"]
-    assertContents (obj "in.txt") "Loud Normal"
-    assertContents (obj "out.txt") "Loud Loud Loud Quiet Loud Loud"
+    assertContents "in.txt" "Loud Normal"
+    assertContents "out.txt" "Loud Loud Loud Quiet Loud Loud"
 
     build ["out.txt","--clean","--quiet"]
-    assertContents (obj "in.txt") "Quiet Normal"
-    assertContents (obj "out.txt") "Quiet Loud Loud Quiet Quiet Quiet"
+    assertContents "in.txt" "Quiet Normal"
+    assertContents "out.txt" "Quiet Loud Loud Quiet Quiet Quiet"
