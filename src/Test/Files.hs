@@ -10,7 +10,7 @@ import General.GetOpt
 
 data Args = UsePredicate deriving (Eq,Show,Bounded,Enum)
 
-main = shakeTest optionsEnum test $ \opts -> do
+main = shakeTest test optionsEnum $ \opts -> do
     let obj = id
     want ["even.txt","odd.txt"]
 

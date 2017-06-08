@@ -22,7 +22,7 @@ opts =
     [Option "" ["prefix"] (ReqArg (Right . Prefix) "") ""
     ,Option "" ["want"] (ReqArg (Right . Want) "") ""]
 
-main = shakeTest opts test $ \xs -> do
+main = shakeTest test opts $ \xs -> do
     let obj = id
     let pre = last $ "" : [decode x | Prefix x <- xs :: [Arg]]
     want [decode x | Want x <- xs]

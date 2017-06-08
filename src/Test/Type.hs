@@ -41,12 +41,12 @@ import Prelude
 
 
 shakeTest
-    :: [OptDescr (Either String a)] -- ^ Arguments the test can accept
-    -> (([String] -> IO ()) -> IO ()) -- ^ The test driver
+    :: (([String] -> IO ()) -> IO ()) -- ^ The test driver
+    -> [OptDescr (Either String a)] -- ^ Arguments the test can accept
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest opts f g = shakenEx False True opts
+shakeTest f opts g = shakenEx False True opts
     (\run _ -> f run)
     (\os args _ -> if null args then g os else want args >> withoutActions (g os))
 
@@ -55,7 +55,7 @@ shakeTest_
     -> Rules () -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest_ f g = shakeTest [] f (const g)
+shakeTest_ f g = shakeTest f [] (const g)
 
 shaken, shakenCwd
     :: (([String] -> IO ()) -> (String -> String) -> IO ())

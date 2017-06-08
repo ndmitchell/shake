@@ -17,7 +17,7 @@ import Prelude
 
 data Args = Die deriving (Eq,Enum,Bounded,Show)
 
-main = shakeTest optionsEnum test $ \args -> do
+main = shakeTest test optionsEnum $ \args -> do
     "norule" %> \_ ->
         need ["norule_isavailable"]
 
