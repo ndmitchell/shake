@@ -6,6 +6,7 @@ module General.GetOpt(
     showOptDescr,
     mergeOptDescr,
     removeOverlap,
+    optionsEnum,
     optionsEnumDesc
     ) where
 
@@ -59,6 +60,9 @@ removeOverlap bad = mapMaybe f
 
 mergeOptDescr :: [OptDescr (Either String a)] -> [OptDescr (Either String b)] -> [OptDescr (Either String (Either a b))]
 mergeOptDescr xs ys = map (fmapOptDescr Left) xs ++ map (fmapOptDescr Right) ys
+
+optionsEnum :: (Enum a, Bounded a, Show a) => [OptDescr (Either String a)]
+optionsEnum = optionsEnumDesc [(x, "Flag " ++ lower (show x) ++ ".") | x <- [minBound..maxBound]]
 
 optionsEnumDesc :: Show a => [(a, String)] -> [OptDescr (Either String a)]
 optionsEnumDesc xs = [Option "" [lower $ show x] (NoArg $ Right x) d | (x,d) <- xs]
