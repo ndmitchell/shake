@@ -31,6 +31,6 @@ test build = do
     b <- try_ b
     out "after try b"
     when (length (filter isLeft [a,b]) /= 1) $
-        error $ "Expected one success and one failure, got " ++ show [a,b]
+        fail $ "Expected one success and one failure, got " ++ show [a,b]
     -- check it succeeds after the lock has been held
     build []
