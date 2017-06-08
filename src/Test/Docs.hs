@@ -16,41 +16,41 @@ import Data.Version.Extra
 -- Older versions of Haddock garbage the --@ markup
 brokenHaddock = compilerVersion < makeVersion [7,8]
 
-main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
-    let index = obj "dist/doc/html/shake/index.html"
-    let config = obj "dist/setup-config"
+main = shakeTest_ (unless brokenHaddock . noTest2) $ do
+    let obj = id
+    let index = root </> "dist/doc/html/shake/index.html"
+    let config = root </> "dist/setup-config"
     want [obj "Success.txt"]
 
-    want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
-
-    let needSource = need =<< getDirectoryFiles "." ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"]
+    let needSource = need =<< getDirectoryFiles "." (map (root </>)
+            ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
     config %> \_ -> do
-        need ["shake.cabal","Setup.hs"]
+        need $ map (root </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
-        cmd_ (RemEnv "GHC_PACKAGE_PATH") "runhaskell Setup.hs configure"
+        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure"
             ["--builddir=" ++ obj "dist","--user"]
             -- package-db is very sensitive, see #267
             ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
         trackAllow [obj "dist//*"]
 
     index %> \_ -> do
-        need [config,"shake.cabal","Setup.hs","README.md","CHANGES.txt"]
+        need $ config : map (root </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
         needSource
-        trackAllow [obj "dist//*"]
-        cmd "runhaskell Setup.hs haddock" ["--builddir=" ++ obj "dist"]
+        trackAllow [root </> "dist//*"]
+        cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ obj "dist"]
 
     obj "Paths_shake.hs" %> \out ->
-        copyFile' "src/Paths.hs" out
+        copyFile' (root </> "src/Paths.hs") out
 
     obj "Part_*.hs" %> \out -> do
-        need ["src/Test/Docs.hs"] -- so much of the generator is in this module
+        need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
-            fmap (findCodeMarkdown . lines . noR) $ readFile' $ "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
+            fmap (findCodeMarkdown . lines . noR) $ readFile' $ root </> "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap (findCodeHaddock . noR) $ readFile' $ obj $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . noR) $ readFile' $ root </> "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
 
         let (imports,rest) = partition ("import " `isPrefixOf`) $ showCode src
         writeFileChanged out $ unlines $
@@ -121,10 +121,10 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
             rest
 
     obj "Files.lst" %> \out -> do
-        need ["src/Test/Docs.hs"] -- so much of the generator is in this module
+        need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index,obj "Paths_shake.hs"]
-        filesHs <- getDirectoryFiles (obj "dist/doc/html/shake") ["Development-*.html"]
-        filesMd <- getDirectoryFiles "docs" ["*.md"]
+        filesHs <- getDirectoryFiles (root </> "dist/doc/html/shake") ["Development-*.html"]
+        filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
             ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd, takeBaseName x `notElem` ["Developing","Model"]]
@@ -139,7 +139,7 @@ main = shaken (\a b -> unless brokenHaddock $ noTest a b) $ \args obj -> do
         needModules
         need [obj "Main.hs", obj "Paths_shake.hs"]
         needSource
-        cmd_ "runhaskell -ignore-package=hashmap " ["-i" ++ obj "","-isrc",obj "Main.hs"]
+        cmd_ "runhaskell -ignore-package=hashmap " ["-i.","-i" ++ root </> "src",obj "Main.hs"]
         writeFile' out ""
 
 
