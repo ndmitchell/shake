@@ -10,7 +10,7 @@ import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
-main = shakenCwd test $ \args obj -> return ()
+main = shakeTest_ test $ return ()
 
 
 newtype Pattern = Pattern FilePattern deriving (Show,Eq)
@@ -27,7 +27,7 @@ instance Arbitrary Path where
     shrink (Path x) = map Path $ shrinkList (\x -> ['/' | x == '\\']) x
 
 
-test build obj = do
+test build = do
     internalTest
     let f b pat file = do
             assertBool (b == (pat ?== file)) $ show pat ++ " ?== " ++ show file ++ "\nEXPECTED: " ++ show b
