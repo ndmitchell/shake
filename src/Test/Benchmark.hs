@@ -2,7 +2,6 @@
 module Test.Benchmark(main) where
 
 import General.GetOpt
-import Text.Read
 import Development.Shake
 import Test.Type
 import Development.Shake.FilePath
@@ -11,6 +10,8 @@ import Development.Shake.FilePath
 data Opts = Depth Int | Breadth Int
 opts = [Option "" ["depth"  ] (ReqArg (fmap Depth   . readEither) "INT") ""
        ,Option "" ["breadth"] (ReqArg (fmap Breadth . readEither) "INT") ""]
+
+readEither = Right . read -- FIXME: Use the version from extra once available
 
 -- | Given a breadth and depth come up with a set of build files
 main = shakeTest test opts $ \opts -> do
