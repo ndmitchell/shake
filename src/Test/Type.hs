@@ -107,22 +107,18 @@ shakenEx changeDir options test rules sleeper = do
                 ,shakeLintInside = [cwd]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs (args \\ files) $ do
-                let shakeWithClean clean opts rules = shakeArgsWith opts [cleanOpt] f
-                        where
-                            cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
-
-                            f extra files = do
-                                when (extra /= []) clean
-                                if "clean" `elem` files then
-                                    clean >> return Nothing
-                                else
-                                    return $ Just $ if null files then rules else want files >> withoutActions rules
-                change $ shakeWithClean
-                    (unchange $ removeDirectoryRecursive out)
-                    opts
+                let clean = unchange $ removeDirectoryRecursive out
                     -- if you have passed sleep, supress the "no errors" warning
-                    (do rules [] files obj; when ("--sleep" `elem` args) $ action $ return ())
+                rules <- return (do rules [] files obj; when ("--sleep" `elem` args) $ action $ return ())
+                let cleanOpt = Option "c" ["clean"] (NoArg $ Right ()) "Clean before building."
 
+                    f extra files = do
+                        when (extra /= []) clean
+                        if "clean" `elem` files then
+                            clean >> return Nothing
+                        else
+                            return $ Just $ if null files then rules else want files >> withoutActions rules
+                change $ shakeArgsWith opts [cleanOpt] f
 
 tracker :: IO Lint
 tracker = do
