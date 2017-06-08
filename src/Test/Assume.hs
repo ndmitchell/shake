@@ -7,14 +7,15 @@ import Control.Monad
 import Development.Shake.FilePath
 
 
-main = shakenCwd test $ \args obj -> do
-    want $ map obj args
+main = shakeTest_ test $ do
+    let obj = id
     obj "*.out" %> \out -> do
         cs <- mapM (readFile' . obj . (:".src")) $ takeBaseName out
         writeFile' out $ concat cs
 
 
-test build obj = do
+test build = do
+    let obj = id
     let set file c = writeFile (obj $ file : ".src") [c]
     let ask file c = do src <- readFile (obj $ file ++ ".out"); src === c
 
