@@ -13,7 +13,7 @@ import qualified Development.Shake.Internal.FileName as BS
 import System.Info.Extra
 
 
-main = shakenCwd test $ \args obj -> return ()
+main = shakeTest_ test $ return ()
 
 
 newtype File = File String deriving Show
@@ -23,7 +23,7 @@ instance Arbitrary File where
     shrink (File x) = map File $ shrink x
 
 
-test build obj = do
+test build = do
     let a === b = a Test.Type.=== b -- duplicate definition in QuickCheck 2.7 and above
 
     let norm x =
