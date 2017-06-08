@@ -10,14 +10,14 @@ import System.Time.Extra
 import Test.Type
 
 
-main = shaken test $ \args obj ->
+main = shakeTest_ test $
     action $ do
         putNormal "Starting sleep"
         liftIO $ sleep 5
         putNormal "Finished sleep"
 
 
-test build obj = do
+test build = do
     -- check it fails exactly once
     time <- offsetTime
     lock <- newLock
