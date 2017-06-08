@@ -45,7 +45,7 @@ shakeTest
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest opts f g = shakenEx True opts
+shakeTest opts f g = shakenEx False True opts
     (\run _ -> f run)
     (\os args _ -> if null args then g os else want args >> withoutActions (g os))
 
@@ -63,16 +63,17 @@ shaken, shakenCwd
     -> IO ()
 shaken = shakeExOld False
 shakenCwd = shakeExOld True
-shakeExOld b f g = shakenEx b [] f (const g)
+shakeExOld b f g = shakenEx False b [] f (const g)
 
 shakenEx
     :: Bool
+    -> Bool
     -> [OptDescr (Either String a)]
     -> (([String] -> IO ()) -> (String -> String) -> IO ())
     -> ([a] -> [String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shakenEx changeDir options test rules sleeper = do
+shakenEx reenter changeDir options test rules sleeper = do
     -- my debug getDataFileName (in Paths) uses a cache of the Cwd
     -- make sure we force the cache before changing directory
     getDataFileName ""
@@ -85,7 +86,7 @@ shakenEx changeDir options test rules sleeper = do
     let out = "output/" ++ name ++ "/"
     let obj x | changeDir = if null x then "." else x
               | otherwise = if "/" `isPrefixOf` x || null x then init out ++ x else out ++ x
-    let change = if changeDir then withCurrentDirectory out else id
+    let change = if changeDir && not reenter then withCurrentDirectory out else id
     let unchange act = do
             new <- getCurrentDirectory
             withCurrentDirectory cwd $ do act; createDirectoryIfMissing True new -- to deal with clean
@@ -94,7 +95,7 @@ shakenEx changeDir options test rules sleeper = do
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            change $ test (\args -> withArgs (name:args ++ extra) $ unchange $ shakenEx changeDir options test rules sleeper) obj
+            change $ test (\args -> withArgs (name:args ++ extra) $ shakenEx changeDir True options test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":_ -> removeDirectoryRecursive out
