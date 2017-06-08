@@ -30,6 +30,7 @@ main = shakeTest_ (unless brokenHaddock . noTest2) $ do
         need $ map (root </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
+        liftIO $ createDirectoryIfMissing True "dist"
         dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
         cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure"
             ["--builddir=" ++ dist,"--user"]
