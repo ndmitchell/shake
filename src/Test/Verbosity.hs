@@ -5,8 +5,8 @@ import Development.Shake
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> do
-    want $ map obj args
+main = shakeTest_ test $ do
+    let obj = id
 
     obj "in.txt" %> \out -> do
         a <- getVerbosity
@@ -25,7 +25,8 @@ main = shakenCwd test $ \args obj -> do
         z <- getVerbosity
         writeFile' out $ unwords $ map show $ [x] ++ ys ++ [z]
 
-test build obj = do
+test build = do
+    let obj = id
     build ["out.txt","--clean"]
     assertContents (obj "in.txt") "Normal Normal"
     assertContents (obj "out.txt") "Normal Loud Loud Quiet Normal Normal"
