@@ -5,7 +5,7 @@ module Test.Type(
     shakeTest, shakeTest_,
     shaken, shakenCwd, unobj,
     root,
-    noTest, hasTracker,
+    noTest, noTest2, hasTracker,
     copyDirectoryChanged, copyFileChanged,
     assertWithin,
     assertBool, assertBoolIO, assertException,
@@ -210,7 +210,10 @@ assertException parts act = do
 
 
 noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
-noTest build obj = do
+noTest build _ = noTest2 build
+
+noTest2 :: ([String] -> IO ()) -> IO ()
+noTest2 build = do
     build ["--abbrev=output=$OUT","-j3"]
     build ["--no-build","--report=-"]
     build []
