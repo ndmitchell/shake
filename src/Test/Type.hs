@@ -94,7 +94,7 @@ shakenEx reenter changeDir options test rules sleeper = do
             withCurrentDirectory (now </> "..") $ do
                 removeDirectoryRecursive now
                 createDirectoryIfMissing True now
-    when (not reenter) $ createDirectoryIfMissing True out
+    unless reenter $ createDirectoryIfMissing True out
     case args of
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
