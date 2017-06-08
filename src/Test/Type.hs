@@ -3,7 +3,7 @@
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     shakeTest, shakeTest_,
-    shaken, shakenCwd, unobj,
+    shaken, unobj,
     root,
     noTest, noTest2, hasTracker,
     copyDirectoryChanged, copyFileChanged,
@@ -57,14 +57,12 @@ shakeTest_
     -> IO ()
 shakeTest_ f g = shakeTest f [] (const g)
 
-shaken, shakenCwd
+shaken
     :: (([String] -> IO ()) -> (String -> String) -> IO ())
     -> ([String] -> (String -> String) -> Rules ())
     -> IO ()
     -> IO ()
-shaken = shakeExOld False
-shakenCwd = shakeExOld True
-shakeExOld b f g = shakenEx False b [] f (const g)
+shaken f g = shakenEx False False [] f (const g)
 
 shakenEx
     :: Bool
