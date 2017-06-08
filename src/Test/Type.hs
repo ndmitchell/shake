@@ -5,7 +5,7 @@ module Test.Type(
     shakeTest, shakeTest_,
     shaken, unobj,
     root,
-    noTest2, hasTracker,
+    noTest, hasTracker,
     copyDirectoryChanged, copyFileChanged,
     assertWithin,
     assertBool, assertBoolIO, assertException,
@@ -207,8 +207,8 @@ assertException parts act = do
         Right _ -> error $ "Expected an exception containing " ++ show parts ++ ", but succeeded"
 
 
-noTest2 :: ([String] -> IO ()) -> IO ()
-noTest2 build = do
+noTest :: ([String] -> IO ()) -> IO ()
+noTest build = do
     build ["--abbrev=output=$OUT","-j3"]
     build ["--no-build","--report=-"]
     build []

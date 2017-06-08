@@ -22,7 +22,7 @@ newtype GhcFlags = GhcFlags () deriving (Show,Typeable,Eq,Hashable,Binary,NFData
 type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
-main = shakeTest_ noTest2 $ do
+main = shakeTest_ noTest $ do
     let obj = id
     let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
     want ["Main" <.> exe]

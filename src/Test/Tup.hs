@@ -11,7 +11,7 @@ import Data.Maybe
 import Prelude
 
 
-main = shakeTest_ noTest2 $ do
+main = shakeTest_ noTest $ do
     let obj = id
     -- Example inspired by http://gittup.org/tup/ex_multiple_directories.html
     usingConfigFile $ root </> "src/Test/Tup/root.cfg"

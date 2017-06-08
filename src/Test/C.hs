@@ -5,7 +5,7 @@ import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
 
-main = shakeTest_ noTest2 $ do
+main = shakeTest_ noTest $ do
     let obj = id
     let src = root </> "src/Test/C"
     want [obj "Main.exe"]
