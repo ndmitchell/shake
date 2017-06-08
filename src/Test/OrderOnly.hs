@@ -7,56 +7,54 @@ import System.Directory(removeFile)
 import Control.Exception.Extra
 
 
-main = shakenCwd test $ \args obj -> do
-    want $ map obj args
-
-    obj "bar.txt" %> \out -> do
+main = shakeTest_ test $ do
+    "bar.txt" %> \out -> do
         alwaysRerun
-        writeFile' out =<< liftIO (readFile $ obj "bar.in")
+        writeFile' out =<< liftIO (readFile "bar.in")
 
-    obj "foo.txt" %> \out -> do
-        let src = obj "bar.txt"
+    "foo.txt" %> \out -> do
+        let src = "bar.txt"
         orderOnly [src]
         writeFile' out =<< liftIO (readFile src)
         need [src]
 
-    obj "baz.txt" %> \out -> do
-        let src = obj "bar.txt"
+    "baz.txt" %> \out -> do
+        let src = "bar.txt"
         orderOnly [src]
         liftIO $ appendFile out "x"
 
-    obj "primary.txt" %> \out -> do
-        need [obj "source.txt"]
-        orderOnly [obj "intermediate.txt"]
-        writeFile' out =<< liftIO (readFile $ obj "intermediate.txt")
+    "primary.txt" %> \out -> do
+        need ["source.txt"]
+        orderOnly ["intermediate.txt"]
+        writeFile' out =<< liftIO (readFile "intermediate.txt")
 
-    obj "intermediate.txt" %> \out ->
-        copyFile' (obj "source.txt") out
+    "intermediate.txt" %> \out ->
+        copyFile' "source.txt" out
 
 
-test build obj = do
-    writeFile (obj "bar.in") "in"
+test build = do
+    writeFile "bar.in" "in"
     build ["foo.txt","--sleep"]
-    assertContents (obj "foo.txt") "in"
-    writeFile (obj "bar.in") "out"
+    assertContents "foo.txt" "in"
+    writeFile "bar.in" "out"
     build ["foo.txt","--sleep"]
-    assertContents (obj "foo.txt") "out"
+    assertContents "foo.txt" "out"
 
-    writeFile (obj "baz.txt") ""
-    writeFile (obj "bar.in") "in"
+    writeFile "baz.txt" ""
+    writeFile "bar.in" "in"
     build ["baz.txt","--sleep"]
-    assertContents (obj "baz.txt") "x"
-    writeFile (obj "bar.in") "out"
+    assertContents "baz.txt" "x"
+    writeFile "bar.in" "out"
     build ["baz.txt"]
-    assertContents (obj "baz.txt") "x"
+    assertContents "baz.txt" "x"
 
-    ignore $ removeFile $ obj "intermediate.txt"
-    writeFile (obj "source.txt") "x"
+    ignore $ removeFile "intermediate.txt"
+    writeFile "source.txt" "x"
     build ["primary.txt","--sleep"]
-    assertContents (obj "intermediate.txt") "x"
-    removeFile $ obj "intermediate.txt"
+    assertContents "intermediate.txt" "x"
+    removeFile "intermediate.txt"
     build ["primary.txt","--sleep"]
-    assertMissing $ obj "intermediate.txt"
-    writeFile (obj "source.txt") "y"
+    assertMissing "intermediate.txt"
+    writeFile "source.txt" "y"
     build ["primary.txt","--sleep"]
-    assertContents (obj "intermediate.txt") "y"
+    assertContents "intermediate.txt" "y"
