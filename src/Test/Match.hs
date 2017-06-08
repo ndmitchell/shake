@@ -6,8 +6,8 @@ import Development.Shake
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> do
-    want $ map obj args
+main = shakeTest_ test $ do
+    let obj = id
     let output x file = writeFile' file x
 
     ["or*","*or"] |%> output ""
@@ -41,7 +41,8 @@ main = shakenCwd test $ \args obj -> do
     priority 9 $ obj "change" %> output "9"
 
 
-test build obj = do
+test build = do
+    let obj = id
     build ["clean"]
     build ["or"]
 
