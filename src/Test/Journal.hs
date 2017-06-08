@@ -14,14 +14,16 @@ rebuilt :: IORef Int
 rebuilt = unsafePerformIO $ newIORef 0
 
 
-main = shakenCwd test $ \args obj -> do
+main = shakeTest_ test $ do
+    let obj = id
     want $ map obj ["a.out","b.out","c.out"]
     obj "*.out" %> \out -> do
         liftIO $ atomicModifyIORef rebuilt $ \a -> (a+1,())
         copyFile' (out -<.> "in") out
 
 
-test build obj = do
+test build = do
+    let obj = id
     
     let change x = writeFile (obj $ x <.> "in") x
     let count x = do
