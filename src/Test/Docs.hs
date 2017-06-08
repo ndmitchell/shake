@@ -4,6 +4,7 @@ module Test.Docs(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import System.Directory
 import Test.Type
 import Control.Monad
 import Data.Char
@@ -29,8 +30,9 @@ main = shakeTest_ (unless brokenHaddock . noTest2) $ do
         need $ map (root </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
+        dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
         cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure"
-            ["--builddir=" ++ obj "dist","--user"]
+            ["--builddir=" ++ dist,"--user"]
             -- package-db is very sensitive, see #267
             ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
         trackAllow [obj "dist//*"]
@@ -39,7 +41,8 @@ main = shakeTest_ (unless brokenHaddock . noTest2) $ do
         need $ config : map (root </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
         needSource
         trackAllow [root </> "dist//*"]
-        cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ obj "dist"]
+        dist <- liftIO $ canonicalizePath "dist"
+        cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
     obj "Paths_shake.hs" %> \out ->
         copyFile' (root </> "src/Paths.hs") out
