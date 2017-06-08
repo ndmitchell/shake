@@ -68,10 +68,9 @@ shakenEx changeDir options test rules sleeper = do
     getDataFileName ""
 
     name:args <- getArgs
-    when ("--sleep" `elem` args) sleeper
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let forward = "--forward" `elem` args
-    args <- return $ args \\ ["--sleep","--forward"]
+    args <- return $ delete "--forward" args
     cwd <- getCurrentDirectory
     let out = "output/" ++ name ++ "/"
     let obj x | changeDir = if null x then "." else x
@@ -98,7 +97,6 @@ shakenEx changeDir options test rules sleeper = do
 
         args -> do
             t <- tracker
-            let (_,files,_) = getOpt [] args
             opts <- return $ shakeOptions
                 {shakeFiles = obj ""
                 ,shakeReport = [obj "report.html"]}
@@ -107,18 +105,21 @@ shakenEx changeDir options test rules sleeper = do
                 ,shakeLintInside = [cwd]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             let clean = unchange $ removeDirectoryRecursive out
-            withArgs (args \\ files) $ do
-                    -- if you have passed sleep, supress the "no errors" warning
-                rules <- return (do rules [] files obj; when ("--sleep" `elem` args) $ action $ return ())
-                let cleanOpt = optionsEnumDesc [(Clean, "Clean before building.")]
+            withArgs args $ do
+                let cleanOpt = optionsEnumDesc
+                        [(Clean, "Clean before building.")
+                        ,(Sleep, "Pause before executing.")]
                 change $ shakeArgsWith opts cleanOpt $ \extra files -> do
                     when (Clean `elem` extra) clean
+                    when (Sleep `elem` extra) sleeper
                     if "clean" `elem` files then
                         clean >> return Nothing
-                    else
-                        return $ Just $ if null files then rules else want files >> withoutActions rules
+                    else return $ Just $ do
+                        -- if you have passed sleep, supress the "no actions" warning
+                        when (Sleep `elem` extra) $ action $ return ()
+                        rules [] files obj
 
-data Flags = Clean deriving (Eq,Show)
+data Flags = Clean | Sleep deriving (Eq,Show)
 
 tracker :: IO Lint
 tracker = do
