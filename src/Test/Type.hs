@@ -45,7 +45,9 @@ shakeTest
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest = undefined
+shakeTest opts f g = shakenEx True opts
+    (\run _ -> f run)
+    (\os args _ -> if null args then g os else want args >> withoutActions (g os))
 
 shaken, shakenCwd
     :: (([String] -> IO ()) -> (String -> String) -> IO ())
