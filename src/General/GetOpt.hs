@@ -2,6 +2,7 @@
 module General.GetOpt(
     OptDescr(..), ArgDescr(..),
     getOpt,
+    fmapOptDescr,
     showOptDescr
     ) where
 
@@ -14,6 +15,14 @@ getOpt :: [OptDescr (Either String a)] -> [String] -> ([a], [String], [String])
 getOpt opts args = (flagGood, files, flagBad ++ errs)
     where (flags, files, errs) = O.getOpt O.Permute opts args
           (flagBad, flagGood) = partitionEithers flags
+
+
+-- fmap is only an instance in later GHC 7.8 and above, so fake our own version
+fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
+fmapOptDescr f (Option a b c d) = Option a b (g c) d
+    where g (NoArg a) = NoArg $ f a
+          g (ReqArg a b) = ReqArg (f . a) b
+          g (OptArg a b) = OptArg (f . a) b
 
 
 showOptDescr :: [OptDescr a] -> [String]

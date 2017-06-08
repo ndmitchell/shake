@@ -197,13 +197,6 @@ shakeArgsWith baseOpts userOptions rules = do
         wrap = fmapOptDescr . fmap
 
 
-fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
-fmapOptDescr f (Option a b c d) = Option a b (g c) d
-    where g (NoArg a) = NoArg $ f a
-          g (ReqArg a b) = ReqArg (f . a) b
-          g (OptArg a b) = OptArg (f . a) b
-
-
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns
 --   either an error message (invalid argument to the flag) or a function that changes some fields
 --   in 'ShakeOptions'. The command line flags are @make@ compatible where possbile, but additional
