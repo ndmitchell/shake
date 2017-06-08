@@ -18,11 +18,11 @@ getOpt opts args = (flagGood, files, flagBad ++ errs)
 
 
 -- fmap is only an instance in later GHC 7.8 and above, so fake our own version
-fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
+fmapOptDescr :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
 fmapOptDescr f (Option a b c d) = Option a b (g c) d
-    where g (NoArg a) = NoArg $ f a
-          g (ReqArg a b) = ReqArg (f . a) b
-          g (OptArg a b) = OptArg (f . a) b
+    where g (NoArg a) = NoArg $ fmap f a
+          g (ReqArg a b) = ReqArg (fmap f . a) b
+          g (OptArg a b) = OptArg (fmap f . a) b
 
 
 showOptDescr :: [OptDescr a] -> [String]

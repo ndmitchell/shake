@@ -188,13 +188,10 @@ shakeArgsWith baseOpts userOptions rules = do
                         time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
                     putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
-        opts = map (wrap Left . snd) shakeOptsEx ++ map (wrap Right) userOptions
+        opts = map (fmapOptDescr Left . snd) shakeOptsEx ++ map (fmapOptDescr Right) userOptions
         showHelp = do
             progName <- getProgName
             putStr $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
-
-        wrap :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
-        wrap = fmapOptDescr . fmap
 
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns
@@ -202,7 +199,7 @@ shakeArgsWith baseOpts userOptions rules = do
 --   in 'ShakeOptions'. The command line flags are @make@ compatible where possbile, but additional
 --   flags have been added for the extra options Shake supports.
 shakeOptDescrs :: [OptDescr (Either String (ShakeOptions -> ShakeOptions))]
-shakeOptDescrs = [fmapOptDescr (fmap snd) o | (True, o) <- shakeOptsEx]
+shakeOptDescrs = [fmapOptDescr snd o | (True, o) <- shakeOptsEx]
 
 data Extra = ChangeDirectory FilePath
            | Version

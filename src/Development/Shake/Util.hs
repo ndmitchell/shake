@@ -76,7 +76,7 @@ shakeArgsPrune opts prune rules = shakeArgsPruneWith opts prune [] f
 -- | A version of 'shakeArgsPrune' that also takes a list of extra options to use.
 shakeArgsPruneWith :: ShakeOptions -> ([FilePath] -> IO ()) -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
 shakeArgsPruneWith opts prune flags act = do
-    let flags2 = Option "P" ["prune"] (NoArg $ Right Nothing) "Remove stale files" : map (fmapOptDescr $ fmap Just) flags
+    let flags2 = Option "P" ["prune"] (NoArg $ Right Nothing) "Remove stale files" : map (fmapOptDescr Just) flags
     pruning <- newIORef False
     shakeArgsWith opts flags2 $ \opts args ->
         if any isNothing opts then do
