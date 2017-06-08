@@ -5,11 +5,13 @@ import Development.Shake
 import Test.Type
 
 
-main = shakenCwd test $ \args obj -> do
+main = shakeTest_ test $ do
+    let obj = id
     want [obj "foo.txt"]
     obj "foo.txt" %> \file -> liftIO $ appendFile file "x"
 
-test build obj = do
+test build = do
+    let obj = id
     writeFile (obj "foo.txt") ""
     v1 <- getHashedShakeVersion [obj "foo.txt"]
     writeFile (obj "foo.txt") "y"
