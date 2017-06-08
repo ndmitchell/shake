@@ -5,6 +5,7 @@ module Test.Oracle(main) where
 
 import Development.Shake
 import Development.Shake.Classes
+import General.GetOpt
 import Test.Type hiding (RandomType)
 import qualified Test.Type as T
 import Control.Monad
@@ -20,7 +21,12 @@ newtype RandomType = RandomType (BinarySentinel String)
 type instance RuleResult RandomType = ()
 type instance RuleResult T.RandomType = ()
 
-main = shakenCwd test $ \args obj -> do
+data Opt = Plus String | Star String | At String | Perc String | Bang String
+opts = [f "plus" Plus, f "star" Star, f "at" At, f "perc" Perc, f "bang" Bang]
+    where f s con = Option "" [s] (ReqArg (Right . con) "") ""
+
+main = shakeTest test opts $ \args -> do
+    let obj = id
     addOracle $ \(T.RandomType _) -> return ()
     addOracle $ \(RandomType _) -> return ()
     action $ do
@@ -37,45 +43,46 @@ main = shakenCwd test $ \args obj -> do
               ,f "int-str" (0::Int) ""]
 
     forM_ args $ \a -> case a of
-        '+':x | Just (add,_) <- lookup x tbl -> add
-        '*':x | Just (_,use) <- lookup x tbl -> use
-        '@':key -> do addOracle $ \() -> return key; return ()
-        '%':name -> let o = obj "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
-        '!':name -> do want [obj "rerun"]; obj "rerun" %> \out -> do alwaysRerun; writeFile' out name
+        Plus x | Just (add,_) <- lookup x tbl -> add
+        Star x | Just (_,use) <- lookup x tbl -> use
+        At key -> do addOracle $ \() -> return key; return ()
+        Perc name -> let o = obj "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
+        Bang name -> do want [obj "rerun"]; obj "rerun" %> \out -> do alwaysRerun; writeFile' out name
 
-test build obj = do
+test build = do
+    let obj = id
     build ["clean"]
 
     -- check it rebuilds when it should
-    build ["@key","%name"]
+    build ["--at=key","--perc=name"]
     assertContents (obj "unit.txt") "name"
-    build ["@key","%test"]
+    build ["--at=key","--perc=test"]
     assertContents (obj "unit.txt") "name"
-    build ["@foo","%test"]
+    build ["--at=foo","--perc=test"]
     assertContents (obj "unit.txt") "test"
 
     -- check adding/removing redundant oracles does not trigger a rebuild
-    build ["@foo","%newer","+str-bool"]
+    build ["--at=foo","--perc=newer","--plus=str-bool"]
     assertContents (obj "unit.txt") "test"
-    build ["@foo","%newer","+int-str"]
+    build ["--at=foo","--perc=newer","--plus=int-str"]
     assertContents (obj "unit.txt") "test"
-    build ["@foo","%newer"]
+    build ["--at=foo","--perc=newer"]
     assertContents (obj "unit.txt") "test"
 
     -- check always run works
-    build ["!foo"]
+    build ["--bang=foo"]
     assertContents (obj "rerun") "foo"
-    build ["!bar"]
+    build ["--bang=bar"]
     assertContents (obj "rerun") "bar"
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
 
-    build ["+str-bool","*str-bool"]
-    errors ["*str-bool"] -- Building with an an Oracle that has been removed
+    build ["--plus=str-bool","--star=str-bool"]
+    errors ["--star=str-bool"] -- Building with an an Oracle that has been removed
         "missing a call to addOracle"
 
-    errors ["*bool-str"] -- Building with an Oracle that I know nothing about
+    errors ["--star=bool-str"] -- Building with an Oracle that I know nothing about
         "missing a call to addOracle"
 
 {-
@@ -89,10 +96,10 @@ test build obj = do
     errors ["+str-int","*str-bool"] -- Using an Oracle at the wrong answer type
         "askOracle is used at the wrong type"
 -}
-    errors ["+str-bool","+str-bool"] -- Two Oracles work if they aren't used
+    errors ["--plus=str-bool","--plus=str-bool"] -- Two Oracles work if they aren't used
         "" -- TODO: Should they?
-    errors ["+str-bool","+str-bool","*str-bool"] -- Two Oracles fail if they are used
-        "Internal error" -- TODO: "Only one call to addOracle is allowed"
+    errors ["--plus=str-bool","--plus=str-bool","--star=str-bool"] -- Two Oracles fail if they are used
+        "Internal error" -- TODO!: "Only one call to addOracle is allowed"
 
 {-
     errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
