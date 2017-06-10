@@ -19,8 +19,8 @@ brokenHaddock = compilerVersion < makeVersion [7,8]
 
 main = shakeTest_ (unless brokenHaddock . noTest) $ do
     let obj = id
-    let index = root </> "dist/doc/html/shake/index.html"
-    let config = root </> "dist/setup-config"
+    let index = "dist/doc/html/shake/index.html"
+    let config = "dist/setup-config"
     want [obj "Success.txt"]
 
     let needSource = need =<< getDirectoryFiles "." (map (root </>)
