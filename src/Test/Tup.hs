@@ -11,9 +11,10 @@ import Data.Maybe
 import Prelude
 
 
-main = shaken noTest $ \args obj -> do
+main = shakeTest_ noTest2 $ do
+    let obj = id
     -- Example inspired by http://gittup.org/tup/ex_multiple_directories.html
-    usingConfigFile "src/Test/Tup/root.cfg"
+    usingConfigFile $ root </> "src/Test/Tup/root.cfg"
 
     action $ do
         keys <- getConfigKeys
@@ -37,7 +38,7 @@ main = shaken noTest $ \args obj -> do
         cmd "ar crs" [out] os
 
     obj "//*.o" %> \out -> do
-        let src = "src/Test/Tup" </> unobj out -<.> "c"
+        let src = root </> "src/Test/Tup" </> out -<.> "c"
         need [src]
-        () <- cmd "gcc -c -MMD -MF" [out -<.> "d"] [src] "-o" [out] "-O2 -Wall -Isrc/Test/Tup/newmath"
+        cmd_ "gcc -c -MMD -MF" [out -<.> "d"] [src] "-o" [out] "-O2 -Wall" ["-I" ++ root </> "src/Test/Tup/newmath"]
         neededMakefileDependencies $ out -<.> "d"
