@@ -3,7 +3,7 @@
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     shakeTest, shakeTest_,
-    shaken, unobj,
+    shaken,
     root,
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChanged,
@@ -150,9 +150,6 @@ hasTracker = do
   t <- tracker
   return $ t == LintFSATrace
 
-
-unobj :: FilePath -> FilePath
-unobj = dropDirectory1 . dropDirectory1
 
 assertBool :: Bool -> String -> IO ()
 assertBool b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
