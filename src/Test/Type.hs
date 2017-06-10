@@ -5,7 +5,7 @@ module Test.Type(
     shakeTest, shakeTest_,
     shaken, unobj,
     root,
-    noTest, noTest2, hasTracker,
+    noTest2, hasTracker,
     copyDirectoryChanged, copyFileChanged,
     assertWithin,
     assertBool, assertBoolIO, assertException,
@@ -206,9 +206,6 @@ assertException parts act = do
             assertBool (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
         Right _ -> error $ "Expected an exception containing " ++ show parts ++ ", but succeeded"
 
-
-noTest :: ([String] -> IO ()) -> (String -> String) -> IO ()
-noTest build _ = noTest2 build
 
 noTest2 :: ([String] -> IO ()) -> IO ()
 noTest2 build = do
