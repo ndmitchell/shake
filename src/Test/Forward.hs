@@ -7,8 +7,9 @@ import Development.Shake.FilePath
 import Control.Monad.Extra
 import Test.Type
 
-main = shaken test $ \args obj -> forwardRule $ do
-    let src = "src/Test/C"
+main = shakeTest_ test $ forwardRule $ do
+    let obj = id
+    let src = root </> "src/Test/C"
     cs <- getDirectoryFiles src ["*.c"]
     os <- forP cs $ \c -> do
         let o = obj c <.> "o"
@@ -16,7 +17,7 @@ main = shaken test $ \args obj -> forwardRule $ do
         return o
     cache $ cmd "gcc -o" [obj "Main" <.> exe] os
 
-test build obj =
+test build =
     whenM hasTracker $ do
         build ["--forward","--clean"]
         build ["--forward","-j2"]
