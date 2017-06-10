@@ -41,7 +41,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
     index %> \_ -> do
         need $ config : map (root </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
         needSource
-        trackAllow [root </> "dist//*"]
+        trackAllow ["dist//*"]
         dist <- liftIO $ canonicalizePath "dist"
         cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
