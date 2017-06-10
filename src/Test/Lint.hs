@@ -15,9 +15,8 @@ newtype Zero = Zero () deriving (Eq, Show, NFData, Typeable, Hashable, Binary)
 
 type instance RuleResult Zero = Zero
 
-main = shaken test $ \args obj -> do
-    want $ map obj args
-
+main = shakeTest_ test $ do
+    let obj = id
     addOracle $ \Zero{} -> do
         liftIO $ createDirectoryIfMissing True $ obj "dir"
         liftIO $ setCurrentDirectory $ obj "dir"
@@ -109,7 +108,8 @@ main = shaken test $ \args obj -> do
                             else cmd Shell "cat" f "> /dev/null"
 
 
-test build obj = do
+test build = do
+    let obj = id
     dir <- getCurrentDirectory
     let crash args parts =
             assertException parts (build $ "--quiet" : args)
@@ -121,7 +121,7 @@ test build obj = do
     crash ["--clean","cdir.1","pause.2","-j2"] ["output","lint","current directory has changed"]
     crash ["existance"] ["changed since being depended upon"]
     crash ["createtwice"] ["changed since being depended upon"]
-    crash ["listing"] ["changed since being depended upon","output/lint"]
+    crash ["listing"] ["changed since being depended upon","listing.ls2"]
     crash ["--clean","listing","existance"] ["changed since being depended upon"]
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
@@ -130,10 +130,10 @@ test build obj = do
         writeFile (obj "tracker-source2") ""
         writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
         writeFile (obj "tracker-source.h") ""
-        crash ["tracker-write1"] ["not have its creation tracked","lint/tracker-write1","lint/tracker-write1.txt"]
+        crash ["tracker-write1"] ["not have its creation tracked","tracker-write1","tracker-write1.txt"]
         build ["tracker-write2"]
-        crash ["tracker-read1"] ["used but not depended upon","lint/tracker-source1"]
+        crash ["tracker-read1"] ["used but not depended upon","tracker-source1"]
         build ["tracker-read2"]
-        crash ["tracker-read3"] ["depended upon after being used","lint/tracker-source2"]
+        crash ["tracker-read3"] ["depended upon after being used","tracker-source2"]
         build ["tracker-compile.o"]
         build ["tracker-compile-auto.o"]
