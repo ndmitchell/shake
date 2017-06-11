@@ -18,10 +18,9 @@ import Data.Version.Extra
 brokenHaddock = compilerVersion < makeVersion [7,8]
 
 main = shakeTest_ (unless brokenHaddock . noTest) $ do
-    let obj = id
     let index = "dist/doc/html/shake/index.html"
     let config = "dist/setup-config"
-    want [obj "Success.txt"]
+    want ["Success.txt"]
 
     let needSource = need =<< getDirectoryFiles "." (map (root </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
@@ -36,7 +35,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ["--builddir=" ++ dist,"--user"]
             -- package-db is very sensitive, see #267
             ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
-        trackAllow [obj "dist//*"]
+        trackAllow ["dist//*"]
 
     index %> \_ -> do
         need $ config : map (root </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
@@ -45,10 +44,10 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         dist <- liftIO $ canonicalizePath "dist"
         cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
-    obj "Paths_shake.hs" %> \out ->
+    "Paths_shake.hs" %> \out ->
         copyFile' (root </> "src/Paths.hs") out
 
-    obj "Part_*.hs" %> \out -> do
+    "Part_*.hs" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
@@ -124,26 +123,26 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"str = \"\""] ++
             rest
 
-    obj "Files.lst" %> \out -> do
+    "Files.lst" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
-        need [index,obj "Paths_shake.hs"]
+        need [index,"Paths_shake.hs"]
         filesHs <- getDirectoryFiles (root </> "dist/doc/html/shake") ["Development-*.html"]
         filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
             ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd, takeBaseName x `notElem` ["Developing","Model"]]
 
-    let needModules = do mods <- readFileLines $ obj "Files.lst"; need [obj m <.> "hs" | m <- mods]; return mods
+    let needModules = do mods <- readFileLines "Files.lst"; need [m <.> "hs" | m <- mods]; return mods
 
-    obj "Main.hs" %> \out -> do
+    "Main.hs" %> \out -> do
         mods <- needModules
         writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m | m <- mods] ++ ["main = return ()"]
 
-    obj "Success.txt" %> \out -> do
+    "Success.txt" %> \out -> do
         needModules
-        need [obj "Main.hs", obj "Paths_shake.hs"]
+        need ["Main.hs", "Paths_shake.hs"]
         needSource
-        cmd_ "runhaskell -ignore-package=hashmap " ["-i.","-i" ++ root </> "src",obj "Main.hs"]
+        cmd_ "runhaskell -ignore-package=hashmap " ["-i.","-i" ++ root </> "src","Main.hs"]
         writeFile' out ""
 
 
