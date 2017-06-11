@@ -45,7 +45,7 @@ shakeTest
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest f opts g = shakenEx False True opts f
+shakeTest f opts g = shakenEx False opts f
     (\os args -> if null args then g os else want args >> withoutActions (g os))
 
 shakeTest_
@@ -57,13 +57,12 @@ shakeTest_ f g = shakeTest f [] (const g)
 
 shakenEx
     :: Bool
-    -> Bool
     -> [OptDescr (Either String a)]
     -> (([String] -> IO ()) -> IO ())
     -> ([a] -> [String] -> Rules ())
     -> IO ()
     -> IO ()
-shakenEx reenter changeDir options test rules sleeper = do
+shakenEx reenter options test rules sleeper = do
     -- my debug getDataFileName (in Paths) uses a cache of the Cwd
     -- make sure we force the cache before changing directory
     getDataFileName ""
@@ -74,10 +73,9 @@ shakenEx reenter changeDir options test rules sleeper = do
     args <- return $ delete "--forward" args
     cwd <- getCurrentDirectory
     let out = "output/" ++ name ++ "/"
-    let obj x | changeDir = if null x then "." else x
-              | otherwise = if "/" `isPrefixOf` x || null x then init out ++ x else out ++ x
-    let change = if changeDir && not reenter then withCurrentDirectory out else id
-    let clean = (if changeDir then id else withCurrentDirectory out) $ do
+    let obj x = if null x then "." else x
+    let change = if not reenter then withCurrentDirectory out else id
+    let clean = do
             now <- getCurrentDirectory
             when (takeBaseName now /= name) $
                 fail $ "Clean went horribly wrong! Dangerous deleting: " ++ show now
@@ -90,7 +88,7 @@ shakenEx reenter changeDir options test rules sleeper = do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
             -- as it is, they do go wrong for random, so disabling for now
-            change $ test (\args -> withArgs (name:args {- ++ extra -}) $ shakenEx True changeDir options test rules sleeper)
+            change $ test (\args -> withArgs (name:args {- ++ extra -}) $ shakenEx True options test rules sleeper)
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":_ -> change clean
