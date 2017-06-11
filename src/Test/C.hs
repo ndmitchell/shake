@@ -6,17 +6,16 @@ import Development.Shake.FilePath
 import Test.Type
 
 main = shakeTest_ noTest $ do
-    let obj = id
     let src = root </> "src/Test/C"
-    want [obj "Main.exe"]
+    want ["Main.exe"]
 
-    obj "Main.exe" %> \out -> do
+    "Main.exe" %> \out -> do
         cs <- getDirectoryFiles src ["*.c"]
-        let os = map (obj . (<.> "o")) cs
+        let os = map (<.> "o") cs
         need os
         cmd "gcc -o" [out] os
 
-    obj "*.c.o" %> \out -> do
+    "*.c.o" %> \out -> do
         let c = src </> takeBaseName out
         need [c]
         headers <- cIncludes c
