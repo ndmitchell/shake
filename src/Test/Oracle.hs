@@ -98,8 +98,3 @@ test build = do
         "" -- TODO: Should they?
     errors ["--plus=str-bool","--plus=str-bool","--star=str-bool"] -- Two Oracles fail if they are used
         "Internal error" -- TODO!: "Only one call to addOracle is allowed"
-
-{-
-    errors ["+str-int","+str-bool"] -- Two Oracles with the same answer type
-        "Internal error" -- TODO: "Only one call to addOracle is allowed"
--}
