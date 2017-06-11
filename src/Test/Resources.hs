@@ -12,7 +12,6 @@ import Data.IORef
 
 
 main = shakeTest_ test $ do
-    let obj = id
     -- test I have good Ord and Show
     do
         r1 <- newResource "test" 2
@@ -25,8 +24,8 @@ main = shakeTest_ test $ do
         let cap = 2
         inside <- liftIO $ newIORef 0
         res <- newResource "test" cap
-        phony "cap" $ need [obj $ "c_file" ++ show i ++ ".txt" | i <- [1..4]]
-        obj "c_*.txt" %> \out ->
+        phony "cap" $ need ["c_file" ++ show i ++ ".txt" | i <- [1..4]]
+        "c_*.txt" %> \out ->
             withResource res 1 $ do
                 old <- liftIO $ atomicModifyIORef inside $ \i -> (i+1,i)
                 when (old >= cap) $ fail "Too many resources in use at one time"
@@ -39,24 +38,24 @@ main = shakeTest_ test $ do
         done <- liftIO $ newIORef 0
         lock <- newResource "lock" 1
         phony "schedule" $
-            need $ map (\x -> obj $ "s_" ++ x) $ "lock1":"done":["free" ++ show i | i <- [1..10]] ++ ["lock2"]
-        obj "s_done" %> \out -> do
-            need [obj "s_lock1",obj "s_lock2"]
+            need $ map ("s_" ++) $ "lock1":"done":["free" ++ show i | i <- [1..10]] ++ ["lock2"]
+        "s_done" %> \out -> do
+            need ["s_lock1","s_lock2"]
             done <- liftIO $ readIORef done
             when (done < 10) $ fail "Not all managed to schedule while waiting"
             writeFile' out ""
-        obj "s_lock*" %> \out -> do
+        "s_lock*" %> \out -> do
             withResource lock 1 $ liftIO $ sleep 0.5
             writeFile' out ""
-        obj "s_free*" %> \out -> do
+        "s_free*" %> \out -> do
             liftIO $ atomicModifyIORef done $ \i -> (i+1,())
             writeFile' out ""
 
     -- test that throttle works properly
     do
         res <- newThrottle "throttle" 2 0.4
-        phony "throttle" $ need $ map obj ["t_file1.1","t_file2.1","t_file3.2","t_file4.1","t_file5.2"]
-        obj "t_*.*" %> \out -> do
+        phony "throttle" $ need ["t_file1.1","t_file2.1","t_file3.2","t_file4.1","t_file5.2"]
+        "t_*.*" %> \out -> do
             withResource res (read $ drop 1 $ takeExtension out) $
                 when (takeBaseName out == "t_file3") $ liftIO $ sleep 0.2
             writeFile' out ""
