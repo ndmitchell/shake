@@ -16,11 +16,10 @@ import qualified Run
 import System.Environment
 import Prelude
 
-data Opts = Arg String -- Arguments to pass onwards
-opts = Option "" ["arg"] (ReqArg (Right . Arg) "") ""
+opts = Option "" ["arg"] (ReqArg Right "") ""
 
 main = shakeTest test [opts] $ \opts -> do
-    let args2 = "-C." : [x | Arg x <- opts]
+    let args2 = "-C." : opts
     let real = "real" `elem` args2
     action $
         if real then cmd "ninja" args2 else liftIO $ withArgs args2 Run.main
