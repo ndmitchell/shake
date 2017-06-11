@@ -16,91 +16,90 @@ newtype Zero = Zero () deriving (Eq, Show, NFData, Typeable, Hashable, Binary)
 type instance RuleResult Zero = Zero
 
 main = shakeTest_ test $ do
-    let obj = id
     addOracle $ \Zero{} -> do
-        liftIO $ createDirectoryIfMissing True $ obj "dir"
-        liftIO $ setCurrentDirectory $ obj "dir"
+        liftIO $ createDirectoryIfMissing True "dir"
+        liftIO $ setCurrentDirectory "dir"
         return $ Zero ()
 
-    obj "changedir" %> \out -> do
+    "changedir" %> \out -> do
         Zero () <- askOracle $ Zero ()
         writeFile' out ""
 
-    obj "pause.*" %> \out -> do
+    "pause.*" %> \out -> do
         liftIO $ sleep 0.1
-        need [obj "cdir" <.> takeExtension out]
+        need ["cdir" <.> takeExtension out]
         writeFile' out ""
 
-    obj "cdir.*" %> \out -> do
+    "cdir.*" %> \out -> do
         pwd <- liftIO getCurrentDirectory
-        let dir2 = obj $ "dir" ++ takeExtension out
+        let dir2 = "dir" ++ takeExtension out
         liftIO $ createDirectoryIfMissing True dir2
         liftIO $ setCurrentDirectory dir2
         liftIO $ sleep 0.2
         liftIO $ setCurrentDirectory pwd
         writeFile' out ""
 
-    obj "createonce" %> \out ->
+    "createonce" %> \out ->
         writeFile' out "X"
 
-    obj "createtwice" %> \out -> do
-        need [obj "createonce"]
+    "createtwice" %> \out -> do
+        need ["createonce"]
         liftIO sleepFileTime
-        writeFile' (obj "createonce") "Y"
+        writeFile' "createonce" "Y"
         writeFile' out ""
 
-    obj "listing" %> \out -> do
+    "listing" %> \out -> do
         writeFile' (out <.> "ls1") ""
-        getDirectoryFiles (obj "") ["//*.ls*"]
+        getDirectoryFiles "" ["//*.ls*"]
         writeFile' (out <.> "ls2") ""
         writeFile' out ""
 
-    obj "existance" %> \out -> do
-        Development.Shake.doesFileExist $ obj "exists"
-        writeFile' (obj "exists") ""
+    "existance" %> \out -> do
+        Development.Shake.doesFileExist "exists"
+        writeFile' "exists" ""
         writeFile' out ""
 
-    obj "gen*" %> \out ->
+    "gen*" %> \out ->
         writeFile' out out
 
-    obj "needed1" %> \out -> do
-        needed [obj "gen1"]
+    "needed1" %> \out -> do
+        needed ["gen1"]
         writeFile' out ""
 
-    obj "needed2" %> \out -> do
-        orderOnly [obj "gen2"]
-        needed [obj "gen2"]
+    "needed2" %> \out -> do
+        orderOnly ["gen2"]
+        needed ["gen2"]
         writeFile' out ""
 
-    obj "tracker-write1" %> \out -> do
+    "tracker-write1" %> \out -> do
         gen "x" $ out <.> "txt"
         need [out <.> "txt"]
         writeFile' out ""
 
-    obj "tracker-write2" %> \out -> do
+    "tracker-write2" %> \out -> do
         gen "x" $ out <.> "txt"
         writeFile' out ""
 
-    obj "tracker-source2" %> \out -> copyFile' (obj "tracker-source1") out
-    obj "tracker-read1" %> \out -> do
-        access $ obj "tracker-source1"
+    "tracker-source2" %> \out -> copyFile' "tracker-source1" out
+    "tracker-read1" %> \out -> do
+        access "tracker-source1"
         writeFile' out ""
-    obj "tracker-read2" %> \out -> do
-        access $ obj "tracker-source1"
-        need [obj "tracker-source1"]
+    "tracker-read2" %> \out -> do
+        access "tracker-source1"
+        need ["tracker-source1"]
         writeFile' out ""
-    obj "tracker-read3" %> \out -> do
-        access $ obj "tracker-source2"
-        need [obj "tracker-source2"]
+    "tracker-read3" %> \out -> do
+        access "tracker-source2"
+        need ["tracker-source2"]
         writeFile' out ""
 
-    obj "tracker-compile.o" %> \out -> do
-        need [obj "tracker-source.c", obj "tracker-source.h"]
-        cmd "gcc" ["-c", obj "tracker-source.c", "-o", out]
+    "tracker-compile.o" %> \out -> do
+        need ["tracker-source.c", "tracker-source.h"]
+        cmd "gcc" ["-c", "tracker-source.c", "-o", out]
 
-    obj "tracker-compile-auto.o" %> \out -> do
-        need [obj "tracker-source.c"]
-        cmd AutoDeps "gcc" ["-c", obj "tracker-source.c", "-o", out]
+    "tracker-compile-auto.o" %> \out -> do
+        need ["tracker-source.c"]
+        cmd AutoDeps "gcc" ["-c", "tracker-source.c", "-o", out]
 
     where gen t f = cmd_ Shell "echo" t ">" (toNative f)
           access f = if isWindows
@@ -109,7 +108,6 @@ main = shakeTest_ test $ do
 
 
 test build = do
-    let obj = id
     dir <- getCurrentDirectory
     let crash args parts =
             assertException parts (build $ "--quiet" : args)
@@ -126,10 +124,10 @@ test build = do
     crash ["needed1"] ["'needed' file required rebuilding"]
     build ["needed2"]
     whenM hasTracker $ do
-        writeFile (obj "tracker-source1") ""
-        writeFile (obj "tracker-source2") ""
-        writeFile (obj "tracker-source.c") "#include <stdio.h>\n#include \"tracker-source.h\"\n"
-        writeFile (obj "tracker-source.h") ""
+        writeFile "tracker-source1" ""
+        writeFile "tracker-source2" ""
+        writeFile "tracker-source.c" "#include <stdio.h>\n#include \"tracker-source.h\"\n"
+        writeFile "tracker-source.h" ""
         crash ["tracker-write1"] ["not have its creation tracked","tracker-write1","tracker-write1.txt"]
         build ["tracker-write2"]
         crash ["tracker-read1"] ["used but not depended upon","tracker-source1"]
