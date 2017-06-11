@@ -35,9 +35,8 @@ data Logic = Logic Int [[Source]]
 arg = [Option "" ["arg"] (ReqArg Right "") ""]
 
 main = shakeTest test arg $ \args -> do
-    let obj = id
-    let toFile (Input i) = obj $ "input-" ++ show i ++ ".txt"
-        toFile (Output i) = obj $ "output-" ++ show i ++ ".txt"
+    let toFile (Input i) = "input-" ++ show i ++ ".txt"
+        toFile (Output i) = "output-" ++ show i ++ ".txt"
         toFile Bang = error "BANG"
 
     let randomSleep = liftIO $ do
@@ -77,15 +76,15 @@ test build = do
         build ["clean"]
         build [] -- to create the directory
         forM_ inputRange $ \i ->
-            writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
+            writeFile ("input-" ++ show i ++ ".txt") $ show $ Single i
         logic <- randomLogic
         runLogic [] logic
         chng <- filterM (const randomIO) inputRange   
         forM_ chng $ \i ->
-            writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single $ negate i
+            writeFile ("input-" ++ show i ++ ".txt") $ show $ Single $ negate i
         runLogic chng logic
         forM_ inputRange $ \i ->
-            writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
+            writeFile ("input-" ++ show i ++ ".txt") $ show $ Single i
         logicBang <- addBang =<< addBang logic
         j <- randomRIO (1::Int,8)
         res <- try_ $ build $ "--exception" : ("-j" ++ show j) : map ((++) "--arg=" . show) (logicBang ++ [Want [i | Logic i _ <- logicBang]])
@@ -96,7 +95,6 @@ test build = do
             _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
         runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
         where
-            obj = id
             runLogic :: [Int] -> [Logic] -> IO ()
             runLogic negated xs = do
                 let poss = [i | Logic i _ <- xs]
@@ -114,7 +112,7 @@ test build = do
                             Output i -> value i
                 forM_ (concat wants) $ \i -> do
                     let wanted = value i
-                    got <- fmap read $ IO.readFile' $ obj $ "output-" ++ show i ++ ".txt"
+                    got <- fmap read $ IO.readFile' $ "output-" ++ show i ++ ".txt"
                     when (wanted /= got) $
                         error $ "INCORRECT VALUE for " ++ show i
 
