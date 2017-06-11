@@ -22,11 +22,10 @@ import Prelude
 
 
 main = shakeTest_ test $ do
-    let obj = id
     -- shake_helper must be in a subdirectory so we can test placing that subdir on the $PATH
-    let helper = toNative $ obj "helper/shake_helper" <.> exe
+    let helper = toNative $ "helper/shake_helper" <.> exe
     let name !> test = do want [name]
-                          name ~> do need [obj "helper/shake_helper" <.> exe]; test
+                          name ~> do need ["helper/shake_helper" <.> exe]; test
 
     let helper_source = unlines
             ["import Control.Concurrent"
@@ -52,12 +51,12 @@ main = shakeTest_ test $ do
             ,"        hFlush stderr"
             ]
 
-    obj "shake_helper.hs" %> \out -> do
+    "shake_helper.hs" %> \out -> do
         need ["../../src/Test/Command.hs"]
         writeFileChanged out helper_source
-    [obj "helper/shake_helper" <.> exe, obj "shake_helper.o", obj "shake_helper.hi"] &%> \_ -> do
-        need [obj "shake_helper.hs"]
-        cmd (Cwd $ obj "") "ghc --make" "shake_helper.hs -o helper/shake_helper"
+    ["helper/shake_helper" <.> exe, "shake_helper.o", "shake_helper.hi"] &%> \_ -> do
+        need ["shake_helper.hs"]
+        cmd "ghc --make" "shake_helper.hs -o helper/shake_helper"
 
     "capture" !> do
         (Stderr err, Stdout out) <- cmd helper ["ostuff goes here","eother stuff here"]
@@ -75,8 +74,8 @@ main = shakeTest_ test $ do
 
     "cwd" !> do
         -- FIXME: Linux searches the Cwd argument for the file, Windows searches getCurrentDirectory
-        helper <- liftIO $ canonicalizePath $ obj "helper/shake_helper" <.> exe
-        Stdout out <- cmd (Cwd $ obj "helper") helper "c"
+        helper <- liftIO $ canonicalizePath $ "helper/shake_helper" <.> exe
+        Stdout out <- cmd (Cwd "helper") helper "c"
         let norm = fmap dropTrailingPathSeparator . canonicalizePath . trim
         liftIO $ join $ liftM2 (===) (norm out) (norm "helper")
 
@@ -109,14 +108,14 @@ main = shakeTest_ test $ do
             fail $ "Invalid CmdLine, " ++ x
 
     "path" !> do
-        let path = AddPath [dropTrailingPathSeparator $ obj "helper"] []
-        cmd_ $ obj "helper/shake_helper"
-        cmd_ $ obj "helper/shake_helper" <.> exe
+        let path = AddPath [dropTrailingPathSeparator "helper"] []
+        cmd_ "helper/shake_helper"
+        cmd_ $ "helper/shake_helper" <.> exe
         cmd_ path Shell "shake_helper"
         cmd_ path "shake_helper"
 
     "file" !> do
-        let file = obj "file.txt"
+        let file = "file.txt"
         cmd_ helper (FileStdout file) (FileStderr file) (EchoStdout False) (EchoStderr False) (WithStderr False) "ofoo ebar obaz"
         liftIO $ assertContents file "foo\nbar\nbaz\n"
         liftIO $ waits $ \w -> do
@@ -148,7 +147,7 @@ main = shakeTest_ test $ do
             liftIO $ x === "hello world"
 
     "async" !> do
-        let file = obj "async.txt"
+        let file = "async.txt"
         pid <- cmd helper (FileStdout file) "w2" "ohello"
         Nothing <- liftIO $ getProcessExitCode pid
         ExitSuccess <- liftIO $ waitForProcess pid
