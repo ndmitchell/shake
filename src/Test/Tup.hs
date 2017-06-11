@@ -12,17 +12,16 @@ import Prelude
 
 
 main = shakeTest_ noTest $ do
-    let obj = id
     -- Example inspired by http://gittup.org/tup/ex_multiple_directories.html
     usingConfigFile $ root </> "src/Test/Tup/root.cfg"
 
     action $ do
         keys <- getConfigKeys
-        need [obj $ x -<.> exe | x <- keys, takeExtension x == ".exe"]
+        need [x -<.> exe | x <- keys, takeExtension x == ".exe"]
 
     let objects dir key = do
-            let f x | takeExtension x == ".c" = obj $ dir </> x -<.> "o"
-                    | takeExtension x == ".a" = obj $ takeBaseName x </> "lib" ++ x
+            let f x | takeExtension x == ".c" = dir </> x -<.> "o"
+                    | takeExtension x == ".a" = takeBaseName x </> "lib" ++ x
                     | otherwise = error $ "Unknown extension, " ++ x
             x <- fromMaybe (error $ "Missing config key, " ++ key) <$> getConfig key
             return $ map f $ words x
@@ -32,12 +31,12 @@ main = shakeTest_ noTest $ do
         need os
         cmd "gcc" os "-o" [out]
 
-    obj "//lib*.a" %> \out -> do
+    "//lib*.a" %> \out -> do
         os <- objects (drop 3 $ takeBaseName out) $ drop 3 $ takeFileName out
         need os
         cmd "ar crs" [out] os
 
-    obj "//*.o" %> \out -> do
+    "//*.o" %> \out -> do
         let src = root </> "src/Test/Tup" </> out -<.> "c"
         need [src]
         cmd_ "gcc -c -MMD -MF" [out -<.> "d"] [src] "-o" [out] "-O2 -Wall" ["-I" ++ root </> "src/Test/Tup/newmath"]
