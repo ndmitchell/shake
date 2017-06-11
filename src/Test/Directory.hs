@@ -27,24 +27,23 @@ showEsc = concatMap f
 
 
 main = shakeTest_ test $ do
-    let obj = id
-    obj "*.contents" %> \out ->
-        writeFileLines out =<< getDirectoryContents (obj $ readEsc $ dropExtension out)
-    obj "*.dirs" %> \out ->
-        writeFileLines out =<< getDirectoryDirs (obj $ readEsc $ dropExtension out)
-    obj "*.files" %> \out -> do
+    "*.contents" %> \out ->
+        writeFileLines out =<< getDirectoryContents (readEsc $ dropExtension out)
+    "*.dirs" %> \out ->
+        writeFileLines out =<< getDirectoryDirs (readEsc $ dropExtension out)
+    "*.files" %> \out -> do
         let pats = readEsc $ dropExtension out
         let (x:xs) = ["" | " " `isPrefixOf` pats] ++ words pats
-        writeFileLines out . map toStandard =<< getDirectoryFiles (obj x) xs
+        writeFileLines out . map toStandard =<< getDirectoryFiles x xs
 
-    obj "*.exist" %> \out -> do
-        let xs = map obj $ words $ readEsc $ dropExtension out
+    "*.exist" %> \out -> do
+        let xs = words $ readEsc $ dropExtension out
         fs <- mapM doesFileExist xs
         ds <- mapM doesDirectoryExist xs
         let bool x = if x then "1" else "0"
         writeFileLines out $ zipWith ((++) `on` bool) fs ds
 
-    obj "dots" %> \out -> do
+    "dots" %> \out -> do
         cwd <- liftIO getCurrentDirectory
         b1 <- liftM2 (==) (getDirectoryContents ".") (getDirectoryContents "")
         b2 <- liftM2 (==) (getDirectoryDirs ".") (getDirectoryDirs "")
@@ -54,19 +53,18 @@ main = shakeTest_ test $ do
         writeFileLines out $ map show [b1,b2,b3,b4,b5]
 
 test build = do
-    let obj = id
-    let demand x ys = let f = showEsc x in do build [f]; assertContents (obj f) $ unlines $ words ys
+    let demand x ys = let f = showEsc x in do build [f]; assertContents f $ unlines $ words ys
     build ["clean"]
     demand " *.txt.files" ""
     demand " //*.txt.files" ""
     demand ".dirs" ""
     demand "A.txt B.txt C.txt.exist" "00 00 00"
 
-    writeFile (obj "A.txt") ""
-    writeFile (obj "B.txt") ""
-    createDirectory (obj "C.txt")
-    writeFile (obj "C.txt/D.txt") ""
-    writeFile (obj "C.txt/E.xtx") ""
+    writeFile "A.txt" ""
+    writeFile "B.txt" ""
+    createDirectory "C.txt"
+    writeFile "C.txt/D.txt" ""
+    writeFile "C.txt/E.xtx" ""
     demand " *.txt.files" "A.txt B.txt"
     demand ".dirs" "C.txt"
     demand "A.txt B.txt C.txt.exist" "10 10 01"
@@ -81,7 +79,7 @@ test build = do
     assertException ["missing_dir","does not exist"] $ build ["--quiet",showEsc "missing_dir *.files"]
 
     build ["dots","--no-lint"]
-    assertContents (obj "dots") $ unlines $ words "True True True True True"
+    assertContents "dots" $ unlines $ words "True True True True True"
 
     let removeTest pat del keep =
             IO.withTempDir $ \dir -> do
