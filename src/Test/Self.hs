@@ -23,8 +23,7 @@ type instance RuleResult GhcPkg = [String]
 type instance RuleResult GhcFlags = [String]
 
 main = shakeTest_ noTest $ do
-    let obj = id
-    let moduleToFile ext xs = map (\x -> if x == '.' then '/' else x) xs <.> ext
+    let moduleToFile ext xs = replace "." "/" xs <.> ext
     want ["Main" <.> exe]
 
     -- fixup to cope with Cabal's generated files
@@ -35,7 +34,7 @@ main = shakeTest_ noTest $ do
         return $ words out
 
     ghcFlags <- addOracle $ \GhcFlags{} -> do
-        pkgs <- readFileLines $ obj ".pkgs"
+        pkgs <- readFileLines ".pkgs"
         return $ map ("-package=" ++) pkgs
 
     let ghc args = do
@@ -44,34 +43,34 @@ main = shakeTest_ noTest $ do
             flags <- ghcFlags $ GhcFlags ()
             cmd "ghc" flags args
 
-    obj "Main" <.> exe %> \out -> do
-        src <- readFileLines $ obj "Run.deps"
-        let os = map (obj . moduleToFile "o") $ "Run" : src
+    "Main" <.> exe %> \out -> do
+        src <- readFileLines "Run.deps"
+        let os = map (moduleToFile "o") $ "Run" : src
         need os
         ghc $ ["-o",out] ++ os
 
-    obj "//*.deps" %> \out -> do
+    "//*.deps" %> \out -> do
         dep <- readFileLines $ out -<.> "dep"
-        let xs = map (obj . moduleToFile "deps") dep
+        let xs = map (moduleToFile "deps") dep
         need xs
         ds <- nubOrd . sort . (++) dep <$> concatMapM readFileLines xs
         writeFileLines out ds
 
-    obj "//*.dep" %> \out -> do
+    "//*.dep" %> \out -> do
         src <- readFile' $ root </> "src" </> fixPaths (out -<.> "hs")
         let xs = hsImports src
         xs <- filterM (doesFileExist . (\x -> root </> "src" </> x) . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
-    [obj "//*.o",obj "//*.hi"] &%> \[out,_] -> do
+    ["//*.o","//*.hi"] &%> \[out,_] -> do
         deps <- readFileLines $ out -<.> "deps"
         let hs = root </> "src" </> fixPaths (out -<.> "hs")
-        need $ hs : map (obj . moduleToFile "hi") deps
-        ghc $ ["-c",hs,"-i" ++ root </> "src","-main-is","Run.main"
-              ,"-hide-all-packages","-outputdir=."] ++
-              ["-DPORTABLE","-fwarn-unused-imports"] -- to test one CPP branch
+        need $ hs : map (moduleToFile "hi") deps
+        ghc ["-c",hs,"-i" ++ root </> "src","-main-is","Run.main"
+            ,"-hide-all-packages","-outputdir=."
+            ,"-DPORTABLE","-fwarn-unused-imports"] -- to test one CPP branch
 
-    obj ".pkgs" %> \out -> do
+    ".pkgs" %> \out -> do
         src <- readFile' $ root </> "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
 
