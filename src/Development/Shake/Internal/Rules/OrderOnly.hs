@@ -16,7 +16,7 @@ import qualified Data.ByteString.Char8 as BS
 -- @
 -- \"source.o\" %> \\out -> do
 --     'orderOnly' [\"header.h\"]
---     () <- 'cmd' \"gcc -c source.c -o source.o -MMD -MF source.m\"
+--     'cmd_' \"gcc -c source.c -o source.o -MMD -MF source.m\"
 --     'neededMakefileDependencies' \"source.m\"
 -- @
 --

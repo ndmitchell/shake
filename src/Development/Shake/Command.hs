@@ -548,18 +548,17 @@ type a :-> t = a
 --   As some examples, here are some calls, and the resulting command string:
 --
 -- @
--- 'unit' $ 'cmd' \"git log --pretty=\" \"oneline\"           -- git log --pretty= oneline
--- 'unit' $ 'cmd' \"git log --pretty=\" [\"oneline\"]         -- git log --pretty= oneline
--- 'unit' $ 'cmd' \"git log\" (\"--pretty=\" ++ \"oneline\")    -- git log --pretty=oneline
--- 'unit' $ 'cmd' \"git log\" (\"--pretty=\" ++ \"one line\")   -- git log --pretty=one line
--- 'unit' $ 'cmd' \"git log\" [\"--pretty=\" ++ \"one line\"]   -- git log "--pretty=one line"
+-- 'cmd_' \"git log --pretty=\" \"oneline\"           -- git log --pretty= oneline
+-- 'cmd_' \"git log --pretty=\" [\"oneline\"]         -- git log --pretty= oneline
+-- 'cmd_' \"git log\" (\"--pretty=\" ++ \"oneline\")    -- git log --pretty=oneline
+-- 'cmd_' \"git log\" (\"--pretty=\" ++ \"one line\")   -- git log --pretty=one line
+-- 'cmd_' \"git log\" [\"--pretty=\" ++ \"one line\"]   -- git log "--pretty=one line"
 -- @
 --
 --   More examples, including return values, see this translation of the examples given for the 'command' function:
 --
 -- @
--- () <- 'cmd' \"gcc -c myfile.c\"                                  -- compile a file, throwing an exception on failure
--- 'unit' $ 'cmd' \"gcc -c myfile.c\"                                 -- alternative to () <- binding.
+-- 'cmd_' \"gcc -c myfile.c\"                                         -- compile a file, throwing an exception on failure
 -- 'Exit' c <- 'cmd' \"gcc -c\" [myfile]                              -- run a command, recording the exit code
 -- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"                -- run a command, recording the exit code and error output
 -- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"                         -- run a command, recording the output
@@ -569,8 +568,7 @@ type a :-> t = a
 --   When passing file arguments we use @[myfile]@ so that if the @myfile@ variable contains spaces they are properly escaped.
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
---   unable to deduce 'CmdResult'. To avoid this error, bind the result to @()@, or include a type signature, or use
---   the 'unit' function.
+--   unable to deduce 'CmdResult'. To avoid this error, use 'cmd_'.
 --
 --   The 'cmd' function can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
 --   As an example:

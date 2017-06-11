@@ -19,8 +19,8 @@ test build = do
     copyDirectoryChanged (root </> "src/General") $ dest </> "General"
     copyFileChanged (root </> "src/Paths.hs") $ dest </> "Paths_shake.hs"
     let cmdline = if isWindows then "build.bat" else "/bin/sh build.sh"
-    () <- cmd [Cwd dest, Shell] cmdline "-j2"
+    cmd_ [Cwd dest, Shell] cmdline "-j2"
     assertExists $ dest </> "_build/run" <.> exe
-    () <- cmd [Cwd dest, Shell] cmdline
-    () <- cmd [Cwd dest, Shell] [cmdline,"clean"]
+    cmd_ [Cwd dest, Shell] cmdline
+    cmd_ [Cwd dest, Shell] [cmdline,"clean"]
     assertMissing $ dest </> "_build/run" <.> exe
