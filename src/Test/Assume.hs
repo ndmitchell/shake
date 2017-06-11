@@ -7,7 +7,7 @@ import Control.Monad
 import Development.Shake.FilePath
 
 
-main = shakeTest_ test $ do
+main = shakeTest_ test $
     "*.out" %> \out -> do
         cs <- mapM (readFile' . (:".src")) $ takeBaseName out
         writeFile' out $ concat cs
