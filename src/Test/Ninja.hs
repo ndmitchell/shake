@@ -6,6 +6,7 @@ import qualified Development.Shake.Config as Config
 import System.Directory(copyFile, createDirectoryIfMissing, removeFile)
 import Control.Applicative
 import Control.Monad
+import General.GetOpt
 import Test.Type
 import qualified Data.HashMap.Strict as Map
 import Data.List
@@ -15,18 +16,21 @@ import qualified Run
 import System.Environment
 import Prelude
 
+data Opts = Arg String -- Arguments to pass onwards
+opts = Option "" ["arg"] (ReqArg (Right . Arg) "") ""
 
-main = shaken test $ \args obj -> do
-    let args2 = ("-C" ++ obj "") : map tail (filter ("@" `isPrefixOf`) args)
-    let real = "real" `elem` args
+main = shakeTest test [opts] $ \opts -> do
+    let args2 = "-C." : [x | Arg x <- opts]
+    let real = "real" `elem` args2
     action $
         if real then cmd "ninja" args2 else liftIO $ withArgs args2 Run.main
 
 
-test build obj = do
-    -- when calling run anything with a leading @ gets given to Shake, anything without gets given to Ninja
-    let run xs = build $ "--exception" : map (\x -> fromMaybe ('@':x) $ stripPrefix "@" x) (words xs)
-    let runFail xs bad = assertException [bad] $ run $ xs ++ " --quiet"
+test build = do
+    let obj = id
+    let runEx ninja shake = build $ "--exception" : map ("--arg=" ++) (words ninja) ++ words shake
+    let run ninja = runEx ninja []
+    let runFail ninja bad = assertException [bad] $ runEx ninja "--quiet"
 
     build ["clean"]
     run "-f../../src/Test/Ninja/test1.ninja"
@@ -40,11 +44,11 @@ test build obj = do
     assertExists $ obj "out2.1"
     assertMissing $ obj "out2.2"
 
-    copyFile "src/Test/Ninja/test3-sub.ninja" $ obj "test3-sub.ninja"
-    copyFile "src/Test/Ninja/test3-inc.ninja" $ obj "test3-inc.ninja"
+    copyFile "../../src/Test/Ninja/test3-sub.ninja" $ obj "test3-sub.ninja"
+    copyFile "../../src/Test/Ninja/test3-inc.ninja" $ obj "test3-inc.ninja"
     createDirectoryIfMissing True $ obj "subdir"
-    copyFile "src/Test/Ninja/subdir/1.ninja" $ obj "subdir/1.ninja"
-    copyFile "src/Test/Ninja/subdir/2.ninja" $ obj "subdir/2.ninja"
+    copyFile "../../src/Test/Ninja/subdir/1.ninja" $ obj "subdir/1.ninja"
+    copyFile "../../src/Test/Ninja/subdir/2.ninja" $ obj "subdir/2.ninja"
     run "-f../../src/Test/Ninja/test3.ninja"
     assertContentsWords (obj "out3.1") "g4+b1+++i1"
     assertContentsWords (obj "out3.2") "g4++++i1"
@@ -71,8 +75,8 @@ test build obj = do
     run "-f../../src/Test/Ninja/lint.ninja good --lint"
     runFail "-f../../src/Test/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
-    res <- fmap (drop 1 . lines . fst) $ captureOutput $ run "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx @--no-report @--quiet"
-    want <- lines <$> readFile "src/Test/Ninja/compdb.output"
+    res <- fmap (drop 1 . lines . fst) $ captureOutput $ runEx "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx" "--no-report --quiet"
+    want <- lines <$> readFile "../../src/Test/Ninja/compdb.output"
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b
     length want === length res
@@ -81,9 +85,9 @@ test build obj = do
     -- Test initial variable bindings and variables in include/subninja statements
     let test6 = obj "test6"
 
-    copyFile "src/Test/Ninja/test6-sub.ninja" $ test6 ++ "-sub.ninja"
-    copyFile "src/Test/Ninja/test6-inc.ninja" $ test6 ++ "-inc.ninja"
-    copyFile "src/Test/Ninja/test6.ninja" $ test6 ++ ".ninja"
+    copyFile "../../src/Test/Ninja/test6-sub.ninja" $ test6 ++ "-sub.ninja"
+    copyFile "../../src/Test/Ninja/test6-inc.ninja" $ test6 ++ "-inc.ninja"
+    copyFile "../../src/Test/Ninja/test6.ninja" $ test6 ++ ".ninja"
 
     config <- Config.readConfigFileWithEnv [("v1", test6)] $ test6 ++ ".ninja"
     -- The file included by subninja should have a separate variable scope
