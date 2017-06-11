@@ -23,33 +23,31 @@ opts =
     ,Option "" ["want"] (ReqArg (Right . Want) "") ""]
 
 main = shakeTest test opts $ \xs -> do
-    let obj = id
     let pre = last $ "" : [decode x | Prefix x <- xs :: [Arg]]
     want [decode x | Want x <- xs]
 
-    obj (pre ++ "dir/*") %> \out -> do
+    pre ++ "dir/*" %> \out -> do
         let src = takeDirectory (takeDirectory out) </> takeFileName out
         copyFile' src out
 
-    obj (pre ++ ".out") %> \out -> do
-        a <- readFile' $ obj $ pre ++ "dir" </> pre <.> "source"
-        b <- readFile' $ obj pre <.> "multi1"
+    pre ++ ".out" %> \out -> do
+        a <- readFile' $ pre ++ "dir" </> pre <.> "source"
+        b <- readFile' $ pre <.> "multi1"
         writeFile' out $ a ++ b
 
-    map obj ["*.multi1","*.multi2"] &%> \[m1,m2] -> do
+    ["*.multi1","*.multi2"] &%> \[m1,m2] -> do
         b <- doesFileExist $ m1 -<.> "exist"
         writeFile' m1 $ show b
         writeFile' m2 $ show b
 
 
 test build = do
-    let obj = id
     build ["clean"]
     -- Useful, if the error message starts crashing...
     -- IO.hSetEncoding IO.stdout IO.char8
     -- IO.hSetEncoding IO.stderr IO.char8
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
-        let ext x = obj $ decode pre <.> x
+        let ext x = decode pre <.> x
         res <- try_ $ writeFile (ext "source") "x"
         case res of
             Left err ->
