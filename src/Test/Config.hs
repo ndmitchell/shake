@@ -8,51 +8,46 @@ import Test.Type
 import Data.Char
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
-import System.Directory
 
 
 main = shakeTest_ test $ do
-    let obj = id
-    want $ map obj ["hsflags.var","cflags.var","none.var","keys"]
-    usingConfigFile $ obj "config"
-    obj "*.var" %> \out -> do
+    want ["hsflags.var","cflags.var","none.var","keys"]
+    usingConfigFile "config"
+    "*.var" %> \out -> do
         cfg <- getConfig $ map toUpper $ takeBaseName out
         liftIO $ appendFile (out -<.> "times") "X"
         writeFile' out $ fromMaybe "" cfg
-    obj "keys" %> \out -> do
-        liftIO $ appendFile (obj "keys.times") "X"
+    "keys" %> \out -> do
+        liftIO $ appendFile "keys.times" "X"
         liftIO . writeFile out . unwords =<< getConfigKeys
 
 
 test build = do
-    let obj = id
     build ["clean"]
-    createDirectoryIfMissing True $ obj ""
-    writeFile (obj "config") $ unlines
+    writeFile "config" $ unlines
         ["HEADERS_DIR = /path/to/dir"
         ,"CFLAGS = -O2 -I${HEADERS_DIR} -g"
         ,"HSFLAGS = -O2"]
     build []
-    assertContents (obj "cflags.var") "-O2 -I/path/to/dir -g"
-    assertContents (obj "hsflags.var") "-O2"
-    assertContents (obj "none.var") ""
-    assertContents (obj "keys") "CFLAGS HEADERS_DIR HSFLAGS"
+    assertContents "cflags.var" "-O2 -I/path/to/dir -g"
+    assertContents "hsflags.var" "-O2"
+    assertContents "none.var" ""
+    assertContents "keys" "CFLAGS HEADERS_DIR HSFLAGS"
 
-    appendFile (obj "config") $ unlines
+    appendFile "config" $ unlines
         ["CFLAGS = $CFLAGS -w"]
     build []
-    assertContents (obj "cflags.var") "-O2 -I/path/to/dir -g -w"
-    assertContents (obj "hsflags.var") "-O2"
-    assertContents (obj "cflags.times") "XX"
-    assertContents (obj "hsflags.times") "X"
-    assertContents (obj "keys.times") "X"
+    assertContents "cflags.var" "-O2 -I/path/to/dir -g -w"
+    assertContents "hsflags.var" "-O2"
+    assertContents "cflags.times" "XX"
+    assertContents "hsflags.times" "X"
+    assertContents "keys.times" "X"
 
     -- Test readConfigFileWithEnv
-    writeFile (obj "config") $ unlines
+    writeFile "config" $ unlines
       ["HEADERS_DIR = ${SOURCE_DIR}/path/to/dir"
       ,"CFLAGS = -O2 -I${HEADERS_DIR} -g"]
-    vars <- readConfigFileWithEnv [("SOURCE_DIR", "/path/to/src")]
-                                  (obj "config")
+    vars <- readConfigFileWithEnv [("SOURCE_DIR", "/path/to/src")] "config"
     assertBool (Map.lookup "HEADERS_DIR" vars == Just "/path/to/src/path/to/dir")
         $ "readConfigFileWithEnv:"
             ++ " Expected: " ++ show (Just "/path/to/src/path/to/dir")
