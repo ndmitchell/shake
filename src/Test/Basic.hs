@@ -13,8 +13,8 @@ import Data.Functor
 import Prelude
 
 
-main = shaken test $ \args obj -> do
-    want $ map (\x -> fromMaybe (obj x) $ stripPrefix "!" x) args
+main = shakeTest_ test $ do
+    let obj = id
 
     obj "AB.txt" %> \out -> do
         need [obj "A.txt", obj "B.txt"]
@@ -32,10 +32,10 @@ main = shaken test $ \args obj -> do
         writeFile' out src
 
     phonys $ \x -> if x /= "halfclean" then Nothing else Just $
-        removeFilesAfter (obj "") ["//*e.txt"]
+        removeFilesAfter "dir" ["//*e.txt"]
 
     phony "cleaner" $
-        removeFilesAfter (obj "") ["//*"]
+        removeFilesAfter "dir" ["//*"]
 
     phony (obj "configure") $
         liftIO $ appendFile (obj "configure") "1"
@@ -89,7 +89,8 @@ main = shaken test $ \args obj -> do
         liftIO $ appendFile (obj "order.log") "Y"
         need ["ordering2"]
 
-test build obj = do
+test build = do
+    let obj = id
     writeFile (obj "A.txt") "AAA"
     writeFile (obj "B.txt") "BBB"
     build ["AB.txt","--sleep"]
@@ -119,27 +120,31 @@ test build obj = do
 
     show shakeOptions === show shakeOptions
 
-    build ["!halfclean"]
-    assertBoolIO (IO.doesDirectoryExist $ obj "") "Directory should exist, cleaner should not have removed it"
+    createDirectoryIfMissing True "dir"
+    writeFile "dir/ae.txt" ""
+    writeFile "dir/ea.txt" ""
+    build ["halfclean"]
+    assertBoolIO (IO.doesDirectoryExist "dir") "Directory should exist, cleaner should not have removed it"
 
-    build ["!cleaner"]
+    build ["cleaner"]
     sleep 1 -- sometimes takes a while for the file system to notice
-    assertBoolIO (not <$> IO.doesDirectoryExist (obj "")) "Directory should not exist, cleaner should have removed it"
+    assertBoolIO (not <$> IO.doesDirectoryExist "dir") "Directory should not exist, cleaner should have removed it"
 
-    IO.createDirectory $ obj ""
     writeFile (obj "zero.txt") ""
+    writeFile (obj "configure") ""
+    writeFile (obj "install") ""
     build ["configure"]
-    build ["!install"]
-    build ["!install"]
+    build ["install"]
+    build ["install"]
     assertContents (obj "configure") "111"
     assertContents (obj "install") "11"
 
     writeFile (obj "dummy.txt") ""
-    build ["!dummy"]
+    build ["dummy"]
     assertContents (obj "dummy") "1"
-    build ["!dummy"]
+    build ["dummy"]
     assertContents (obj "dummy") "11"
-    build ["!dummy","!dummy"]
+    build ["dummy","dummy"]
     assertContents (obj "dummy") "111"
 
     writeFile (obj "dummer.txt") ""
@@ -164,19 +169,19 @@ test build obj = do
     build ["unsafe1.par","unsafe2.par","-j2"]
     assertContents (obj ".log") "[[]]"
 
-    build ["!threads","-j3"]
+    build ["threads","-j3"]
     assertContents (obj "threads.txt") "3"
-    build ["!threads","-j0"]
+    build ["threads","-j0"]
     assertContents (obj "threads.txt") (show processors)
 
     writeFile (obj "duplicate") ""
-    build ["!duplicate1","!duplicate3"]
+    build ["duplicate1","duplicate3"]
     assertContents (obj "duplicate") "1"
 
     build $ concat [["sep/" ++ show i ++ ".txt", "sep" </> show i ++ ".txt"] | i <- [1..7]]
 
-    build ["!slash" </> "platform","!slash" </> "forward"]
-    build ["!slash/platform","!slash/forward"]
+    build ["slash" </> "platform","slash" </> "forward"]
+    build ["slash/platform","slash/forward"]
 
     createDirectoryIfMissing True (obj "ids")
     writeFile (obj "ids/source") (obj "ids/a")
@@ -194,7 +199,7 @@ test build obj = do
 
     -- #523, #524 - phony children should not run first
     writeFile (obj "order.log") ""
-    build ["!ordering"]
+    build ["ordering"]
     assertContents (obj "order.log") "YX"
-    build ["!ordering"]
+    build ["ordering"]
     assertContents (obj "order.log") "YXYX"
