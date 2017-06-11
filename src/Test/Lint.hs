@@ -102,10 +102,10 @@ main = shakeTest_ test $ do
         need [obj "tracker-source.c"]
         cmd AutoDeps "gcc" ["-c", obj "tracker-source.c", "-o", out]
 
-    where gen t f = unit $ cmd Shell "echo" t ">" (toNative f)
-          access f = unit $ if isWindows
-                            then cmd Shell "type" (toNative f) "> nul"
-                            else cmd Shell "cat" f "> /dev/null"
+    where gen t f = cmd_ Shell "echo" t ">" (toNative f)
+          access f = if isWindows
+                     then cmd_ Shell "type" (toNative f) "> nul"
+                     else cmd_ Shell "cat" f "> /dev/null"
 
 
 test build = do
