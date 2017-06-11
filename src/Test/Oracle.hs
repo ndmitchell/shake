@@ -26,7 +26,6 @@ opts = [f "plus" Plus, f "star" Star, f "at" At, f "perc" Perc, f "bang" Bang]
     where f s con = Option "" [s] (ReqArg (Right . con) "") ""
 
 main = shakeTest test opts $ \args -> do
-    let obj = id
     addOracle $ \(T.RandomType _) -> return ()
     addOracle $ \(RandomType _) -> return ()
     action $ do
@@ -36,7 +35,7 @@ main = shakeTest test opts $ \args -> do
     let f :: (ShakeValue q, ShakeValue (RuleResult q)) => String -> q -> RuleResult q -> (String, (Rules (), Rules ()))
         f name lhs rhs = (,) name
             (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
-            ,let o = obj name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
+            ,let o = name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
     let tbl = [f "str-bool" "" True
               -- ,f "str-int" "" (0::Int)
               ,f "bool-str" True ""
@@ -46,34 +45,33 @@ main = shakeTest test opts $ \args -> do
         Plus x | Just (add,_) <- lookup x tbl -> add
         Star x | Just (_,use) <- lookup x tbl -> use
         At key -> do addOracle $ \() -> return key; return ()
-        Perc name -> let o = obj "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
-        Bang name -> do want [obj "rerun"]; obj "rerun" %> \out -> do alwaysRerun; writeFile' out name
+        Perc name -> let o = "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
+        Bang name -> do want ["rerun"]; "rerun" %> \out -> do alwaysRerun; writeFile' out name
 
 test build = do
-    let obj = id
     build ["clean"]
 
     -- check it rebuilds when it should
     build ["--at=key","--perc=name"]
-    assertContents (obj "unit.txt") "name"
+    assertContents "unit.txt" "name"
     build ["--at=key","--perc=test"]
-    assertContents (obj "unit.txt") "name"
+    assertContents "unit.txt" "name"
     build ["--at=foo","--perc=test"]
-    assertContents (obj "unit.txt") "test"
+    assertContents "unit.txt" "test"
 
     -- check adding/removing redundant oracles does not trigger a rebuild
     build ["--at=foo","--perc=newer","--plus=str-bool"]
-    assertContents (obj "unit.txt") "test"
+    assertContents "unit.txt" "test"
     build ["--at=foo","--perc=newer","--plus=int-str"]
-    assertContents (obj "unit.txt") "test"
+    assertContents "unit.txt" "test"
     build ["--at=foo","--perc=newer"]
-    assertContents (obj "unit.txt") "test"
+    assertContents "unit.txt" "test"
 
     -- check always run works
     build ["--bang=foo"]
-    assertContents (obj "rerun") "foo"
+    assertContents "rerun" "foo"
     build ["--bang=bar"]
-    assertContents (obj "rerun") "bar"
+    assertContents "rerun" "bar"
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
