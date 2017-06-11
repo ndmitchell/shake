@@ -45,9 +45,8 @@ shakeTest
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest f opts g = shakenEx False True opts
-    (\run _ -> f run)
-    (\os args _ -> if null args then g os else want args >> withoutActions (g os))
+shakeTest f opts g = shakenEx False True opts f
+    (\os args -> if null args then g os else want args >> withoutActions (g os))
 
 shakeTest_
     :: (([String] -> IO ()) -> IO ()) -- ^ The test driver
@@ -60,8 +59,8 @@ shakenEx
     :: Bool
     -> Bool
     -> [OptDescr (Either String a)]
-    -> (([String] -> IO ()) -> (String -> String) -> IO ())
-    -> ([a] -> [String] -> (String -> String) -> Rules ())
+    -> (([String] -> IO ()) -> IO ())
+    -> ([a] -> [String] -> Rules ())
     -> IO ()
     -> IO ()
 shakenEx reenter changeDir options test rules sleeper = do
@@ -91,7 +90,7 @@ shakenEx reenter changeDir options test rules sleeper = do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
             -- as it is, they do go wrong for random, so disabling for now
-            change $ test (\args -> withArgs (name:args {- ++ extra -}) $ shakenEx True changeDir options test rules sleeper) obj
+            change $ test (\args -> withArgs (name:args {- ++ extra -}) $ shakenEx True changeDir options test rules sleeper)
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":_ -> change clean
@@ -100,7 +99,7 @@ shakenEx reenter changeDir options test rules sleeper = do
             del <- removeFilesRandom out
             threads <- randomRIO (1,4)
             putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
-            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules [] args (out++)
+            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules [] args
 
         args -> do
             t <- tracker
@@ -124,7 +123,7 @@ shakenEx reenter changeDir options test rules sleeper = do
                     else return $ Just $ do
                         -- if you have passed sleep, supress the "no actions" warning
                         when (Sleep `elem` extra1) $ action $ return ()
-                        rules extra2 files obj
+                        rules extra2 files
 
 data Flags = Clean | Sleep deriving (Eq,Show)
 
