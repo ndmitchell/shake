@@ -15,17 +15,14 @@ rebuilt = unsafePerformIO $ newIORef 0
 
 
 main = shakeTest_ test $ do
-    let obj = id
-    want $ map obj ["a.out","b.out","c.out"]
-    obj "*.out" %> \out -> do
+    want ["a.out","b.out","c.out"]
+    "*.out" %> \out -> do
         liftIO $ atomicModifyIORef rebuilt $ \a -> (a+1,())
         copyFile' (out -<.> "in") out
 
 
 test build = do
-    let obj = id
-    
-    let change x = writeFile (obj $ x <.> "in") x
+    let change x = writeFile (x <.> "in") x
     let count x = do
             before <- readIORef rebuilt
             build ["--sleep"]
