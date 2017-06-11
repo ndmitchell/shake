@@ -98,7 +98,8 @@ shakenEx reenter changeDir options test rules sleeper = do
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
             -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            change $ test (\args -> withArgs (name:args ++ extra) $ shakenEx True changeDir options test rules sleeper) obj
+            -- as it is, they do go wrong for random, so disabling for now
+            change $ test (\args -> withArgs (name:args {- ++ extra -}) $ shakenEx True changeDir options test rules sleeper) obj
             putStrLn $ "## FINISHED TESTING " ++ name
 
         "clean":_ -> change clean
