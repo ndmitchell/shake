@@ -10,6 +10,7 @@ import Control.Exception.Extra
 import Control.Monad
 import Data.List
 import Data.Maybe
+import General.GetOpt
 import System.Environment
 import System.Exit
 import System.Random
@@ -31,8 +32,10 @@ data Logic = Logic Int [[Source]]
            | Want [Int]
     deriving (Read,Show)
 
+arg = [Option "" ["arg"] (ReqArg Right "") ""]
 
-main = shaken test $ \args obj -> do
+main = shakeTest test arg $ \args -> do
+    let obj = id
     let toFile (Input i) = obj $ "input-" ++ show i ++ ".txt"
         toFile (Output i) = obj $ "output-" ++ show i ++ ".txt"
         toFile Bang = error "BANG"
@@ -59,7 +62,7 @@ asDuration x
     | otherwise = Nothing
 
 
-test build obj = do
+test build = do
     limit <- do
         args <- getArgs
         let bound = listToMaybe $ reverse $ mapMaybe asDuration args
@@ -85,7 +88,7 @@ test build obj = do
             writeFile (obj $ "input-" ++ show i ++ ".txt") $ show $ Single i
         logicBang <- addBang =<< addBang logic
         j <- randomRIO (1::Int,8)
-        res <- try_ $ build $ "--exception" : ("-j" ++ show j) : map show (logicBang ++ [Want [i | Logic i _ <- logicBang]])
+        res <- try_ $ build $ "--exception" : ("-j" ++ show j) : map ((++) "--arg=" . show) (logicBang ++ [Want [i | Logic i _ <- logicBang]])
         case res of
             Left err
                 | "BANG" `isInfixOf` show err -> return () -- error I expected
@@ -93,6 +96,7 @@ test build obj = do
             _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
         runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
         where
+            obj = id
             runLogic :: [Int] -> [Logic] -> IO ()
             runLogic negated xs = do
                 let poss = [i | Logic i _ <- xs]
@@ -102,7 +106,7 @@ test build obj = do
                     replicateM i $ randomElem poss
                 sleepFileTime
                 j <- randomRIO (1::Int,8)
-                build $ ("-j" ++ show j) : map show (xs ++ map Want wants)
+                build $ ("-j" ++ show j) : map ((++) "--arg=" . show) (xs ++ map Want wants)
 
                 let value i = case [ys | Logic j ys <- xs, j == i] of
                         [ys] -> Multiple $ flip map ys $ map $ \i -> case i of
