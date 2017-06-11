@@ -8,16 +8,14 @@ import Development.Shake.FilePath
 
 
 main = shakeTest_ test $ do
-    let obj = id
-    obj "*.out" %> \out -> do
-        cs <- mapM (readFile' . obj . (:".src")) $ takeBaseName out
+    "*.out" %> \out -> do
+        cs <- mapM (readFile' . (:".src")) $ takeBaseName out
         writeFile' out $ concat cs
 
 
 test build = do
-    let obj = id
-    let set file c = writeFile (obj $ file : ".src") [c]
-    let ask file c = do src <- readFile (obj $ file ++ ".out"); src === c
+    let set file c = writeFile (file : ".src") [c]
+    let ask file c = do src <- readFile (file ++ ".out"); src === c
 
     forM_ ['a'..'f'] $ \c -> set c c
     build ["--sleep","abc.out"]
