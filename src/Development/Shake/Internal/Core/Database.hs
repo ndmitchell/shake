@@ -236,7 +236,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
         reduce stack i = do
             s <- Ids.lookup status i
             case s of
-                Nothing -> err $ "interned value missing from database, " ++ show i
+                Nothing -> errorInternal $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> spawn True stack i k Nothing
                 Just (k, Loaded r) -> check stack i k r (depends r)
                 Just (k, res) -> return res
@@ -378,7 +378,7 @@ toReport Database{..} = do
             }
             where fromStep i = fromJust $ Map.lookup i steps
                   fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
-    return [maybe (err "toReport") f $ Map.lookup i status | i <- order]
+    return [maybe (errorInternal "toReport") f $ Map.lookup i status | i <- order]
 
 
 checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
@@ -485,7 +485,7 @@ withDatabase opts diagnostic witness act = do
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
 putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
     putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putExN (putEx x4) <> putEx x6
-putDatabase _ (_, x) = err $ "putWith, Cannot write Status with constructor " ++ statusType x
+putDatabase _ (_, x) = errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
 
 
 getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)

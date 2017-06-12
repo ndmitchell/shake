@@ -199,7 +199,7 @@ applyForall ks = do
     whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
     case Map.lookup tk globalRules of
         Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> err $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2 
+        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2 
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 

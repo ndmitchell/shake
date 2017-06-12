@@ -67,7 +67,7 @@ rendezvous xs = do
      else do
         (waiting, run) <- newWaiting
         let n = length xs
-        result <- newArray n $ err "rendezvous"
+        result <- newArray n $ errorInternal "rendezvous"
         todo <- newIORef $ length later
         forM_ (zip [0..] xs) $ \(i,x) -> case x of
             Now (Continue c) -> writeArray result i c

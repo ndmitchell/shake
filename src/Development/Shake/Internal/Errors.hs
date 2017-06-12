@@ -3,7 +3,8 @@
 -- | Errors seen by the user
 module Development.Shake.Internal.Errors(
     ShakeException(..),
-    errorStructured, err,
+    errorInternal,
+    errorStructured,
     errorNoRuleToBuildType, errorRuleDefinedMultipleTimes,
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
     errorDirectoryNotFile
@@ -15,8 +16,8 @@ import Data.Typeable
 import Data.List
 
 
-err :: String -> a
-err msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
+errorInternal :: String -> a
+errorInternal msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
 
 alternatives = let (*) = (,) in
     ["_rule_" * "oracle"
