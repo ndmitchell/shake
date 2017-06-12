@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, FlexibleContexts, TypeFamilies, ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies, ConstraintKinds #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Test.Oracle(main) where
