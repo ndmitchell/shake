@@ -35,7 +35,7 @@ main = shakeTest test opts $ \args -> do
     let f :: (ShakeValue q, ShakeValue (RuleResult q)) => String -> q -> RuleResult q -> (String, (Rules (), Rules ()))
         f name lhs rhs = (,) name
             (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
-            ,let o = name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracleWith lhs rhs; writeFile' o $ show v)
+            ,let o = name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracle lhs; writeFile' o $ show v)
     let tbl = [f "str-bool" "" True
               -- ,f "str-int" "" (0::Int)
               ,f "bool-str" True ""
@@ -45,7 +45,7 @@ main = shakeTest test opts $ \args -> do
         Plus x | Just (add,_) <- lookup x tbl -> add
         Star x | Just (_,use) <- lookup x tbl -> use
         At key -> do addOracle $ \() -> return key; return ()
-        Perc name -> let o = "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
+        Perc name -> let o = "unit.txt" in do want [o]; o %> \_ -> do {askOracle (); writeFile' o name}
 
 test build = do
     build ["clean"]
