@@ -75,14 +75,20 @@ errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
 
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
 errorMultipleRulesMatch tk k count
-    | specialIsOracleKey tk = if count == 0 then err $ "no oracle match for " ++ show tk else errorDuplicateOracle tk (Just k) []
+    | specialIsOracleKey tk, count == 0 =
+        errorInternal $ "no oracle match for " ++ show tk -- they are always irrifutable rules
+    | specialIsOracleKey tk = errorStructured
+        "Build system error - duplicate oracles for the same question type"
+        [("Question type",Just $ show tk)
+        ,("Question value",Just k)]
+        "Only one call to addOracle is allowed per question type"
     | otherwise = errorStructured
-    ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
-    [("Key type",Just $ show tk)
-    ,("Key value",Just k)
-    ,("Rules matched",Just $ show count)]
-    (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
-     else "Modify your rules/defaultRules so only one can produce the above key")
+        ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
+        [("Key type",Just $ show tk)
+        ,("Key value",Just k)
+        ,("Rules matched",Just $ show count)]
+        (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
+        else "Modify your rules/defaultRules so only one can produce the above key")
 
 errorRuleRecursion :: [String] -> TypeRep -> String -> IO a
 -- may involve both rules and oracle, so report as only rules
@@ -99,14 +105,6 @@ errorComplexRecursion ks = errorStructured
     "Build system error - indirect recursion detected"
     [("Key value " ++ show i, Just k) | (i, k) <- zip [1..] ks]
     "Rules may not be recursive"
-
-errorDuplicateOracle :: TypeRep -> Maybe String -> [TypeRep] -> IO a
-errorDuplicateOracle tk k tvs = errorStructured
-    "Build system error - duplicate oracles for the same question type"
-    ([("Question type",Just $ show tk)
-     ,("Question value",k)] ++
-     [("Answer type " ++ show i, Just $ show tv) | (i,tv) <- zip [1..] tvs])
-    "Only one call to addOracle is allowed per question type"
 
 errorNoApply :: TypeRep -> Maybe String -> String -> IO a
 errorNoApply tk k msg = structured (specialIsOracleKey tk)
