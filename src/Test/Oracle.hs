@@ -18,19 +18,21 @@ type instance RuleResult () = String
 newtype RandomType = RandomType (BinarySentinel String)
     deriving (Eq,Show,NFData,Typeable,Hashable,Binary)
 
-type instance RuleResult RandomType = ()
-type instance RuleResult T.RandomType = ()
+type instance RuleResult RandomType = Int
+type instance RuleResult T.RandomType = Int
 
 data Opt = Plus String | Star String | At String | Perc String
 opts = [f "plus" Plus, f "star" Star, f "at" At, f "perc" Perc]
     where f s con = Option "" [s] (ReqArg (Right . con) "") ""
 
 main = shakeTest test opts $ \args -> do
-    addOracle $ \(T.RandomType _) -> return ()
-    addOracle $ \(RandomType _) -> return ()
-    action $ do
-        askOracle $ T.RandomType $ BinarySentinel ()
-        askOracle $ RandomType $ BinarySentinel ()
+    addOracle $ \(T.RandomType _) -> return 42
+    addOracle $ \(RandomType _) -> return (-42)
+
+    "randomtype.txt" %> \out -> do
+        a <- askOracle $ T.RandomType $ BinarySentinel ()
+        b <- askOracle $ RandomType $ BinarySentinel ()
+        writeFile' out $ show (a,b)
 
     let f :: (ShakeValue q, ShakeValue (RuleResult q)) => String -> q -> RuleResult q -> (String, (Rules (), Rules ()))
         f name lhs rhs = (,) name
@@ -49,6 +51,9 @@ main = shakeTest test opts $ \args -> do
 
 test build = do
     build ["clean"]
+
+    build ["randomtype.txt"]
+    assertContents "randomtype.txt" "(42,-42)"
 
     -- check it rebuilds when it should
     build ["--at=key","--perc=name"]
