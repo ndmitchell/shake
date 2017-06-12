@@ -5,15 +5,20 @@ module Test.Oracle(main) where
 
 import Development.Shake
 import Development.Shake.Classes
+import Development.Shake.FilePath
 import General.GetOpt
+import Data.List.Extra
+import Data.Tuple.Extra
 import Test.Type hiding (RandomType)
 import qualified Test.Type as T
 import Control.Monad
 
-type instance RuleResult String = Bool
-type instance RuleResult Bool = String
+-- These are instances we'll compute over
+type instance RuleResult String = String
 type instance RuleResult Int = String
 type instance RuleResult () = String
+
+type instance RuleResult Bool = Bool -- test results don't have to be a boolean
 
 newtype RandomType = RandomType (BinarySentinel String)
     deriving (Eq,Show,NFData,Typeable,Hashable,Binary)
@@ -21,33 +26,30 @@ newtype RandomType = RandomType (BinarySentinel String)
 type instance RuleResult RandomType = Int
 type instance RuleResult T.RandomType = Int
 
-data Opt = Plus String | Star String | At String | Perc String
-opts = [f "plus" Plus, f "star" Star, f "at" At, f "perc" Perc]
-    where f s con = Option "" [s] (ReqArg (Right . con) "") ""
+data Define = Define String String -- this type produces this result
+opt = [Option "" ["def"] (ReqArg (Right . uncurry Define . second tail . breakOn "=") "type=value") ""]
 
-main = shakeTest test opts $ \args -> do
+main = shakeTest test opt $ \args -> do
     addOracle $ \(T.RandomType _) -> return 42
     addOracle $ \(RandomType _) -> return (-42)
-
     "randomtype.txt" %> \out -> do
         a <- askOracle $ T.RandomType $ BinarySentinel ()
         b <- askOracle $ RandomType $ BinarySentinel ()
         writeFile' out $ show (a,b)
 
-    let f :: (ShakeValue q, ShakeValue (RuleResult q)) => String -> q -> RuleResult q -> (String, (Rules (), Rules ()))
-        f name lhs rhs = (,) name
-            (do addOracle $ \k -> let _ = k `asTypeOf` lhs in return rhs; return ()
-            ,let o = name ++ ".txt" in do want [o]; o %> \_ -> do v <- askOracle lhs; writeFile' o $ show v)
-    let tbl = [f "str-bool" "" True
-              -- ,f "str-int" "" (0::Int)
-              ,f "bool-str" True ""
-              ,f "int-str" (0::Int) ""]
+    addOracle $ \b -> return $ not b
+    "true.txt" %> \out -> writeFile' out . show =<< askOracle False
 
-    forM_ args $ \a -> case a of
-        Plus x | Just (add,_) <- lookup x tbl -> add
-        Star x | Just (_,use) <- lookup x tbl -> use
-        At key -> do addOracle $ \() -> return key; return ()
-        Perc name -> let o = "unit.txt" in do want [o]; o %> \_ -> do {askOracle (); writeFile' o name}
+    let add :: (ShakeValue a, RuleResult a ~ String) => String -> a -> Rules ()
+        add name key = do
+            name <.> "txt" %> \out -> do
+                liftIO $ appendFile ".log" "."
+                writeFile' out =<< askOracle key
+            forM_ [val | Define nam val <- args, nam == name] $ \val ->
+                addOracle $ \k -> let _ = k `asTypeOf` key in return val
+    add "string" ""
+    add "unit" ()
+    add "int" (0 :: Int)
 
 test build = do
     build ["clean"]
@@ -56,43 +58,31 @@ test build = do
     assertContents "randomtype.txt" "(42,-42)"
 
     -- check it rebuilds when it should
-    build ["--at=key","--perc=name"]
-    assertContents "unit.txt" "name"
-    build ["--at=key","--perc=test"]
-    assertContents "unit.txt" "name"
-    build ["--at=foo","--perc=test"]
-    assertContents "unit.txt" "test"
+    writeFile ".log" ""
+    build ["--def=string=name","string.txt"]
+    assertContents "string.txt" "name"
+    build ["--def=string=name","string.txt"]
+    assertContents "string.txt" "name"
+    build ["--def=string=test","string.txt"]
+    assertContents "string.txt" "test"
+    assertContents ".log" ".."
 
     -- check adding/removing redundant oracles does not trigger a rebuild
-    build ["--at=foo","--perc=newer","--plus=str-bool"]
-    assertContents "unit.txt" "test"
-    build ["--at=foo","--perc=newer","--plus=int-str"]
-    assertContents "unit.txt" "test"
-    build ["--at=foo","--perc=newer"]
-    assertContents "unit.txt" "test"
+    build ["--def=string=test","string.txt","--def=unit=bob"]
+    build ["--def=string=test","string.txt","--def=int=fred"]
+    build ["--def=string=test","string.txt"]
+    assertContents "string.txt" "test"
+    assertContents ".log" ".."
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
 
-    build ["--plus=str-bool","--star=str-bool"]
-    errors ["--star=str-bool"] -- Building with an an Oracle that has been removed
+    build ["--def=unit=test","unit.txt"]
+    errors ["unit.txt"] -- Building with an an Oracle that has been removed
         "missing a call to addOracle"
 
-    errors ["--star=bool-str"] -- Building with an Oracle that I know nothing about
+    errors ["int.txt"] -- Building with an Oracle that I know nothing about
         "missing a call to addOracle"
 
-{-
-    build ["+str-int","*str-int"]
-    errors ["+str-bool","*str-int"] -- Building with an Oracle that has changed type
-        "askOracle is used at the wrong type"
-
-    errors ["+str-int","+str-bool"] -- Two Oracles with the same question type
-        "Internal error" -- TODO: "Only one call to addOracle is allowed"
-
-    errors ["+str-int","*str-bool"] -- Using an Oracle at the wrong answer type
-        "askOracle is used at the wrong type"
--}
-    errors ["--plus=str-bool","--plus=str-bool"] -- Two Oracles work if they aren't used
-        "" -- TODO: Should they?
-    errors ["--plus=str-bool","--plus=str-bool","--star=str-bool"] -- Two Oracles fail if they are used
-        "Internal error" -- TODO!: "Only one call to addOracle is allowed"
+    errors ["--def=string=1","--def=string=1"] -- Two Oracles defined in one go
+        "oracle defined twice"
