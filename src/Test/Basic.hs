@@ -88,6 +88,7 @@ main = shakeTest_ test $ do
         need ["ordering2"]
 
 test build = do
+    build ["clean"]
     writeFile "A.txt" "AAA"
     writeFile "B.txt" "BBB"
     build ["AB.txt","--sleep"]
