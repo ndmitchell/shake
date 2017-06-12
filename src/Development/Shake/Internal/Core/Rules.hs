@@ -27,6 +27,7 @@ import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import System.IO.Extra
+import System.IO.Unsafe
 import Data.Monoid
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary.Builder as Bin
@@ -103,9 +104,9 @@ data SRules = SRules
 
 instance Monoid SRules where
     mempty = SRules mempty Map.empty Map.empty
-    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWith f x2 y2) (Map.unionWith g x3 y3)
+    mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (Map.unionWith g x3 y3)
         where
-            f _ _ = err "Cannot call addBuiltinRule twice on the same key" -- TODO, proper error message
+            f k _ _ = unsafePerformIO $ errorRuleDefinedMultipleTimes k
             g (UserRule_ x) (UserRule_ y) = UserRule_ $ Unordered $ fromUnordered x ++ fromUnordered (fromJust $ cast y)
 
             fromUnordered (Unordered xs) = xs

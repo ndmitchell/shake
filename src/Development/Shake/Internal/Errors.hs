@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Errors(
     ShakeException(..),
     errorStructured, err,
-    errorNoRuleToBuildType, errorRuleTypeMismatch,
+    errorNoRuleToBuildType, errorRuleDefinedMultipleTimes,
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
     errorDirectoryNotFile
     ) where
@@ -66,13 +66,10 @@ errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     ,("_Result_ type", fmap show tv)]
     "Either you are missing a call to _rule/defaultRule_, or your call to _apply_ has the wrong _key_ type"
 
-errorRuleTypeMismatch :: TypeRep -> Maybe String -> TypeRep -> TypeRep -> IO a
-errorRuleTypeMismatch tk k tvReal tvWant = structured (specialIsOracleKey tk)
-    "Build system error - _rule_ used at the wrong _result_ type"
-    [("_Key_ type", Just $ show tk)
-    ,("_Key_ value", k)
-    ,("_Rule_ _result_ type", Just $ show tvReal)
-    ,("Requested _result_ type", Just $ show tvWant)]
+errorRuleDefinedMultipleTimes :: TypeRep-> IO a
+errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
+    "Build system error - _rule_ defined twice at one _key_ type"
+    [("_Key_ type", Just $ show tk)]
     "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
 
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
