@@ -26,7 +26,7 @@ alternatives = let (*) = (,) in
     ,"_Key_" * "Question"
     ,"_result_" * "answer"
     ,"_Result_" * "Answer"
-    ,"_rule/defaultRule_" * "addOracle"
+    ,"_addBuiltinRule_" * "addOracle"
     ,"_apply_" * "askOracle"]
 
 
@@ -65,13 +65,13 @@ errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     [("_Key_ type", Just $ show tk)
     ,("_Key_ value", k)
     ,("_Result_ type", fmap show tv)]
-    "Either you are missing a call to _rule/defaultRule_, or your call to _apply_ has the wrong _key_ type"
+    "You are missing a call to _addBuiltinRule_, or your call to _apply_ has the wrong _key_ type"
 
 errorRuleDefinedMultipleTimes :: TypeRep-> IO a
 errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
     "Build system error - _rule_ defined twice at one _key_ type"
     [("_Key_ type", Just $ show tk)]
-    "Either the function passed to _rule/defaultRule_ has the wrong _result_ type, or the result of _apply_ is used at the wrong type"
+    "You have called _addBuiltinRule_ more than once on the same key type"
 
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
 errorMultipleRulesMatch tk k count
