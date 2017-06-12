@@ -21,8 +21,8 @@ newtype RandomType = RandomType (BinarySentinel String)
 type instance RuleResult RandomType = ()
 type instance RuleResult T.RandomType = ()
 
-data Opt = Plus String | Star String | At String | Perc String | Bang String
-opts = [f "plus" Plus, f "star" Star, f "at" At, f "perc" Perc, f "bang" Bang]
+data Opt = Plus String | Star String | At String | Perc String
+opts = [f "plus" Plus, f "star" Star, f "at" At, f "perc" Perc]
     where f s con = Option "" [s] (ReqArg (Right . con) "") ""
 
 main = shakeTest test opts $ \args -> do
@@ -46,7 +46,6 @@ main = shakeTest test opts $ \args -> do
         Star x | Just (_,use) <- lookup x tbl -> use
         At key -> do addOracle $ \() -> return key; return ()
         Perc name -> let o = "unit.txt" in do want [o]; o %> \_ -> do {askOracleWith () ""; writeFile' o name}
-        Bang name -> do want ["rerun"]; "rerun" %> \out -> do alwaysRerun; writeFile' out name
 
 test build = do
     build ["clean"]
@@ -66,12 +65,6 @@ test build = do
     assertContents "unit.txt" "test"
     build ["--at=foo","--perc=newer"]
     assertContents "unit.txt" "test"
-
-    -- check always run works
-    build ["--bang=foo"]
-    assertContents "rerun" "foo"
-    build ["--bang=bar"]
-    assertContents "rerun" "bar"
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
