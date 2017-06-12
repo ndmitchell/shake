@@ -136,7 +136,6 @@ test build = do
     assertContents "configure" "111"
     assertContents "install" "11"
 
-    writeFile "dummy.txt" ""
     build ["dummy"]
     assertContents "dummy" "1"
     build ["dummy"]
