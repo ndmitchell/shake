@@ -78,6 +78,8 @@ main = shakeTest_ test $ do
     "ids/out" %> \out -> do need =<< readFileLines "ids/source"; writeFile' out ""
     "ids/*" %> \out -> do alwaysRerun; trace (takeFileName out); writeFile' out $ takeFileName out
 
+    "rerun" %> \out -> do alwaysRerun; liftIO $ appendFile out "."
+
     phony "foo" $
         liftIO $ createDirectoryIfMissing True "foo"
 
@@ -188,6 +190,12 @@ test build = do
     build ["ids/out","-j4"]
     -- if you collapse depends to [Id] then this ends up asking for the stale 'a'
     assertContents ".log" "b"
+
+    writeFile "rerun" ""
+    build ["rerun"]
+    assertContents "rerun" "."
+    build ["rerun","rerun"]
+    assertContents "rerun" ".."
 
     build ["foo"]
     build ["foo"]
