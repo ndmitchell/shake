@@ -101,7 +101,7 @@ main = shakeTest_ test $ do
         need ["tracker-source.c"]
         cmd AutoDeps "gcc" ["-c", "tracker-source.c", "-o", out]
 
-    where gen t f = cmd_ Shell "echo" t ">" (toNative f) :: Action ()
+    where gen t f = cmd Shell "echo" t ">" (toNative f) :: Action ()
           access f = if isWindows
                      then cmd_ Shell "type" (toNative f) "> nul"
                      else cmd_ Shell "cat" f "> /dev/null"
