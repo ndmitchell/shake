@@ -19,9 +19,9 @@ main _ = do
 assertIsJust :: IO (Maybe a) -> IO ()
 assertIsJust action = do
     Just _ <- action
-    pure ()
+    return ()
 
 assertIsNothing :: IO (Maybe a) -> IO ()
 assertIsNothing action = do
     Nothing <- action
-    pure ()
+    return ()
