@@ -379,6 +379,7 @@ test-suite shake-test
         Test.Directory
         Test.Docs
         Test.Errors
+        Test.Existence
         Test.FileLock
         Test.FilePath
         Test.FilePattern
