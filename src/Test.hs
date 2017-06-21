@@ -25,6 +25,7 @@ import qualified Test.Digest as Digest
 import qualified Test.Directory as Directory
 import qualified Test.Docs as Docs
 import qualified Test.Errors as Errors
+import qualified Test.Existence as Existence
 import qualified Test.FileLock as FileLock
 import qualified Test.Files as Files
 import qualified Test.FilePath as FilePath
@@ -61,7 +62,9 @@ fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetim
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main
         ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
-        ,"docs" * Docs.main, "errors" * Errors.main, "orderonly" * OrderOnly.main
+        ,"docs" * Docs.main
+        ,"errors" * Errors.main, "existence" * Existence.main
+        ,"orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
         ,"forward" * Forward.main, "match" * Match.main
         ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "manual" * Manual.main

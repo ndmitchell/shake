@@ -13,6 +13,7 @@ import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char
 import Data.Word
+import GHC.IO.Exception
 import Numeric
 import System.IO
 import Foreign
@@ -149,12 +150,15 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 
 #else
 -- Unix version
-getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
+getFileInfo x = handleBool isDoesNotExistError' (const $ return Nothing) $ do
     s <- getFileStatus $ fileNameToByteString x
     if isDirectory s then
         errorDirectoryNotFile $ fileNameToString x
      else
         result (extractFileTime s) (fromIntegral $ fileSize s)
+    where
+        isDoesNotExistError' e =
+            isDoesNotExistError e || ioeGetErrorType e == InappropriateType
 
 extractFileTime :: FileStatus -> Word32
 #ifndef MIN_VERSION_unix
