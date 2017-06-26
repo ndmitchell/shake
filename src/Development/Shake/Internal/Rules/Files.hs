@@ -5,8 +5,11 @@ module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>), defaultRuleFiles
     ) where
 
+import Control.DeepSeq (force)
 import Control.Monad
 import Control.Monad.IO.Class
+import qualified Data.Digest.Pure.SHA as SHA
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.Maybe
 import Data.List.Extra
 import System.Directory
@@ -71,7 +74,14 @@ defaultRuleFiles = do
                         [r] -> r
                         rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
             }
-    addBuiltinRuleEx newBinaryOp lint run
+
+    let summary (FilesQ ks) _ = do
+            hashes <- forM ks $ \(FileQ k) -> do
+                str <- LBS.readFile (fileNameToString k)
+                return $ SHA.showDigest $ SHA.sha256 str
+            return $ force $ SHA.showDigest $ SHA.sha256 $ LBS.pack $ show hashes
+
+    addBuiltinRuleEx newBinaryOp lint summary run
 
 
 

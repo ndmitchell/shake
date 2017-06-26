@@ -84,7 +84,7 @@ addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -
 addOracle = f where
     f :: forall q a . (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
     f act = do
-        addBuiltinRule noLint $ \(OracleQ q) old _ -> do
+        addBuiltinRule noLint binarySummary $ \(OracleQ q) old _ -> do
             new <- OracleA <$> act q
             return $ RunResult
                 (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)

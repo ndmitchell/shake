@@ -76,7 +76,8 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    addBuiltinRule noLint $ \k old dirty ->
+    let summary _ _ = error "Rule memoization cannot be used with the Forward mode"
+    addBuiltinRule noLint summary $ \k old dirty ->
         case old of
             Just old | not dirty -> return $ RunResult ChangedNothing old ()
             _ -> do

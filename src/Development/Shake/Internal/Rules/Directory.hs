@@ -115,11 +115,12 @@ instance Show GetDirectoryA where
 -- RULE DEFINITIONS
 
 queryRule :: (RuleResult key ~ value, BinaryEx key, BinaryEx witness, Eq witness, ShakeValue key, ShakeValue value)
-          => (value -> witness) -> (key -> IO value) -> Rules ()
-queryRule witness query = addBuiltinRuleEx newBinaryOp
+          => (value -> witness) -> (BuiltinSummary key value) -> (key -> IO value) -> Rules ()
+queryRule witness summary query = addBuiltinRuleEx newBinaryOp
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)
+    summary
     (\k old _ -> liftIO $ do
         new <- query k
         let wnew = witness new
@@ -132,13 +133,12 @@ defaultRuleDirectory :: Rules ()
 defaultRuleDirectory = do
     -- for things we are always going to rerun, and which might take up a lot of memory to store,
     -- we only store their hash, so we can compute change, but not know what changed happened
-    queryRule id (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
-    queryRule id (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
-    queryRule hash (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
-    queryRule hash (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
-    queryRule hash (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
-    queryRule hash (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
-
+    queryRule id showSummary (\(DoesFileExistQ x) -> DoesFileExistA <$> IO.doesFileExist x)
+    queryRule id showSummary (\(DoesDirectoryExistQ x) -> DoesDirectoryExistA <$> IO.doesDirectoryExist x)
+    queryRule hash binarySummary (\(GetEnvQ x) -> GetEnvA <$> IO.lookupEnv x)
+    queryRule hash binarySummary (\(GetDirectoryContentsQ x) -> GetDirectoryA <$> getDirectoryContentsIO x)
+    queryRule hash binarySummary (\(GetDirectoryFilesQ (a,b)) -> GetDirectoryA <$> getDirectoryFilesIO a b)
+    queryRule hash binarySummary (\(GetDirectoryDirsQ x) -> GetDirectoryA <$> getDirectoryDirsIO x)
 
 ---------------------------------------------------------------------
 -- RULE ENTRY POINTS

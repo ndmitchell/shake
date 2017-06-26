@@ -4,6 +4,8 @@ module Development.Shake.Internal.CmdOption(CmdOption(..)) where
 import Data.Data
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
+import Development.Shake.Internal.FilePattern
+
 -- | Options passed to 'command' or 'cmd' to control how processes are executed.
 data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
@@ -25,4 +27,5 @@ data CmdOption
     | FileStdout FilePath -- ^ Should I put the @stdout@ to a file.
     | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
     | AutoDeps -- ^ Compute dependencies automatically.
+    | Capture [FilePattern] -- ^ Output files captured for rule memoization. See 'Development.Shake.Memo.memoFiles' for more information.
       deriving (Eq,Ord,Show,Data,Typeable)

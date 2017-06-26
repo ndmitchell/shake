@@ -40,7 +40,7 @@ import System.Process
 import System.Info.Extra
 import System.Time.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Process
 import Control.Applicative
@@ -50,6 +50,7 @@ import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Core.Run
 import Development.Shake.FilePath
 import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.Memo
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived
@@ -133,10 +134,17 @@ commandExplicit funcName oopts results exe args = do
             verb <- getVerbosity
             (if verb >= Loud then quietly else id) act
 
-    let tracer = case reverse [x | Traced x <- opts] of
-            "":_ -> liftIO
-            msg:_ -> traced msg
-            [] -> traced (takeFileName exe)
+    let traceMsg = case reverse [x | Traced x <- opts] of
+            "":_ -> Nothing
+            msg:_ -> Just msg
+            [] -> Just (takeFileName exe)
+
+    let tracer = maybe liftIO traced traceMsg
+
+    let memoiser exe args = case reverse [x | Capture x <- opts] of
+            [] -> id
+            xs -> fmap (fromMaybe [])
+                . memoFiles' (show $ exe:args) traceMsg (concat xs)
 
     let tracker act
             | useLint = fsatrace act
@@ -207,8 +215,7 @@ commandExplicit funcName oopts results exe args = do
             unsafeAllowApply $ need $ ham cwd xs
             return res
 
-    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
-
+    skipper $ tracker $ \exe args -> memoiser exe args $ verboser $ tracer $ commandExplicitIO funcName opts results exe args
 
 -- | Given a shell command, call the continuation with the sanitised exec-style arguments
 runShell :: String -> (String -> [String] -> Action a) -> Action a

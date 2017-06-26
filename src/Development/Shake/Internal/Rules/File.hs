@@ -11,6 +11,7 @@ module Development.Shake.Internal.Rules.File(
     ) where
 
 import Control.Applicative
+import Control.DeepSeq (force)
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
@@ -18,7 +19,9 @@ import Data.Typeable
 import Data.List
 import Data.Bits
 import Data.Maybe
+import qualified Data.Digest.Pure.SHA as SHA
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashSet as Set
 import Foreign.Storable
 import Data.Word
@@ -267,7 +270,12 @@ defaultRuleFile = do
                 Just now -> case fileEqualValue opts v now of
                     EqualCheap -> return Nothing
                     _ -> return $ Just $ show now
-    addBuiltinRuleEx newBinaryOp lint run
+
+    let summary (FileQ k) _ = do
+            str <- LBS.readFile (fileNameToString k)
+            return $! force $ SHA.showDigest $ SHA.sha256 str
+
+    addBuiltinRuleEx newBinaryOp lint summary run
 
 
 apply_ :: (a -> FileName) -> [a] -> Action [Maybe FileA]
