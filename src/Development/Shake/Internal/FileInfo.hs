@@ -13,7 +13,6 @@ import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char
 import Data.Word
-import GHC.IO.Exception
 import Numeric
 import System.IO
 import Foreign
@@ -33,6 +32,7 @@ import Foreign.C.Types
 import Foreign.C.String
 
 #else
+import GHC.IO.Exception
 import System.IO.Error
 import System.Posix.Files.ByteString
 #endif
