@@ -104,6 +104,11 @@ worker pool@(Pool var done) = do
             Nothing -> return (Just s, return ())
             Just (now, todo2) -> return (Just s{todo = todo2}, now >> worker pool)
 
+-- | Like 'forkFinally', but the inner thread is unmasked even if you started masked.
+forkFinallyUnmasked :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
+forkFinallyUnmasked act cleanup =
+    mask_ $ forkIOWithUnmask $ \unmask ->
+        try (unmask act) >>= cleanup
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch threadsLimit or todo
@@ -116,7 +121,7 @@ step pool@(Pool var done) op = do
         case res of
             Just (now, todo2) | Set.size (threads s) < threadsLimit s -> do
                 -- spawn a new worker
-                t <- forkFinally (now >> worker pool) $ \res -> case res of
+                t <- forkFinallyUnmasked (now >> worker pool) $ \res -> case res of
                     Left e -> onVar $ \s -> do
                         t <- myThreadId
                         mapM_ killThread $ Set.toList $ Set.delete t $ threads s
