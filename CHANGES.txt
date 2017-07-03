@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #499, add a filePattern function, like ?== but with the matches
     #474, never spawn user actions unmasked
     Allow user arguments to replace builtin arguments
     #522, make copyFile create directories if necessary

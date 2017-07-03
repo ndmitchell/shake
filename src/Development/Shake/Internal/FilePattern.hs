@@ -3,6 +3,8 @@
 module Development.Shake.Internal.FilePattern(
     -- * Primitive API, as exposed
     FilePattern, (?==), (<//>),
+    -- * General API, used by other people.
+    filePattern,
     -- * Optimisation opportunities
     simple,
     -- * Multipattern file rules
@@ -223,6 +225,22 @@ matchStars (Stars pre mid post) x = do
          in if rp then (\x -> isRelativePath x && f x) else f
     where rp = isRelativePattern p
 
+
+-- | Like '?==', but returns 'Nothing' on if there is no match, otherwise 'Just' with the list
+--   of fragments matching each wildcard. For example:
+--
+-- @
+-- 'filePattern' \"**\/*.c\" \"test.txt\" == Nothing
+-- 'filePattern' \"**\/*.c\" \"foo.c\" == Just [\"",\"foo\"]
+-- 'filePattern' \"**\/*.c\" \"bar\/baz\/foo.c\" == Just [\"bar\/baz/\",\"foo\"]
+-- @
+--
+--   Note that the @**@ will often contain a trailing @\/@, and even on Windows any
+--   @\\@ separators will be replaced by @\/@.
+filePattern :: FilePattern -> FilePath -> Maybe [String]
+filePattern p = \x -> if eq x then Just $ ex x else Nothing
+    where eq = (?==) p
+          ex = extract p
 
 ---------------------------------------------------------------------
 -- MULTIPATTERN COMPATIBLE SUBSTITUTIONS
