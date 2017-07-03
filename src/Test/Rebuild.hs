@@ -1,5 +1,5 @@
 
-module Test.Assume(main) where
+module Test.Rebuild(main) where
 
 import Development.Shake
 import Test.Type

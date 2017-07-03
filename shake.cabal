@@ -368,7 +368,7 @@ test-suite shake-test
         General.Timing
         Paths_shake
         Run
-        Test.Assume
+        Test.Rebuild
         Test.Basic
         Test.Benchmark
         Test.C

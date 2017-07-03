@@ -14,7 +14,7 @@ import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent
 import Prelude
 
-import qualified Test.Assume as Assume
+import qualified Test.Rebuild as Rebuild
 import qualified Test.Basic as Basic
 import qualified Test.Benchmark as Benchmark
 import qualified Test.C as C
@@ -69,7 +69,7 @@ mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"forward" * Forward.main, "match" * Match.main
         ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "manual" * Manual.main
         ,"monad" * Monad.main, "parallel" * Parallel.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
-        ,"resources" * Resources.main, "assume" * Assume.main, "benchmark" * Benchmark.main
+        ,"resources" * Resources.main, "rebuild" * Rebuild.main, "benchmark" * Benchmark.main
         ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main
         ,"verbosity" * Verbosity.main, "version" * Version.main, "tup" * Tup.main]
     where (*) = (,)
