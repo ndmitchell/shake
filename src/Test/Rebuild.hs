@@ -25,7 +25,7 @@ test build = do
     build ["--sleep","abc.out"]
     ask "abc" "adc"
     set 'b' 'p'
-    build ["--sleep","abc.out","--rebuild-never"]
+    build ["--sleep","abc.out","--skip-forever"]
     build ["abc.out"]
     ask "abc" "adc"
     set 'c' 'z'
@@ -36,9 +36,9 @@ test build = do
     ask "bc" "pz"
     set 'b' 'r'
     set 'c' 'n'
-    build ["--sleep","abc.out","--rebuild-never"]
+    build ["--sleep","abc.out","--skip-forever"]
     ask "abc" "apz"
-    build ["ab.out","--rebuild-now"]
+    build ["ab.out","--rebuild"]
     ask "ab" "ar"
     build ["c.out"]
     ask "c" "z"
