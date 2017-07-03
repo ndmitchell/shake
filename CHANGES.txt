@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #474, never spawn user actions unmasked
     Allow user arguments to replace builtin arguments
     #522, make copyFile create directories if necessary
     #516, add an example for withTempDir
