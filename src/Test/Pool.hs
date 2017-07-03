@@ -12,14 +12,19 @@ import Control.Monad
 main = shakeTest_ test $ return ()
 
 
-test build =
+test build = do
+    -- See #474, we should never be running pool actions masked
+    let addPool pool act = addPoolMediumPriority pool $ do
+            Unmasked <- getMaskingState
+            act
+
     forM_ [False,True] $ \deterministic -> do
         -- check that it aims for exactly the limit
         forM_ [1..6] $ \n -> do
             var <- newMVar (0,0) -- (maximum, current)
             runPool deterministic n $ \pool ->
                 forM_ [1..5] $ \i ->
-                    addPoolMediumPriority pool $ do
+                    addPool pool $ do
                         modifyMVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
                         -- requires that all tasks get spawned within 0.1s
                         sleep 0.1
@@ -32,10 +37,10 @@ test build =
         started <- newBarrier
         stopped <- newBarrier
         res <- try_ $ runPool deterministic 3 $ \pool -> do
-                addPoolMediumPriority pool $ do
+                addPool pool $ do
                     waitBarrier started
                     error "pass"
-                addPoolMediumPriority pool $
+                addPool pool $
                     flip finally (signalBarrier stopped ()) $ do
                         signalBarrier started ()
                         sleep 10
@@ -51,8 +56,8 @@ test build =
         -- check someone spawned when at zero todo still gets run
         done <- newBarrier
         runPool deterministic 1 $ \pool ->
-            addPoolMediumPriority pool $
-                addPoolMediumPriority pool $
+            addPool pool $
+                addPool pool $
                     signalBarrier done ()
         assertWithin 1 $ waitBarrier done
 
@@ -61,7 +66,7 @@ test build =
         died <- newBarrier
         done <- newBarrier
         t <- forkIO $ flip finally (signalBarrier died ()) $ runPool deterministic 1 $ \pool ->
-            addPoolMediumPriority pool $
+            addPool pool $
                 flip onException (signalBarrier done ()) $ do
                     killThread =<< waitBarrier thread
                     sleep 10
