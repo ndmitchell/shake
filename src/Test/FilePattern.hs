@@ -130,6 +130,12 @@ test build = do
     f (not isWindows) "**" "C:\\drive"
     f (not isWindows) "**" "C:drive"
 
+    filePattern "**/*.c" "test.txt" === Nothing
+    filePattern "**/*.c" "foo.c" === Just ["","foo"]
+    filePattern "**/*.c" "bar/baz/foo.c" === Just ["bar/baz/","foo"]
+    filePattern "**/*.c" "bar\\baz\\foo.c" === Just
+        (if isWindows then ["bar/baz/","foo"] else ["","bar\\baz\\foo"])
+
     simple "a*b" === False
     simple "a//b" === False
     simple "a/**/b" === False
