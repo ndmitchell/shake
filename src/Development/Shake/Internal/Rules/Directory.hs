@@ -220,7 +220,7 @@ getDirectoryContents = fmap fromGetDirectoryA . apply1 . GetDirectoryContentsQ
 --   As a consequence of being tracked, if the contents change during the build
 --   (e.g. you are generating @.c@ files in this directory) then the build not reach
 --   a stable point, which is an error - detected by running with @--lint@.
---   You should only call this function returning source files.
+--   You should normally only call this function returning source files.
 --
 --   For an untracked variant see 'getDirectoryFilesIO'.
 getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
