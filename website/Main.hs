@@ -72,7 +72,7 @@ readFileTags = fmap parseTags . readFile'
 writeFileTags :: FilePath -> [Tag String] -> IO ()
 writeFileTags file = writeFileUTF8 file . renderTagsOptions renderOptions{optEscape=concatMap (\x -> Map.findWithDefault [x] x escapes)}
     where escapes = Map.fromList $ [(b, "&" ++ a ++ ";") | (a,[b]) <- xmlEntities] ++
-                                   [(b, "&" ++ a ++ ";") | (a,[b]) <- htmlEntities, not $ isAscii b]
+                                   [(b, "&" ++ takeWhile (/= ';') a ++ ";") | (a,[b]) <- htmlEntities, not $ isAscii b]
 
 
 ---------------------------------------------------------------------
