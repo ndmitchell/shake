@@ -5,6 +5,7 @@
 * [User manual](Manual.md) -- the place to start, which also serves as a tutorial.
 * [Why](Why.md) -- details on why you should use Shake, for those who are easily influenced.
 * [Includes](Includes.md) -- how to deal with `#include` files, import statements and other dependencies between files.
+* [Debugging](Debugging.md) -- how to determine what a Shake build system is doing.
 * [Profiling and optimisation](Profiling.md) -- how to speed up an existing Shake build system.
 * [Command line flags](CommandLine.md) -- the flags and settings supported by Shake, a better version of `--help`.
 * [Developing Shake](Developing.md) -- notes for people who want to contribute to Shake itself.
