@@ -1,6 +1,13 @@
 :set -i.
 :set -fwarn-unused-binds -fwarn-unused-imports
 :set -hide-all-packages
-:set -package=base -package=directory -package=filepath -package=text -package=containers
-:set -package=blaze-html -package=tagsoup -package=markdown -package=extra
+:set -package=base
+:set -package=directory
+:set -package=filepath
+:set -package=text
+:set -package=containers
+:set -package=blaze-html
+:set -package=tagsoup
+:set -package=markdown
+:set -package=extra
 :load Main
