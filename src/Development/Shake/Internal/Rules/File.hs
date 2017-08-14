@@ -187,6 +187,7 @@ defaultRuleFile = do
             -- but more than that, it goes wrong if you do, see #427
             let asLint (ResultDirect x) = Just x
                 asLint x = Nothing
+            let noLint (RunResult a b _) = RunResult a b Nothing
             let retNew :: RunChanged -> Result -> Action (RunResult (Maybe FileA))
                 retNew c v = return $ RunResult c (runBuilder $ putEx v) (asLint v)
             let retOld :: RunChanged -> Action (RunResult (Maybe FileA))
@@ -236,7 +237,10 @@ defaultRuleFile = do
             case old of
                 _ | r == RebuildNow -> rebuild
                 _ | r == RebuildLater -> case old of
-                    Just old -> retOld ChangedNothing
+                    Just old ->
+                        -- ignoring the currently stored value, which may trigger lint has changed
+                        -- so disable lint on this file
+                        noLint <$> retOld ChangedNothing
                     Nothing -> do
                         -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
                         now <- liftIO $ fileStoredValue opts o
