@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Require extra-1.5.3
     #499, add a filePattern function, like ?== but with the matches
     #474, never spawn user actions unmasked
     Allow user arguments to replace builtin arguments
@@ -22,7 +23,6 @@ Changelog for Shake
     #481, document how to raise errors in Action
     Delete the deprecated system* functions
     #427, check stored value after checking dependencies
-    Require extra-1.4.10
     Significant changes to defining custom rules
     Delete the deprecated defaultRule
     IMPORTANT: Incompatible on disk format change

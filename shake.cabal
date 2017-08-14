@@ -92,7 +92,7 @@ library
         js-jquery,
         js-flot,
         transformers >= 0.2,
-        extra >= 1.4.10,
+        extra >= 1.5.3,
         deepseq >= 1.1,
         primitive
 
@@ -192,7 +192,7 @@ executable shake
         js-jquery,
         js-flot,
         transformers >= 0.2,
-        extra >= 1.4.10,
+        extra >= 1.5.3,
         deepseq >= 1.1,
         primitive
 
@@ -294,7 +294,7 @@ test-suite shake-test
         js-flot,
         transformers >= 0.2,
         deepseq >= 1.1,
-        extra >= 1.4.10,
+        extra >= 1.5.3,
         primitive,
         QuickCheck >= 2.0
 
