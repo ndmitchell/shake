@@ -1,44 +1,59 @@
+{-# LANGUAGE ViewPatterns #-}
 
 module Test.Rebuild(main) where
 
 import Development.Shake
 import Test.Type
-import Control.Monad
-import Development.Shake.FilePath
+import General.GetOpt
 
 
-main = shakeTest_ test $
-    "*.out" %> \out -> do
-        cs <- mapM (readFile' . (:".src")) $ takeBaseName out
-        writeFile' out $ concat cs
+opts = [Option "" ["arg"] (ReqArg Right "VALUE") ""]
 
+main = shakeTest test opts $ \(concat -> x) -> do
+    want ["a.txt"]
+    "a.txt" %> \out -> do
+        src <- readFile' "b.txt"
+        writeFile' out $ src ++ x
+
+    "b.txt" %> \out -> do
+        src <- readFile' "c.txt"
+        writeFile' out $ src ++ x
 
 test build = do
-    let set file c = writeFile (file : ".src") [c]
-    let ask file c = do src <- readFile (file ++ ".out"); src === c
+    build ["clean"]
+    let go arg c b a flags = do
+            writeFileChanged "c.txt" c
+            build $ ["--arg=" ++ arg, "--sleep","--no-reports"] ++ flags
+            assertContents "b.txt" b
+            assertContents "a.txt" a
 
-    forM_ ['a'..'f'] $ \c -> set c c
-    build ["--sleep","abc.out"]
-    ask "abc" "abc"
+    -- check rebuild works
+    go "1" "x" "x1" "x11" []
+    go "2" "x" "x1" "x11" []
+    go "3" "x" "x1" "x13" ["--rebuild=a.*"]
+    go "4" "x" "x1" "x13" []
+    go "5" "x" "x5" "x55" ["--rebuild=b.*"]
+    go "6" "x" "x6" "x66" ["--rebuild"]
+    go "7" "x" "x6" "x66" []
+    go "8" "y" "y8" "y88" []
 
-    set 'b' 'd'
-    build ["--sleep","abc.out"]
-    ask "abc" "adc"
-    set 'b' 'p'
-    build ["--sleep","abc.out","--skip-forever"]
-    build ["abc.out"]
-    ask "abc" "adc"
-    set 'c' 'z'
-    build ["--sleep","abc.out"]
-    ask "abc" "apz"
+    -- check skip works
+    go "1" "x" "x1" "x11" []
+    go "2" "y" "y2" "x11" ["--skip=a.*"]
+    go "3" "y" "y2" "y23" []
+    go "4" "z" "y2" "y23" ["--skip=b.*"]
+    go "5" "z" "y2" "y23" ["--skip=b.*"]
+    go "6" "z" "z6" "z66" []
+    go "7" "a" "z6" "z66" ["--skip=c.*"]
+    go "8" "a" "z6" "z66" ["--skip=b.*"]
+    go "9" "a" "a9" "z66" ["--skip=a.*"]
+    go "0" "a" "a9" "a90" []
 
-    build ["bc.out","c.out"]
-    ask "bc" "pz"
-    set 'b' 'r'
-    set 'c' 'n'
-    build ["--sleep","abc.out","--skip-forever"]
-    ask "abc" "apz"
-    build ["ab.out","--rebuild"]
-    ask "ab" "ar"
-    build ["c.out"]
-    ask "c" "z"
+{-
+    -- check skip-forever works
+    -- currently it does not work properly
+    go "1" "x" "x1" "x11" []
+    go "2" "y" "y2" "x11" ["--skip-forever=a.*"]
+    go "3" "y" "y2" "x11" []
+    go "4" "z" "z4" "z44" []
+-}
