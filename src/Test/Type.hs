@@ -11,7 +11,7 @@ module Test.Type(
     assertContents, assertContentsUnordered, assertContentsWords,
     assertExists, assertMissing,
     (===),
-    Pat(..), pat,
+    Pat(PatWildcard), pat,
     BinarySentinel(..), RandomType(..),
     ) where
 
