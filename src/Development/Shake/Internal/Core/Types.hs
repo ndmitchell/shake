@@ -72,7 +72,11 @@ instance NFData value => NFData (RunResult value) where
 --   The arguments comprise the @key@, the value of the previous serialisation or 'Nothing' if the rule
 --   has not been run previously, and 'True' to indicate the dependencies have changed or 'False' that
 --   they have not.
-type BuiltinRun key value = key -> Maybe BS.ByteString -> Bool -> Action (RunResult value)
+type BuiltinRun key value
+    = key
+    -> Maybe BS.ByteString
+    -> Bool
+    -> Action (RunResult value)
 
 -- | The action performed by @--lint@ for a given @key@/@value@ pair.
 --   At the end of the build the lint action will be called for each @key@ that was built this run,
