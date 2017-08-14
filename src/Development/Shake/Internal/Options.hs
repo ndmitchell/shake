@@ -37,11 +37,13 @@ data Rebuild
     | RebuildLater
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run/.
         --   Assume these files are clean in this run, but test them normally in future runs.
+{-
     | RebuildNever
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run, and in future runs/.
         --   Assume and record that these files are clean and do not require rebuilding, provided the file
         --   has been built before. Useful if you have modified a file in some
         --   inconsequential way, such as only the comments or whitespace, and wish to avoid a rebuild.
+-}
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
 
 

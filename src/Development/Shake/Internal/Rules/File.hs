@@ -247,11 +247,16 @@ defaultRuleFile = do
                         case now of
                             Nothing -> rebuild
                             Just now -> do alwaysRerun; retNew ChangedStore $ ResultDirect now
+                {-
                 _ | r == RebuildNever -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
                         Nothing -> rebuild
-                        Just now -> retNew ChangedStore $ ResultDirect now
+                        Just now -> do
+                            let diff | Just (ResultDirect old) <- old, fileEqualValue opts old now /= NotEqual = ChangedRecomputeSame
+                                     | otherwise = ChangedRecomputeDiff
+                            retNew diff $ ResultDirect now
+                -}
                 Just (ResultDirect old) | not dirty -> do
                     now <- liftIO $ fileStoredValue opts o
                     case now of
