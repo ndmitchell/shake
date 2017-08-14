@@ -29,6 +29,9 @@ writeProfile out xs
     | takeExtension out == ".json" = writeFile out $ generateJSON xs
     | takeExtension out == ".trace" = writeFile out $ generateTrace xs
     | out == "-" = putStr $ unlines $ generateSummary xs
+    -- NOTE: On my laptop writing 1.5Mb of profile report takes 0.6s.
+    --       This is fundamentals of my laptop, not a Haskell profiling issue.
+    --       Verified with similar "type foo > bar" commands taking similar time.
     | otherwise = LBS.writeFile out =<< generateHTML xs
 
 
