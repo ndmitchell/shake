@@ -11,6 +11,7 @@ module Test.Type(
     assertContents, assertContentsUnordered, assertContentsWords,
     assertExists, assertMissing,
     (===),
+    Pat(..), pat,
     BinarySentinel(..), RandomType(..),
     ) where
 
@@ -256,6 +257,21 @@ copyFileChanged old new = do
     good <- IO.doesFileExist new
     good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
     unless good $ copyFile old new
+
+-- The operators %> ?> &*> &?> |?> |*> all have an isomorphism
+data Pat = PatWildcard | PatPredicate | PatOrWildcard | PatAndWildcard | PatAndPredicate
+    deriving (Read, Show, Enum, Bounded)
+
+pat :: Pat -> FilePattern -> (FilePath -> Action ()) -> Rules ()
+pat PatWildcard p act = p %> act
+pat PatPredicate p act = (p ?==) ?> act
+pat PatOrWildcard p act = [p] |%> act
+pat PatAndWildcard p act =
+    -- single wildcard shortcircuits, so we use multiple to avoid that
+    -- and thus have to fake writing an extra file
+    [p, p ++ "'"] &%> \[x,x'] -> do act x; writeFile' x' ""
+pat PatAndPredicate p act = (\x -> if p ?== x then Just [x] else Nothing) &?> \[x] -> act x
+
 
 ---------------------------------------------------------------------
 -- TEST MATERIAL
