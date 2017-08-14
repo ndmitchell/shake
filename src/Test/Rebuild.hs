@@ -7,7 +7,7 @@ import Test.Type
 import General.GetOpt
 
 
-opts = [Option "" ["arg"] (ReqArg Right "VALUE") ""]
+opts = [Option "" ["timestamp"] (ReqArg Right "VALUE") "Value used to detect what has rebuilt when"]
 
 main = shakeTest test opts $ \(concat -> x) -> do
     want ["a.txt"]
@@ -23,7 +23,7 @@ test build = do
     build ["clean"]
     let go arg c b a flags = do
             writeFileChanged "c.txt" c
-            build $ ["--arg=" ++ arg, "--sleep","--no-reports"] ++ flags
+            build $ ["--timestamp=" ++ arg, "--sleep","--no-reports"] ++ flags
             assertContents "b.txt" b
             assertContents "a.txt" a
 
