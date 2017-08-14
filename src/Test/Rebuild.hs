@@ -1,4 +1,3 @@
-{-# LANGUAGE ViewPatterns #-}
 
 module Test.Rebuild(main) where
 
