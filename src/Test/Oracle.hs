@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Test.Oracle(main) where
