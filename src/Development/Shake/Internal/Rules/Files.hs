@@ -77,16 +77,14 @@ ruleRun opts k (fmap getEx -> old) dirtyChildren = case old of
         Just old | not dirtyChildren -> do
             v <- liftIO $ filesStoredValue opts k
             case v of
-                Just v -> do
-                    let e = filesEqualValue opts old v
-                    case e of
-                        NotEqual -> rebuild k $ Just old
-                        EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
-                        EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
-                Nothing -> rebuild k $ Just old
-        _ -> rebuild k old
+                Just v -> case filesEqualValue opts old v of
+                    NotEqual -> rebuild
+                    EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
+                    EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
+                Nothing -> rebuild
+        _ -> rebuild
     where
-        rebuild k old = do
+        rebuild = do
             putWhen Chatty $ "# " ++ show k
             rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
             v <- case userRuleMatch rules ($ k) of
