@@ -23,6 +23,7 @@ import Development.Shake.Internal.Core.Rules
 import General.Extra
 import Development.Shake.Internal.FileName
 import Development.Shake.Classes
+import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
@@ -63,6 +64,7 @@ defaultRuleFiles = do
     addBuiltinRuleEx newBinaryOp (ruleLint opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
+ruleLint opts k (FilesA []) = return Nothing -- in the case of disabling lint
 ruleLint opts k v = do
     now <- filesStoredValue opts k
     return $ case now of
@@ -71,16 +73,27 @@ ruleLint opts k v = do
                  | otherwise -> Just $ show now
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
-ruleRun opts rebuildFlags k (fmap getEx -> old) dirtyChildren = do
+ruleRun opts rebuildFlags k o@(fmap getEx -> old) dirtyChildren = do
     let r = map rebuildFlags $ map (fileNameToString . fromFileQ) $ fromFilesQ k
     case old of
         _ | RebuildNow `elem` r -> rebuild
+        _ | RebuildLater `elem` r -> case old of
+            Just old ->
+                -- ignoring the currently stored value, which may trigger lint has changed
+                -- so disable lint on this file
+                return $ RunResult ChangedNothing (fromJust o) $ FilesA []
+            Nothing -> do
+                -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
+                now <- liftIO $ filesStoredValue opts k
+                case now of
+                    Nothing -> rebuild
+                    Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx now) now
         Just old | not dirtyChildren -> do
             v <- liftIO $ filesStoredValue opts k
             case v of
                 Just v -> case filesEqualValue opts old v of
                     NotEqual -> rebuild
-                    EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
+                    EqualCheap -> return $ RunResult ChangedNothing (fromJust o) v
                     EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
                 Nothing -> rebuild
         _ -> rebuild
