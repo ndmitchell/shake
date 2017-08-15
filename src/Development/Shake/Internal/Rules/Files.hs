@@ -61,7 +61,6 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
-    let equalValue = filesEqualValue opts
     let executeRule (k :: FilesQ) = do
             rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
             case userRuleMatch rules ($ k) of
@@ -72,15 +71,15 @@ defaultRuleFiles = do
             now <- filesStoredValue opts k
             return $ case now of
                 Nothing -> Just "<missing>"
-                Just now | equalValue v now == EqualCheap -> Nothing
+                Just now | filesEqualValue opts v now == EqualCheap -> Nothing
                          | otherwise -> Just $ show now
 
-    let builtinRun k (fmap getEx -> old) dirtyChildren = case old of
+    let run k (fmap getEx -> old) dirtyChildren = case old of
                 Just old | not dirtyChildren -> do
                     v <- liftIO $ filesStoredValue opts k
                     case v of
                         Just v -> do
-                            let e = equalValue old v
+                            let e = filesEqualValue opts old v
                             case e of
                                 NotEqual -> rebuild k $ Just old
                                 EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
@@ -91,11 +90,11 @@ defaultRuleFiles = do
                 rebuild k old = do
                     putWhen Chatty $ "# " ++ show k
                     v <- executeRule k
-                    let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
+                    let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ RunResult c (runBuilder $ putEx v) v
 
-    addBuiltinRuleEx newBinaryOp lint builtinRun
+    addBuiltinRuleEx newBinaryOp lint run
 
 
 -- | Define a rule for building multiple files at the same time.
