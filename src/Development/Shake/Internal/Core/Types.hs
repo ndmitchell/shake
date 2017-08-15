@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
-{-# LANGUAGE ExistentialQuantification, ConstraintKinds, DeriveFunctor #-}
+{-# LANGUAGE ExistentialQuantification, DeriveFunctor #-}
 
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),

@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ExistentialQuantification, ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(

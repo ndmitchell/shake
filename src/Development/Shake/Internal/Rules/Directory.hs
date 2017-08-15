@@ -1,5 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, FlexibleContexts #-}
-{-# LANGUAGE ConstraintKinds, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Both System.Directory and System.Environment wrappers
 module Development.Shake.Internal.Rules.Directory(
