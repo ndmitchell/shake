@@ -15,7 +15,6 @@ import Data.Typeable.Extra
 import General.Binary
 import Prelude
 
-import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Action hiding (trackAllow)
 import Development.Shake.Internal.Core.Run
@@ -62,17 +61,42 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
-    let (run, lint) = convertLegacy LegacyRule
-            {storedValue=filesStoredValue opts
-            ,equalValue=filesEqualValue opts
-            ,executeRule = \(k :: FilesQ) -> do
-                rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
-                case userRuleMatch rules ($ k) of
-                        [r] -> r
-                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
-            }
-    addBuiltinRuleEx newBinaryOp lint run
+    let storedValue = filesStoredValue opts
+    let equalValue = filesEqualValue opts
+    let executeRule (k :: FilesQ) = do
+            rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
+            case userRuleMatch rules ($ k) of
+                    [r] -> r
+                    rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
 
+    let builtinLint k v = do
+            now <- storedValue k
+            return $ case now of
+                Nothing -> Just "<missing>"
+                Just now | equalValue v now == EqualCheap -> Nothing
+                         | otherwise -> Just $ show now
+
+    let builtinRun k (fmap getEx -> old) dirtyChildren = case old of
+                Just old | not dirtyChildren -> do
+                    v <- liftIO $ storedValue k
+                    case v of
+                        Just v -> do
+                            let e = equalValue old v
+                            case e of
+                                NotEqual -> rebuild k $ Just old
+                                EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
+                                EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
+                        Nothing -> rebuild k $ Just old
+                _ -> rebuild k old
+            where
+                rebuild k old = do
+                    putWhen Chatty $ "# " ++ show k
+                    v <- executeRule k
+                    let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
+                          | otherwise = ChangedRecomputeDiff
+                    return $ RunResult c (runBuilder $ putEx v) v
+
+    addBuiltinRuleEx newBinaryOp builtinLint builtinRun
 
 
 -- | Define a rule for building multiple files at the same time.
@@ -175,48 +199,3 @@ getFileTimes name xs = do
             error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
                     concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
-
-
-data LegacyRule key value = LegacyRule
-    {storedValue :: key -> IO (Maybe value)
-        -- ^ /[Required]/ Retrieve the @value@ associated with a @key@, if available.
-        --
-        --   As an example for filenames/timestamps, if the file exists you should return 'Just'
-        --   the timestamp, but otherwise return 'Nothing'.
-    ,equalValue :: value -> value -> EqualCost
-        -- ^ /[Optional]/ Equality check, with a notion of how expensive the check was.
-        --   Use 'defaultLegacyRule' if you do not want a different equality.
-    ,executeRule :: key -> Action value
-        -- ^ How to run a rule, given ways to get a UserRule.
-    }
-
-
-convertLegacy :: forall k v . (BinaryEx v, ShakeValue k, ShakeValue v) => LegacyRule k v -> (BuiltinRun k v, BuiltinLint k v)
-convertLegacy LegacyRule{..} = (builtinRun, builtinLint)
-    where
-        builtinLint k v = do
-            now <- storedValue k
-            return $ case now of
-                Nothing -> Just "<missing>"
-                Just now | equalValue v now == EqualCheap -> Nothing
-                         | otherwise -> Just $ show now
-
-        builtinRun k (fmap getEx -> old) dirtyChildren = case old of
-                Just old | not dirtyChildren -> do
-                    v <- liftIO $ storedValue k
-                    case v of
-                        Just v -> do
-                            let e = equalValue old v
-                            case e of
-                                NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
-                                EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
-                        Nothing -> rebuild k $ Just old
-                _ -> rebuild k old
-            where
-                rebuild k old = do
-                    putWhen Chatty $ "# " ++ show k
-                    v <- executeRule k
-                    let c | Just old <- old, equalValue old v /= NotEqual = ChangedRecomputeSame
-                          | otherwise = ChangedRecomputeDiff
-                    return $ RunResult c (runBuilder $ putEx v) v
