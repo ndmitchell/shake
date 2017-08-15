@@ -124,7 +124,7 @@ instance BinaryEx Result where
     getEx x = case BS.length x of
         0 -> ResultPhony
         12 -> ResultDirect $ getEx x
-        13 -> ResultForward $ getEx (BS.tail x)
+        13 -> ResultForward $ getEx $ BS.tail x
 
 
 ---------------------------------------------------------------------

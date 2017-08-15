@@ -54,7 +54,7 @@ filesStoredValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (fileStore
 filesEqualValue :: ShakeOptions -> FilesA -> FilesA -> EqualCost
 filesEqualValue opts (FilesA xs) (FilesA ys)
     | length xs /= length ys = NotEqual
-    | otherwise = foldr and_ EqualCheap (zipWith (fileEqualValue opts) xs ys)
+    | otherwise = foldr and_ EqualCheap $ zipWith (fileEqualValue opts) xs ys
         where and_ NotEqual x = NotEqual
               and_ EqualCheap x = x
               and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
