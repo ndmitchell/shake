@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Oracle(
     addOracle, askOracle, askOracleWith
