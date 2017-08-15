@@ -61,7 +61,6 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
-    let storedValue = filesStoredValue opts
     let equalValue = filesEqualValue opts
     let executeRule (k :: FilesQ) = do
             rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
@@ -69,8 +68,8 @@ defaultRuleFiles = do
                     [r] -> r
                     rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
 
-    let builtinLint k v = do
-            now <- storedValue k
+    let lint k v = do
+            now <- filesStoredValue opts k
             return $ case now of
                 Nothing -> Just "<missing>"
                 Just now | equalValue v now == EqualCheap -> Nothing
@@ -78,7 +77,7 @@ defaultRuleFiles = do
 
     let builtinRun k (fmap getEx -> old) dirtyChildren = case old of
                 Just old | not dirtyChildren -> do
-                    v <- liftIO $ storedValue k
+                    v <- liftIO $ filesStoredValue opts k
                     case v of
                         Just v -> do
                             let e = equalValue old v
@@ -96,7 +95,7 @@ defaultRuleFiles = do
                           | otherwise = ChangedRecomputeDiff
                     return $ RunResult c (runBuilder $ putEx v) v
 
-    addBuiltinRuleEx newBinaryOp builtinLint builtinRun
+    addBuiltinRuleEx newBinaryOp lint builtinRun
 
 
 -- | Define a rule for building multiple files at the same time.
