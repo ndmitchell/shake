@@ -61,38 +61,41 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
+    -- A rule from FilesQ to FilesA. The result value is only useful for linting.
+    addBuiltinRuleEx newBinaryOp (ruleLint opts) (ruleRun opts)
 
-    let lint k v = do
-            now <- filesStoredValue opts k
-            return $ case now of
-                Nothing -> Just "<missing>"
-                Just now | filesEqualValue opts v now == EqualCheap -> Nothing
-                         | otherwise -> Just $ show now
+ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
+ruleLint opts k v = do
+    now <- filesStoredValue opts k
+    return $ case now of
+        Nothing -> Just "<missing>"
+        Just now | filesEqualValue opts v now == EqualCheap -> Nothing
+                 | otherwise -> Just $ show now
 
-    let run k (fmap getEx -> old) dirtyChildren = case old of
-                Just old | not dirtyChildren -> do
-                    v <- liftIO $ filesStoredValue opts k
-                    case v of
-                        Just v -> do
-                            let e = filesEqualValue opts old v
-                            case e of
-                                NotEqual -> rebuild k $ Just old
-                                EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
-                                EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
-                        Nothing -> rebuild k $ Just old
-                _ -> rebuild k old
-            where
-                rebuild k old = do
-                    putWhen Chatty $ "# " ++ show k
-                    rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
-                    v <- case userRuleMatch rules ($ k) of
-                        [r] -> r
-                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
-                    let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
-                          | otherwise = ChangedRecomputeDiff
-                    return $ RunResult c (runBuilder $ putEx v) v
+ruleRun :: ShakeOptions -> BuiltinRun FilesQ FilesA
+ruleRun opts k (fmap getEx -> old) dirtyChildren = case old of
+        Just old | not dirtyChildren -> do
+            v <- liftIO $ filesStoredValue opts k
+            case v of
+                Just v -> do
+                    let e = filesEqualValue opts old v
+                    case e of
+                        NotEqual -> rebuild k $ Just old
+                        EqualCheap -> return $ RunResult ChangedNothing (runBuilder $ putEx v) v
+                        EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
+                Nothing -> rebuild k $ Just old
+        _ -> rebuild k old
+    where
+        rebuild k old = do
+            putWhen Chatty $ "# " ++ show k
+            rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
+            v <- case userRuleMatch rules ($ k) of
+                [r] -> r
+                rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
+            let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
+                    | otherwise = ChangedRecomputeDiff
+            return $ RunResult c (runBuilder $ putEx v) v
 
-    addBuiltinRuleEx newBinaryOp lint run
 
 
 -- | Define a rule for building multiple files at the same time.
