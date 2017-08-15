@@ -48,7 +48,7 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (wrapQuote . show) x
 
 
 filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)
-filesStoredValue opts (FilesQ xs) = (fmap FilesA . sequence) <$> mapM (fileStoredValue opts) xs
+filesStoredValue opts (FilesQ xs) = fmap FilesA . sequence <$> mapM (fileStoredValue opts) xs
 
 filesEqualValue :: ShakeOptions -> FilesA -> FilesA -> EqualCost
 filesEqualValue opts (FilesA xs) (FilesA ys)
