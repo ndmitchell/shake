@@ -2,7 +2,7 @@
 {-# LANGUAGE ExistentialQuantification, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Internal.Core.Types(
-    BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),
+    BuiltinRun, BuiltinLint, BuiltinSummary, RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
     BuiltinRule(..), Global(..), Local(..), Action(..),
     newLocal
@@ -86,9 +86,15 @@ type BuiltinRun key value
 --   For builtin rules where the value is expected to change use 'Development.Shake.Rules.noLint'.
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
+-- | A function that summarizes the current value into a short string, typically a hash.
+--   The result should be stable, and should not depend on the state of the Shake database.
+--   Used for rule memoization.
+type BuiltinSummary key value = key -> value -> IO String
+
 data BuiltinRule = BuiltinRule
     {builtinRun :: BuiltinRun Key Value
     ,builtinLint :: BuiltinLint Key Value
+    ,builtinSummary :: BuiltinSummary Key Value
     ,builtinResult :: TypeRep
     ,builtinKey :: BinaryOp Key
     }
@@ -127,6 +133,7 @@ data Global = Global
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state
     ,globalUserRules :: Map.HashMap TypeRep UserRule_
+    ,globalSHACache :: IORef (Map.HashMap Key String) -- ^ SHA cache for memoization
     }
 
 -- local variables of Action

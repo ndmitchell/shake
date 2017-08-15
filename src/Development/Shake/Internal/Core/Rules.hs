@@ -5,13 +5,15 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    RuleResult, addBuiltinRule, addBuiltinRuleEx, noLint,
+    RuleResult, addBuiltinRule, addBuiltinRuleEx,
+    noLint, binarySummary, showSummary,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
     ) where
 
 import Control.Applicative
+import Control.DeepSeq (force)
 import Data.Tuple.Extra
 import Control.Monad.Extra
 import Control.Monad.Fix
@@ -21,6 +23,7 @@ import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 import Data.Binary
 import General.Binary
+import qualified Data.Digest.Pure.SHA as SHA
 import Data.Typeable.Extra
 import Data.Function
 import Data.List.Extra
@@ -126,25 +129,35 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
+-- | A 'BuiltinSummary' based on a 'Binary' instance.
+binarySummary :: (Binary value) => BuiltinSummary key value
+binarySummary _ value = return $! force $ SHA.showDigest $ SHA.sha256 $
+    encode value
+
+-- | A 'BuiltinSummary' based on a 'Show' instance.
+showSummary :: (Show value) => BuiltinSummary key value
+showSummary _ value = return $! force $ show value
+
 type family RuleResult key -- = value
 
 -- | Add a builtin rule, comprising of a lint rule and an action. Each builtin rule must be identified by
 --   a unique key.
-addBuiltinRule :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRule :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinSummary key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = addBuiltinRuleEx $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
 
 
 -- | Initial version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
-addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleEx binary lint (run :: BuiltinRun key value) = do
+addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinSummary key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleEx binary lint summary (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
     let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
+    let summary_ k v = summary (fromKey k) (fromValue v)
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v) binary_}
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ summary_ (typeRep v) binary_}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.

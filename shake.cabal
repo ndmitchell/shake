@@ -94,6 +94,7 @@ library
         transformers >= 0.2,
         extra >= 1.5.3,
         deepseq >= 1.1,
+        SHA,
         primitive
 
     if flag(portable)
@@ -113,6 +114,7 @@ library
         Development.Shake.Config
         Development.Shake.FilePath
         Development.Shake.Forward
+        Development.Shake.Memo
         Development.Shake.Rule
         Development.Shake.Util
 
@@ -137,6 +139,7 @@ library
         Development.Shake.Internal.FilePattern
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
+        Development.Shake.Internal.Memo
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
@@ -194,6 +197,7 @@ executable shake
         transformers >= 0.2,
         extra >= 1.5.3,
         deepseq >= 1.1,
+        SHA,
         primitive
 
     if flag(portable)
@@ -230,6 +234,7 @@ executable shake
         Development.Shake.Internal.FileInfo
         Development.Shake.FilePath
         Development.Shake.Internal.FilePattern
+        Development.Shake.Internal.Memo
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Profile

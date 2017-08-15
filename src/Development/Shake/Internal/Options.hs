@@ -161,6 +161,16 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to writing using 'putStrLn'. A function called to output messages from Shake, along with the 'Verbosity' at
         --   which that message should be printed. This function will be called atomically from all other 'shakeOutput' functions.
         --   The 'Verbosity' will always be greater than or higher than 'shakeVerbosity'.
+    ,shakeMemoSave :: String -> String -> [FilePath] -> IO ()
+        -- ^ Defaults to @\_  _ _ -> return ()@. A function for saving files into the memoization table.
+        --
+        -- The function will be called like @f key query paths@. @key@ is the key under which the files
+        -- are to be stored, @query@ is an ASCII representation of the key (for debuggin), and
+        -- @paths@ is the list of files to be stored.
+    ,shakeMemoRestore :: String -> IO Bool
+        -- ^ Defaults to @\_ -> return False@. A function for restoring an entry from the memoization table.
+        --
+        -- The function should return 'True' if it has successfully restored the entry specified by the given key.
     ,shakeExtra :: Map.HashMap TypeRep Dynamic
         -- ^ This a map which can be used to store arbitrary extra information that a user may need when writing rules.
         --   The key of each entry must be the 'dynTypeRep' of the value.
@@ -176,6 +186,8 @@ shakeOptions = ShakeOptions
     True ChangeModtime True [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
+    (\_ _ _ -> return ())
+    (const $ return False)
     Map.empty
 
 fieldsShakeOptions =
@@ -186,15 +198,15 @@ fieldsShakeOptions =
     ,"shakeLiveFiles","shakeVersionIgnore","shakeProgress", "shakeOutput", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromHidden y1) (fromHidden y2) (fromHidden y3)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 y4 y5 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 (fromHidden y1) (fromHidden y2) (fromHidden y3) (fromHidden y4) (fromHidden y5)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 y1 y2 y3 y4 y5) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
         x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k`
-        Hidden y1 `k` Hidden y2 `k` Hidden y3
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+        Hidden y1 `k` Hidden y2 `k` Hidden y3 `k` Hidden y4 `k` Hidden y5
+    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 

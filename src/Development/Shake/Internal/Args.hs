@@ -7,6 +7,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Demo
 import Development.Shake.FilePath
+import Development.Shake.Internal.Memo
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
 import Development.Shake.Internal.Shake
@@ -250,6 +251,8 @@ shakeOptsEx =
     ,yes $ Option ""  ["lint-fsatrace"] (noArg $ \s -> s{shakeLint=Just LintFSATrace}) "Use fsatrace to do validation."
     ,yes $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
     ,yes $ Option ""  ["live"] (OptArg (\x -> Right ([], \s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]})) "FILE") "List the files that are live [to live.txt]."
+    ,yes $ Option ""  ["memo-store"] (reqArg "DIRECTORY" $ \x s -> s{shakeMemoSave = fsMemoSave x, shakeMemoRestore = fsMemoRestore x}) "Enable rule memoization, storing files in DIRECTORY"
+    ,yes $ Option ""  ["no-memo"] (noArg $ \s -> s{shakeMemoSave = \_ _ _ -> return (), shakeMemoRestore = \_ -> return False}) "Disable rule memoization"
     ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,no  $ Option ""  ["numeric-version"] (NoArg $ Right ([NumericVersion],id)) "Print just the version number and exit."
     ,yes $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
