@@ -183,7 +183,7 @@ defaultRuleFile = do
 
     -- value returned is only useful for linting
     let run o@(FileQ x) oldBin@(fmap getEx -> old) dirty = do
-            -- no need to link check forward files
+            -- no need to lint check forward files
             -- but more than that, it goes wrong if you do, see #427
             let asLint (ResultDirect x) = Just x
                 asLint x = Nothing
@@ -268,14 +268,16 @@ defaultRuleFile = do
                 Just (ResultForward old) | not dirty -> retOld ChangedNothing
                 _ -> rebuild
 
-    let lint k Nothing = return Nothing
-        lint k (Just v) = do
-            now <- fileStoredValue opts k
-            return $ case now of
-                Nothing -> Just "<missing>"
-                Just now | fileEqualValue opts v now == EqualCheap -> Nothing
-                         | otherwise -> Just $ show now
-    addBuiltinRuleEx newBinaryOp lint run
+    addBuiltinRuleEx newBinaryOp (ruleLint opts) run
+
+ruleLint :: ShakeOptions -> BuiltinLint FileQ (Maybe FileA) 
+ruleLint opts k Nothing = return Nothing
+ruleLint opts k (Just v) = do
+    now <- fileStoredValue opts k
+    return $ case now of
+        Nothing -> Just "<missing>"
+        Just now | fileEqualValue opts v now == EqualCheap -> Nothing
+                    | otherwise -> Just $ show now
 
 
 apply_ :: (a -> FileName) -> [a] -> Action [Maybe FileA]
