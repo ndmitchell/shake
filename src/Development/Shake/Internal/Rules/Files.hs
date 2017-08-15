@@ -34,10 +34,8 @@ infix 1 &?>, &%>
 
 type instance RuleResult FilesQ = FilesA
 
-newtype FilesQ = FilesQ [FileQ]
+newtype FilesQ = FilesQ {fromFilesQ :: [FileQ]}
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
-
-
 
 newtype FilesA = FilesA [FileA]
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
@@ -62,7 +60,7 @@ defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
     -- A rule from FilesQ to FilesA. The result value is only useful for linting.
-    addBuiltinRuleEx newBinaryOp (ruleLint opts) (ruleRun opts)
+    addBuiltinRuleEx newBinaryOp (ruleLint opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
 ruleLint opts k v = do
@@ -72,8 +70,11 @@ ruleLint opts k v = do
         Just now | filesEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
 
-ruleRun :: ShakeOptions -> BuiltinRun FilesQ FilesA
-ruleRun opts k (fmap getEx -> old) dirtyChildren = case old of
+ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
+ruleRun opts rebuildFlags k (fmap getEx -> old) dirtyChildren = do
+    let r = map rebuildFlags $ map (fileNameToString . fromFileQ) $ fromFilesQ k
+    case old of
+        _ | RebuildNow `elem` r -> rebuild
         Just old | not dirtyChildren -> do
             v <- liftIO $ filesStoredValue opts k
             case v of
