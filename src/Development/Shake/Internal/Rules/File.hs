@@ -192,19 +192,59 @@ ruleLint opts k (Just v) = do
                     | otherwise -> Just $ show now
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ (Maybe FileA)
-ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) dirty = do
-    -- no need to lint check forward files
-    -- but more than that, it goes wrong if you do, see #427
-    let asLint (ResultDirect x) = Just x
+ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) dirtyChildren = do
+    -- for One, rebuild makes perfect sense
+    -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
+    -- for Phony, it doesn't make that much sense, but probably isn't harmful?
+    let r = rebuildFlags $ fileNameToString x
+    case old of
+        _ | r == RebuildNow -> rebuild
+        _ | r == RebuildLater -> case old of
+            Just old ->
+                -- ignoring the currently stored value, which may trigger lint has changed
+                -- so disable lint on this file
+                unLint <$> retOld ChangedNothing
+            Nothing -> do
+                -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
+                now <- liftIO $ fileStoredValue opts o
+                case now of
+                    Nothing -> rebuild
+                    Just now -> do alwaysRerun; retNew ChangedStore $ ResultDirect now
+        {-
+        _ | r == RebuildNever -> do
+            now <- liftIO $ fileStoredValue opts o
+            case now of
+                Nothing -> rebuild
+                Just now -> do
+                    let diff | Just (ResultDirect old) <- old, fileEqualValue opts old now /= NotEqual = ChangedRecomputeSame
+                                | otherwise = ChangedRecomputeDiff
+                    retNew diff $ ResultDirect now
+        -}
+        Just (ResultDirect old) | not dirtyChildren -> do
+            now <- liftIO $ fileStoredValue opts o
+            case now of
+                Nothing -> rebuild
+                Just now -> case fileEqualValue opts old now of
+                    EqualCheap -> retNew ChangedNothing $ ResultDirect now
+                    EqualExpensive -> retNew ChangedStore $ ResultDirect now
+                    NotEqual -> rebuild
+        Just (ResultForward old) | not dirtyChildren -> retOld ChangedNothing
+        _ -> rebuild
+    where
+        -- no need to lint check forward files
+        -- but more than that, it goes wrong if you do, see #427
+        asLint (ResultDirect x) = Just x
         asLint x = Nothing
-    let noLint (RunResult a b _) = RunResult a b Nothing
-    let retNew :: RunChanged -> Result -> Action (RunResult (Maybe FileA))
+        unLint (RunResult a b _) = RunResult a b Nothing
+
+        retNew :: RunChanged -> Result -> Action (RunResult (Maybe FileA))
         retNew c v = return $ RunResult c (runBuilder $ putEx v) (asLint v)
-    let retOld :: RunChanged -> Action (RunResult (Maybe FileA))
+
+        retOld :: RunChanged -> Action (RunResult (Maybe FileA))
         retOld c = return $ RunResult c (fromJust oldBin) $ asLint $ fromJust old
 
-    let rebuild = do
-            -- actually run the rebuild
+        -- actually run the rebuild
+        rebuild = do
             putWhen Chatty $ "# " ++ show o
             x <- return $ fileNameToString x
             rules <- getUserRules
@@ -239,44 +279,6 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     alwaysRerun
                     act
                     retNew ChangedRecomputeDiff ResultPhony
-
-    -- for One, rebuild makes perfect sense
-    -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
-    -- for Phony, it doesn't make that much sense, but probably isn't harmful?
-    let r = rebuildFlags $ fileNameToString x
-    case old of
-        _ | r == RebuildNow -> rebuild
-        _ | r == RebuildLater -> case old of
-            Just old ->
-                -- ignoring the currently stored value, which may trigger lint has changed
-                -- so disable lint on this file
-                noLint <$> retOld ChangedNothing
-            Nothing -> do
-                -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
-                now <- liftIO $ fileStoredValue opts o
-                case now of
-                    Nothing -> rebuild
-                    Just now -> do alwaysRerun; retNew ChangedStore $ ResultDirect now
-        {-
-        _ | r == RebuildNever -> do
-            now <- liftIO $ fileStoredValue opts o
-            case now of
-                Nothing -> rebuild
-                Just now -> do
-                    let diff | Just (ResultDirect old) <- old, fileEqualValue opts old now /= NotEqual = ChangedRecomputeSame
-                                | otherwise = ChangedRecomputeDiff
-                    retNew diff $ ResultDirect now
-        -}
-        Just (ResultDirect old) | not dirty -> do
-            now <- liftIO $ fileStoredValue opts o
-            case now of
-                Nothing -> rebuild
-                Just now -> case fileEqualValue opts old now of
-                    EqualCheap -> retNew ChangedNothing $ ResultDirect now
-                    EqualExpensive -> retNew ChangedStore $ ResultDirect now
-                    NotEqual -> rebuild
-        Just (ResultForward old) | not dirty -> retOld ChangedNothing
-        _ -> rebuild
 
 
 apply_ :: (a -> FileName) -> [a] -> Action [Maybe FileA]
