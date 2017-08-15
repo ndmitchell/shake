@@ -61,11 +61,6 @@ filesEqualValue opts (FilesA xs) (FilesA ys)
 defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
-    let executeRule (k :: FilesQ) = do
-            rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
-            case userRuleMatch rules ($ k) of
-                    [r] -> r
-                    rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
 
     let lint k v = do
             now <- filesStoredValue opts k
@@ -89,7 +84,10 @@ defaultRuleFiles = do
             where
                 rebuild k old = do
                     putWhen Chatty $ "# " ++ show k
-                    v <- executeRule k
+                    rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
+                    v <- case userRuleMatch rules ($ k) of
+                        [r] -> r
+                        rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
                     let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
                           | otherwise = ChangedRecomputeDiff
                     return $ RunResult c (runBuilder $ putEx v) v
