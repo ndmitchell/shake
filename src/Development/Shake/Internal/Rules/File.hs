@@ -271,11 +271,10 @@ defaultRuleFile = do
     let lint k Nothing = return Nothing
         lint k (Just v) = do
             now <- fileStoredValue opts k
-            case now of
-                Nothing -> return $ Just "<missing>"
-                Just now -> case fileEqualValue opts v now of
-                    EqualCheap -> return Nothing
-                    _ -> return $ Just $ show now
+            return $ case now of
+                Nothing -> Just "<missing>"
+                Just now | fileEqualValue opts v now == EqualCheap -> Nothing
+                         | otherwise -> Just $ show now
     addBuiltinRuleEx newBinaryOp lint run
 
 
