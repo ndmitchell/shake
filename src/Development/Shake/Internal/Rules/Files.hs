@@ -74,7 +74,7 @@ ruleLint opts k v = do
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
 ruleRun opts rebuildFlags k o@(fmap getEx -> old) dirtyChildren = do
-    let r = map rebuildFlags $ map (fileNameToString . fromFileQ) $ fromFilesQ k
+    let r = map (rebuildFlags . fileNameToString . fromFileQ) $ fromFilesQ k
     case old of
         _ | RebuildNow `elem` r -> rebuild
         _ | RebuildLater `elem` r -> case old of

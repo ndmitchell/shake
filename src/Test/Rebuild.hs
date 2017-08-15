@@ -25,7 +25,7 @@ main = shakeTest test opts $ \args -> do
         writeFile' out $ src ++ timestamp
 
 test build =
-    forM_ ([minBound..maxBound :: Pat]) $ \pat -> do
+    forM_ [minBound..maxBound :: Pat] $ \pat -> do
         build ["clean"]
         let go arg c b a flags = do
                 writeFileChanged "c.txt" c
