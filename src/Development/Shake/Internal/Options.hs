@@ -246,7 +246,6 @@ data Verbosity
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
 
 
-
 -- | Apply the 'shakeRebuild' flags to a file, determining the desired behaviour
 shakeRebuildApply :: ShakeOptions -> (FilePath -> Rebuild)
 shakeRebuildApply ShakeOptions{shakeRebuild=rs}
