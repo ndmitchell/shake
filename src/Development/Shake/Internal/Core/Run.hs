@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(

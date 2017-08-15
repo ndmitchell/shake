@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,
