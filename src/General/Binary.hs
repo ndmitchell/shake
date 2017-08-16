@@ -59,6 +59,7 @@ for2M_ as bs f = zipWithM_ f as bs
 ---------------------------------------------------------------------
 -- BINARY SERIALISATION
 
+-- We can't use the Data.ByteString builder as that doesn't track the size of the chunk.
 data Builder = Builder {-# UNPACK #-} !Int (forall a . Ptr a -> Int -> IO ())
 
 sizeBuilder :: Builder -> Int
