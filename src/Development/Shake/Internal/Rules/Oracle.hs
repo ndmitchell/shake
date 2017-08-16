@@ -8,6 +8,7 @@ module Development.Shake.Internal.Rules.Oracle(
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Options
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import qualified Data.ByteString as BS
@@ -82,12 +83,19 @@ type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
 addOracle act = do
-        addBuiltinRule noLint $ \(OracleQ q) old _ -> do
-            new <- OracleA <$> act q
-            return $ RunResult
-                (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
-                (encode' new)
-                new
+        -- rebuild is automatic for oracles, skip just means we don't rebuild
+        opts <- getShakeOptionsRules
+        let skip = shakeRebuildApply opts "" == RebuildLater
+
+        addBuiltinRule noLint $ \(OracleQ q) old _ -> case old of
+            Just old | skip -> do
+                return $ RunResult ChangedNothing old $ decode' old
+            _ -> do
+                new <- OracleA <$> act q
+                return $ RunResult
+                    (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
+                    (encode' new)
+                    new
         return askOracle
     where
         encode' :: Binary a => a -> BS.ByteString
