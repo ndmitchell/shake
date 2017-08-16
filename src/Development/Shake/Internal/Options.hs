@@ -156,7 +156,7 @@ data ShakeOptions = ShakeOptions
     ,shakeVersionIgnore :: Bool
         -- ^ Defaults to 'False'. Ignore any differences in 'shakeVersion'.
     ,shakeColor :: Bool
-        -- ^ Whether to colorize the output.
+        -- ^ Defaults to 'False'. Whether to colorize the output.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -178,7 +178,7 @@ data ShakeOptions = ShakeOptions
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
     ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) [] [] False True False
-    True ChangeModtime True [] False True
+    True ChangeModtime True [] False False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     Map.empty
