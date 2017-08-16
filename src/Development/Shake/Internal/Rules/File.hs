@@ -189,7 +189,7 @@ ruleLint opts k (Just v) = do
     return $ case now of
         Nothing -> Just "<missing>"
         Just now | fileEqualValue opts v now == EqualCheap -> Nothing
-                    | otherwise -> Just $ show now
+                 | otherwise -> Just $ show now
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ (Maybe FileA)
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) dirtyChildren = do
