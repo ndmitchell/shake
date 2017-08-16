@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #49, add shakeColor and --color flags
     #490, recommend -threaded as standard
     #517, ignore ./ in FilePattern
     Require extra-1.5.3
