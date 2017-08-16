@@ -5,7 +5,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    RuleResult, addBuiltinRule, addBuiltinRuleInternal, noLint,
+    RuleResult, addBuiltinRule, addBuiltinRuleEx, noLint,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -134,6 +134,9 @@ addBuiltinRule :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => 
 addBuiltinRule = addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
+
+addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, ShakeValue value, BinaryEx key) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
 
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
