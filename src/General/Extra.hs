@@ -2,6 +2,7 @@
 
 module General.Extra(
     getProcessorCount,
+    withResultType,
     randomElem,
     wrapQuote, showBracket,
     withs,
@@ -13,6 +14,7 @@ module General.Extra(
 import Control.Exception.Extra
 import Data.Char
 import Data.List
+import Data.Proxy
 import System.Environment.Extra
 import System.IO.Extra
 import System.IO.Unsafe
@@ -117,3 +119,10 @@ isAsyncException e
     | Just (_ :: AsyncException) <- fromException e = True
     | Just (_ :: ExitCode) <- fromException e = True
     | otherwise = False
+
+
+---------------------------------------------------------------------
+-- Data.Proxy
+
+withResultType :: (Proxy a -> a) -> a
+withResultType f = f Proxy

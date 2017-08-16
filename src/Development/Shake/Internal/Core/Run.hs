@@ -182,12 +182,8 @@ lineBuffering act = do
 --   This function requires that appropriate rules have been added with 'addUserRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => [key] -> Action [value]
-apply = applyForall
-
--- We don't want the forall in the Haddock docs
 -- Don't short-circuit [] as we still want error messages
-applyForall :: forall key value . (ShakeValue key, Typeable value) => [key] -> Action [value]
-applyForall ks = do
+apply (ks :: [key]) = withResultType $ \(p :: Proxy (Action [value])) -> do
     -- this is the only place a user can inject a key into our world, so check they aren't throwing
     -- in unevaluated bottoms
     liftIO $ mapM_ (evaluate . rnf) ks
