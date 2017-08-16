@@ -59,8 +59,8 @@ data Lint
 
 
 -- | How should you determine if a file has changed, used by 'shakeChange'. The most common values are
---   'ChangeModtime' (very fast, @touch@ causes files to rebuild) and 'ChangeModtimeAndDigestInput'
---   (a bit slower, @touch@ does not cause input files to rebuild).
+--   'ChangeModtime' (the default, very fast, @touch@ causes files to rebuild) and 'ChangeModtimeAndDigestInput'
+--   (slightly slower, @touch@ and switching @git@ branches does not cause input files to rebuild).
 data Change
     = ChangeModtime
         -- ^ Compare equality of modification timestamps, a file has changed if its last modified time changes.
@@ -73,6 +73,8 @@ data Change
         --   time is checked first, and if that has changed, the digest is checked.
     | ChangeModtimeAndDigestInput
         -- ^ Use 'ChangeModtimeAndDigest' for input\/source files and 'ChangeModtime' for output files.
+        --   An input file is one which is a dependency but is not built by Shake as it has no
+        --   matching rule and already exists on the file system.
     | ChangeModtimeOrDigest
         -- ^ A file is rebuilt if either its modification time or its digest has changed. A @touch@ will force a rebuild,
         --   but even if a files modification time is reset afterwards, changes will also cause a rebuild.
