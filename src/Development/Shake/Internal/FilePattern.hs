@@ -165,7 +165,7 @@ match (Skip:xs) (y:ys) = map ("":) (match xs (y:ys)) ++ match (Skip1:xs) (y:ys)
 match (Skip1:xs) (y:ys) = [(y++"/"++r):rs | r:rs <- match (Skip:xs) ys]
 match (Skip:xs) [] = map ("":) $ match xs []
 match (Star:xs) (y:ys) = map (y:) $ match xs ys
-match (Lit x:xs) (y:ys) | x == y = match xs ys
+match (Lit x:xs) (y:ys) = concat $ [match xs ys | x == y] ++ [match xs (y:ys) | x == "."]
 match (x@Stars{}:xs) (y:ys) | Just rs <- matchStars x y = map (rs ++) $ match xs ys
 match [] [] = [[]]
 match _ _ = []
@@ -299,8 +299,10 @@ data Walk = Walk ([String] -> ([String],[(String,Walk)]))
           | WalkTo            ([String],[(String,Walk)])
 
 walk :: [FilePattern] -> (Bool, Walk)
-walk ps = let ps2 = map (optimise . parse) ps in (any (\p -> isEmpty p || not (null $ match p [""])) ps2, f ps2)
+walk ps = (any (\p -> isEmpty p || not (null $ match p [""])) ps2, f ps2)
     where
+        ps2 = map (filter (/= Lit ".") . optimise . parse) ps
+
         f (nubOrd -> ps)
             | all isLit fin, all (isLit . fst) nxt = WalkTo (map fromLit fin, map (fromLit *** f) nxt)
             | otherwise = Walk $ \xs ->
