@@ -81,9 +81,7 @@ type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracle = f where
-    f :: forall q a . (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-    f act = do
+addOracle act = do
         addBuiltinRule noLint $ \(OracleQ q) old _ -> do
             new <- OracleA <$> act q
             return $ RunResult
