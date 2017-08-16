@@ -3,6 +3,7 @@ module Test.Files(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import System.Directory
 import Test.Type
 import Control.Monad
 import Data.List
@@ -12,6 +13,18 @@ data Args = UsePredicate deriving (Eq,Show,Bounded,Enum)
 
 main = shakeTest test optionsEnum $ \opts -> do
     want ["even.txt","odd.txt"]
+
+    "A1-plus-B" %> \out -> do
+        a1 <- readFileLines "A1"
+        b  <- readFileLines "B"
+        writeFileLines out $ a1 ++ b
+
+    ["A1", "A2"] &%> \[o1, o2] -> do
+        writeFileLines o1 $ ["This is", "A1"]
+        writeFileLines o2 $ ["This is", "A2"]
+
+    "B" %> \out -> do
+        writeFileLines out $ ["This is", "B"]
 
     -- Since &?> and &%> are implemented separately we test everything in both modes
     let deps &?%> act | UsePredicate `elem` opts = (\x -> if x `elem` deps then Just deps else Nothing) &?> act
@@ -44,3 +57,8 @@ test build = do
         build ["dir1/out.txt"]
 
     build ["pred/a.txt"]
+
+    -- Test #496
+    build ["A1-plus-B"]
+    removeFile "A2"
+    build ["A1-plus-B"]
