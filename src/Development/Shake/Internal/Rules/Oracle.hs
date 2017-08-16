@@ -89,12 +89,12 @@ addOracle act = do
                 (encode' new)
                 new
         return askOracle
+    where
+        encode' :: Binary a => a -> BS.ByteString
+        encode' = BS.concat . LBS.toChunks . encode
 
-    encode' :: Binary a => a -> BS.ByteString
-    encode' = BS.concat . LBS.toChunks . encode
-
-    decode' :: Binary a => BS.ByteString -> a
-    decode' = decode . LBS.fromChunks . return
+        decode' :: Binary a => BS.ByteString -> a
+        decode' = decode . LBS.fromChunks . return
 
 
 -- | Get information previously added with 'addOracle'. The question/answer types must match those provided
