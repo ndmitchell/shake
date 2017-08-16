@@ -5,7 +5,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
-    RuleResult, addBuiltinRule, addBuiltinRuleEx, noLint,
+    RuleResult, addBuiltinRule, addBuiltinRuleInternal, noLint,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -131,14 +131,14 @@ type family RuleResult key -- = value
 -- | Add a builtin rule, comprising of a lint rule and an action. Each builtin rule must be identified by
 --   a unique key.
 addBuiltinRule :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule = addBuiltinRuleEx $ BinaryOp
+addBuiltinRule = addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
 
 
--- | Initial version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
-addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleEx binary lint (run :: BuiltinRun key value) = do
+-- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
+addBuiltinRuleInternal :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleInternal binary lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
     let run_ k v b = fmap newValue <$> run (fromKey k) v b

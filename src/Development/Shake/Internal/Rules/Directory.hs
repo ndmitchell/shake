@@ -116,7 +116,7 @@ instance Show GetDirectoryA where
 
 queryRule :: (RuleResult key ~ value, BinaryEx key, BinaryEx witness, Eq witness, ShakeValue key, ShakeValue value)
           => (value -> witness) -> (key -> IO value) -> Rules ()
-queryRule witness query = addBuiltinRuleEx newBinaryOp
+queryRule witness query = addBuiltinRuleInternal newBinaryOp
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)

@@ -61,7 +61,7 @@ defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
     -- A rule from FilesQ to FilesA. The result value is only useful for linting.
-    addBuiltinRuleEx newBinaryOp (ruleLint opts) (ruleRun opts $ shakeRebuildApply opts)
+    addBuiltinRuleInternal newBinaryOp (ruleLint opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
 ruleLint opts k (FilesA []) = return Nothing -- in the case of disabling lint
