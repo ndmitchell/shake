@@ -121,18 +121,23 @@ shakeArgsWith baseOpts userOptions rules = do
                                                   then outputColor (shakeOutput oshakeOpts)
                                                   else shakeOutput oshakeOpts
                                }
+    let putWhen v msg = when (shakeVerbosity oshakeOpts >= v) $ shakeOutput oshakeOpts v msg
+    let putWhenLn v msg = putWhen v $ msg ++ "\n"
+    let showHelp = do
+            progName <- getProgName
+            putWhen Normal $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
 
     when (errs /= []) $ do
-        putStr $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
+        putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
         showHelp
         exitFailure
 
     if Help `elem` flagsExtra then
         showHelp
      else if Version `elem` flagsExtra then
-        putStrLn $ "Shake build system, version " ++ showVersion version
+        putWhenLn Normal $ "Shake build system, version " ++ showVersion version
      else if NumericVersion `elem` flagsExtra then
-        putStrLn $ showVersion version
+        putWhenLn Normal $ showVersion version
      else if Demo `elem` flagsExtra then
         demo $ shakeStaunch shakeOpts
      else if not $ null progressReplays then do
@@ -140,7 +145,7 @@ shakeArgsWith baseOpts userOptions rules = do
             src <- readFile file
             return (file, map read $ lines src)
         forM_ (if null $ shakeReport shakeOpts then ["-"] else shakeReport shakeOpts) $ \file -> do
-            putStrLn $ "Writing report to " ++ file
+            putWhenLn Normal $ "Writing report to " ++ file
             writeProgressReport file dat
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
@@ -165,7 +170,7 @@ shakeArgsWith baseOpts userOptions rules = do
                         return p
             }
         (ran,res) <- redir $ do
-            when printDirectory $ putStrLn $ "shake: In directory `" ++ curdir ++ "'"
+            when printDirectory $ putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
             rules <- rules user files
             case rules of
                 Nothing -> return (False,Right ())
@@ -183,18 +188,15 @@ shakeArgsWith baseOpts userOptions rules = do
                     if Exception `elem` flagsExtra then
                         throwIO err
                     else do
-                        putStrLn $ esc "31" $ show err
+                        putWhenLn Quiet $ esc "31" $ show err
                         exitFailure
                 Right () -> do
                     tot <- start
                     let (mins,secs) = divMod (ceiling tot) (60 :: Int)
                         time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
-                    putStrLn $ esc "32" $ "Build completed in " ++ time ++ "m"
+                    putWhenLn Normal $ esc "32" $ "Build completed in " ++ time ++ "m"
     where
         opts = removeOverlap userOptions (map snd shakeOptsEx) `mergeOptDescr` userOptions
-        showHelp = do
-            progName <- getProgName
-            putStr $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
 
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Ensure shakeOutput is used more consistently
     #49, add shakeColor and --color flags
     #490, recommend -threaded as standard
     #517, ignore ./ in FilePattern
