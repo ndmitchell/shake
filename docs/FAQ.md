@@ -53,6 +53,12 @@ In Shake, `need xs >> need ys` will build `xs` in parallel, then afterwards buil
 
 Shake _could_ follow the Haxl approach, but does not, mainly because they are targeting different problems. In Haxl, the operations are typically read-only, and any single step is likely to involve lots of operations. In contrast, with Shake the operations definitely change the file system, and there are typically only one or two per rule. Consequently, Shake opts for an explicit approach, rather than allow users to use `*>` (and then inevitably add a comment because its an unusual thing to do).
 
+#### Q: Should file names be relative or absolute?
+
+We recommend using only relative file names in Shake.
+
+Shake can use file names that are either absolute (`C:\file.txt`, `/file.txt`) or relative (`file.txt`). However, Shake compares filenames by value, so if you `need` both `file.txt` and `/file.txt` it will attempt to build both, likely resulting in failure - within a single Shake project you must stick to either relative or absolute file names.
+
 #### Q: How can I depend on directories?
 
 Think of directories as containers for files. They exist or don't pretty randomly, but if they have files, they must exist. In particular, you can't depend on a directory with `need` or write a rule to create a directory. Directories are created as needed -- the rule for `bar/baz.exe` will create the `bar` directory if necessary. If you want to depend on a `git clone` having being performed, depend on a particular checked-out file instead (e.g. `README.md`), with the rule to create it being `git clone`.
