@@ -166,7 +166,7 @@ findCodeHaddock src =
 findCodeMarkdown :: [String] -> [Code]
 findCodeMarkdown (x:xs) | indented x && not (isBlank x) =
     let (a,b) = span (\x -> indented x || isBlank x) (x:xs)
-    in Code (unindent a) : findCodeMarkdown b
+    in Code (dropWhileEnd isBlank $ unindent a) : findCodeMarkdown b
     where
         indented x = length (takeWhile isSpace x) >= 4
 findCodeMarkdown (x:xs) = map (Code . return) (evens $ splitOn "`" x) ++ findCodeMarkdown xs
