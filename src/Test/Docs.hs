@@ -126,7 +126,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
     "Files.lst" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index,"Paths_shake.hs"]
-        filesHs <- getDirectoryFiles (root </> "dist/doc/html/shake") ["Development-*.html"]
+        filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
