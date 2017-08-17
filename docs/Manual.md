@@ -21,12 +21,12 @@ Shake is a Haskell library for writing build systems -- designed as a replacemen
             cs <- getDirectoryFiles "" ["//*.c"]
             let os = ["_build" </> c -<.> "o" | c <- cs]
             need os
-            cmd "gcc -o" [out] os
+            cmd_ "gcc -o" [out] os
     
         "_build//*.o" %> \out -> do
             let c = dropDirectory1 $ out -<.> "c"
             let m = out -<.> "m"
-            () <- cmd "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
+            cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
             needMakefileDependencies m
 
 This build system builds the executable `_build/run` from all C source files in the current directory. It will rebuild if you add/remove any C files to the directory, if the C files themselves change, or if any headers used by the C files change. All generated files are placed in `_build`, and a `clean` command is provided that will wipe all the generated files. In the rest of this manual we'll explain how the above code works and how to extend it. 
@@ -106,15 +106,15 @@ Let's look at a simple example of a rule:
     "*.rot13" %> \out -> do
         let src = out -<.> "txt"
         need [src]
-        cmd "rot13" src "-o" out
+        cmd_ "rot13" src "-o" out
 
 This rule can build any `.rot13` file. Imagine we are building `"file.rot13"`, it proceeds by:
 
 * Using `let` to define a local variable `src`, using the `-<.>` extension replacement method, which removes the extension from a file and adds a new extension. When `out` is `"file.rot13"` the variable `src` will become `file.txt`.
 * Using `need` to introduce a dependency on the `src` file, ensuring that if `src` changes then `out` will be rebuilt and that `src` will be up-to-date before any further commands are run.
-* Using `cmd` to run the command line `rot13 file.txt -o file.rot13`, which should read `file.txt` and write out `file.rot13` being the ROT13 encoding of the file.
+* Using `cmd_` to run the command line `rot13 file.txt -o file.rot13`, which should read `file.txt` and write out `file.rot13` being the ROT13 encoding of the file.
 
-Many rules follow this pattern -- calculate some local variables, `need` some dependencies, then use `cmd` to perform some actions. We now discuss each of the three statements.
+Many rules follow this pattern -- calculate some local variables, `need` some dependencies, then use `cmd_` to perform some actions. We now discuss each of the three statements.
 
 #### Local variables
 
@@ -132,7 +132,7 @@ Variables are evaluated by substituting the <tt><i>expression</i></tt> everywher
 
     "*.rot13" %> \out -> do
         need [out -<.> "txt"]
-        cmd "rot13" (out -<.> "txt") "-o" out
+        cmd_ "rot13" (out -<.> "txt") "-o" out
 
 Variables are local to the rule they are defined in, cannot be modified, and should not be defined multiple times within a single rule.
 
@@ -155,24 +155,22 @@ It is preferable to use fewer calls to `need`, if possible, as multiple files re
 
 #### Running external commands
 
-The `cmd` function allows you to call system commands, e.g. `gcc`. Taking the initial example, we see: 
+The `cmd_` function allows you to call system commands, e.g. `gcc`. Taking the initial example, we see:
 
-    cmd "gcc -o" [out] os
+    cmd_ "gcc -o" [out] os
 
 After substituting `out` (a string variable) and `os` (a list of strings variable) we might get:
 
-    cmd "gcc -o" ["_make/run"] ["_build/main.o","_build/constants.o"]
+    cmd_ "gcc -o" ["_make/run"] ["_build/main.o","_build/constants.o"]
 
-The `cmd` function takes any number of space-separated expressions. Each expression can be either a string (which is treated as a space-separated list of arguments) or a list of strings (which is treated as a direct list of arguments).  Therefore the above command line is equivalent to either of:
+The `cmd_` function takes any number of space-separated expressions. Each expression can be either a string (which is treated as a space-separated list of arguments) or a list of strings (which is treated as a direct list of arguments).  Therefore the above command line is equivalent to either of:
 
-    cmd "gcc -o _make/run _build/main.o _build/constants.o"
-    cmd ["gcc","-o","_make/run","_build/main.o","_build/constants.o"]
+    cmd_ "gcc -o _make/run _build/main.o _build/constants.o"
+    cmd_ ["gcc","-o","_make/run","_build/main.o","_build/constants.o"]
 
 To properly handle unknown string variables it is recommended to enclose them in a list, e.g. `[out]`, so that even if `out` contains a space it will be treated as a single argument.
 
-The `cmd` function as presented here will fail if the system command returns a non-zero exit code, but see later for how to treat failing commands differently.
-
-As a wart, if the `cmd` call is _not_ the last line of a rule, you must precede it with `() <- cmd ...`.
+The `cmd_` function as presented here will fail if the system command returns a non-zero exit code, but see later for how to treat failing commands differently.
 
 #### Filepath manipulation functions
 
@@ -233,7 +231,7 @@ Now, if either `main.c` or any headers transitively imported by `main.c` change,
     "_build//*.o" %> \out -> do
         let c = dropDirectory1 $ out -<.> "c"
         let m = out -<.> "m"
-        () <- cmd "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
+        cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
         needMakefileDependencies m
 
 We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `needMakefileDependencies`.
@@ -325,7 +323,7 @@ Progress prediction is likely to be relatively poor during the first build and a
 
 Shake features a built in "lint" features to check the build system is well formed. To run use `build --lint`. You are likely to catch more lint violations if you first `build clean`. Sadly, lint does _not_ catch missing dependencies. However, it does catch:
 
-* Changing the current directory, typically with `setCurrentDirectory`. You should never change the current directory within the build system as multiple rules running at the same time share the current directory. You can still run `cmd` calls in different directories using the `Cwd` argument.
+* Changing the current directory, typically with `setCurrentDirectory`. You should never change the current directory within the build system as multiple rules running at the same time share the current directory. You can still run `cmd_` calls in different directories using the `Cwd` argument.
 * Outputs that change after Shake has built them. The usual cause of this error is if the rule for `foo` also writes to the file `bar`, despite `bar` having a different rule producing it.
 
 There is a performance penalty for building with `--lint`, but it is typically small.
@@ -353,15 +351,15 @@ This section details a number of build system features that are useful in some b
 
 #### Advanced `cmd` usage
 
-The `cmd` function can also obtain the stdout and stderr streams, along with the  exit code. As an example:
+The `cmd_` has a related function `cmd` that can also obtain the stdout and stderr streams, along with the  exit code. As an example:
 
     (Exit code, Stdout out, Stderr err) <- cmd "gcc --version"
 
 Now the variable `code` is bound to the exit code, while `out` and `err` are bound to the stdout and stderr streams. If `ExitCode` is not requested then any non-zero return value will raise an error.
 
-The `cmd` function also takes additional parameters to control how the command is run. As an example:
+Both `cmd_` and `cmd` also takes additional parameters to control how the command is run. As an example:
 
-    cmd Shell (Cwd "temp") "pwd"
+    cmd_ Shell (Cwd "temp") "pwd"
 
 This runs the `pwd` command through the system shell, after first changing to the `temp` directory.
 
@@ -371,7 +369,7 @@ You can use tracked dependencies on environment variables using the `getEnv` fun
 
     link <- getEnv "C_LINK_FLAGS"
     let linkFlags = fromMaybe "" link    
-    cmd "gcc -o" [output] inputs linkFlags
+    cmd_ "gcc -o" [output] inputs linkFlags
 
 This example gets the `$C_LINK_FLAGS` environment variable (which is `Maybe String`, namely a `String` that might be missing), then using `fromMaybe` defines a local variable `linkFlags` that is the empty string when `$C_LINK_FLAGS` is not set. It then passes these flags to `gcc`.
 
@@ -398,9 +396,9 @@ Resources allow us to limit the number of simultaneous operations more precisely
     want [show i <.> "exe" | i <- [1..100]]
     "*.exe" %> \out -> do
         withResource disk 1 $ do
-            cmd "ld -o" [out] ...
+            cmd_ "ld -o" [out] ...
     "*.o" %> \out -> do
-        cmd "cl -o" [out] ...
+        cmd_ "cl -o" [out] ...
 
 Assuming `-j8`, this allows up to 8 compilers, but only a maximum of 4 linkers.
 
@@ -410,7 +408,7 @@ Some tools, for example [bison](https://www.gnu.org/software/bison/), can genera
 
     ["//*.bison.h","//*.bison.c"] &%> \[outh, outc] -> do
         let src = outc -<.> "y"
-        cmd "bison -d -o" [outc] [src]
+        cmd_ "bison -d -o" [outc] [src]
 
 Now we define a list of patterns that are matched, and get a list of output files. If any output file is required, then all output files will be built, with proper dependencies.
 
