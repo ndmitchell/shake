@@ -35,6 +35,7 @@ main = shakeTest_ test $ do
     priority 43 $ "xx" %> output "43"
 
     priority 10 $ do
+        priority 6 $ "change" %> output "6"
         priority 7 $ "change" %> output "7"
         priority 8 $ "change" %> output "8"
     priority 9 $ "change" %> output "9"
@@ -59,4 +60,4 @@ test build = do
     assertContents "x" "55"
     assertContents "xx" "43"
 
-    assertException ["matches multiple rules"] $ build ["change","--quiet"]
+    assertException ["matches multiple rules","3"] $ build ["change","--quiet"]
