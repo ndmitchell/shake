@@ -336,7 +336,6 @@ whitelist x = x `elem`
     ,"#!/bin/sh"
     ,"shake-build-system"
     ,"\"_build\" </> x -<.> \"o\""
-    ,"cmd \"gcc -o\" [out] os"
     ,"[item1,item2,item2]"
     ,"$(LitE . StringL . loc_filename <$> location)"
     ,"-d[ FILE], --debug[=FILE]"
