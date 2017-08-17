@@ -5,7 +5,7 @@ This page discusses how to debug a Shake-based build system -- how to determine 
 * Switch to single-threaded operation, using `-j1`. While concurrency is rarely the cause of the bugs, it often makes the diagnostic messages easier to interpret, and makes reproduction more deterministic.
 * Turn on `--lint`, which will check for a number of common mistakes.
 * Turn up the verbosity level `-v` will print all command lines, `-vv` will print even more, and `-vvv` gives a super-detailed commentary on everything that happens (usually for debugging Shake itself).
-* If you use `shakeArgs` then every rule can be built individually, e.g. `my-build-system dir/output_that_fails.txt`. Reducing the error can allow higher levels of verbosity.
+* If you use `shakeArgs` then every rule can be built individually, e.g. `runhaskell MyShakeFile.hs foo/output_that_fails.txt`. Reducing the error can allow higher levels of verbosity.
 * If you are still stuck, ask on [StackOverflow](https://stackoverflow.com/questions/tagged/shake-build-system) using the tag `shake-build-system`.
 
 ## Raises an error
