@@ -117,6 +117,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"(r1,r2) = (return () :: Rules(), return () :: Rules())"
             ,"xs = []"
             ,"ys = []"
+            ,"os = [\"file.o\"]"
             ,"out = \"\""
             ,"str1 = \"\""
             ,"str2 = \"\""
@@ -187,14 +188,13 @@ showCode = concat . zipWith f [1..] . nubOrd
 
 
 fixCmd :: String -> String
-fixCmd x | "cmd " `isPrefixOf` x || "command " `isPrefixOf` x = "unit $ " ++ x
 fixCmd x = replace "Stdout out" "Stdout (out :: String)" $ replace "Stderr err" "Stderr (err :: String)" x
 
 -- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)
 undefDots :: String -> String
 undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = x ++ new
             | otherwise = replace "..." new x
-    where new = if words x `disjoint` ["cmd","Development.Shake.cmd"] then "undefined" else "[\"\"]"
+    where new = if words x `disjoint` ["cmd","cmd_","Development.Shake.cmd","Development.Shake.cmd_"] then "undefined" else "[\"\"]"
 
 showStmt :: Int -> [String] -> [String]
 showStmt i [] = []
