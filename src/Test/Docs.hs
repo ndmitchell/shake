@@ -184,11 +184,13 @@ showCode = concat . zipWith f [1..] . nubOrd
     where
         f i (Code x) | "#" `isPrefixOf` concat x = []
                      | all whitelist x = []
-                     | otherwise = showStmt i $ filter (not . isBlank . dropComment) $ map (fixCmd . undefDots) x
+                     | otherwise = showStmt i $ filter (not . isBlank . dropComment) $ fixCmd $ map undefDots x
 
 
-fixCmd :: String -> String
-fixCmd x = replace "Stdout out" "Stdout (out :: String)" $ replace "Stderr err" "Stderr (err :: String)" x
+fixCmd :: [String] -> [String]
+fixCmd xs
+    | all ("cmd_ " `isPrefixOf`) xs = xs ++ ["return () :: IO () "]
+    | otherwise = map (replace "Stdout out" "Stdout (out :: String)" . replace "Stderr err" "Stderr (err :: String)") xs
 
 -- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)
 undefDots :: String -> String
