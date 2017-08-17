@@ -276,7 +276,7 @@ dupes = words "main progressSimple rules"
 
 
 isFilePath :: String -> Bool
-isFilePath x = all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `elem` exts)
+isFilePath x = "C:\\" `isPrefixOf` x || (all validChar  x && ("foo/" `isPrefixOf` x || takeExtension x `elem` exts))
     where
         validChar x = isAlphaNum x || x `elem` "_./*"
         exts = words $ ".txt .hi .hs .o .exe .tar .cpp .cfg .dep .out .deps .m .h .c .html .zip " ++
