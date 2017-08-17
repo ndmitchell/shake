@@ -59,7 +59,7 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
     LexDefine a b -> do
         addBind env a b
         return ninja
-    LexBind a b ->
+    LexBind a _ ->
         error $ "Unexpected binding defining " ++ BS.unpack a
 
 

@@ -71,7 +71,7 @@ usingConfigFile file = do
         need [file]
         liftIO $ readConfigFile file
     addOracle $ \(Config x) -> Map.lookup x <$> mp ()
-    addOracle $ \(ConfigKeys x) -> sort . Map.keys <$> mp ()
+    addOracle $ \(ConfigKeys ()) -> sort . Map.keys <$> mp ()
     return ()
 
 
@@ -81,7 +81,7 @@ usingConfigFile file = do
 usingConfig :: Map.HashMap String String -> Rules ()
 usingConfig mp = do
     addOracle $ \(Config x) -> return $ Map.lookup x mp
-    addOracle $ \(ConfigKeys x) -> return $ sort $ Map.keys mp
+    addOracle $ \(ConfigKeys ()) -> return $ sort $ Map.keys mp
     return ()
 
 
