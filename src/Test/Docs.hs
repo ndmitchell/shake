@@ -298,7 +298,7 @@ isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
 
 isProgram :: String -> Bool
 isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFilePath x || all isAlpha x || x == "&&") xs
-    where programs = words "excel gcc cl make ghc cabal distcc build tar git fsatrace ninja touch pwd runhaskell rot13 main shake stack"
+    where programs = words "excel gcc cl make ghc cabal distcc build tar git fsatrace ninja touch pwd runhaskell rot13 main shake stack rm cat sed sh"
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
