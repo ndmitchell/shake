@@ -23,6 +23,7 @@ libraries =
 --
 -- * <link href="foo" rel="stylesheet" type="text/css" /> ==> <style type="text/css">[[foo]]</style>
 runTemplate :: (Functor m, MonadIO m) => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
+-- Functor constraint is required for GHC 7.8 and before
 runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
     where
         link = LBS.pack "<link href=\""
