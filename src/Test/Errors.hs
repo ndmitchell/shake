@@ -171,7 +171,7 @@ test build = do
     assertContents "overlap.foo" "overlap.*"
     build ["overlap.txt"]
     assertContents "overlap.txt" "overlap.txt"
-    crash ["overlap.txx"] ["key matches multiple rules","overlap.txx"]
+    crash ["overlap.txx"] ["key matches multiple rules","2","overlap.txx"]
 
     crash ["tempfile"] ["tempfile-died"]
     src <- readFile "tempfile"
