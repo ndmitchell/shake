@@ -139,6 +139,8 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m | m <- mods] ++ ["main = return ()"]
 
     "Success.txt" %> \out -> do
+        putNormal "Checking documentation for:"
+        putNormal =<< readFile' "Files.lst"
         needModules
         need ["Main.hs", "Paths_shake.hs"]
         needSource
