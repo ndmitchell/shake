@@ -53,7 +53,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         src <- if "_md" `isSuffixOf` takeBaseName out then
             fmap (findCodeMarkdown . lines . noR) $ readFile' $ root </> "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap (findCodeHaddock . noR) $ readFile' $ root </> "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
 
         let (imports,rest) = partition ("import " `isPrefixOf`) $ showCode src
         writeFileChanged out $ unlines $
