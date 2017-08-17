@@ -143,7 +143,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         needModules
         need ["Main.hs", "Paths_shake.hs"]
         needSource
-        cmd_ "runhaskell -ignore-package=hashmap " ["-i.","-i" ++ root </> "src","Main.hs"]
+        cmd_ "ghc -fno-code -ignore-package=hashmap " ["-i.","-i" ++ root </> "src","Main.hs"]
         writeFile' out ""
 
 
