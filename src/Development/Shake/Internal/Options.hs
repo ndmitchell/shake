@@ -29,7 +29,7 @@ import Development.Shake.Internal.CmdOption
 --   other files in the database are left unchanged.
 data Rebuild
     = RebuildNow
-        -- ^ Assume these files are dirty and require rebuilding. Useful to undo the results of 'RebuildNever',
+        -- ^ Assume these files are dirty and require rebuilding.
         --   for benchmarking rebuild speed and for rebuilding if untracked dependencies have changed.
         --   This flag is safe, but may cause more rebuilding than necessary.
     | RebuildNormal
@@ -39,6 +39,7 @@ data Rebuild
         --   Assume these files are clean in this run, but test them normally in future runs.
 {-
     | RebuildNever
+        -- Add to RebuildNow: Useful to undo the results of 'RebuildNever',
         -- ^ /This assumption is unsafe, and may lead to incorrect build results in this run, and in future runs/.
         --   Assume and record that these files are clean and do not require rebuilding, provided the file
         --   has been built before. Useful if you have modified a file in some
