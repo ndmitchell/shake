@@ -14,7 +14,6 @@ module General.Extra(
 import Control.Exception.Extra
 import Data.Char
 import Data.List
-import Data.Proxy
 import System.Environment.Extra
 import System.IO.Extra
 import System.IO.Unsafe
@@ -124,5 +123,6 @@ isAsyncException e
 ---------------------------------------------------------------------
 -- Data.Proxy
 
-withResultType :: (Proxy a -> a) -> a
-withResultType f = f Proxy
+-- Should be Proxy, but that's not available in older GHC 7.6 and before
+withResultType :: (Maybe a -> a) -> a
+withResultType f = f Nothing

@@ -54,7 +54,7 @@ getHashedShakeVersion files = do
 -- | Get an item from 'shakeExtra', using the requested type as the key. Fails
 -- if the value found at this key does not match the requested type.
 getShakeExtra :: Typeable a => Action (Maybe a)
-getShakeExtra = withResultType $ \(_ :: Proxy (Action (Maybe a))) -> do
+getShakeExtra = withResultType $ \(_ :: Maybe (Action (Maybe a))) -> do
     let want = typeRep (Proxy :: Proxy a)
     extra <- shakeExtra <$> getShakeOptions
     case Map.lookup want extra of
