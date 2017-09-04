@@ -3,7 +3,8 @@
 --   Most users will find the built-in set of rules sufficient.
 module Development.Shake.Rule(
     -- * Defining builtin rules
-    BuiltinLint, noLint, BuiltinRun, RunChanged(..), RunResult(..), addBuiltinRule,
+    addBuiltinRule,
+    BuiltinLint, noLint, BuiltinRun, RunChanged(..), RunResult(..),
     -- * Calling builtin rules
     apply, apply1,
     -- * User rules
