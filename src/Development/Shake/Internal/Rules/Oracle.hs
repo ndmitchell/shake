@@ -88,7 +88,7 @@ addOracle act = do
         let skip = shakeRebuildApply opts "" == RebuildLater
 
         addBuiltinRule noLint $ \(OracleQ q) old _ -> case old of
-            Just old | skip -> do
+            Just old | skip ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
                 new <- OracleA <$> act q
