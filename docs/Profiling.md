@@ -85,7 +85,7 @@ The Shake profiling groups time by rule names and phases of the build, but if yo
 
 In some versions of GHC profiles may generate incorrectly when combined with `-I0`, so you may need to omit that flag.
 
-Often most of the build time will be spent calling out to commands, which can be well profiled with the existing Shake mechanisms, and just contribute noise to the Haskell profiling. By passing `--no-command` you can avoid running any `cmd` calls which don't return any results (return type `Action ()`). If any of your other actions can be similarly avoided you can examine the `shakeRunCommands` flag of `ShakeOptions`.
+Often most of the build time will be spent calling out to commands, which can be well profiled with the existing Shake mechanisms, and just contribute noise to the Haskell profiling. By passing `--rebuild --no-command` you can rebuild everything but skip running any `cmd` calls which don't return any results (return type `Action ()`). If any of your other actions can be similarly avoided you can examine the `shakeRunCommands` flag of `ShakeOptions`.
 
 ## Chrome traces
 
