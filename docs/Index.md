@@ -51,6 +51,10 @@ There are several libraries providing pre-made rules for Shake:
 * [shake-minify](https://hackage.haskell.org/package/shake-minify) uses native Haskell code (no external `$PATH` dependencies) to minify CSS and JS files.
 * [shake-pack](https://hackage.haskell.org/package/shake-pack) uses bz2 lib on the system to tar and bzip compress given files.
 
+There is one library taking Shake into a new domain:
+
+* [bioshake](https://github.com/PapenfussLab/bioshake) lets users define bioinformatics pipelines in a DSL that is executed in conjunction with Shake, also including support for cluster execution.
+
 Several open-source projects make key use of Shake:
 
 * [ToolCabal](https://github.com/TiborIntelSoft/ToolCabal) is a rewrite of [Cabal](https://www.haskell.org/cabal/) using Shake as the dependency engine.
