@@ -59,10 +59,11 @@ data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
 
 -- | Result of a File rule, may contain raw file information and wether the rule did run this build
-data FileR = FileR { fileA :: Maybe FileA
-                   , hasChanged :: Bool
-                   }
+data FileR = FileR (Maybe FileA) Bool
     deriving (Typeable, Eq)
+
+hasChanged :: FileR -> Bool
+hasChanged (FileR _ b) = b
 
 -- | The types of file rule that occur.
 data Mode
