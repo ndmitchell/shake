@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances, TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.File(
-    need, needBS, needed, neededBS, want,
+    need, needHasChanged, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
@@ -48,7 +48,7 @@ infix 1 %>, ?>, |%>, ~>
 ---------------------------------------------------------------------
 -- TYPES
 
-type instance RuleResult FileQ = Maybe FileA
+type instance RuleResult FileQ = FileR
 
 -- | The unique key we use to index File rules, to avoid name clashes.
 newtype FileQ = FileQ {fromFileQ :: FileName}
@@ -57,6 +57,12 @@ newtype FileQ = FileQ {fromFileQ :: FileName}
 -- | Raw information about a file.
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
+
+-- | Result of a File rule, may contain raw file information and wether the rule did run this build
+data FileR = FileR { fileA :: (Maybe FileA)
+                   , hasChanged :: Bool
+                   }
+    deriving (Typeable, Eq)
 
 -- | The types of file rule that occur.
 data Mode
@@ -87,15 +93,28 @@ instance BinaryEx [FileQ] where
 instance Hashable FileA where
     hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
 
+instance Hashable FileR where
+    hashWithSalt salt (FileR f _) = hashWithSalt salt f
+
 instance NFData FileA where
     rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
+
+instance NFData FileR where
+    rnf (FileR f _) = rnf f
 
 instance Binary FileA where
     put (FileA a b c) = put a >> put b >> put c
     get = liftA3 FileA get get get
 
+instance Binary FileR where
+    put (FileR f _) = put f
+    get = (`FileR` False) <$> get
+
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
+
+instance Show FileR where
+    show (FileR f b) = show f ++ if b then " recomputed" else " not recomputed"
 
 instance Storable FileA where
     sizeOf _ = 4 * 3 -- 4 Word32's
@@ -182,16 +201,16 @@ defaultRuleFile = do
     -- A rule from FileQ to (Maybe FileA). The result value is only useful for linting.
     addBuiltinRuleEx (ruleLint opts) (ruleRun opts $ shakeRebuildApply opts)
 
-ruleLint :: ShakeOptions -> BuiltinLint FileQ (Maybe FileA) 
-ruleLint opts k Nothing = return Nothing
-ruleLint opts k (Just v) = do
+ruleLint :: ShakeOptions -> BuiltinLint FileQ FileR
+ruleLint opts k (FileR Nothing _) = return Nothing
+ruleLint opts k (FileR (Just v) _) = do
     now <- fileStoredValue opts k
     return $ case now of
         Nothing -> Just "<missing>"
         Just now | fileEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
 
-ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ (Maybe FileA)
+ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) dirtyChildren = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
@@ -235,13 +254,16 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         -- but more than that, it goes wrong if you do, see #427
         asLint (ResultDirect x) = Just x
         asLint x = Nothing
-        unLint (RunResult a b _) = RunResult a b Nothing
+        unLint (RunResult a b (FileR _ c)) = RunResult a b $ FileR Nothing c
 
-        retNew :: RunChanged -> Result -> Action (RunResult (Maybe FileA))
-        retNew c v = return $ RunResult c (runBuilder $ putEx v) (asLint v)
+        retNew :: RunChanged -> Result -> Action (RunResult FileR)
+        retNew c v = return $ RunResult c (runBuilder $ putEx v) (FileR (asLint v) (case c of
+                                                                                      ChangedNothing -> False
+                                                                                      ChangedStore   -> False
+                                                                                      _ -> True))
 
-        retOld :: RunChanged -> Action (RunResult (Maybe FileA))
-        retOld c = return $ RunResult c (fromJust oldBin) $ asLint $ fromJust old
+        retOld :: RunChanged -> Action (RunResult FileR)
+        retOld c = return $ RunResult c (fromJust oldBin) $ (FileR (asLint $ fromJust old) False)
 
         -- actually run the rebuild
         rebuild = do
@@ -281,7 +303,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     retNew ChangedRecomputeDiff ResultPhony
 
 
-apply_ :: (a -> FileName) -> [a] -> Action [Maybe FileA]
+apply_ :: (a -> FileName) -> [a] -> Action [FileR]
 apply_ f = apply . map (FileQ . f)
 
 
@@ -313,6 +335,32 @@ fileForward act = addUserRule $ FileRule $ fmap ModeForward . act
 need :: [FilePath] -> Action ()
 need = void . apply_ fileNameFromString
 
+
+-- | Like 'need' but returns a list indicating, which dependency has changed since the last build.
+--
+--   The following example writes a list of changed dependencies to a file as its action.
+--
+-- @
+-- \"target\" '%>' \\out -> do
+--       let sourceList = [\"source1\", \"source2\"]
+--       rebuildList <- 'needHasChanged' sourceList
+--       let changedDependencies = map fst $ filter snd $ zip sourceList rebuildList
+--       'Development.Shake.writeFileLines' out changedDependencies
+-- @
+--
+--    This function can be used to alter the action depending on which dependency needed
+--    to be rebuild.
+--
+--    It can be used together with 'Development.Shake.&%>' or 'Development.Shake.&?>'
+--    to implement batching. There is at
+--    the moment no way to get a list of inconsistent targets in such a rule, therefore
+--    either all targets need to be rebuild or it needs to be ensured, that targets don't
+--    get inconsistent. (This happens if targets get altered in a build after they have
+--    been produced or if some process alter the targets between builds. Support for
+--    detecting inconsistent targets will be added later.)
+needHasChanged :: [FilePath] -> Action [Bool]
+needHasChanged = fmap (fmap hasChanged) . apply_ fileNameFromString
+
 needBS :: [BS.ByteString] -> Action ()
 needBS = void . apply_ fileNameFromByteString
 
@@ -337,7 +385,7 @@ neededCheck xs = do
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply_ id xs
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, Just b) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
+              | (x, a, (FileR (Just b) _)) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
