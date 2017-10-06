@@ -59,7 +59,7 @@ data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
 
 -- | Result of a File rule, may contain raw file information and wether the rule did run this build
-data FileR = FileR { fileA :: (Maybe FileA)
+data FileR = FileR { fileA :: Maybe FileA
                    , hasChanged :: Bool
                    }
     deriving (Typeable, Eq)
@@ -263,7 +263,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                                                                                       _ -> True))
 
         retOld :: RunChanged -> Action (RunResult FileR)
-        retOld c = return $ RunResult c (fromJust oldBin) $ (FileR (asLint $ fromJust old) False)
+        retOld c = return $ RunResult c (fromJust oldBin) $ FileR (asLint $ fromJust old) False
 
         -- actually run the rebuild
         rebuild = do
@@ -385,7 +385,7 @@ neededCheck xs = do
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply_ id xs
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, (FileR (Just b) _)) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
+              | (x, a, FileR (Just b) _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
