@@ -258,9 +258,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         unLint (RunResult a b (FileR _ c)) = RunResult a b $ FileR Nothing c
 
         retNew :: RunChanged -> Result -> Action (RunResult FileR)
-        retNew c v = return $ RunResult c (runBuilder $ putEx v) (FileR (asLint v) (case c of
-                                                                                      ChangedRecomputeDiff -> True
-                                                                                      _ -> False))
+        retNew c v = return $ RunResult c (runBuilder $ putEx v) (FileR (asLint v) (c == ChangedRecomputeDiff))
 
         retOld :: RunChanged -> Action (RunResult FileR)
         retOld c = return $ RunResult c (fromJust oldBin) $ FileR (asLint $ fromJust old) False
