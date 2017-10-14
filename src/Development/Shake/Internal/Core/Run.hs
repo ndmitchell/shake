@@ -7,8 +7,8 @@ module Development.Shake.Internal.Core.Run(
     Action, actionOnException, actionFinally, apply, apply1, traced,
     getShakeOptions, getProgress,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    Resource, newResource, newResourceIO, withResource, withResources, newThrottle, newThrottleIO,
-    newCache, newCacheIO,
+    Resource, newResourceIO, withResource, newThrottleIO,
+    newCacheIO,
     unsafeExtraThread, unsafeAllowApply,
     parallel,
     orderOnlyAction,
@@ -271,72 +271,6 @@ apply1 = fmap head . apply . return
 ---------------------------------------------------------------------
 -- RESOURCES
 
--- | Create a finite resource, given a name (for error messages) and a quantity of the resource that exists.
---   Shake will ensure that actions using the same finite resource do not execute in parallel.
---   As an example, only one set of calls to the Excel API can occur at one time, therefore
---   Excel is a finite resource of quantity 1. You can write:
---
--- @
--- 'Development.Shake.shake' 'Development.Shake.shakeOptions'{'Development.Shake.shakeThreads'=2} $ do
---    'Development.Shake.want' [\"a.xls\",\"b.xls\"]
---    excel <- 'Development.Shake.newResource' \"Excel\" 1
---    \"*.xls\" 'Development.Shake.%>' \\out ->
---        'Development.Shake.withResource' excel 1 $
---            'Development.Shake.cmd' \"excel\" out ...
--- @
---
---   Now the two calls to @excel@ will not happen in parallel.
---
---   As another example, calls to compilers are usually CPU bound but calls to linkers are usually
---   disk bound. Running 8 linkers will often cause an 8 CPU system to grid to a halt. We can limit
---   ourselves to 4 linkers with:
---
--- @
--- disk <- 'Development.Shake.newResource' \"Disk\" 4
--- 'Development.Shake.want' [show i 'Development.Shake.FilePath.<.>' \"exe\" | i <- [1..100]]
--- \"*.exe\" 'Development.Shake.%>' \\out ->
---     'Development.Shake.withResource' disk 1 $
---         'Development.Shake.cmd' \"ld -o\" [out] ...
--- \"*.o\" 'Development.Shake.%>' \\out ->
---     'Development.Shake.cmd' \"cl -o\" [out] ...
--- @
-newResource :: String -> Int -> Rules Resource
-newResource name mx = liftIO $ newResourceIO name mx
-
-
--- | Create a throttled resource, given a name (for error messages) and a number of resources (the 'Int') that can be
---   used per time period (the 'Double' in seconds). Shake will ensure that actions using the same throttled resource
---   do not exceed the limits. As an example, let us assume that making more than 1 request every 5 seconds to
---   Google results in our client being blacklisted, we can write:
---
--- @
--- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
--- \"*.url\" 'Development.Shake.%>' \\out -> do
---     'Development.Shake.withResource' google 1 $
---         'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
--- @
---
---   Now we will wait at least 5 seconds after querying Google before performing another query. If Google change the rules to
---   allow 12 requests per minute we can instead use @'Development.Shake.newThrottle' \"Google\" 12 60@, which would allow
---   greater parallelisation, and avoid throttling entirely if only a small number of requests are necessary.
---
---   In the original example we never make a fresh request until 5 seconds after the previous request has /completed/. If we instead
---   want to throttle requests since the previous request /started/ we can write:
---
--- @
--- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
--- \"*.url\" 'Development.Shake.%>' \\out -> do
---     'Development.Shake.withResource' google 1 $ return ()
---     'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
--- @
---
---   However, the rule may not continue running immediately after 'Development.Shake.withResource' completes, so while
---   we will never exceed an average of 1 request every 5 seconds, we may end up running an unbounded number of
---   requests simultaneously. If this limitation causes a problem in practice it can be fixed.
-newThrottle :: String -> Int -> Double -> Rules Resource
-newThrottle name count period = liftIO $ newThrottleIO name count period
-
-
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
 --   You cannot depend on a rule (e.g. 'need') while a resource is held.
 withResource :: Resource -> Int -> Action a -> Action a
@@ -353,18 +287,6 @@ withResource r i act = do
     liftIO $ releaseResource r globalPool i
     liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
     Action $ either throwRAW return res
-
-
--- | Run an action which uses part of several finite resources. Acquires the resources in a stable
---   order, to prevent deadlock. If all rules requiring more than one resource acquire those
---   resources with a single call to 'withResources', resources will not deadlock.
-withResources :: [(Resource, Int)] -> Action a -> Action a
-withResources res act
-    | (r,i):_ <- filter ((< 0) . snd) res = error $ "You cannot acquire a negative quantity of " ++ show r ++ ", requested " ++ show i
-    | otherwise = f $ groupBy ((==) `on` fst) $ sortBy (compare `on` fst) res
-    where
-        f [] = act
-        f (r:rs) = withResource (fst $ head r) (sum $ map snd r) $ f rs
 
 
 -- | A version of 'newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
@@ -402,29 +324,6 @@ newCacheIO act = do
                             let deps = take (length post - length pre) post
                             liftIO $ signalFence bar $ Right (deps, v)
                             return v
-
--- | Given an action on a key, produce a cached version that will execute the action at most once per key.
---   Using the cached result will still result include any dependencies that the action requires.
---   Each call to 'newCache' creates a separate cache that is independent of all other calls to 'newCache'.
---
---   This function is useful when creating files that store intermediate values,
---   to avoid the overhead of repeatedly reading from disk, particularly if the file requires expensive parsing.
---   As an example:
---
--- @
--- digits \<- 'newCache' $ \\file -> do
---     src \<- readFile\' file
---     return $ length $ filter isDigit src
--- \"*.digits\" 'Development.Shake.%>' \\x -> do
---     v1 \<- digits ('dropExtension' x)
---     v2 \<- digits ('dropExtension' x)
---     'Development.Shake.writeFile'' x $ show (v1,v2)
--- @
---
---   To create the result @MyFile.txt.digits@ the file @MyFile.txt@ will be read and counted, but only at most
---   once per execution.
-newCache :: (Eq k, Hashable k) => (k -> Action v) -> Rules (k -> Action v)
-newCache = liftIO . newCacheIO
 
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
