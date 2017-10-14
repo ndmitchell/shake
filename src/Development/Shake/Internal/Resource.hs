@@ -87,7 +87,7 @@ newResourceIO name mx = do
                 if want <= finiteAvailable then
                     (x{finiteAvailable = finiteAvailable - want}, continue)
                 else
-                    (x{finiteWaiting = finiteWaiting `snoc` (want, addPoolMediumPriority pool continue)}, return ())
+                    (x{finiteWaiting = finiteWaiting `snoc` (want, addPoolResume pool continue)}, return ())
 
         release :: Var Finite -> Pool -> Int -> IO ()
         release var _ i = join $ modifyVar var $ \x -> return $ f x{finiteAvailable = finiteAvailable x + i}
@@ -113,7 +113,7 @@ waiter period act = void $ forkIO $ do
 blockPool :: Pool -> IO (IO ())
 blockPool pool = do
     bar <- newBarrier
-    addPoolMediumPriority pool $ do
+    addPoolResume pool $ do
         cancel <- increasePool pool
         waitBarrier bar
         cancel
@@ -148,8 +148,8 @@ newThrottleIO name count period = do
                     | i >= want -> return (ThrottleAvailable $ i - want, continue)
                     | otherwise -> do
                         stop <- blockPool pool
-                        return (ThrottleWaiting stop $ (want - i, addPoolMediumPriority pool continue) `cons` mempty, return ())
-                ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPoolMediumPriority pool continue), return ())
+                        return (ThrottleWaiting stop $ (want - i, addPoolResume pool continue) `cons` mempty, return ())
+                ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPoolResume pool continue), return ())
 
         release :: Var Throttle -> Pool -> Int -> IO ()
         release var pool n = waiter period $ join $ modifyVar var $ \x -> return $ case x of

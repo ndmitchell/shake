@@ -203,8 +203,8 @@ build pool Database{..} BuildKey{..} stack ks continue =
             \go -> do
                 time <- offsetTime
                 go $ \x -> case x of
-                    Left e -> addPoolHighPriority pool $ continue $ Left e
-                    Right rs -> addPoolMediumPriority pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
+                    Left e -> addPoolException pool $ continue $ Left e
+                    Right rs -> addPoolResume pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
                 return $ return ()
     where
         (#=) :: Id -> (Key, Status) -> IO Status
@@ -267,7 +267,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
         spawn :: Bool -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
         spawn dirtyChildren stack i k r = do
             (w, done) <- newWaiting
-            addPoolLowPriority pool $
+            addPoolStart pool $
                 buildKey (addStack i k stack) step k r dirtyChildren $ \res -> do
                     let status = either Error (Ready . thd3) res
                     withLock lock $ do

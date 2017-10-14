@@ -1,8 +1,17 @@
 
--- | Thread pool implementation.
+-- | Thread pool implementation. The three names correspond to the following
+--   priority levels (highest to lowest):
+--
+-- * 'addPoolException' - things that probably result in a build error,
+--   so kick them off quickly.
+--
+-- * 'addPoolResume' - things that started, blocked, and may have open
+--   resources in their closure.
+--
+-- * 'addPoolStart' - rules that haven't yet started.
 module Development.Shake.Internal.Core.Pool(
     Pool, runPool,
-    addPoolHighPriority, addPoolMediumPriority, addPoolLowPriority,
+    addPoolException, addPoolResume, addPoolStart,
     increasePool
     ) where
 
@@ -141,20 +150,20 @@ step pool@(Pool var done) op = do
 
 -- | Add a new task to the pool.
 --   Medium priority is suitable for tasks that are resuming running after a pause.
-addPoolMediumPriority :: Pool -> IO a -> IO ()
-addPoolMediumPriority pool act = step pool $ \s -> do
+addPoolResume :: Pool -> IO a -> IO ()
+addPoolResume pool act = step pool $ \s -> do
     todo <- return $ enqueue (void act) (todo s)
     return s{todo = todo}
 
 -- | Add a new task to the pool.
 --   Low priority is suitable for new tasks that are just starting.
-addPoolLowPriority :: Pool -> IO a -> IO ()
-addPoolLowPriority = addPoolMediumPriority
+addPoolStart :: Pool -> IO a -> IO ()
+addPoolStart = addPoolResume
 
 -- | Add a new task to the pool.
 --   High priority is suitable for tasks that have detected failure and are resuming to propagate that failure.
-addPoolHighPriority :: Pool -> IO a -> IO ()
-addPoolHighPriority pool act = step pool $ \s -> do
+addPoolException :: Pool -> IO a -> IO ()
+addPoolException pool act = step pool $ \s -> do
     todo <- return $ enqueuePriority (void act) (todo s)
     return s{todo = todo}
 
@@ -195,7 +204,7 @@ runPool deterministic n act = do
                 _ -> throwIO BlockedIndefinitelyOnMVar
     handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip onException cleanup $ do
         let pool = Pool s done
-        addPoolMediumPriority pool $ act pool
+        addPoolStart pool $ act pool
         res <- waitBarrier done
         case res of
             Left e -> throwIO e

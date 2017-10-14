@@ -14,7 +14,7 @@ main = shakeTest_ test $ return ()
 
 test build = do
     -- See #474, we should never be running pool actions masked
-    let addPool pool act = addPoolMediumPriority pool $ do
+    let addPool pool act = addPoolStart pool $ do
             Unmasked <- getMaskingState
             act
 
