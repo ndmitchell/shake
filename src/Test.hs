@@ -60,19 +60,46 @@ import qualified Run
 fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetime]
     where (*) = (,)
 
-mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
-        ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main
-        ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
-        ,"docs" * Docs.main, "batch" * Batch.main
-        ,"errors" * Errors.main, "existence" * Existence.main
-        ,"orderonly" * OrderOnly.main
-        ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
-        ,"forward" * Forward.main, "match" * Match.main
-        ,"journal" * Journal.main, "lint" * Lint.main, "live" * Live.main, "manual" * Manual.main
-        ,"monad" * Monad.main, "parallel" * Parallel.main, "pool" * Pool.main, "random" * Random.main, "ninja" * Ninja.main
-        ,"resources" * Resources.main, "rebuild" * Rebuild.main, "benchmark" * Benchmark.main
-        ,"oracle" * Oracle.main, "progress" * Progress.main, "unicode" * Unicode.main, "util" * Util.main
-        ,"verbosity" * Verbosity.main, "version" * Version.main, "tup" * Tup.main]
+mains =
+    ["basic" * Basic.main
+    ,"batch" * Batch.main
+    ,"benchmark" * Benchmark.main
+    ,"c" * C.main
+    ,"cache" * Cache.main
+    ,"command" * Command.main
+    ,"config" * Config.main
+    ,"digest" * Digest.main
+    ,"directory" * Directory.main
+    ,"docs" * Docs.main
+    ,"errors" * Errors.main
+    ,"existence" * Existence.main
+    ,"filelock" * FileLock.main
+    ,"filepath" * FilePath.main
+    ,"filepattern" * FilePattern.main
+    ,"files" * Files.main
+    ,"forward" * Forward.main
+    ,"journal" * Journal.main
+    ,"lint" * Lint.main
+    ,"live" * Live.main
+    ,"manual" * Manual.main
+    ,"match" * Match.main
+    ,"monad" * Monad.main
+    ,"ninja" * Ninja.main
+    ,"oracle" * Oracle.main
+    ,"orderonly" * OrderOnly.main
+    ,"parallel" * Parallel.main
+    ,"pool" * Pool.main
+    ,"progress" * Progress.main
+    ,"random" * Random.main
+    ,"rebuild" * Rebuild.main
+    ,"resources" * Resources.main
+    ,"self" * Self.main
+    ,"tar" * Tar.main
+    ,"tup" * Tup.main
+    ,"unicode" * Unicode.main
+    ,"util" * Util.main
+    ,"verbosity" * Verbosity.main
+    ,"version" * Version.main]
     where (*) = (,)
 
 
