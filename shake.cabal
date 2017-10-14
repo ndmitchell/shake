@@ -36,34 +36,34 @@ extra-doc-files:
     CHANGES.txt
     README.md
 extra-source-files:
+    docs/Manual.md
+    docs/shake-progress.png
+    src/Paths.hs
     src/Test/C/constants.c
     src/Test/C/constants.h
     src/Test/C/main.c
-    src/Test/Tar/list.txt
     src/Test/Ninja/*.ninja
-    src/Test/Ninja/subdir/*.ninja
     src/Test/Ninja/*.output
+    src/Test/Ninja/subdir/*.ninja
     src/Test/Progress/*.prog
+    src/Test/Tar/list.txt
     src/Test/Tup/hello.c
-    src/Test/Tup/root.cfg
     src/Test/Tup/newmath/root.cfg
     src/Test/Tup/newmath/square.c
     src/Test/Tup/newmath/square.h
-    src/Paths.hs
-    docs/Manual.md
-    docs/shake-progress.png
+    src/Test/Tup/root.cfg
 
 data-files:
-    html/viz.js
-    html/profile.html
-    html/progress.html
-    html/shake.js
     docs/manual/build.bat
     docs/manual/Build.hs
     docs/manual/build.sh
     docs/manual/constants.c
     docs/manual/constants.h
     docs/manual/main.c
+    html/profile.html
+    html/progress.html
+    html/shake.js
+    html/viz.js
 
 source-repository head
     type:     git
@@ -79,22 +79,22 @@ library
     hs-source-dirs:   src
     build-depends:
         base >= 4.5,
-        directory,
-        hashable >= 1.1.2.3,
         binary,
-        filepath,
-        process >= 1.1,
-        unordered-containers >= 0.2.1,
         bytestring,
-        utf8-string >= 0.3,
-        time,
-        random,
-        js-jquery,
-        js-flot,
-        transformers >= 0.2,
-        extra >= 1.5.3,
         deepseq >= 1.1,
-        primitive
+        directory,
+        extra >= 1.5.3,
+        filepath,
+        hashable >= 1.1.2.3,
+        js-flot,
+        js-jquery,
+        primitive,
+        process >= 1.1,
+        random,
+        time,
+        transformers >= 0.2,
+        unordered-containers >= 0.2.1,
+        utf8-string >= 0.3
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -122,21 +122,23 @@ library
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Shake.Internal.Args
-        General.Makefile
+        Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Action
+        Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.Monad
+        Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Rendezvous
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
-        Development.Shake.Internal.CmdOption
-        Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Core.Types
         Development.Shake.Internal.Demo
         Development.Shake.Internal.Derived
         Development.Shake.Internal.Errors
         Development.Shake.Internal.FileInfo
+        Development.Shake.Internal.FileName
         Development.Shake.Internal.FilePattern
-        Development.Shake.Internal.Core.Monad
-        Development.Shake.Internal.Core.Pool
+        Development.Shake.Internal.Options
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
@@ -147,8 +149,6 @@ library
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
-        Development.Shake.Internal.Core.Storage
-        Development.Shake.Internal.Options
         Development.Shake.Internal.Value
         General.Bag
         General.Bilist
@@ -162,8 +162,8 @@ library
         General.Ids
         General.Intern
         General.ListBuilder
+        General.Makefile
         General.Process
-        Development.Shake.Internal.FileName
         General.Template
         General.Timing
         Paths_shake
@@ -180,22 +180,22 @@ executable shake
         ghc-options: -threaded "-with-rtsopts=-I0 -qg -qb"
     build-depends:
         base == 4.*,
-        directory,
-        hashable >= 1.1.2.3,
         binary,
-        filepath,
-        process >= 1.1,
-        unordered-containers >= 0.2.1,
         bytestring,
-        utf8-string >= 0.3,
-        time,
-        random,
-        js-jquery,
-        js-flot,
-        transformers >= 0.2,
-        extra >= 1.5.3,
         deepseq >= 1.1,
-        primitive
+        directory,
+        extra >= 1.5.3,
+        filepath,
+        hashable >= 1.1.2.3,
+        js-flot,
+        js-jquery,
+        primitive,
+        process >= 1.1,
+        random,
+        time,
+        transformers >= 0.2,
+        unordered-containers >= 0.2.1,
+        utf8-string >= 0.3
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -214,25 +214,27 @@ executable shake
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Shake
-        Development.Shake.Internal.Args
-        General.Makefile
         Development.Shake.Classes
-        Development.Shake.Internal.CmdOption
         Development.Shake.Command
+        Development.Shake.FilePath
+        Development.Shake.Internal.Args
+        Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Action
+        Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.Monad
+        Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Rendezvous
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
-        Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Core.Types
         Development.Shake.Internal.Demo
         Development.Shake.Internal.Derived
         Development.Shake.Internal.Errors
         Development.Shake.Internal.FileInfo
-        Development.Shake.FilePath
+        Development.Shake.Internal.FileName
         Development.Shake.Internal.FilePattern
-        Development.Shake.Internal.Core.Monad
-        Development.Shake.Internal.Core.Pool
+        Development.Shake.Internal.Options
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
@@ -243,8 +245,6 @@ executable shake
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
-        Development.Shake.Internal.Core.Storage
-        Development.Shake.Internal.Options
         Development.Shake.Internal.Value
         General.Bag
         General.Bilist
@@ -253,13 +253,13 @@ executable shake
         General.Cleanup
         General.Concurrent
         General.Extra
-        General.GetOpt
         General.FileLock
+        General.GetOpt
         General.Ids
         General.Intern
         General.ListBuilder
+        General.Makefile
         General.Process
-        Development.Shake.Internal.FileName
         General.Template
         General.Timing
         Paths_shake
@@ -282,23 +282,23 @@ test-suite shake-test
 
     build-depends:
         base == 4.*,
-        directory,
-        hashable >= 1.1.2.3,
         binary,
-        filepath,
-        process >= 1.1,
-        unordered-containers >= 0.2.1,
         bytestring,
-        utf8-string >= 0.3,
-        time,
-        random,
-        js-jquery,
-        js-flot,
-        transformers >= 0.2,
         deepseq >= 1.1,
+        directory,
         extra >= 1.5.3,
+        filepath,
+        hashable >= 1.1.2.3,
+        js-flot,
+        js-jquery,
         primitive,
-        QuickCheck >= 2.0
+        process >= 1.1,
+        QuickCheck >= 2.0,
+        random,
+        time,
+        transformers >= 0.2,
+        unordered-containers >= 0.2.1,
+        utf8-string >= 0.3
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -317,31 +317,32 @@ test-suite shake-test
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Shake
-        Development.Shake.Internal.Args
-        General.Makefile
         Development.Shake.Classes
-        Development.Shake.Internal.CmdOption
         Development.Shake.Command
         Development.Shake.Config
+        Development.Shake.FilePath
+        Development.Shake.Forward
+        Development.Shake.Internal.Args
+        Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Action
+        Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.Monad
+        Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Rendezvous
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
-        Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.Storage
         Development.Shake.Internal.Core.Types
         Development.Shake.Internal.Demo
         Development.Shake.Internal.Derived
         Development.Shake.Internal.Errors
         Development.Shake.Internal.FileInfo
-        Development.Shake.FilePath
+        Development.Shake.Internal.FileName
         Development.Shake.Internal.FilePattern
-        Development.Shake.Forward
-        Development.Shake.Internal.Core.Monad
-        Development.Shake.Internal.Core.Pool
+        Development.Shake.Internal.Options
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
-        Development.Shake.Rule
         Development.Shake.Internal.Rules.Directory
         Development.Shake.Internal.Rules.File
         Development.Shake.Internal.Rules.Files
@@ -349,10 +350,9 @@ test-suite shake-test
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
-        Development.Shake.Internal.Core.Storage
-        Development.Shake.Internal.Options
-        Development.Shake.Util
         Development.Shake.Internal.Value
+        Development.Shake.Rule
+        Development.Shake.Util
         General.Bag
         General.Bilist
         General.Binary
@@ -361,17 +361,16 @@ test-suite shake-test
         General.Concurrent
         General.Extra
         General.FileLock
-        General.Ids
         General.GetOpt
+        General.Ids
         General.Intern
         General.ListBuilder
+        General.Makefile
         General.Process
-        Development.Shake.Internal.FileName
         General.Template
         General.Timing
         Paths_shake
         Run
-        Test.Rebuild
         Test.Basic
         Test.Benchmark
         Test.C
@@ -401,6 +400,7 @@ test-suite shake-test
         Test.Pool
         Test.Progress
         Test.Random
+        Test.Rebuild
         Test.Resources
         Test.Self
         Test.Tar
