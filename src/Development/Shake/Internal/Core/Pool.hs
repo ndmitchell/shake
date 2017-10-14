@@ -124,20 +124,12 @@ addPool (sel, upd) pool act = step pool $ \s ->
     return s{todo = upd (todo s) $ Bag.insert (void act) $ sel $ todo s}
 
 
--- | Add a new task to the pool.
---   Medium priority is suitable for tasks that are resuming running after a pause.
-addPoolResume :: Pool -> IO a -> IO ()
-addPoolResume = addPool lensResume
-
--- | Add a new task to the pool.
---   Low priority is suitable for new tasks that are just starting.
-addPoolStart :: Pool -> IO a -> IO ()
-addPoolStart = addPool lensStart
-
--- | Add a new task to the pool.
---   High priority is suitable for tasks that have detected failure and are resuming to propagate that failure.
-addPoolException :: Pool -> IO a -> IO ()
+-- | Add a new task to the pool. See the top of the module for the relative ordering
+--   and semantics.
+addPoolException, addPoolResume, addPoolStart :: Pool -> IO a -> IO ()
 addPoolException = addPool lensException
+addPoolStart = addPool lensStart
+addPoolResume = addPool lensResume
 
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
