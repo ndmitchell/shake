@@ -2,6 +2,7 @@
 module Run(main) where
 
 import Development.Ninja.All
+import Development.Shake.Util
 import System.Environment
 import Development.Shake
 import Development.Shake.FilePath
@@ -24,8 +25,7 @@ main = do
         ,"Shakefile.hs","Shakefile.lhs"]
     case hsExe of
         Just file -> do
-            (prog,args) <- return $
-                if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
+            prog <- selectProg file
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
         Nothing -> 
@@ -51,3 +51,24 @@ flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "R
 
 findFile :: [FilePath] -> IO (Maybe FilePath)
 findFile = findM (fmap (either (const False) id) . try_ . IO.doesFileExist)
+
+selectProg :: FilePath -> IO FilePath
+selectProg file = if takeExtension file `elem` [".hs",".lhs"]
+    then buildShakefile file
+    else return $ toNative file
+
+buildShakefile :: FilePath -> IO FilePath
+buildShakefile shakefile = do
+    let shakefileBin = ".shake" </> shakefile -<.> exe
+    () <- doBuild shakefile shakefileBin
+    return $ toNative shakefileBin
+
+doBuild :: FilePath -> FilePath -> IO ()
+doBuild file target = shake shakeOptions { shakeFiles = ".shake" } $ do
+    want [target]
+
+    target %> \out -> do
+        let makefile = ".shake" </> "Makefile"
+        () <- cmd ["ghc", "-M", "-dep-makefile", makefile, "-dep-suffix=.", file]
+        needMakefileDependencies makefile
+        cmd ["ghc", "--make", file, "-o", target, "-outputdir", ".shake"]
