@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Avoid parallel duplicating local state such as discounting
     Prefer to resume tasks rather than start new ones
 0.16
     #536, make --skip work for oracles

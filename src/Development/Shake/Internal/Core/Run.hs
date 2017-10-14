@@ -365,26 +365,14 @@ parallel acts = Action $ do
                     res <- act
                     old <- Action getRW
                     return (old, res)
-            addPoolResume globalPool $ runAction global local act2 $ \res -> do
+            addPoolResume globalPool $ runAction global (localClearMutable local) act2 $ \res -> do
                 writeIORef result $ Just res
                 modifyVar_ todo $ \v -> case v of
                     Nothing -> return Nothing
                     Just i | i == 1 || isLeft res -> do resume; return Nothing
                     Just i -> return $ Just $ i - 1
 
-    -- don't construct with RecordWildCards so any new fields raise an error
-    modifyRW $ \root -> Local
-        -- immutable/stack that need copying
-        {localStack = localStack root
-        ,localVerbosity = localVerbosity root
-        ,localBlockApply = localBlockApply root
-        -- mutable locals that need integrating
-        ,localDepends = localDepends root ++ concatMap localDepends locals
-        ,localDiscount = localDiscount root + maximum (0:map localDiscount locals)
-        ,localTraces = localTraces root ++ concatMap localTraces locals
-        ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows locals
-        ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed locals
-        }
+    modifyRW $ \root -> localMergeMutable root locals
     return results
 
 
