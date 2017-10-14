@@ -334,7 +334,7 @@ need :: [FilePath] -> Action ()
 need = void . apply_ fileNameFromString
 
 
--- | Like 'need' but returns a list indicating, which dependency has changed since the last build.
+-- | Like 'need' but returns a list of rebuild dependencies this build.
 --
 --   The following example writes a list of changed dependencies to a file as its action.
 --
@@ -342,22 +342,20 @@ need = void . apply_ fileNameFromString
 -- \"target\" '%>' \\out -> do
 --       let sourceList = [\"source1\", \"source2\"]
 --       rebuildList <- 'needHasChanged' sourceList
---       let changedDependencies = map fst $ filter snd $ zip sourceList rebuildList
---       'Development.Shake.writeFileLines' out changedDependencies
+--       'Development.Shake.writeFileLines' out rebuildList
 -- @
 --
---    This function can be used to alter the action depending on which dependency needed
---    to be rebuild.
+--   This function can be used to alter the action depending on which dependency needed
+--   to be rebuild.
 --
---    It can be used together with 'Development.Shake.&%>' or 'Development.Shake.&?>'
---    to implement batching. There is at
---    the moment no way to get a list of inconsistent targets in such a rule, therefore
---    either all targets need to be rebuild or it needs to be ensured, that targets don't
---    get inconsistent. (This happens if targets get altered in a build after they have
---    been produced or if some process alter the targets between builds. Support for
---    detecting inconsistent targets will be added later.)
-needHasChanged :: [FilePath] -> Action [Bool]
-needHasChanged = fmap (fmap hasChanged) . apply_ fileNameFromString
+--   Notice that a rule can be run even if no dependency has changed and needHasChanged
+--   will return an empty list on every call then. In this case a target got inconsistent
+--   and you should recreate it, without reusing any part of the target from the last build,
+--   as the target could have been edited or even deleted.
+needHasChanged :: [FilePath] -> Action [FilePath]
+needHasChanged paths = do
+    changed <- fmap hasChanged <$> apply_ fileNameFromString paths
+    return $ fmap fst $ filter snd $ zip paths changed
 
 needBS :: [BS.ByteString] -> Action ()
 needBS = void . apply_ fileNameFromByteString
