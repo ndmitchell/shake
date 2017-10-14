@@ -14,7 +14,6 @@ import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent
 import Prelude
 
-import qualified Test.Rebuild as Rebuild
 import qualified Test.Basic as Basic
 import qualified Test.Batch as Batch
 import qualified Test.Benchmark as Benchmark
@@ -28,9 +27,9 @@ import qualified Test.Docs as Docs
 import qualified Test.Errors as Errors
 import qualified Test.Existence as Existence
 import qualified Test.FileLock as FileLock
-import qualified Test.Files as Files
 import qualified Test.FilePath as FilePath
 import qualified Test.FilePattern as FilePattern
+import qualified Test.Files as Files
 import qualified Test.Forward as Forward
 import qualified Test.Journal as Journal
 import qualified Test.Lint as Lint
@@ -45,6 +44,7 @@ import qualified Test.Parallel as Parallel
 import qualified Test.Pool as Pool
 import qualified Test.Progress as Progress
 import qualified Test.Random as Random
+import qualified Test.Rebuild as Rebuild
 import qualified Test.Resources as Resources
 import qualified Test.Self as Self
 import qualified Test.Tar as Tar
