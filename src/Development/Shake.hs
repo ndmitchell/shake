@@ -96,6 +96,8 @@ module Development.Shake(
     unsafeExtraThread,
     -- * Cache
     newCache, newCacheIO,
+    -- * Batching
+    batch,
     -- * Deprecated
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>)
