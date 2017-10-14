@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, ViewPatterns, ScopedTypeVariables #-}
 
 module Development.Ninja.All(runNinja) where
 
@@ -185,7 +185,7 @@ applyRspfile env act = do
     if rspfile == "" then
         act
      else
-        flip actionFinally (ignore $ removeFile rspfile) $ do
+        flip actionFinally (removeFile rspfile `catch` \(_ :: IOError) -> return ()) $ do
             liftIO $ BS.writeFile rspfile rspfile_content
             act
 
