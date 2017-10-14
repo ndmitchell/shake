@@ -80,7 +80,6 @@ main = shakeTest_ test $ do
         liftIO $ join $ liftM2 (===) (norm out) (norm "helper")
 
     "timeout" !> do
-        opts <- getShakeOptions
         offset <- liftIO offsetTime
         Exit exit <- cmd (Timeout 2) helper "w20"
         t <- liftIO offset
