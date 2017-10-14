@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Prefer to resume tasks rather than start new ones
 0.16
     #536, make --skip work for oracles
     Ensure shakeOutput is used more consistently
