@@ -292,8 +292,8 @@ withResource r i act = do
 -- | A version of 'newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
-newCacheIO act = do
-    var {- :: Var (Map k (Fence (Either SomeException ([Depends],v)))) -} <- newVar Map.empty
+newCacheIO (act :: k -> Action v) = do
+    var :: Var (Map.HashMap k (Fence (Either SomeException ([Depends],v)))) <- newVar Map.empty
     return $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
