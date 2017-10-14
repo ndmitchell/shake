@@ -19,10 +19,10 @@ import Control.Concurrent.Extra
 import System.Time.Extra
 import Control.Exception
 import Control.Monad
+import Data.Tuple.Extra
 import General.Timing
+import qualified General.Bag as Bag
 import qualified Data.HashSet as Set
-import qualified Data.HashMap.Strict as Map
-import System.Random
 
 
 ---------------------------------------------------------------------
@@ -32,51 +32,20 @@ import System.Random
 type NonDet a = IO a
 
 -- Left = deterministic list, Right = non-deterministic tree
-data Queue a = Queue [a] (Either [a] (Tree a))
+data Queue a = Queue [a] (Bag.Bag a)
 
 newQueue :: Bool -> Queue a
-newQueue deterministic = Queue [] $ if deterministic then Left [] else Right emptyTree
+newQueue deterministic = Queue [] $ if deterministic then Bag.emptyPure else Bag.emptyRandom
 
 enqueuePriority :: a -> Queue a -> Queue a
 enqueuePriority x (Queue p t) = Queue (x:p) t
 
 enqueue :: a -> Queue a -> Queue a
-enqueue x (Queue p (Left xs)) = Queue p $ Left $ x:xs
-enqueue x (Queue p (Right t)) = Queue p $ Right $ insertTree x t
+enqueue x (Queue p b) = Queue p $ Bag.insert x b
 
-dequeue :: Queue a -> NonDet (Maybe (a, Queue a))
+dequeue :: Queue a -> Bag.Randomly (Maybe (a, Queue a))
 dequeue (Queue (p:ps) t) = return $ Just (p, Queue ps t)
-dequeue (Queue [] (Left (x:xs))) = return $ Just (x, Queue [] $ Left xs)
-dequeue (Queue [] (Left [])) = return Nothing
-dequeue (Queue [] (Right t)) = do
-    bs <- randomIO
-    return $ case removeTree bs t of
-        Nothing -> Nothing
-        Just (x,t) -> Just (x, Queue [] $ Right t)
-
-
----------------------------------------------------------------------
--- TREE
-
--- A tree where removal is random. Nodes are stored at indicies 0..n-1
-data Tree a = Tree {-# UNPACK #-} !Int (Map.HashMap Int a)
-
-
-emptyTree :: Tree a
-emptyTree = Tree 0 Map.empty
-
-insertTree :: a -> Tree a -> Tree a
-insertTree x (Tree n mp) = Tree (n+1) $ Map.insert n x mp
-
--- Remove an item at random, put the n-1 item to go in it's place
-removeTree :: Int -> Tree a -> Maybe (a, Tree a)
-removeTree rnd (Tree n mp)
-        | n == 0 = Nothing
-        | n == 1 = Just (mp Map.! 0, emptyTree)
-        | i == n-1 = Just (mp Map.! i, Tree (n-1) $ Map.delete i mp)
-        | otherwise = Just (mp Map.! i, Tree (n-1) $ Map.insert i (mp Map.! (n-1)) $ Map.delete (n-1) mp)
-    where
-        i = abs rnd `mod` n
+dequeue (Queue [] b) = fmap (second (Queue [])) <$> Bag.remove b
 
 
 ---------------------------------------------------------------------
