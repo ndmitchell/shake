@@ -18,8 +18,7 @@ module Development.Shake.Internal.Core.Pool(
 import Control.Concurrent.Extra
 import System.Time.Extra
 import Control.Exception
-import Control.Monad
-import Data.Tuple.Extra
+import Control.Monad.Extra
 import General.Timing
 import qualified General.Bag as Bag
 import qualified Data.HashSet as Set
@@ -28,21 +27,28 @@ import qualified Data.HashSet as Set
 ---------------------------------------------------------------------
 -- UNFAIR/RANDOM QUEUE
 
--- Left = deterministic list, Right = non-deterministic tree
-data Queue a = Queue [a] (Bag.Bag a)
+data Queue a = Queue
+    {queueException :: Bag.Bag a
+    ,queueResume :: Bag.Bag a
+    ,queueStart :: Bag.Bag a
+    }
+
+lensException = (queueException, \x v -> x{queueException=v})
+lensResume = (queueResume, \x v -> x{queueResume=v})
+lensStart = (queueStart, \x v -> x{queueStart=v})
+lenses = [lensException, lensResume, lensStart]
 
 newQueue :: Bool -> Queue a
-newQueue deterministic = Queue [] $ if deterministic then Bag.emptyPure else Bag.emptyRandom
-
-enqueuePriority :: a -> Queue a -> Queue a
-enqueuePriority x (Queue p t) = Queue (x:p) t
-
-enqueue :: a -> Queue a -> Queue a
-enqueue x (Queue p b) = Queue p $ Bag.insert x b
+newQueue deterministic = Queue b b b
+    where b = if deterministic then Bag.emptyPure else Bag.emptyRandom
 
 dequeue :: Queue a -> Bag.Randomly (Maybe (a, Queue a))
-dequeue (Queue (p:ps) t) = return $ Just (p, Queue ps t)
-dequeue (Queue [] b) = fmap (second (Queue [])) <$> Bag.remove b
+dequeue q = firstJustM f lenses
+    where
+        f (sel, upd)
+            | Just x <- Bag.remove $ sel q
+            = do (x,b) <- x; return $ Just (x, upd q b)
+        f _ = return Nothing
 
 
 ---------------------------------------------------------------------
@@ -114,24 +120,24 @@ step pool@(Pool var done) op = do
             _ -> return $ Just s
 
 
+addPool (sel, upd) pool act = step pool $ \s ->
+    return s{todo = upd (todo s) $ Bag.insert (void act) $ sel $ todo s}
+
+
 -- | Add a new task to the pool.
 --   Medium priority is suitable for tasks that are resuming running after a pause.
 addPoolResume :: Pool -> IO a -> IO ()
-addPoolResume pool act = step pool $ \s -> do
-    todo <- return $ enqueue (void act) (todo s)
-    return s{todo = todo}
+addPoolResume = addPool lensResume
 
 -- | Add a new task to the pool.
 --   Low priority is suitable for new tasks that are just starting.
 addPoolStart :: Pool -> IO a -> IO ()
-addPoolStart = addPoolResume
+addPoolStart = addPool lensStart
 
 -- | Add a new task to the pool.
 --   High priority is suitable for tasks that have detected failure and are resuming to propagate that failure.
 addPoolException :: Pool -> IO a -> IO ()
-addPoolException pool act = step pool $ \s -> do
-    todo <- return $ enqueuePriority (void act) (todo s)
-    return s{todo = todo}
+addPoolException = addPool lensException
 
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
