@@ -290,8 +290,8 @@ withResource r i act = do
     Action $ either throwRAW return res
 
 
--- | A version of 'newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
---   Most people should use 'newCache' instead.
+-- | A version of 'Development.Shake.newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
+--   Most people should use 'Development.Shake.newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
 newCacheIO (act :: k -> Action v) = do
     var :: Var (Map.HashMap k (Fence (Either SomeException ([Depends],v)))) <- newVar Map.empty
