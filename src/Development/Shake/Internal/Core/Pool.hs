@@ -9,9 +9,11 @@
 --   resources in their closure.
 --
 -- * 'addPoolStart' - rules that haven't yet started.
+--
+-- * 'addPoolBatch' - rules that might batch if other rules start first.
 module Development.Shake.Internal.Core.Pool(
     Pool, runPool,
-    addPoolException, addPoolResume, addPoolStart,
+    addPoolException, addPoolResume, addPoolStart, addPoolBatch,
     increasePool
     ) where
 
@@ -31,15 +33,17 @@ data Queue a = Queue
     {queueException :: Bag.Bag a
     ,queueResume :: Bag.Bag a
     ,queueStart :: Bag.Bag a
+    ,queueBatch :: Bag.Bag a
     }
 
 lensException = (queueException, \x v -> x{queueException=v})
 lensResume = (queueResume, \x v -> x{queueResume=v})
 lensStart = (queueStart, \x v -> x{queueStart=v})
-lenses = [lensException, lensResume, lensStart]
+lensBatch = (queueBatch, \x v -> x{queueBatch=v})
+lenses = [lensException, lensResume, lensStart, lensBatch]
 
 newQueue :: Bool -> Queue a
-newQueue deterministic = Queue b b b
+newQueue deterministic = Queue b b b b
     where b = if deterministic then Bag.emptyPure else Bag.emptyRandom
 
 dequeue :: Queue a -> Bag.Randomly (Maybe (a, Queue a))
@@ -130,6 +134,7 @@ addPoolException, addPoolResume, addPoolStart :: Pool -> IO a -> IO ()
 addPoolException = addPool lensException
 addPoolResume = addPool lensResume
 addPoolStart = addPool lensStart
+addPoolBatch = addPool lensBatch
 
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
