@@ -87,6 +87,14 @@ main = shakeTest_ test $ do
         when (exit == ExitSuccess) $ error "== ExitSuccess"
         when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
 
+    -- #538, a bug, but disabled as #538 is broken
+    when False $ "timeout2" !> do
+        offset <- liftIO offsetTime
+        liftIO $ timeout 2 $ cmd_ helper "w20"
+        t <- liftIO offset
+        putNormal $ "Timed out in " ++ showDuration t
+        when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
+
     "env" !> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
         Stdout out <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell helper "vFOO"
