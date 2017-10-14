@@ -387,6 +387,33 @@ orderOnlyAction act = Action $ do
     return res
 
 
+-- | Batch different outputs into a single 'Action', typically useful when a command has a high
+--   startup cost - e.g. @apt-get install foo bar baz@ is a lot cheaper than three separate
+--   calls to @apt-get install@. As an example, if we have a standard build rule:
+--
+-- @
+-- \"*.out\" 'Development.Shake.%>' \\out -> do
+--     'Development.Shake.need' [out '-<.>' \"in\"]
+--     'Development.Shake.cmd' "build-multiple" [out '-<.>' \"in\"]
+-- @
+--
+--   Assuming that @build-multiple@ can compile multiple files in a single run,
+--   and that the cost of doing so is a lot less than running each individually,
+--   we can write:
+--
+-- @
+-- 'batch' 3 (\"*.out\" 'Development.Shake.%>')
+--     (\\out -> do 'Development.Shake.need' [out '-<.>' \"in\"]; return out)
+--     (\\outs -> 'Development.Shake.cmd' "build-multiple" [out '-<.>' \"in\" | out \<- outs])
+-- @
+--
+--   In constrast to the normal call, we have specified a maximum batch size of 3,
+--   an action to run on each output individually (typically all the 'need' dependencies),
+--   and an action that runs on multiple files at once. If we were to require lots of
+--   @*.out@ files, they would typically be built in batches of 3.
+--
+--   If Shake ever has nothing else to do it will run batches before they are at the maximum,
+--   so you may see much smaller batches, especially at high parallelism settings.
 batch
     :: Int
     -> ((a -> Action ()) -> Rules ())
