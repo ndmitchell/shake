@@ -61,6 +61,19 @@ test build = do
                     signalBarrier done ()
         assertWithin 1 $ waitBarrier done
 
+        -- check high priority stuff runs first
+        res <- newVar ""
+        runPool deterministic 1 $ \pool -> do
+            let note c = modifyVar_ res $ return . (c:)
+            -- deliberately in a random order
+            addPoolBatch pool $ note 'b'
+            addPoolException pool $ note 'e'
+            addPoolStart pool $ note 's'
+            addPoolStart pool $ note 's'
+            addPoolResume pool $ note 'r'
+            addPoolException pool $ note 'e'
+        (=== "bssree") =<< readVar res
+
         -- check that killing a thread pool stops the tasks, bug 545
         thread <- newBarrier
         died <- newBarrier
