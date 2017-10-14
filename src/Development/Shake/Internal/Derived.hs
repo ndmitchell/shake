@@ -26,8 +26,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
-import Data.List
-import Data.Function
+import Data.List.Extra
 import Data.Hashable
 import Data.Typeable.Extra
 import Data.Dynamic
@@ -235,10 +234,10 @@ newThrottle name count period = liftIO $ newThrottleIO name count period
 withResources :: [(Resource, Int)] -> Action a -> Action a
 withResources res act
     | (r,i):_ <- filter ((< 0) . snd) res = error $ "You cannot acquire a negative quantity of " ++ show r ++ ", requested " ++ show i
-    | otherwise = f $ groupBy ((==) `on` fst) $ sortBy (compare `on` fst) res
+    | otherwise = f $ groupSort res
     where
         f [] = act
-        f (r:rs) = withResource (fst $ head r) (sum $ map snd r) $ f rs
+        f ((r,xs):rs) = withResource r (sum xs) $ f rs
 
 
 -- | Given an action on a key, produce a cached version that will execute the action at most once per key.
