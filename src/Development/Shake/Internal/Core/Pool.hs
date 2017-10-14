@@ -128,8 +128,8 @@ addPool (sel, upd) pool act = step pool $ \s ->
 --   and semantics.
 addPoolException, addPoolResume, addPoolStart :: Pool -> IO a -> IO ()
 addPoolException = addPool lensException
-addPoolStart = addPool lensStart
 addPoolResume = addPool lensResume
+addPoolStart = addPool lensStart
 
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
