@@ -59,7 +59,7 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts@ShakeOptions{..} rs = (if shakeLineBuffering then lineBuffering else id) $ do
+run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering else id) $ do
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
 
     start <- offsetTime
@@ -166,8 +166,8 @@ lintCurrentDirectory old msg = do
         ""
 
 
-lineBuffering :: IO a -> IO a
-lineBuffering act = do
+withLineBuffering :: IO a -> IO a
+withLineBuffering act = do
     -- instead of withBuffering avoid two finally handlers and stack depth
     out <- hGetBuffering stdout
     err <- hGetBuffering stderr
