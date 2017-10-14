@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
-{-# LANGUAGE ExistentialQuantification, DeriveFunctor #-}
+{-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
     BuiltinRule(..), Global(..), Local(..), Action(..),
-    newLocal
+    newLocal, localClearMutable, localMergeMutable
     ) where
 
 import Control.DeepSeq
@@ -146,3 +146,23 @@ data Local = Local
 
 newLocal :: Stack -> Verbosity -> Local
 newLocal stack verb = Local stack verb Nothing [] 0 [] [] []
+
+-- Clear all the local mutable variables
+localClearMutable :: Local -> Local
+localClearMutable Local{..} = (newLocal localStack localVerbosity){localBlockApply=localBlockApply}
+
+-- Merge, works well assuming you clear the variables first
+localMergeMutable :: Local -> [Local] -> Local
+-- don't construct with RecordWildCards so any new fields raise an error
+localMergeMutable root xs = Local
+    -- immutable/stack that need copying
+    {localStack = localStack root
+    ,localVerbosity = localVerbosity root
+    ,localBlockApply = localBlockApply root
+    -- mutable locals that need integrating
+    ,localDepends = localDepends root ++ concatMap localDepends xs
+    ,localDiscount = localDiscount root + maximum (0:map localDiscount xs)
+    ,localTraces = localTraces root ++ concatMap localTraces xs
+    ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
+    ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
+    }
