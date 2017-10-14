@@ -28,9 +28,6 @@ import qualified Data.HashSet as Set
 ---------------------------------------------------------------------
 -- UNFAIR/RANDOM QUEUE
 
--- Monad for non-deterministic (but otherwise pure) computations
-type NonDet a = IO a
-
 -- Left = deterministic list, Right = non-deterministic tree
 data Queue a = Queue [a] (Bag.Bag a)
 
@@ -90,7 +87,7 @@ forkFinallyUnmasked act cleanup =
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch threadsLimit or todo
-step :: Pool -> (S -> NonDet S) -> IO ()
+step :: Pool -> (S -> Bag.Randomly S) -> IO ()
 step pool@(Pool var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
     onVar $ \s -> do
