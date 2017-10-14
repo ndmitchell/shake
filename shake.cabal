@@ -372,6 +372,7 @@ test-suite shake-test
         Paths_shake
         Run
         Test.Basic
+        Test.Batch
         Test.Benchmark
         Test.C
         Test.Cache

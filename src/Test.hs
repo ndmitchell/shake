@@ -16,6 +16,7 @@ import Prelude
 
 import qualified Test.Rebuild as Rebuild
 import qualified Test.Basic as Basic
+import qualified Test.Batch as Batch
 import qualified Test.Benchmark as Benchmark
 import qualified Test.C as C
 import qualified Test.Cache as Cache
@@ -62,7 +63,7 @@ fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetim
 mains = ["tar" * Tar.main, "self" * Self.main, "c" * C.main
         ,"basic" * Basic.main, "cache" * Cache.main, "command" * Command.main
         ,"config" * Config.main, "digest" * Digest.main, "directory" * Directory.main
-        ,"docs" * Docs.main
+        ,"docs" * Docs.main, "batch" * Batch.main
         ,"errors" * Errors.main, "existence" * Existence.main
         ,"orderonly" * OrderOnly.main
         ,"filepath" * FilePath.main, "filepattern" * FilePattern.main, "files" * Files.main, "filelock" * FileLock.main
