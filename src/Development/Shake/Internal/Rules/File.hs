@@ -58,9 +58,13 @@ newtype FileQ = FileQ {fromFileQ :: FileName}
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
 
--- | Result of a File rule, may contain raw file information and wether the rule did run this build
-data FileR = FileR { result :: Maybe FileA -- ^ Raw information about the file built by this rule. Set to 'Nothing' to prevent linting some times.
-                   , hasChanged :: Bool    -- ^ Wether the file changed this build. Transient information, that doesn't get serialized, is recreated at 'False' and doesn't participate in 'Eq', 'Hash' and the like.
+-- | Result of a File rule, may contain raw file information and whether the rule did run this build
+data FileR = FileR { result :: Maybe FileA -- ^ Raw information about the file built by this rule.
+                                           --   Set to 'Nothing' to prevent linting some times.
+                   , hasChanged :: Bool    -- ^ Whether the file changed this build. Transient
+                                           --   information, that doesn't get serialized, is
+                                           --   recreated at 'False' and doesn't participate in 'Eq',
+                                           --   'Hash' and the like.
                    }
     deriving (Typeable)
 
@@ -97,7 +101,7 @@ instance Eq FileR where
    fr1 == fr2 = result fr1 == result fr2
 
 instance Hashable FileR where
-    hashWithSalt salt (FileR f _) = hashWithSalt salt f
+    hashWithSalt salt f = hashWithSalt salt $ result f
 
 instance NFData FileA where
     rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
@@ -356,8 +360,8 @@ need = void . apply_ fileNameFromString
 --   as the target could have been edited or even deleted.
 needHasChanged :: [FilePath] -> Action [FilePath]
 needHasChanged paths = do
-    changed <- fmap hasChanged <$> apply_ fileNameFromString paths
-    return $ fmap fst $ filter snd $ zip paths changed
+    res <- apply_ fileNameFromString paths
+    return [a | (a,b) <- zip paths res, hasChanged b]
 
 needBS :: [BS.ByteString] -> Action ()
 needBS = void . apply_ fileNameFromByteString
