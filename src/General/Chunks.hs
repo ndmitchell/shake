@@ -10,7 +10,7 @@ import System.Time.Extra
 import System.FilePath
 import Control.Concurrent.Extra
 import Control.Monad.Extra
-import Control.Exception.Extra
+import Control.Exception
 import System.IO
 import System.Directory
 import qualified Data.ByteString as BS

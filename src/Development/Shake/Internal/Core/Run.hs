@@ -17,7 +17,7 @@ module Development.Shake.Internal.Core.Run(
     runAfter
     ) where
 
-import Control.Exception.Extra
+import Control.Exception
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra

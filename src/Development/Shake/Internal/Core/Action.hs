@@ -9,7 +9,7 @@ module Development.Shake.Internal.Core.Action(
     traced
     ) where
 
-import Control.Exception.Extra
+import Control.Exception
 import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
