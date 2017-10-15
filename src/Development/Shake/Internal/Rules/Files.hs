@@ -39,7 +39,7 @@ newtype FilesQ = FilesQ {fromFilesQ :: [FileQ]}
     deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
 
 newtype FilesA = FilesA [FileA]
-    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Typeable,BinaryEx,NFData)
 
 instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . show) xs
 

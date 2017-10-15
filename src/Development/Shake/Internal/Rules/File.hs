@@ -10,13 +10,11 @@ module Development.Shake.Internal.Rules.File(
     FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
 
-import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
 import Data.Typeable
 import Data.List
-import Data.Bits
 import Data.Maybe
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashSet as Set
@@ -56,15 +54,13 @@ newtype FileQ = FileQ {fromFileQ :: FileName}
 
 -- | Raw information about a file.
 data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
-    deriving (Typeable,Eq)
+    deriving (Typeable)
 
 -- | Result of a File rule, may contain raw file information and whether the rule did run this build
 data FileR = FileR { result :: Maybe FileA -- ^ Raw information about the file built by this rule.
                                            --   Set to 'Nothing' to prevent linting some times.
                    , hasChanged :: Bool    -- ^ Whether the file changed this build. Transient
-                                           --   information, that doesn't get serialized, is
-                                           --   recreated at 'False' and doesn't participate in 'Eq',
-                                           --   'Hash' and the like.
+                                           --   information, that doesn't get serialized.
                    }
     deriving (Typeable)
 
@@ -94,34 +90,17 @@ instance BinaryEx [FileQ] where
     putEx = putEx . map fromFileQ
     getEx = map FileQ . getEx
 
-instance Hashable FileA where
-    hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
-
-instance Eq FileR where
-   fr1 == fr2 = result fr1 == result fr2
-
-instance Hashable FileR where
-    hashWithSalt salt f = hashWithSalt salt $ result f
-
 instance NFData FileA where
     rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
 
 instance NFData FileR where
     rnf (FileR f b) = rnf f `seq` rnf b
 
-instance Binary FileA where
-    put (FileA a b c) = put a >> put b >> put c
-    get = liftA3 FileA get get get
-
-instance Binary FileR where
-    put (FileR f _) = put f
-    get = (`FileR` False) <$> get
-
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
 instance Show FileR where
-    show (FileR f b) = show f ++ if b then " recomputed" else " not recomputed"
+    show FileR{..} = show result ++ if hasChanged then " recomputed" else " not recomputed"
 
 instance Storable FileA where
     sizeOf _ = 4 * 3 -- 4 Word32's
