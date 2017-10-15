@@ -94,7 +94,7 @@ instance Hashable FileA where
     hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
 
 instance Eq FileR where
-   (FileR f1 _) == (FileR f2 _) = f1 == f2
+   fr1 == fr2 = result fr1 == result fr2
 
 instance Hashable FileR where
     hashWithSalt salt (FileR f _) = hashWithSalt salt f
