@@ -182,7 +182,7 @@ withLineBuffering act = do
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'addUserRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => [key] -> Action [value]
+apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
 -- Don't short-circuit [] as we still want error messages
 apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
     -- this is the only place a user can inject a key into our world, so check they aren't throwing
@@ -265,7 +265,7 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
-apply1 :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => key -> Action value
+apply1 :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
 apply1 = fmap head . apply . return
 
 
