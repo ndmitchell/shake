@@ -8,6 +8,7 @@ module General.Extra(
     withs,
     maximum', maximumBy',
     fastAt,
+    forkFinallyUnmasked,
     isAsyncException,
     removeFile_,
     catchIO, tryIO,
@@ -109,6 +110,16 @@ randomElem xs = do
 withs :: [(a -> r) -> r] -> ([a] -> r) -> r
 withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
+
+
+---------------------------------------------------------------------
+-- Control.Concurrent
+
+-- | Like 'forkFinally', but the inner thread is unmasked even if you started masked.
+forkFinallyUnmasked :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
+forkFinallyUnmasked act cleanup =
+    mask_ $ forkIOWithUnmask $ \unmask ->
+        try (unmask act) >>= cleanup
 
 
 ---------------------------------------------------------------------

@@ -22,6 +22,7 @@ import System.Time.Extra
 import Control.Exception
 import Control.Monad.Extra
 import General.Timing
+import General.Extra
 import qualified General.Bag as Bag
 import qualified Data.HashSet as Set
 
@@ -88,12 +89,6 @@ worker pool@(Pool var done) = do
         case res of
             Nothing -> return (Just s, return ())
             Just (now, todo2) -> return (Just s{todo = todo2}, now >> worker pool)
-
--- | Like 'forkFinally', but the inner thread is unmasked even if you started masked.
-forkFinallyUnmasked :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
-forkFinallyUnmasked act cleanup =
-    mask_ $ forkIOWithUnmask $ \unmask ->
-        try (unmask act) >>= cleanup
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch threadsLimit or todo
