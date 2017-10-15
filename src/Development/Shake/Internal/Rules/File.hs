@@ -59,11 +59,10 @@ data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable,Eq)
 
 -- | Result of a File rule, may contain raw file information and wether the rule did run this build
-data FileR = FileR (Maybe FileA) Bool
-    deriving (Typeable, Eq)
-
-hasChanged :: FileR -> Bool
-hasChanged (FileR _ b) = b
+data FileR = FileR { result :: Maybe FileA -- ^ Raw information about the file built by this rule. Set to 'Nothing' to prevent linting some times.
+                   , hasChanged :: Bool    -- ^ Wether the file changed this build. Transient information, that doesn't get serialized, is recreated at 'False' and doesn't participate in 'Eq', 'Hash' and the like.
+                   }
+    deriving (Typeable)
 
 -- | The types of file rule that occur.
 data Mode
@@ -94,6 +93,9 @@ instance BinaryEx [FileQ] where
 instance Hashable FileA where
     hashWithSalt salt (FileA a b c) = hashWithSalt salt a `xor` hashWithSalt salt b `xor` hashWithSalt salt c
 
+instance Eq FileR where
+   (FileR f1 _) == (FileR f2 _) = f1 == f2
+
 instance Hashable FileR where
     hashWithSalt salt (FileR f _) = hashWithSalt salt f
 
@@ -101,7 +103,7 @@ instance NFData FileA where
     rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
 
 instance NFData FileR where
-    rnf (FileR f _) = rnf f
+    rnf (FileR f b) = rnf f `seq` rnf b
 
 instance Binary FileA where
     put (FileA a b c) = put a >> put b >> put c
