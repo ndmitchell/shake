@@ -12,7 +12,6 @@ module Development.Shake.Internal.Rules.Directory(
     ) where
 
 import Control.Applicative
-import Control.Exception as C
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
@@ -297,14 +296,14 @@ removeFiles dir pat =
         f dir (Walk op) = f dir . WalkTo . op =<< getDirectoryContentsIO dir
         f dir (WalkTo (files, dirs)) = do
             forM_ files $ \fil ->
-                try $ removeItem $ dir </> fil :: IO (Either IOException ())
+                tryIO $ removeItem $ dir </> fil
             let done = Set.fromList files
             forM_ (filter (not . flip Set.member done . fst) dirs) $ \(d,w) -> do
                 let dir2 = dir </> d
                 whenM (IO.doesDirectoryExist dir2) $ f dir2 w
 
         removeItem :: FilePath -> IO ()
-        removeItem x = IO.removeFile x `C.catch` \(_ :: IOException) -> removeDir x
+        removeItem x = IO.removeFile x `catchIO` \_ -> removeDir x
 
         -- In newer GHC's removeDirectoryRecursive is probably better, but doesn't follow
         -- symlinks, so it's got different behaviour
