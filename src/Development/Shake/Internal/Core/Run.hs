@@ -105,7 +105,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                     shakeProgress getProgress
                 _ <- addCleanup cleanup $ do
                     killThread tid
-                    void $ timeout 1000000 $ waitBarrier wait
+                    void $ timeout 1 $ waitBarrier wait
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
