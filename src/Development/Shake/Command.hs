@@ -42,6 +42,7 @@ import System.Time.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import General.Extra
 import General.Process
 import Control.Applicative
 import Prelude
@@ -297,7 +298,7 @@ commandExplicitIO funcName opts results exe args = do
             cwd <- case optCwd of
                 Nothing -> return ""
                 Just v -> do
-                    v <- canonicalizePath v `catch_` const (return v)
+                    v <- canonicalizePath v `catchIO` const (return v)
                     return $ "Current directory: " ++ v ++ "\n"
             fail $
                 "Development.Shake." ++ funcName ++ ", system command failed\n" ++
