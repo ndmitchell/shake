@@ -18,6 +18,16 @@ main = shakeTest_ test $ do
         forM_ outs $ \out -> liftIO $ copyFile (inp out) out
     want [show i <.> "out" | i <- [1..6]]
 
+    "ABn.txt" %> \out -> do
+        xs <-needHasChanged ["An.txt", "Bn.txt"]
+        writeFileLines out xs
+
+    "On" %> \out -> do
+        xs <- needHasChanged ["An", "Bn"]
+        writeFileLines out xs
+
+
+
 test build = do
     forM_ [1..6] $ \i -> writeFile (show i <.> "in") $ show i
     build ["--sleep","-j2"]
@@ -27,3 +37,19 @@ test build = do
     writeFile "5.in" "55"
     build []
     assertContents "log.txt" "2\n"
+
+    writeFile "An.txt" "1"
+    writeFile "Bn.txt" "1"
+    build ["ABn.txt", "--sleep"]
+    assertContents "ABn.txt" "An.txt\nBn.txt\n"
+    writeFile "An.txt" "1"
+    build ["ABn.txt", "--sleep"]
+    assertContents "ABn.txt" "An.txt\n"
+    writeFile "Bn.txt" "1"
+    build ["ABn.txt", "--sleep"]
+    assertContents "ABn.txt" "Bn.txt\n"
+    build ["ABn.txt", "--sleep"]
+    assertContents "ABn.txt" "Bn.txt\n"
+    writeFile "ABn.txt" "bogus"
+    build ["ABn.txt", "--sleep"]
+    assertContents "ABn.txt" ""
