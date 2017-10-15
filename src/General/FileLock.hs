@@ -12,6 +12,7 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 #else
+import General.Extra
 import System.IO
 import System.Posix.IO
 #endif
