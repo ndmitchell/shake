@@ -147,7 +147,7 @@ filetime _ = do
     let (a,bcd) = splitAt (n `div` 4) files
     let (b,cd) = splitAt (n `div` 4) bcd
     let (c,d) = splitAt (n `div` 4) cd
-    vars <- forM [a,b,c,d] $ \xs -> do
+    vars <- forM [a,b,c,d] $ \xs ->
         onceFork $ mapM_ (getFileInfo . fileNameFromByteString) xs
     sequence_ vars
     printTimings
