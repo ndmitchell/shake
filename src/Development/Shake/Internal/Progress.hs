@@ -11,7 +11,7 @@ import Control.Applicative
 import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad
-import System.Environment
+import System.Environment.Extra
 import System.Directory
 import System.Process
 import System.FilePath
