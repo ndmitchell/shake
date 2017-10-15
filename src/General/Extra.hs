@@ -8,7 +8,8 @@ module General.Extra(
     withs,
     maximum', maximumBy',
     fastAt,
-    isAsyncException
+    isAsyncException,
+    catchIO, tryIO,
     ) where
 
 import Control.Exception.Extra
@@ -118,6 +119,13 @@ isAsyncException e
     | Just (_ :: AsyncException) <- fromException e = True
     | Just (_ :: ExitCode) <- fromException e = True
     | otherwise = False
+
+catchIO :: IO a -> (IOException -> IO a) -> IO a
+catchIO = Control.Exception.catch -- GHC 7.4 has catch in the Prelude as well
+
+tryIO :: IO a -> IO (Either IOException a)
+tryIO = try
+
 
 
 ---------------------------------------------------------------------
