@@ -13,7 +13,7 @@ module General.Extra(
     catchIO, tryIO,
     ) where
 
-import Control.Exception.Extra
+import Control.Exception
 import Data.Char
 import Data.List
 import System.Environment.Extra
@@ -85,14 +85,13 @@ getProcessorCount = let res = unsafePerformIO act in return res
         act =
             if rtsSupportsBoundThreads then
                 fromIntegral <$> getNumProcessors
-            else
-                handle_ (const $ return 1) $ do
-                    env <- lookupEnv "NUMBER_OF_PROCESSORS"
-                    case env of
-                        Just s | [(i,"")] <- reads s -> return i
-                        _ -> do
-                            src <- readFile' "/proc/cpuinfo"
-                            return $! length [() | x <- lines src, "processor" `isPrefixOf` x]
+            else do
+                env <- lookupEnv "NUMBER_OF_PROCESSORS"
+                case env of
+                    Just s | [(i,"")] <- reads s -> return i
+                    _ -> do
+                        src <- readFile' "/proc/cpuinfo" `catchIO` \_ -> return ""
+                        return $! max 1 $ length [() | x <- lines src, "processor" `isPrefixOf` x]
 
 
 ---------------------------------------------------------------------
