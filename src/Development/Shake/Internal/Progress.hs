@@ -304,8 +304,7 @@ jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}
 xterm :: Bool
 xterm = System.IO.Unsafe.unsafePerformIO $
     -- Terminal.app uses "xterm-256color" as its env variable
-    catch_ (("xterm" `isPrefixOf`) <$> getEnv "TERM") $
-    \e -> return False
+    maybe False ("xterm" `isPrefixOf`) <$> lookupEnv "TERM"
 
 
 -- | Set the title of the current console window to the given text. If the
