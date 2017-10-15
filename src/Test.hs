@@ -11,7 +11,7 @@ import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Char8 as BS
 import Test.Type(sleepFileTimeCalibrate)
-import Control.Concurrent
+import Control.Concurrent.Extra
 import Prelude
 
 import qualified Test.Basic as Basic
@@ -148,11 +148,7 @@ filetime _ = do
     let (b,cd) = splitAt (n `div` 4) bcd
     let (c,d) = splitAt (n `div` 4) cd
     vars <- forM [a,b,c,d] $ \xs -> do
-        mvar <- newEmptyMVar
-        forkIO $ do
-            mapM_ (getFileInfo . fileNameFromByteString) xs
-            putMVar mvar ()
-        return $ takeMVar mvar
+        onceFork $ mapM_ (getFileInfo . fileNameFromByteString) xs
     sequence_ vars
     printTimings
 
