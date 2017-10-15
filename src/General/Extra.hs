@@ -3,6 +3,7 @@
 module General.Extra(
     getProcessorCount,
     withResultType,
+    whenLeft,
     randomElem,
     wrapQuote, showBracket,
     withs,
@@ -145,6 +146,13 @@ tryIO = try
 -- | Remove a file, but don't worry if it fails
 removeFile_ :: FilePath -> IO ()
 removeFile_ x = removeFile x `catchIO` \_ -> return ()
+
+
+---------------------------------------------------------------------
+-- Data.Either
+
+whenLeft :: Applicative m => Either a b -> (a -> m ()) -> m ()
+whenLeft x f = either f (const $ pure ()) x
 
 
 ---------------------------------------------------------------------

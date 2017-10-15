@@ -69,7 +69,7 @@ writeChunks Chunks{..} act = withMVar chunksHandle $ \h -> do
             writeChan chan $ hFlush h >> return True
 
     root <- myThreadId
-    writer <- flip forkFinally (\e -> do signalBarrier died (); either (throwTo root) (const $ return ()) e) $
+    writer <- flip forkFinally (\e -> do signalBarrier died (); whenLeft e (throwTo root)) $
         -- only one thread ever writes, ensuring only the final write can be torn
         whileM $ join $ readChan chan
 
