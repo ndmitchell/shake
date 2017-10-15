@@ -47,7 +47,7 @@ instance Show DoesFileExistQ where
     show (DoesFileExistQ a) = "doesFileExist " ++ wrapQuote a
 
 newtype DoesFileExistA = DoesFileExistA {fromDoesFileExistA :: Bool}
-    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Typeable,Eq,BinaryEx,NFData)
 
 instance Show DoesFileExistA where
     show (DoesFileExistA a) = show a
@@ -61,7 +61,7 @@ instance Show DoesDirectoryExistQ where
     show (DoesDirectoryExistQ a) = "doesDirectoryExist " ++ wrapQuote a
 
 newtype DoesDirectoryExistA = DoesDirectoryExistA {fromDoesDirectoryExistA :: Bool}
-    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Typeable,Eq,BinaryEx,NFData)
 
 instance Show DoesDirectoryExistA where
     show (DoesDirectoryExistA a) = show a
@@ -76,7 +76,7 @@ instance Show GetEnvQ where
     show (GetEnvQ a) = "getEnv " ++ wrapQuote a
 
 newtype GetEnvA = GetEnvA {fromGetEnvA :: Maybe String}
-    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Typeable,Eq,Hashable,BinaryEx,NFData)
 
 instance Show GetEnvA where
     show (GetEnvA a) = maybe "<unset>" wrapQuote a
@@ -105,7 +105,7 @@ instance Show GetDirectoryDirsQ where
     show (GetDirectoryDirsQ dir) = "getDirectoryDirs " ++ wrapQuote dir
 
 newtype GetDirectoryA = GetDirectoryA {fromGetDirectoryA :: [FilePath]}
-    deriving (Typeable,Eq,Hashable,Binary,BinaryEx,NFData)
+    deriving (Typeable,Eq,Hashable,BinaryEx,NFData)
 
 instance Show GetDirectoryA where
     show (GetDirectoryA xs) = unwords $ map wrapQuote xs
@@ -114,7 +114,10 @@ instance Show GetDirectoryA where
 ---------------------------------------------------------------------
 -- RULE DEFINITIONS
 
-queryRule :: (RuleResult key ~ value, BinaryEx key, BinaryEx witness, Eq witness, ShakeValue key, ShakeValue value)
+queryRule :: (RuleResult key ~ value
+             ,BinaryEx witness, Eq witness
+             ,BinaryEx key, ShakeValue key
+             ,Typeable value, NFData value, Show value, Eq value)
           => (value -> witness) -> (key -> IO value) -> Rules ()
 queryRule witness query = addBuiltinRuleEx
     (\k old -> do
