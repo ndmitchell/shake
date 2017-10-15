@@ -71,16 +71,16 @@ test build = do
         build ["On", "--sleep"]
         assertContents "On" "An\nBn\n"
         writeFile "An.in" "1"
-        build ["On"]
+        build ["On", "--sleep"]
         assertContents "On" "An\n"
         writeFile "Bn.in" "1"
-        build ["On"]
+        build ["On", "--sleep"]
         assertContents "On" "Bn\n"
-        build ["On"]
+        build ["On", "--sleep"]
         assertContents "On" "Bn\n"
         -- for this to "somehow" work, we have to do special things in the appropriate rule
         removeFile "An"
-        build ["On"]
+        build ["On", "--sleep"]
         assertContents "On" "An\nBn\n" -- ideally we should have only "An" here.
                                        -- But for this we need a finer reporting
                                        -- about inconsistent targets.

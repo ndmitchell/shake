@@ -112,15 +112,15 @@ test build = do
     build ["ABn.txt", "--sleep"]
     assertContents "ABn.txt" "An.txt\nBn.txt\n"
     writeFile "An.txt" "1"
-    build ["ABn.txt"]
+    build ["ABn.txt", "--sleep"]
     assertContents "ABn.txt" "An.txt\n"
     writeFile "Bn.txt" "1"
-    build ["ABn.txt"]
+    build ["ABn.txt", "--sleep"]
     assertContents "ABn.txt" "Bn.txt\n"
     build ["ABn.txt", "--sleep"]
     assertContents "ABn.txt" "Bn.txt\n"
     writeFile "ABn.txt" "bogus"
-    build ["ABn.txt"]
+    build ["ABn.txt", "--sleep"]
     assertContents "ABn.txt" ""
 
     writeFile "zero.txt" "xxx"
