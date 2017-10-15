@@ -17,6 +17,7 @@ import qualified Data.ByteString as BS
 import Data.Word
 import Data.Monoid
 import General.Binary
+import General.Extra
 
 
 data Chunks = Chunks
@@ -94,7 +95,7 @@ restoreChunksBackup file = do
     -- complete a partially failed compress
     b <- doesFileExist $ backup file
     if not b then return False else do
-        handle (\(_ :: IOError) -> return ()) $ removeFile file
+        removeFile_ file
         renameFile (backup file) file
         return True
 

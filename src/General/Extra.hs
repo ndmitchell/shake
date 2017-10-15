@@ -9,6 +9,7 @@ module General.Extra(
     maximum', maximumBy',
     fastAt,
     isAsyncException,
+    removeFile_,
     catchIO, tryIO,
     ) where
 
@@ -19,6 +20,7 @@ import System.Environment.Extra
 import System.IO.Extra
 import System.IO.Unsafe
 import System.Random
+import System.Directory
 import System.Exit
 import Control.Concurrent
 import Data.Functor
@@ -126,6 +128,13 @@ catchIO = Control.Exception.catch -- GHC 7.4 has catch in the Prelude as well
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try
 
+
+---------------------------------------------------------------------
+-- System.Directory
+
+-- | Remove a file, but don't worry if it fails
+removeFile_ :: FilePath -> IO ()
+removeFile_ x = removeFile x `catchIO` \_ -> return ()
 
 
 ---------------------------------------------------------------------

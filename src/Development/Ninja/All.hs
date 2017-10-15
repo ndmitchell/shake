@@ -23,6 +23,7 @@ import System.Info.Extra
 import Prelude
 
 -- Internal imports
+import General.Extra(removeFile_)
 import General.Timing(addTiming)
 import General.Makefile(parseMakefile)
 import Development.Shake.Internal.FileName(filepathNormalise)
@@ -185,7 +186,7 @@ applyRspfile env act = do
     if rspfile == "" then
         act
      else
-        flip actionFinally (removeFile rspfile `catch` \(_ :: IOError) -> return ()) $ do
+        flip actionFinally (removeFile_ rspfile) $ do
             liftIO $ BS.writeFile rspfile rspfile_content
             act
 
