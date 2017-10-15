@@ -10,6 +10,7 @@ module Development.Shake.Internal.Rules.File(
     FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
 
+import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
@@ -39,6 +40,8 @@ import Development.Shake.Internal.Errors
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
 import System.IO.Unsafe(unsafeInterleaveIO)
+
+import Prelude
 
 
 infix 1 %>, ?>, |%>, ~>
