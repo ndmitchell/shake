@@ -76,7 +76,7 @@ module Development.Shake(
     removeFiles, removeFilesAfter,
     withTempFile, withTempDir,
     -- * File rules
-    need, needHasChanged, want, (%>), (|%>), (?>), phony, (~>), phonys,
+    need, want, (%>), (|%>), (?>), phony, (~>), phonys,
     (&%>), (&?>),
     orderOnly, orderOnlyAction,
     FilePattern, (?==), (<//>), filePattern,
@@ -97,6 +97,7 @@ module Development.Shake(
     -- * Cache
     newCache, newCacheIO,
     -- * Batching
+    needHasChanged,
     batch,
     -- * Deprecated
     (*>), (|*>), (&*>),
