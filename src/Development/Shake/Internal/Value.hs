@@ -83,7 +83,7 @@ data Value = forall a . Value
 newKey :: forall a . ShakeValue a => a -> Key
 newKey = Key (typeRep (Proxy :: Proxy a)) show rnf (==) hashWithSalt
 
-newValue :: forall a . ShakeValue a => a -> Value
+newValue :: forall a . (Typeable a, Show a, NFData a) => a -> Value
 newValue = Value (typeRep (Proxy :: Proxy a)) show rnf
 
 typeKey :: Key -> TypeRep

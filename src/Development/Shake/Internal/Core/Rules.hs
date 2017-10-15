@@ -19,7 +19,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
-import Data.Binary
+import Development.Shake.Classes
 import General.Binary
 import Data.Typeable.Extra
 import Data.Function
@@ -135,12 +135,12 @@ addBuiltinRule = addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
 
-addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, ShakeValue value, BinaryEx key) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleEx :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value) => BuiltinLint key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
 
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
-addBuiltinRuleInternal :: (RuleResult key ~ value, ShakeValue key, ShakeValue value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleInternal :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value) => BinaryOp key -> BuiltinLint key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleInternal binary lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
