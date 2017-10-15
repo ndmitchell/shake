@@ -302,7 +302,7 @@ jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}
 
 {-# NOINLINE xterm #-}
 xterm :: Bool
-xterm = System.IO.Unsafe.unsafePerformIO $
+xterm = unsafePerformIO $
     -- Terminal.app uses "xterm-256color" as its env variable
     maybe False ("xterm" `isPrefixOf`) <$> lookupEnv "TERM"
 
