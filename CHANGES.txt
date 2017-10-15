@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #502, add needHasChanged to track what in a need has changed
     Weaken the typeclasses required for apply/apply1
     #502, add batch function to batch commands with high startup
     Avoid parallel duplicating local state such as discounting
