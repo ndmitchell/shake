@@ -27,6 +27,7 @@ import System.Exit
 import Control.Concurrent
 import Data.Functor
 import Data.Primitive.Array
+import Control.Applicative
 import Control.Monad
 import Control.Monad.ST
 import GHC.Conc(getNumProcessors)
