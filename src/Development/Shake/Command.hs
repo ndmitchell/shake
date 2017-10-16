@@ -292,7 +292,7 @@ commandExplicitIO funcName opts results exe args = do
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
         ,poAsync = optAsync
         }
-    res <- try_ $ duration $ process po
+    res <- fmap Right $ duration $ process po
 
     let failure extra = do
             cwd <- case optCwd of
@@ -305,7 +305,7 @@ commandExplicitIO funcName opts results exe args = do
                 "Command: " ++ cmdline ++ "\n" ++
                 cwd ++ extra
     case res of
-        Left err -> failure $ show err
+        Left (err :: SomeException) -> failure $ show err
         Right (_,(_,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
             exceptionBuffer <- readBuffer exceptionBuffer
             let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
