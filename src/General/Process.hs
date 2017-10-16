@@ -92,17 +92,19 @@ stdStream file _ _ = CreatePipe
 stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
 stdIn file [] = (Inherit, const $ return ())
 stdIn file [SrcFile x] = (UseHandle $ file x, const $ return ())
-stdIn file src = (,) CreatePipe $ \h ->
-    void $ tryBool isPipeGone $ do
-        forM_ src $ \x -> case x of
-            SrcString x -> hPutStr h x
-            SrcBytes x -> LBS.hPutStr h x
-            SrcFile x -> LBS.hPutStr h =<< LBS.hGetContents (file x)
-        hFlush h
-        hClose h
-    where
-        isPipeGone IOError{ioe_type=ResourceVanished, ioe_errno=Just ioe} = Errno ioe == ePIPE
-        isPipeGone _ = False
+stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
+    forM_ src $ \x -> case x of
+        SrcString x -> hPutStr h x
+        SrcBytes x -> LBS.hPutStr h x
+        SrcFile x -> LBS.hPutStr h =<< LBS.hGetContents (file x)
+    hFlush h
+    hClose h
+
+
+ignoreSigPipe :: IO () -> IO ()
+ignoreSigPipe = handleIO $ \e -> case e of
+    IOError {ioe_type=ResourceVanished, ioe_errno=Just ioe} | Errno ioe == ePIPE -> return ()
+    _ -> throwIO e
 
 
 withTimeout :: Maybe Double -> IO () -> IO a -> IO a
@@ -212,14 +214,14 @@ bsHGetSome :: Handle -> Int -> IO BS.ByteString
 bsHGetSome h i = BS.createAndTrim i $ \p -> hGetBufSome h p i
 
 -- available in process-1.4.3.0, GHC ??? (Nov 2015)
+-- logic copied directly (apart from Ctrl-C handling magic using internal pieces)
 withCreateProcessCompat :: CreateProcess -> (Maybe Handle -> Maybe Handle -> Maybe Handle -> ProcessHandle -> IO a) -> IO a
 withCreateProcessCompat cp act = bracketOnError (createProcess cp) cleanup
     (\(m_in, m_out, m_err, ph) -> act m_in m_out m_err ph)
     where
         cleanup (inh, outh, errh, pid) = do
-            mapM_ (`whenJust` hClose) [inh, outh, errh]
-            ignore $ do
-                -- sometimes we fail before the process is valid
-                -- therefore if terminate process fails, skip waiting on the process
-                terminateProcess pid
-                void $ waitForProcess pid
+            terminateProcess pid
+            whenJust inh $ ignoreSigPipe . hClose
+            whenJust outh hClose
+            whenJust errh hClose
+            forkIO $ void $ waitForProcess pid

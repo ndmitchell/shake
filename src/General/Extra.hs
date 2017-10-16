@@ -12,7 +12,7 @@ module General.Extra(
     forkFinallyUnmasked,
     isAsyncException,
     removeFile_,
-    catchIO, tryIO,
+    catchIO, tryIO, handleIO
     ) where
 
 import Control.Exception
@@ -139,6 +139,9 @@ catchIO = Control.Exception.catch -- GHC 7.4 has catch in the Prelude as well
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try
+
+handleIO :: (IOException -> IO a) -> IO a -> IO a
+handleIO = flip catchIO
 
 
 ---------------------------------------------------------------------
