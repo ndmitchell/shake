@@ -87,8 +87,7 @@ main = shakeTest_ test $ do
         when (exit == ExitSuccess) $ error "== ExitSuccess"
         when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
 
-    -- #538, a bug, but disabled as #538 is broken
-    when False $ "timeout2" !> do
+    "timeout2" !> do
         offset <- liftIO offsetTime
         liftIO $ timeout 2 $ cmd_ helper "w20"
         t <- liftIO offset
