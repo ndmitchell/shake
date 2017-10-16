@@ -132,15 +132,15 @@ abort pid = do
 
 -- FIXME: There is a new withCreateProcess in process-1.4.3.0 which is probably better than ours...
 withCreateProcessOld :: CreateProcess -> ((Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO a) -> IO a
-withCreateProcessOld cp act = mask $ \restore -> do
-    ans@(inh, outh, errh, pid) <- createProcess cp
-    onException (restore $ act ans) $ do
-        mapM_ (`whenJust` hClose) [inh, outh, errh]
-        ignore $ do
-            -- sometimes we fail before the process is valid
-            -- therefore if terminate process fails, skip waiting on the process
-            terminateProcess pid
-            void $ waitForProcess pid
+withCreateProcessOld cp act = bracketOnError (createProcess cp) cleanup act
+    where
+        cleanup (inh, outh, errh, pid) = do
+            mapM_ (`whenJust` hClose) [inh, outh, errh]
+            ignore $ do
+                -- sometimes we fail before the process is valid
+                -- therefore if terminate process fails, skip waiting on the process
+                terminateProcess pid
+                void $ waitForProcess pid
 
 
 withFiles :: IOMode -> [FilePath] -> ((FilePath -> Handle) -> IO a) -> IO a
