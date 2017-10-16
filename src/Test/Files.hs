@@ -40,16 +40,6 @@ main = shakeTest test optionsEnum $ \opts -> do
         writeFile' a "a"
         writeFile' b "b"
 
-    ["An", "Bn"] &?%> \outs -> do
-        xs <- needHasChanged $ map (-<.> ".in") outs
-        mapM_ (`writeFile'` "1") $ if null xs
-          then outs             -- recreate all targets, as one of them was messed with
-          else map (-<.> "") xs -- recreate targets associated to changed deps
-
-    "On" %> \out -> do
-        xs <- needHasChanged ["An", "Bn"]
-        writeFileLines out xs
-
     (\x -> let dir = takeDirectory x in
            if takeFileName dir /= "pred" then Nothing else Just [dir </> "a.txt",dir </> "b.txt"]) &?> \outs ->
         mapM_ (`writeFile'` "") outs
@@ -65,30 +55,6 @@ test build = do
         build ["clean"]
         build ["--no-build","--report=-"]
         build ["dir1/out.txt"]
-
-        writeFile "An.in" "1"
-        writeFile "Bn.in" "1"
-        build ["On", "--sleep"]
-        assertContents "On" "An\nBn\n"
-        writeFile "An.in" "1"
-        build ["On", "--sleep"]
-        assertContents "On" "An\n"
-        writeFile "Bn.in" "1"
-        build ["On", "--sleep"]
-        assertContents "On" "Bn\n"
-        build ["On", "--sleep"]
-        assertContents "On" "Bn\n"
-        -- for this to "somehow" work, we have to do special things in the appropriate rule
-        removeFile "An"
-        build ["On", "--sleep"]
-        assertContents "On" "An\nBn\n" -- ideally we should have only "An" here.
-                                       -- But for this we need a finer reporting
-                                       -- about inconsistent targets.
-        -- but this again fails ... as how should we notice, An was messed with?
-        -- removeFile "An"
-        -- writeFile "Bn.in" "2"
-        -- build ["On"]
-        -- assertContents "On" "An\nBn\n"
 
     build ["pred/a.txt"]
 
