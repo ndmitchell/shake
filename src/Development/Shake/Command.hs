@@ -24,7 +24,6 @@ module Development.Shake.Command(
     ) where
 
 import Data.Tuple.Extra
-import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Char
@@ -292,29 +291,25 @@ commandExplicitIO funcName opts results exe args = do
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
         ,poAsync = optAsync
         }
-    res <- fmap Right $ duration $ process po
-
-    let failure extra = do
-            cwd <- case optCwd of
-                Nothing -> return ""
-                Just v -> do
-                    v <- canonicalizePath v `catchIO` const (return v)
-                    return $ "Current directory: " ++ v ++ "\n"
-            fail $
-                "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-                "Command: " ++ cmdline ++ "\n" ++
-                cwd ++ extra
-    case res of
-        Left (err :: SomeException) -> failure $ show err
-        Right (_,(_,ex)) | ex /= ExitSuccess && ResultCode ExitSuccess `notElem` results -> do
-            exceptionBuffer <- readBuffer exceptionBuffer
-            let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
-            failure $
-                "Exit code: " ++ show (case ex of ExitFailure i -> i; _ -> 0) ++ "\n" ++
-                if null captured then "Stderr not captured because WithStderr False was used\n"
-                else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
-                else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
-        Right (dur,(pid,ex)) -> mapM (\f -> f dur pid ex) resultBuild
+    (dur,(pid,exit)) <- duration $ process po
+    if exit == ExitSuccess || ResultCode ExitSuccess `elem` results then
+        mapM (\f -> f dur pid exit) resultBuild
+     else do
+        exceptionBuffer <- readBuffer exceptionBuffer
+        let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
+        cwd <- case optCwd of
+            Nothing -> return ""
+            Just v -> do
+                v <- canonicalizePath v `catchIO` const (return v)
+                return $ "Current directory: " ++ v ++ "\n"
+        fail $
+            "Development.Shake." ++ funcName ++ ", system command failed\n" ++
+            "Command: " ++ cmdline ++ "\n" ++
+            cwd ++
+            "Exit code: " ++ show (case exit of ExitFailure i -> i; _ -> 0) ++ "\n" ++
+            if null captured then "Stderr not captured because WithStderr False was used\n"
+            else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
+            else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
 
 
 -- | Apply all environment operations, to produce a new environment to use.
