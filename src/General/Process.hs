@@ -130,19 +130,6 @@ abort pid = do
     -- seems to happen with some GHC 7.2 compiled binaries with FFI etc
     terminateProcess pid
 
--- FIXME: There is a new withCreateProcess in process-1.4.3.0 which is probably better than ours...
-withCreateProcessOld :: CreateProcess -> ((Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO a) -> IO a
-withCreateProcessOld cp act = bracketOnError (createProcess cp) cleanup act
-    where
-        cleanup (inh, outh, errh, pid) = do
-            mapM_ (`whenJust` hClose) [inh, outh, errh]
-            ignore $ do
-                -- sometimes we fail before the process is valid
-                -- therefore if terminate process fails, skip waiting on the process
-                terminateProcess pid
-                void $ waitForProcess pid
-
-
 withFiles :: IOMode -> [FilePath] -> ((FilePath -> Handle) -> IO a) -> IO a
 withFiles mode files act = withs (map (`withFile` mode) files) $ \handles ->
     act $ \x -> fromJust $ lookup x $ zip files handles
@@ -158,7 +145,7 @@ process po = do
         let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
                  ,std_in = fst $ stdIn inHandle poStdin
                  ,std_out = stdStream outHandle poStdout poStderr, std_err = stdStream outHandle poStderr poStdout}
-        withCreateProcessOld cp $ \(inh, outh, errh, pid) ->
+        withCreateProcessCompat cp $ \inh outh errh pid ->
             withTimeout poTimeout (abort pid) $ do
 
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++
@@ -223,3 +210,16 @@ process po = do
 -- implementation copied below
 bsHGetSome :: Handle -> Int -> IO BS.ByteString
 bsHGetSome h i = BS.createAndTrim i $ \p -> hGetBufSome h p i
+
+-- available in process-1.4.3.0, GHC ??? (Nov 2015)
+withCreateProcessCompat :: CreateProcess -> (Maybe Handle -> Maybe Handle -> Maybe Handle -> ProcessHandle -> IO a) -> IO a
+withCreateProcessCompat cp act = bracketOnError (createProcess cp) cleanup
+    (\(m_in, m_out, m_err, ph) -> act m_in m_out m_err ph)
+    where
+        cleanup (inh, outh, errh, pid) = do
+            mapM_ (`whenJust` hClose) [inh, outh, errh]
+            ignore $ do
+                -- sometimes we fail before the process is valid
+                -- therefore if terminate process fails, skip waiting on the process
+                terminateProcess pid
+                void $ waitForProcess pid
