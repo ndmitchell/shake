@@ -97,7 +97,6 @@ stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
         SrcString x -> hPutStr h x
         SrcBytes x -> LBS.hPutStr h x
         SrcFile x -> LBS.hPutStr h =<< LBS.hGetContents (file x)
-    hFlush h
     hClose h
 
 
