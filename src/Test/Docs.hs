@@ -327,7 +327,7 @@ whitelist x = x `elem`
     ,"1m25s (15%)"
     ,"3m12s (82%)"
     ,"getPkgVersion $ GhcPkgVersion \"shake\""
-    ,"ghc --make MyBuildSystem -threaded -rtsopts \"-with-rtsopts=-I0 -qg qb\""
+    ,"ghc --make MyBuildSystem -threaded -rtsopts \"-with-rtsopts=-I0 -qg -qb\""
     ,"# command-name (for file-name)"
     ,"<i>build rules</i>"
     ,"<i>actions</i>"
