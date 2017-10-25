@@ -1,12 +1,13 @@
 
 -- | Code for ensuring cleanup actions are run.
 module General.Cleanup(
-    Cleanup, withCleanup, addCleanup
+    Cleanup, withCleanup, addCleanup, addCleanup_
     ) where
 
 import Control.Exception as E
 import qualified Data.HashMap.Strict as Map
 import Data.Function
+import Data.Functor
 import Data.IORef
 import Data.List
 
@@ -32,3 +33,6 @@ addCleanup :: Cleanup -> IO () -> IO (IO ())
 addCleanup (Cleanup ref) act = atomicModifyIORef' ref $ \s -> let i = unique s in
     (,) (S (unique s + 1) (Map.insert i act $ items s)) $
         atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, ())
+
+addCleanup_ :: Cleanup -> IO () -> IO ()
+addCleanup_ c act = void $ addCleanup c act
