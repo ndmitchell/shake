@@ -4,7 +4,7 @@ module General.Cleanup(
     Cleanup, withCleanup, addCleanup, addCleanup_
     ) where
 
-import Control.Exception as E
+import Control.Exception
 import qualified Data.HashMap.Strict as Map
 import Data.Function
 import Data.Functor
