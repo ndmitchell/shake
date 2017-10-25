@@ -46,7 +46,8 @@ actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act clean = do
     cleanup <- Action $ getsRO globalCleanup
     undo <- liftIO $ addCleanup cleanup $ void clean
-    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ undo >> clean) >> throwRAW e
+    -- important to mask_ the undo/clean combo so either both happen or neither
+    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ $ undo >> clean) >> throwRAW e
     liftIO $ mask_ $ undo >> when runOnSuccess (void clean)
     return res
 
