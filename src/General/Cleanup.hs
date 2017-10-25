@@ -11,7 +11,7 @@ import Data.IORef
 import Data.List
 
 
-data S = S {unique :: !Int, items :: Map.HashMap Int (IO ())}
+data S = S {unique :: {-# UNPACK #-} !Int, items :: !(Map.HashMap Int (IO ()))}
 
 newtype Cleanup = Cleanup (IORef S)
 
@@ -22,13 +22,13 @@ withCleanup :: (Cleanup -> IO a) -> IO a
 withCleanup act = do
     ref <- newIORef $ S 0 Map.empty
     act (Cleanup ref) `finally` do
-        items <- atomicModifyIORef ref $ \s -> (s{items=Map.empty}, items s)
+        items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
         mapM_ snd $ sortBy (compare `on` negate . fst) $ Map.toList items
 
 
 -- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove that action.
 --   If not removed by the time 'withCleanup' terminates then the cleanup action will be run then.
 addCleanup :: Cleanup -> IO () -> IO (IO ())
-addCleanup (Cleanup ref) act = atomicModifyIORef ref $ \s -> let i = unique s in
+addCleanup (Cleanup ref) act = atomicModifyIORef' ref $ \s -> let i = unique s in
     (,) (S (unique s + 1) (Map.insert i act $ items s)) $
-        atomicModifyIORef ref $ \s -> (s{items = Map.delete i $ items s}, ())
+        atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, ())
