@@ -90,7 +90,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
     after <- newIORef []
     absent <- newIORef []
     withCleanup $ \cleanup -> do
-        _ <- addCleanup cleanup $ do
+        addCleanup_ cleanup $ do
             when shakeTimings printTimings
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
@@ -103,7 +103,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                         return stats{isFailure=failure}
                 tid <- flip forkFinally (const $ signalBarrier wait ()) $
                     shakeProgress getProgress
-                _ <- addCleanup cleanup $ do
+                addCleanup_ cleanup $ do
                     killThread tid
                     void $ timeout 1 $ waitBarrier wait
 
