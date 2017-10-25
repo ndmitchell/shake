@@ -35,4 +35,6 @@ addCleanup (Cleanup ref) act = atomicModifyIORef' ref $ \s -> let i = unique s i
         atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, ())
 
 addCleanup_ :: Cleanup -> IO () -> IO ()
+-- we could avoid inserting into the Map, but we need to store the pairs anyway
+-- to unregister them in order, so might as well keep it simple
 addCleanup_ c act = void $ addCleanup c act
