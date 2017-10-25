@@ -27,7 +27,7 @@ withCleanup act = do
         mapM_ snd $ sortBy (compare `on` negate . fst) $ Map.toList items
 
 
--- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove that action.
+-- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove (but not perform) that action.
 --   If not removed by the time 'withCleanup' terminates then the cleanup action will be run then.
 addCleanup :: Cleanup -> IO () -> IO (IO ())
 addCleanup (Cleanup ref) act = atomicModifyIORef' ref $ \s -> let i = unique s in
