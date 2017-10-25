@@ -8,7 +8,7 @@ import Control.Exception
 import qualified Data.HashMap.Strict as Map
 import Data.Function
 import Control.Monad
-import Data.IORef
+import Data.IORef.Extra
 import Data.List
 
 
