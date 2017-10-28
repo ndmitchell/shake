@@ -251,7 +251,7 @@ We can now write:
     buildDir ("run" <.> exe) %> \out -> do
         ...
 
-All top-level variables and functions can be though of as being expanded wherever they are used, although in practice may have their evaluation shared.
+All top-level variables and functions can be thought of as being expanded wherever they are used, although in practice may have their evaluation shared.
 
 #### A clean command
 
