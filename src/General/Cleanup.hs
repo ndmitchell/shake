@@ -1,7 +1,7 @@
 
 -- | Code for ensuring cleanup actions are run.
 module General.Cleanup(
-    Cleanup, withCleanup, addCleanup, addCleanup_
+    Cleanup, withCleanup, runCleanup, addCleanup, addCleanup_
     ) where
 
 import Control.Exception
@@ -22,10 +22,13 @@ newtype Cleanup = Cleanup (IORef S)
 withCleanup :: (Cleanup -> IO a) -> IO a
 withCleanup act = do
     ref <- newIORef $ S 0 Map.empty
-    act (Cleanup ref) `finally` do
-        items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
-        mapM_ snd $ sortBy (compare `on` negate . fst) $ Map.toList items
+    act (Cleanup ref) `finally` runCleanup (Cleanup ref)
 
+-- | Run all the cleanup actions immediately. Done automatically by withCleanup
+runCleanup :: Cleanup -> IO ()
+runCleanup (Cleanup ref) = do
+    items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
+    mapM_ snd $ sortBy (compare `on` negate . fst) $ Map.toList items
 
 -- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove (but not perform) that action.
 --   If not removed by the time 'withCleanup' terminates then the cleanup action will be run then.
