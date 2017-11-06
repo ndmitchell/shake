@@ -6,7 +6,7 @@ module Development.Shake.Internal.Derived(
     writeFile', writeFileLines, writeFileChanged,
     withTempFile, withTempDir,
     getHashedShakeVersion,
-    getShakeExtra, addShakeExtra,
+    getShakeExtra, getShakeExtraRules, addShakeExtra,
     par, forP,
     newResource, newThrottle, withResources,
     newCache
@@ -16,10 +16,10 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
-import General.Extra
 import System.FilePath (takeDirectory)
 import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
 
+import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Options
@@ -57,15 +57,23 @@ getHashedShakeVersion files = do
 -- | Get an item from 'shakeExtra', using the requested type as the key. Fails
 -- if the value found at this key does not match the requested type.
 getShakeExtra :: Typeable a => Action (Maybe a)
-getShakeExtra = withResultType $ \(_ :: Maybe (Action (Maybe a))) -> do
-    let want = typeRep (Proxy :: Proxy a)
-    extra <- shakeExtra <$> getShakeOptions
-    case Map.lookup want extra of
+getShakeExtra = liftIO . lookupShakeExtra . shakeExtra =<< getShakeOptions
+
+getShakeExtraRules :: Typeable a => Rules (Maybe a)
+getShakeExtraRules = liftIO . lookupShakeExtra . shakeExtra =<< getShakeOptionsRules
+
+lookupShakeExtra :: forall a . Typeable a => Map.HashMap TypeRep Dynamic -> IO (Maybe a)
+lookupShakeExtra mp =
+    case Map.lookup want mp of
         Just dyn
             | Just x <- fromDynamic dyn -> return $ Just x
-            | otherwise -> fail $
-                "getShakeExtra: Key " ++ show want ++ " had value of unexpected type " ++ show (dynTypeRep dyn)
+            | otherwise -> errorStructured
+                "shakeExtra value is malformed, all keys and values must agree"
+                [("Key", Just $ show want)
+                ,("Value", Just $ show $ dynTypeRep dyn)]
+                "Use addShakeExtra to ensure shakeExtra is well-formed"
         Nothing -> return Nothing
+    where want = typeRep (Proxy :: Proxy a)
 
 -- | Add a properly structued value to 'shakeExtra' which can be retrieved with 'getShakeExtra'.
 addShakeExtra :: Typeable a => a -> Map.HashMap TypeRep Dynamic -> Map.HashMap TypeRep Dynamic

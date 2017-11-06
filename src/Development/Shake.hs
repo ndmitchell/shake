@@ -55,7 +55,7 @@ module Development.Shake(
     -- * Configuration
     ShakeOptions(..), Rebuild(..), Lint(..), Change(..),
     getShakeOptions, getShakeOptionsRules, getHashedShakeVersion,
-    getShakeExtra, addShakeExtra,
+    getShakeExtra, getShakeExtraRules, addShakeExtra,
     -- ** Command line
     shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs,
     -- ** Progress reporting
