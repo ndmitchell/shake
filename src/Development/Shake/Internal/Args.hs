@@ -23,6 +23,7 @@ import Control.Exception.Extra
 import Control.Monad
 import Data.Char
 import Data.Either
+import Data.Functor
 import Data.List
 import Data.Maybe
 import Data.Version(showVersion)
@@ -30,6 +31,7 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.Time.Extra
+import Prelude
 
 
 -- | Run a build system using command line arguments for configuration.
