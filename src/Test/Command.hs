@@ -79,20 +79,20 @@ main = shakeTest_ test $ do
         let norm = fmap dropTrailingPathSeparator . canonicalizePath . trim
         liftIO $ join $ liftM2 (===) (norm out) (norm "helper")
 
-    "timeout" !> do
-        offset <- liftIO offsetTime
-        Exit exit <- cmd (Timeout 2) helper "w20"
-        t <- liftIO offset
-        putNormal $ "Timed out in " ++ showDuration t
-        when (exit == ExitSuccess) $ error "== ExitSuccess"
-        when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
+    let checkTimeout act = do
+            offset <- liftIO offsetTime
+            act
+            t <- liftIO offset
+            putNormal $ "Timed out in " ++ showDuration t
+            when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
 
-    "timeout2" !> do
-        offset <- liftIO offsetTime
-        liftIO $ timeout 2 $ cmd_ helper "w20"
-        t <- liftIO offset
-        putNormal $ "Timed out in " ++ showDuration t
-        when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
+    "timeout1" !> checkTimeout (do
+        Exit exit <- cmd (Timeout 2) helper "w20"
+        liftIO $ assertBool (exit /= ExitSuccess) "exit was ExitSuccess")
+
+    "timeout2" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "w20"
+
+    when False $ "timeout3" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ Shell helper "w20"
 
     "env" !> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
