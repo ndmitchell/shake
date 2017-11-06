@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
@@ -11,6 +12,7 @@ module Test.Type(
     assertContents, assertContentsUnordered, assertContentsWords,
     assertExists, assertMissing,
     (===),
+    (&?%>),
     Pat(PatWildcard), pat,
     BinarySentinel(..), RandomType(..),
     ) where
@@ -110,21 +112,38 @@ shakenEx reenter options test rules sleeper = do
                 ,shakeLintInside = [cwd]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs args $ do
-                let cleanOpt = optionsEnumDesc
+                let optionsBuiltin = optionsEnumDesc
                         [(Clean, "Clean before building.")
-                        ,(Sleep, "Pause before executing.")]
-                change $ shakeArgsWith opts (cleanOpt `mergeOptDescr` options) $ \extra files -> do
+                        ,(Sleep, "Pause before executing.")
+                        ,(UsePredicate, "Use &?> in preference to &%>")]
+                change $ shakeArgsOptionsWith opts (optionsBuiltin `mergeOptDescr` options) $ \so extra files -> do
                     let (extra1, extra2) = partitionEithers extra
                     when (Clean `elem` extra1) clean
                     when (Sleep `elem` extra1) sleeper
+                    so <- return $ if UsePredicate `notElem` extra1 then so else
+                        so{shakeExtra = addShakeExtra UsePredicateYes $ shakeExtra so}
                     if "clean" `elem` files then
                         clean >> return Nothing
-                    else return $ Just $ do
+                    else return $ Just $ (,) so $ do
                         -- if you have passed sleep, supress the "no actions" warning
                         when (Sleep `elem` extra1) $ action $ return ()
                         rules extra2 files
 
-data Flags = Clean | Sleep deriving (Eq,Show)
+data Flags
+    = Clean -- ^ Clean all the files before starting
+    | Sleep -- ^ Call 'sleepFileTimeCalibrate' before starting
+    | UsePredicate -- ^ Use &?> in preference to &%>
+      deriving (Eq,Show)
+
+data UsePredicateYes = UsePredicateYes
+
+(&?%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+deps &?%> act = do
+    so :: Maybe UsePredicateYes <- getShakeExtraRules
+    if isJust so
+        then (\x -> if x `elem` deps then Just deps else Nothing) &?> act
+        else deps &%> act
+
 
 root :: FilePath
 root = "../.."

@@ -6,11 +6,9 @@ import Development.Shake.FilePath
 import System.Directory
 import Test.Type
 import Control.Monad
-import General.GetOpt
 
-data Args = UsePredicate deriving (Eq,Show,Bounded,Enum)
 
-main = shakeTest test optionsEnum $ \opts -> do
+main = shakeTest test [] $ \opts -> do
     let inp x = x -<.> "in"
     file <- newResource "log.txt" 1
     batch 3 ("*.out" %>) (\out -> do need [inp out]; return out) $ \outs -> do
@@ -23,10 +21,6 @@ main = shakeTest test optionsEnum $ \opts -> do
     "ABn.txt" %> \out -> do
         xs <-needHasChanged ["An.txt", "Bn.txt"]
         writeFileLines out xs
-
-    -- Since &?> and &%> are implemented separately we test everything in both modes
-    let deps &?%> act | UsePredicate `elem` opts = (\x -> if x `elem` deps then Just deps else Nothing) &?> act
-                      | otherwise = deps &%> act
 
     ["An", "Bn"] &?%> \outs -> do
         xs <- needHasChanged $ map (-<.> ".in") outs

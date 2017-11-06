@@ -7,11 +7,9 @@ import System.Directory
 import Test.Type
 import Control.Monad
 import Data.List
-import General.GetOpt
 
-data Args = UsePredicate deriving (Eq,Show,Bounded,Enum)
 
-main = shakeTest test optionsEnum $ \opts -> do
+main = shakeTest test [] $ \opts -> do
     want ["even.txt","odd.txt"]
 
     "A1-plus-B" %> \out -> do
@@ -25,10 +23,6 @@ main = shakeTest test optionsEnum $ \opts -> do
 
     "B" %> \out ->
         writeFileLines out ["This is", "B"]
-
-    -- Since &?> and &%> are implemented separately we test everything in both modes
-    let deps &?%> act | UsePredicate `elem` opts = (\x -> if x `elem` deps then Just deps else Nothing) &?> act
-                      | otherwise = deps &%> act
 
     ["even.txt","odd.txt"] &?%> \[evens,odds] -> do
         src <- readFileLines "numbers.txt"
