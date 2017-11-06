@@ -1,6 +1,10 @@
+{-# LANGUAGE TupleSections #-}
 
 -- | Command line parsing flags.
-module Development.Shake.Internal.Args(shakeOptDescrs, shakeArgs, shakeArgsWith) where
+module Development.Shake.Internal.Args(
+    shakeOptDescrs,
+    shakeArgs, shakeArgsWith, shakeArgsOptionsWith
+    ) where
 
 import Paths_shake
 import Development.Shake.Internal.Options
@@ -102,7 +106,15 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --
 --   Now you can pass @--distcc@ to use the @distcc@ compiler.
 shakeArgsWith :: ShakeOptions -> [OptDescr (Either String a)] -> ([a] -> [String] -> IO (Maybe (Rules ()))) -> IO ()
-shakeArgsWith baseOpts userOptions rules = do
+shakeArgsWith opt args f = shakeArgsOptionsWith opt args $ \so a b -> fmap (so,) <$> f a b
+
+-- | Like 'shakeArgsWith', but also lets you manipulate the 'ShakeOptions'.
+shakeArgsOptionsWith
+    :: ShakeOptions
+    -> [OptDescr (Either String a)]
+    -> (ShakeOptions -> [a] -> [String] -> IO (Maybe (ShakeOptions, Rules ())))
+    -> IO ()
+shakeArgsOptionsWith baseOpts userOptions rules = do
     addTiming "shakeArgsWith"
     args <- getArgs
     let (flag1,files,errs) = getOpt opts args
@@ -169,15 +181,15 @@ shakeArgsWith baseOpts userOptions rules = do
                             appendFile file $ show (t,p) ++ "\n"
                         return p
             }
-        (ran,res) <- redir $ do
+        (ran,shakeOpts,res) <- redir $ do
             when printDirectory $ putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
-            rules <- rules user files
+            rules <- rules shakeOpts user files
             case rules of
-                Nothing -> return (False,Right ())
-                Just rules -> do
+                Nothing -> return (False, shakeOpts, Right ())
+                Just (shakeOpts, rules) -> do
                     res <- try_ $ shake shakeOpts $
                         if NoBuild `elem` flagsExtra then withoutActions rules else rules
-                    return (True, res)
+                    return (True, shakeOpts, res)
 
         if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
             either throwIO return res

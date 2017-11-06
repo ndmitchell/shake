@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #535, add shakeArgsOptionsWith to manipulate ShakeOptions
     #538, make sure processes can be killed properly
     #502, add needHasChanged to track what in a need has changed
     Weaken the typeclasses required for apply/apply1

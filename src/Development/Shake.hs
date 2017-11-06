@@ -57,7 +57,7 @@ module Development.Shake(
     getShakeOptions, getShakeOptionsRules, getHashedShakeVersion,
     getShakeExtra, addShakeExtra,
     -- ** Command line
-    shakeArgs, shakeArgsWith, shakeOptDescrs,
+    shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs,
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress,
     -- ** Verbosity
