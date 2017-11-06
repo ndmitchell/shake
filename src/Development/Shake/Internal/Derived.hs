@@ -59,6 +59,7 @@ getHashedShakeVersion files = do
 getShakeExtra :: Typeable a => Action (Maybe a)
 getShakeExtra = liftIO . lookupShakeExtra . shakeExtra =<< getShakeOptions
 
+-- | A version of 'getShakeExtra' in 'Rules'.
 getShakeExtraRules :: Typeable a => Rules (Maybe a)
 getShakeExtraRules = liftIO . lookupShakeExtra . shakeExtra =<< getShakeOptionsRules
 
