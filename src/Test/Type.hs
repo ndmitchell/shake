@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
