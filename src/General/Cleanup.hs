@@ -1,7 +1,7 @@
 
 -- | Code for ensuring cleanup actions are run.
 module General.Cleanup(
-    Cleanup, withCleanup, runCleanup, addCleanup, addCleanup_
+    Cleanup, withCleanup, addCleanup, addCleanup_
     ) where
 
 import Control.Exception
