@@ -359,10 +359,9 @@ need = void . apply_ fileNameFromString
 --   This function can be used to alter the action depending on which dependency needed
 --   to be rebuild.
 --
---   Notice that a rule can be run even if no dependency has changed and needHasChanged
---   will return an empty list on every call then. In this case a target got inconsistent
---   and you should recreate it, without reusing any part of the target from the last build,
---   as the target could have been edited or even deleted.
+--   Note that a rule can be run even if no dependency has changed, for example
+--   because of 'shakeRebuild' or because the target has changed or been deleted.
+--   To detect the latter case you may wish to use 'resultHasChanged'.
 needHasChanged :: [FilePath] -> Action [FilePath]
 needHasChanged paths = do
     res <- apply_ fileNameFromString paths
@@ -370,7 +369,6 @@ needHasChanged paths = do
 
 needBS :: [BS.ByteString] -> Action ()
 needBS = void . apply_ fileNameFromByteString
-
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
