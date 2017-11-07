@@ -5,7 +5,7 @@
 module Development.Shake.Internal.Core.Database(
     Trace(..), newTrace,
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies,
+    listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build, Depends,
     Step, Result(..),
     progress,
@@ -183,6 +183,10 @@ internKey intern status k = do
             Ids.insert status i (k,Missing)
             return i
 
+lookupStatus :: Database -> Key -> IO (Maybe (Either BS.ByteString Value))
+lookupStatus Database{..} k = withLock lock $ do
+    i <- internKey intern status k
+    maybe Nothing (fmap result . getResult . snd) <$> Ids.lookup status i
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> BuildKey -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))

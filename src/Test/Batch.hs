@@ -23,14 +23,16 @@ main = shakeTest test [] $ \opts -> do
         writeFileLines out xs
 
     ["An", "Bn"] &?%> \outs -> do
-        xs <- needHasChanged $ map (-<.> ".in") outs
-        mapM_ (`writeFile'` "1") $ if null xs
-          then outs             -- recreate all targets, as one of them was messed with
-          else map (-<.> "") xs -- recreate targets associated to changed deps
+        xs <- needHasChanged $ map (-<.> "in") outs
+        os <- mapM resultHasChanged outs
+        forM_ (zip outs os) $ \(out, o) ->
+            when (o || (out -<.> "in" `elem` xs)) $
+                writeFile' out "1"
 
     "On" %> \out -> do
         xs <- needHasChanged ["An", "Bn"]
-        writeFileLines out xs
+        o <- resultHasChanged out
+        writeFileLines out $ xs ++ ["On" | o]
 
 
 test build = do
@@ -72,14 +74,13 @@ test build = do
         assertContents "On" "Bn\n"
         build $ ["On", "--sleep"] ++ args
         assertContents "On" "Bn\n"
-        -- for this to "somehow" work, we have to do special things in the appropriate rule
         removeFile "An"
         build $ ["On", "--sleep"] ++ args
-        assertContents "On" "An\nBn\n" -- ideally we should have only "An" here.
-                                       -- But for this we need a finer reporting
-                                       -- about inconsistent targets.
-        -- but this again fails ... as how should we notice, An was messed with?
-        -- removeFile "An"
-        -- writeFile "Bn.in" "2"
-        -- build ["On"]
-        -- assertContents "On" "An\nBn\n"
+        assertContents "On" "An\n"
+        removeFile "An"
+        writeFile "Bn.in" "2"
+        build $ ["On", "--sleep"] ++ args
+        assertContents "On" "An\nBn\n"
+        removeFile "On"
+        build $ ["On", "--sleep"] ++ args
+        assertContents "On" "On\n"

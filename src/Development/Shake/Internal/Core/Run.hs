@@ -5,6 +5,7 @@
 module Development.Shake.Internal.Core.Run(
     run,
     Action, actionOnException, actionFinally, apply, apply1, traced,
+    getDatabaseValue,
     getShakeOptions, getProgress,
     getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     Resource, newResourceIO, withResource, newThrottleIO,
@@ -177,6 +178,12 @@ withLineBuffering act = do
     act `finally` do
         hSetBuffering stdout out
         hSetBuffering stderr err
+
+
+getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
+getDatabaseValue k = do
+    global@Global{..} <- Action getRO
+    liftIO $ fmap (fmap $ fmap fromValue) $ lookupStatus globalDatabase $ newKey k
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.

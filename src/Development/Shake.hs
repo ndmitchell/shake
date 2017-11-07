@@ -98,6 +98,7 @@ module Development.Shake(
     newCache, newCacheIO,
     -- * Batching
     needHasChanged,
+    resultHasChanged,
     batch,
     -- * Deprecated
     (*>), (|*>), (&*>),

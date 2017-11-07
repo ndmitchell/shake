@@ -6,6 +6,7 @@ module Development.Shake.Internal.Rules.File(
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
+    resultHasChanged,
     -- * Internal only
     FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
@@ -291,6 +292,28 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
 
 apply_ :: (a -> FileName) -> [a] -> Action [FileR]
 apply_ f = apply . map (FileQ . f)
+
+
+-- | Has a file changed. This function will only give the correct answer if called in the rule
+--   producing the file, /before/ the rule has modified the file in question.
+--   Best avoided, but sometimes necessary in conjunction with 'needHasChanged' to cause rebuilds
+--   to happen if the result is deleted or modified.
+resultHasChanged :: FilePath -> Action Bool
+resultHasChanged file = do
+    let filename = FileQ $ fileNameFromString file
+    res <- getDatabaseValue filename
+    old <- return $ case res of
+        Nothing -> Nothing
+        Just (Left bs) -> fromResult $ getEx bs
+        Just (Right v) -> result v
+    case old of
+        Nothing -> return True
+        Just old -> do
+            opts <- getShakeOptions
+            new <- liftIO $ fileStoredValue opts filename
+            return $ case new of
+                Nothing -> True
+                Just new -> fileEqualValue opts old new == NotEqual
 
 
 ---------------------------------------------------------------------
