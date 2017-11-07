@@ -134,7 +134,7 @@ data Flags
     | UsePredicate -- ^ Use &?> in preference to &%>
       deriving (Eq,Show)
 
-data UsePredicateYes = UsePredicateYes
+data UsePredicateYes = UsePredicateYes deriving Typeable
 
 (&?%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 deps &?%> act = do
