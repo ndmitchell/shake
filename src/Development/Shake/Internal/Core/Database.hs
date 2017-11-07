@@ -139,10 +139,10 @@ statusType Waiting{} = "Waiting"
 statusType Missing{} = "Missing"
 
 
-getResult :: Status -> Maybe (Result ())
-getResult (Ready r) = Just $ void r
-getResult (Loaded r) = Just $ void r
-getResult (Waiting _ r) = void <$> r
+getResult :: Status -> Maybe (Result (Either BS.ByteString Value))
+getResult (Ready r) = Just $ Right <$> r
+getResult (Loaded r) = Just $ Left <$> r
+getResult (Waiting _ r) = fmap Left <$> r
 getResult _ = Nothing
 
 
@@ -351,7 +351,7 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
 
 
 -- | Eliminate all errors from the database, pretending they don't exist
-resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result ())
+resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result (Either BS.ByteString Value))
 resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = map (Depends . filter (isJust . flip Map.lookup keep) . fromDepends) $ depends r})) keep
     where keep = Map.filter (isJust . getResult . snd) mp
 
