@@ -4,6 +4,7 @@ module Test.Batch(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import System.Directory
+import General.Extra
 import Test.Type
 import Control.Monad
 
@@ -64,8 +65,9 @@ test build = do
     forM_ [[],["--usepredicate"]] $ \args -> do
         writeFile "An.in" "1"
         writeFile "Bn.in" "1"
+        removeFile_ "On"
         build $ ["On", "--sleep"] ++ args
-        assertContents "On" "An\nBn\n"
+        assertContents "On" "An\nBn\nOn\n"
         writeFile "An.in" "1"
         build $ ["On", "--sleep"] ++ args
         assertContents "On" "An\n"
