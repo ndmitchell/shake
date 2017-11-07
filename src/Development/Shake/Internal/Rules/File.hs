@@ -321,7 +321,7 @@ resultHasChanged file = do
 
 -- | Internal method for adding forwarding actions
 fileForward :: (FilePath -> Maybe (Action FileA)) -> Rules ()
-fileForward act = addUserRule $ FileRule $ fmap ModeForward . act 
+fileForward act = addUserRule $ FileRule $ fmap ModeForward . act
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
