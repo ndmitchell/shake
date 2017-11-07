@@ -8,6 +8,7 @@ import Data.List
 import Control.Monad
 import Control.Concurrent
 import General.GetOpt
+import General.Extra
 import Control.Exception.Extra hiding (assert)
 import System.Directory as IO
 import System.Time.Extra
@@ -94,9 +95,9 @@ main = shakeTest test optionsEnum $ \args -> do
 
     when (Die `elem` args) $ action $ error "death error"
 
-    "fresh_dir" %> \out -> liftIO $ createDirectoryIfMissing True out
+    "fresh_dir" %> \out -> liftIO $ createDirectoryRecursive out
     "need_dir" %> \out -> do
-        liftIO $ createDirectoryIfMissing True "existing_dir"
+        liftIO $ createDirectoryRecursive "existing_dir"
         need ["existing_dir"]
         writeFile' out ""
 

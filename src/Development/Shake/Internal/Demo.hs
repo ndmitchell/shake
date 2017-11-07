@@ -8,6 +8,7 @@ import Development.Shake.Command
 import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
+import General.Extra
 import Data.Char
 import Data.List
 import Data.Maybe
@@ -62,7 +63,7 @@ demo auto = do
     require b "% Please create an empty directory to run the demo from, then run 'shake --demo' again."
 
     putStr "% Copying files... "
-    createDirectoryIfMissing True dir
+    createDirectoryRecursive dir
     forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
         copyFile (manual </> file) (dir </> file)
     unless isWindows $ do

@@ -30,7 +30,6 @@ import Numeric
 import General.Extra
 import Data.List.Extra
 import Data.Maybe
-import System.Directory
 import System.FilePath
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.HashMap.Strict as Map
@@ -68,7 +67,7 @@ withStorage
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
-    createDirectoryIfMissing True shakeFiles
+    createDirectoryRecursive shakeFiles
 
     -- complete a partially failed compress
     whenM (restoreChunksBackup dbfile) $ do

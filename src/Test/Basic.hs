@@ -81,7 +81,7 @@ main = shakeTest_ test $ do
     "rerun" %> \out -> do alwaysRerun; liftIO $ appendFile out "."
 
     phony "foo" $
-        liftIO $ createDirectoryIfMissing True "foo"
+        liftIO $ createDirectoryRecursive "foo"
 
     phony "ordering2" $
         liftIO $ appendFile "order.log" "X"
@@ -120,7 +120,7 @@ test build = do
 
     show shakeOptions === show shakeOptions
 
-    createDirectoryIfMissing True "dir"
+    createDirectoryRecursive "dir"
     writeFile "dir/ae.txt" ""
     writeFile "dir/ea.txt" ""
     build ["halfclean"]
@@ -182,7 +182,7 @@ test build = do
     build ["slash" </> "platform","slash" </> "forward"]
     build ["slash/platform","slash/forward"]
 
-    createDirectoryIfMissing True "ids"
+    createDirectoryRecursive "ids"
     writeFile "ids/source" "ids/a"
     build ["ids/out","--sleep"]
     writeFile ".log" ""

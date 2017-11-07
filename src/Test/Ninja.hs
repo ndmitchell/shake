@@ -3,10 +3,11 @@ module Test.Ninja(main) where
 
 import Development.Shake
 import qualified Development.Shake.Config as Config
-import System.Directory(copyFile, createDirectoryIfMissing, removeFile)
+import System.Directory(copyFile, removeFile)
 import Control.Applicative
 import Control.Monad
 import General.GetOpt
+import General.Extra
 import Test.Type
 import qualified Data.HashMap.Strict as Map
 import Data.List
@@ -44,7 +45,7 @@ test build = do
 
     copyFile "../../src/Test/Ninja/test3-sub.ninja" "test3-sub.ninja"
     copyFile "../../src/Test/Ninja/test3-inc.ninja" "test3-inc.ninja"
-    createDirectoryIfMissing True "subdir"
+    createDirectoryRecursive "subdir"
     copyFile "../../src/Test/Ninja/subdir/1.ninja" "subdir/1.ninja"
     copyFile "../../src/Test/Ninja/subdir/2.ninja" "subdir/2.ninja"
     run "-f../../src/Test/Ninja/test3.ninja"

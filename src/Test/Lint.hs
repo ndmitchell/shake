@@ -5,6 +5,7 @@ module Test.Lint(main) where
 import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath
+import General.Extra
 import Test.Type
 import Control.Exception
 import System.Directory as IO
@@ -17,7 +18,7 @@ type instance RuleResult Zero = Zero
 
 main = shakeTest_ test $ do
     addOracle $ \Zero{} -> do
-        liftIO $ createDirectoryIfMissing True "dir"
+        liftIO $ createDirectoryRecursive "dir"
         liftIO $ setCurrentDirectory "dir"
         return $ Zero ()
 
@@ -33,7 +34,7 @@ main = shakeTest_ test $ do
     "cdir.*" %> \out -> do
         pwd <- liftIO getCurrentDirectory
         let dir2 = "dir" ++ takeExtension out
-        liftIO $ createDirectoryIfMissing True dir2
+        liftIO $ createDirectoryRecursive dir2
         liftIO $ setCurrentDirectory dir2
         liftIO $ sleep 0.2
         liftIO $ setCurrentDirectory pwd

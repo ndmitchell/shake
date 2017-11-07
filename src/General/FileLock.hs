@@ -3,8 +3,8 @@
 module General.FileLock(withLockFile) where
 
 import Control.Exception.Extra
-import System.Directory
 import System.FilePath
+import General.Extra
 #ifdef mingw32_HOST_OS
 import Data.Bits
 import Data.Word
@@ -12,7 +12,6 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 #else
-import General.Extra
 import System.IO
 import System.Posix.IO
 #endif
@@ -43,7 +42,7 @@ withLockFile :: FilePath -> IO a -> IO a
 #ifdef mingw32_HOST_OS
 
 withLockFile file act = withCWString file $ \cfile -> do
-    createDirectoryIfMissing True $ takeDirectory file
+    createDirectoryRecursive $ takeDirectory file
     let open = c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
     bracket open c_CloseHandle $ \h ->
         if h == c_INVALID_HANDLE_VALUE then do
@@ -58,7 +57,7 @@ withLockFile file act = withCWString file $ \cfile -> do
 #else
 
 withLockFile file act = do
-    createDirectoryIfMissing True $ takeDirectory file
+    createDirectoryRecursive $ takeDirectory file
     tryIO $ writeFile file ""
 
     bracket (openFd file ReadWrite Nothing defaultFileFlags) closeFd $ \fd -> do

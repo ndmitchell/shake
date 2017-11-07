@@ -9,7 +9,6 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.List.Extra
-import System.Directory
 import Control.Applicative
 import Data.Typeable.Extra
 import General.Binary
@@ -140,7 +139,7 @@ ps &%> act
         (if all simple ps then id else priority 0.5) $
             addUserRule $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
-                    liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
+                    liftIO $ mapM_ createDirectoryRecursive $ nubOrd $ map takeDirectory xs
                     trackAllow xs
                     act xs
                     getFileTimes "&%>" xs_
@@ -190,7 +189,7 @@ ps &%> act
     addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
-                liftIO $ mapM_ (createDirectoryIfMissing True) $ nubOrd $ map takeDirectory xs
+                liftIO $ mapM_ createDirectoryRecursive $ nubOrd $ map takeDirectory xs
                 act xs
                 getFileTimes "&?>" xs_
             Just ys -> error $ "Error, &?> is incompatible with " ++ show xs ++ " vs " ++ show ys

@@ -170,7 +170,7 @@ commandExplicit funcName oopts results exe args = do
                                     tmpdir <- getTemporaryDirectory
                                     let fake = tmpdir ++ "fsatrace-fakes" ++ re
                                     unlessM (doesFileExist fake) $ do
-                                        createDirectoryIfMissing True $ takeDirectory fake
+                                        createDirectoryRecursive $ takeDirectory fake
                                         copyFile re fake
                                     return fake
                                 else return re

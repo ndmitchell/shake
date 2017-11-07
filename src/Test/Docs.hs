@@ -8,6 +8,7 @@ import System.Directory
 import Test.Type
 import Control.Monad
 import Data.Char
+import General.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Info
@@ -29,7 +30,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         need $ map (root </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
-        liftIO $ createDirectoryIfMissing True "dist"
+        liftIO $ createDirectoryRecursive "dist"
         dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
         cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure"
             ["--builddir=" ++ dist,"--user"]

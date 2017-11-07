@@ -83,8 +83,8 @@ shakenEx reenter options test rules sleeper = do
                 fail $ "Clean went horribly wrong! Dangerous deleting: " ++ show now
             withCurrentDirectory (now </> "..") $ do
                 removeDirectoryRecursive now
-                createDirectoryIfMissing True now
-    unless reenter $ createDirectoryIfMissing True out
+                createDirectoryRecursive now
+    unless reenter $ createDirectoryRecursive out
     case args of
         "test":extra -> do
             putStrLn $ "## TESTING " ++ name
@@ -228,7 +228,7 @@ sleepFileTime = sleep 1
 sleepFileTimeCalibrate :: IO (IO ())
 sleepFileTimeCalibrate = do
     let file = "output/calibrate"
-    createDirectoryIfMissing True $ takeDirectory file
+    createDirectoryRecursive $ takeDirectory file
     -- with 10 measurements can get a bit slow, see #451
     -- if it rounds to a second then 1st will be a fraction, but 2nd will be full second
     mtimes <- forM [1..2] $ \i -> fmap fst $ duration $ do
@@ -266,7 +266,7 @@ copyDirectoryChanged old new = do
     xs <- getDirectoryContentsRecursive old
     forM_ xs $ \from -> do
         let to = new </> drop (length $ addTrailingPathSeparator old) from
-        createDirectoryIfMissing True $ takeDirectory to
+        createDirectoryRecursive $ takeDirectory to
         copyFileChanged from to
 
 

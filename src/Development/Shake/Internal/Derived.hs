@@ -26,6 +26,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
+import General.Extra
 import Data.List.Extra
 import Data.Hashable
 import Data.Typeable.Extra
@@ -88,8 +89,9 @@ copyFile' :: FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
-    liftIO $ createDirectoryIfMissing True $ takeDirectory new
-    liftIO $ copyFile old new
+    liftIO $ do
+        createDirectoryRecursive $ takeDirectory new
+        copyFile old new
 
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
@@ -101,9 +103,10 @@ copyFileChanged old new = do
     -- the timestamp as well and thus no need to read the source file twice.
     unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
-        liftIO $ createDirectoryIfMissing True $ takeDirectory new
-        -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
-        liftIO $ copyFile old new
+        liftIO $ do
+            createDirectoryRecursive $ takeDirectory new
+            -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
+            liftIO $ copyFile old new
 
 
 -- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.

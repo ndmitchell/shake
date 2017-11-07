@@ -11,7 +11,7 @@ module General.Extra(
     fastAt,
     forkFinallyUnmasked,
     isAsyncException,
-    removeFile_,
+    removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO
     ) where
 
@@ -150,6 +150,13 @@ handleIO = flip catchIO
 -- | Remove a file, but don't worry if it fails
 removeFile_ :: FilePath -> IO ()
 removeFile_ x = removeFile x `catchIO` \_ -> return ()
+
+-- | Like @createDirectoryIfMissing True@ but faster, as it avoids
+--   any work in the common case the directory already exists.
+createDirectoryRecursive :: FilePath -> IO ()
+createDirectoryRecursive dir = do
+    x <- tryIO $ doesDirectoryExist dir
+    when (x /= Right True) $ createDirectoryIfMissing True dir
 
 
 ---------------------------------------------------------------------

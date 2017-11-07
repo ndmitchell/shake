@@ -7,7 +7,8 @@ import Test.Type
 import Data.List
 import Data.Function
 import Control.Monad
-import System.Directory(getCurrentDirectory, createDirectory, createDirectoryIfMissing)
+import General.Extra
+import System.Directory(getCurrentDirectory, createDirectory)
 import qualified System.Directory as IO
 import qualified System.IO.Extra as IO
 
@@ -84,11 +85,11 @@ test build = do
     let removeTest pat del keep =
             IO.withTempDir $ \dir -> do
                 forM_ (del ++ keep) $ \s -> do
-                    createDirectoryIfMissing True $ dir </> takeDirectory s
+                    createDirectoryRecursive $ dir </> takeDirectory s
                     unless (hasTrailingPathSeparator s) $
                         writeFile (dir </> s) ""
                 removeFiles dir pat
-                createDirectoryIfMissing True dir
+                createDirectoryRecursive dir
                 forM_ (map ((,) False) del ++ map ((,) True) keep) $ \(b,s) -> do
                     b2 <- (if hasTrailingPathSeparator s then IO.doesDirectoryExist else IO.doesFileExist) $ dir </> s
                     when (b /= b2) $ do

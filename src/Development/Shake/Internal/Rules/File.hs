@@ -14,7 +14,6 @@ module Development.Shake.Internal.Rules.File(
 import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
-import System.Directory
 import Data.Typeable
 import Data.List
 import Data.Maybe
@@ -24,6 +23,7 @@ import Foreign.Storable
 import Data.Word
 import Data.Monoid
 import General.Binary
+import General.Extra
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
@@ -441,7 +441,7 @@ want xs = action $ need xs
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 root help test act = addUserRule $ FileRule $ \x -> if not $ test x then Nothing else Just $ ModeDirect $ do
-    liftIO $ createDirectoryIfMissing True $ takeDirectory x
+    liftIO $ createDirectoryRecursive $ takeDirectory x
     act x
 
 
