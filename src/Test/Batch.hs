@@ -19,7 +19,7 @@ main = shakeTest test [] $ \opts -> do
     want [show i <.> "out" | i <- [1..6]]
 
     "ABn.txt" %> \out -> do
-        xs <-needHasChanged ["An.txt", "Bn.txt"]
+        xs <- needHasChanged ["An.txt", "Bn.txt"]
         writeFileLines out xs
 
     ["An", "Bn"] &?%> \outs -> do
@@ -31,7 +31,6 @@ main = shakeTest test [] $ \opts -> do
     "On" %> \out -> do
         xs <- needHasChanged ["An", "Bn"]
         writeFileLines out xs
-
 
 
 test build = do
