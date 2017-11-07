@@ -115,7 +115,9 @@ readFile' x = need [x] >> liftIO (readFile x)
 
 -- | Write a file, lifted to the 'Action' monad.
 writeFile' :: MonadIO m => FilePath -> String -> m ()
-writeFile' name x = liftIO $ writeFile name x
+writeFile' name x = liftIO $ do
+    createDirectoryRecursive $ takeDirectory name
+    writeFile name x
 
 
 -- | A version of 'readFile'' which also splits the result into lines.
@@ -131,6 +133,7 @@ writeFileLines name = writeFile' name . unlines
 -- | Write a file, but only if the contents would change.
 writeFileChanged :: MonadIO m => FilePath -> String -> m ()
 writeFileChanged name x = liftIO $ do
+    createDirectoryRecursive $ takeDirectory name
     b <- doesFileExist name
     if not b then writeFile name x else do
         -- Cannot use ByteString here, since it has different line handling

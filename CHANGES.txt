@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #534, make writeFile' and writeFileChanged create the directory
     #543, add resultHasChanged to track results which have changed
     Add getShakeExtraRules, like getShakeOptionsRules for shakeExtra
     #535, add shakeArgsOptionsWith to manipulate ShakeOptions
