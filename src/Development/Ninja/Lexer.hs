@@ -182,15 +182,16 @@ lexxName ctor x
 lexxExprs :: Bool -> Str0 -> ([Expr], Str0)
 lexxExprs stopColon x = case lexxExpr stopColon True x of
     (a,c_x) | c <- head0 c_x, x <- tail0 c_x -> case c of
-        ' ' -> first (a:) $ lexxExprs stopColon $ dropSpace x
-        ':' | stopColon -> ([a], x)
+        ' ' -> add a $ lexxExprs stopColon $ dropSpace x
+        ':' | stopColon -> new a x
         _ | stopColon -> error "expected a colon"
-        '\r' -> a $: dropN x
-        '\n' -> a $: x
-        '\0' -> a $: c_x
+        '\r' -> new a $ dropN x
+        '\n' -> new a x
+        '\0' -> new a c_x
     where
-        Exprs [] $: x = ([], x)
-        a $: x = ([a], x)
+        new a x = add a ([], x)
+        add (Exprs []) x = x
+        add a (as,x) = (a:as,x)
 
 
 {-# NOINLINE lexxExpr #-}
