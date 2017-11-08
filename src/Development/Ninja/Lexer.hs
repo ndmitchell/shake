@@ -144,7 +144,7 @@ lexBind c_x | (c,x) <- list0 c_x = case c of
 lexBuild :: Str0 -> [Lexeme]
 lexBuild x
     | (outputs,x) <- lexxExprs True x
-    , (rule,x) <- span0 isVarDot $ dropSpace x
+    , (rule,x) <- span0 isVarDot $ jumpCont $ dropSpace x
     , (deps,x) <- lexxExprs False $ dropSpace x
     = LexBuild outputs rule deps : lexerLoop x
 
@@ -163,8 +163,8 @@ lexDefine = lexxBind LexDefine
 lexxBind :: (Str -> Expr -> Lexeme) -> Str0 -> [Lexeme]
 lexxBind ctor x
     | (var,x) <- span0 isVarDot x
-    , ('=',x) <- list0 $ dropSpace x
-    , (exp,x) <- lexxExpr False False $ dropSpace x
+    , ('=',x) <- list0 $ jumpCont $ dropSpace x
+    , (exp,x) <- lexxExpr False False $ jumpCont $ dropSpace x
     = ctor var exp : lexerLoop x
 lexxBind _ x = error $ show ("parse failed when parsing binding", take0 100 x)
 
@@ -220,6 +220,15 @@ lexxExpr stopColon stopSpace = first exprs . f
             _ | (name,x) <- span0 isVar c_x, not $ BS.null name -> Var name $: f x
             _ -> error "Unexpect $ followed by unexpected stuff"
 
+jumpCont :: Str0 -> Str0
+jumpCont o
+    | '$' <- head0 o
+    , let x = tail0 o
+    = case head0 x of
+        '\n' -> dropSpace $ tail0 x
+        '\r' -> dropSpace $ dropN $ tail0 x
+        _ -> o
+    | otherwise = o
 
 splitLineCont :: Str0 -> (Str, Str0)
 splitLineCont x = first BS.concat $ f x
