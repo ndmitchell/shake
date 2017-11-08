@@ -137,7 +137,8 @@ commandExplicit funcName oopts results exe args = do
     let tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
-            [] -> traced (takeFileName exe)
+            _ | useShell -> traced $ takeFileName $ fst $ word1 exe
+            [] -> traced $ takeFileName exe
 
     let tracker act
             | useLint = fsatrace act
