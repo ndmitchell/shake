@@ -121,16 +121,16 @@ lexerLoop c_x | (c,x) <- list0 c_x = case c of
     '\n' -> lexerLoop x
     ' ' -> lexBind $ dropSpace x
     '#' -> lexerLoop $ dropWhile0 (/= '\n') x
-    'b' | Just x <- strip "uild " x -> lexBuild $ dropSpace x
-    'r' | Just x <- strip "ule " x -> lexRule $ dropSpace x
-    'd' | Just x <- strip "efault " x -> lexDefault $ dropSpace x
-    'p' | Just x <- strip "ool " x -> lexPool $ dropSpace x
-    'i' | Just x <- strip "nclude " x -> lexInclude $ dropSpace x
-    's' | Just x <- strip "ubninja " x -> lexSubninja $ dropSpace x
+    'b' | Just x <- strip "uild " x -> lexBuild x
+    'r' | Just x <- strip "ule " x -> lexRule x
+    'd' | Just x <- strip "efault " x -> lexDefault x
+    'p' | Just x <- strip "ool " x -> lexPool x
+    'i' | Just x <- strip "nclude " x -> lexInclude x
+    's' | Just x <- strip "ubninja " x -> lexSubninja x
     '\0' -> []
     _ -> lexDefine c_x
     where
-        strip str (Str0 x) = if b `BS.isPrefixOf` x then Just $ Str0 $ BS.drop (BS.length b) x else Nothing
+        strip str (Str0 x) = if b `BS.isPrefixOf` x then Just $ dropSpace $ Str0 $ BS.drop (BS.length b) x else Nothing
             where b = BS.pack str
 
 lexBind :: Str0 -> [Lexeme]
