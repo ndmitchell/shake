@@ -129,7 +129,9 @@ commandExplicit funcName oopts results exe args = do
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
-            putLoud $ maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++ showCommandForUser2 exe args
+            putLoud $
+                maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
+                if useShell then unwords $ exe : args else showCommandForUser2 exe args
             verb <- getVerbosity
             -- run quietly to supress the tracer (don't want to print twice)
             (if verb >= Loud then quietly else id) act
