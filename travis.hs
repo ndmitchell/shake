@@ -5,12 +5,14 @@ import Data.Function
 import System.Directory.Extra
 import System.Environment.Extra
 import System.Time.Extra
+import Data.Functor
 import Data.Version.Extra
 import Data.List
 import Data.Maybe
 import Control.Exception.Extra
 import Control.Monad
 import System.Process.Extra
+import Prelude
 
 
 requiresShake = words "ghc-make shake-language-c"
