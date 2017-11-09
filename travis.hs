@@ -5,7 +5,9 @@ import Data.Function
 import System.Directory.Extra
 import System.Environment.Extra
 import System.Time.Extra
+import Data.Version.Extra
 import Data.List
+import Data.Maybe
 import Control.Exception.Extra
 import Control.Monad
 import System.Process.Extra
@@ -81,8 +83,8 @@ main = do
     withCurrentDirectory "temp" $
         cmd "shake --demo --keep-going"
 
-    ghcver <- lookupEnv "GHCVER"
-    when (ghcver >= Just "7.6" && ghcver /= Just "head") $ do
+    ghcver <- fromMaybe "head" <$> lookupEnv "GHCVER"
+    when (ghcver /= "head" && readVersion ghcver >= readVersion "7.10") $ do
         ver <- do
             src <- readFile "shake.cabal"
             return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
