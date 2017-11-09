@@ -9,7 +9,7 @@ import Control.Monad
 import Control.Concurrent
 import General.GetOpt
 import General.Extra
-import Control.Exception.Extra hiding (assert)
+import Control.Exception.Extra
 import System.Directory as IO
 import System.Time.Extra
 import qualified System.IO.Extra as IO
