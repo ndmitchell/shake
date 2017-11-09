@@ -11,8 +11,7 @@ import Control.Monad
 import System.Process.Extra
 
 
--- Reenable as part of #494
-requiresShake = [] -- words "ghc-make shake-language-c"
+requiresShake = words "ghc-make shake-language-c"
 
 ms x = show $ ceiling $ x * 1000
 
