@@ -19,3 +19,4 @@
 - ignore: {name: "Redundant if"}
 - ignore: {name: "Move brackets to avoid $"}
 - ignore: {name: "Redundant lambda"}
+- ignore: {name: "Use lambda-case"} # Not supported by GHC 7.4
