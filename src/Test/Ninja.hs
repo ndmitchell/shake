@@ -20,10 +20,9 @@ import Prelude
 opts = Option "" ["arg"] (ReqArg Right "") ""
 
 main = shakeTest test [opts] $ \opts -> do
-    let args2 = "-C." : opts
-    let real = "real" `elem` args2
+    let real = "real" `elem` opts
     action $
-        if real then cmd "ninja" args2 else liftIO $ withArgs args2 Run.main
+        if real then cmd "ninja" opts else liftIO $ withArgs opts Run.main
 
 
 test build = do
