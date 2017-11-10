@@ -160,9 +160,10 @@ localMergeMutable root xs = Local
     ,localVerbosity = localVerbosity root
     ,localBlockApply = localBlockApply root
     -- mutable locals that need integrating
-    ,localDepends = localDepends root ++ concatMap localDepends xs
+        -- note that a lot of the lists are stored in reverse, assume root happened first
+    ,localDepends =  concatMap localDepends xs ++ localDepends root
     ,localDiscount = localDiscount root + maximum (0:map localDiscount xs)
-    ,localTraces = localTraces root ++ concatMap localTraces xs
+    ,localTraces = concatMap localTraces xs ++ localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
     }
