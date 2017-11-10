@@ -46,7 +46,8 @@ addBinds e bs = do
 -- STRUCTURE
 
 data Ninja = Ninja
-    {rules :: [(Str,Rule)]
+    {sources :: [FilePath]
+    ,rules :: [(Str,Rule)]
     ,singles :: [(FileStr,Build)]
     ,multiples :: [([FileStr], Build)]
     ,phonys :: [(Str, [FileStr])]
@@ -56,7 +57,7 @@ data Ninja = Ninja
     deriving Show
 
 newNinja :: Ninja
-newNinja = Ninja [] [] [] [] [] []
+newNinja = Ninja [] [] [] [] [] [] []
 
 data Build = Build
     {ruleName :: Str

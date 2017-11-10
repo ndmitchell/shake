@@ -18,7 +18,7 @@ parse file env = parseFile file env newNinja
 parseFile :: FilePath -> Env Str Str -> Ninja -> IO Ninja
 parseFile file env ninja = do
     lexes <- lexerFile $ if file == "-" then Nothing else Just file
-    foldM (applyStmt env) ninja $ withBinds lexes
+    foldM (applyStmt env) ninja{sources=file:sources ninja} $ withBinds lexes
 
 withBinds :: [Lexeme] -> [(Lexeme, [(Str,Expr)])]
 withBinds [] = []
