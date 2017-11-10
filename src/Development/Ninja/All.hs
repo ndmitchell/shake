@@ -59,8 +59,8 @@ runNinja file args tool = do
     addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file =<< newEnv
     return $ Just $ do
-        needDeps <- return $ needDeps ninja -- partial application
         phonys <- return $ Map.fromList phonys
+        needDeps <- return $ needDeps ninja phonys -- partial application
         singles <- return $ Map.fromList $ map (first filepathNormalise) singles
         multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map filepathNormalise) multiples, x <- xs]
         rules <- return $ Map.fromList rules
@@ -139,8 +139,8 @@ build needDeps phonys rules pools out build@Build{..} = do
                     -- when (deps == "gcc") $ liftIO $ removeFile depfile
 
 
-needDeps :: Ninja -> Build -> [Str] -> Action ()
-needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
+needDeps :: Ninja -> Map.HashMap Str [Str] -> Build -> [Str] -> Action ()
+needDeps Ninja{..} phonysMp = \build xs -> do -- eta reduced so 'builds' is shared
     opts <- getShakeOptions
     if isNothing $ shakeLint opts then needBS xs else do
         neededBS xs
@@ -176,7 +176,7 @@ needDeps Ninja{..} = \build xs -> do -- eta reduced so 'builds' is shared
         allDependencies rule = f Set.empty [] [rule]
             where
                 f seen [] [] = []
-                f seen [] (x:xs) = f seen (map filepathNormalise $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
+                f seen [] (x:xs) = f seen (map filepathNormalise $ concatMap (resolvePhony phonysMp) $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
                 f seen (x:xs) rest | x `Set.member` seen = f seen xs rest
                                    | otherwise = x : f (Set.insert x seen) xs (maybeToList (Map.lookup x builds) ++ rest)
 
