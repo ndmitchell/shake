@@ -21,12 +21,13 @@ opts = Option "" ["arg"] (ReqArg Right "") ""
 
 main = shakeTest test [opts] $ \opts -> do
     let real = "real" `elem` opts
-    action $
-        if real then cmd "ninja" opts else liftIO $ withArgs opts Run.main
+    action $ if real
+        then cmd "ninja" opts
+        else liftIO $ withArgs ("--lint":"--report=report.html":opts) Run.main
 
 
 test build = do
-    let runEx ninja shake = build $ "--exception" : map ("--arg=" ++) (words ninja) ++ words shake
+    let runEx ninja shake = build $ "--exception" : "--no-report" : "--no-lint" : map ("--arg=" ++) (words ninja) ++ words shake
     let run ninja = runEx ninja []
     let runFail ninja bad = assertException [bad] $ runEx ninja "--quiet"
 
@@ -73,7 +74,7 @@ test build = do
     run "-f../../src/Test/Ninja/lint.ninja good --lint"
     runFail "-f../../src/Test/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
-    res <- fmap (drop 1 . lines . fst) $ captureOutput $ runEx "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx" "--no-report --quiet"
+    res <- fmap (drop 1 . lines . fst) $ captureOutput $ runEx "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx" "--quiet"
     want <- lines <$> readFile "../../src/Test/Ninja/compdb.output"
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b
