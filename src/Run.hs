@@ -30,7 +30,7 @@ main = do
                 if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
-        Nothing -> do
+        Nothing ->
             withArgs ("--no-time":args) $ whileM $ do
                 redoRef <- newIORef $ return False
                 shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
