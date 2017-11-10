@@ -107,6 +107,10 @@ test build = do
     run "-f../../src/Test/Ninja/continuations.ninja"
     assertExists "continuations.txt"
 
+    copyFile "../../src/Test/Ninja/restart.ninja" "restart.ninja"
+    runEx "-frestart.ninja" "--sleep"
+    assertExists "restart.txt"
+
     when False $ do
         -- currently fails because Shake doesn't match Ninja here
         run "-f../../src/Test/Ninja/outputtouch.ninja"
