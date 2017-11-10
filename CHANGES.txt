@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #548, rebuild the Ninja files, if they change, restart
     #547, make Ninja --lint checking see through phonys
     #546, support Ninja line continuations in more places
     #470, make --verbose and --quiet help text clearer

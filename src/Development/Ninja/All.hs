@@ -18,6 +18,7 @@ import Control.Exception.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
+import Data.IORef
 import Data.List.Extra
 import System.Info.Extra
 import Prelude
@@ -26,13 +27,16 @@ import Prelude
 import General.Extra(removeFile_)
 import General.Timing(addTiming)
 import General.Makefile(parseMakefile)
-import Development.Shake.Internal.FileName(filepathNormalise)
+import Development.Shake.Internal.FileName(filepathNormalise, fileNameFromString)
+import Development.Shake.Internal.FileInfo(getFileInfo)
 import Development.Shake.Internal.Errors(errorStructured)
 import Development.Shake.Internal.Rules.File(needBS, neededBS)
 import Development.Shake.Internal.Rules.OrderOnly(orderOnlyBS)
 
 
-runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))
+-- | Given the Ninja source file, a list of file arguments, a tool name.
+--   Return a bool if you should restart and the rules.
+runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (IO Bool, Rules ()))
 runNinja file args (Just "compdb") = do
     dir <- getCurrentDirectory
     Ninja{..} <- parse file =<< newEnv
@@ -57,8 +61,9 @@ runNinja file args (Just x) = errorIO $ "Unknown tool argument, expected 'compdb
 
 runNinja file args tool = do
     addTiming "Ninja parse"
+    restart <- newIORef False
     ninja@Ninja{..} <- parse file =<< newEnv
-    return $ Just $ do
+    return $ Just $ (,) (readIORef restart) $ do
         phonys <- return $ Map.fromList phonys
         needDeps <- return $ needDeps ninja phonys -- partial application
         singles <- return $ Map.fromList $ map (first filepathNormalise) singles
@@ -67,10 +72,18 @@ runNinja file args tool = do
         pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
             (,) name <$> newResource (BS.unpack name) depth
 
-        action $ needBS $ concatMap (resolvePhony phonys) $
-            if not $ null args then map BS.pack args
-            else if not $ null defaults then defaults
-            else Map.keys singles ++ Map.keys multiples
+        action $ do
+            -- build the .ninja files, if they change, restart the build
+            before <- liftIO $ mapM (getFileInfo . fileNameFromString) sources
+            need sources
+            after <- liftIO $ mapM (getFileInfo . fileNameFromString) sources
+            if before /= after then
+                liftIO $ writeIORef restart True
+             else
+                needBS $ concatMap (resolvePhony phonys) $
+                    if not $ null args then map BS.pack args
+                    else if not $ null defaults then defaults
+                    else Map.keys singles ++ Map.keys multiples
 
         (\x -> (map BS.unpack . fst) <$> Map.lookup (BS.pack x) multiples) &?> \out -> let out2 = map BS.pack out in
             build needDeps phonys rules pools out2 $ snd $ multiples Map.! head out2
