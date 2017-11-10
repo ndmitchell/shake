@@ -27,7 +27,7 @@ main = shakeTest test [opts] $ \opts -> do
 
 
 test build = do
-    let runEx ninja shake = build $ "--exception" : "--no-report" : "--no-lint" : map ("--arg=" ++) (words ninja) ++ words shake
+    let runEx ninja shake = build $ "--exception" : "--no-report" : map ("--arg=" ++) (words ninja) ++ words shake
     let run ninja = runEx ninja []
     let runFail ninja bad = assertException [bad] $ runEx ninja "--quiet"
 
