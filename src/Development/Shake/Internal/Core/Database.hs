@@ -194,17 +194,18 @@ build pool Database{..} BuildKey{..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
-        whenJust (checkStack is stack) $ \(badId, badKey) ->
-            -- everything else gets thrown via Left and can be Staunch'd
-            -- recursion in the rules is considered a worse error, so fails immediately
-            errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
-
         buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)
             (\v -> return $ continue $ case v of
                 Left e -> Left e
                 Right rs -> Right (0, Depends is, map result rs)) $
             \go -> do
+                -- only bother doing the stack check if we're actually going to build stuff
+                whenJust (checkStack is stack) $ \(badId, badKey) ->
+                    -- everything else gets thrown via Left and can be Staunch'd
+                    -- recursion in the rules is considered a worse error, so fails immediately
+                    errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
+
                 time <- offsetTime
                 go $ \x -> case x of
                     Left e -> addPoolException pool $ continue $ Left e
