@@ -173,11 +173,12 @@ withLineBuffering act = do
     -- instead of withBuffering avoid two finally handlers and stack depth
     out <- hGetBuffering stdout
     err <- hGetBuffering stderr
-    hSetBuffering stdout LineBuffering
-    hSetBuffering stderr LineBuffering
-    act `finally` do
-        hSetBuffering stdout out
-        hSetBuffering stderr err
+    if out == LineBuffering && err == LineBuffering then act else do
+        hSetBuffering stdout LineBuffering
+        hSetBuffering stderr LineBuffering
+        act `finally` do
+            hSetBuffering stdout out
+            hSetBuffering stderr err
 
 
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
