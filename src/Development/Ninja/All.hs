@@ -18,7 +18,6 @@ import Control.Exception.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
-import Data.IORef
 import Data.List.Extra
 import System.Info.Extra
 import Prelude
@@ -36,8 +35,8 @@ import Development.Shake.Internal.Rules.OrderOnly(orderOnlyBS)
 
 -- | Given the Ninja source file, a list of file arguments, a tool name.
 --   Return a bool if you should restart and the rules.
-runNinja :: FilePath -> [String] -> Maybe String -> IO (Maybe (IO Bool, Rules ()))
-runNinja file args (Just "compdb") = do
+runNinja :: IO () -> FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))
+runNinja restart file args (Just "compdb") = do
     dir <- getCurrentDirectory
     Ninja{..} <- parse file =<< newEnv
     rules <- return $ Map.fromList [r | r <- rules, BS.unpack (fst r) `elem` args]
@@ -57,13 +56,12 @@ runNinja file args (Just "compdb") = do
     putStr $ printCompDb xs
     return Nothing
 
-runNinja file args (Just x) = errorIO $ "Unknown tool argument, expected 'compdb', got " ++ x
+runNinja restart file args (Just x) = errorIO $ "Unknown tool argument, expected 'compdb', got " ++ x
 
-runNinja file args tool = do
+runNinja restart file args tool = do
     addTiming "Ninja parse"
-    restart <- newIORef False
     ninja@Ninja{..} <- parse file =<< newEnv
-    return $ Just $ (,) (readIORef restart) $ do
+    return $ Just $ do
         phonys <- return $ Map.fromList phonys
         needDeps <- return $ needDeps ninja phonys -- partial application
         singles <- return $ Map.fromList $ map (first filepathNormalise) singles
@@ -78,7 +76,7 @@ runNinja file args tool = do
             need sources
             after <- liftIO $ mapM (getFileInfo . fileNameFromString) sources
             if before /= after then
-                liftIO $ writeIORef restart True
+                runAfter restart
              else
                 needBS $ concatMap (resolvePhony phonys) $
                     if not $ null args then map BS.pack args

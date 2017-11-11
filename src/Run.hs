@@ -9,7 +9,6 @@ import General.Timing(resetTimings)
 import Control.Monad.Extra
 import Control.Exception.Extra
 import Data.Maybe
-import Data.IORef
 import qualified System.Directory as IO
 import General.Extra
 import General.GetOpt
@@ -30,25 +29,18 @@ main = do
                 if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
-        Nothing ->
-            withArgs ("--no-time":args) $ whileM $ do
-                redoRef <- newIORef $ return False
-                shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
-                    let tool = listToMaybe [x | Tool x <- opts]
-                    makefile <- case reverse [x | UseMakefile x <- opts] of
-                        x:_ -> return x
-                        _ -> do
-                            res <- findFile ["build.ninja"]
-                            case res of
-                                Just x -> return x
-                                Nothing -> errorIO "Could not find `build.ninja'"
-                    res <- runNinja makefile targets tool
-                    case res of
-                        Nothing -> return Nothing
-                        Just (redo, rules) -> do
-                            writeIORef redoRef redo
-                            return $ Just rules
-                join $ readIORef redoRef
+        Nothing -> do
+            let go = shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
+                        let tool = listToMaybe [x | Tool x <- opts]
+                        makefile <- case reverse [x | UseMakefile x <- opts] of
+                            x:_ -> return x
+                            _ -> do
+                                res <- findFile ["build.ninja"]
+                                case res of
+                                    Just x -> return x
+                                    Nothing -> errorIO "Could not find `build.ninja'"
+                        runNinja go makefile targets tool
+            withArgs ("--no-time":args) go
 
 data Flag = UseMakefile FilePath
           | Tool String
