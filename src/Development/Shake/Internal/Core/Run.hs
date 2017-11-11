@@ -143,7 +143,10 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                     forM_ shakeLiveFiles $ \file -> do
                         putWhen Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
-            sequence_ . reverse =<< readIORef after
+            after <- readIORef after
+            unless (null after) $ do
+                addTiming "Running runAfter"
+                sequence_ $ reverse after
 
 
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
