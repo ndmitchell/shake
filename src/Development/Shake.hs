@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 
 -- | This module is used for defining Shake build systems. As a simple example of a Shake build system,
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
