@@ -91,7 +91,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
     absent <- newIORef []
     withCleanup $ \cleanup -> do
         addCleanup_ cleanup $ do
-            when shakeTimings printTimings
+            when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
             diagnostic $ return "Starting run 3"

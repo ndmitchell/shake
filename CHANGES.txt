@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #469, only print timing information at normal verbosity or above
     #340, add runAfter
     #372, deprecate askOracleWith
     #520, only record each dependency once
