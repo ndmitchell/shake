@@ -14,7 +14,6 @@ module Development.Shake.Internal.Core.Run(
     parallel,
     orderOnlyAction,
     batch,
-    -- Internal stuff
     runAfter
     ) where
 

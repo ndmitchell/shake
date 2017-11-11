@@ -51,7 +51,7 @@ module Development.Shake(
     shakeOptions,
     Rules, action, withoutActions, alternatives, priority,
     Action, traced,
-    liftIO, actionOnException, actionFinally,
+    liftIO, actionOnException, actionFinally, runAfter,
     ShakeException(..),
     -- * Configuration
     ShakeOptions(..), Rebuild(..), Lint(..), Change(..),
