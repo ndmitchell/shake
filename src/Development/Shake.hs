@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 
 -- | This module is used for defining Shake build systems. As a simple example of a Shake build system,
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
@@ -87,7 +88,7 @@ module Development.Shake(
     -- * Environment rules
     getEnv, getEnvWithDefault,
     -- * Oracle rules
-    ShakeValue, RuleResult, addOracle, askOracle, askOracleWith,
+    ShakeValue, RuleResult, addOracle, askOracle,
     -- * Special rules
     alwaysRerun,
     -- * Resources
@@ -102,7 +103,8 @@ module Development.Shake(
     batch,
     -- * Deprecated
     (*>), (|*>), (&*>),
-    (**>), (*>>), (?>>)
+    (**>), (*>>), (?>>),
+    askOracleWith
     ) where
 
 import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
@@ -211,3 +213,12 @@ infix 1 *>, |*>, &*>
 -- | /Deprecated:/ Alias for '&%>'.
 (&*>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 (&*>) = (&%>)
+
+
+---------------------------------------------------------------------
+-- DEPRECATED SINCE 0.16.1, NOV 2017
+
+-- | /Depreciated:/ Replace @'askOracleWith' q a@ by @'askOracle' q@
+--   since the 'RuleResult' type family now fixes the result type.
+askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
+askOracleWith question _ = askOracle question

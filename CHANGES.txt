@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #372, deprecate askOracleWith
     #520, only record each dependency once
     #548, rebuild the Ninja files, if they change, restart
     #547, make Ninja --lint checking see through phonys

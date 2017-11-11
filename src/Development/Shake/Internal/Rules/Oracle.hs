@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Oracle(
-    addOracle, askOracle, askOracleWith
+    addOracle, askOracle
     ) where
 
 import Development.Shake.Internal.Core.Run
@@ -109,10 +109,3 @@ addOracle act = do
 --   to 'addOracle'.
 askOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> Action a
 askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answer
-
--- | Get information previously added with 'addOracle'. The second argument is not used, but can
---   be useful to fix the answer type, avoiding ambiguous type error messages.
---
---   Since the 'RuleResult' type family now fixes the result type, 'askOracle' should be used instead.
-askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
-askOracleWith question _ = askOracle question
