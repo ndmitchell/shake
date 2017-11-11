@@ -246,7 +246,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
                         {result = runValue
                         ,changed = c
                         ,built = step
-                        ,depends = reverse localDepends
+                        ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
 

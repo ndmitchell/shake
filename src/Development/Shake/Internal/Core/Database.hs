@@ -6,7 +6,8 @@ module Development.Shake.Internal.Core.Database(
     Trace(..), newTrace,
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies, lookupStatus,
-    BuildKey(..), build, Depends,
+    BuildKey(..), build,
+    Depends, nubDepends,
     Step, Result(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -155,6 +156,18 @@ newtype Depends = Depends {fromDepends :: [Id]}
 instance Show Depends where
     -- Appears in diagnostic output and the Depends ctor is just verbose
     show = show . fromDepends
+
+-- | Afterwards each Id must occur at most once and there are no empty Depends
+nubDepends :: [Depends] -> [Depends]
+nubDepends = fMany Set.empty
+    where
+        fMany seen [] = []
+        fMany seen (Depends d:ds) = [Depends d2 | d2 /= []] ++ fMany seen2 ds
+            where (d2,seen2) = fOne seen d
+
+        fOne seen [] = ([], seen)
+        fOne seen (x:xs) | x `Set.member` seen = fOne seen xs
+        fOne seen (x:xs) = first (x:) $ fOne (Set.insert x seen) xs
 
 
 newtype BuildKey = BuildKey
