@@ -22,6 +22,7 @@ import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.UTF8 as UTF8
 import Data.Functor
+import Data.Semigroup (Semigroup (..))
 import Data.Monoid
 import Prelude
 
@@ -68,10 +69,12 @@ sizeBuilder (Builder i _) = i
 runBuilder :: Builder -> BS.ByteString
 runBuilder (Builder i f) = unsafePerformIO $ BS.create i $ \ptr -> f ptr 0
 
+instance Semigroup Builder where
+    (Builder x1 x2) <> (Builder y1 y2) = Builder (x1+y1) $ \p i -> do x2 p i; y2 p $ i+x1
+
 instance Monoid Builder where
     mempty = Builder 0 $ \_ _ -> return ()
-    mappend (Builder x1 x2) (Builder y1 y2) = Builder (x1+y1) $ \p i -> do x2 p i; y2 p $ i+x1
-
+    mappend = (<>)
 
 -- | Methods for Binary serialisation that go directly between strict ByteString values.
 --   When the Database is read each key/value will be loaded as a separate ByteString,

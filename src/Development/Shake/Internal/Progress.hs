@@ -28,6 +28,7 @@ import General.Template
 import System.IO.Unsafe
 import Paths_shake
 import System.Time.Extra
+import Data.Semigroup (Semigroup (..))
 import Data.Monoid
 import Prelude
 
@@ -66,10 +67,8 @@ data Progress = Progress
     ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (have never been built before).
     }
     deriving (Eq,Ord,Show,Read,Data,Typeable)
-
-instance Monoid Progress where
-    mempty = Progress Nothing 0 0 0 0 0 0 0 (0,0)
-    mappend a b = Progress
+instance Semigroup Progress where
+    a <> b = Progress
         {isFailure = isFailure a `mplus` isFailure b
         ,countSkipped = countSkipped a + countSkipped b
         ,countBuilt = countBuilt a + countBuilt b
@@ -83,6 +82,10 @@ instance Monoid Progress where
                     in x1 `seq` x2 `seq` (x1,x2)
         }
 
+
+instance Monoid Progress where
+    mempty = Progress Nothing 0 0 0 0 0 0 0 (0,0)
+    mappend = (<>)
 
 ---------------------------------------------------------------------
 -- MEALY TYPE - for writing the progress functions
