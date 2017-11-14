@@ -15,7 +15,7 @@ import Data.Maybe
 import Data.Dynamic
 import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.Progress
-import Development.Shake.Internal.FilePattern
+import FilePattern.Legacy
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Internal.CmdOption

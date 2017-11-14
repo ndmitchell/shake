@@ -28,7 +28,7 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import Development.Shake.FilePath
-import Development.Shake.Internal.FilePattern
+import FilePattern.Legacy
 import General.Extra
 import General.Binary
 import Prelude

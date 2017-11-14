@@ -49,7 +49,7 @@ import Prelude
 import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Core.Run
 import Development.Shake.FilePath
-import Development.Shake.Internal.FilePattern
+import FilePattern.Legacy
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived

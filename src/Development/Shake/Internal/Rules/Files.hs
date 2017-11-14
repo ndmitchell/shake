@@ -24,7 +24,7 @@ import Development.Shake.Internal.FileName
 import Development.Shake.Classes
 import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.Rules.File
-import Development.Shake.Internal.FilePattern
+import FilePattern.Legacy
 import Development.Shake.FilePath
 import Development.Shake.Internal.Options
 

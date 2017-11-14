@@ -123,7 +123,7 @@ import Development.Shake.Internal.Args
 import Development.Shake.Internal.Shake
 
 import Development.Shake.Command
-import Development.Shake.Internal.FilePattern
+import FilePattern.Legacy
 import Development.Shake.Internal.Rules.Directory
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Rules.Files

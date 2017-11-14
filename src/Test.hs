@@ -28,7 +28,6 @@ import qualified Test.Errors as Errors
 import qualified Test.Existence as Existence
 import qualified Test.FileLock as FileLock
 import qualified Test.FilePath as FilePath
-import qualified Test.FilePattern as FilePattern
 import qualified Test.Files as Files
 import qualified Test.Forward as Forward
 import qualified Test.Journal as Journal
@@ -75,7 +74,6 @@ mains =
     ,"existence" * Existence.main
     ,"filelock" * FileLock.main
     ,"filepath" * FilePath.main
-    ,"filepattern" * FilePattern.main
     ,"files" * Files.main
     ,"forward" * Forward.main
     ,"journal" * Journal.main

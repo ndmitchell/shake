@@ -85,6 +85,7 @@ library
         directory,
         extra >= 1.5.3,
         filepath,
+        filepattern >= 0.1,
         hashable >= 1.1.2.3,
         js-flot,
         js-jquery,
@@ -137,7 +138,6 @@ library
         Development.Shake.Internal.Errors
         Development.Shake.Internal.FileInfo
         Development.Shake.Internal.FileName
-        Development.Shake.Internal.FilePattern
         Development.Shake.Internal.Options
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
@@ -186,6 +186,7 @@ executable shake
         directory,
         extra >= 1.5.3,
         filepath,
+        filepattern >= 0.1,
         hashable >= 1.1.2.3,
         js-flot,
         js-jquery,
@@ -233,7 +234,6 @@ executable shake
         Development.Shake.Internal.Errors
         Development.Shake.Internal.FileInfo
         Development.Shake.Internal.FileName
-        Development.Shake.Internal.FilePattern
         Development.Shake.Internal.Options
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
@@ -288,6 +288,7 @@ test-suite shake-test
         directory,
         extra >= 1.5.3,
         filepath,
+        filepattern >= 0.1,
         hashable >= 1.1.2.3,
         js-flot,
         js-jquery,
@@ -338,7 +339,6 @@ test-suite shake-test
         Development.Shake.Internal.Errors
         Development.Shake.Internal.FileInfo
         Development.Shake.Internal.FileName
-        Development.Shake.Internal.FilePattern
         Development.Shake.Internal.Options
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
@@ -385,7 +385,6 @@ test-suite shake-test
         Test.Existence
         Test.FileLock
         Test.FilePath
-        Test.FilePattern
         Test.Files
         Test.Forward
         Test.Journal
