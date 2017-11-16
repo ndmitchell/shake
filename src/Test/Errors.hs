@@ -1,7 +1,9 @@
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
 
 module Test.Errors(main) where
 
 import Development.Shake
+import Development.Shake.Classes
 import Development.Shake.FilePath
 import Test.Type
 import Data.List
@@ -17,6 +19,12 @@ import Data.Functor
 import Prelude
 
 data Args = Die deriving (Eq,Enum,Bounded,Show)
+
+newtype BadBinary = BadBinary String deriving (NFData,Show,Eq,Hashable)
+type instance RuleResult BadBinary = BadBinary
+instance Binary BadBinary where
+    put (BadBinary x) = put x
+    get = do x <- get; if x == "bad" then error "get: BadBinary \"bad\"" else return $ BadBinary x
 
 main = shakeTest test optionsEnum $ \args -> do
     "norule" %> \_ ->
@@ -122,6 +130,17 @@ main = shakeTest test optionsEnum $ \args -> do
         liftIO $ sleep 20
         writeFile' out ""
 
+    addOracle $ \(BadBinary x) -> return $ BadBinary $ 'b':x
+    "badinput" %> \out -> do
+        askOracle $ BadBinary "bad"
+        liftIO $ appendFile out "x"
+    "badoutput" %> \out -> do
+        askOracle $ BadBinary "ad"
+        liftIO $ appendFile out "x"
+    "badnone" %> \out -> do
+        alwaysRerun
+        liftIO $ appendFile out "x"
+
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
         liftIO $ putStrLn $ let x = x in x
@@ -208,3 +227,16 @@ test build = do
     -- check a fast failure aborts a slow success
     (t, _) <- duration $ crash ["fast_failure","slow_success","-j2"] ["die"]
     assertBool (t < 10) $ "Took too long, expected < 10, got " ++ show t
+
+    -- for exceptions on Key we die while reading the database, and restart from scratch
+    build ["badinput"]
+    build ["badinput","--silent"]
+    assertContents "badinput" "xx"
+    build ["badnone","--silent"] -- must be able to still run other rules
+    assertContents "badnone" "x"
+
+    -- for exceptions on Value we die while running the rule that requires it
+    build ["badoutput"]
+    crash ["badoutput"] ["badoutput","BadBinary"]
+    build ["badnone"] -- must be able to still run other rules
+    assertContents "badnone" "xx"
