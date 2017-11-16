@@ -21,7 +21,7 @@ import Unsafe.Coerce
 -- | Like TypeRep, but the Show includes enough information to be unique
 --   so I can rely on @a == b === show a == show b@.
 newtype QTypeRep = QTypeRep {fromQTypeRep :: TypeRep}
-    deriving (Eq,Hashable)
+    deriving (Eq,Hashable,NFData)
 
 instance Show QTypeRep where
     show (QTypeRep x) = show x ++ " {" ++ showHex (abs $ hashWithSalt 0 x) "" ++ "}"

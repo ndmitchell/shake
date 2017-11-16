@@ -123,6 +123,13 @@ data Status
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
+instance NFData Status where
+    rnf (Ready x) = rnf x
+    rnf (Error x) = rnf $ show x -- Best I can do for arbitrary exceptions
+    rnf (Loaded x) = rnf x
+    rnf (Waiting _ x) = rnf x -- Can't RNF a waiting, but also unnecessary
+    rnf Missing = ()
+
 data Result a = Result
     {result :: a -- ^ the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
@@ -132,6 +139,9 @@ data Result a = Result
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Functor)
 
+instance NFData a => NFData (Result a) where
+    -- ignore the unpacked fields
+    rnf (Result a _ _ b _ c) = rnf a `seq` rnf b `seq` rnf c
 
 statusType Ready{} = "Ready"
 statusType Error{} = "Error"
