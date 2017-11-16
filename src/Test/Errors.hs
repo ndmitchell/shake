@@ -128,8 +128,7 @@ main = shakeTest test optionsEnum $ \args -> do
 
 test build = do
     let crash args parts = assertException parts (build $ "--quiet" : args)
-    build ["clean"]
-    build ["--sleep"]
+    build ["clean","--sleep"]
 
     writeFile "chain.1" "x"
     build ["chain.3","--sleep"]
