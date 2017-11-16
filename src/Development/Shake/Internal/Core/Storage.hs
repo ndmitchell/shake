@@ -59,7 +59,7 @@ databaseVersion x = "SHAKE-DATABASE-13-" ++ s ++ "\r\n"
 --   error witness is manufactured. If the witness ever changes the entire DB is
 --   rewritten.
 withStorage
-    :: (Show k, Eq k, Hashable k, Show v)
+    :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
     => ShakeOptions                      -- ^ Storage options
     -> (IO String -> IO ())              -- ^ Logging function
     -> Map.HashMap k (BinaryOp v)           -- ^ Witnesses
@@ -128,6 +128,8 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                                 return i
                             Right bs -> do
                                 let (k,id,v) = load bs
+                                evaluate $ rnf k
+                                evaluate $ rnf v
                                 Ids.insert ids id (k,v)
                                 diagnostic $ do
                                     let raw x = "[len " ++ show (BS.length bs) ++ "] " ++ concat
