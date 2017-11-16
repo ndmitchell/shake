@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Test.Errors(main) where
 
@@ -20,7 +20,7 @@ import Prelude
 
 data Args = Die deriving (Eq,Enum,Bounded,Show)
 
-newtype BadBinary = BadBinary String deriving (NFData,Show,Eq,Hashable)
+newtype BadBinary = BadBinary String deriving (NFData,Show,Eq,Hashable,Typeable)
 type instance RuleResult BadBinary = BadBinary
 instance Binary BadBinary where
     put (BadBinary x) = put x
