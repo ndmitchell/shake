@@ -67,6 +67,9 @@ data Progress = Progress
     }
     deriving (Eq,Ord,Show,Read,Data,Typeable)
 
+instance Semigroup Progress where
+    (<>) = mappend
+
 instance Monoid Progress where
     mempty = Progress Nothing 0 0 0 0 0 0 0 (0,0)
     mappend a b = Progress

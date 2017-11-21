@@ -3,6 +3,7 @@ module General.ListBuilder(
     ListBuilder, runListBuilder, newListBuilder
     ) where
 
+import Data.Semigroup
 import Data.Monoid
 import Prelude()
 
@@ -10,6 +11,9 @@ data ListBuilder a
     = Zero
     | One a
     | Add (ListBuilder a) (ListBuilder a)
+
+instance Semigroup (ListBuilder a) where
+    (<>) = mappend
 
 instance Monoid (ListBuilder a) where
     mempty = Zero

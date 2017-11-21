@@ -19,6 +19,9 @@ isEmpty (Bilist as bs) = null as && null bs
 instance Eq a => Eq (Bilist a) where
     a == b = toList a == toList b
 
+instance Semigroup (Bilist a) where
+    (<>) = mappend
+
 instance Monoid (Bilist a) where
     mempty = Bilist [] []
     mappend a b = Bilist (toList a ++ toList b) []
