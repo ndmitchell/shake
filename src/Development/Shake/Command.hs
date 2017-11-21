@@ -586,7 +586,7 @@ cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 newtype CmdArgument = CmdArgument [Either CmdOption String]
-  deriving (Eq, Monoid, Show)
+  deriving (Eq, Semigroup, Monoid, Show)
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where

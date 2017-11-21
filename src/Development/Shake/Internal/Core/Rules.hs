@@ -102,6 +102,9 @@ data SRules = SRules
     ,userRules :: !(Map.HashMap TypeRep{-k-} UserRule_)
     }
 
+instance Semigroup SRules where
+  (<>) = mappend
+
 instance Monoid SRules where
     mempty = SRules mempty Map.empty Map.empty
     mappend (SRules x1 x2 x3) (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (Map.unionWith g x3 y3)
@@ -112,6 +115,8 @@ instance Monoid SRules where
             fromUnordered (Unordered xs) = xs
             fromUnordered x = [x]
 
+instance Monoid a => Semigroup (Rules a) where
+    (<>) = mappend
 
 instance Monoid a => Monoid (Rules a) where
     mempty = return mempty
