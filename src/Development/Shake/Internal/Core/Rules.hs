@@ -119,7 +119,7 @@ instance Monoid SRules where
 instance Semigroup a => Semigroup (Rules a) where
     (<>) = liftA2 (<>)
 
-instance Monoid a => Monoid (Rules a) where
+instance (Semigroup a, Monoid a) => Monoid (Rules a) where
     mempty = return mempty
     mappend = (<>)
 
