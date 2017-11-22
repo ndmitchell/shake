@@ -106,8 +106,8 @@ library
     if !os(windows)
         build-depends: unix
 
-    if !impl(ghc >= 8.0)
-        build-depends: semigroups == 0.18.*
+    if impl(ghc < 8.0)
+        build-depends: semigroups >= 0.18
 
     exposed-modules:
         Development.Shake
@@ -210,8 +210,8 @@ executable shake
     if !os(windows)
         build-depends: unix
 
-    if !impl(ghc >= 8.0)
-        build-depends: semigroups == 0.18.*
+    if impl(ghc < 8.0)
+        build-depends: semigroups >= 0.18
 
     other-modules:
         Development.Ninja.All
@@ -316,8 +316,8 @@ test-suite shake-test
     if !os(windows)
         build-depends: unix
 
-    if !impl(ghc >= 8.0)
-        build-depends: semigroups == 0.18.*
+    if impl(ghc < 8.0)
+        build-depends: semigroups >= 0.18
 
     other-modules:
         Development.Ninja.All
