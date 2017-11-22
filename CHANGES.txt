@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #549, Semigroup-Monoid proposal support
     Hadrian-462, fail gracefully if on-disk formats change
     #469, only print timing information at normal verbosity or above
     #340, add runAfter
