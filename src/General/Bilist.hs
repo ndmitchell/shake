@@ -5,7 +5,7 @@ module General.Bilist(
     ) where
 
 import Data.Semigroup (Semigroup(..))
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import Prelude
 
 

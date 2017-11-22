@@ -29,7 +29,7 @@ import Data.Maybe
 import System.IO.Extra
 import System.IO.Unsafe
 import Data.Semigroup (Semigroup (..))
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary.Builder as Bin
 import Data.Binary.Put

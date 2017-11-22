@@ -29,7 +29,7 @@ import System.IO.Unsafe
 import Paths_shake
 import System.Time.Extra
 import Data.Semigroup (Semigroup (..))
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import Prelude
 
 #ifdef mingw32_HOST_OS

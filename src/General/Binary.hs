@@ -23,7 +23,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.UTF8 as UTF8
 import Data.Functor
 import Data.Semigroup (Semigroup (..))
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import Prelude
 
 
