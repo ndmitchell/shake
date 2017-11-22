@@ -106,6 +106,9 @@ library
     if !os(windows)
         build-depends: unix
 
+    if !impl(ghc >= 8.0)
+        build-depends: semigroups == 0.18.*
+
     exposed-modules:
         Development.Shake
         Development.Shake.Classes
