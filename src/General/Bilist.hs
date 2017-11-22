@@ -4,7 +4,8 @@ module General.Bilist(
     Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
 
-import Data.Monoid
+import Data.Semigroup (Semigroup(..))
+import Data.Monoid hiding ((<>))
 import Prelude
 
 
@@ -19,9 +20,12 @@ isEmpty (Bilist as bs) = null as && null bs
 instance Eq a => Eq (Bilist a) where
     a == b = toList a == toList b
 
+instance Semigroup (Bilist a) where
+    a <> b = Bilist (toList a ++ toList b) []
+
 instance Monoid (Bilist a) where
     mempty = Bilist [] []
-    mappend a b = Bilist (toList a ++ toList b) []
+    mappend = (<>)
 
 cons :: a -> Bilist a -> Bilist a
 cons x (Bilist as bs) = Bilist (x:as) bs

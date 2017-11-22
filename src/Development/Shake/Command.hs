@@ -30,6 +30,7 @@ import Data.Char
 import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
+import Data.Semigroup (Semigroup)
 import Data.Monoid
 import System.Directory
 import System.Environment.Extra
@@ -586,7 +587,7 @@ cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 newtype CmdArgument = CmdArgument [Either CmdOption String]
-  deriving (Eq, Monoid, Show)
+  deriving (Eq, Semigroup, Monoid, Show)
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where
