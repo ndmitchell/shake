@@ -210,6 +210,9 @@ executable shake
     if !os(windows)
         build-depends: unix
 
+    if !impl(ghc >= 8.0)
+        build-depends: semigroups == 0.18.*
+
     other-modules:
         Development.Ninja.All
         Development.Ninja.Env
@@ -312,6 +315,9 @@ test-suite shake-test
             build-depends: unix >= 2.5.1
     if !os(windows)
         build-depends: unix
+
+    if !impl(ghc >= 8.0)
+        build-depends: semigroups == 0.18.*
 
     other-modules:
         Development.Ninja.All
