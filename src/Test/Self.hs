@@ -91,4 +91,4 @@ packages = words
     ("base transformers binary unordered-containers hashable time bytestring primitive " ++
      "filepath directory process deepseq random utf8-string extra js-jquery js-flot") ++
     ["old-time" | compilerVersion < makeVersion [7,6]] ++
-    ["semigroup" | compilerVersion < makeVersion [8,0]]
+    ["semigroups" | compilerVersion < makeVersion [8,0]]
