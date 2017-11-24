@@ -133,7 +133,7 @@ instance NFData Status where
         where
             -- ignore the unpacked fields
             -- complex because ByteString lacks NFData in GHC 7.4 and below
-            rnfResult by (Result a _ _ b _ c) = rnf a `seq` rnf b `seq` by c `seq` ()
+            rnfResult by (Result a _ _ b _ c) = by a `seq` rnf b `seq` rnf c `seq` ()
             {-# INLINE rnfResult #-}
 
 data Result a = Result
