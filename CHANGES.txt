@@ -20,7 +20,7 @@ Changelog for Shake
     #502, add batch function to batch commands with high startup
     Avoid parallel duplicating local state such as discounting
     Prefer to resume tasks rather than start new ones
-0.16
+0.16, released 2017-09-20
     #536, make --skip work for oracles
     Ensure shakeOutput is used more consistently
     #49, add shakeColor and --color flags
@@ -53,18 +53,18 @@ Changelog for Shake
     Delete the deprecated defaultRule
     IMPORTANT: Incompatible on disk format change
     #428, don't persist errors to the database
-0.15.11
+0.15.11, released 2017-01-18
     #488, make sure parallel tracks dependencies
     #513, permit process-1.4.3.0 and above
-0.15.10
+0.15.10, released 2016-06-14
     #465, fix phony names which clash with directories
-0.15.9
+0.15.9, released 2016-06-12
     Documentation tweaks
     Optimise the thread pool
     Fix progress output through wget
-0.15.8
+0.15.8, released 2016-06-01
     Extra base bounds to rule out building on GHC 7.4
-0.15.7
+0.15.7, released 2016-06-01
     Require extra-1.4.8
     #457, better error message when calling need on a directory
     #456, use displayException for inner exceptions
@@ -72,7 +72,7 @@ Changelog for Shake
     #448, fix FSATrace on Mac 10.11
     #444, optimise copyFileChanged
     #58, change writeFile functions to MonadIO
-0.15.6
+0.15.6, released 2016-04-19
     Require the primitive package
     #431, make it an error to need a directory
     #393, add orderOnlyAction, a general version of orderOnly
@@ -127,18 +127,18 @@ Changelog for Shake
     #295, discount time spent waiting for a cache
     #294, give better error messages if you hit GHC bug #10793
     #4, add a lock file to stop corrupting databases
-0.15.5
+0.15.5, released 2015-08-04
     #279, make usingConfigFile do a need on the config file
     Fix a bug where predicted progress could sometimes be ??
     #264, make the the suite more less non-deterministic
-0.15.4
+0.15.4, released 2015-06-20
     Undo a locally modified file
-0.15.3
+0.15.3, released 2015-06-20
     #254, in staunch mode, print out all exceptions
     Require extra-1.3
     #259, discount time waiting for a resource in profiles
     #252, have the docs test configure not in dist
-0.15.2
+0.15.2, released 2015-05-22
     #248, add another example of using cmd
     #245, initial support for fsatrace lint checking
     Reexport -<.> from filepath where available
@@ -146,7 +146,7 @@ Changelog for Shake
     Add AddEnv and AddPath command options
     #243, close fds in child processes when spawning commands
     Make Ninja variable handling more accurate
-0.15.1
+0.15.1, released 2015-04-25
     If you have Shakefile.hs, pass it all arguments without interp
     Add shakeArgsPrune and shakeArgsPruneWith
     #228, allow running cmd async by collecting the ProcessHandle
@@ -157,7 +157,7 @@ Changelog for Shake
     #226, add escaping for GraphViz labels
     #227, add StdinBS for passing a bytestring as Stdin
     Make cmd Timeout call terminateProcess as well
-0.15
+0.15, released 2015-03-26
     #203, make shakeFiles a directory rather than a file prefix
     #220, add getHashedShakeVersion helper
     #220, add shakeVersionIgnore to ignore version numbers
@@ -177,17 +177,17 @@ Changelog for Shake
     Add unit for use with cmd
     IMPORTANT: Incompatible on disk format change
     #209, improve orderOnly dependencies
-0.14.3
+0.14.3, released 2015-01-07
     Support for the filepath shipped with GHC 7.10
     Add Timeout option to command
-0.14.2
+0.14.2, released 2014-11-27
     #198, add <//> operator to join FilePatterns
     #198, fix the <.> and other extension methods to work with //
-0.14.1
+0.14.1, released 2014-11-21
     #196, change the links to point at http://www.shakebuild.com/
     Improve the error messages when &%> or &?> go wrong
     Normalise file patterns used by &?>
-0.14
+0.14, released 2014-11-19
     Make FilePattern on Windows cope with all path separators
     Rename normalise to normaliseEx
     Expose native System.FilePath in Development.Shake.FilePath
@@ -204,9 +204,9 @@ Changelog for Shake
     Fix incorrect units when showing profile to the console
     Require the extra library
     #178, make --help show the current executable name
-0.13.4
+0.13.4, released 2014-09-19
     #171, fix the --demo mode on Linux
-0.13.3
+0.13.3, released 2014-09-16
     Ensure you wait until the progress thread cleans up
     Add --demo mode
     Add --progress=record and --progress=replay
@@ -231,16 +231,16 @@ Changelog for Shake
     Add Maybe instances for cmd arguments
     Add a --profile flag (alias for --report)
     Switch to an underlying continuation monad
-0.13.2
+0.13.2, released 2014-06-20
     #95, ensure progress never gets corrupted
     #124, add a profile report demo
     #128, allow long Ninja command lines
     Fix --report=- for builds with no commands in them
-0.13.1
+0.13.1, released 2014-05-28
     Remove all package upper bounds
     #126, Ninja compatibility if Ninja fails to create a file
     #123, generate Chrome compatible traces
-0.13
+0.13, released 2014-05-27
     #122, make --report=- write a report to stdout
     Improve the profile report summary
     #122, turn shakeReport into a list of files, instead of a Maybe
@@ -254,7 +254,7 @@ Changelog for Shake
     Deprecate defaultRule
     Make literal *> matches take precedence over wildcard matches
     #120, add a priority function
-0.12
+0.12, released 2014-05-09
     #62, move to a ReaderT/IORef for the Action monad
     Add DEPRECATED pragmas on system' calls
     Delete Development.Shake.Sys, use command or cmd instead
@@ -264,13 +264,13 @@ Changelog for Shake
     #117, use higher precision times for Unicode files on Windows
     #118, add support for Ninja -t compdb
     #119, more test fixes for Linux GHC 7.8
-0.11.7
+0.11.7, released 2014-05-05
     #119, test fixes for Linux GHC 7.8
-0.11.6
+0.11.6, released 2014-05-04
     #114, run build.sh in the test suite with sh
     #115, fix the test suite on Linux GHC 7.8
     #116, fix for GHC 7.10
-0.11.5
+0.11.5, released 2014-04-25
     Include the sources for flot and jQuery in the dist tarball
     Note that .. in FilePattern values is unlikely to be correct
     #109, make removeFiles delete directories that match
@@ -279,20 +279,20 @@ Changelog for Shake
     #110, don't give a warning if -threaded is turned off
     #103, don't suggest -qg and -qb, they fail without -threaded
     #102, fix up </> when the LHS starts with .
-0.11.4
+0.11.4, released 2014-03-20
     Work with QuickCheck-2.7 (which defines ===)
     #100, handle GraphViz missing gracefully
     Fix up the profiling report generation
     #99, add getEnvWithDefault
-0.11.3
+0.11.3, released 2014-02-27
     #97, fix a serialisation bug when > 254 arguments to need
-0.11.2
+0.11.2, released 2014-02-18
     #96, fix a bug in addPath that caused $PATH to be added twice
-0.11.1
+0.11.1, released 2014-02-06
     #94, GHC 7.8 support
     Add a Config module
     #89, support :: as a build rule separator
-0.11
+0.11, released 2014-01-03
     Add alternatives to allow overlapping rules
     Make storedValue take a ShakeOptions structure
     Generalise the newCache function
@@ -307,9 +307,9 @@ Changelog for Shake
     Mark Development.Shake.Sys as DEPRECATED with a pragma
     Change shakeLint to be of type Maybe Lint, instead of Bool
     #50, add shakeArgsAccumulate
-0.10.10
+0.10.10, released 2013-11-16
     Improve Ninja --lint checking
-0.10.9
+0.10.9, released 2013-11-15
     #76, add Ninja specific lint checking
     #75, add orderOnly dependencies
     #76, add needed, to assert a need doesn't rebuild
@@ -331,11 +331,11 @@ Changelog for Shake
     Add a --no-build flag
     #74, allow cmd to be used with result IO
     Add a Util module, with Makefile parsing
-0.10.8
+0.10.8, released 2013-10-15
     Allow unix-1.5.1 again
     Require Cabal 1.10 or above
     Convert to the cabal test compatible test suite
-0.10.7
+0.10.7, released 2013-09-26
     Support time-1.2
     #71, fix a bug when requesting all three outputs from command
     #64, add progressProgram and use it in progressSimple
@@ -360,16 +360,16 @@ Changelog for Shake
     Reduce stack usage when lint checking
     #24, create the output directories for the multiple file rule
     Improvements to match Ninja behaviour
-0.10.6
+0.10.6, released 2013-06-28
     Include command/cmd in the default module
     #16, change the scoping in subninja
     #15, fix up the Ninja default targets
     Fix up --version output
-0.10.5
+0.10.5, released 2013-06-14
     Improve progress prediction for the first build
     Fix removeFiles when there is a directory argument and a pattern
     Delete shakeDeterministic, shakeThreads=1 has the same effect
-0.10.4
+0.10.4, released 2013-06-13
     Fix writeFileChanged for line endings on Windows
     Support arguments to --progress
     Set the number of capabilities based on -j flags
@@ -382,10 +382,10 @@ Changelog for Shake
     Add -<.> alias for replaceExtension
     Add selectors on Stdout/Stdin/Exit
     Add CmdResult instance for ExitCode
-0.10.3
+0.10.3, released 2013-05-12
     Upgrade to Flot-0.8
     Small documentation markup fixes
-0.10.2
+0.10.2, released 2013-03-30
     Require process-1.1 or above
     Improve progress guesses (use exponential decay of work rate)
     Improve profiling report error messages
@@ -402,9 +402,9 @@ Changelog for Shake
     Add a --no-time flag
     Makefile improvements
     Avoid use of ghc-options in .cabal file
-0.10.1
+0.10.1, released 2013-03-18
     Allow the shake executable to build
-0.10
+0.10, released 2013-03-17
     Add phony, for writing phony actions
     Add removeFilesAfter
     Switch to the new profiling code
@@ -417,9 +417,9 @@ Changelog for Shake
     Change how progress messages are written
     Do not write a beep in progressDisplay, avoids a beep
     Add exe function to FilePath
-0.9.1
+0.9.1, released 2013-02-28
     GHC head (7.7) compatibility by removing the Rules fundep
-0.9
+0.9, released 2013-02-16
     Make the tests work on Linux
     Fix report generation on machines whose text format is not ASCII
     Make Directory functions work the same on Linux/Mac
@@ -434,10 +434,10 @@ Changelog for Shake
     Add newCache to cache the parsed contents of files
     Add newResourceIO and move newResource into the Rules monad
     Add shakeStorageLog, to help diagnosing obscure database errors
-0.8
+0.8, released 2013-01-31
     Improve the Oracle documentation
     Allow getDirectoryFiles to operate recursively
-0.7
+0.7, released 2013-01-29
     Change getDirectoryFiles to take a set of file patterns
     Add doesDirectoryExist function
     Add shakeAbbreviations feature
@@ -452,16 +452,16 @@ Changelog for Shake
     Change the storage to not write messages on --silent
     Add Applicative on Rules
     Add Applicative on Action
-0.6
+0.6, released 2013-01-09
     Make addOracle return a result of askOracle
     Export the class bodies from Classes
     Don't export ShakeValue from Classes
-0.5
+0.5, released 2013-01-05
     IMPORTANT: Incompatible on disk format change
     Add the ShakeValue constraint synonym
     Change the Oracle to be strongly typed
     Add a Classes module
-0.4
+0.4, released 2013-01-02
     Add shakeFlush to control how often flush is called
     Fix a serious space leak in the thread pool
     #502, add shakeAssume to assume files are clean/dirty
@@ -471,29 +471,29 @@ Changelog for Shake
     #501, add statistics gathering functions to help report progress
     Ensure registering witnesses is thread safe
     Ensure GHC does not over-optimise type registration
-0.3.10
+0.3.10, released 2012-12-17
     Add Paths.hs so you can run the tests from the tarball
-0.3.9
+0.3.9, released 2012-12-17
     Don't rely on toList returning a consistent order
     Allow hashable-1.2
-0.3.8
+0.3.8, released 2012-12-12
     Fix up FilePattern so "foo//bar" ?== "foo/bar"
-0.3.7
+0.3.7, released 2012-12-02
     Update the cabal file
-0.3.6
+0.3.6, released 2012-11-27
     Add addOracles, for implementing more advanced oracles
     Add withoutActions, for implementing command line arguments
-0.3.5
+0.3.5, released 2012-11-27
     #571, vastly improve the correctness of FilePattern
     #574, documentation typos
     Expose rulePriority
-0.3.4
+0.3.4, released 2012-09-17
     Update documentation with links to ICFP 2012 paper/talk
-0.3.3
+0.3.3, released 2012-09-17
     Minor refactorings
-0.3.2
+0.3.2, released 2012-09-12
     Fix cabal specification on non-Windows
-0.3.1
+0.3.1, released 2012-09-08
     Don't use syntax also stolen by QuasiQuotes
     Avoid warnings about unused monadic values
     Fix up getModificationTime for GHC 7.6
@@ -513,7 +513,7 @@ Changelog for Shake
     Switch to ByteString for storing File
     Add shakeDeterministic, along with a default random pool
     Make the Monad/Monoid instance for Rules strict
-0.3
+0.3, released 2012-06-17
     #550, ensure the journal thread is locked
     #550, if your thread dies while reading the database then die
     #550, ensure you reset to before the slop before writing
@@ -523,13 +523,13 @@ Changelog for Shake
     Better messages on invalid database versions
     Complete rewrite of the storage layer and journal design
     IMPORTANT: Incompatible on disk format change
-0.2.11
+0.2.11, released 2012-05-19
     IMPORTANT: #546, don't save the database to where it was created
-0.2.10
+0.2.10, released 2012-05-19
     Add systemCwd for running with a particular current directory
     Ensure the database is saved to where it was created
     #545, make sure if shake is killed, it kills its children
-0.2.9
+0.2.9, released 2012-03-25
     Require unordered-containers 2.1 or higher, fixes bugs
     Allow transformers-0.3.*
     Add a random script generator and tester
@@ -537,31 +537,31 @@ Changelog for Shake
     Fix the unordered-containers constraint, was too loose
     Don't write report generation messages in Quiet mode
     Add ?>> operator, a generalisation of *>>
-0.2.8
+0.2.8, released 2012-02-24
     Rename shakeDump to shakeReport
     Add profile report generator
-0.2.7
+0.2.7, released 2012-02-18
     #530, require unordered-containers >= 0.1.4.3
-0.2.6
+0.2.6, released 2012-02-17
     Improve the documentation code fragments (more links)
     Add support for managing finite resources
-0.2.5
+0.2.5, released 2012-02-15
     Require hashable-1.1.2.3, which has a TypeRep instance
     Add Data/Typeable instances for ShakeOptions
     Add Data instance for Verbosity
-0.2.4
+0.2.4, released 2012-02-11
     Include the C example source files
     Significant documentation improvements
-0.2.3
+0.2.3, released 2012-02-09
     Create the shakeFiles directory if missing
-0.2.2
+0.2.2, released 2012-02-05
     Allow deepseq-1.3.*
     Add a basic lint checking mode
     Remove the Dirty state entirely (was incorrect)
-0.2.1
+0.2.1, released 2012-01-28
     Put diagnostics in more places
     Add a C example
-0.2
+0.2, released 2012-01-23
     Add shakeStaunch
     Rename shakeParallel to shakeThreads
     Delete the lint support (never actually worked)
@@ -573,25 +573,25 @@ Changelog for Shake
     Add an Oracle module
     Add an explicit Verbosity type
     Change to lower precedence for *> etc
-0.1.5
+0.1.5, released 2012-01-01
     Allow deepseq-1.2
-0.1.4
+0.1.4, released 2012-01-01
     Don't export currentRule/currentStack
     Fix **>, was matching the wrong way round
     Fix FilePath normalise so it works properly on Windows
     Properly detect recursive rules, instead of looping
     Add *>> for building multiple files at once
-0.1.3
+0.1.3, released 2011-12-22
     Fix a bug where a file rule could return with a lazy error
     Make sure all the files are stored in binary, not text
     Fix a pattern match error in getDirectoryFiles
-0.1.2
+0.1.2, released 2011-12-18
     Add a warning in the description
-0.1.1
+0.1.1, released 2011-12-18
     Significantly improved documentation
     system' now takes an initial argument for the program
-0.1
+0.1, released 2011-12-18
     Many changes to signatures, some basic documentation
     Additional demo, to build shake itself
-0.0
+0.0, released 2011-12-11
     Initial version, not ready for public use
