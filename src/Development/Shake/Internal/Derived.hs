@@ -17,7 +17,8 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
 import System.FilePath (takeDirectory)
-import System.IO.Extra hiding (withTempFile, withTempDir, readFile')
+import System.IO
+import qualified System.IO.Extra as IO
 
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Run
@@ -101,7 +102,7 @@ copyFileChanged old new = do
     need [old]
     -- in newer versions of the directory package we can use copyFileWithMetadata which (we think) updates
     -- the timestamp as well and thus no need to read the source file twice.
-    unlessM (liftIO $ doesFileExist new &&^ fileEq old new) $ do
+    unlessM (liftIO $ doesFileExist new &&^ IO.fileEq old new) $ do
         putLoud $ "Copying from " ++ old ++ " to " ++ new
         liftIO $ do
             createDirectoryRecursive $ takeDirectory new
@@ -150,7 +151,7 @@ writeFileChanged name x = liftIO $ do
 --   If you require a file with a specific name, use 'withTempDir'.
 withTempFile :: (FilePath -> Action a) -> Action a
 withTempFile act = do
-    (file, del) <- liftIO newTempFile
+    (file, del) <- liftIO IO.newTempFile
     act file `actionFinally` del
 
 
@@ -164,7 +165,7 @@ withTempFile act = do
 -- @
 withTempDir :: (FilePath -> Action a) -> Action a
 withTempDir act = do
-    (dir,del) <- liftIO newTempDir
+    (dir,del) <- liftIO IO.newTempDir
     act dir `actionFinally` del
 
 
