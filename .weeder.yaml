@@ -10,3 +10,8 @@
 - message:
   - name: Weeds exported
   - module: [General.Bilist, General.Ids, General.Intern]
+
+# These packages are used on older compilers for compatibility methods
+- message:
+  - name: Redundant build-depends entry
+  - depends: [old-time, semigroups]
