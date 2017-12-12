@@ -76,6 +76,7 @@ module Development.Shake(
     writeFile', writeFileLines, writeFileChanged,
     removeFiles, removeFilesAfter,
     withTempFile, withTempDir,
+    withTempFileWithin, withTempDirWithin,
     -- * File rules
     need, want, (%>), (|%>), (?>), phony, (~>), phonys,
     (&%>), (&?>),

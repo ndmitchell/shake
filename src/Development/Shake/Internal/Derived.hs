@@ -5,6 +5,7 @@ module Development.Shake.Internal.Derived(
     readFile', readFileLines,
     writeFile', writeFileLines, writeFileChanged,
     withTempFile, withTempDir,
+    withTempFileWithin, withTempDirWithin,
     getHashedShakeVersion,
     getShakeExtra, getShakeExtraRules, addShakeExtra,
     par, forP,
@@ -154,6 +155,12 @@ withTempFile act = do
     (file, del) <- liftIO IO.newTempFile
     act file `actionFinally` del
 
+-- | Like 'withTempFile' but using a custom temporary directory.
+withTempFileWithin :: FilePath -> (FilePath -> Action a) -> Action a
+withTempFileWithin tdir act = do
+    (file, del) <- liftIO $ IO.newTempFileWithin tdir
+    act file `actionFinally` del
+
 
 -- | Create a temporary directory inside the system temporary directory.
 --   The directory will be deleted after the action completes. As an example:
@@ -167,6 +174,13 @@ withTempDir :: (FilePath -> Action a) -> Action a
 withTempDir act = do
     (dir,del) <- liftIO IO.newTempDir
     act dir `actionFinally` del
+
+-- | Like 'withTempDir' but using a custom temporary directory.
+withTempDirWithin :: FilePath -> (FilePath -> Action a) -> Action a
+withTempDirWithin tdir act = do
+    (dir,del) <- liftIO $ IO.newTempDirWithin tdir
+    act dir `actionFinally` del
+
 
 
 -- | A 'parallel' version of 'forM'.
