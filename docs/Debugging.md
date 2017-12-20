@@ -17,7 +17,7 @@ Error when running Shake build system:
 * stack_element1.txt
 * stack_eLement2.txt
 * real_file.o
-Error, rule failed to build file:
+Error, rule finished running but did not produce file:
   real_rile.o
 ```
 

@@ -206,6 +206,6 @@ getFileTimes name xs = do
         Nothing | not $ shakeCreationCheck opts -> return $ FilesA []
         Nothing -> do
             let missing = length $ filter isNothing ys
-            error $ "Error, " ++ name ++ " rule failed to build " ++ show missing ++
+            error $ "Error, " ++ name ++ " rule failed to produce " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
                     concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
