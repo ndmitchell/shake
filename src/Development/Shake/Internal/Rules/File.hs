@@ -276,7 +276,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     answer ResultForward =<< act
                 Just (ModeDirect act) -> do
                     act
-                    new <- liftIO $ storedValueError opts False "Error, rule failed to build file:" o
+                    new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                     case new of
                         Nothing -> retNew ChangedRecomputeDiff ResultPhony
                         Just new -> answer ResultDirect new
