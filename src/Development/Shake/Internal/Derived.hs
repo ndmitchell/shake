@@ -189,7 +189,7 @@ forP xs f = parallel $ map f xs
 
 -- | Execute two operations in parallel, based on 'parallel'.
 par :: Action a -> Action b -> Action (a,b)
-par a b = do [Left a, Right b] <- parallel [Left <$> a, Right <$> b]; return (a,b)
+par a b = (\[Left a, Right b] -> (a,b)) <$> parallel [Left <$> a, Right <$> b]
 
 
 -- | Create a finite resource, given a name (for error messages) and a quantity of the resource that exists.
