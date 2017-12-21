@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Monad(
@@ -17,6 +18,10 @@ import Control.Applicative
 import Control.Monad
 import Prelude
 
+#if __GLASGOW_HASKELL__ >= 800
+import Control.Monad.Fail
+#endif
+
 
 data S ro rw = S
     {handler :: IORef (SomeException -> IO ())
@@ -25,7 +30,11 @@ data S ro rw = S
     }
 
 newtype RAW ro rw a = RAW {fromRAW :: ReaderT (S ro rw) (ContT () IO) a}
-    deriving (Functor, Applicative, Monad, MonadIO)
+    deriving (Functor, Applicative, Monad, MonadIO
+#if __GLASGOW_HASKELL__ >= 800
+             , MonadFail
+#endif
+    )
 
 type Capture a = (a -> IO ()) -> IO ()
 

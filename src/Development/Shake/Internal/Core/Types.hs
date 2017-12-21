@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards #-}
 
@@ -26,6 +27,10 @@ import Development.Shake.Internal.Options
 import General.Cleanup
 import Prelude
 
+#if __GLASGOW_HASKELL__ >= 800
+import Control.Monad.Fail
+#endif
+
 
 ---------------------------------------------------------------------
 -- UNDERLYING DATA TYPE
@@ -34,7 +39,11 @@ import Prelude
 --   Action values are used by 'addUserRule' and 'action'. The 'Action' monad tracks the dependencies of a rule.
 --   To raise an exception call 'error', 'fail' or @'liftIO' . 'throwIO'@.
 newtype Action a = Action {fromAction :: RAW Global Local a}
-    deriving (Functor, Applicative, Monad, MonadIO, Typeable)
+    deriving (Functor, Applicative, Monad, MonadIO, Typeable
+#if __GLASGOW_HASKELL__ >= 800
+             ,MonadFail
+#endif
+        )
 
 -- | How has a rule changed.
 data RunChanged
