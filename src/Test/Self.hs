@@ -33,9 +33,8 @@ main = shakeTest_ noTest $ do
         Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
         return $ words out
 
-    ghcFlags <- addOracle $ \GhcFlags{} -> do
-        pkgs <- readFileLines ".pkgs"
-        return $ map ("-package=" ++) pkgs
+    ghcFlags <- addOracle $ \GhcFlags{} ->
+        map ("-package=" ++) <$> readFileLines ".pkgs"
 
     let ghc args = do
             -- since ghc-pkg includes the ghc package, it changes if the version does

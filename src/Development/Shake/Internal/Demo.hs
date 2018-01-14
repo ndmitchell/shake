@@ -51,7 +51,7 @@ demo auto = do
     require shakeLib "% You don't have the 'shake' library installed with GHC, which is required to run the demo."
     require hasManual "% You don't have the Shake data files installed, which are required to run the demo."
 
-    empty <- (not . any (not . all (== '.'))) <$> getDirectoryContents "."
+    empty <- not . any (not . all (== '.')) <$> getDirectoryContents "."
     dir <- if empty then getCurrentDirectory else do
         home <- getHomeDirectory
         dir <- getDirectoryContents home

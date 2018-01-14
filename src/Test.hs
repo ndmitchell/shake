@@ -140,7 +140,7 @@ filetime _ = do
     args <- getArgs
     addTiming "Reading files"
     files <- fmap concat $ forM (drop 1 args) $ \file ->
-        (BS.lines . BS.filter (/= '\r')) <$> BS.readFile file
+        BS.lines . BS.filter (/= '\r') <$> BS.readFile file
     let n = length files
     evaluate n
     addTiming "Modtime"
