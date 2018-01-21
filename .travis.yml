@@ -1,13 +1,15 @@
 sudo: required
-env:
-- GHCVER=7.4.2
-- GHCVER=7.6.3
-- GHCVER=7.8.4
-- GHCVER=7.10.3
-- GHCVER=8.0.2
-- GHCVER=8.2.2
-- GHCVER=8.4.1
-- GHCVER=head
+matrix:
+  include:
+  - env: GHCVER=7.4.2
+  - env: GHCVER=7.6.3
+  - env: GHCVER=7.8.4
+  - env: GHCVER=7.10.3
+  - env: GHCVER=8.0.2
+  - env: GHCVER=8.2.2
+  - env: GHCVER=8.4.1
+  - env: GHCVER=head
+  - os: osx
 
 script:
 - git clone https://github.com/jacereda/fsatrace.git .fsatrace
