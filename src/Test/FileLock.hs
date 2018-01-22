@@ -18,6 +18,7 @@ main = shakeTest_ test $
         putNormal "Finished sleep"
 
 
+-- Disabled under Mac because it fails, see #560
 test build = unless isMac $ do
     -- check it fails exactly once
     time <- offsetTime
