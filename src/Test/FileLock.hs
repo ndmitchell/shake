@@ -7,6 +7,7 @@ import Control.Exception.Extra
 import Control.Monad
 import Data.Either.Extra
 import System.Time.Extra
+import System.Info.Extra
 import Test.Type
 
 
@@ -17,7 +18,7 @@ main = shakeTest_ test $
         putNormal "Finished sleep"
 
 
-test build = do
+test build = unless isMac $ do
     -- check it fails exactly once
     time <- offsetTime
     lock <- newLock
