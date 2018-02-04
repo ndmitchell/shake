@@ -171,8 +171,8 @@ doesDirectoryExist = fmap fromDoesDirectoryExistA . apply1 . DoesDirectoryExistQ
 getEnv :: String -> Action (Maybe String)
 getEnv = fmap fromGetEnvA . apply1 . GetEnvQ
 
--- | Return the value of the environment variable (second argument), or the
---   default value (first argument) if it is not set. Similar to 'getEnv'.
+-- | @'getEnvWithDefault' def var@ returns the value of the environment variable @var@, or the
+--   default value @def@ if it is not set. Similar to 'getEnv'.
 --
 -- @
 -- flags <- getEnvWithDefault \"-Wall\" \"CFLAGS\"
