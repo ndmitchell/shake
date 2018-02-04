@@ -122,6 +122,8 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"out = \"\""
             ,"str1 = \"\""
             ,"str2 = \"\""
+            ,"def = undefined"
+            ,"var = undefined"
             ,"str = \"\""] ++
             rest
 
