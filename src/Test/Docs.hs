@@ -134,8 +134,10 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
         writeFileChanged out $ unlines $
-            ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs, not $ "-Classes.html" `isSuffixOf` x] ++
-            ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd, takeBaseName x `notElem` ["Developing","Model"]]
+            ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs,
+                not $ any (`isSuffixOf` x) ["-Classes.html", "-FilePath.html"]] ++
+            ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd,
+                takeBaseName x `notElem` ["Developing","Model"]]
 
     let needModules = do mods <- readFileLines "Files.lst"; need [m <.> "hs" | m <- mods]; return mods
 
