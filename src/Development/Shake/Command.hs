@@ -104,11 +104,11 @@ data Result
     | ResultCode ExitCode
     | ResultTime Double
     | ResultLine String
-    | ResultProcess Pid
+    | ResultProcess PID
       deriving Eq
 
-data Pid = Pid0 | Pid ProcessHandle
-instance Eq Pid where _ == _ = True
+data PID = PID0 | PID ProcessHandle
+instance Eq PID where _ == _ = True
 
 
 ---------------------------------------------------------------------
@@ -261,7 +261,7 @@ commandExplicitIO funcName opts results exe args = do
             _ -> Nothing
     let optShell = Shell `elem` opts
     let optBinary = BinaryPipes `elem` opts
-    let optAsync = ResultProcess Pid0 `elem` results
+    let optAsync = ResultProcess PID0 `elem` results
     let optTimeout = listToMaybe $ reverse [x | Timeout x <- opts]
     let optWithStdout = last $ False : [x | WithStdout x <- opts]
     let optWithStderr = last $ True : [x | WithStderr x <- opts]
@@ -282,7 +282,7 @@ commandExplicitIO funcName opts results exe args = do
             ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
             ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
             ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine cmdline)
-            ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ Pid pid)
+            ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ PID pid)
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
@@ -452,10 +452,10 @@ instance CmdResult ExitCode where
     cmdResult = ([ResultCode ExitSuccess], \[ResultCode x] -> x)
 
 instance CmdResult Process where
-    cmdResult = ([ResultProcess Pid0], \[ResultProcess (Pid x)] -> Process x)
+    cmdResult = ([ResultProcess PID0], \[ResultProcess (PID x)] -> Process x)
 
 instance CmdResult ProcessHandle where
-    cmdResult = ([ResultProcess Pid0], \[ResultProcess (Pid x)] -> x)
+    cmdResult = ([ResultProcess PID0], \[ResultProcess (PID x)] -> x)
 
 instance CmdResult CmdLine where
     cmdResult = ([ResultLine ""], \[ResultLine x] -> CmdLine x)
