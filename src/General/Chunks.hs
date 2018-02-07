@@ -18,6 +18,7 @@ import Data.Word
 import Data.Monoid
 import General.Binary
 import General.Extra
+import Prelude
 
 
 data Chunks = Chunks
