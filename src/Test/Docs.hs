@@ -126,7 +126,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"var = undefined"
             ,"str = \"\""] ++
             rest
-        liftIO . putStrLn =<< readFile' out
+        liftIO $ putStrLn =<< readFile out
 
     "Files.lst" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
