@@ -85,7 +85,7 @@ main = do
     withCurrentDirectory "temp" $
         cmd "shake --demo --keep-going"
 
-    isHead <- maybe False (== "1") <$> lookupEnv "GHC_HEAD"
+    isHead <- (== Just "1") <$> lookupEnv "GHC_HEAD"
     ghcver <- fromMaybe "head" <$> lookupEnv "GHCVER"
     when (not isHead && readVersion ghcver >= readVersion "7.10") $ do
         ver <- do
