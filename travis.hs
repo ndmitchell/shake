@@ -86,7 +86,7 @@ main = do
         cmd "shake --demo --keep-going"
 
     isHead <- (== Just "1") <$> lookupEnv "GHC_HEAD"
-    ghcver <- fromMaybe "head" <$> lookupEnv "GHCVER"
+    ghcver <- fromMaybe "" <$> lookupEnv "GHCVER"
     when (not isHead && readVersion ghcver >= readVersion "7.10") $ do
         ver <- do
             src <- readFile "shake.cabal"
