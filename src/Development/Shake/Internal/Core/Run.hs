@@ -354,6 +354,7 @@ unsafeExtraThread act = Action $ do
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
 parallel :: [Action a] -> Action [a]
+-- Note: There is no parallel_ unlike sequence_ because there is no stack benefit to doing so
 parallel [] = return []
 parallel [x] = fmap return x
 parallel acts = Action $ do
