@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.16.1, released 2018-02-11
     Support process-1.6.3.0
     #290, add withTempFileInside and withTempDirInside
     #549, Semigroup-Monoid proposal support
