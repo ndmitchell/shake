@@ -269,7 +269,6 @@ executable shake
         General.Template
         General.Timing
         Paths_shake
-        Run
 
 
 test-suite shake-test
