@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Set the correct lower bound on unordered-containers of 0.2.7
 0.16.1, released 2018-02-11
     Support process-1.6.3.0
     #290, add withTempFileInside and withTempDirInside

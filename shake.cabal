@@ -93,7 +93,7 @@ library
         random,
         time,
         transformers >= 0.2,
-        unordered-containers >= 0.2.1,
+        unordered-containers >= 0.2.7,
         utf8-string >= 0.3
 
     if flag(portable)
@@ -197,7 +197,7 @@ executable shake
         random,
         time,
         transformers >= 0.2,
-        unordered-containers >= 0.2.1,
+        unordered-containers >= 0.2.7,
         utf8-string >= 0.3
 
     if flag(portable)
@@ -302,7 +302,7 @@ test-suite shake-test
         random,
         time,
         transformers >= 0.2,
-        unordered-containers >= 0.2.1,
+        unordered-containers >= 0.2.7,
         utf8-string >= 0.3
 
     if flag(portable)
