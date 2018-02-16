@@ -79,11 +79,11 @@ shakeArgsPruneWith opts prune flags act = do
     let flags2 = Option "P" ["prune"] (NoArg $ Right Nothing) "Remove stale files" : map (fmapOptDescr Just) flags
     pruning <- newIORef False
     shakeArgsWith opts flags2 $ \opts args ->
-        if any isNothing opts then do
-            writeIORef pruning True
-            return Nothing
-        else
-            act (map fromJust opts) args
+        case sequence opts of
+            Nothing -> do
+                writeIORef pruning True
+                return Nothing
+            Just opts -> act opts args
     whenM (readIORef pruning) $
         IO.withTempFile $ \file -> do
             shakeArgsWith opts{shakeLiveFiles=file : shakeLiveFiles opts} flags2 $ \opts args ->
