@@ -72,7 +72,7 @@ data FileR = FileR { result :: Maybe FileA -- ^ Raw information about the file b
 data Mode
     = ModePhony (Action ()) -- ^ An action with no file value
     | ModeDirect (Action ()) -- ^ An action that produces this file
-    | ModeForward (Action FileA) -- ^ An action that looks up a file someone else produced
+    | ModeForward (Action (Maybe FileA)) -- ^ An action that looks up a file someone else produced
 
 -- | The results of the various 'Mode' rules.
 data Result
@@ -272,8 +272,13 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                 Nothing -> do
                     new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
                     answer ResultDirect $ fromJust new
-                Just (ModeForward act) ->
-                    answer ResultForward =<< act
+                Just (ModeForward act) -> do
+                    new <- act
+                    case new of
+                        Nothing -> do
+                            alwaysRerun
+                            retNew ChangedRecomputeDiff ResultPhony
+                        Just new -> answer ResultForward new
                 Just (ModeDirect act) -> do
                     act
                     new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
@@ -320,7 +325,7 @@ resultHasChanged file = do
 -- OPTIONS ON TOP
 
 -- | Internal method for adding forwarding actions
-fileForward :: (FilePath -> Maybe (Action FileA)) -> Rules ()
+fileForward :: (FilePath -> Maybe (Action (Maybe FileA))) -> Rules ()
 fileForward act = addUserRule $ FileRule $ fmap ModeForward . act
 
 

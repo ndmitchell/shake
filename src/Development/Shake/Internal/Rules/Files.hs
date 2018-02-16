@@ -135,7 +135,7 @@ ps &%> act
             (if simple p then id else priority 0.5) $
                 fileForward $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
                     FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
-                    return $ res !! i
+                    return $ if null res then Nothing else Just $ res !! i
         (if all simple ps then id else priority 0.5) $
             addUserRule $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
@@ -184,7 +184,7 @@ ps &%> act
         Nothing -> Nothing
         Just ys -> Just $ do
             FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) ys
-            return $ res !! fromJust (elemIndex x ys)
+            return $ if null res then Nothing else Just $ res !! fromJust (elemIndex x ys)
 
     addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
         case checkedTest x of
