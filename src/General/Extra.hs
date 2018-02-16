@@ -102,7 +102,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
 
 randomElem :: [a] -> IO a
 randomElem xs = do
-    when (null xs) $ fail $ "General.Extra.randomElem called with empty list, can't pick a random element"
+    when (null xs) $ fail "General.Extra.randomElem called with empty list, can't pick a random element"
     i <- randomRIO (0, length xs - 1)
     return $ xs !! i
 
