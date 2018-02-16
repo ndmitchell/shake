@@ -61,6 +61,8 @@ test build = do
     run "-f../../src/Test/Ninja/test5.ninja"
     assertExists "output file"
 
+    run "-f../../src/Test/Ninja/test7.ninja"
+
     writeFile "nocreate.log" ""
     writeFile "nocreate.in" ""
     run "-f../../src/Test/Ninja/nocreate.ninja"
