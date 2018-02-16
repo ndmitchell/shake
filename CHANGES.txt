@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Improve the documentation of getDirectoryContents
 0.16.2, released 2018-02-13
     Set the correct lower bound on unordered-containers of 0.2.7
 0.16.1, released 2018-02-11

@@ -182,9 +182,10 @@ getEnvWithDefault :: String -> String -> Action String
 getEnvWithDefault def var = fromMaybe def <$> getEnv var
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
---   the entries @.@ or @..@ (unlike the standard Haskell version). The resulting paths will be relative
---   to the first argument. The result is tracked as a
---   dependency, and if it changes the rule will rerun in subsequent builds.
+--   the entries @.@ or @..@ (unlike the standard Haskell version).
+--   The resulting paths will be relative to the first argument.
+--   The result itself is tracked as a dependency, but the files in the result are not.
+--   If the list of files changes in subsequent builds any rule calling it will rerun.
 --
 --   It is usually simpler to call either 'getDirectoryFiles' or 'getDirectoryDirs'.
 getDirectoryContents :: FilePath -> Action [FilePath]
@@ -192,8 +193,9 @@ getDirectoryContents = fmap fromGetDirectoryA . apply1 . GetDirectoryContentsQ
 
 -- | Get the files anywhere under a directory that match any of a set of patterns.
 --   For the interpretation of the patterns see '?=='. All results will be
---   relative to the directory argument. The result is tracked as a
---   dependency, and if it changes the rule will rerun in subsequent builds.
+--   relative to the directory argument.
+--   The result itself is tracked as a dependency, but the files in the result are not.
+--   If the list of files changes in subsequent builds any rule calling it will rerun.
 --   Some examples:
 --
 -- > getDirectoryFiles "Config" ["//*.xml"]
@@ -229,8 +231,10 @@ getDirectoryFiles :: FilePath -> [FilePattern] -> Action [FilePath]
 getDirectoryFiles dir pat = fmap fromGetDirectoryA $ apply1 $ GetDirectoryFilesQ (dir,pat)
 
 -- | Get the directories in a directory, not including @.@ or @..@.
---   All directories are relative to the argument directory. The result is tracked as a
---   dependency, and if it changes the rule will rerun in subsequent builds.
+--   All directories are relative to the argument directory.
+--   The result itself is tracked as a dependency, but the directories in the result are not.
+--   If the list of directories changes in subsequent builds any rule calling it will rerun.
+
 --   The rules about creating entries described in 'getDirectoryFiles' also apply here.
 --
 -- > getDirectoryDirs "/Users"
