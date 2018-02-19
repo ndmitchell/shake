@@ -35,9 +35,9 @@ tested-with:        GHC==8.2.2, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3,
 extra-doc-files:
     CHANGES.txt
     README.md
-extra-source-files:
     docs/Manual.md
     docs/shake-progress.png
+extra-source-files:
     src/Paths.hs
     src/Test/C/constants.c
     src/Test/C/constants.h
@@ -52,7 +52,6 @@ extra-source-files:
     src/Test/Tup/newmath/square.c
     src/Test/Tup/newmath/square.h
     src/Test/Tup/root.cfg
-
 data-files:
     docs/manual/build.bat
     docs/manual/Build.hs
