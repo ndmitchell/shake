@@ -21,7 +21,7 @@ script:
 deploy:
   provider: releases
   api_key:
-    secure: ""
+    secure: "aFuskonICPg8VRvkui/uvJ1+/Cf5eMM78gQGOon1x2tzu16KBpmXfY+O4yCGSFy1NIuoRZ1OU1LpwIgCcb71AxHz4CTZk+Xjf5dwqy7b7iOzbxYHZJUzUC1OpwsWNEqd7MwAjdcDNg4w5kqLZtDMtf9DuUXPzYTj+iM6HLwZQVg="
   file_glob: true
   file:  travis-release/*
   skip_cleanup: true
