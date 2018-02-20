@@ -163,12 +163,8 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
      else do
         when (Sleep `elem` flagsExtra) $ threadDelay 1000000
         start <- offsetTime
-        curdir <- getCurrentDirectory
-        let redir = case changeDirectory of
-                Nothing -> id
-                -- get the "html" directory so it caches with the current directory
-                -- required only for debug code
-                Just d -> bracket_ (initDataDirectory >> setCurrentDirectory d) (setCurrentDirectory curdir)
+        initDataDirectory -- must be done before we start changing directory
+        let redir = maybe id withCurrentDirectory changeDirectory
         shakeOpts <- if null progressRecords then return shakeOpts else do
             t <- offsetTime
             return shakeOpts{shakeProgress = \p ->
