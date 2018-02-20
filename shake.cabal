@@ -241,6 +241,7 @@ executable shake
         Development.Shake.Internal.FileName
         Development.Shake.Internal.FilePattern
         Development.Shake.Internal.Options
+        Development.Shake.Internal.Paths
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
@@ -348,6 +349,7 @@ test-suite shake-test
         Development.Shake.Internal.FileName
         Development.Shake.Internal.FilePattern
         Development.Shake.Internal.Options
+        Development.Shake.Internal.Paths
         Development.Shake.Internal.Profile
         Development.Shake.Internal.Progress
         Development.Shake.Internal.Resource
