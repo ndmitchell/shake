@@ -8,7 +8,6 @@ import Development.Shake.Command
 import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
-import General.Extra
 import Data.Char
 import Data.List
 import Data.Maybe
@@ -29,8 +28,7 @@ demo auto = do
 
     -- CONFIGURE
 
-    manual <- getDataFileName "docs/manual"
-    hasManual <- wrap $ doesDirectoryExist manual
+    hasManual <- wrap hasManualData
     ghc <- findExecutable "ghc"
     gcc <- do
         v <- findExecutable "gcc"
@@ -62,9 +60,7 @@ demo auto = do
     require b "% Please create an empty directory to run the demo from, then run 'shake --demo' again."
 
     putStr "% Copying files... "
-    createDirectoryRecursive dir
-    forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
-        copyFile (manual </> file) (dir </> file)
+    copyManualData dir
     unless isWindows $ do
          p <- getPermissions $ dir </> "build.sh"
          setPermissions (dir </> "build.sh") p{executable=True}
