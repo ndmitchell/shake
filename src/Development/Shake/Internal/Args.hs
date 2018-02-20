@@ -168,7 +168,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 Nothing -> id
                 -- get the "html" directory so it caches with the current directory
                 -- required only for debug code
-                Just d -> bracket_ (getDataFileName "html" >> setCurrentDirectory d) (setCurrentDirectory curdir)
+                Just d -> bracket_ (initDataDirectory >> setCurrentDirectory d) (setCurrentDirectory curdir)
         shakeOpts <- if null progressRecords then return shakeOpts else do
             t <- offsetTime
             return shakeOpts{shakeProgress = \p ->

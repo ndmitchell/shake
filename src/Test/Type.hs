@@ -65,9 +65,7 @@ shakenEx
     -> IO ()
     -> IO ()
 shakenEx reenter options test rules sleeper = do
-    -- my debug getDataFileName (in Paths) uses a cache of the Cwd
-    -- make sure we force the cache before changing directory
-    getDataFileName ""
+    initDataDirectory
 
     name:args <- getArgs
     putStrLn $ "## BUILD " ++ unwords (name:args)
