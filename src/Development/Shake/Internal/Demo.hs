@@ -24,10 +24,8 @@ demo :: Bool -> IO ()
 demo auto = do
     hSetBuffering stdout NoBuffering
     putStrLn $ "% Welcome to the Shake v" ++ shakeVersionString ++ " demo mode!"
+
     putStr "% Detecting machine configuration... "
-
-    -- CONFIGURE
-
     hasManual <- wrap hasManualData
     ghc <- findExecutable "ghc"
     gcc <- do
