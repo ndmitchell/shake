@@ -183,7 +183,9 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                         return p
             }
         (ran,shakeOpts,res) <- redir $ do
-            when printDirectory $ putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
+            when printDirectory $ do
+                curdir <- getCurrentDirectory
+                putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
             rules <- rules shakeOpts user files
             case rules of
                 Nothing -> return (False, shakeOpts, Right ())
