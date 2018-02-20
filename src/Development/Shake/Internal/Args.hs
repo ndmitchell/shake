@@ -26,7 +26,6 @@ import Data.Either
 import Data.Functor
 import Data.List
 import Data.Maybe
-import Data.Version(showVersion)
 import System.Directory
 import System.Environment
 import System.Exit
@@ -149,9 +148,9 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     if Help `elem` flagsExtra then
         showHelp
      else if Version `elem` flagsExtra then
-        putWhenLn Normal $ "Shake build system, version " ++ showVersion version
+        putWhenLn Normal $ "Shake build system, version " ++ shakeVersionString
      else if NumericVersion `elem` flagsExtra then
-        putWhenLn Normal $ showVersion version
+        putWhenLn Normal shakeVersionString
      else if Demo `elem` flagsExtra then
         demo $ shakeStaunch shakeOpts
      else if not $ null progressReplays then do

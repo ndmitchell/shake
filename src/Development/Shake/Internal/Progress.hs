@@ -20,7 +20,6 @@ import Data.Data
 import Data.IORef
 import Data.List
 import Data.Maybe
-import Data.Version
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
@@ -282,7 +281,7 @@ generateHTML xs = do
     htmlDir <- getDataFileName "html"
     report <- LBS.readFile $ htmlDir </> "progress.html"
     let f name | name == "progress-data.js" = return $ LBS.pack $ "var progress =\n" ++ generateJSON xs
-               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
+               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show shakeVersionString
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 

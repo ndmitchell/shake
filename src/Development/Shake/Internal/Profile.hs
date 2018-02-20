@@ -6,7 +6,6 @@ import General.Template
 import Data.Tuple.Extra
 import Data.Function
 import Data.List
-import Data.Version
 import System.FilePath
 import Numeric.Extra
 import General.Extra
@@ -58,7 +57,7 @@ generateHTML xs = do
     htmlDir <- getDataFileName "html"
     report <- LBS.readFile $ htmlDir </> "profile.html"
     let f name | name == "profile-data.js" = return $ LBS.pack $ "var profile =\n" ++ generateJSON xs
-               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show (showVersion version)
+               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show shakeVersionString
                | otherwise = LBS.readFile $ htmlDir </> name
     runTemplate f report
 

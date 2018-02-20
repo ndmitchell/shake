@@ -12,7 +12,6 @@ import General.Extra
 import Data.Char
 import Data.List
 import Data.Maybe
-import Data.Version(showVersion)
 import System.Directory
 import System.Exit
 import System.FilePath
@@ -25,7 +24,7 @@ import Prelude
 demo :: Bool -> IO ()
 demo auto = do
     hSetBuffering stdout NoBuffering
-    putStrLn $ "% Welcome to the Shake v" ++ showVersion version ++ " demo mode!"
+    putStrLn $ "% Welcome to the Shake v" ++ shakeVersionString ++ " demo mode!"
     putStr "% Detecting machine configuration... "
 
     -- CONFIGURE
