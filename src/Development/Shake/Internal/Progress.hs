@@ -26,7 +26,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
 import General.Template
 import System.IO.Unsafe
-import Paths_shake
+import Development.Shake.Internal.Paths
 import System.Time.Extra
 import Data.Semigroup (Semigroup (..))
 import Data.Monoid hiding ((<>))

@@ -6,7 +6,7 @@ module Development.Shake.Internal.Args(
     shakeArgs, shakeArgsWith, shakeArgsOptionsWith
     ) where
 
-import Paths_shake
+import Development.Shake.Internal.Paths
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Demo

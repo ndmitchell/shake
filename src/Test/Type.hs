@@ -23,7 +23,7 @@ import Development.Shake.Internal.FileName
 import General.Extra
 import Development.Shake.Internal.FileInfo
 import Development.Shake.FilePath
-import Paths_shake
+import Development.Shake.Internal.Paths
 
 import Control.Exception.Extra
 import Control.Monad.Extra

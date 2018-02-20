@@ -2,7 +2,7 @@
 -- | Demo tutorial, accessed with --demo
 module Development.Shake.Internal.Demo(demo) where
 
-import Paths_shake
+import Development.Shake.Internal.Paths
 import Development.Shake.Command
 
 import Control.Applicative

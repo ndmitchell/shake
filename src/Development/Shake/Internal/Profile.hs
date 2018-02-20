@@ -10,7 +10,7 @@ import Data.Version
 import System.FilePath
 import Numeric.Extra
 import General.Extra
-import Paths_shake
+import Development.Shake.Internal.Paths
 import System.Time.Extra
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
