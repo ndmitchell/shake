@@ -1,9 +1,10 @@
 
 -- | The information from Paths_shake cleaned up
 module Development.Shake.Internal.Paths(
-    getDataFileName, initDataDirectory,
+    shakeVersionString,
+    initDataDirectory,
     hasManualData, copyManualData,
-    shakeVersionString
+    readDataFileHTML
     ) where
 
 import Paths_shake
@@ -14,6 +15,7 @@ import System.FilePath
 import System.Info.Extra
 import System.IO.Error
 import General.Extra
+import qualified Data.ByteString.Lazy as LBS
 
 
 shakeVersionString :: String
@@ -24,6 +26,12 @@ initDataDirectory :: IO ()
 -- my debug getDataFileName (in Paths) uses a cache of the Cwd
 -- make sure we force the cache before changing directory
 initDataDirectory = void $ getDataFileName ""
+
+
+readDataFileHTML :: FilePath -> IO LBS.ByteString
+readDataFileHTML file = do
+    file <- getDataFileName $ "html" </> file
+    LBS.readFile file
 
 
 hasManualData :: IO Bool

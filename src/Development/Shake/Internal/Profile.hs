@@ -54,11 +54,10 @@ generateSummary xs =
 
 generateHTML :: [ProfileEntry] -> IO LBS.ByteString
 generateHTML xs = do
-    htmlDir <- getDataFileName "html"
-    report <- LBS.readFile $ htmlDir </> "profile.html"
+    report <- readDataFileHTML "profile.html"
     let f name | name == "profile-data.js" = return $ LBS.pack $ "var profile =\n" ++ generateJSON xs
                | name == "version.js" = return $ LBS.pack $ "var version = " ++ show shakeVersionString
-               | otherwise = LBS.readFile $ htmlDir </> name
+               | otherwise = readDataFileHTML name
     runTemplate f report
 
 
