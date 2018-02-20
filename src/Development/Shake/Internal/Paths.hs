@@ -1,7 +1,7 @@
 
 -- | The information from Paths_shake cleaned up
 module Development.Shake.Internal.Paths(
-    module Paths_shake
+    getDataFileName, version
     ) where
 
 import Paths_shake
