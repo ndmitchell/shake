@@ -26,7 +26,7 @@ import Data.Either
 import Data.Functor
 import Data.List
 import Data.Maybe
-import System.Directory
+import System.Directory.Extra
 import System.Environment
 import System.Exit
 import System.Time.Extra
