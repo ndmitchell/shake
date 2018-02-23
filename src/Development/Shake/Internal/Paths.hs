@@ -28,20 +28,23 @@ initDataDirectory :: IO ()
 initDataDirectory = void $ getDataFileName ""
 
 
+getDataDirectory :: String -> IO FilePath
+getDataDirectory = getDataFileName
+
 readDataFileHTML :: FilePath -> IO LBS.ByteString
 readDataFileHTML file = do
-    file <- getDataFileName $ "html" </> file
-    LBS.readFile file
+    html <- getDataDirectory "html"
+    LBS.readFile $ html </> file
 
 
 hasManualData :: IO Bool
 hasManualData = do
-    manual <- getDataFileName "docs/manual"
+    manual <- getDataDirectory "docs/manual"
     doesDirectoryExist manual `catchIOError` const (return False)
 
 copyManualData :: FilePath -> IO ()
 copyManualData dest = do
     createDirectoryRecursive dest
-    manual <- getDataFileName "docs/manual"
+    manual <- getDataDirectory "docs/manual"
     forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
         copyFile (manual </> file) (dest </> file)
