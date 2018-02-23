@@ -28,22 +28,15 @@ demo auto = do
 
     putStr "% Detecting machine configuration... "
     hasManual <- hasManualData
-    ghc <- findExecutable "ghc"
-    gcc <- do
-        v <- findExecutable "gcc"
-        case v of
-            Nothing | isWindows, Just ghc <- ghc -> do
-                let dir = takeDirectory (takeDirectory ghc) </> "mingw/bin/gcc.exe"
-                b <- doesFileExist_ dir
-                return $ if b then Just dir else Nothing
-            _ -> return v
+    ghc <- isJust <$> findExecutable "ghc"
+    (gcc, gccPath) <- findGcc
     shakeLib <- wrap $ fmap (not . null . words . fromStdout) (cmd "ghc-pkg list --simple-output shake")
     ninja <- findExecutable "ninja"
     putStrLn "done\n"
 
     let path = if isWindows then "%PATH%" else "$PATH"
-    require (isJust ghc) $ "% You don't have 'ghc' on your " ++ path ++ ", which is required to run the demo."
-    require (isJust gcc) $ "% You don't have 'gcc' on your " ++ path ++ ", which is required to run the demo."
+    require ghc $ "% You don't have 'ghc' on your " ++ path ++ ", which is required to run the demo."
+    require gcc $ "% You don't have 'gcc' on your " ++ path ++ ", which is required to run the demo."
     require shakeLib "% You don't have the 'shake' library installed with GHC, which is required to run the demo."
     require hasManual "% You don't have the Shake data files installed, which are required to run the demo."
 
@@ -70,7 +63,7 @@ demo auto = do
             if auto then putLine "" else getLine
     let execute x = do
             putStrLn $ "% RUNNING: " ++ x
-            cmd (Cwd dir) Shell x :: IO ()
+            cmd (Cwd dir) (AddPath [] (maybeToList gccPath)) Shell x :: IO ()
     let build = if isWindows then "build" else "./build.sh"
 
     putStrLn "\n% [1/5] Building an example project with Shake."

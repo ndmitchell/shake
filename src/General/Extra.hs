@@ -2,6 +2,7 @@
 
 module General.Extra(
     getProcessorCount,
+    findGcc,
     withResultType,
     whenLeft,
     randomElem,
@@ -22,10 +23,13 @@ import Data.List
 import System.Environment.Extra
 import System.IO.Extra
 import System.IO.Unsafe
+import System.Info.Extra
+import System.FilePath
 import System.Random
 import System.Directory
 import System.Exit
 import Control.Concurrent
+import Data.Maybe
 import Data.Functor
 import Data.Primitive.Array
 import Control.Applicative
@@ -96,6 +100,23 @@ getProcessorCount = let res = unsafePerformIO act in return res
                     _ -> do
                         src <- readFile' "/proc/cpuinfo" `catchIO` \_ -> return ""
                         return $! max 1 $ length [() | x <- lines src, "processor" `isPrefixOf` x]
+
+
+-- Can you find a GCC executable? return a Bool, and optionally something to add to $PATH to run it
+findGcc :: IO (Bool, Maybe FilePath)
+findGcc = do
+    v <- findExecutable "gcc"
+    case v of
+        Nothing | isWindows -> do
+            ghc <- findExecutable "ghc"
+            case ghc of
+                Just ghc -> do
+                    let gcc = takeDirectory (takeDirectory ghc) </> "mingw/bin/gcc.exe"
+                    b <- doesFileExist_ gcc
+                    return $ if b then (True, Just $ takeDirectory gcc) else (False, Nothing)
+                _ -> return (False, Nothing)
+        _ -> return (isJust v, Nothing)
+
 
 
 ---------------------------------------------------------------------
