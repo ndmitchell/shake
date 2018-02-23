@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #566, require extra-1.6.1
     #565, deal with multi-file rules that don't create their contents
     Improve the documentation of getDirectoryContents
 0.16.2, released 2018-02-13
