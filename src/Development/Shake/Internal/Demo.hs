@@ -14,6 +14,7 @@ import Data.Maybe
 import System.Directory
 import System.Exit
 import System.FilePath
+import General.Extra
 import Development.Shake.FilePath(exe)
 import System.IO
 import System.Info.Extra
@@ -26,14 +27,14 @@ demo auto = do
     putStrLn $ "% Welcome to the Shake v" ++ shakeVersionString ++ " demo mode!"
 
     putStr "% Detecting machine configuration... "
-    hasManual <- wrap hasManualData
+    hasManual <- hasManualData
     ghc <- findExecutable "ghc"
     gcc <- do
         v <- findExecutable "gcc"
         case v of
             Nothing | isWindows, Just ghc <- ghc -> do
                 let dir = takeDirectory (takeDirectory ghc) </> "bin/mingw/gcc.exe"
-                b <- wrap $ doesFileExist dir
+                b <- doesFileExist_ dir
                 return $ if b then Just dir else Nothing
             _ -> return v
     shakeLib <- wrap $ fmap (not . null . words . fromStdout) (cmd "ghc-pkg list --simple-output shake")
