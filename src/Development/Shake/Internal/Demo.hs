@@ -33,7 +33,7 @@ demo auto = do
         v <- findExecutable "gcc"
         case v of
             Nothing | isWindows, Just ghc <- ghc -> do
-                let dir = takeDirectory (takeDirectory ghc) </> "bin/mingw/gcc.exe"
+                let dir = takeDirectory (takeDirectory ghc) </> "mingw/bin/gcc.exe"
                 b <- doesFileExist_ dir
                 return $ if b then Just dir else Nothing
             _ -> return v
