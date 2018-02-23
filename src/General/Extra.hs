@@ -11,6 +11,7 @@ module General.Extra(
     fastAt,
     forkFinallyUnmasked,
     isAsyncException,
+    doesFileExist_,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO
     ) where
@@ -147,6 +148,9 @@ handleIO = flip catchIO
 
 ---------------------------------------------------------------------
 -- System.Directory
+
+doesFileExist_ :: FilePath -> IO Bool
+doesFileExist_ x = doesFileExist x `catchIO` \_ -> return False
 
 -- | Remove a file, but don't worry if it fails
 removeFile_ :: FilePath -> IO ()
