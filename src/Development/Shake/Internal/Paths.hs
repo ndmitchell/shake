@@ -8,12 +8,14 @@ module Development.Shake.Internal.Paths(
     ) where
 
 import Paths_shake
-import Control.Monad
+import Control.Exception
+import Control.Monad.Extra
 import Data.Version
 import System.Directory
 import System.FilePath
 import System.Info.Extra
-import System.IO.Error
+import System.IO.Unsafe
+import System.Environment.Extra
 import General.Extra
 import qualified Data.ByteString.Lazy as LBS
 
@@ -21,30 +23,48 @@ import qualified Data.ByteString.Lazy as LBS
 shakeVersionString :: String
 shakeVersionString = showVersion version
 
+
+-- We want getDataFileName to be relative to the current directory on program startup,
+-- even if we issue a change directory command. Therefore, first call caches, future ones read.
+{-# NOINLINE dataDirs #-}
+dataDirs :: [String]
+dataDirs = unsafePerformIO $ do
+    datdir <- getDataDir
+    exedir <- takeDirectory <$> getExecutablePath `catchIO` \_ -> return ""
+    curdir <- getCurrentDirectory
+    return $ [datdir] ++ [exedir | exedir /= ""] ++ [curdir]
+
+
 -- The data files may be located relative to the current directory, if so cache it in advance
 initDataDirectory :: IO ()
--- my debug getDataFileName (in Paths) uses a cache of the Cwd
--- make sure we force the cache before changing directory
-initDataDirectory = void $ getDataFileName ""
+initDataDirectory = void $ evaluate dataDirs
 
 
-getDataDirectory :: String -> IO FilePath
-getDataDirectory = getDataFileName
+getDataFile :: FilePath -> IO FilePath
+getDataFile file = do
+    let poss = map (</> file) dataDirs
+    res <- filterM doesFileExist_ poss
+    case res of
+        [] -> fail $ unlines $ ("Could not find data file " ++ file ++ ", looked in:") : map ("  " ++) poss
+        x:_ -> return x
+
+hasDataFile :: FilePath -> IO Bool
+hasDataFile file = anyM (\dir -> doesFileExist_ $ dir </> file) dataDirs
+
 
 readDataFileHTML :: FilePath -> IO LBS.ByteString
-readDataFileHTML file = do
-    html <- getDataDirectory "html"
-    LBS.readFile $ html </> file
+readDataFileHTML file = LBS.readFile =<< getDataFile ("html" </> file)
 
+
+manualFiles :: [FilePath]
+manualFiles = map ("docs/manual" </>) ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"]
 
 hasManualData :: IO Bool
-hasManualData = do
-    manual <- getDataDirectory "docs/manual"
-    doesDirectoryExist manual `catchIOError` const (return False)
+hasManualData = allM hasDataFile manualFiles
 
 copyManualData :: FilePath -> IO ()
 copyManualData dest = do
     createDirectoryRecursive dest
-    manual <- getDataDirectory "docs/manual"
-    forM_ ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"] $ \file ->
-        copyFile (manual </> file) (dest </> file)
+    forM_ manualFiles $ \file -> do
+        src <- getDataFile file
+        copyFile src (dest </> takeBaseName file)

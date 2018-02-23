@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Allow reading data files from next to the executable
     #566, require extra-1.6.1
     #565, deal with multi-file rules that don't create their contents
     Improve the documentation of getDirectoryContents
