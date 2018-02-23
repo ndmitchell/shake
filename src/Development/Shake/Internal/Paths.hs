@@ -69,4 +69,4 @@ copyManualData dest = do
     createDirectoryRecursive dest
     forM_ manualFiles $ \file -> do
         src <- getDataFile file
-        copyFile src (dest </> takeBaseName file)
+        copyFile src (dest </> takeFileName file)
