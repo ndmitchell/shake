@@ -15,7 +15,7 @@ description:
     including an example. Further examples are included in the Cabal tarball,
     under the @Examples@ directory. The homepage contains links to a user
     manual, an academic paper and further information:
-    <http://shakebuild.com>
+    <https://shakebuild.com>
     .
     To use Shake the user writes a Haskell program
     that imports "Development.Shake", defines some build rules, and calls

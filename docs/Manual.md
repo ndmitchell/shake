@@ -35,9 +35,9 @@ This build system builds the executable `_build/run` from all C source files in 
 
 To run the example above:
 
-1. Install the [Haskell Stack](http://haskellstack.org/), which provides a Haskell compiler and package manager.
-3. Type `stack install shake`, to build and install Shake and all its dependencies.
-4. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
+1. Install the [Haskell Stack](https://haskellstack.org/), which provides a Haskell compiler and package manager.
+2. Type `stack install shake`, to build and install Shake and all its dependencies.
+3. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
 
 ## Basic syntax
 
@@ -284,7 +284,7 @@ As shown before, we can use `runhaskell Build.hs` to execute our build system, b
     mkdir -p _shake
     ghc --make Build.hs -rtsopts -threaded -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
 
-This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](http://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
+This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
 
 Now you can run a build by simply typing `stack exec ./build.sh` on Linux, or `stack exec build.bat` on Windows. On Linux you may want to alias `build` to `stack exec ./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
@@ -420,7 +420,7 @@ _Use configuration files:_ Most build information, such as which files a C file 
 
 _Depend on the build source:_ One approach is to depend on the build system source in each of the rules, then if _any_ rules change, _everything_ will rebuild. While this option is safe, it may cause a significant number of redundant rebuilds. As a restricted version of this technique, for a generated file you can include a dependency on the generator source and use `writeFileChanged`. If the generator changes it will rerun, but typically only a few generated files will change, so little is rebuilt.
 
-_Use a version stamp:_ There is a field named `shakeVersion` in the `ShakeOptions` record. If the build system changes in a significant and incompatible way, you can change this field to force a full rebuild. If you want all rules to depend on all rules, you can put a hash of the build system source in the version field, as [described here](http://stackoverflow.com/questions/18532552/shake-how-to-reliably-automatically-force-rebuild-when-my-rules-change-becomi/18532553#18532553).
+_Use a version stamp:_ There is a field named `shakeVersion` in the `ShakeOptions` record. If the build system changes in a significant and incompatible way, you can change this field to force a full rebuild. If you want all rules to depend on all rules, you can put a hash of the build system source in the version field, as [described here](https://stackoverflow.com/questions/18532552/shake-how-to-reliably-automatically-force-rebuild-when-my-rules-change-becomi/18532553#18532553).
 
 ## The Haskell Zone
 

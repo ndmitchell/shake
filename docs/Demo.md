@@ -2,7 +2,7 @@
 
 To get started with Shake, you need to:
 
-* Install the [Haskell Stack](http://haskellstack.org/).
+* Install the [Haskell Stack](https://haskellstack.org/).
 * Type `stack install shake`
 * Run `stack exec -- shake --demo`, which should produce something similar to the trace below.
 * To repeat the build after the initial demo, run either `stack exec ./build.sh` (on Linux) or `stack exec build.bat` (on Windows) in the demo directory.
@@ -65,8 +65,8 @@ Build completed in 0:03m
 &#32;
 % Demo complete - all the examples can be run from:
 %     C:\Users\Neil\shake-demo
-% For more info see <a href="http://www.shakebuild.com/">http://shakebuild.com</a>
+% For more info see <a href="https://www.shakebuild.com/">https://shakebuild.com</a>
 &#32;
 % PS. Shake can also execute Ninja build files
-% For more info see <a href="http://www.shakebuild.com/ninja">http://shakebuild.com/ninja</a></b>
+% For more info see <a href="https://www.shakebuild.com/ninja">https://shakebuild.com/ninja</a></b>
 </pre>

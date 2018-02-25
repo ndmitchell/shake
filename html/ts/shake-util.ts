@@ -38,7 +38,7 @@ jQuery.fn.enable = function (x : boolean)
 
 // Given "?foo=bar&baz=1" returns {foo:"bar",baz:"1"}
 function uriQueryParameters(s : string) : MapString<string> {
-    // From http://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
+    // From https://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
     const params: MapString<string> = {};
     const a = /\+/g;  // Regex for replacing addition symbol with a space
     const r = /([^&=]+)=?([^&]*)/g;

@@ -88,7 +88,7 @@ instance Monoid Progress where
 
 ---------------------------------------------------------------------
 -- MEALY TYPE - for writing the progress functions
--- See <http://hackage.haskell.org/package/machines-0.2.3.1/docs/Data-Machine-Mealy.html>
+-- See <https://hackage.haskell.org/package/machines-0.2.3.1/docs/Data-Machine-Mealy.html>
 
 -- | A machine that takes inputs and produces outputs
 newtype Mealy i a = Mealy {runMealy :: i -> (a, Mealy i a)}

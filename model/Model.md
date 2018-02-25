@@ -42,7 +42,7 @@ These consequences allow two workflows that aren't pleasant in Make:
 
 ## Optimising the Model
 
-The above model expresses the semantics of Shake, but the implementation uses an optimised model. Note that the original [Shake paper](http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf) gives the optimised model, not the easy to understand model - that's because I only figured out the difference a few days ago (thanks to Simon Marlow, Simon Peyton Jones and Andrey Mokhov). To recap, we started with:
+The above model expresses the semantics of Shake, but the implementation uses an optimised model. Note that the original [Shake paper](https://ndmitchell.com/downloads/slides-shake_before_building-10_sep_2012.pdf) gives the optimised model, not the easy to understand model - that's because I only figured out the difference a few days ago (thanks to Simon Marlow, Simon Peyton Jones and Andrey Mokhov). To recap, we started with:
 
     database :: File -> (ModTime, [(File, ModTime)])
 
@@ -120,16 +120,16 @@ dependencies you must ensure they have become valid.
 
 There are some attempts at defining rules somewhat like yours in the
 paper, in S5.1 (see
-http://community.haskell.org/~ndm/downloads/paper-shake_before_building-10_sep_2012.pdf).
+https://ndmitchell.com/downloads/slides-shake_before_building-10_sep_2012.pdf).
 It's certainly an area that needs formalising in order to properly
 express the properties.
 
->  Suppose the database contains `file -> (mf, [(di,mdi)])`
->  The file is "clean" if the mod-time on disk of 'file' is 'mf'
->  and the mod-time on disk of each dependency 'di' is 'mdi'.
+> Suppose the database contains `file -> (mf, [(di,mdi)])`
+> The file is "clean" if the mod-time on disk of 'file' is 'mf'
+> and the mod-time on disk of each dependency 'di' is 'mdi'.
 >
->  Or perhaps the latter sentence should say "if each of the
->  dependencies 'di' is clean, and fst(lookup(di)) = mdi?
+> Or perhaps the latter sentence should say "if each of the
+> dependencies 'di' is clean, and fst(lookup(di)) = mdi?
 
 Assuming there are no files being changed by the external world while
 Shake is working, and that all dependencies are clean before they are
@@ -137,7 +137,7 @@ used, these two things are the same. In practice, Shake uses the
 second formulation, but hopefully that's just an implementation
 detail.
 
->  A file is "dirty" if it is not clean.
+> A file is "dirty" if it is not clean.
 
 Basically, yes. In reality files have a few more states - see Figure 5
 in the paper where Ready = clean and Building = dirty. The other
@@ -155,14 +155,14 @@ environment. At the end of that rule, Shake looks at the ondisk
 modification time, and records that along with the environment.
 
 > Presumably the list of dependencies may be different than
->  the previous time.
+> the previous time.
 
 Indeed, the previous dependencies determine whether a file is
 dirty/clean, but as soon as the rule starts running they are
 discarded.
 
 > "If you update an output file, it will rebuild that file,
->   as the ModTime of a result is tracked".  I did not understand that.
+> as the ModTime of a result is tracked".  I did not understand that.
 
 Given a build system that does:
 
@@ -181,23 +181,23 @@ isn't the case, and "output" would still be clean.
 > In you rule `File -(ModTime, [(File, ModTime)]`. Is the time stored for a dependency
 >
 > 1 - the time the dependency has been last used 
-> 
+>
 > 2 - the dependency last modification when the dependency has been used?
 >
 > For example. Let's say B depends on A and A has been modified yesterday.
-> 
+>
 > If I'm building B today: scenario (1) would be store 
-> 
+>
 > database B = (Today, [(A, Today)])
-> 
+>
 > where as scenario (2) would store
-> 
+>
 > database B = (Today, [(A, Yesterday)])
-> 
+>
 > My understanding is scenario 2, in that case, ModTime could be easily replaced by a SHA. However, *Consequence 1*
-> 
+>
 > The ModTime for a file and the ModTime for its dependencies are all recorded in the same run, so they share the same Step
-> 
+>
 > Let's suppose we are using scenario (1).
 
 In the simple model, the time stored for a dependency is the last modification when the dependency has been used. So the semantics are based on scenario 2.

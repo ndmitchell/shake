@@ -2,12 +2,12 @@
 
 _See also: [Shake links](https://github.com/ndmitchell/shake#readme); [Shake manual](Manual.md#readme)_
 
-Shake is a library for writing build systems. Most large projects have a custom-written build system, and developers working on the project are likely to run the build system many times a day, spending a noticeable amount of time [waiting for the build system](http://xkcd.com/303/). This document explains why you might pick Shake over alternative tools for writing build systems (e.g. make, Ant, Scons). Shake primarily benefits two groups of people:
+Shake is a library for writing build systems. Most large projects have a custom-written build system, and developers working on the project are likely to run the build system many times a day, spending a noticeable amount of time [waiting for the build system](https://xkcd.com/303/). This document explains why you might pick Shake over alternative tools for writing build systems (e.g. make, Ant, Scons). Shake primarily benefits two groups of people:
 
 * **Developers running the build system** -- Shake based build systems run quickly, require little manual intervention and report estimated completion time as they go.
 * **Developers writing the build system** -- Shake provides a powerful language for writing build systems, has excellent support for writing large robust build systems, can express many types of build rules and provides profiling information to help speed up builds.
 
-In the rest of this document we explain and justify the above claims. Shake combines [cutting edge research](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) with a [robust industrial-quality implementation](https://hackage.haskell.org/package/shake/). Shake is in constant use at many large organisations, including [a large investment bank](http://sc.com/), where it was originally developed and has been in use since 2009.
+In the rest of this document we explain and justify the above claims. Shake combines [cutting edge research](https://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) with a [robust industrial-quality implementation](https://hackage.haskell.org/package/shake/). Shake is in constant use at many large organisations, including [a large investment bank](https://sc.com/), where it was originally developed and has been in use since 2009.
 
 #### Expresses many types of build rule
 

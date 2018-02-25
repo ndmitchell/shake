@@ -21,9 +21,9 @@ Shake is suitable for all sizes of build systems, from a simple C project to a h
 
 There is a complete list of [every function in Shake](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) which [can be searched](http://hoogle.haskell.org/?package=shake). Each function comes with documentation and examples.
 
-Much of the theory behind Shake is covered in [a conference paper](http://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by [this video](https://www.youtube.com/watch?v=xYCPpXVlqFM) ([slides](http://ndmitchell.com/downloads/slides-shake_before_building-10_sep_2012.pdf)). Since then I've given videoed talks on [small worked examples](http://www.infoq.com/presentations/shake) ([slides](http://ndmitchell.com/downloads/slides-building_stuff_with_shake-20_nov_2014.pdf)) and [how to structure large Shake systems](https://skillsmatter.com/skillscasts/6548-defining-your-own-build-system-with-shake) ([slides](http://ndmitchell.com/downloads/slides-defining_your_own_build_system_with_shake-09_oct_2015.pdf)).
+Much of the theory behind Shake is covered in [a conference paper](https://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by [this video](https://www.youtube.com/watch?v=xYCPpXVlqFM) ([slides](https://ndmitchell.com/downloads/slides-shake_before_building-10_sep_2012.pdf)). Since then I've given videoed talks on [small worked examples](https://www.infoq.com/presentations/shake) ([slides](https://ndmitchell.com/downloads/slides-building_stuff_with_shake-20_nov_2014.pdf)) and [how to structure large Shake systems](https://skillsmatter.com/skillscasts/6548-defining-your-own-build-system-with-shake) ([slides](https://ndmitchell.com/downloads/slides-defining_your_own_build_system_with_shake-09_oct_2015.pdf)).
 
-I sometimes write about ongoing development work or other Shake-related things on [my blog](http://neilmitchell.blogspot.co.uk/search/label/shake).
+I sometimes write about ongoing development work or other Shake-related things on [my blog](https://neilmitchell.blogspot.co.uk/search/label/shake).
 
 If you have any further questions:
 
@@ -33,7 +33,7 @@ If you have any further questions:
 
 #### Q: Is Shake limited to building Haskell?
 
-Not at all -- Shake can build any project in any combination of languages. In fact, Shake isn't typically necessary for vanilla Haskell projects, as you can use [`cabal`](https://haskell.org/cabal) or [`stack`](http://haskellstack.org/). Shake is often used for building C/C++, Docker containers and Javascript/HTML/CSS projects.
+Not at all -- Shake can build any project in any combination of languages. In fact, Shake isn't typically necessary for vanilla Haskell projects, as you can use [`cabal`](https://haskell.org/cabal) or [`stack`](https://haskellstack.org/). Shake is often used for building C/C++, Docker containers and Javascript/HTML/CSS projects.
 
 #### Q: Where are functions for string manipulation?
 
@@ -67,7 +67,7 @@ There is a tracked function `doesDirectoryExist`, to depend on the presence or a
 
 #### Q: What's the history of Shake?
 
-I ([Neil Mitchell](http://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](http://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
+I ([Neil Mitchell](https://ndmitchell.com)) was one of the people behind the [Yhc project](https://www.haskell.org/haskellwiki/Yhc), a Haskell compiler that died in a large part because of its build system. To quote from [the final blog post](https://yhc06.blogspot.co.uk/2011/04/yhc-is-dead.html):
 
 > The biggest challenge for Yhc was the build system -- we ended up with 10,000 lines of Python Scons scripts. Without a robust build system nothing else matters. When our sole Python hacker left the team that was the beginning of the end.
 
