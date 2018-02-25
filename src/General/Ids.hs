@@ -89,7 +89,7 @@ toListUnsafe (Ids ref) = do
     S{..} <- readIORef ref
 
     -- execute in O(1) stack
-    -- see http://neilmitchell.blogspot.co.uk/2015/09/making-sequencemapm-for-io-take-o1-stack.html
+    -- see https://neilmitchell.blogspot.co.uk/2015/09/making-sequencemapm-for-io-take-o1-stack.html
     let index r i | i >= used = []
         index r i | IO io <- readArray values i = case io r of
             (# r, Nothing #) -> index r (i+1)

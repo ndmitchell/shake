@@ -234,7 +234,7 @@ newResource name mx = liftIO $ newResourceIO name mx
 -- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
 -- \"*.url\" 'Development.Shake.%>' \\out -> do
 --     'Development.Shake.withResource' google 1 $
---         'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
+--         'Development.Shake.cmd' \"wget\" [\"https:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
 -- @
 --
 --   Now we will wait at least 5 seconds after querying Google before performing another query. If Google change the rules to
@@ -248,7 +248,7 @@ newResource name mx = liftIO $ newResourceIO name mx
 -- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
 -- \"*.url\" 'Development.Shake.%>' \\out -> do
 --     'Development.Shake.withResource' google 1 $ return ()
---     'Development.Shake.cmd' \"wget\" [\"http:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
+--     'Development.Shake.cmd' \"wget\" [\"https:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
 -- @
 --
 --   However, the rule may not continue running immediately after 'Development.Shake.withResource' completes, so while
