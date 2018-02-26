@@ -46,8 +46,8 @@ There are several libraries providing pre-made rules for Shake:
 
 * [shake-language-c](https://hackage.haskell.org/package/shake-language-c) allows cross-compiling C, C++ and Objective-C code to various target platforms.
 * [shake-cpp](https://github.com/jfeltz/shake-cpp) is an abstraction layer for Shake, providing simple C++ rules.
-* [kansas-lava-shake](https://hackage.haskell.org/package/kansas-lava-shake) provides a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](http://www.xilinx.com/).
-* [avr-shake](https://hackage.haskell.org/package/avr-shake) provides rules for building things with [AVR Crosspack](http://www.obdev.at/products/crosspack/index.html).
+* [kansas-lava-shake](https://hackage.haskell.org/package/kansas-lava-shake) provides a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](https://www.xilinx.com/).
+* [avr-shake](https://hackage.haskell.org/package/avr-shake) provides rules for building things with [AVR Crosspack](https://www.obdev.at/products/crosspack/index.html).
 * [shake-minify](https://hackage.haskell.org/package/shake-minify) uses native Haskell code (no external `$PATH` dependencies) to minify CSS and JS files.
 * [shake-pack](https://hackage.haskell.org/package/shake-pack) uses bz2 lib on the system to tar and bzip compress given files.
 
@@ -65,7 +65,7 @@ Several open-source projects make key use of Shake:
 
 And finally, here are a few tutorials and blog posts:
 
-* [Many articles from the author of Shake](http://neilmitchell.blogspot.co.uk/search/label/shake), covering ongoing development.
+* [Many articles from the author of Shake](https://neilmitchell.blogspot.co.uk/search/label/shake), covering ongoing development.
 * [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
 
 Do you have a link that should be included above? Let me know with a [tweet to `@ndm_haskell`](https://twitter.com/ndm_haskell).
