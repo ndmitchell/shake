@@ -13,8 +13,10 @@
 
 <!--
 Shake is suitable for all sizes of build systems, from a simple C project to a huge cross-platform multi-language project. However, at different scales, different techniques tend to be applicable.
+
 * [Small/simple build systems](Small.md#readme) -- some simpler build systems can be written as _forward_ build systems, without the need to explicitly think about dependencies or targets. Useful for getting started, relies on a tool to automatically track your dependencies.
 * [Large frequently changing build systems](Large.md#readme) -- for large build systems, it is useful to split the build system interpreter and metadata apart, making changes to the Haskell build system comparatively rare.
+
 -->
 
 #### Q: Any more documentation?
@@ -29,7 +31,6 @@ If you have any further questions:
 
 * [Ask on StackOverflow](https://stackoverflow.com/questions/tagged/shake-build-system), using the tag `shake-build-system`.
 * [Email us](https://groups.google.com/forum/?fromgroups#!forum/shake-build-system) for any questions/bugs/thoughts on Shake. If you need more information and aren't sure where to start, use the mailing list.
-
 
 #### Q: Is Shake limited to building Haskell?
 
@@ -64,6 +65,20 @@ Shake can use file names that are either absolute (`C:\file.txt`, `/file.txt`) o
 Think of directories as containers for files. They exist or don't pretty randomly, but if they have files, they must exist. In particular, you can't depend on a directory with `need` or write a rule to create a directory. Directories are created as needed -- the rule for `bar/baz.exe` will create the `bar` directory if necessary. If you want to depend on a `git clone` having being performed, depend on a particular checked-out file instead (e.g. `README.md`), with the rule to create it being `git clone`.
 
 There is a tracked function `doesDirectoryExist`, to depend on the presence or absence of a directory, but you should not call it on directories which might be created by the build system.
+
+#### Q: What GHC bugs has Shake found?
+
+For some reason, Shake tends to find a reasonable number of serious bugs in GHC, given how few bugs there are generally in GHC. I suspect the reason is a combination of thorough testing including with GHC pre-releases. Some of the best bugs found by Shake are:
+
+* [GHC bug 7646](https://ghc.haskell.org/trac/ghc/ticket/7646), a race condition when closing file handles that had been in several releases.
+* [GHC bug 10830](https://ghc.haskell.org/trac/ghc/ticket/10830), `maximumBy` had a space leak in a released version.
+* [GHC bug 11555](https://ghc.haskell.org/trac/ghc/ticket/11555), `catch` wouldn't catch an `undefined` argument passed to it in a pre-release.
+* [GHC bug 11830](https://ghc.haskell.org/trac/ghc/ticket/11830), livelock when disabling idle GC in a pre-release.
+* [GHC bug 11458](https://ghc.haskell.org/trac/ghc/ticket/11458) (originally from [GHC bug 11379](https://ghc.haskell.org/trac/ghc/ticket/11379)), serious issue with type applications producing dodgy programs in a pre-release.
+* [GHC bug 11978](https://ghc.haskell.org/trac/ghc/ticket/11978), segfaults when running certain profiling modes that weren't multithread safe.
+* [GHC bug 10553](https://ghc.haskell.org/trac/ghc/ticket/10553), `getEnvironment` was blank when run on PowerPC in `ghci`.
+* [GHC bug 10549](https://ghc.haskell.org/trac/ghc/ticket/10549), inconsistent optimisation flags leading to fatal errors in a pre-release.
+* [GHC bug 10176](https://ghc.haskell.org/trac/ghc/ticket/10176), invalid optimisations caused by a part of GHC that had been formally proved to be correct, in a pre-release.
 
 #### Q: What's the history of Shake?
 
