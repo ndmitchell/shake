@@ -13,10 +13,8 @@
 
 <!--
 Shake is suitable for all sizes of build systems, from a simple C project to a huge cross-platform multi-language project. However, at different scales, different techniques tend to be applicable.
-
 * [Small/simple build systems](Small.md#readme) -- some simpler build systems can be written as _forward_ build systems, without the need to explicitly think about dependencies or targets. Useful for getting started, relies on a tool to automatically track your dependencies.
 * [Large frequently changing build systems](Large.md#readme) -- for large build systems, it is useful to split the build system interpreter and metadata apart, making changes to the Haskell build system comparatively rare.
-
 -->
 
 #### Q: Any more documentation?
