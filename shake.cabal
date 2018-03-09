@@ -31,7 +31,7 @@ description:
     (e.g. compiler version).
 homepage:           https://shakebuild.com
 bug-reports:        https://github.com/ndmitchell/shake/issues
-tested-with:        GHC==8.2.2, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2
+tested-with:        GHC==8.4.1, GHC==8.2.2, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2
 extra-doc-files:
     CHANGES.txt
     README.md
