@@ -11,6 +11,7 @@ import Data.Char
 import General.Extra
 import Data.List.Extra
 import Data.Maybe
+import System.Directory.Extra(listFilesRecursive)
 import System.Info
 import Data.Version.Extra
 
@@ -36,6 +37,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ["--builddir=" ++ dist,"--user"]
             -- package-db is very sensitive, see #267
             ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
+        liftIO $ print =<< listFilesRecursive dist
         trackAllow ["dist//*"]
 
     index %> \_ -> do
