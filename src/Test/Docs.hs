@@ -38,6 +38,8 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             -- package-db is very sensitive, see #267
             ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
         liftIO $ print =<< listFilesRecursive dist
+        liftIO $ print ("Search path", path)
+        cmd_ "ghc-pkg list"
         trackAllow ["dist//*"]
 
     index %> \_ -> do
