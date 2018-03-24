@@ -38,6 +38,11 @@ import Prelude
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
 runAction g l (Action x) = runRAW g l x
 
+-- | Apply a modification, run an action, then undo the changes after.
+--   Doesn't actually require exception handling because we don't have the ability to catch exceptions to the user.
+actionBracket :: (Local -> (Local, Local -> Local)) -> Action a -> Action a
+actionBracket f = Action . unmodifyRW f . fromAction
+
 
 ---------------------------------------------------------------------
 -- EXCEPTION HANDLING
@@ -120,8 +125,8 @@ getVerbosity = Action $ getsRW localVerbosity
 --   Will not update the 'shakeVerbosity' returned by 'getShakeOptions' and will
 --   not have any impact on 'Diagnostic' tracing.
 withVerbosity :: Verbosity -> Action a -> Action a
-withVerbosity new = Action . unmodifyRW f . fromAction
-    where f s0 = (s0{localVerbosity=new}, \s -> s{localVerbosity=localVerbosity s0})
+withVerbosity new = actionBracket $ \s0 ->
+    (s0{localVerbosity=new}, \s -> s{localVerbosity=localVerbosity s0})
 
 
 -- | Run an action with 'Quiet' verbosity, in particular messages produced by 'traced'
@@ -142,8 +147,8 @@ blockApply :: String -> Action a -> Action a
 blockApply = applyBlockedBy . Just
 
 applyBlockedBy :: Maybe String -> Action a -> Action a
-applyBlockedBy reason = Action . unmodifyRW f . fromAction
-    where f s0 = (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
+applyBlockedBy reason = actionBracket $ \s0 ->
+    (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
 
 
 ---------------------------------------------------------------------
