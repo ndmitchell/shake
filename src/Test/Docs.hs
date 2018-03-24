@@ -11,7 +11,6 @@ import Data.Char
 import General.Extra
 import Data.List.Extra
 import Data.Maybe
-import System.Directory.Extra(listFilesRecursive)
 import System.Info
 import Data.Version.Extra
 
@@ -38,9 +37,6 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             -- package-db is very sensitive, see #267
             -- note that the reverse ensures the behaviour is consistent between the flags and the env variable
             ["--package-db=" ++ x | x <- maybe [] (reverse . filter (`notElem` [".",""]) . splitSearchPath) path]
-        liftIO $ print =<< listFilesRecursive dist
-        liftIO $ print ("Search path", path)
-        cmd_ "ghc-pkg list"
         trackAllow ["dist//*"]
 
     index %> \_ -> do
