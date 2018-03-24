@@ -33,10 +33,11 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         path <- getEnv "GHC_PACKAGE_PATH"
         liftIO $ createDirectoryRecursive "dist"
         dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
-        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure -v3"
+        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure"
             ["--builddir=" ++ dist,"--user"]
             -- package-db is very sensitive, see #267
-            ["--package-db=" ++ x | x <- maybe [] (filter (`notElem` [".",""]) . splitSearchPath) path]
+            -- note that the reverse ensures the behaviour is consistent between the flags and the env variable
+            ["--package-db=" ++ x | x <- maybe [] (reverse . filter (`notElem` [".",""]) . splitSearchPath) path]
         liftIO $ print =<< listFilesRecursive dist
         liftIO $ print ("Search path", path)
         cmd_ "ghc-pkg list"
