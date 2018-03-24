@@ -66,7 +66,7 @@ newtype Cache k v a = Cache (State (k :-> v) a)
     deriving (Functor, Applicative, Monad)
 
 askCache :: Eq k => k -> Cache k v (Maybe v)
-askCache k = Cache $ fmap (! k) get
+askCache k = Cache $ gets (! k)
 
 cache :: Eq k => k -> Cache k v v -> Cache k v v
 cache k act = do
