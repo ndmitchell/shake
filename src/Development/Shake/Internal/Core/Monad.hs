@@ -4,7 +4,6 @@
 module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
-    withRO, withRW,
     catchRAW, tryRAW, throwRAW,
     unmodifyRW, captureRAW,
     ) where
@@ -68,20 +67,8 @@ getsRW f = fmap f getRW
 putRW :: rw -> RAW ro rw ()
 putRW rw = rw `seq` RAW $ liftIO . flip writeIORef rw =<< asks rww
 
-withRAW :: (S ro rw -> S ro2 rw2) -> RAW ro2 rw2 a -> RAW ro rw a
-withRAW f m = RAW $ withReaderT f $ fromRAW m
-
 modifyRW :: (rw -> rw) -> RAW ro rw ()
 modifyRW f = do x <- getRW; putRW $ f x
-
-withRO :: (ro -> ro2) -> RAW ro2 rw a -> RAW ro rw a
-withRO f = withRAW $ \s -> s{ro=f $ ro s}
-
-withRW :: (rw -> rw2) -> RAW ro rw2 a -> RAW ro rw a
-withRW f m = do
-    rw <- getRW
-    rww <- liftIO $ newIORef $ f rw
-    withRAW (\s -> s{rww=rww}) m
 
 
 ---------------------------------------------------------------------

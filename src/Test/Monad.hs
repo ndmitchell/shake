@@ -23,38 +23,37 @@ run ro rw m = do
 
 test build = do
     let conv x = either (Left . fromException) Right x :: Either (Maybe ArithException) Int
-    let dump ro rw = do liftIO . (=== ro) =<< getRO; liftIO . (=== rw) =<< getRW
+    let dump rw = liftIO . (=== rw) =<< getRW
 
     -- test the basics plus exception handling
     run 1 "test" $ do
-        dump 1 "test"
+        dump "test"
         putRW "more"
-        dump 1 "more"
-        res <- tryRAW $ withRO (+3) $ do
-            dump 4 "more"
-            withRW (++ "x") $
-                dump 4 "morex"
-            dump 4 "more"
+        dump "more"
+        res <- tryRAW $ do
+            dump "more"
+            modifyRW (++ "x")
+            dump "morex"
             return 100
         liftIO $ conv res === Right 100
-        dump 1 "more"
+        dump "morex"
         putRW "new"
-        dump 1 "new"
-        res <- tryRAW $ withRO (+2) $ do
-            dump 3 "new"
-            withRW (++ "x") $ do
-                dump 3 "newx"
-                throwRAW Overflow
+        dump "new"
+        res <- tryRAW $ do
+            dump "new"
+            modifyRW (++ "z")
+            dump "newz"
+            throwRAW Overflow
             error "Should not have reached here"
             return 9
         liftIO $ conv res === Left (Just Overflow)
-        dump 1 "new"
+        dump "newz"
         catchRAW (catchRAW (throwRAW Overflow) $ \_ -> modifyRW (++ "x")) $
             \_ -> modifyRW (++ "y")
-        dump 1 "newx"
+        dump "newzx"
         catchRAW (catchRAW (throwRAW Overflow) $ \e -> modifyRW (++ "x") >> throwRAW e) $
             \_ -> modifyRW (++ "y")
-        dump 1 "newxxy"
+        dump "newzxxy"
 
     -- test capture
     run 1 "test" $ do
