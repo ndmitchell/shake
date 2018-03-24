@@ -3,8 +3,3 @@ cache: "c:\\sr -> appveyor.yml"
 
 test_script:
 - ps: Invoke-Expression (Invoke-WebRequest 'https://raw.githubusercontent.com/ndmitchell/neil/master/appveyor.ps1')
-
-init:
-  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
