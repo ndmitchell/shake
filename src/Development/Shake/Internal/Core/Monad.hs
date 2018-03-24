@@ -5,7 +5,7 @@ module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
     getRO, getRW, getsRO, getsRW, putRW, modifyRW,
     catchRAW, tryRAW, throwRAW,
-    unmodifyRW, captureRAW,
+    captureRAW,
     ) where
 
 import Control.Exception.Extra
@@ -94,17 +94,7 @@ throwRAW = liftIO . throwIO
 
 
 ---------------------------------------------------------------------
--- WEIRD STUFF
-
--- | Apply a modification, run an action, then undo the changes after.
-unmodifyRW :: (rw -> (rw, rw -> rw)) -> RAW ro rw a -> RAW ro rw a
-unmodifyRW f m = do
-    (s2,undo) <- fmap f getRW
-    putRW s2
-    res <- m
-    modifyRW undo
-    return res
-
+-- CONTINUATIONS
 
 -- | Capture a continuation. The continuation should be called at most once.
 --   Calling the same continuation, multiple times, in parallel, results in incorrect behaviour.

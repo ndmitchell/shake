@@ -38,10 +38,15 @@ import Prelude
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
 runAction g l (Action x) = runRAW g l x
 
--- | Apply a modification, run an action, then undo the changes after.
+-- | Apply a modification, run an action, then run an undo action after.
 --   Doesn't actually require exception handling because we don't have the ability to catch exceptions to the user.
 actionBracket :: (Local -> (Local, Local -> Local)) -> Action a -> Action a
-actionBracket f = Action . unmodifyRW f . fromAction
+actionBracket f m = Action $ do
+    (s2, undo) <- fmap f getRW
+    putRW s2
+    res <- fromAction m
+    modifyRW undo
+    return res
 
 
 ---------------------------------------------------------------------
