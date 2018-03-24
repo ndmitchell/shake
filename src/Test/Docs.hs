@@ -149,6 +149,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         putNormal . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
         needModules
         need ["Main.hs"]
+        trackAllow ["dist//*"]
         needSource
         cmd_ "ghc -fno-code -ignore-package=hashmap " ["-idist/build/autogen","-i" ++ root </> "src","Main.hs"]
         writeFile' out ""
