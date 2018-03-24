@@ -39,6 +39,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ["--package-db=" ++ x | x <- maybe [] (reverse . filter (`notElem` [".",""]) . splitSearchPath) path]
         -- Paths_shake is only created by "Setup build" (which we want to skip), and required by "Setup haddock", so we fake it
         copyFile' (root </> "src/Paths.hs") "dist/build/autogen/Paths_shake.hs"
+        copyFile' (root </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
         writeFile' "dist/build/autogen/cabal_macros.h" ""
         trackAllow ["dist//*"]
 
