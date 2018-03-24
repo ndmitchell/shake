@@ -26,7 +26,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
     let needSource = need =<< getDirectoryFiles "." (map (root </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
-    config %> \_ -> withVerbosity Loud $ do
+    config %> \_ -> do
         need $ map (root </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
