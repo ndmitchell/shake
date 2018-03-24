@@ -37,6 +37,8 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             -- package-db is very sensitive, see #267
             -- note that the reverse ensures the behaviour is consistent between the flags and the env variable
             ["--package-db=" ++ x | x <- maybe [] (reverse . filter (`notElem` [".",""]) . splitSearchPath) path]
+        -- Paths_shake is only created by "Setup build" (which we want to skip), and required by "Setup haddock", so we fake it
+        copyFile' (root </> "src/Paths.hs") "dist/build/autogen/Paths_shake.hs"
         trackAllow ["dist//*"]
 
     index %> \_ -> do
@@ -45,9 +47,6 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         trackAllow ["dist//*"]
         dist <- liftIO $ canonicalizePath "dist"
         cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
-
-    "Paths_shake.hs" %> \out ->
-        copyFile' (root </> "src/Paths.hs") out
 
     "Part_*.hs" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
@@ -130,7 +129,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
 
     "Files.lst" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
-        need [index,"Paths_shake.hs"]
+        need [index]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
         writeFileChanged out $ unlines $
@@ -148,9 +147,9 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
     "Success.txt" %> \out -> do
         putNormal . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
         needModules
-        need ["Main.hs", "Paths_shake.hs"]
+        need ["Main.hs"]
         needSource
-        cmd_ "ghc -fno-code -ignore-package=hashmap " ["-i.","-i" ++ root </> "src","Main.hs"]
+        cmd_ "ghc -fno-code -ignore-package=hashmap " ["-idist/build/autogen","-i" ++ root </> "src","Main.hs"]
         writeFile' out ""
 
 
