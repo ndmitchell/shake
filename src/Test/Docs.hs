@@ -41,6 +41,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         copyFile' (root </> "src/Paths.hs") "dist/build/autogen/Paths_shake.hs"
         copyFile' (root </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
         writeFile' "dist/build/autogen/cabal_macros.h" ""
+        writeFile' "dist/build/shake/autogen/cabal_macros.h" ""
         trackAllow ["dist//*"]
 
     index %> \_ -> do
