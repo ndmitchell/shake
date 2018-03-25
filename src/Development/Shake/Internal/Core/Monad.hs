@@ -3,7 +3,7 @@
 
 module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
-    getRO, getRW, getsRO, getsRW, putRW, modifyRW,
+    getRO, getRW, putRW, modifyRW,
     catchRAW, tryRAW, throwRAW,
     captureRAW,
     ) where
@@ -56,12 +56,6 @@ getRO = RAW $ asks ro
 
 getRW :: RAW ro rw rw
 getRW = RAW $ liftIO . readIORef =<< asks rww
-
-getsRO :: (ro -> a) -> RAW ro rw a
-getsRO f = fmap f getRO
-
-getsRW :: (rw -> a) -> RAW ro rw a
-getsRW f = fmap f getRW
 
 -- | Strict version
 putRW :: rw -> RAW ro rw ()
