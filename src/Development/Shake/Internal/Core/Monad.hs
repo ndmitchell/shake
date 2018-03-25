@@ -10,7 +10,7 @@ module Development.Shake.Internal.Core.Monad(
 
 import Control.Exception.Extra
 import Control.Monad.IO.Class
-import Data.IORef
+import Data.IORef.Extra
 import Control.Applicative
 import Control.Monad
 import Prelude
