@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -202,8 +202,8 @@ apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
     let tk = typeRep (Proxy :: Proxy key)
         tv = typeRep (Proxy :: Proxy value)
     Global{..} <- Action getRO
-    block <- Action $ getsRW localBlockApply
-    whenJust block $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
+    Local{localBlockApply} <- Action getRW
+    whenJust localBlockApply $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
     case Map.lookup tk globalRules of
         Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
         Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
@@ -214,8 +214,8 @@ applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
-    stack <- Action $ getsRW localStack
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) stack ks
+    Local{localStack} <- Action getRW
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) localStack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
@@ -312,10 +312,10 @@ newCacheIO (act :: k -> Action v) = do
                 (res,offset) <- case res of
                     Just res -> return (res, 0)
                     Nothing -> do
-                        pool <- Action $ getsRO globalPool
+                        Global{..} <- Action getRO
                         offset <- liftIO offsetTime
                         Action $ captureRAW $ \k -> waitFence bar $ \v ->
-                            addPoolResume pool $ do offset <- liftIO offset; k $ Right (v,offset)
+                            addPoolResume globalPool $ do offset <- liftIO offset; k $ Right (v,offset)
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
@@ -324,14 +324,14 @@ newCacheIO (act :: k -> Action v) = do
             Nothing -> do
                 bar <- newFence
                 return $ (,) (Map.insert key bar mp) $ do
-                    pre <- Action $ getsRW localDepends
+                    Local{localDepends=pre} <- Action getRW
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
                             liftIO $ signalFence bar $ Left err
                             Action $ throwRAW err
                         Right v -> do
-                            post <- Action $ getsRW localDepends
+                            Local{localDepends=post} <- Action getRW
                             let deps = take (length post - length pre) post
                             liftIO $ signalFence bar $ Right (deps, v)
                             return v
@@ -392,7 +392,7 @@ parallel acts = Action $ do
 --   A more general version of 'orderOnly'.
 orderOnlyAction :: Action a -> Action a
 orderOnlyAction act = Action $ do
-    pre <- getsRW localDepends
+    Local{localDepends=pre} <- getRW
     res <- fromAction act
     modifyRW $ \s -> s{localDepends=pre}
     return res

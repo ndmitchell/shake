@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ScopedTypeVariables, ConstraintKinds #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,
@@ -42,7 +42,8 @@ runAction g l (Action x) = runRAW g l x
 --   Doesn't actually require exception handling because we don't have the ability to catch exceptions to the user.
 actionBracket :: (Local -> (Local, Local -> Local)) -> Action a -> Action a
 actionBracket f m = Action $ do
-    (s2, undo) <- fmap f getRW
+    s <- getRW
+    let (s2,undo) = f s
     putRW s2
     res <- fromAction m
     modifyRW undo
@@ -54,8 +55,8 @@ actionBracket f m = Action $ do
 
 actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act clean = do
-    cleanup <- Action $ getsRO globalCleanup
-    undo <- liftIO $ addCleanup cleanup $ void clean
+    Global{..} <- Action getRO
+    undo <- liftIO $ addCleanup globalCleanup $ void clean
     -- important to mask_ the undo/clean combo so either both happen or neither
     res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ $ undo >> clean) >> throwRAW e
     liftIO $ mask_ $ undo >> when runOnSuccess (void clean)
@@ -75,14 +76,14 @@ actionFinally = actionBoom True
 
 -- | Get the initial 'ShakeOptions', these will not change during the build process.
 getShakeOptions :: Action ShakeOptions
-getShakeOptions = Action $ getsRO globalOptions
+getShakeOptions = Action $ globalOptions <$> getRO
 
 
 -- | Get the current 'Progress' structure, as would be returned by 'shakeProgress'.
 getProgress :: Action Progress
 getProgress = do
-    res <- Action $ getsRO globalProgress
-    liftIO res
+    Global{..} <- Action getRO
+    liftIO globalProgress
 
 -- | Specify an action to be run after the database has been closed, if building completes successfully.
 runAfter :: IO () -> Action ()
@@ -123,7 +124,7 @@ putQuiet = putWhen Quiet
 --   'putLoud' \/ 'putNormal' \/ 'putQuiet', which ensures multiple messages are
 --   not interleaved. The verbosity can be modified locally by 'withVerbosity'.
 getVerbosity :: Action Verbosity
-getVerbosity = Action $ getsRW localVerbosity
+getVerbosity = Action $ localVerbosity <$> getRW
 
 
 -- | Run an action with a particular verbosity level.
@@ -173,9 +174,9 @@ applyBlockedBy reason = actionBracket $ \s0 ->
 traced :: String -> IO a -> Action a
 traced msg act = do
     Global{..} <- Action getRO
-    stack <- Action $ getsRW localStack
+    Local{localStack} <- Action getRW
     start <- liftIO globalTimestamp
-    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack stack ++ ")"
+    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack localStack ++ ")"
     res <- liftIO act
     stop <- liftIO globalTimestamp
     let trace = newTrace msg start stop

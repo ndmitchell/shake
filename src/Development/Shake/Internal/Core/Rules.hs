@@ -53,8 +53,8 @@ getUserRules :: Typeable a => Action (UserRule a)
 getUserRules = f where
     f :: forall a . Typeable a => Action (UserRule a)
     f = do
-        userRules <- Action $ getsRO globalUserRules
-        return $ case Map.lookup (typeRep (Proxy :: Proxy a)) userRules of
+        Global{..} <- Action getRO
+        return $ case Map.lookup (typeRep (Proxy :: Proxy a)) globalUserRules of
             Nothing -> Unordered []
             Just (UserRule_ r) -> fromJust $ cast r
 
