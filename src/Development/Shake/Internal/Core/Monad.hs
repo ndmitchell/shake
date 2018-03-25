@@ -43,8 +43,8 @@ instance Applicative (RAW ro rw) where
     (<*>) = Ap
 
 instance Monad (RAW ro rw) where
-    return = Pure
-    (>>) = Next
+    return = pure
+    (>>) = (*>)
     (>>=) = Bind
 
 instance MonadIO (RAW ro rw) where
