@@ -138,7 +138,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp = do
             progName <- getProgName
-            putWhen Normal $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
+            putWhen Quiet $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
 
     when (errs /= []) $ do
         putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
