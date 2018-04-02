@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    #576, remove incorrect Cabal description
 0.16.3, released 2018-02-23
     Allow reading data files from next to the executable
     #566, require extra-1.6.1

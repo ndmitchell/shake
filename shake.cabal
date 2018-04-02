@@ -12,8 +12,7 @@ synopsis:           Build system library, like Make, but more accurate dependenc
 description:
     Shake is a Haskell library for writing build systems - designed as a
     replacement for @make@. See "Development.Shake" for an introduction,
-    including an example. Further examples are included in the Cabal tarball,
-    under the @Examples@ directory. The homepage contains links to a user
+    including an example. The homepage contains links to a user
     manual, an academic paper and further information:
     <https://shakebuild.com>
     .
