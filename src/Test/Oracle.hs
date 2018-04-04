@@ -20,6 +20,10 @@ type instance RuleResult () = String
 
 type instance RuleResult Bool = Bool -- test results don't have to be a boolean
 
+newtype FileLen = FileLen FilePath
+    deriving (Eq,Show,NFData,Typeable,Hashable,Binary)
+type instance RuleResult FileLen = Int
+
 newtype RandomType = RandomType (BinarySentinel String)
     deriving (Eq,Show,NFData,Typeable,Hashable,Binary)
 
@@ -51,6 +55,14 @@ main = shakeTest test opt $ \args -> do
     add "unit" ()
     add "int" (0 :: Int)
 
+    addOracleCache $ \(FileLen file) -> do
+        liftIO $ appendFile ".log" "#"
+        length <$> readFile' file
+    "cache_out.txt" %> \out -> do
+        o <- askOracle (FileLen "cache_in.txt")
+        liftIO $ appendFile ".log" "!"
+        writeFile' out $ show o
+
 test build = do
     build ["clean"]
 
@@ -73,6 +85,21 @@ test build = do
     build ["--def=string=test","string.txt"]
     assertContents "string.txt" "test"
     assertContents ".log" ".."
+
+    writeFile ".log" ""
+    writeFile "cache_in.txt" "aaa"
+    build ["cache_out.txt","--sleep"]
+    assertContents "cache_out.txt" "3"
+    assertContents ".log" "#!"
+    writeFile "cache_in.txt" "zzz"
+    build ["cache_out.txt","--sleep"]
+    build ["cache_out.txt","--sleep"]
+    assertContents "cache_out.txt" "3"
+    assertContents ".log" "#!#"
+    writeFile "cache_in.txt" "zzzz"
+    build ["cache_out.txt","--sleep"]
+    assertContents "cache_out.txt" "4"
+    assertContents ".log" "#!##!"
 
     -- check error messages are good
     let errors args err = assertException [err] $ build $ "--quiet" : args
