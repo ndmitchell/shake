@@ -1,5 +1,6 @@
 Changelog for Shake
 
+0.16.4, released 2018-04-04
     #185, add addOracleCache which doesn't always rerun
     #576, remove incorrect Cabal description
     #575, print --help message at Quiet verbosity or above
