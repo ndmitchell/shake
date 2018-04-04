@@ -270,9 +270,10 @@ withResources res act
         f ((r,xs):rs) = withResource r (sum xs) $ f rs
 
 
--- | Given an action on a key, produce a cached version that will execute the action at most once per key.
+-- | Given an action on a key, produce a cached version that will execute the action at most once per key per run.
 --   Using the cached result will still result include any dependencies that the action requires.
 --   Each call to 'newCache' creates a separate cache that is independent of all other calls to 'newCache'.
+--   The operations will not be cached between runs and nothing will be persisted to the Shake database.
 --
 --   This function is useful when creating files that store intermediate values,
 --   to avoid the overhead of repeatedly reading from disk, particularly if the file requires expensive parsing.
