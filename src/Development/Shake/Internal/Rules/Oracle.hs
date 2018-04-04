@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Oracle(
-    addOracle, askOracle
+    addOracle, addOracleCache, askOracle
     ) where
 
 import Development.Shake.Internal.Core.Run
@@ -25,6 +25,30 @@ newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
 type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
+
+
+addOracleRaw :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Bool -> (q -> Action a) -> Rules (q -> Action a)
+addOracleRaw cache act = do
+        -- rebuild is automatic for oracles, skip just means we don't rebuild
+        opts <- getShakeOptionsRules
+        let skip = shakeRebuildApply opts "" == RebuildLater
+
+        addBuiltinRule noLint $ \(OracleQ q) old changed -> case old of
+            Just old | skip || (cache && not changed) ->
+                return $ RunResult ChangedNothing old $ decode' old
+            _ -> do
+                new <- OracleA <$> act q
+                return $ RunResult
+                    (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
+                    (encode' new)
+                    new
+        return askOracle
+    where
+        encode' :: Binary a => a -> BS.ByteString
+        encode' = BS.concat . LBS.toChunks . encode
+
+        decode' :: Binary a => BS.ByteString -> a
+        decode' = decode . LBS.fromChunks . return
 
 
 -- | Add extra information which rules can depend on.
@@ -82,30 +106,26 @@ type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracle act = do
-        -- rebuild is automatic for oracles, skip just means we don't rebuild
-        opts <- getShakeOptionsRules
-        let skip = shakeRebuildApply opts "" == RebuildLater
+addOracle = addOracleRaw False
 
-        addBuiltinRule noLint $ \(OracleQ q) old _ -> case old of
-            Just old | skip ->
-                return $ RunResult ChangedNothing old $ decode' old
-            _ -> do
-                new <- OracleA <$> act q
-                return $ RunResult
-                    (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
-                    (encode' new)
-                    new
-        return askOracle
-    where
-        encode' :: Binary a => a -> BS.ByteString
-        encode' = BS.concat . LBS.toChunks . encode
-
-        decode' :: Binary a => BS.ByteString -> a
-        decode' = decode . LBS.fromChunks . return
+-- | A combination of 'addOracle' and 'newCache' - an action that only runs when its dependencies change,
+--   whose result is stored in the database.
+--
+-- * Does the information need recomputing every time? e.g. looking up stuff in the environment?
+--   If so, use 'addOracle' instead.
+--
+-- * Is the action mostly deserisalising some file? If so, use 'newCache'.
+--
+-- * Is the operation expensive computation from other results? If so, use 'addOracleCache'.
+--
+--   An alternative to using 'addOracleCache' is introducing an intermediate file containing the result,
+--   which requires less storage in the Shake database and can be inspected by existing file-system viewing
+--   tools.
+addOracleCache ::(RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
+addOracleCache = addOracleRaw True
 
 
--- | Get information previously added with 'addOracle'. The question/answer types must match those provided
---   to 'addOracle'.
+-- | Get information previously added with 'addOracle' or 'addOracleCache'.
+--   The question/answer types must match those provided previously.
 askOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> Action a
 askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answer
