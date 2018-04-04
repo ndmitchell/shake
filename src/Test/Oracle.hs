@@ -12,6 +12,9 @@ import Data.Tuple.Extra
 import Test.Type hiding (RandomType)
 import qualified Test.Type as T
 import Control.Monad
+import Data.Functor
+import Prelude
+
 
 -- These are instances we'll compute over
 type instance RuleResult String = String
