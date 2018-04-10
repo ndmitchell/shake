@@ -426,10 +426,10 @@ orderOnlyAction act = Action $ do
 --   If Shake ever has nothing else to do it will run batches before they are at the maximum,
 --   so you may see much smaller batches, especially at high parallelism settings.
 batch
-    :: Int
-    -> ((a -> Action ()) -> Rules ())
-    -> (a -> Action b)
-    -> ([b] -> Action ())
+    :: Int   -- ^ Maximum number to run in a single batch, e.g. @3@.
+    -> ((a -> Action ()) -> Rules ()) -- ^ Way to match an entry, e.g. @\"*.ext\" '%>'@.
+    -> (a -> Action b)  -- ^ Preparation to run individually on each, e.g. using 'need'.
+    -> ([b] -> Action ())  -- ^ Combination action to run on all, e.g. using 'cmd'.
     -> Rules ()
 batch mx pred one many
     | mx <= 0 = error $ "Can't call batchable with <= 0, you used " ++ show mx
