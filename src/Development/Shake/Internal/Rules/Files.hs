@@ -154,6 +154,7 @@ ps &%> act
 --
 -- > forAll $ \x ys -> test x == Just ys ==> x `elem` ys && all ((== Just ys) . test) ys
 --
+--   Intuitively, the function defines a set partitioning, mapping each element to the partition that contains it.
 --   As an example of a function satisfying the invariaint:
 --
 -- @
