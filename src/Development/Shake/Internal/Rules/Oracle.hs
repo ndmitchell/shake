@@ -26,15 +26,16 @@ newtype OracleA answer = OracleA answer
 
 type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 
+data Mode = Norm | Cache deriving Eq
 
-addOracleRaw :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Bool -> (q -> Action a) -> Rules (q -> Action a)
-addOracleRaw cache act = do
+addOracleMode :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Mode -> (q -> Action a) -> Rules (q -> Action a)
+addOracleMode mode act = do
         -- rebuild is automatic for oracles, skip just means we don't rebuild
         opts <- getShakeOptionsRules
         let skip = shakeRebuildApply opts "" == RebuildLater
 
         addBuiltinRule noLint $ \(OracleQ q) old changed -> case old of
-            Just old | skip || (cache && not changed) ->
+            Just old | skip || (mode == Cache && not changed) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
                 new <- OracleA <$> act q
@@ -106,7 +107,7 @@ addOracleRaw cache act = do
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracle = addOracleRaw False
+addOracle = addOracleMode Norm
 
 -- | A combination of 'addOracle' and 'newCache' - an action that only runs when its dependencies change,
 --   whose result is stored in the database.
@@ -122,7 +123,7 @@ addOracle = addOracleRaw False
 --   which requires less storage in the Shake database and can be inspected by existing file-system viewing
 --   tools.
 addOracleCache ::(RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracleCache = addOracleRaw True
+addOracleCache = addOracleMode Cache
 
 
 -- | Get information previously added with 'addOracle' or 'addOracleCache'.
