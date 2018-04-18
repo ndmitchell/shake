@@ -115,8 +115,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 corrupt
                 return Nothing) $ do
 
-                let load = getWitness witnessOld witness
-                evaluate load
+                load <- evaluate $ getWitness witnessOld witness
                 ids <- Ids.empty
                 let go !i = do
                         v <- readChunk h
