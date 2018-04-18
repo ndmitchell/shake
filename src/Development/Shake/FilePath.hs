@@ -111,7 +111,7 @@ normaliseEx xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) --
                   ys = dropWhile sep xs
 
 
--- | Convert to native path separators, namely @\\@ on Windows. 
+-- | Convert to native path separators, namely @\\@ on Windows.
 toNative :: FilePath -> FilePath
 toNative = if isWindows then map (\x -> if x == '/' then '\\' else x) else id
 
