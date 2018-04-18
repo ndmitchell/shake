@@ -161,7 +161,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
             putWhenLn Normal $ "Writing report to " ++ file
             writeProgressReport file dat
      else do
-        when (Sleep `elem` flagsExtra) $ threadDelay 1000000
+        when (Sleep `elem` flagsExtra) $ sleep 1
         start <- offsetTime
         initDataDirectory -- must be done before we start changing directory
         let redir = maybe id withCurrentDirectory changeDirectory

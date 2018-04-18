@@ -65,7 +65,7 @@ writeChunks Chunks{..} act = withMVar chunksHandle $ \h -> do
         Nothing -> return Nothing
         Just flush -> fmap Just $ forkIO $ forever $ do
             takeMVar kick
-            threadDelay $ ceiling $ flush * 1000000
+            sleep flush
             tryTakeMVar kick
             writeChan chan $ hFlush h >> return True
 

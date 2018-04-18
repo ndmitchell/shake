@@ -28,7 +28,7 @@ main = shakeTest_ test $ do
                           name ~> do need ["helper/shake_helper" <.> exe]; test
 
     let helper_source = unlines
-            ["import Control.Concurrent"
+            ["import System.Time.Extra"
             ,"import Control.Monad"
             ,"import System.Directory"
             ,"import System.Environment"
@@ -44,7 +44,7 @@ main = shakeTest_ test $ do
             ,"            'x' -> exitFailure"
             ,"            'c' -> putStrLn =<< getCurrentDirectory"
             ,"            'v' -> putStrLn =<< getEnv rg"
-            ,"            'w' -> threadDelay $ floor $ 1000000 * (read rg :: Double)"
+            ,"            'w' -> sleep (read rg :: Double)"
             ,"            'r' -> LBS.putStr $ LBS.replicate (read rg) 'x'"
             ,"            'i' -> putStr =<< getContents"
             ,"        hFlush stdout"
