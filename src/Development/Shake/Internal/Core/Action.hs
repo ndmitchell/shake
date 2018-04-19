@@ -247,6 +247,7 @@ trackChange ks = do
     Global{..} <- Action getRO
     Local{..} <- Action getRW
     let top = topStack localStack
+
     let condition1 k = Just k == top
     let condition2 k = any ($ k) localTrackAllows
     let condition3 = filter (\k -> not $ condition1 k || condition2 k) $ map newKey ks
