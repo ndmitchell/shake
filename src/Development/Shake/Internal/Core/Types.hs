@@ -24,12 +24,9 @@ import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
+import Data.Semigroup
 import General.Cleanup
 import Prelude
-
-#if __GLASGOW_HASKELL__ < 840
-import Data.Semigroup
-#endif
 
 #if __GLASGOW_HASKELL__ >= 800
 import Control.Monad.Fail
@@ -54,9 +51,7 @@ instance Semigroup a => Semigroup (Action a) where
 
 instance Monoid a => Monoid (Action a) where
     mempty = pure mempty
-#if __GLASGOW_HASKELL__ < 840
     mappend a b = mappend <$> a <*> b
-#endif
 
 -- | How has a rule changed.
 -- | How has a rule changed.
