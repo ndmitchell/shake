@@ -1,5 +1,6 @@
-Changelog for Shake
+Changelog for Shake (* = breaking change)
 
+*   Change the Development.Shake.Rule.track* functions
     #584, add Semigroup/Monoid instances for Action
     Add produces to declare which untracked files a rule produces
     Add untrackedDependencies to note which rules cannot be cached

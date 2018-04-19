@@ -415,7 +415,7 @@ trackRead = mapM_ (trackUse . FileQ . fileNameFromString)
 --   then these files must either be the target of this rule, or never referred to by the build system.
 --   Calls to 'trackWrite' are automatically inserted in 'LintFSATrace' mode.
 trackWrite :: [FilePath] -> Action ()
-trackWrite = mapM_ (trackChange . FileQ . fileNameFromString)
+trackWrite = trackChange . map (FileQ . fileNameFromString)
 
 -- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
 --   the pattern.

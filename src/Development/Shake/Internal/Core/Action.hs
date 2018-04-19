@@ -238,24 +238,20 @@ trackCheckUsed = do
 
 
 -- | Track that a key has been changed by the action preceding it.
-trackChange :: ShakeValue key => key -> Action ()
+trackChange :: ShakeValue key => [key] -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
 -- 2) someone explicitly gave you permission with trackAllow
 -- 3) this file is never known to the build system, at the end it is not in the database
-trackChange key = do
-    let k = newKey key
+trackChange ks = do
     Global{..} <- Action getRO
     Local{..} <- Action getRW
-    liftIO $ do
-        let top = topStack localStack
-        if top == Just k then
-            return () -- condition 1
-         else if any ($ k) localTrackAllows then
-            return () -- condition 2
-         else
-            -- condition 3
-            atomicModifyIORef globalTrackAbsent $ \ks -> ((fromMaybe k top, k):ks, ())
+    let top = topStack localStack
+    let condition1 k = Just k == top
+    let condition2 k = any ($ k) localTrackAllows
+    let condition3 = filter (\k -> not $ condition1 k || condition2 k) $ map newKey ks
+    unless (null condition3) $
+        liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- condition3] ++ old, ())
 
 
 -- | Allow any matching key to violate the tracking rules.
