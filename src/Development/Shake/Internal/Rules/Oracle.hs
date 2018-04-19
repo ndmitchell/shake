@@ -28,23 +28,23 @@ newtype OracleA answer = OracleA answer
 
 type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 
-data Mode = Norm | Cache | Hash deriving Eq
+data Flavor = Norm | Cache | Hash deriving Eq
 
-addOracleMode :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Mode -> (q -> Action a) -> Rules (q -> Action a)
-addOracleMode mode act = do
+addOracleFlavor :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Flavor -> (q -> Action a) -> Rules (q -> Action a)
+addOracleFlavor flavor act = do
         -- rebuild is automatic for oracles, skip just means we don't rebuild
         opts <- getShakeOptionsRules
         let skip = shakeRebuildApply opts "" == RebuildLater
 
         addBuiltinRule noLint $ \(OracleQ q) old changed -> case old of
-            Just old | (mode /= Hash && skip) || (mode == Cache && not changed) ->
+            Just old | (flavor /= Hash && skip) || (flavor == Cache && not changed) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
-                when (mode == Norm) untrackedDependencies
+                when (flavor == Norm) untrackedDependencies
                 new <- OracleA <$> act q
                 let newHash = encodeHash new
                 return $
-                    if mode == Hash then RunResult
+                    if flavor == Hash then RunResult
                         (if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff)
                         newHash
                         new
@@ -119,13 +119,13 @@ addOracleMode mode act = do
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracle = addOracleMode Norm
+addOracle = addOracleFlavor Norm
 
 
 -- | An alternative to to 'addOracle' that relies on the 'hash' function providing a perfect equality,
 --   doesn't support @--skip@, but requires less storage.
 addOracleHash :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracleHash = addOracleMode Hash
+addOracleHash = addOracleFlavor Hash
 
 -- | A combination of 'addOracle' and 'newCache' - an action that only runs when its dependencies change,
 --   whose result is stored in the database.
@@ -141,7 +141,7 @@ addOracleHash = addOracleMode Hash
 --   which requires less storage in the Shake database and can be inspected by existing file-system viewing
 --   tools.
 addOracleCache ::(RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracleCache = addOracleMode Cache
+addOracleCache = addOracleFlavor Cache
 
 
 -- | Get information previously added with 'addOracle' or 'addOracleCache'.
