@@ -128,8 +128,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     lintCurrentDirectory curdir "After completion"
-                    absent <- readIORef absent
-                    checkValid database (runLint ruleinfo) absent
+                    checkValid database (runLint ruleinfo) =<< readIORef absent
                     putWhen Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
