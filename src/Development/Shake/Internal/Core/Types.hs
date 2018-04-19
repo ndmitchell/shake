@@ -46,8 +46,7 @@ newtype Action a = Action {fromAction :: RAW Global Local a}
 #endif
         )
 
--- | How has a rule changed.
--- | How has a rule changed.
+-- | How the output of a rule has changed.
 data RunChanged
     = ChangedNothing -- ^ Nothing has changed.
     | ChangedStore -- ^ The persisted value has changed, but in a way that should be considered identical.
