@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds, ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Test.Oracle(main) where
@@ -47,13 +47,13 @@ main = shakeTest test opt $ \args -> do
     addOracle $ \b -> return $ not b
     "true.txt" %> \out -> writeFile' out . show =<< askOracle False
 
-    let add :: (ShakeValue a, RuleResult a ~ String) => String -> a -> Rules ()
+    let add :: forall a . (ShakeValue a, RuleResult a ~ String) => String -> a -> Rules ()
         add name key = do
             name <.> "txt" %> \out -> do
                 liftIO $ appendFile ".log" "."
                 writeFile' out =<< askOracle key
             forM_ [val | Define nam val <- args, nam == name] $ \val ->
-                addOracle $ \k -> let _ = k `asTypeOf` key in return val
+                addOracle $ \(k :: a) -> return val
     add "string" ""
     add "unit" ()
     add "int" (0 :: Int)
