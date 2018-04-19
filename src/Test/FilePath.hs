@@ -24,7 +24,8 @@ instance Arbitrary File where
 
 
 test build = do
-    let a === b = a Test.Type.=== b -- duplicate definition in QuickCheck 2.7 and above
+    let infix 1 ===
+        a === b = a Test.Type.=== b -- duplicate definition in QuickCheck 2.7 and above
 
     let norm x =
             let s = toStandard $ normaliseEx x
@@ -83,6 +84,9 @@ test build = do
     takeDirectory1 "aaa/bbb" === "aaa"
     takeDirectory1 "aaa/" === "aaa"
     takeDirectory1 "aaa" === "aaa"
+
+    replaceDirectory1 "root/file.ext" "directory" === "directory" ++ [pathSeparator] ++ "file.ext"
+    replaceDirectory1 "root/foo/bar/file.ext" "directory" === "directory" ++ [pathSeparator] ++ "foo/bar/file.ext"
 
     searchPathSeparator === Native.searchPathSeparator
     pathSeparators === Native.pathSeparators

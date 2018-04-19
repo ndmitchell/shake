@@ -15,7 +15,8 @@
 --   (which is bad for 'Development.Shake.FilePattern' values).
 module Development.Shake.FilePath(
     module System.FilePath, module System.FilePath.Posix,
-    dropDirectory1, takeDirectory1, normaliseEx,
+    dropDirectory1, takeDirectory1, replaceDirectory1,
+    normaliseEx,
 #if !MIN_VERSION_filepath(1,4,0)
     (-<.>),
 #endif
@@ -69,6 +70,16 @@ dropDirectory1 = drop 1 . dropWhile (not . isPathSeparator)
 -- > takeDirectory1 "aaa" == "aaa"
 takeDirectory1 :: FilePath -> FilePath
 takeDirectory1 = takeWhile (not . isPathSeparator)
+
+
+
+-- | Replace the first component of a 'FilePath'. Should only be used on
+--   relative paths.
+--
+-- > replaceDirectory1 "root/file.ext" "directory" == "directory/file.ext"
+-- > replaceDirectory1 "root/foo/bar/file.ext" "directory" == "directory/foo/bar/file.ext"
+replaceDirectory1 :: FilePath -> String -> FilePath
+replaceDirectory1 x dir = dir </> dropDirectory1 x
 
 
 -- | Normalise a 'FilePath', applying the rules:
