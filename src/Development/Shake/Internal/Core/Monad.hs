@@ -59,9 +59,9 @@ instance MonadFail (RAW ro rw) where
 instance Semigroup a => Semigroup (RAW ro rw a) where
     (<>) a b = (<>) <$> a <*> b
 
-instance Monoid a => Monoid (RAW ro rw a) where
+instance (Semigroup a, Monoid a) => Monoid (RAW ro rw a) where
     mempty = pure mempty
-    mappend a b = mappend <$> a <*> b
+    mappend = (<>)
 
 
 type Capture a = (a -> IO ()) -> IO ()
