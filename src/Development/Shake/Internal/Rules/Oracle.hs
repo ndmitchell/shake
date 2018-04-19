@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Oracle(
-    addOracle, addOracleCache, askOracle
+    addOracle, addOracleCache, addOracleHash, askOracle
     ) where
 
 import Development.Shake.Internal.Core.Run
@@ -14,6 +14,7 @@ import Development.Shake.Classes
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary
+import General.Binary
 import Control.Applicative
 import Prelude
 
@@ -26,7 +27,7 @@ newtype OracleA answer = OracleA answer
 
 type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 
-data Mode = Norm | Cache deriving Eq
+data Mode = Norm | Cache | Hash deriving Eq
 
 addOracleMode :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Mode -> (q -> Action a) -> Rules (q -> Action a)
 addOracleMode mode act = do
@@ -35,16 +36,25 @@ addOracleMode mode act = do
         let skip = shakeRebuildApply opts "" == RebuildLater
 
         addBuiltinRule noLint $ \(OracleQ q) old changed -> case old of
-            Just old | skip || (mode == Cache && not changed) ->
+            Just old | (mode /= Hash && skip) || (mode == Cache && not changed) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
                 new <- OracleA <$> act q
-                return $ RunResult
-                    (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
-                    (encode' new)
-                    new
+                let newHash = encodeHash new
+                return $
+                    if mode == Hash then RunResult
+                        (if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff)
+                        newHash
+                        new
+                    else RunResult
+                        (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
+                        (encode' new)
+                        new
         return askOracle
     where
+        encodeHash :: Hashable a => a -> BS.ByteString
+        encodeHash = runBuilder . putEx . hash
+
         encode' :: Binary a => a -> BS.ByteString
         encode' = BS.concat . LBS.toChunks . encode
 
@@ -108,6 +118,12 @@ addOracleMode mode act = do
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
 addOracle = addOracleMode Norm
+
+
+-- | An alternative to to 'addOracle' that relies on the 'hash' function providing a perfect equality,
+--   doesn't support @--skip@, but requires less storage.
+addOracleHash :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
+addOracleHash = addOracleMode Hash
 
 -- | A combination of 'addOracle' and 'newCache' - an action that only runs when its dependencies change,
 --   whose result is stored in the database.

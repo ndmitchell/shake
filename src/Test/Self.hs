@@ -29,11 +29,11 @@ main = shakeTest_ noTest $ do
     -- fixup to cope with Cabal's generated files
     let fixPaths x = if x == "Paths_shake.hs" then "Paths.hs" else x
 
-    ghcPkg <- addOracle $ \GhcPkg{} -> do
+    ghcPkg <- addOracleHash $ \GhcPkg{} -> do
         Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
         return $ words out
 
-    ghcFlags <- addOracle $ \GhcFlags{} ->
+    ghcFlags <- addOracleHash $ \GhcFlags{} ->
         map ("-package=" ++) <$> readFileLines ".pkgs"
 
     let ghc args = do
