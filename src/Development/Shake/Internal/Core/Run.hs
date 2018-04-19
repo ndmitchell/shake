@@ -14,7 +14,7 @@ module Development.Shake.Internal.Core.Run(
     parallel,
     orderOnlyAction,
     batch,
-    runAfter
+    runAfter,
     ) where
 
 import Control.Exception
