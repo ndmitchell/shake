@@ -188,7 +188,7 @@ defaultRuleFile :: Rules ()
 defaultRuleFile = do
     opts@ShakeOptions{..} <- getShakeOptionsRules
     -- A rule from FileQ to (Maybe FileA). The result value is only useful for linting.
-    addBuiltinRuleEx (ruleLint opts) (ruleRun opts $ shakeRebuildApply opts)
+    addBuiltinRuleEx (ruleLint opts) noCheck (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FileQ FileR
 ruleLint opts k (FileR Nothing _) = return Nothing

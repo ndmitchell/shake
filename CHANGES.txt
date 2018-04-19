@@ -1,6 +1,7 @@
 Changelog for Shake (* = breaking change)
 
 *   Change the Development.Shake.Rule.track* functions
+*   Require addBuiltinRule to take a BuiltinCheck argument
 *   Make the third argument to BuiltinRun a real ADT
     Disable all the lintTrack functions unless lint is enabled
 *   Change the Development.Shake.Rule.track* functions to lintTrack*

@@ -3,7 +3,8 @@
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Types(
-    BuiltinRun, BuiltinLint, RunMode(..), RunResult(..), RunChanged(..),
+    BuiltinRun, BuiltinLint, BuiltinCheck,
+    RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
     BuiltinRule(..), Global(..), Local(..), Action(..),
     newLocal, localClearMutable, localMergeMutable
@@ -96,8 +97,15 @@ type BuiltinRun key value
 --   For builtin rules where the value is expected to change use 'Development.Shake.Rules.noLint'.
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
+
+-- | Check that a serialised value is compatible with the currently computed value.
+--
+--   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noCheck'.
+type BuiltinCheck key value = key -> value -> BS.ByteString -> Bool
+
 data BuiltinRule = BuiltinRule
     {builtinLint :: BuiltinLint Key Value
+    ,builtinCheck :: BuiltinCheck Key Value
     ,builtinRun :: BuiltinRun Key Value
     ,builtinResult :: TypeRep
     ,builtinKey :: BinaryOp Key

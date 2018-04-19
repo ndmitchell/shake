@@ -76,7 +76,7 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
-    addBuiltinRule noLint $ \k old mode ->
+    addBuiltinRule noLint noCheck $ \k old mode ->
         case old of
             Just old | mode == RunDependenciesSame -> return $ RunResult ChangedNothing old ()
             _ -> do
