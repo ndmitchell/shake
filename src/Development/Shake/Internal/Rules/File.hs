@@ -420,10 +420,7 @@ trackWrite = trackChange . map (FileQ . fileNameFromString)
 -- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
-trackAllow ps = do
-    opts <- getShakeOptions
-    when (isJust $ shakeLint opts) $
-        S.trackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
+trackAllow ps = S.trackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.

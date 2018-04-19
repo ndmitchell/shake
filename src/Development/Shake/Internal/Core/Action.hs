@@ -188,7 +188,7 @@ traced msg act = do
 ---------------------------------------------------------------------
 -- TRACKING
 
--- | Track that a key has been used by the action preceeding it.
+-- | Track that a key has been used by the action preceeding it when 'shakeLint' is active.
 trackUse :: ShakeValue key => [key] -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
@@ -197,45 +197,47 @@ trackUse :: ShakeValue key => [key] -> Action ()
 -- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
 trackUse ks = do
     Global{..} <- Action getRO
-    l@Local{..} <- Action getRW
-    deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
-    let top = topStack localStack
+    when (isJust $ shakeLint globalOptions) $ do
+        l@Local{..} <- Action getRW
+        deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
+        let top = topStack localStack
 
-    let condition1 k = top == Just k
-    let condition2 k = k `elem` deps
-    let condition3 k = any ($ k) localTrackAllows
-    let condition4 = filter (\k -> not $ condition1 k || condition2 k || condition3 k) $ map newKey ks
-    unless (null condition4) $
-        Action $ putRW l{localTrackUsed = condition4 ++ localTrackUsed}
+        let condition1 k = top == Just k
+        let condition2 k = k `elem` deps
+        let condition3 k = any ($ k) localTrackAllows
+        let condition4 = filter (\k -> not $ condition1 k || condition2 k || condition3 k) $ map newKey ks
+        unless (null condition4) $
+            Action $ putRW l{localTrackUsed = condition4 ++ localTrackUsed}
 
 
 trackCheckUsed :: Action ()
 trackCheckUsed = do
     Global{..} <- Action getRO
-    Local{..} <- Action getRW
-    liftIO $ do
-        deps <- concatMapM (listDepends globalDatabase) localDepends
+    when (isJust $ shakeLint globalOptions) $ do
+        Local{..} <- Action getRW
+        liftIO $ do
+            deps <- concatMapM (listDepends globalDatabase) localDepends
 
-        -- check 4a
-        bad <- return $ localTrackUsed \\ deps
-        unless (null bad) $ do
-            let n = length bad
-            errorStructured
-                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
-                [("Used", Just $ show x) | x <- bad]
-                ""
+            -- check 4a
+            bad <- return $ localTrackUsed \\ deps
+            unless (null bad) $ do
+                let n = length bad
+                errorStructured
+                    ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+                    [("Used", Just $ show x) | x <- bad]
+                    ""
 
-        -- check 4b
-        bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
-        unless (null bad) $ do
-            let n = length bad
-            errorStructured
-                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
-                [("Used", Just $ show x) | x <- bad]
-                ""
+            -- check 4b
+            bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
+            unless (null bad) $ do
+                let n = length bad
+                errorStructured
+                    ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+                    [("Used", Just $ show x) | x <- bad]
+                    ""
 
 
--- | Track that a key has been changed by the action preceding it.
+-- | Track that a key has been changed by the action preceding it when 'shakeLint' is active.
 trackChange :: ShakeValue key => [key] -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
@@ -243,19 +245,23 @@ trackChange :: ShakeValue key => [key] -> Action ()
 -- 3) this file is never known to the build system, at the end it is not in the database
 trackChange ks = do
     Global{..} <- Action getRO
-    Local{..} <- Action getRW
-    let top = topStack localStack
+    when (isJust $ shakeLint globalOptions) $ do
+        Local{..} <- Action getRW
+        let top = topStack localStack
 
-    let condition1 k = Just k == top
-    let condition2 k = any ($ k) localTrackAllows
-    let condition3 = filter (\k -> not $ condition1 k || condition2 k) $ map newKey ks
-    unless (null condition3) $
-        liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- condition3] ++ old, ())
+        let condition1 k = Just k == top
+        let condition2 k = any ($ k) localTrackAllows
+        let condition3 = filter (\k -> not $ condition1 k || condition2 k) $ map newKey ks
+        unless (null condition3) $
+            liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- condition3] ++ old, ())
 
 
 -- | Allow any matching key to violate the tracking rules.
 trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
-trackAllow (test :: key -> Bool) = Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
+trackAllow (test :: key -> Bool) = do
+    Global{..} <- Action getRO
+    when (isJust $ shakeLint globalOptions) $
+        Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
     where
         tk = typeRep (Proxy :: Proxy key)
         f k = typeKey k == tk && test (fromKey k)
