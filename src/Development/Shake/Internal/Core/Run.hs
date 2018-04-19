@@ -15,6 +15,7 @@ module Development.Shake.Internal.Core.Run(
     orderOnlyAction,
     batch,
     runAfter,
+    untrackedDependencies,
     ) where
 
 import Control.Exception
@@ -465,3 +466,9 @@ batch mx pred one many
                 runAction global local (do many $ map fst now; Action getRW) $ \x ->
                     forM_ now $ \(_,k) ->
                         (if isLeft x then addPoolException else addPoolResume) globalPool $ k x
+
+
+-- | This rule makes use of untracked dependencies (e.g. files in a system directory or items on the @$PATH@)
+--   and thus should never be cached. Calling 'Development.Shake.alwaysRerun' implicitly calls this function.
+untrackedDependencies :: Action ()
+untrackedDependencies = Action $ modifyRW $ \s -> s{localUntrackedDeps = True}

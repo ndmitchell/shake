@@ -13,6 +13,7 @@ import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import Control.Monad
 import Data.Binary
 import General.Binary
 import Control.Applicative
@@ -39,6 +40,7 @@ addOracleMode mode act = do
             Just old | (mode /= Hash && skip) || (mode == Cache && not changed) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
+                when (mode == Norm) untrackedDependencies
                 new <- OracleA <$> act q
                 let newHash = encodeHash new
                 return $

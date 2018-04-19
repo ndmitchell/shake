@@ -98,6 +98,7 @@ module Development.Shake(
     unsafeExtraThread,
     -- * Cache
     newCache, newCacheIO,
+    untrackedDependencies,
     -- * Batching
     needHasChanged,
     resultHasChanged,

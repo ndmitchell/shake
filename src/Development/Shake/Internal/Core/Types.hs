@@ -151,10 +151,11 @@ data Local = Local
     ,localTraces :: [Trace] -- ^ Traces, built in reverse
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
+    ,localUntrackedDeps :: !Bool -- ^ Taint flag that says this code has untracked dependencies
     }
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack verb Nothing [] 0 [] [] []
+newLocal stack verb = Local stack verb Nothing [] 0 [] [] [] False
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -175,4 +176,5 @@ localMergeMutable root xs = Local
     ,localTraces = concatMap localTraces xs ++ localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
+    ,localUntrackedDeps = any localUntrackedDeps $ root:xs
     }

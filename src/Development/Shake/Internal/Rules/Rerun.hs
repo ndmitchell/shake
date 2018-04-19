@@ -35,7 +35,9 @@ type instance RuleResult AlwaysRerunQ = ()
 --   Note that 'alwaysRerun' is applied when a rule is executed. Modifying an existing rule
 --   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
 alwaysRerun :: Action ()
-alwaysRerun = apply1 $ AlwaysRerunQ ()
+alwaysRerun = do
+    untrackedDependencies
+    apply1 $ AlwaysRerunQ ()
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun =

@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add untrackedDependencies to note which rules cannot be cached
     #583, add replaceDirectory1
     Add addOracleHash for oracles with reduced storage requirements
 0.16.4, released 2018-04-04
