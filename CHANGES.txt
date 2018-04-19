@@ -1,6 +1,7 @@
 Changelog for Shake (* = breaking change)
 
 *   Change the Development.Shake.Rule.track* functions
+*   Change the Development.Shake.Rule.track* functions to lintTrack*
     #584, add Semigroup/Monoid instances for Action
     Add produces to declare which untracked files a rule produces
     Add untrackedDependencies to note which rules cannot be cached

@@ -235,7 +235,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
         liftIO $ evaluate $ rnf res
 
         -- completed, now track anything required afterwards
-        trackCheckUsed
+        lintTrackFinished
         producesCheck
 
         Action $ fmap ((,) res) getRW) $ \x -> case x of

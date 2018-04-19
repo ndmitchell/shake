@@ -28,8 +28,7 @@ import General.Extra
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
-import Development.Shake.Internal.Core.Action hiding (trackAllow)
-import qualified Development.Shake.Internal.Core.Action as S
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.FileName
 import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Classes
@@ -409,18 +408,18 @@ neededCheck xs = do
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
 --   automatically inserted in 'LintFSATrace' mode.
 trackRead :: [FilePath] -> Action ()
-trackRead = trackUse . map (FileQ . fileNameFromString)
+trackRead = lintTrackRead . map (FileQ . fileNameFromString)
 
 -- | Track that a file was written by the action preceeding it. If 'shakeLint' is activated
 --   then these files must either be the target of this rule, or never referred to by the build system.
 --   Calls to 'trackWrite' are automatically inserted in 'LintFSATrace' mode.
 trackWrite :: [FilePath] -> Action ()
-trackWrite = trackChange . map (FileQ . fileNameFromString)
+trackWrite = lintTrackWrite . map (FileQ . fileNameFromString)
 
 -- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
-trackAllow ps = S.trackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
+trackAllow ps = lintTrackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.

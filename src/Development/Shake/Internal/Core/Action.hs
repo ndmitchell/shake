@@ -3,7 +3,7 @@
 module Development.Shake.Internal.Core.Action(
     runAction, actionOnException, actionFinally,
     getShakeOptions, getProgress, runAfter,
-    trackUse, trackChange, trackAllow, trackCheckUsed,
+    lintTrackRead, lintTrackWrite, lintTrackAllow, lintTrackFinished,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     blockApply, unsafeAllowApply,
     traced
@@ -188,14 +188,14 @@ traced msg act = do
 ---------------------------------------------------------------------
 -- TRACKING
 
--- | Track that a key has been used by the action preceeding it when 'shakeLint' is active.
-trackUse :: ShakeValue key => [key] -> Action ()
+-- | Track that a key has been used/read by the action preceeding it when 'shakeLint' is active.
+lintTrackRead :: ShakeValue key => [key] -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
 -- 2) you have already been used by apply, and are on the dependency list
 -- 3) someone explicitly gave you permission with trackAllow
 -- 4) at the end of the rule, a) you are now on the dependency list, and b) this key itself has no dependencies (is source file)
-trackUse ks = do
+lintTrackRead ks = do
     Global{..} <- Action getRO
     when (isJust $ shakeLint globalOptions) $ do
         l@Local{..} <- Action getRW
@@ -210,8 +210,8 @@ trackUse ks = do
             Action $ putRW l{localTrackUsed = condition4 ++ localTrackUsed}
 
 
-trackCheckUsed :: Action ()
-trackCheckUsed = do
+lintTrackFinished :: Action ()
+lintTrackFinished = do
     Global{..} <- Action getRO
     when (isJust $ shakeLint globalOptions) $ do
         Local{..} <- Action getRW
@@ -237,13 +237,13 @@ trackCheckUsed = do
                     ""
 
 
--- | Track that a key has been changed by the action preceding it when 'shakeLint' is active.
-trackChange :: ShakeValue key => [key] -> Action ()
+-- | Track that a key has been changed/written by the action preceding it when 'shakeLint' is active.
+lintTrackWrite :: ShakeValue key => [key] -> Action ()
 -- One of the following must be true:
 -- 1) you are the one building this key (e.g. key == topStack)
 -- 2) someone explicitly gave you permission with trackAllow
 -- 3) this file is never known to the build system, at the end it is not in the database
-trackChange ks = do
+lintTrackWrite ks = do
     Global{..} <- Action getRO
     when (isJust $ shakeLint globalOptions) $ do
         Local{..} <- Action getRW
@@ -257,8 +257,8 @@ trackChange ks = do
 
 
 -- | Allow any matching key to violate the tracking rules.
-trackAllow :: ShakeValue key => (key -> Bool) -> Action ()
-trackAllow (test :: key -> Bool) = do
+lintTrackAllow :: ShakeValue key => (key -> Bool) -> Action ()
+lintTrackAllow (test :: key -> Bool) = do
     Global{..} <- Action getRO
     when (isJust $ shakeLint globalOptions) $
         Action $ modifyRW $ \s -> s{localTrackAllows = f : localTrackAllows s}
