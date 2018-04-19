@@ -1,5 +1,6 @@
 Changelog for Shake
 
+    Add produces to declare which untracked files a rule produces
     Add untrackedDependencies to note which rules cannot be cached
     #583, add replaceDirectory1
     Add addOracleHash for oracles with reduced storage requirements

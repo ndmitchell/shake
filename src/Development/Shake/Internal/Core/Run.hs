@@ -16,6 +16,7 @@ module Development.Shake.Internal.Core.Run(
     batch,
     runAfter,
     untrackedDependencies,
+    produces,
     ) where
 
 import Control.Exception
@@ -233,7 +234,11 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
     runAction global s (do
         res <- builtinRun k (fmap result r) dirtyChildren
         liftIO $ evaluate $ rnf res
+
+        -- completed, now track anything required afterwards
         when (Just LintFSATrace == shakeLint) trackCheckUsed
+        producesCheck
+
         Action $ fmap ((,) res) getRW) $ \x -> case x of
             Left e -> do
                 e <- if isNothing shakeLint then return e else handle return $
@@ -472,3 +477,18 @@ batch mx pred one many
 --   and thus should never be cached. Calling 'Development.Shake.alwaysRerun' implicitly calls this function.
 untrackedDependencies :: Action ()
 untrackedDependencies = Action $ modifyRW $ \s -> s{localUntrackedDeps = True}
+
+-- | This rule the following files, in addition to any defined by its target.
+--   At the end of the rule these files must have been written.
+produces :: [FilePath] -> Action ()
+produces xs = Action $ modifyRW $ \s -> s{localProduces = reverse xs ++ localProduces s}
+
+
+producesCheck :: Action ()
+producesCheck = do
+    Local{localProduces} <- Action getRW
+    missing <- liftIO $ filterM (notM . doesFileExist_) localProduces
+    when (missing /= []) $ liftIO $ errorStructured
+        "Files declared by 'produces' not produced"
+        [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
+        ""

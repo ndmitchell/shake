@@ -141,6 +141,14 @@ main = shakeTest test optionsEnum $ \args -> do
         alwaysRerun
         liftIO $ appendFile out "x"
 
+    "produces1" %> \out -> do
+        produces [out <.> "also"]
+        writeFile' (out <.> "also") ""
+        writeFile' out ""
+    "produces2" %> \out -> do
+        produces [out <.> "also"]
+        writeFile' out ""
+
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
         liftIO $ putStrLn $ let x = x in x
@@ -240,3 +248,7 @@ test build = do
     crash ["badoutput"] ["badoutput","BadBinary"]
     build ["badnone"] -- must be able to still run other rules
     assertContents "badnone" "xx"
+
+    -- check that produces works
+    build ["produces1"]
+    crash ["produces2"] ["produces","produces2.also"]
