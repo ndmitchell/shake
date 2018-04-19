@@ -150,10 +150,10 @@ addBuiltinRuleInternal :: (RuleResult key ~ value, ShakeValue key, Typeable valu
 addBuiltinRuleInternal binary lint (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value
-    let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let lint_ k v = lint (fromKey k) (fromValue v)
+    let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule run_ lint_ (typeRep v) binary_}
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ run_ (typeRep v) binary_}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.

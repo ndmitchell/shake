@@ -97,8 +97,8 @@ type BuiltinRun key value
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 data BuiltinRule = BuiltinRule
-    {builtinRun :: BuiltinRun Key Value
-    ,builtinLint :: BuiltinLint Key Value
+    {builtinLint :: BuiltinLint Key Value
+    ,builtinRun :: BuiltinRun Key Value
     ,builtinResult :: TypeRep
     ,builtinKey :: BinaryOp Key
     }
