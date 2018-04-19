@@ -36,8 +36,8 @@ addOracleFlavor flavor act = do
         opts <- getShakeOptionsRules
         let skip = shakeRebuildApply opts "" == RebuildLater
 
-        addBuiltinRule noLint $ \(OracleQ q) old changed -> case old of
-            Just old | (flavor /= Hash && skip) || (flavor == Cache && not changed) ->
+        addBuiltinRule noLint $ \(OracleQ q) old mode -> case old of
+            Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
                 when (flavor == Norm) untrackedDependencies

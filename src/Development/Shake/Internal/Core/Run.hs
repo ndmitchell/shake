@@ -221,8 +221,8 @@ applyKeyValue ks = do
     return vs
 
 
-runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> Bool -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
-runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChildren continue = do
+runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
+runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
         Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
@@ -231,7 +231,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r dirtyChil
     let s = newLocal stack shakeVerbosity
     time <- offsetTime
     runAction global s (do
-        res <- builtinRun k (fmap result r) dirtyChildren
+        res <- builtinRun k (fmap result r) mode
         liftIO $ evaluate $ rnf res
 
         -- completed, now track anything required afterwards

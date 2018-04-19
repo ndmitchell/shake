@@ -72,7 +72,7 @@ ruleLint opts k v = do
                  | otherwise -> Just $ show now
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
-ruleRun opts rebuildFlags k o@(fmap getEx -> old) dirtyChildren = do
+ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
     let r = map (rebuildFlags . fileNameToString . fromFileQ) $ fromFilesQ k
     case old of
         _ | RebuildNow `elem` r -> rebuild
@@ -87,7 +87,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) dirtyChildren = do
                 case now of
                     Nothing -> rebuild
                     Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx now) now
-        Just old | not dirtyChildren -> do
+        Just old | mode == RunDependenciesSame -> do
             v <- liftIO $ filesStoredValue opts k
             case v of
                 Just v -> case filesEqualValue opts old v of

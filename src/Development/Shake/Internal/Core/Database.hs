@@ -8,6 +8,7 @@ module Development.Shake.Internal.Core.Database(
     listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build,
     Depends, nubDepends,
+    RunMode(..),
     Step, Result(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -50,6 +51,15 @@ import Data.Monoid
 import Prelude
 
 type Map = Map.HashMap
+
+---------------------------------------------------------------------
+-- PUBLIC TYPES
+
+-- | What mode a rule is running in.
+data RunMode
+    = RunDependenciesSame -- ^ My dependencies have not changed.
+    | RunDependenciesChanged -- ^ At least one of my dependencies from last time have changed, or I have no recorded dependencies.
+      deriving (Eq,Show)
 
 
 ---------------------------------------------------------------------
@@ -188,7 +198,7 @@ newtype BuildKey = BuildKey
         -> Step -- And the current step
         -> Key -- The key to build
         -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
-        -> Bool -- True if any of the children were dirty
+        -> RunMode -- True if any of the children were dirty
         -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
             -- Either an error, or a result.
             -- If the Bool is True you should rewrite the database entry.
@@ -267,16 +277,16 @@ build pool Database{..} BuildKey{..} stack ks continue =
             s <- Ids.lookup status i
             case s of
                 Nothing -> errorInternal $ "interned value missing from database, " ++ show i
-                Just (k, Missing) -> spawn True stack i k Nothing
+                Just (k, Missing) -> spawn RunDependenciesChanged stack i k Nothing
                 Just (k, Loaded r) -> check stack i k r (depends r)
                 Just (k, res) -> return res
 
 
         -- | Given a Key and the list of dependencies yet to be checked, check them
         check :: Stack -> Id -> Key -> Result BS.ByteString -> [Depends] -> IO Status {- Ready | Waiting -}
-        check stack i k r [] = spawn False stack i k $ Just r
+        check stack i k r [] = spawn RunDependenciesSame stack i k $ Just r
         check stack i k r (Depends ds:rest) = do
-            let cont v = if isLeft v then spawn True stack i k $ Just r else check stack i k r rest
+            let cont v = if isLeft v then spawn RunDependenciesChanged stack i k $ Just r else check stack i k r rest
             buildMany (addStack i k stack) ds
                 (\v -> case v of
                     Error _ -> Just ()
@@ -294,11 +304,11 @@ build pool Database{..} BuildKey{..} stack ks continue =
 
 
         -- | Given a Key, queue up execution and return waiting
-        spawn :: Bool -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
-        spawn dirtyChildren stack i k r = do
+        spawn :: RunMode -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
+        spawn mode stack i k r = do
             (w, done) <- newWaiting
             addPoolStart pool $
-                buildKey (addStack i k stack) step k r dirtyChildren $ \res -> do
+                buildKey (addStack i k stack) step k r mode $ \res -> do
                     let status = either Error (Ready . thd3) res
                     withLock lock $ do
                         i #= (k, status)

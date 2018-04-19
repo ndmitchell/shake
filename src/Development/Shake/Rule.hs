@@ -4,7 +4,7 @@
 module Development.Shake.Rule(
     -- * Defining builtin rules
     addBuiltinRule,
-    BuiltinLint, noLint, BuiltinRun, RunChanged(..), RunResult(..),
+    BuiltinLint, noLint, BuiltinRun, RunMode(..), RunChanged(..), RunResult(..),
     -- * Calling builtin rules
     apply, apply1,
     -- * User rules

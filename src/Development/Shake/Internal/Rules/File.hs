@@ -200,7 +200,7 @@ ruleLint opts k (FileR (Just v) _) = do
                  | otherwise -> Just $ show now
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
-ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) dirtyChildren = do
+ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) mode = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
     -- for Phony, it doesn't make that much sense, but probably isn't harmful?
@@ -228,7 +228,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                                 | otherwise = ChangedRecomputeDiff
                     retNew diff $ ResultDirect now
         -}
-        Just (ResultDirect old) | not dirtyChildren -> do
+        Just (ResultDirect old) | mode == RunDependenciesSame -> do
             now <- liftIO $ fileStoredValue opts o
             case now of
                 Nothing -> rebuild
@@ -236,7 +236,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     EqualCheap -> retNew ChangedNothing $ ResultDirect now
                     EqualExpensive -> retNew ChangedStore $ ResultDirect now
                     NotEqual -> rebuild
-        Just (ResultForward old) | not dirtyChildren -> retOld ChangedNothing
+        Just (ResultForward old) | mode == RunDependenciesSame -> retOld ChangedNothing
         _ -> rebuild
     where
         -- no need to lint check forward files

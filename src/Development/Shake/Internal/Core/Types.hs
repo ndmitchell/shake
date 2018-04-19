@@ -3,7 +3,7 @@
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Types(
-    BuiltinRun, BuiltinLint, RunResult(..), RunChanged(..),
+    BuiltinRun, BuiltinLint, RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
     BuiltinRule(..), Global(..), Local(..), Action(..),
     newLocal, localClearMutable, localMergeMutable
@@ -86,7 +86,7 @@ instance NFData value => NFData (RunResult value) where
 type BuiltinRun key value
     = key
     -> Maybe BS.ByteString
-    -> Bool
+    -> RunMode
     -> Action (RunResult value)
 
 -- | The action performed by @--lint@ for a given @key@/@value@ pair.
