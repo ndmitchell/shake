@@ -13,6 +13,7 @@ import Control.Monad.IO.Class
 import Data.IORef.Extra
 import Control.Applicative
 import Control.Monad
+import Data.Semigroup
 import Prelude
 
 #if __GLASGOW_HASKELL__ >= 800
@@ -54,6 +55,14 @@ instance MonadIO (RAW ro rw) where
 instance MonadFail (RAW ro rw) where
     fail = liftIO . Control.Monad.Fail.fail
 #endif
+
+instance Semigroup a => Semigroup (RAW ro rw a) where
+    (<>) a b = (<>) <$> a <*> b
+
+instance Monoid a => Monoid (RAW ro rw a) where
+    mempty = pure mempty
+    mappend a b = mappend <$> a <*> b
+
 
 type Capture a = (a -> IO ()) -> IO ()
 

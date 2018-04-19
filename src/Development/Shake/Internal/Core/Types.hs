@@ -40,18 +40,11 @@ import Control.Monad.Fail
 --   Action values are used by 'addUserRule' and 'action'. The 'Action' monad tracks the dependencies of a rule.
 --   To raise an exception call 'error', 'fail' or @'liftIO' . 'throwIO'@.
 newtype Action a = Action {fromAction :: RAW Global Local a}
-    deriving (Functor, Applicative, Monad, MonadIO, Typeable
+    deriving (Functor, Applicative, Monad, MonadIO, Typeable, Semigroup, Monoid
 #if __GLASGOW_HASKELL__ >= 800
              ,MonadFail
 #endif
         )
-
-instance Semigroup a => Semigroup (Action a) where
-    (<>) a b = (<>) <$> a <*> b
-
-instance Monoid a => Monoid (Action a) where
-    mempty = pure mempty
-    mappend a b = mappend <$> a <*> b
 
 -- | How has a rule changed.
 -- | How has a rule changed.
