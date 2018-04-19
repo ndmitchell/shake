@@ -218,7 +218,7 @@ trackCheckUsed = do
     liftIO $ do
         deps <- concatMapM (listDepends globalDatabase) localDepends
 
-        -- check 3a
+        -- check 4a
         bad <- return $ localTrackUsed \\ deps
         unless (null bad) $ do
             let n = length bad
@@ -227,7 +227,7 @@ trackCheckUsed = do
                 [("Used", Just $ show x) | x <- bad]
                 ""
 
-        -- check 3b
+        -- check 4b
         bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
         unless (null bad) $ do
             let n = length bad
