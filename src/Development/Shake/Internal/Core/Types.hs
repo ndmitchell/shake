@@ -75,7 +75,7 @@ type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 -- | Check that a serialised value is compatible with the currently computed value.
 --
---   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noCheck'.
+--   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noIdentity'.
 type BuiltinIdentity key value = key -> value -> BS.ByteString
 
 data BuiltinRule = BuiltinRule

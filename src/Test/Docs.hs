@@ -327,7 +327,7 @@ whitelist x | elem x $ words $
     "_shake _shake/build manual chrome://tracing/ compdb " ++
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
-    "*> BuiltinRun BuiltinLint RuleResult"
+    "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
