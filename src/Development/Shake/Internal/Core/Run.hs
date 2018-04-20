@@ -16,7 +16,7 @@ module Development.Shake.Internal.Core.Run(
     batch,
     runAfter,
     neverCache,
-    produces,
+    produces, producesUnchecked,
     ) where
 
 import Control.Exception
@@ -480,13 +480,17 @@ neverCache = Action $ modifyRW $ \s -> s{localUntrackedDeps = True}
 -- | This rule the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.
 produces :: [FilePath] -> Action ()
-produces xs = Action $ modifyRW $ \s -> s{localProduces = reverse xs ++ localProduces s}
+produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (reverse xs) ++ localProduces s}
+
+-- | A version of 'produces' that does not check.
+producesUnchecked :: [FilePath] -> Action ()
+producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (reverse xs) ++ localProduces s}
 
 
 producesCheck :: Action ()
 producesCheck = do
     Local{localProduces} <- Action getRW
-    missing <- liftIO $ filterM (notM . doesFileExist_) localProduces
+    missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
     when (missing /= []) $ liftIO $ errorStructured
         "Files declared by 'produces' not produced"
         [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
