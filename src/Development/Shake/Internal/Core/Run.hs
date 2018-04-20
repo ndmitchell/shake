@@ -494,7 +494,7 @@ produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (revers
 
 -- | A version of 'produces' that does not check.
 producesUnchecked :: [FilePath] -> Action ()
-producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (reverse xs) ++ localProduces s}
+producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}
 
 
 producesCheck :: Action ()
