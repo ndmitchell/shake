@@ -3,6 +3,7 @@
 -- | Errors seen by the user
 module Development.Shake.Internal.Errors(
     ShakeException(..),
+    throwM, throwImpure,
     errorInternal,
     errorStructured,
     errorNoRuleToBuildType, errorRuleDefinedMultipleTimes,
@@ -12,12 +13,19 @@ module Development.Shake.Internal.Errors(
 
 import Data.Tuple.Extra
 import Control.Exception.Extra
+import Control.Monad.IO.Class
 import Data.Typeable
 import Data.List
 
+throwM :: MonadIO m => SomeException -> m a
+throwM = liftIO . throwIO
 
-errorInternal :: String -> a
-errorInternal msg = error $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
+throwImpure :: SomeException -> a
+throwImpure = throw
+
+
+errorInternal :: String -> SomeException
+errorInternal msg = toException $ ErrorCall $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
 
 alternatives = let (*) = (,) in
     ["_rule_" * "oracle"
@@ -30,8 +38,8 @@ alternatives = let (*) = (,) in
     ,"_apply_" * "askOracle"]
 
 
-errorStructured :: String -> [(String, Maybe String)] -> String -> IO a
-errorStructured msg args hint = errorIO $ errorStructuredContents msg args hint
+errorStructured :: String -> [(String, Maybe String)] -> String -> SomeException
+errorStructured msg args hint = toException $ ErrorCall $ errorStructuredContents msg args hint
 
 errorStructuredContents :: String -> [(String, Maybe String)] -> String -> String
 errorStructuredContents msg args hint = unlines $
@@ -44,7 +52,7 @@ errorStructuredContents msg args hint = unlines $
 
 
 
-structured :: Bool -> String -> [(String, Maybe String)] -> String -> IO a
+structured :: Bool -> String -> [(String, Maybe String)] -> String -> SomeException
 structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f hint)
     where
         f = filter (/= '_') . (if alt then g else id)
@@ -53,13 +61,13 @@ structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f h
         g [] = []
 
 
-errorDirectoryNotFile :: FilePath -> IO a
+errorDirectoryNotFile :: FilePath -> SomeException
 errorDirectoryNotFile dir = errorStructured
     "Build system error - expected a file, got a directory"
     [("Directory", Just dir)]
     "Probably due to calling 'need' on a directory. Shake only permits 'need' on files."
 
-errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> IO a
+errorNoRuleToBuildType :: TypeRep -> Maybe String -> Maybe TypeRep -> SomeException
 errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     "Build system error - no _rule_ matches the _key_ type"
     [("_Key_ type", Just $ show tk)
@@ -67,13 +75,13 @@ errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     ,("_Result_ type", fmap show tv)]
     "You are missing a call to _addBuiltinRule_, or your call to _apply_ has the wrong _key_ type"
 
-errorRuleDefinedMultipleTimes :: TypeRep-> IO a
+errorRuleDefinedMultipleTimes :: TypeRep-> SomeException
 errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
     "Build system error - _rule_ defined twice at one _key_ type"
     [("_Key_ type", Just $ show tk)]
     "You have called _addBuiltinRule_ more than once on the same key type"
 
-errorMultipleRulesMatch :: TypeRep -> String -> Int -> IO a
+errorMultipleRulesMatch :: TypeRep -> String -> Int -> SomeException
 errorMultipleRulesMatch tk k count
     | specialIsOracleKey tk, count == 0 =
         errorInternal $ "no oracle match for " ++ show tk -- they are always irrifutable rules
@@ -100,13 +108,13 @@ errorRuleRecursion stack tk k = throwIO $ wrap $ toException $ ErrorCall $ error
     where
         wrap = if null stack then id else toException . ShakeException (last stack) stack
 
-errorComplexRecursion :: [String] -> IO a
+errorComplexRecursion :: [String] -> SomeException
 errorComplexRecursion ks = errorStructured
     "Build system error - indirect recursion detected"
     [("Key value " ++ show i, Just k) | (i, k) <- zip [1..] ks]
     "Rules may not be recursive"
 
-errorNoApply :: TypeRep -> Maybe String -> String -> IO a
+errorNoApply :: TypeRep -> Maybe String -> String -> SomeException
 errorNoApply tk k msg = structured (specialIsOracleKey tk)
     "Build system error - cannot currently call _apply_"
     [("Reason", Just msg)

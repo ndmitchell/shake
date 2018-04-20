@@ -117,7 +117,7 @@ getFileInfo x = BS.useAsCString (fileNameToByteString x) $ \file ->
         let peek = do
                 code <- peekFileAttributes fad
                 if testBit code 4 then
-                    errorDirectoryNotFile $ fileNameToString x
+                    throwIO $ errorDirectoryNotFile $ fileNameToString x
                  else
                     join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
         if res then

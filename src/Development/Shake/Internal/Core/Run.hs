@@ -154,7 +154,7 @@ checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
 checkShakeExtra mp = do
     let bad = [(k,t) | (k,v) <- Map.toList mp, let t = dynTypeRep v, t /= k]
     case bad of
-        (k,t):xs -> errorStructured "Invalid Map in shakeExtra"
+        (k,t):xs -> throwIO $ errorStructured "Invalid Map in shakeExtra"
             [("Key",Just $ show k),("Value type",Just $ show t)]
             (if null xs then "" else "Plus " ++ show (length xs) ++ " other keys")
         _ -> return ()
@@ -163,7 +163,7 @@ checkShakeExtra mp = do
 lintCurrentDirectory :: FilePath -> String -> IO ()
 lintCurrentDirectory old msg = do
     now <- getCurrentDirectory
-    when (old /= now) $ errorStructured
+    when (old /= now) $ throwIO $ errorStructured
         "Lint checking error - current directory has changed"
         [("When", Just msg)
         ,("Wanted",Just old)
@@ -204,17 +204,17 @@ apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
         tv = typeRep (Proxy :: Proxy value)
     Global{..} <- Action getRO
     Local{localBlockApply} <- Action getRW
-    whenJust localBlockApply $ liftIO . errorNoApply tk (show <$> listToMaybe ks)
+    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
     case Map.lookup tk globalRules of
-        Nothing -> liftIO $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
+        Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
+        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
 runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
-    | otherwise = errorInternal "runIdentify can't find rule"
+    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
 
 
 applyKeyValue :: [Key] -> Action [Value]
@@ -231,7 +231,7 @@ runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunM
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
-        Nothing -> errorNoRuleToBuildType tk (Just $ show k) Nothing
+        Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just r -> return r
 
     let s = newLocal stack shakeVerbosity
@@ -501,7 +501,7 @@ producesCheck :: Action ()
 producesCheck = do
     Local{localProduces} <- Action getRW
     missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
-    when (missing /= []) $ liftIO $ errorStructured
+    when (missing /= []) $ throwM $ errorStructured
         "Files declared by 'produces' not produced"
         [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
         ""

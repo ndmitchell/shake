@@ -28,7 +28,6 @@ import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import System.IO.Extra
-import System.IO.Unsafe
 import Data.Semigroup (Semigroup (..))
 import Data.Monoid hiding ((<>))
 import qualified Data.ByteString.Lazy as LBS
@@ -107,7 +106,7 @@ data SRules = SRules
 instance Semigroup SRules where
     (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (Map.unionWith g x3 y3)
         where
-            f k _ _ = unsafePerformIO $ errorRuleDefinedMultipleTimes k
+            f k _ _ = throwImpure $ errorRuleDefinedMultipleTimes k
             g (UserRule_ x) (UserRule_ y) = UserRule_ $ Unordered $ fromUnordered x ++ fromUnordered (fromJust $ cast y)
 
             fromUnordered (Unordered xs) = xs
@@ -135,7 +134,7 @@ noLint _ _ = return Nothing
 
 -- | A suitable 'BuiltinIdentity' that always fails, cannot be run with 'shakeCache'.
 noIdentity :: Typeable key => BuiltinIdentity key value
-noIdentity k _ = unsafePerformIO $ errorStructured
+noIdentity k _ = throwImpure $ errorStructured
     "Key type does not support BuiltinIdentity, so does not work with 'shakeCache'"
     [("Key type", Just $ show (typeOf k))] []
 

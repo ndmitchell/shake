@@ -302,7 +302,7 @@ build pool Database{..} BuildKey{..} identity stack ks continue =
         reduce stack i = do
             s <- Ids.lookup status i
             case s of
-                Nothing -> errorInternal $ "interned value missing from database, " ++ show i
+                Nothing -> throwM $ errorInternal $ "interned value missing from database, " ++ show i
                 Just (k, Missing) -> spawn RunDependenciesChanged stack i k Nothing
                 Just (k, Loaded r) -> check stack i k r (depends r)
                 Just (k, res) -> return res
@@ -382,7 +382,7 @@ assertFinishedDatabase Database{..} = do
     status <- Ids.toList status
     let bad = [key | (_, (key, Waiting{})) <- status]
     when (bad /= []) $
-        errorComplexRecursion (map show bad)
+        throwM $ errorComplexRecursion (map show bad)
 
 
 -- | Given a map of representing a dependency order (with a show for error messages), find an ordering for the items such
@@ -445,7 +445,7 @@ toReport Database{..} = do
             }
             where fromStep i = fromJust $ Map.lookup i steps
                   fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
-    return [maybe (errorInternal "toReport") f $ Map.lookup i status | i <- order]
+    return [maybe (throwImpure $ errorInternal "toReport") f $ Map.lookup i status | i <- order]
 
 
 checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
@@ -463,7 +463,7 @@ checkValid Database{..} check missing = do
         _ -> return seen
     unless (null bad) $ do
         let n = length bad
-        errorStructured
+        throwM $ errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
             (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just now)]
                                         | (key, result, now) <- bad])
@@ -472,7 +472,7 @@ checkValid Database{..} check missing = do
     bad <- return [(parent,key) | (parent, key) <- missing, isJust $ Intern.lookup key intern]
     unless (null bad) $ do
         let n = length bad
-        errorStructured
+        throwM $ errorStructured
             ("Lint checking error - " ++ (if n == 1 then "value" else show n ++ " values") ++ " did not have " ++ (if n == 1 then "its" else "their") ++ " creation tracked")
             (intercalate [("",Just "")] [ [("Rule", Just $ show parent), ("Created", Just $ show key)] | (parent,key) <- bad])
             ""
@@ -552,7 +552,7 @@ withDatabase opts diagnostic witness act = do
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
 putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
     putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putExN (putEx x4) <> putEx x6
-putDatabase _ (_, x) = errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
+putDatabase _ (_, x) = throwImpure $ errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
 
 
 getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)

@@ -28,7 +28,7 @@ import General.Timing(addTiming)
 import General.Makefile(parseMakefile)
 import Development.Shake.Internal.FileName(filepathNormalise, fileNameFromString)
 import Development.Shake.Internal.FileInfo(getFileInfo)
-import Development.Shake.Internal.Errors(errorStructured)
+import Development.Shake.Internal.Errors(throwM, errorStructured)
 import Development.Shake.Internal.Rules.File(needBS, neededBS)
 import Development.Shake.Internal.Rules.OrderOnly(orderOnlyBS)
 
@@ -162,7 +162,7 @@ needDeps Ninja{..} phonysMp = \build xs -> do -- eta reduced so 'builds' is shar
         let bad = xs `difference` allDependencies build
         case bad of
             [] -> return ()
-            xs -> liftIO $ errorStructured
+            xs -> throwM $ errorStructured
                 ("Lint checking error - " ++
                     (if length xs == 1 then "file in deps is" else "files in deps are") ++
                     " generated and not a pre-dependency")

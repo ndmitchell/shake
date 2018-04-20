@@ -39,7 +39,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
-import System.IO.Unsafe(unsafeInterleaveIO, unsafePerformIO)
+import System.IO.Unsafe(unsafeInterleaveIO)
 
 import Prelude
 
@@ -201,11 +201,11 @@ ruleLint opts k (FileR (Just v) True _) = do
 ruleLint _ _ _ = return Nothing
 
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FileQ FileR
-ruleIdentity opts | shakeChange opts == ChangeModtime = unsafePerformIO $ errorStructured
+ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure $ errorStructured
     "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
 ruleIdentity opts = \k v -> case result v of
     Just (FileA _ size hash) -> runBuilder $ putExStorable size <> putExStorable hash
-    Nothing -> unsafePerformIO $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
+    Nothing -> throwImpure $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) mode = do
@@ -268,7 +268,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
             act <- case userRuleMatch rules $ \(FileRule f) -> f x of
                 [] -> return Nothing
                 [r] -> return $ Just r
-                rs  -> liftIO $ errorMultipleRulesMatch (typeOf o) (show o) (length rs)
+                rs  -> throwM $ errorMultipleRulesMatch (typeOf o) (show o) (length rs)
             let answer ctor new = do
                     let b = case () of
                                 _ | Just old <- old
@@ -408,7 +408,7 @@ neededCheck xs = do
               | (x, a, FileR (Just b) _ _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
-        (file,msg):_ -> liftIO $ errorStructured
+        (file,msg):_ -> throwM $ errorStructured
             "Lint checking error - 'needed' file required rebuilding"
             [("File", Just $ fileNameToString file)
             ,("Error",Just msg)]

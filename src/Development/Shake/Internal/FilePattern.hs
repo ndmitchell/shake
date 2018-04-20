@@ -267,7 +267,7 @@ compatible (x:xs) = all ((==) (specials x) . specials) xs
 extract :: FilePattern -> FilePath -> [String]
 extract p = let pat = parse p in \x ->
     case match pat (split isPathSeparator x) of
-        [] | p ?== x -> errorInternal $ "extract with " ++ show p ++ " and " ++ show x
+        [] | p ?== x -> throwImpure $ errorInternal $ "extract with " ++ show p ++ " and " ++ show x
            | otherwise -> error $ "Pattern " ++ show p ++ " does not match " ++ x ++ ", when trying to extract the FilePattern matches"
         ms:_ -> ms
 

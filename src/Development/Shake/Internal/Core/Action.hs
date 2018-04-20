@@ -222,7 +222,7 @@ lintTrackFinished = do
             bad <- return $ localTrackUsed \\ deps
             unless (null bad) $ do
                 let n = length bad
-                errorStructured
+                throwM $ errorStructured
                     ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
                     [("Used", Just $ show x) | x <- bad]
                     ""
@@ -231,7 +231,7 @@ lintTrackFinished = do
             bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
             unless (null bad) $ do
                 let n = length bad
-                errorStructured
+                throwM $ errorStructured
                     ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
                     [("Used", Just $ show x) | x <- bad]
                     ""

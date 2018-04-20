@@ -97,13 +97,13 @@ typeKey Key{..} = keyType
 fromKey :: forall a . Typeable a => Key -> a
 fromKey Key{..}
     | keyType == resType = unsafeCoerce keyValue
-    | otherwise = errorInternal $ "fromKey, bad cast, have " ++ show keyType ++ ", wanted " ++ show resType
+    | otherwise = throwImpure $ errorInternal $ "fromKey, bad cast, have " ++ show keyType ++ ", wanted " ++ show resType
     where resType = typeRep (Proxy :: Proxy a)
 
 fromValue :: forall a . Typeable a => Value -> a
 fromValue Value{..}
     | valueType == resType = unsafeCoerce valueValue
-    | otherwise = errorInternal $ "fromValue, bad cast, have " ++ show valueType ++ ", wanted " ++ show resType
+    | otherwise = throwImpure $ errorInternal $ "fromValue, bad cast, have " ++ show valueType ++ ", wanted " ++ show resType
     where resType = typeRep (Proxy :: Proxy a)
 
 instance Show Key where

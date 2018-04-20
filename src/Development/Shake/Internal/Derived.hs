@@ -71,7 +71,7 @@ lookupShakeExtra mp =
     case Map.lookup want mp of
         Just dyn
             | Just x <- fromDynamic dyn -> return $ Just x
-            | otherwise -> errorStructured
+            | otherwise -> throwM $ errorStructured
                 "shakeExtra value is malformed, all keys and values must agree"
                 [("Key", Just $ show want)
                 ,("Value", Just $ show $ dynTypeRep dyn)]
