@@ -150,7 +150,7 @@ fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
     res <- getFileInfo x
     case res of
         Nothing -> return Nothing
-        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size fileInfoNoHash
+        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size noFileHash
         Just (time,size) -> do
             hash <- unsafeInterleaveIO $ getFileHash x
             return $ Just $ FileA time size hash

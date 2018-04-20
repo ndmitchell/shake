@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, CPP, ForeignFunctionInterface #-}
 
 module Development.Shake.Internal.FileInfo(
-    FileInfo, fileInfoNoHash,
+    noFileHash,
     FileSize, ModTime, FileHash,
     getFileHash, getFileInfo
     ) where
@@ -42,8 +42,8 @@ import System.Posix.Files.ByteString
 newtype FileInfo a = FileInfo Word32
     deriving (Typeable,Hashable,Binary,Storable,NFData)
 
-fileInfoNoHash :: FileInfo FileInfoHash
-fileInfoNoHash = FileInfo 1   -- Equal to nothing
+noFileHash :: FileHash
+noFileHash = FileInfo 1   -- Equal to nothing
 
 fileInfo :: Word32 -> FileInfo a
 fileInfo a = FileInfo $ if a > maxBound - 2 then a else a + 2
