@@ -39,7 +39,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 
 import System.FilePath(takeDirectory) -- important that this is the system local filepath, or wrong slashes go wrong
-import System.IO.Unsafe(unsafeInterleaveIO)
+import System.IO.Unsafe(unsafeInterleaveIO, unsafePerformIO)
 
 import Prelude
 
@@ -189,7 +189,7 @@ defaultRuleFile :: Rules ()
 defaultRuleFile = do
     opts@ShakeOptions{..} <- getShakeOptionsRules
     -- A rule from FileQ to (Maybe FileA). The result value is only useful for linting.
-    addBuiltinRuleEx (ruleLint opts) noIdentity (ruleRun opts $ shakeRebuildApply opts)
+    addBuiltinRuleEx (ruleLint opts) (ruleIdentity opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FileQ FileR
 ruleLint opts k (FileR (Just v) True _) = do
@@ -199,6 +199,13 @@ ruleLint opts k (FileR (Just v) True _) = do
         Just now | fileEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
 ruleLint _ _ _ = return Nothing
+
+ruleIdentity :: ShakeOptions -> BuiltinIdentity FileQ FileR
+ruleIdentity opts | shakeChange opts == ChangeModtime = unsafePerformIO $ errorStructured
+    "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
+ruleIdentity opts = \k v -> case result v of
+    Just (FileA _ size hash) -> runBuilder $ putExStorable size <> putExStorable hash
+    Nothing -> unsafePerformIO $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) mode = do
