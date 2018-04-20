@@ -160,7 +160,7 @@ data Local = Local
     ,localTraces :: [Trace] -- ^ Traces, built in reverse
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
-    ,localProduces :: [FilePath] -- ^ Things this rule produces
+    ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
     ,localUntrackedDeps :: !Bool -- ^ Taint flag that says this code has untracked dependencies
     }
 
