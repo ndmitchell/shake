@@ -134,8 +134,10 @@ noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
 -- | A suitable 'BuiltinIdentity' that always fails, cannot be run with 'shakeCache'.
-noIdentity :: BuiltinIdentity key value
-noIdentity _ _ = error "This key type does not support identity, so does not work with 'shakeCache'"
+noIdentity :: Typeable key => BuiltinIdentity key value
+noIdentity k _ = unsafePerformIO $ errorStructured
+    "Key type does not support BuiltinIdentity, so does not work with 'shakeCache'"
+    [("Key type", Just $ show (typeOf k))] []
 
 
 type family RuleResult key -- = value
