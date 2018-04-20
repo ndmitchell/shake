@@ -3,7 +3,7 @@
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Types(
-    BuiltinRun, BuiltinLint, BuiltinCheck,
+    BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
     BuiltinRule(..), Global(..), Local(..), Action(..),
