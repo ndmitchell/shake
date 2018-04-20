@@ -211,17 +211,23 @@ apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
+runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
+runIdentify mp k v
+    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
+    | otherwise = errorInternal "runIdentify can't find rule"
+
+
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) localStack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) (runIdentify globalRules) localStack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
 
-runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (RunResult (Result Value)))
+runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
@@ -245,18 +251,19 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode cont
                 continue . Left . toException =<< shakeException global (showStack stack) e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ RunResult runChanged runStore r{result = runValue}
+                    continue $ Right $ (,) produced $ RunResult runChanged runStore (r{result = runValue})
                 | otherwise -> do
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, step)
-                    continue $ Right $ RunResult cr runStore Result
+                    continue $ Right $ (,) produced $ RunResult cr runStore Result
                         {result = runValue
                         ,changed = c
                         ,built = step
                         ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
+                where produced = if localUntrackedDeps then Nothing else Just $ reverse $ map snd localProduces
 
 
 runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)

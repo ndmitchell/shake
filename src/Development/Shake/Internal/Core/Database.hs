@@ -226,7 +226,8 @@ newtype BuildKey = BuildKey
         -> Key -- The key to build
         -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
         -> RunMode -- True if any of the children were dirty
-        -> Capture (Either SomeException (RunResult (Result Value))) -- Either an error, or a result.
+        -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
+            -- Either an error, or a (the produced files, the result).
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
@@ -249,8 +250,8 @@ lookupStatus Database{..} k = withLock lock $ do
     maybe Nothing (fmap result . getResult . snd) <$> Ids.lookup status i
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> BuildKey -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool Database{..} BuildKey{..} stack ks continue =
+build :: Pool -> Database -> BuildKey -> (Key -> Value -> BS.ByteString) -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build pool Database{..} BuildKey{..} identity stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -339,7 +340,7 @@ build pool Database{..} BuildKey{..} stack ks continue =
                         i #= (k, status)
                         done status
                     case res of
-                        Right RunResult{..} -> do
+                        Right (produced, RunResult{..}) -> do
                             diagnostic $ return $
                                 "result " ++ showBracket k ++ " = "++ showBracket (result runValue) ++
                                 " " ++ (if built runValue == changed runValue then "(changed)" else "(unchanged)")
