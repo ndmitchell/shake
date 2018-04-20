@@ -61,6 +61,8 @@ data RunMode
     | RunDependenciesChanged -- ^ At least one of my dependencies from last time have changed, or I have no recorded dependencies.
       deriving (Eq,Show)
 
+instance NFData RunMode where rnf x = x `seq` ()
+
 -- | How the output of a rule has changed.
 data RunChanged
     = ChangedNothing -- ^ Nothing has changed.
