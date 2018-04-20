@@ -61,6 +61,7 @@ test build = do
     run "-f../../src/Test/Ninja/test5.ninja"
     assertExists "output file"
 
+    -- #565, check multi-file rules that don't create their contents
     run "-f../../src/Test/Ninja/test7.ninja"
 
     writeFile "nocreate.log" ""
