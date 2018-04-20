@@ -60,9 +60,10 @@ data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
     deriving (Typeable)
 
 -- | Result of a File rule, may contain raw file information and whether the rule did run this build
-data FileR = FileR { result :: Maybe FileA -- ^ Raw information about the file built by this rule.
+data FileR = FileR { result :: !(Maybe FileA) -- ^ Raw information about the file built by this rule.
                                            --   Set to 'Nothing' to prevent linting some times.
-                   , hasChanged :: Bool    -- ^ Whether the file changed this build. Transient
+                   , useLint :: !Bool       -- ^ Should we lint the resulting file
+                   , hasChanged :: !Bool    -- ^ Whether the file changed this build. Transient
                                            --   information, that doesn't get serialized.
                    }
     deriving (Typeable)
@@ -97,7 +98,7 @@ instance NFData FileA where
     rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
 
 instance NFData FileR where
-    rnf (FileR f b) = rnf f `seq` rnf b
+    rnf (FileR a b c) = rnf a `seq` rnf b `seq` rnf c
 
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
@@ -191,13 +192,13 @@ defaultRuleFile = do
     addBuiltinRuleEx (ruleLint opts) noIdentity (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FileQ FileR
-ruleLint opts k (FileR Nothing _) = return Nothing
-ruleLint opts k (FileR (Just v) _) = do
+ruleLint opts k (FileR (Just v) True _) = do
     now <- fileStoredValue opts k
     return $ case now of
         Nothing -> Just "<missing>"
         Just now | fileEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
+ruleLint _ _ _ = return Nothing
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) mode = do
@@ -241,15 +242,16 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
     where
         -- no need to lint check forward files
         -- but more than that, it goes wrong if you do, see #427
-        asLint (ResultDirect x) = Just x
-        asLint x = Nothing
-        unLint (RunResult a b (FileR _ c)) = RunResult a b $ FileR Nothing c
+        fileR (ResultDirect x) = FileR (Just x) True
+        fileR (ResultForward x) = FileR (Just x) False
+        fileR ResultPhony = FileR Nothing False
+        unLint (RunResult a b c) = RunResult a b c{useLint = False}
 
         retNew :: RunChanged -> Result -> Action (RunResult FileR)
-        retNew c v = return $ RunResult c (runBuilder $ putEx v) (FileR (asLint v) (c == ChangedRecomputeDiff))
+        retNew c v = return $ RunResult c (runBuilder $ putEx v) $ fileR v (c == ChangedRecomputeDiff)
 
         retOld :: RunChanged -> Action (RunResult FileR)
-        retOld c = return $ RunResult c (fromJust oldBin) $ FileR (asLint $ fromJust old) False
+        retOld c = return $ RunResult c (fromJust oldBin) $ fileR (fromJust old) False
 
         -- actually run the rebuild
         rebuild = do
@@ -396,7 +398,7 @@ neededCheck xs = do
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply_ id xs
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, FileR (Just b) _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
+              | (x, a, FileR (Just b) _ _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> liftIO $ errorStructured
