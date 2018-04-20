@@ -40,7 +40,7 @@ addOracleFlavor flavor act = do
             Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
-                when (flavor /= Cache) neverCache -- other flavours are implicitly always-rerun
+                when (flavor == Cache) cacheAllow
                 new <- OracleA <$> act q
                 let newHash = encodeHash new
                 return $

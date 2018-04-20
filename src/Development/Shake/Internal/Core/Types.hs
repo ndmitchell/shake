@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
-    BuiltinRule(..), Global(..), Local(..), Action(..),
+    BuiltinRule(..), Global(..), Local(..), Action(..), Cache(..),
     newLocal, localClearMutable, localMergeMutable
     ) where
 
@@ -136,11 +136,14 @@ data Local = Local
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
     ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
-    ,localUntrackedDeps :: !Bool -- ^ Taint flag that says this code has untracked dependencies
+    ,localCache :: !Cache -- ^ Is it valid to cache the result
     }
 
+data Cache = CacheDefault | CacheYes | CacheNo
+    deriving (Eq,Ord)
+
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack verb Nothing [] 0 [] [] [] [] False
+newLocal stack verb = Local stack verb Nothing [] 0 [] [] [] [] CacheDefault
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -162,5 +165,5 @@ localMergeMutable root xs = Local
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
     ,localProduces = concatMap localProduces xs ++ localProduces root
-    ,localUntrackedDeps = any localUntrackedDeps $ root:xs
+    ,localCache = maximum $ map localCache $ root:xs
     }

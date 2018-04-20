@@ -10,7 +10,9 @@ module Development.Shake.Rule(
     -- * User rules
     UserRule(..), addUserRule, getUserRules, userRuleMatch,
     -- * Lint integration
-    lintTrackRead, lintTrackWrite, lintTrackAllow
+    lintTrackRead, lintTrackWrite, lintTrackAllow,
+    -- * Caching
+    cacheAllow
     ) where
 
 import Development.Shake.Internal.Core.Types

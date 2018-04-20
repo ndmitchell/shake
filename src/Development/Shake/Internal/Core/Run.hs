@@ -15,7 +15,7 @@ module Development.Shake.Internal.Core.Run(
     orderOnlyAction,
     batch,
     runAfter,
-    neverCache,
+    cacheNever, cacheAllow,
     produces, producesUnchecked,
     ) where
 
@@ -263,7 +263,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode cont
                         ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
-                where produced = if localUntrackedDeps then Nothing else Just $ reverse $ map snd localProduces
+                where produced = if localCache /= CacheYes then Nothing else Just $ reverse $ map snd localProduces
 
 
 runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)
@@ -481,8 +481,11 @@ batch mx pred one many
 
 -- | This rule should not be cached because it makes use of untracked dependencies
 --   (e.g. files in a system directory or items on the @$PATH@), or is trivial to compute locally.
-neverCache :: Action ()
-neverCache = Action $ modifyRW $ \s -> s{localUntrackedDeps = True}
+cacheNever :: Action ()
+cacheNever = Action $ modifyRW $ \s -> s{localCache = CacheNo}
+
+cacheAllow :: Action ()
+cacheAllow = Action $ modifyRW $ \s -> s{localCache = max CacheYes $ localCache s}
 
 -- | This rule the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.

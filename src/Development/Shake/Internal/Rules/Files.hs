@@ -103,6 +103,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
             v <- case userRuleMatch rules ($ k) of
                 [r] -> r
                 rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
+            cacheAllow
             producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
             let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
                   | otherwise = ChangedRecomputeDiff

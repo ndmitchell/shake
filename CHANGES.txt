@@ -6,7 +6,7 @@ Changelog for Shake (* = breaking change)
 *   Change the Development.Shake.Rule.track* functions to lintTrack*
     #584, add Semigroup/Monoid instances for Action
     Add produces to declare which untracked files a rule produces
-    Add neverCache to note which rules cannot be cached
+    Add cacheNever to note which rules cannot be cached
     #583, add replaceDirectory1
     Add addOracleHash for oracles with reduced storage requirements
 0.16.4, released 2018-04-04

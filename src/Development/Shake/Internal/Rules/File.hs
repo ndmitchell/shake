@@ -270,11 +270,9 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
             case act of
                 Nothing -> do
                     new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                    neverCache
                     answer ResultDirect $ fromJust new
                 Just (ModeForward act) -> do
                     new <- act
-                    neverCache
                     case new of
                         Nothing -> do
                             alwaysRerun
@@ -282,6 +280,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                         Just new -> answer ResultForward new
                 Just (ModeDirect act) -> do
                     act
+                    cacheAllow
                     producesUnchecked [x]
                     new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                     case new of
