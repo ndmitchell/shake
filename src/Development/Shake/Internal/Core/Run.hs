@@ -15,7 +15,7 @@ module Development.Shake.Internal.Core.Run(
     orderOnlyAction,
     batch,
     runAfter,
-    untrackedDependencies,
+    neverCache,
     produces,
     ) where
 
@@ -472,10 +472,10 @@ batch mx pred one many
                         (if isLeft x then addPoolException else addPoolResume) globalPool $ k x
 
 
--- | This rule makes use of untracked dependencies (e.g. files in a system directory or items on the @$PATH@)
---   and thus should never be cached. Calling 'Development.Shake.alwaysRerun' implicitly calls this function.
-untrackedDependencies :: Action ()
-untrackedDependencies = Action $ modifyRW $ \s -> s{localUntrackedDeps = True}
+-- | This rule should not be cached because it makes use of untracked dependencies
+--   (e.g. files in a system directory or items on the @$PATH@), or is trivial to compute locally.
+neverCache :: Action ()
+neverCache = Action $ modifyRW $ \s -> s{localUntrackedDeps = True}
 
 -- | This rule the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.
