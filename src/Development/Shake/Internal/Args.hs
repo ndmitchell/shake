@@ -249,7 +249,7 @@ shakeOptsEx =
     [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,no  $ Option ""  ["no-build"] (NoArg $ Right ([NoBuild], id)) "Don't build anything."
     ,no  $ Option "C" ["directory"] (ReqArg (\x -> Right ([ChangeDirectory x],id)) "DIRECTORY") "Change to DIRECTORY before doing anything."
-    ,yes $ Option ""  ["cache"] (OptArg (\x -> Right ([], \s -> s{shakeCache=Just $ fromMaybe "" x})) "DIRECTORY") "Shared cache location."
+    ,yes $ Option ""  ["cache"] (OptArg (\x -> Right ([], \s -> s{shakeCache=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s})) "DIRECTORY") "Shared cache location."
     ,yes $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
     ,no  $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
@@ -327,3 +327,8 @@ shakeOptsEx =
         prog i p = do
             program <- progressProgram
             progressDisplay i (\s -> progressTitlebar s >> program s) p
+
+        -- ensure the file system always computes a hash, required for --cache
+        ensureHash ChangeModtime = ChangeModtimeAndDigest
+        ensureHash ChangeModtimeAndDigestInput = ChangeModtimeAndDigest
+        ensureHash x = x
