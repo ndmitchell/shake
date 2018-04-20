@@ -278,7 +278,7 @@ types = words $
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
     "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep " ++
-    "BuiltinRun BuiltinLint"
+    "BuiltinRun BuiltinLint BuiltinCheck"
 
 -- | Duplicated identifiers which require renaming
 dupes :: [String]
