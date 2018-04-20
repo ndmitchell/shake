@@ -8,7 +8,7 @@ module Development.Shake.Internal.Core.Database(
     listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build,
     Depends, nubDepends,
-    RunMode(..),
+    RunMode(..), RunResult(..), RunChanged(..),
     Step, Result(..),
     progress,
     Stack, emptyStack, topStack, showStack, showTopStack,
@@ -60,6 +60,31 @@ data RunMode
     = RunDependenciesSame -- ^ My dependencies have not changed.
     | RunDependenciesChanged -- ^ At least one of my dependencies from last time have changed, or I have no recorded dependencies.
       deriving (Eq,Show)
+
+-- | How the output of a rule has changed.
+data RunChanged
+    = ChangedNothing -- ^ Nothing has changed.
+    | ChangedStore -- ^ The persisted value has changed, but in a way that should be considered identical.
+    | ChangedRecomputeSame -- ^ I recomputed the value and it was the same.
+    | ChangedRecomputeDiff -- ^ I recomputed the value and it was different.
+      deriving (Eq,Show)
+
+instance NFData RunChanged where rnf x = x `seq` ()
+
+
+-- | The result of 'BuiltinRun'.
+data RunResult value = RunResult
+    {runChanged :: RunChanged
+        -- ^ What has changed from the previous time.
+    ,runStore :: BS.ByteString
+        -- ^ Return the new value to store. Often a serialised version of 'runValue'.
+    ,runValue :: value
+        -- ^ Return the produced value.
+    } deriving Functor
+
+instance NFData value => NFData (RunResult value) where
+    rnf (RunResult x1 x2 x3) = rnf x1 `seq` x2 `seq` rnf x3
+
 
 
 ---------------------------------------------------------------------
@@ -199,9 +224,7 @@ newtype BuildKey = BuildKey
         -> Key -- The key to build
         -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
         -> RunMode -- True if any of the children were dirty
-        -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
-            -- Either an error, or a result.
-            -- If the Bool is True you should rewrite the database entry.
+        -> Capture (Either SomeException (RunResult (Result Value))) -- Either an error, or a result.
     }
 
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
@@ -309,16 +332,17 @@ build pool Database{..} BuildKey{..} stack ks continue =
             (w, done) <- newWaiting
             addPoolStart pool $
                 buildKey (addStack i k stack) step k r mode $ \res -> do
-                    let status = either Error (Ready . thd3) res
+                    let status = either Error (Ready . runValue) res
                     withLock lock $ do
                         i #= (k, status)
                         done status
                     case res of
-                        Right (write, bs, r) -> do
+                        Right RunResult{..} -> do
                             diagnostic $ return $
-                                "result " ++ showBracket k ++ " = "++ showBracket (result r) ++
-                                " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
-                            when write $ journal i k r{result=bs}
+                                "result " ++ showBracket k ++ " = "++ showBracket (result runValue) ++
+                                " " ++ (if built runValue == changed runValue then "(changed)" else "(unchanged)")
+                            unless (runChanged == ChangedNothing) $
+                                journal i k runValue{result=runStore}
                         Left _ ->
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)

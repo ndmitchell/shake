@@ -221,7 +221,7 @@ applyKeyValue ks = do
     return vs
 
 
-runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (Bool, BS.ByteString, Result Value))
+runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (RunResult (Result Value)))
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
@@ -245,12 +245,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode cont
                 continue . Left . toException =<< shakeException global (showStack stack) e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right (runChanged == ChangedStore, runStore, r{result = runValue})
+                    continue $ Right $ RunResult runChanged runStore r{result = runValue}
                 | otherwise -> do
                     dur <- time
-                    let c | Just r <- r, runChanged == ChangedRecomputeSame = changed r
-                          | otherwise = step
-                    continue $ Right $ (,,) True runStore Result
+                    let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
+                                | otherwise = (ChangedRecomputeDiff, step)
+                    continue $ Right $ RunResult cr runStore Result
                         {result = runValue
                         ,changed = c
                         ,built = step
