@@ -334,8 +334,8 @@ build pool Database{..} BuildKey{..} stack ks continue =
             (w, done) <- newWaiting
             addPoolStart pool $
                 buildKey (addStack i k stack) step k r mode $ \res -> do
-                    let status = either Error (Ready . runValue) res
                     withLock lock $ do
+                        let status = either Error (Ready . runValue . snd) res
                         i #= (k, status)
                         done status
                     case res of
