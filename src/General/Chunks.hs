@@ -36,7 +36,10 @@ readChunk c = readChunkMax c maxBound
 
 -- | Return either a valid chunk (Right), or a trailing suffix with no information (Left)
 readChunkMax :: Chunks -> Word32 -> IO (Either BS.ByteString BS.ByteString)
-readChunkMax Chunks{..} mx = withMVar chunksHandle $ \h -> do
+readChunkMax Chunks{..} mx = withMVar chunksHandle $ \h -> readChunkDirect h mx
+
+readChunkDirect :: Handle -> Word32 -> IO (Either BS.ByteString BS.ByteString)
+readChunkDirect h mx = do
     let slop x = do
             unless (BS.null x) $ hSetFileSize h . subtract (toInteger $ BS.length x) =<< hFileSize h
             return $ Left x
