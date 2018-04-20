@@ -10,7 +10,6 @@ module Development.Shake.Internal.Core.Types(
     newLocal, localClearMutable, localMergeMutable
     ) where
 
-import Control.DeepSeq
 import Control.Monad.IO.Class
 import Control.Applicative
 import Data.Typeable
@@ -46,30 +45,6 @@ newtype Action a = Action {fromAction :: RAW Global Local a}
              ,MonadFail
 #endif
         )
-
--- | How the output of a rule has changed.
-data RunChanged
-    = ChangedNothing -- ^ Nothing has changed.
-    | ChangedStore -- ^ The persisted value has changed, but in a way that should be considered identical.
-    | ChangedRecomputeSame -- ^ I recomputed the value and it was the same.
-    | ChangedRecomputeDiff -- ^ I recomputed the value and it was different.
-      deriving (Eq,Show)
-
-instance NFData RunChanged where rnf x = x `seq` ()
-
-
--- | The result of 'BuiltinRun'.
-data RunResult value = RunResult
-    {runChanged :: RunChanged
-        -- ^ What has changed from the previous time.
-    ,runStore :: BS.ByteString
-        -- ^ Return the new value to store. Often a serialised version of 'runValue'.
-    ,runValue :: value
-        -- ^ Return the produced value.
-    } deriving Functor
-
-instance NFData value => NFData (RunResult value) where
-    rnf (RunResult x1 x2 x3) = rnf x1 `seq` x2 `seq` rnf x3
 
 
 -- | Define a rule between @key@ and @value@. A rule for a class of artifacts (e.g. /files/) provides:
