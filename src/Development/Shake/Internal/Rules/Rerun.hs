@@ -41,5 +41,5 @@ alwaysRerun = do
 
 defaultRuleRerun :: Rules ()
 defaultRuleRerun =
-    addBuiltinRuleEx noLint noCheck $
+    addBuiltinRuleEx noLint noIdentity $
         \AlwaysRerunQ{} _ _ -> return $ RunResult ChangedRecomputeDiff BS.empty ()

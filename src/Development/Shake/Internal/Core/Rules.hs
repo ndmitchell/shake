@@ -6,7 +6,7 @@
 module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
-    noLint, noCheck,
+    noLint, noIdentity,
     getShakeOptionsRules, userRuleMatch,
     getUserRules, addUserRule, alternatives, priority,
     action, withoutActions
@@ -133,9 +133,9 @@ addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
--- | A suitable 'BuiltinCheck' that always fails.
-noCheck :: BuiltinCheck key value
-noCheck _ _ _ = False
+-- | A suitable 'BuiltinIdentity' that always fails, cannot be run with 'shakeCache'.
+noIdentity :: BuiltinIdentity key value
+noIdentity _ _ = error "This key type does not support identity, so does not work with 'shakeCache'"
 
 
 type family RuleResult key -- = value
@@ -144,21 +144,21 @@ type family RuleResult key -- = value
 --   a unique key.
 addBuiltinRule
     :: (RuleResult key ~ value, ShakeValue key, ShakeValue value)
-    => BuiltinLint key value -> BuiltinCheck key value -> BuiltinRun key value -> Rules ()
+    => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
 
 addBuiltinRuleEx
     :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value)
-    => BuiltinLint key value -> BuiltinCheck key value -> BuiltinRun key value -> Rules ()
+    => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
 
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
 addBuiltinRuleInternal
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value)
-    => BinaryOp key -> BuiltinLint key value -> BuiltinCheck key value -> BuiltinRun key value -> Rules ()
+    => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
         v = Proxy :: Proxy value

@@ -101,11 +101,11 @@ type BuiltinLint key value = key -> value -> IO (Maybe String)
 -- | Check that a serialised value is compatible with the currently computed value.
 --
 --   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noCheck'.
-type BuiltinCheck key value = key -> value -> BS.ByteString -> Bool
+type BuiltinIdentity key value = key -> value -> BS.ByteString
 
 data BuiltinRule = BuiltinRule
     {builtinLint :: BuiltinLint Key Value
-    ,builtinCheck :: BuiltinCheck Key Value
+    ,builtinIdentity :: BuiltinIdentity Key Value
     ,builtinRun :: BuiltinRun Key Value
     ,builtinResult :: TypeRep
     ,builtinKey :: BinaryOp Key

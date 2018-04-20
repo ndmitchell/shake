@@ -122,7 +122,7 @@ queryRule witness query = addBuiltinRuleEx
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)
-    noCheck
+    noIdentity
     (\k old _ -> liftIO $ do
         new <- query k
         let wnew = witness new
