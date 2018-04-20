@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
 
 module General.Binary(
-    BinaryOp(..),
+    BinaryOp(..), binaryOpMap,
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..),
@@ -9,6 +9,7 @@ module General.Binary(
     putExList, getExList, putExN, getExN
     ) where
 
+import Development.Shake.Classes
 import Control.Monad
 import Data.Binary
 import Data.List.Extra
@@ -16,6 +17,7 @@ import Data.Tuple.Extra
 import Foreign.Storable
 import Foreign.Ptr
 import System.IO.Unsafe as U
+import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Unsafe as BS
@@ -35,6 +37,13 @@ data BinaryOp v = BinaryOp
     {putOp :: v -> Builder
     ,getOp :: BS.ByteString -> v
     }
+
+binaryOpMap :: (Eq a, Hashable a, BinaryEx a) => Map.HashMap a (BinaryOp b) -> BinaryOp (a, b)
+binaryOpMap mp = BinaryOp
+    {putOp = \(a, b) -> putExN (putEx a) <> putOp (mp Map.! a) b
+    ,getOp = \bs -> let (bs1,bs2) = getExN bs; a = getEx bs1 in (a, getOp (mp Map.! a) bs2)
+    }
+
 
 binarySplit :: forall a . Storable a => BS.ByteString -> (a, BS.ByteString)
 binarySplit bs | BS.length bs < sizeOf (undefined :: a) = error "Reading from ByteString, insufficient left"
