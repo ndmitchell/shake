@@ -104,7 +104,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
                 [r] -> r
                 rs  -> liftIO $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
             let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
-                    | otherwise = ChangedRecomputeDiff
+                  | otherwise = ChangedRecomputeDiff
             return $ RunResult c (runBuilder $ putEx v) v
 
 
