@@ -6,11 +6,12 @@ module Development.Shake.Internal.FileInfo(
     getFileHash, getFileInfo
     ) where
 
+import Data.Hashable
 import Control.Exception.Extra
 import Development.Shake.Classes
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.FileName
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Internal as LBS (defaultChunkSize)
 import Data.Char
 import Data.Word
 import Numeric
@@ -65,11 +66,18 @@ data FileInfoSize; type FileSize = FileInfo FileInfoSize
 
 
 getFileHash :: FileName -> IO FileHash
-getFileHash x = withFile (fileNameToString x) ReadMode $ \h -> do
-    s <- LBS.hGetContents h
-    let res = fileInfo $ fromIntegral $ hash s
-    evaluate res
-    return res
+getFileHash x = withFile (fileNameToString x) ReadMode $ \h ->
+    allocaBytes LBS.defaultChunkSize $ \ptr ->
+        go h ptr (hash ())
+    where
+        go h ptr salt = do
+            n <- hGetBufSome h ptr LBS.defaultChunkSize
+            if n == 0 then
+                return $! fileInfo $ fromIntegral salt
+            else
+                go h ptr =<< hashPtrWithSalt ptr n salt
+
+
 
 -- If the result isn't strict then we are referencing a much bigger structure,
 -- and it causes a space leak I don't really understand on Linux when running
