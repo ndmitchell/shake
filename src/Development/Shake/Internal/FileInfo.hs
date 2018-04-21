@@ -9,7 +9,6 @@ module Development.Shake.Internal.FileInfo(
 import Data.Hashable
 import Control.Exception.Extra
 import Development.Shake.Classes
-import Development.Shake.Internal.Errors
 import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Lazy.Internal as LBS (defaultChunkSize)
 import Data.Char
@@ -27,12 +26,14 @@ import System.Time
 #endif
 
 #elif defined(mingw32_HOST_OS)
+import Development.Shake.Internal.Errors
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Foreign.C.Types
 import Foreign.C.String
 
 #else
+import Development.Shake.Internal.Errors
 import GHC.IO.Exception
 import System.IO.Error
 import System.Posix.Files.ByteString
