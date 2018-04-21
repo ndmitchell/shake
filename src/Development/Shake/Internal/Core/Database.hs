@@ -42,8 +42,6 @@ import System.Time.Extra
 import Data.Monoid
 import Prelude
 
-type Map = Map.HashMap
-
 
 newtype BuildKey = BuildKey
     {buildKey
@@ -278,7 +276,7 @@ lookupDependencies Database{..} k =
 ---------------------------------------------------------------------
 -- STORAGE
 
-withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic owitness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
     witness <- return $ Map.fromList
