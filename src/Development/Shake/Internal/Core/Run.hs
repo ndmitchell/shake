@@ -132,10 +132,9 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                     putWhen Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
-                    report <- toReport database
                     forM_ shakeReport $ \file -> do
                         putWhen Normal $ "Writing report to " ++ file
-                        writeProfile file report
+                        writeProfile file database
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
                     live <- listLive database

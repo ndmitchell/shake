@@ -7,7 +7,7 @@ module Development.Shake.Internal.Core.Database(
     listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build,
     progress,
-    toReport, checkValid, listLive
+    checkValid, listLive
     ) where
 
 import Development.Shake.Classes
@@ -18,7 +18,6 @@ import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.Options
-import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
 import Development.Shake.Internal.Core.History
@@ -32,7 +31,6 @@ import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
 import Control.Concurrent.Extra
-import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
 import Data.Typeable.Extra
@@ -221,69 +219,6 @@ assertFinishedDatabase Database{..} = do
     let bad = [key | (_, (key, Waiting{})) <- status]
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
-
-
--- | Given a map of representing a dependency order (with a show for error messages), find an ordering for the items such
---   that no item points to an item before itself.
---   Raise an error if you end up with a cycle.
-dependencyOrder :: (Eq a, Hashable a) => (a -> String) -> Map a [a] -> [a]
--- Algorithm:
---    Divide everyone up into those who have no dependencies [Id]
---    And those who depend on a particular Id, Dep :-> Maybe [(Key,[Dep])]
---    Where d :-> Just (k, ds), k depends on firstly d, then remaining on ds
---    For each with no dependencies, add to list, then take its dep hole and
---    promote them either to Nothing (if ds == []) or into a new slot.
---    k :-> Nothing means the key has already been freed
-dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWith (++) [(d, [(k,ds)]) | (k,d:ds) <- hasDeps]
-    where
-        (noDeps, hasDeps) = partition (null . snd) $ Map.toList status
-
-        f [] mp | null bad = []
-                | otherwise = error $ unlines $
-                    "Internal invariant broken, database seems to be cyclic" :
-                    map ("    " ++) bad ++
-                    ["... plus " ++ show (length badOverflow) ++ " more ..." | not $ null badOverflow]
-            where (bad,badOverflow) = splitAt 10 [shw i | (i, Just _) <- Map.toList mp]
-
-        f (x:xs) mp = x : f (now++xs) later
-            where Just free = Map.lookupDefault (Just []) x mp
-                  (now,later) = foldl' g ([], Map.insert x Nothing mp) free
-
-        g (free, mp) (k, []) = (k:free, mp)
-        g (free, mp) (k, d:ds) = case Map.lookupDefault (Just []) d mp of
-            Nothing -> g (free, mp) (k, ds)
-            Just todo -> (free, Map.insert d (Just $ (k,ds) : todo) mp)
-
-
--- | Eliminate all errors from the database, pretending they don't exist
-resultsOnly :: Map Id (Key, Status) -> Map Id (Key, Result (Either BS.ByteString Value))
-resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends = map (Depends . filter (isJust . flip Map.lookup keep) . fromDepends) $ depends r})) keep
-    where keep = Map.filter (isJust . getResult . snd) mp
-
-removeStep :: Map Id (Key, Result a) -> Map Id (Key, Result a)
-removeStep = Map.filter (\(k,_) -> k /= stepKey)
-
-toReport :: Database -> IO [ProfileEntry]
-toReport Database{..} = do
-    status <- removeStep . resultsOnly <$> Ids.toMap status
-    let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
-                in dependencyOrder shw $ Map.map (concatMap fromDepends . depends . snd) status
-        ids = Map.fromList $ zip order [0..]
-
-        steps = let xs = Set.toList $ Set.fromList $ concat [[changed, built] | (_,Result{..}) <- Map.elems status]
-                in Map.fromList $ zip (sortBy (flip compare) xs) [0..]
-
-        f (k, Result{..}) = ProfileEntry
-            {prfName = show k
-            ,prfBuilt = fromStep built
-            ,prfChanged = fromStep changed
-            ,prfDepends = mapMaybe (`Map.lookup` ids) (concatMap fromDepends depends)
-            ,prfExecution = floatToDouble execution
-            ,prfTraces = map fromTrace traces
-            }
-            where fromStep i = fromJust $ Map.lookup i steps
-                  fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
-    return [maybe (throwImpure $ errorInternal "toReport") f $ Map.lookup i status | i <- order]
 
 
 checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
