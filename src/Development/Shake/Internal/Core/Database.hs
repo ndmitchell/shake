@@ -1,6 +1,6 @@
-{-# LANGUAGE RecordWildCards, PatternGuards, DeriveFunctor #-}
-{-# LANGUAGE Rank2Types, FlexibleInstances #-}
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards, PatternGuards #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(
     Trace(..), newTrace,
