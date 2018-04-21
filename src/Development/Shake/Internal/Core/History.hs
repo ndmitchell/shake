@@ -18,6 +18,7 @@ import Numeric
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.FileName
 import Data.Monoid
+import Data.Functor
 import qualified Data.ByteString as BS
 import Prelude
 
