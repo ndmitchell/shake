@@ -161,7 +161,7 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 getFileInfo x = handleBool isDoesNotExistError' (const $ return Nothing) $ do
     s <- getFileStatus $ fileNameToByteString x
     if isDirectory s then
-        errorDirectoryNotFile $ fileNameToString x
+        throwM $ errorDirectoryNotFile $ fileNameToString x
      else
         result (extractFileTime s) (fromIntegral $ fileSize s)
     where
