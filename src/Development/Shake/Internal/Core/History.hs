@@ -19,6 +19,7 @@ import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.FileName
 import Data.Monoid
 import qualified Data.ByteString as BS
+import Prelude
 
 {-
 #ifndef mingw32_HOST_OS
