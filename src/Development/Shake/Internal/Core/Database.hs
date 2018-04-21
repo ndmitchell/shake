@@ -25,6 +25,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
+import Development.Shake.Internal.Core.History
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
 import General.Extra
@@ -147,6 +148,7 @@ data Database = Database
     {lock :: Lock
     ,intern :: InternDB
     ,status :: StatusDB
+    ,history :: Maybe History
     ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
     ,diagnostic :: IO String -> IO () -- ^ logging function
@@ -333,6 +335,8 @@ build pool Database{..} BuildKey{..} identity stack ks continue =
         spawn :: RunMode -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
         spawn mode stack i k r = do
             (w, done) <- newWaiting
+            when (mode == RunDependenciesChanged) $ whenJust history $ \history ->
+                whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
             addPoolStart pool $
                 buildKey (addStack i k stack) step k r mode $ \res -> do
                     withLock lock $ do
@@ -344,8 +348,15 @@ build pool Database{..} BuildKey{..} identity stack ks continue =
                             diagnostic $ return $
                                 "result " ++ showBracket k ++ " = "++ showBracket (result runValue) ++
                                 " " ++ (if built runValue == changed runValue then "(changed)" else "(unchanged)")
-                            unless (runChanged == ChangedNothing) $
+                            unless (runChanged == ChangedNothing) $ do
                                 journal i k runValue{result=runStore}
+                                unless (runChanged == ChangedStore) $ whenJust history $ \history -> whenJust produced $ \produced -> do
+                                    ds <- forM (depends runValue) $ \(Depends is) ->
+                                        forM is $ \i -> do
+                                            -- if this didn't match then we couldn't have got here
+                                            Just (key, Ready value) <- Ids.lookup status i
+                                            return (key, identity key $ result value)
+                                    addHistory history k ds runStore produced
                         Left _ ->
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
@@ -546,6 +557,13 @@ withDatabase opts diagnostic owitness act = do
                 _ -> Step 1
         journal stepId stepKey $ toStepResult step
         lock <- newLock
+
+        history <- case shakeCache opts of
+            Nothing -> return Nothing
+            Just x -> do
+                let wit = binaryOpMap $ Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
+                let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
+                Just <$> newHistory wit2 x
         act Database{..}
 
 

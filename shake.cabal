@@ -126,6 +126,7 @@ library
         Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Rendezvous
@@ -226,6 +227,7 @@ executable shake
         Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Rendezvous
@@ -334,6 +336,7 @@ test-suite shake-test
         Development.Shake.Internal.CmdOption
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Database
+        Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Rendezvous
