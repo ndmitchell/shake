@@ -20,6 +20,7 @@ import General.Binary
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
+import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Profile
@@ -27,10 +28,9 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
 import Development.Shake.Internal.Core.History
 import qualified Data.ByteString.Char8 as BS
-import Data.Word
 import General.Extra
 import qualified General.Intern as Intern
-import General.Intern(Id, Intern)
+import General.Intern(Id)
 
 import Numeric.Extra
 import Control.Applicative
@@ -40,7 +40,6 @@ import Control.Concurrent.Extra
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
-import Foreign.Storable
 import Data.Typeable.Extra
 import Data.IORef.Extra
 import Data.Maybe
@@ -52,174 +51,6 @@ import Data.Monoid
 import Prelude
 
 type Map = Map.HashMap
-
----------------------------------------------------------------------
--- PUBLIC TYPES
-
--- | What mode a rule is running in.
-data RunMode
-    = RunDependenciesSame -- ^ My dependencies have not changed.
-    | RunDependenciesChanged -- ^ At least one of my dependencies from last time have changed, or I have no recorded dependencies.
-    | RunFromCache BS.ByteString -- ^ My value is coming from the cache
-      deriving (Eq,Show)
-
-instance NFData RunMode where rnf x = x `seq` ()
-
--- | How the output of a rule has changed.
-data RunChanged
-    = ChangedNothing -- ^ Nothing has changed.
-    | ChangedStore -- ^ The persisted value has changed, but in a way that should be considered identical.
-    | ChangedRecomputeSame -- ^ I recomputed the value and it was the same.
-    | ChangedRecomputeDiff -- ^ I recomputed the value and it was different.
-      deriving (Eq,Show)
-
-instance NFData RunChanged where rnf x = x `seq` ()
-
-
--- | The result of 'BuiltinRun'.
-data RunResult value = RunResult
-    {runChanged :: RunChanged
-        -- ^ What has changed from the previous time.
-    ,runStore :: BS.ByteString
-        -- ^ Return the new value to store. Often a serialised version of 'runValue'.
-    ,runValue :: value
-        -- ^ Return the produced value.
-    } deriving Functor
-
-instance NFData value => NFData (RunResult value) where
-    rnf (RunResult x1 x2 x3) = rnf x1 `seq` x2 `seq` rnf x3
-
-
-
----------------------------------------------------------------------
--- UTILITY TYPES
-
-newtype Step = Step Word32 deriving (Eq,Ord,Show,Storable,BinaryEx,NFData,Hashable,Typeable)
-
-incStep (Step i) = Step $ i + 1
-
-
----------------------------------------------------------------------
--- CALL STACK
-
--- Invariant: Stack xs set . HashSet.fromList (map fst xs) == set
-data Stack = Stack [(Id,Key)] !(Set.HashSet Id)
-
-showStack :: Stack -> [String]
-showStack (Stack xs _) = reverse $ map (show . snd) xs
-
-showTopStack :: Stack -> String
-showTopStack = maybe "<unknown>" show . topStack
-
-addStack :: Id -> Key -> Stack -> Stack
-addStack x key (Stack xs set) = Stack ((x,key):xs) (Set.insert x set)
-
-topStack :: Stack -> Maybe Key
-topStack (Stack xs _) = snd <$> listToMaybe xs
-
-checkStack :: [Id] -> Stack -> Maybe (Id,Key)
-checkStack new (Stack xs set)
-    | bad:_ <- filter (`Set.member` set) new = Just (bad, fromJust $ lookup bad xs)
-    | otherwise = Nothing
-
-emptyStack :: Stack
-emptyStack = Stack [] Set.empty
-
-
----------------------------------------------------------------------
--- TRACE
-
-data Trace = Trace {-# UNPACK #-} !BS.ByteString {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
-    deriving Show
-
-instance NFData Trace where
-    rnf x = x `seq` () -- all strict atomic fields
-
-newTrace :: String -> Double -> Double -> Trace
-newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFloat stop)
-
----------------------------------------------------------------------
--- CENTRAL TYPES
-
-type StatusDB = Ids.Ids (Key, Status)
-type InternDB = IORef (Intern Key)
-
--- | Invariant: The database does not have any cycles where a Key depends on itself
-data Database = Database
-    {lock :: Lock
-    ,intern :: InternDB
-    ,status :: StatusDB
-    ,history :: Maybe History
-    ,step :: {-# UNPACK #-} !Step
-    ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
-    ,diagnostic :: IO String -> IO () -- ^ logging function
-    }
-
-data Status
-    = Ready (Result Value) -- ^ I have a value
-    | Error SomeException -- ^ I have been run and raised an error
-    | Loaded (Result BS.ByteString) -- ^ Loaded from the database
-    | Waiting (Waiting Status) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
-    | Missing -- ^ I am only here because I got into the Intern table
-      deriving Show
-
-instance NFData Status where
-    rnf x = case x of
-        Ready x -> rnfResult rnf x
-        Error x -> rnf $ show x -- Best I can do for arbitrary exceptions
-        Loaded x -> rnfResult id x
-        Waiting _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
-        Missing -> ()
-        where
-            -- ignore the unpacked fields
-            -- complex because ByteString lacks NFData in GHC 7.4 and below
-            rnfResult by (Result a _ _ b _ c) = by a `seq` rnf b `seq` rnf c `seq` ()
-            {-# INLINE rnfResult #-}
-
-data Result a = Result
-    {result :: a -- ^ the result associated with the Key
-    ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
-    ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
-    ,depends :: [Depends] -- ^ dependencies (don't run them early)
-    ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
-    ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
-    } deriving (Show,Functor)
-
-statusType Ready{} = "Ready"
-statusType Error{} = "Error"
-statusType Loaded{} = "Loaded"
-statusType Waiting{} = "Waiting"
-statusType Missing{} = "Missing"
-
-
-getResult :: Status -> Maybe (Result (Either BS.ByteString Value))
-getResult (Ready r) = Just $ Right <$> r
-getResult (Loaded r) = Just $ Left <$> r
-getResult (Waiting _ r) = fmap Left <$> r
-getResult _ = Nothing
-
-
----------------------------------------------------------------------
--- OPERATIONS
-
-newtype Depends = Depends {fromDepends :: [Id]}
-    deriving NFData
-
-instance Show Depends where
-    -- Appears in diagnostic output and the Depends ctor is just verbose
-    show = show . fromDepends
-
--- | Afterwards each Id must occur at most once and there are no empty Depends
-nubDepends :: [Depends] -> [Depends]
-nubDepends = fMany Set.empty
-    where
-        fMany seen [] = []
-        fMany seen (Depends d:ds) = [Depends d2 | d2 /= []] ++ fMany seen2 ds
-            where (d2,seen2) = fOne seen d
-
-        fOne seen [] = ([], seen)
-        fOne seen (x:xs) | x `Set.member` seen = fOne seen xs
-        fOne seen (x:xs) = first (x:) $ fOne (Set.insert x seen) xs
 
 
 newtype BuildKey = BuildKey
@@ -581,19 +412,3 @@ getDatabase getKey bs
     , (x2, x3, x5, bs) <- binarySplit3 bs
     , (x4, x6) <- getExN bs
     = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
-
-instance BinaryEx Depends where
-    putEx (Depends xs) = putExStorableList xs
-    getEx = Depends . getExStorableList
-
-instance BinaryEx [Depends] where
-    putEx = putExList . map putEx
-    getEx = map getEx . getExList
-
-instance BinaryEx Trace where
-    putEx (Trace a b c) = putEx b <> putEx c <> putEx a
-    getEx x | (b,c,a) <- binarySplit2 x = Trace a b c
-
-instance BinaryEx [Trace] where
-    putEx = putExList . map putEx
-    getEx = map getEx . getExList
