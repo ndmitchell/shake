@@ -3,7 +3,7 @@
 {-
 This module stores the meta-data so its very important its always accurate
 We can't rely on getting any exceptions or termination at the end, so we'd better write out a journal
-We store a series of records, and if they contain twice as many records as needed, we compress
+We store a series of records, and if they contain twice as many records as needed, we compact
 -}
 
 module Development.Shake.Internal.Core.Storage(
