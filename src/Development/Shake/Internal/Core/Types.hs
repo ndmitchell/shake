@@ -9,7 +9,8 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRule(..), Global(..), Local(..), Action(..), Cache(CacheYes, CacheNo),
     newLocal, localClearMutable, localMergeMutable,
     Stack(..), Step(..), Result(..), InternDB, StatusDB, Database(..), Depends(..), Status(..), Trace(..),
-    getResult, checkStack, showStack, statusType, addStack, incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack
+    getResult, checkStack, showStack, statusType, addStack, incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
+    stepKey, StepKey(..), toStepResult, fromStepResult
     ) where
 
 import Control.Monad.IO.Class
@@ -108,6 +109,21 @@ newtype Step = Step Word32 deriving (Eq,Ord,Show,Storable,BinaryEx,NFData,Hashab
 incStep (Step i) = Step $ i + 1
 
 
+-- To simplify journaling etc we smuggle the Step in the database, with a special StepKey
+newtype StepKey = StepKey ()
+    deriving (Show,Eq,Typeable,Hashable,Binary,BinaryEx,NFData)
+
+stepKey :: Key
+stepKey = newKey $ StepKey ()
+
+toStepResult :: Step -> Result BS.ByteString
+toStepResult i = Result (runBuilder $ putEx i) i i [] 0 []
+
+fromStepResult :: Result BS.ByteString -> Step
+fromStepResult = getEx . result
+
+
+
 ---------------------------------------------------------------------
 -- CALL STACK
 
@@ -138,7 +154,11 @@ emptyStack = Stack [] Set.empty
 ---------------------------------------------------------------------
 -- TRACE
 
-data Trace = Trace {-# UNPACK #-} !BS.ByteString {-# UNPACK #-} !Float {-# UNPACK #-} !Float -- ^ (message, start, end)
+data Trace = Trace
+    {traceMessage ::  {-# UNPACK #-} !BS.ByteString
+    ,traceStart :: {-# UNPACK #-} !Float
+    ,traceEnd :: {-# UNPACK #-} !Float
+    }
     deriving Show
 
 instance NFData Trace where

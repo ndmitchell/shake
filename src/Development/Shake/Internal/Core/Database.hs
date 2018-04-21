@@ -344,20 +344,6 @@ lookupDependencies Database{..} k =
 ---------------------------------------------------------------------
 -- STORAGE
 
--- To simplify journaling etc we smuggle the Step in the database, with a special StepKey
-newtype StepKey = StepKey ()
-    deriving (Show,Eq,Typeable,Hashable,Binary,BinaryEx,NFData)
-
-stepKey :: Key
-stepKey = newKey $ StepKey ()
-
-toStepResult :: Step -> Result BS.ByteString
-toStepResult i = Result (runBuilder $ putEx i) i i [] 0 []
-
-fromStepResult :: Result BS.ByteString -> Step
-fromStepResult = getEx . result
-
-
 withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
 withDatabase opts diagnostic owitness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
