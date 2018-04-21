@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
-    BuiltinRule(..), Global(..), Local(..), Action(..), Cache(..),
+    BuiltinRule(..), Global(..), Local(..), Action(..), Cache(CacheYes, CacheNo),
     newLocal, localClearMutable, localMergeMutable
     ) where
 

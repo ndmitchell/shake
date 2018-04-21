@@ -4,7 +4,7 @@ module General.Chunks(
     Chunks,
     readChunk, readChunkMax, writeChunks, writeChunk,
     restoreChunksBackup, withChunks, resetChunksCompact, resetChunksCorrupt,
-    readChunkDirect, readChunksDirect, writeChunkDirect
+    readChunksDirect, writeChunkDirect
     ) where
 
 import System.Time.Extra
