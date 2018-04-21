@@ -3,15 +3,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(
-    Trace(..), newTrace,
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build,
-    Depends, nubDepends,
-    RunMode(..), RunResult(..), RunChanged(..),
-    Step, Result(..),
     progress,
-    Stack, emptyStack, topStack, showStack, showTopStack,
     toReport, checkValid, listLive
     ) where
 
