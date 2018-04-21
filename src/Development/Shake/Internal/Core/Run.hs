@@ -170,19 +170,6 @@ lintCurrentDirectory old msg = do
         ""
 
 
-withLineBuffering :: IO a -> IO a
-withLineBuffering act = do
-    -- instead of withBuffering avoid two finally handlers and stack depth
-    out <- hGetBuffering stdout
-    err <- hGetBuffering stderr
-    if out == LineBuffering && err == LineBuffering then act else do
-        hSetBuffering stdout LineBuffering
-        hSetBuffering stderr LineBuffering
-        act `finally` do
-            hSetBuffering stdout out
-            hSetBuffering stderr err
-
-
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
     global@Global{..} <- Action getRO

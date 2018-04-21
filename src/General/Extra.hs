@@ -12,6 +12,7 @@ module General.Extra(
     fastAt,
     forkFinallyUnmasked,
     isAsyncException,
+    withLineBuffering,
     doesFileExist_,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO
@@ -127,6 +128,22 @@ randomElem xs = do
     when (null xs) $ fail "General.Extra.randomElem called with empty list, can't pick a random element"
     i <- randomRIO (0, length xs - 1)
     return $ xs !! i
+
+
+---------------------------------------------------------------------
+-- System.IO
+
+withLineBuffering :: IO a -> IO a
+withLineBuffering act = do
+    -- instead of withBuffering avoid two finally handlers and stack depth
+    out <- hGetBuffering stdout
+    err <- hGetBuffering stderr
+    if out == LineBuffering && err == LineBuffering then act else do
+        hSetBuffering stdout LineBuffering
+        hSetBuffering stderr LineBuffering
+        act `finally` do
+            hSetBuffering stdout out
+            hSetBuffering stderr err
 
 
 ---------------------------------------------------------------------
