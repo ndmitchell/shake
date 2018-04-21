@@ -1,6 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards #-}
 {-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Database(
     Database, withDatabase, assertFinishedDatabase,
