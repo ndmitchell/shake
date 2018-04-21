@@ -484,6 +484,9 @@ batch mx pred one many
 cacheNever :: Action ()
 cacheNever = Action $ modifyRW $ \s -> s{localCache = CacheNo}
 
+-- | This rule can be cached. Usually called by the 'addBuiltinRule' function to indicate that this rule-type
+--   supports caching. Should not usually be called from user code.
+--   A rule will only be cached if 'cacheAllow' is called and 'cacheNever' is not called.
 cacheAllow :: Action ()
 cacheAllow = Action $ modifyRW $ \s -> s{localCache = max CacheYes $ localCache s}
 
