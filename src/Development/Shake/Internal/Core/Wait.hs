@@ -2,7 +2,7 @@
 
 module Development.Shake.Internal.Core.Wait(
     Wait, newWait, afterWait,
-    Answer(..), Compute(..),
+    Answer(..), Waits(..),
     rendezvous
     ) where
 
@@ -20,7 +20,7 @@ data Answer a c
 
 -- | A compuation that either has a result available immediate,
 --   or has a result that can be collected later.
-data Compute a
+data Waits a
     = Now a
     | Later (Wait a)
 
@@ -29,7 +29,7 @@ partitionAnswer = foldr f ([],[])
     where f (Abort    a) ~(as,cs) = (a:as,cs)
           f (Continue c) ~(as,cs) = (as,c:cs)
 
-partitionCompute :: [Compute a] -> ([a], [Wait a])
+partitionCompute :: [Waits a] -> ([a], [Wait a])
 partitionCompute = foldr f ([],[])
     where f (Now   x) ~(xs,ws) = (x:xs,ws)
           f (Later w) ~(xs,ws) = (xs,w:ws)
@@ -56,7 +56,7 @@ afterWait :: Wait a -> (a -> IO ()) -> IO ()
 afterWait (Wait op ref) act = modifyIORef' ref (\a s -> a s >> act (op s))
 
 
-rendezvous :: [Compute (Answer a c)] -> IO (Compute (Either a [c]))
+rendezvous :: [Waits (Answer a c)] -> IO (Waits (Either a [c]))
 rendezvous xs = do
     let (now, later) = partitionCompute xs
     let (abort, continue) = partitionAnswer now
