@@ -24,7 +24,6 @@ import qualified System.IO.Extra as IO
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Resource
 import Development.Shake.Internal.Core.Types
-import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Options

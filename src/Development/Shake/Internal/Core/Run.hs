@@ -3,11 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(
-    run,
-    newCacheIO,
-    unsafeExtraThread,
-    parallel,
-    batch,
+    run
     ) where
 
 import Control.Exception
@@ -20,7 +16,6 @@ import Development.Shake.Internal.Core.History
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
 import Control.Monad.Extra
-import Control.Monad.IO.Class
 import Data.Typeable.Extra
 import Data.Function
 import Data.Either.Extra
@@ -39,7 +34,6 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Pool
-import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Progress
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile
@@ -47,7 +41,6 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 import General.Timing
 import General.Extra
-import General.Concurrent
 import General.Cleanup
 import Data.Monoid
 import Prelude
@@ -263,166 +256,3 @@ getDatabase getKey bs
     , (x2, x3, x5, bs) <- binarySplit3 bs
     , (x4, x6) <- getExN bs
     = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
-
-
-
-
----------------------------------------------------------------------
--- RESOURCES
-
-
--- | A version of 'Development.Shake.newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
---   Most people should use 'Development.Shake.newCache' instead.
-newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
-newCacheIO (act :: k -> Action v) = do
-    var :: Var (Map.HashMap k (Fence (Either SomeException ([Depends],v)))) <- newVar Map.empty
-    return $ \key ->
-        join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
-            Just bar -> return $ (,) mp $ do
-                res <- liftIO $ testFence bar
-                (res,offset) <- case res of
-                    Just res -> return (res, 0)
-                    Nothing -> do
-                        Global{..} <- Action getRO
-                        offset <- liftIO offsetTime
-                        Action $ captureRAW $ \k -> waitFence bar $ \v ->
-                            addPoolResume globalPool $ do offset <- liftIO offset; k $ Right (v,offset)
-                case res of
-                    Left err -> Action $ throwRAW err
-                    Right (deps,v) -> do
-                        Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s, localDiscount = localDiscount s + offset}
-                        return v
-            Nothing -> do
-                bar <- newFence
-                return $ (,) (Map.insert key bar mp) $ do
-                    Local{localDepends=pre} <- Action getRW
-                    res <- Action $ tryRAW $ fromAction $ act key
-                    case res of
-                        Left err -> do
-                            liftIO $ signalFence bar $ Left err
-                            Action $ throwRAW err
-                        Right v -> do
-                            Local{localDepends=post} <- Action getRW
-                            let deps = take (length post - length pre) post
-                            liftIO $ signalFence bar $ Right (deps, v)
-                            return v
-
-
--- | Run an action without counting to the thread limit, typically used for actions that execute
---   on remote machines using barely any local CPU resources.
---   Unsafe as it allows the 'shakeThreads' limit to be exceeded.
---   You cannot depend on a rule (e.g. 'need') while the extra thread is executing.
---   If the rule blocks (e.g. calls 'withResource') then the extra thread may be used by some other action.
---   Only really suitable for calling 'cmd' / 'command'.
-unsafeExtraThread :: Action a -> Action a
-unsafeExtraThread act = Action $ do
-    Global{..} <- getRO
-    stop <- liftIO $ increasePool globalPool
-    res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
-    liftIO stop
-    captureRAW $ \continue -> (if isLeft res then addPoolException else addPoolResume) globalPool $ continue res
-
-
--- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
-parallel :: [Action a] -> Action [a]
--- Note: There is no parallel_ unlike sequence_ because there is no stack benefit to doing so
-parallel [] = return []
-parallel [x] = fmap return x
-parallel acts = Action $ do
-    global@Global{..} <- getRO
-    local <- getRW
-    -- number of items still to complete, or Nothing for has completed (by either failure or completion)
-    todo :: Var (Maybe Int) <- liftIO $ newVar $ Just $ length acts
-    -- a list of refs where the results go
-    results :: [IORef (Maybe (Either SomeException (Local, a)))] <- liftIO $ replicateM (length acts) $ newIORef Nothing
-
-    (locals, results) <- captureRAW $ \continue -> do
-        let resume = do
-                res <- liftIO $ sequence . catMaybes <$> mapM readIORef results
-                continue $ fmap unzip res
-
-        liftIO $ forM_ (zip acts results) $ \(act, result) -> do
-            let act2 = do
-                    whenM (liftIO $ isNothing <$> readVar todo) $
-                        fail "parallel, one has already failed"
-                    res <- act
-                    old <- Action getRW
-                    return (old, res)
-            addPoolResume globalPool $ runAction global (localClearMutable local) act2 $ \res -> do
-                writeIORef result $ Just res
-                modifyVar_ todo $ \v -> case v of
-                    Nothing -> return Nothing
-                    Just i | i == 1 || isLeft res -> do resume; return Nothing
-                    Just i -> return $ Just $ i - 1
-
-    modifyRW $ \root -> localMergeMutable root locals
-    return results
-
-
--- | Batch different outputs into a single 'Action', typically useful when a command has a high
---   startup cost - e.g. @apt-get install foo bar baz@ is a lot cheaper than three separate
---   calls to @apt-get install@. As an example, if we have a standard build rule:
---
--- @
--- \"*.out\" 'Development.Shake.%>' \\out -> do
---     'Development.Shake.need' [out '-<.>' \"in\"]
---     'Development.Shake.cmd' "build-multiple" [out '-<.>' \"in\"]
--- @
---
---   Assuming that @build-multiple@ can compile multiple files in a single run,
---   and that the cost of doing so is a lot less than running each individually,
---   we can write:
---
--- @
--- 'batch' 3 (\"*.out\" 'Development.Shake.%>')
---     (\\out -> do 'Development.Shake.need' [out '-<.>' \"in\"]; return out)
---     (\\outs -> 'Development.Shake.cmd' "build-multiple" [out '-<.>' \"in\" | out \<- outs])
--- @
---
---   In constrast to the normal call, we have specified a maximum batch size of 3,
---   an action to run on each output individually (typically all the 'need' dependencies),
---   and an action that runs on multiple files at once. If we were to require lots of
---   @*.out@ files, they would typically be built in batches of 3.
---
---   If Shake ever has nothing else to do it will run batches before they are at the maximum,
---   so you may see much smaller batches, especially at high parallelism settings.
-batch
-    :: Int   -- ^ Maximum number to run in a single batch, e.g. @3@.
-    -> ((a -> Action ()) -> Rules ()) -- ^ Way to match an entry, e.g. @\"*.ext\" '%>'@.
-    -> (a -> Action b)  -- ^ Preparation to run individually on each, e.g. using 'need'.
-    -> ([b] -> Action ())  -- ^ Combination action to run on all, e.g. using 'cmd'.
-    -> Rules ()
-batch mx pred one many
-    | mx <= 0 = error $ "Can't call batchable with <= 0, you used " ++ show mx
-    | mx == 1 = pred $ \a -> do b <- one a; many [b]
-    | otherwise = do
-        todo :: IORef (Int, [(b, Either SomeException Local -> IO ())]) <- liftIO $ newIORef (0, [])
-        pred $ \a -> Action $ do
-            b <- fromAction $ one a
-            -- optimisation would be to avoid taking the continuation if count >= mx
-            -- but it only saves one pool requeue per mx, which is likely to be trivial
-            -- and the code becomes a lot more special cases
-            global@Global{..} <- getRO
-            local <- getRW
-            local2 <- captureRAW $ \k -> do
-                count <- atomicModifyIORef todo $ \(count, bs) -> ((count+1, (b,k):bs), count+1)
-                -- only trigger on the edge so we don't have lots of waiting pool entries
-                (if count == mx then addPoolResume else if count == 1 then addPoolBatch else none)
-                    globalPool $ go global (localClearMutable local) todo
-            modifyRW $ \root -> localMergeMutable root [local2]
-    where
-        none _ _ = return ()
-
-        go global@Global{..} local todo = do
-            (now, count) <- atomicModifyIORef todo $ \(count, bs) ->
-                if count <= mx then
-                    ((0, []), (bs, 0))
-                else
-                    let (xs,ys) = splitAt mx bs
-                    in ((count - mx, ys), (xs, count - mx))
-            (if count >= mx then addPoolResume else if count > 0 then addPoolBatch else none)
-                    globalPool $ go global local todo
-            unless (null now) $
-                runAction global local (do many $ map fst now; Action getRW) $ \x ->
-                    forM_ now $ \(_,k) ->
-                        (if isLeft x then addPoolException else addPoolResume) globalPool $ k x
