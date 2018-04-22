@@ -23,6 +23,11 @@ import Control.Exception
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra
+import General.Binary
+import Development.Shake.Internal.Core.Storage
+import Development.Shake.Internal.Core.History
+import qualified General.Ids as Ids
+import qualified General.Intern as Intern
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Typeable.Extra
@@ -55,6 +60,7 @@ import General.Timing
 import General.Extra
 import General.Concurrent
 import General.Cleanup
+import Data.Monoid
 import Prelude
 
 ---------------------------------------------------------------------
@@ -149,6 +155,14 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                 sequence_ $ reverse after
 
 
+listLive :: Database -> IO [Key]
+listLive Database{..} = do
+    diagnostic $ return "Listing live keys"
+    status <- Ids.toList status
+    return [k | (_, (k, Ready{})) <- status]
+
+
+
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
 checkShakeExtra mp = do
     let bad = [(k,t) | (k,v) <- Map.toList mp, let t = dynTypeRep v, t /= k]
@@ -171,6 +185,105 @@ runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)
 runLint mp k v = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just BuiltinRule{..} -> builtinLint k v
+
+
+assertFinishedDatabase :: Database -> IO ()
+assertFinishedDatabase Database{..} = do
+    -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
+    status <- Ids.toList status
+    let bad = [key | (_, (key, Waiting{})) <- status]
+    when (bad /= []) $
+        throwM $ errorComplexRecursion (map show bad)
+
+
+checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
+checkValid Database{..} check missing = do
+    status <- Ids.toList status
+    intern <- readIORef intern
+    diagnostic $ return "Starting validity/lint checking"
+
+    -- Do not use a forM here as you use too much stack space
+    bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
+        (key, Ready Result{..}) -> do
+            good <- check key result
+            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
+            return $ [(key, result, now) | Just now <- [good]] ++ seen
+        _ -> return seen
+    unless (null bad) $ do
+        let n = length bad
+        throwM $ errorStructured
+            ("Lint checking error - " ++ (if n == 1 then "value has" else show n ++ " values have")  ++ " changed since being depended upon")
+            (intercalate [("",Just "")] [ [("Key", Just $ show key),("Old", Just $ show result),("New", Just now)]
+                                        | (key, result, now) <- bad])
+            ""
+
+    bad <- return [(parent,key) | (parent, key) <- missing, isJust $ Intern.lookup key intern]
+    unless (null bad) $ do
+        let n = length bad
+        throwM $ errorStructured
+            ("Lint checking error - " ++ (if n == 1 then "value" else show n ++ " values") ++ " did not have " ++ (if n == 1 then "its" else "their") ++ " creation tracked")
+            (intercalate [("",Just "")] [ [("Rule", Just $ show parent), ("Created", Just $ show key)] | (parent,key) <- bad])
+            ""
+
+    diagnostic $ return "Validity/lint check passed"
+
+
+
+
+---------------------------------------------------------------------
+-- STORAGE
+
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
+withDatabase opts diagnostic owitness act = do
+    let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
+    witness <- return $ Map.fromList
+        [ (QTypeRep t, BinaryOp (putDatabase putOp) (getDatabase getOp))
+        | (t,BinaryOp{..}) <- step : Map.toList owitness]
+    withStorage opts diagnostic witness $ \status journal -> do
+        journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
+
+        xs <- Ids.toList status
+        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+
+        (mp1, stepId) <- case Intern.lookup stepKey mp1 of
+            Just stepId -> return (mp1, stepId)
+            Nothing -> do
+                (mp1, stepId) <- return $ Intern.add stepKey mp1
+                return (mp1, stepId)
+
+        intern <- newIORef mp1
+        step <- do
+            v <- Ids.lookup status stepId
+            return $ case v of
+                Just (_, Loaded r) -> incStep $ fromStepResult r
+                _ -> Step 1
+        journal stepId stepKey $ toStepResult step
+        lock <- newLock
+
+        history <- case shakeCache opts of
+            Nothing -> return Nothing
+            Just x -> do
+                let wit = binaryOpMap $ Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
+                let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
+                Just <$> newHistory wit2 x
+        act Database{..}
+
+
+putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
+    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putExN (putEx x4) <> putEx x6
+putDatabase _ (_, x) = throwImpure $ errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
+
+
+getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)
+getDatabase getKey bs
+    | (key, bs) <- getExN bs
+    , (x1, bs) <- getExN bs
+    , (x2, x3, x5, bs) <- binarySplit3 bs
+    , (x4, x6) <- getExN bs
+    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
+
+
 
 
 ---------------------------------------------------------------------
@@ -359,24 +472,3 @@ batch mx pred one many
                 runAction global local (do many $ map fst now; Action getRW) $ \x ->
                     forM_ now $ \(_,k) ->
                         (if isLeft x then addPoolException else addPoolResume) globalPool $ k x
-
-
--- | This rule should not be cached because it makes use of untracked dependencies
---   (e.g. files in a system directory or items on the @$PATH@), or is trivial to compute locally.
-cacheNever :: Action ()
-cacheNever = Action $ modifyRW $ \s -> s{localCache = CacheNo}
-
--- | This rule can be cached. Usually called by the 'addBuiltinRule' function to indicate that this rule-type
---   supports caching. Should not usually be called from user code.
---   A rule will only be cached if 'cacheAllow' is called and 'cacheNever' is not called.
-cacheAllow :: Action ()
-cacheAllow = Action $ modifyRW $ \s -> s{localCache = max CacheYes $ localCache s}
-
--- | This rule the following files, in addition to any defined by its target.
---   At the end of the rule these files must have been written.
-produces :: [FilePath] -> Action ()
-produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (reverse xs) ++ localProduces s}
-
--- | A version of 'produces' that does not check.
-producesUnchecked :: [FilePath] -> Action ()
-producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}

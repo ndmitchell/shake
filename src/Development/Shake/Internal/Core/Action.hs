@@ -7,6 +7,8 @@ module Development.Shake.Internal.Core.Action(
     lintTrackRead, lintTrackWrite, lintTrackAllow, lintTrackFinished,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     blockApply, unsafeAllowApply, lintCurrentDirectory, shakeException,
+    producesCheck, produces, producesUnchecked,
+    cacheNever, cacheAllow,
     traced
     ) where
 
@@ -21,8 +23,9 @@ import Data.Function
 import Control.Concurrent.Extra
 import Data.Maybe
 import Data.IORef
-import Data.List
+import Data.List.Extra
 import System.IO.Extra
+import General.Extra
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
 
@@ -309,3 +312,35 @@ lookupDependencies Database{..} k =
         Just (_, Ready r) <- Ids.lookup status i
         forM (concatMap fromDepends $ depends r) $ \x ->
             fst . fromJust <$> Ids.lookup status x
+
+
+producesCheck :: Action ()
+producesCheck = do
+    Local{localProduces} <- Action getRW
+    missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
+    when (missing /= []) $ throwM $ errorStructured
+        "Files declared by 'produces' not produced"
+        [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
+        ""
+
+
+
+-- | This rule should not be cached because it makes use of untracked dependencies
+--   (e.g. files in a system directory or items on the @$PATH@), or is trivial to compute locally.
+cacheNever :: Action ()
+cacheNever = Action $ modifyRW $ \s -> s{localCache = CacheNo}
+
+-- | This rule can be cached. Usually called by the 'addBuiltinRule' function to indicate that this rule-type
+--   supports caching. Should not usually be called from user code.
+--   A rule will only be cached if 'cacheAllow' is called and 'cacheNever' is not called.
+cacheAllow :: Action ()
+cacheAllow = Action $ modifyRW $ \s -> s{localCache = max CacheYes $ localCache s}
+
+-- | This rule the following files, in addition to any defined by its target.
+--   At the end of the rule these files must have been written.
+produces :: [FilePath] -> Action ()
+produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (reverse xs) ++ localProduces s}
+
+-- | A version of 'produces' that does not check.
+producesUnchecked :: [FilePath] -> Action ()
+producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}
