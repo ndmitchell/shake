@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, ViewPatterns #-}
 
 module Development.Shake.Internal.Resource(
-    Resource, newResourceIO, newThrottleIO, acquireResource, releaseResource
+    Resource, newResourceIO, newThrottleIO, withResource
     ) where
 
 import Data.Function
@@ -12,6 +12,10 @@ import Data.Tuple.Extra
 import Control.Monad
 import General.Bilist
 import Development.Shake.Internal.Core.Pool
+import Development.Shake.Internal.Core.Types
+import Development.Shake.Internal.Core.Monad
+import Development.Shake.Internal.Core.Action
+import Control.Monad.IO.Class
 import System.Time.Extra
 import Data.Monoid
 import Prelude
@@ -23,6 +27,24 @@ resourceIds = unsafePerformIO $ newVar 0
 
 resourceId :: IO Int
 resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j)
+
+
+-- | Run an action which uses part of a finite resource. For more details see 'Resource'.
+--   You cannot depend on a rule (e.g. 'need') while a resource is held.
+withResource :: Resource -> Int -> Action a -> Action a
+withResource r i act = do
+    Global{..} <- Action getRO
+    liftIO $ globalDiagnostic $ return $ show r ++ " waiting to acquire " ++ show i
+    offset <- liftIO offsetTime
+    Action $ captureRAW $ \continue -> acquireResource r globalPool i $ continue $ Right ()
+    res <- Action $ tryRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) $ do
+        offset <- liftIO offset
+        liftIO $ globalDiagnostic $ return $ show r ++ " acquired " ++ show i ++ " in " ++ showDuration offset
+        Action $ modifyRW $ \s -> s{localDiscount = localDiscount s + offset}
+        act
+    liftIO $ releaseResource r globalPool i
+    liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
+    Action $ either throwRAW return res
 
 
 -- | A type representing an external resource which the build system should respect. There

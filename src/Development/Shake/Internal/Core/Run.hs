@@ -289,23 +289,6 @@ getDatabase getKey bs
 ---------------------------------------------------------------------
 -- RESOURCES
 
--- | Run an action which uses part of a finite resource. For more details see 'Resource'.
---   You cannot depend on a rule (e.g. 'need') while a resource is held.
-withResource :: Resource -> Int -> Action a -> Action a
-withResource r i act = do
-    Global{..} <- Action getRO
-    liftIO $ globalDiagnostic $ return $ show r ++ " waiting to acquire " ++ show i
-    offset <- liftIO offsetTime
-    Action $ captureRAW $ \continue -> acquireResource r globalPool i $ continue $ Right ()
-    res <- Action $ tryRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) $ do
-        offset <- liftIO offset
-        liftIO $ globalDiagnostic $ return $ show r ++ " acquired " ++ show i ++ " in " ++ showDuration offset
-        Action $ modifyRW $ \s -> s{localDiscount = localDiscount s + offset}
-        act
-    liftIO $ releaseResource r globalPool i
-    liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
-    Action $ either throwRAW return res
-
 
 -- | A version of 'Development.Shake.newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newCache' instead.
