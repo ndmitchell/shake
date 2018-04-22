@@ -9,6 +9,7 @@ import System.IO.Unsafe
 import Control.Concurrent.Extra
 import Control.Exception.Extra
 import Data.Tuple.Extra
+import Data.IORef
 import Control.Monad
 import General.Bilist
 import Development.Shake.Internal.Core.Pool
@@ -21,12 +22,11 @@ import Data.Monoid
 import Prelude
 
 
-{-# NOINLINE resourceIds #-}
-resourceIds :: Var Int
-resourceIds = unsafePerformIO $ newVar 0
-
+{-# NOINLINE resourceId #-}
 resourceId :: IO Int
-resourceId = modifyVar resourceIds $ \i -> let j = i + 1 in j `seq` return (j, j)
+resourceId = unsafePerformIO $ do
+    ref <- newIORef 0
+    return $ atomicModifyIORef ref $ \i -> let j = i + 1 in (j, j)
 
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
