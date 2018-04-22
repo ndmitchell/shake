@@ -99,11 +99,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let s0 = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules
-                    let s1 = newLocal emptyStack shakeVerbosity
+                    let global = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules
+                    let local = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
-                        addPoolStart pool $ runAction s0 s1 act $ \x -> case x of
-                            Left e -> raiseError =<< shakeException s0 ["Top-level action/want"] e
+                        addPoolStart pool $ runAction global local act $ \x -> case x of
+                            Left e -> raiseError =<< shakeException global ["Top-level action/want"] e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
                 assertFinishedDatabase database
