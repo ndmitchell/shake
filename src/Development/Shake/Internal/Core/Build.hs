@@ -261,8 +261,3 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode cont
 --   use 'apply' to allow parallelism.
 apply1 :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
 apply1 = fmap head . apply . return
-
-
-
----------------------------------------------------------------------
--- QUERY DATABASE
