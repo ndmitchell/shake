@@ -28,7 +28,6 @@ import General.Extra
 import Development.Shake.Internal.Core.Types hiding (Result, result)
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Build
-import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.FileName
 import Development.Shake.Internal.Rules.Rerun

@@ -8,6 +8,7 @@ module Development.Shake.Internal.Core.Action(
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     blockApply, unsafeAllowApply, lintCurrentDirectory, shakeException,
     producesCheck, produces, producesUnchecked,
+    orderOnlyAction,
     cacheNever, cacheAllow,
     traced
     ) where
@@ -344,3 +345,13 @@ produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (revers
 -- | A version of 'produces' that does not check.
 producesUnchecked :: [FilePath] -> Action ()
 producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}
+
+
+-- | Run an action but do not depend on anything the action uses.
+--   A more general version of 'orderOnly'.
+orderOnlyAction :: Action a -> Action a
+orderOnlyAction act = Action $ do
+    Local{localDepends=pre} <- getRW
+    res <- fromAction act
+    modifyRW $ \s -> s{localDepends=pre}
+    return res

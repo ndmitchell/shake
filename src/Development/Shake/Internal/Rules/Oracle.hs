@@ -5,10 +5,11 @@ module Development.Shake.Internal.Rules.Oracle(
     addOracle, addOracleCache, addOracleHash, askOracle
     ) where
 
-import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
+import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import qualified Data.ByteString as BS

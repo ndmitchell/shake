@@ -5,9 +5,10 @@ module Development.Shake.Internal.Rules.Rerun(
     defaultRuleRerun, alwaysRerun
     ) where
 
-import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Types
+import Development.Shake.Internal.Core.Build
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Classes
 import qualified Data.ByteString as BS
 import General.Binary

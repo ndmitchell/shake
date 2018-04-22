@@ -2,7 +2,7 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Development.Shake.Internal.Core.Build(
-    lookupStatus,
+    getDatabaseValue,
     apply, apply1,
     ) where
 
@@ -69,6 +69,13 @@ lookupStatus :: Database -> Key -> IO (Maybe (Either BS.ByteString Value))
 lookupStatus Database{..} k = withLock lock $ do
     i <- internKey intern status k
     maybe Nothing (fmap result . getResult . snd) <$> Ids.lookup status i
+
+getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
+getDatabaseValue k = do
+    global@Global{..} <- Action getRO
+    liftIO $ fmap (fmap $ fmap fromValue) $ lookupStatus globalDatabase $ newKey k
+
+
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Pool -> Database -> BuildKey -> (Key -> Value -> BS.ByteString) -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))

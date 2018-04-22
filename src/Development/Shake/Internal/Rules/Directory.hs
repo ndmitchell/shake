@@ -23,8 +23,9 @@ import qualified System.Directory as IO
 import qualified System.Environment.Extra as IO
 
 import Development.Shake.Internal.Core.Types
-import Development.Shake.Internal.Core.Run
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Value
 import Development.Shake.Classes
 import Development.Shake.FilePath

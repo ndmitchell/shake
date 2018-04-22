@@ -4,19 +4,10 @@
 
 module Development.Shake.Internal.Core.Run(
     run,
-    Action, apply1, traced,
-    getDatabaseValue,
-    getShakeOptions, getProgress,
-    getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    Resource, newResourceIO, withResource, newThrottleIO,
     newCacheIO,
-    unsafeExtraThread, unsafeAllowApply,
+    unsafeExtraThread,
     parallel,
-    orderOnlyAction,
     batch,
-    runAfter,
-    cacheNever, cacheAllow,
-    produces, producesUnchecked,
     ) where
 
 import Control.Exception
@@ -48,10 +39,8 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Pool
-import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Progress
-import Development.Shake.Internal.Resource
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Options
@@ -171,14 +160,6 @@ checkShakeExtra mp = do
             [("Key",Just $ show k),("Value type",Just $ show t)]
             (if null xs then "" else "Plus " ++ show (length xs) ++ " other keys")
         _ -> return ()
-
-
-getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
-getDatabaseValue k = do
-    global@Global{..} <- Action getRO
-    liftIO $ fmap (fmap $ fmap fromValue) $ lookupStatus globalDatabase $ newKey k
-
-
 
 
 runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)
@@ -376,16 +357,6 @@ parallel acts = Action $ do
 
     modifyRW $ \root -> localMergeMutable root locals
     return results
-
-
--- | Run an action but do not depend on anything the action uses.
---   A more general version of 'orderOnly'.
-orderOnlyAction :: Action a -> Action a
-orderOnlyAction act = Action $ do
-    Local{localDepends=pre} <- getRW
-    res <- fromAction act
-    modifyRW $ \s -> s{localDepends=pre}
-    return res
 
 
 -- | Batch different outputs into a single 'Action', typically useful when a command has a high
