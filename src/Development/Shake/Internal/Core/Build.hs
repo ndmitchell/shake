@@ -121,7 +121,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
             res <- rendezvous =<< mapM (fmap toCompute . reduce stack) is
             case res of
                 Now v -> fast v
-                Later w -> slow $ \slow -> afterWaiting w slow
+                Later w -> slow $ \slow -> afterWait w slow
 
         -- Rules for each of the following functions
         -- * Must NOT lock
@@ -150,11 +150,11 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
                     _ -> Nothing)
                 cont $
                 \go -> do
-                    (self, done) <- newWaiting
+                    (self, done) <- newWait
                     go $ \v -> do
                         res <- cont v
                         case res of
-                            Waiting w _ -> afterWaiting w done
+                            Waiting w _ -> afterWait w done
                             _ -> done res
                     i #= (k, Waiting self $ Just r)
 
@@ -162,7 +162,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
         -- | Given a Key, queue up execution and return waiting
         spawn :: RunMode -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
         spawn mode stack i k r = do
-            (w, done) <- newWaiting
+            (w, done) <- newWait
             when (mode == RunDependenciesChanged) $ whenJust history $ \history ->
                 whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
             addPoolStart pool $

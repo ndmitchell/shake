@@ -177,7 +177,7 @@ data Status
     = Ready (Result Value) -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
     | Loaded (Result BS.ByteString) -- ^ Loaded from the database
-    | Waiting (Waiting Status) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
+    | Waiting (Wait Status) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 

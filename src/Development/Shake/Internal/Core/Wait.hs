@@ -1,7 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Development.Shake.Internal.Core.Wait(
-    Waiting, newWaiting, afterWaiting,
+    Wait, newWait, afterWait,
     Answer(..), Compute(..),
     rendezvous
     ) where
@@ -22,38 +22,38 @@ data Answer a c
 --   or has a result that can be collected later.
 data Compute a
     = Now a
-    | Later (Waiting a)
+    | Later (Wait a)
 
 partitionAnswer :: [Answer a c] -> ([a], [c])
 partitionAnswer = foldr f ([],[])
     where f (Abort    a) ~(as,cs) = (a:as,cs)
           f (Continue c) ~(as,cs) = (as,c:cs)
 
-partitionCompute :: [Compute a] -> ([a], [Waiting a])
+partitionCompute :: [Compute a] -> ([a], [Wait a])
 partitionCompute = foldr f ([],[])
     where f (Now   x) ~(xs,ws) = (x:xs,ws)
           f (Later w) ~(xs,ws) = (xs,w:ws)
 
 
 -- | A type representing someone waiting for a result.
-data Waiting a = forall b . Waiting (b -> a) (IORef (b -> IO ()))
+data Wait a = forall b . Wait (b -> a) (IORef (b -> IO ()))
     -- Contains a functor value to apply, along with somewhere to register callbacks
 
-instance Functor Waiting where
-    fmap f (Waiting op ref) = Waiting (f . op) ref
+instance Functor Wait where
+    fmap f (Wait op ref) = Wait (f . op) ref
 
-instance Show (Waiting a) where
-    show _ = "Waiting"
+instance Show (Wait a) where
+    show _ = "Wait"
 
 
-newWaiting :: IO (Waiting a, a -> IO ())
-newWaiting = do
+newWait :: IO (Wait a, a -> IO ())
+newWait = do
     ref <- newIORef $ \_ -> return ()
     let run x = ($ x) =<< readIORef ref
-    return (Waiting id ref, run)
+    return (Wait id ref, run)
 
-afterWaiting :: Waiting a -> (a -> IO ()) -> IO ()
-afterWaiting (Waiting op ref) act = modifyIORef' ref (\a s -> a s >> act (op s))
+afterWait :: Wait a -> (a -> IO ()) -> IO ()
+afterWait (Wait op ref) act = modifyIORef' ref (\a s -> a s >> act (op s))
 
 
 rendezvous :: [Compute (Answer a c)] -> IO (Compute (Either a [c]))
@@ -65,13 +65,13 @@ rendezvous xs = do
      else if null later then
         return $ Now $ Right continue
      else do
-        (waiting, run) <- newWaiting
+        (waiting, run) <- newWait
         let n = length xs
         result <- newArray n $ throwImpure $ errorInternal "rendezvous"
         todo <- newIORef $ length later
         forM_ (zip [0..] xs) $ \(i,x) -> case x of
             Now (Continue c) -> writeArray result i c
-            Later w -> afterWaiting w $ \v -> do
+            Later w -> afterWait w $ \v -> do
                 t <- readIORef todo
                 case v of
                     _ | t == 0 -> return () -- must have already aborted
