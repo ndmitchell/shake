@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
-    BuiltinRule(..), Global(..), Local(..), Action(..), Cache(CacheYes, CacheNo),
+    BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo),
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), InternDB, StatusDB, Database(..), Depends(..), Status(..), Trace(..),
     getResult, checkStack, showStack, statusType, addStack, incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
@@ -61,6 +61,9 @@ newtype Action a = Action {fromAction :: RAW Global Local a}
              ,MonadFail
 #endif
         )
+
+runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
+runAction g l (Action x) = runRAW g l x
 
 
 ---------------------------------------------------------------------

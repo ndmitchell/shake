@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
-    runAction,
     actionOnException, actionFinally,
     getShakeOptions, getProgress, runAfter,
     lintTrackRead, lintTrackWrite, lintTrackAllow, lintTrackFinished,
@@ -72,9 +71,6 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
         when (shakeStaunch && shakeVerbosity >= Quiet) $
             globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
         return e
-
-runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
-runAction g l (Action x) = runRAW g l x
 
 
 
