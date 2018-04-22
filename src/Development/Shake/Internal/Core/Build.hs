@@ -78,8 +78,8 @@ getDatabaseValue k = do
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Pool -> Database -> BuildKey -> (Key -> Value -> BS.ByteString) -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build pool Database{..} BuildKey{..} identity stack ks continue =
+build :: Pool -> Global -> BuildKey -> (Key -> Value -> BS.ByteString) -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build pool Global{globalDatabase=Database{..},..} BuildKey{..} identity stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -220,7 +220,7 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) (runIdentify globalRules) localStack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool global (BuildKey $ runKey global) (runIdentify globalRules) localStack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
