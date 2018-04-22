@@ -195,8 +195,6 @@ checkValid diagnostic Database{..} check missing = do
     diagnostic $ return "Validity/lint check passed"
 
 
-
-
 ---------------------------------------------------------------------
 -- STORAGE
 
