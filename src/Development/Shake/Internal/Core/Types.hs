@@ -306,7 +306,6 @@ data Database = Database
     ,history :: Maybe History
     ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
-    ,diagnostic :: IO String -> IO () -- ^ logging function
     }
 
 

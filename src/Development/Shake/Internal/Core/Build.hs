@@ -105,7 +105,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
 
         (#=) :: Id -> (Key, Status) -> IO Status
         i #= (k,v) = do
-            diagnostic $ do
+            globalDiagnostic $ do
                 old <- Ids.lookup status i
                 return $ maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
             Ids.insert status i (k,v)
@@ -173,7 +173,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
                         done status
                     case res of
                         Right (produced, RunResult{..}) -> do
-                            diagnostic $ return $
+                            globalDiagnostic $ return $
                                 "result " ++ showBracket k ++ " = "++ showBracket (result runValue) ++
                                 " " ++ (if built runValue == changed runValue then "(changed)" else "(unchanged)")
                             unless (runChanged == ChangedNothing) $ do
@@ -186,7 +186,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
                                             return (key, identity key $ result value)
                                     addHistory history k ds runStore produced
                         Left _ ->
-                            diagnostic $ return $ "result " ++ showBracket k ++ " = error"
+                            globalDiagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
 
 

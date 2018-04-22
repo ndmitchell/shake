@@ -116,7 +116,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                 when (isJust shakeLint) $ do
                     addTiming "Lint checking"
                     lintCurrentDirectory curdir "After completion"
-                    checkValid database (runLint ruleinfo) =<< readIORef absent
+                    checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
                     putWhen Loud "Lint checking succeeded"
                 when (shakeReport /= []) $ do
                     addTiming "Profile report"
@@ -125,9 +125,10 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                         writeProfile file database
                 when (shakeLiveFiles /= []) $ do
                     addTiming "Listing live"
-                    live <- listLive database
+                    diagnostic $ return "Listing live keys"
+                    status <- Ids.toList $ status database
                     let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
-                    let liveFiles = [show k | k <- live, specialIsFileKey $ typeKey k]
+                    let liveFiles = [show k | (_, (k, Ready{})) <- status, specialIsFileKey $ typeKey k]
                     forM_ shakeLiveFiles $ \file -> do
                         putWhen Normal $ "Writing live list to " ++ file
                         (if file == "-" then putStr else writeFile file) $ unlines liveFiles
@@ -135,14 +136,6 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
             unless (null after) $ do
                 addTiming "Running runAfter"
                 sequence_ $ reverse after
-
-
-listLive :: Database -> IO [Key]
-listLive Database{..} = do
-    diagnostic $ return "Listing live keys"
-    status <- Ids.toList status
-    return [k | (_, (k, Ready{})) <- status]
-
 
 
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
@@ -170,8 +163,8 @@ assertFinishedDatabase Database{..} = do
         throwM $ errorComplexRecursion (map show bad)
 
 
-checkValid :: Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
-checkValid Database{..} check missing = do
+checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
+checkValid diagnostic Database{..} check missing = do
     status <- Ids.toList status
     intern <- readIORef intern
     diagnostic $ return "Starting validity/lint checking"
