@@ -20,6 +20,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Internal.CmdOption
 import Data.Semigroup
+import Prelude
 
 
 -- | The current assumptions made by the build system, used by 'shakeRebuild'. These options
