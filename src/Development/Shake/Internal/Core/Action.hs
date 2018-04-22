@@ -41,6 +41,7 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Core.Wait2
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
@@ -428,35 +429,24 @@ unsafeExtraThread act = Action $ do
 parallel :: [Action a] -> Action [a]
 -- Note: There is no parallel_ unlike sequence_ because there is no stack benefit to doing so
 parallel [] = return []
-parallel [x] = fmap return x
-parallel acts = Action $ do
-    global@Global{..} <- getRO
-    local <- getRW
-    -- number of items still to complete, or Nothing for has completed (by either failure or completion)
-    todo :: Var (Maybe Int) <- liftIO $ newVar $ Just $ length acts
-    -- a list of refs where the results go
-    results :: [IORef (Maybe (Either SomeException (Local, a)))] <- liftIO $ replicateM (length acts) $ newIORef Nothing
+parallel [x] = return <$> x
+parallel acts = do
+    global@Global{..} <- Action getRO
+    local <- Action getRW
 
-    (locals, results) <- captureRAW $ \continue -> do
-        let resume = do
-                res <- liftIO $ sequence . catMaybes <$> mapM readIORef results
-                continue $ fmap unzip res
-
-        liftIO $ forM_ (zip acts results) $ \(act, result) -> do
-            let act2 = do
-                    whenM (liftIO $ isNothing <$> readVar todo) $
-                        fail "parallel, one has already failed"
-                    res <- act
-                    old <- Action getRW
-                    return (old, res)
-            addPool PoolResume globalPool $ runAction global (localClearMutable local) act2 $ \res -> do
-                writeIORef result $ Just res
-                modifyVar_ todo $ \v -> case v of
-                    Nothing -> return Nothing
-                    Just i | i == 1 || isLeft res -> do resume; return Nothing
-                    Just i -> return $ Just $ i - 1
-
-    modifyRW $ \root -> localMergeMutable root locals
+    done <- liftIO $ newIORef False
+    waits <- forM acts $ \act ->
+        addPoolWait PoolResume $ do
+            whenM (liftIO $ readIORef done) $
+                fail "parallel, one has already failed"
+            Action $ modifyRW localClearMutable
+            res <- act
+            old <- Action getRW
+            return (old, res)
+    res <- actionFence =<< liftIO (exceptFence waits)
+    liftIO $ atomicWriteIORef done True
+    let (locals, results) = unzip res
+    Action $ modifyRW $ \root -> localMergeMutable root locals
     return results
 
 
