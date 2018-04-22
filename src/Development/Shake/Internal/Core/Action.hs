@@ -28,7 +28,7 @@ import Control.Concurrent.Extra
 import Data.Maybe
 import Data.IORef
 import Data.List.Extra
-import Data.Either
+import Data.Either.Extra
 import System.IO.Extra
 import System.Time.Extra
 import General.Extra
