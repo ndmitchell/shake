@@ -1,6 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
-module Development.Shake.Internal.Core.Rendezvous(
+module Development.Shake.Internal.Core.Wait(
     Waiting, newWaiting, afterWaiting,
     Answer(..), Compute(..),
     rendezvous

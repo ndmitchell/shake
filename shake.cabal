@@ -129,7 +129,7 @@ library
         Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
-        Development.Shake.Internal.Core.Rendezvous
+        Development.Shake.Internal.Core.Wait
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -230,7 +230,7 @@ executable shake
         Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
-        Development.Shake.Internal.Core.Rendezvous
+        Development.Shake.Internal.Core.Wait
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -339,7 +339,7 @@ test-suite shake-test
         Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
-        Development.Shake.Internal.Core.Rendezvous
+        Development.Shake.Internal.Core.Wait
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage

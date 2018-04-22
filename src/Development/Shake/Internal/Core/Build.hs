@@ -14,7 +14,7 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.Rendezvous
+import Development.Shake.Internal.Core.Wait
 import Development.Shake.Internal.Core.History
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class

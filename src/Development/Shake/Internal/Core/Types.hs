@@ -23,7 +23,7 @@ import General.Binary
 import Control.Exception
 import Data.Maybe
 import Control.Concurrent.Extra
-import Development.Shake.Internal.Core.Rendezvous
+import Development.Shake.Internal.Core.Wait
 import Development.Shake.Internal.Core.History
 import Data.IORef
 import qualified Data.ByteString.Char8 as BS
