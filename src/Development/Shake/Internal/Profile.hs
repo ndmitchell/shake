@@ -22,8 +22,8 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Char8 as BS
 import General.Intern(Id)
-
-
+import Data.Functor
+import Prelude
 
 
 -- | Given a map of representing a dependency order (with a show for error messages), find an ordering for the items such
