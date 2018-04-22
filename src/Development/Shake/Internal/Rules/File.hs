@@ -241,7 +241,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
             case now of
                 Nothing -> rebuild
                 Just now -> case fileEqualValue opts old now of
-                    EqualCheap -> retNew ChangedNothing $ ResultDirect now
+                    EqualCheap -> retOld ChangedNothing
                     EqualExpensive -> retNew ChangedStore $ ResultDirect now
                     NotEqual -> rebuild
         Just (ResultForward old) | mode == RunDependenciesSame -> retOld ChangedNothing
