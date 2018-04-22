@@ -13,12 +13,13 @@ import Data.List.Extra
 import Data.Tuple.Extra
 import Data.Maybe
 import Data.Dynamic
+import Control.Monad
 import qualified Data.HashMap.Strict as Map
-import Development.Shake.Internal.Progress
 import Development.Shake.Internal.FilePattern
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Internal.CmdOption
+import Data.Semigroup
 
 
 -- | The current assumptions made by the build system, used by 'shakeRebuild'. These options
@@ -80,6 +81,46 @@ data Change
         -- ^ A file is rebuilt if either its modification time or its digest has changed. A @touch@ will force a rebuild,
         --   but even if a files modification time is reset afterwards, changes will also cause a rebuild.
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
+
+
+-- | Information about the current state of the build, obtained by either passing a callback function
+--   to 'Development.Shake.shakeProgress' (asynchronous output) or 'Development.Shake.getProgress'
+--   (synchronous output). Typically a build system will pass 'progressDisplay' to 'Development.Shake.shakeProgress',
+--   which will poll this value and produce status messages.
+data Progress = Progress
+-- In retrospect shakeProgress should have been done differently, as a feature you turn on in Rules
+-- but easiest way around that for now is put the Progress type in Options
+
+    {isFailure :: !(Maybe String) -- ^ Starts out 'Nothing', becomes 'Just' a target name if a rule fails.
+    ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
+    ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run.
+    ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required.
+    ,countTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built.
+    ,timeSkipped :: {-# UNPACK #-} !Double -- ^ Time spent building 'countSkipped' rules in previous runs.
+    ,timeBuilt :: {-# UNPACK #-} !Double -- ^ Time spent building 'countBuilt' rules.
+    ,timeUnknown :: {-# UNPACK #-} !Double -- ^ Time spent building 'countUnknown' rules in previous runs.
+    ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (have never been built before).
+    }
+    deriving (Eq,Ord,Show,Read,Data,Typeable)
+
+instance Semigroup Progress where
+    a <> b = Progress
+        {isFailure = isFailure a `mplus` isFailure b
+        ,countSkipped = countSkipped a + countSkipped b
+        ,countBuilt = countBuilt a + countBuilt b
+        ,countUnknown = countUnknown a + countUnknown b
+        ,countTodo = countTodo a + countTodo b
+        ,timeSkipped = timeSkipped a + timeSkipped b
+        ,timeBuilt = timeBuilt a + timeBuilt b
+        ,timeUnknown = timeUnknown a + timeUnknown b
+        ,timeTodo = let (a1,a2) = timeTodo a; (b1,b2) = timeTodo b
+                        x1 = a1 + b1; x2 = a2 + b2
+                    in x1 `seq` x2 `seq` (x1,x2)
+        }
+
+instance Monoid Progress where
+    mempty = Progress Nothing 0 0 0 0 0 0 0 (0,0)
+    mappend = (<>)
 
 
 -- | Options to control the execution of Shake, usually specified by overriding fields in

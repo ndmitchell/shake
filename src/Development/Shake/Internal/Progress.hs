@@ -1,8 +1,8 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, CPP, ViewPatterns, ForeignFunctionInterface #-}
+{-# LANGUAGE RecordWildCards, CPP, ViewPatterns, ForeignFunctionInterface #-}
 
 -- | Progress tracking
 module Development.Shake.Internal.Progress(
-    Progress(..),
+    progress,
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
     ProgressEntry(..), progressReplay, writeProgressReport -- INTERNAL USE ONLY
     ) where
@@ -10,16 +10,16 @@ module Development.Shake.Internal.Progress(
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Exception.Extra
-import Control.Monad
 import System.Environment.Extra
 import System.Directory
 import System.Process
 import System.FilePath
 import Data.Char
-import Data.Data
 import Data.IORef
 import Data.List
 import Data.Maybe
+import Development.Shake.Internal.Options
+import Development.Shake.Internal.Core.Types
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
@@ -27,9 +27,8 @@ import General.Template
 import System.IO.Unsafe
 import Development.Shake.Internal.Paths
 import System.Time.Extra
-import Data.Semigroup (Semigroup (..))
-import Data.Monoid hiding ((<>))
-import Prelude
+import qualified General.Ids as Ids
+
 
 #ifdef mingw32_HOST_OS
 
@@ -47,44 +46,29 @@ foreign import CALLCONV "Windows.h SetConsoleTitleA" c_setConsoleTitle :: Ptr CC
 #endif
 
 
+
 ---------------------------------------------------------------------
--- PROGRESS TYPES - exposed to the user
+-- PROGRESS
 
--- | Information about the current state of the build, obtained by either passing a callback function
---   to 'Development.Shake.shakeProgress' (asynchronous output) or 'Development.Shake.getProgress'
---   (synchronous output). Typically a build system will pass 'progressDisplay' to 'Development.Shake.shakeProgress',
---   which will poll this value and produce status messages.
-data Progress = Progress
-    {isFailure :: !(Maybe String) -- ^ Starts out 'Nothing', becomes 'Just' a target name if a rule fails.
-    ,countSkipped :: {-# UNPACK #-} !Int -- ^ Number of rules which were required, but were already in a valid state.
-    ,countBuilt :: {-# UNPACK #-} !Int -- ^ Number of rules which were have been built in this run.
-    ,countUnknown :: {-# UNPACK #-} !Int -- ^ Number of rules which have been built previously, but are not yet known to be required.
-    ,countTodo :: {-# UNPACK #-} !Int -- ^ Number of rules which are currently required (ignoring dependencies that do not change), but not built.
-    ,timeSkipped :: {-# UNPACK #-} !Double -- ^ Time spent building 'countSkipped' rules in previous runs.
-    ,timeBuilt :: {-# UNPACK #-} !Double -- ^ Time spent building 'countBuilt' rules.
-    ,timeUnknown :: {-# UNPACK #-} !Double -- ^ Time spent building 'countUnknown' rules in previous runs.
-    ,timeTodo :: {-# UNPACK #-} !(Double,Int) -- ^ Time spent building 'countTodo' rules in previous runs, plus the number which have no known time (have never been built before).
-    }
-    deriving (Eq,Ord,Show,Read,Data,Typeable)
-instance Semigroup Progress where
-    a <> b = Progress
-        {isFailure = isFailure a `mplus` isFailure b
-        ,countSkipped = countSkipped a + countSkipped b
-        ,countBuilt = countBuilt a + countBuilt b
-        ,countUnknown = countUnknown a + countUnknown b
-        ,countTodo = countTodo a + countTodo b
-        ,timeSkipped = timeSkipped a + timeSkipped b
-        ,timeBuilt = timeBuilt a + timeBuilt b
-        ,timeUnknown = timeUnknown a + timeUnknown b
-        ,timeTodo = let (a1,a2) = timeTodo a; (b1,b2) = timeTodo b
-                        x1 = a1 + b1; x2 = a2 + b2
-                    in x1 `seq` x2 `seq` (x1,x2)
-        }
+progress :: Database -> IO Progress
+progress Database{..} = do
+    xs <- Ids.toList status
+    return $! foldl' f mempty $ map (snd . snd) xs
+    where
+        g = floatToDouble
+
+        f s (Ready Result{..}) = if step == built
+            then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
+            else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + g execution}
+        f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + g execution}
+        f s (Waiting _ r) =
+            let (d,c) = timeTodo s
+                t | Just Result{..} <- r = let d2 = d + g execution in d2 `seq` (d2,c)
+                  | otherwise = let c2 = c + 1 in c2 `seq` (d,c2)
+            in s{countTodo = countTodo s + 1, timeTodo = t}
+        f s _ = s
 
 
-instance Monoid Progress where
-    mempty = Progress Nothing 0 0 0 0 0 0 0 (0,0)
-    mappend = (<>)
 
 ---------------------------------------------------------------------
 -- MEALY TYPE - for writing the progress functions

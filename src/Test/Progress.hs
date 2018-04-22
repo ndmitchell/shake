@@ -1,6 +1,7 @@
 module Test.Progress(main) where
 
 import Development.Shake.Internal.Progress
+import Development.Shake.Internal.Options
 import Test.Type
 import System.Directory.Extra
 import System.FilePath

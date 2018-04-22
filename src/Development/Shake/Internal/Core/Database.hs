@@ -5,7 +5,6 @@ module Development.Shake.Internal.Core.Database(
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build,
-    progress,
     checkValid, listLive
     ) where
 
@@ -25,7 +24,6 @@ import General.Extra
 import qualified General.Intern as Intern
 import General.Intern(Id)
 
-import Numeric.Extra
 import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
@@ -182,28 +180,6 @@ build pool Database{..} BuildKey{..} identity stack ks continue =
                         Left _ ->
                             diagnostic $ return $ "result " ++ showBracket k ++ " = error"
             i #= (k, Waiting w r)
-
-
----------------------------------------------------------------------
--- PROGRESS
-
-progress :: Database -> IO Progress
-progress Database{..} = do
-    xs <- Ids.toList status
-    return $! foldl' f mempty $ map (snd . snd) xs
-    where
-        g = floatToDouble
-
-        f s (Ready Result{..}) = if step == built
-            then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
-            else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + g execution}
-        f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + g execution}
-        f s (Waiting _ r) =
-            let (d,c) = timeTodo s
-                t | Just Result{..} <- r = let d2 = d + g execution in d2 `seq` (d2,c)
-                  | otherwise = let c2 = c + 1 in c2 `seq` (d,c2)
-            in s{countTodo = countTodo s + 1, timeTodo = t}
-        f s _ = s
 
 
 ---------------------------------------------------------------------
