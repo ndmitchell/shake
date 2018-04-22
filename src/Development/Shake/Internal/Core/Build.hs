@@ -1,10 +1,10 @@
-{-# LANGUAGE RecordWildCards, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
 {-# LANGUAGE Rank2Types #-}
 
 module Development.Shake.Internal.Core.Build(
     Database, withDatabase, assertFinishedDatabase,
-    listDepends, lookupDependencies, lookupStatus,
-    BuildKey(..), build,
+    lookupStatus,
+    apply, apply1,
     checkValid, listLive
     ) where
 
@@ -15,11 +15,13 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Storage
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Rendezvous
 import Development.Shake.Internal.Core.History
 import qualified Data.ByteString.Char8 as BS
+import Control.Monad.IO.Class
 import General.Extra
 import qualified General.Intern as Intern
 import General.Intern(Id)
@@ -27,13 +29,15 @@ import General.Intern(Id)
 import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
+import Numeric.Extra
 import Control.Concurrent.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
+import Development.Shake.Internal.Core.Rules
 import Data.Typeable.Extra
 import Data.IORef.Extra
 import Data.Maybe
-import Data.List
+import Data.List.Extra
 import Data.Tuple.Extra
 import Data.Either.Extra
 import System.Time.Extra
@@ -182,6 +186,89 @@ build pool Database{..} BuildKey{..} identity stack ks continue =
             i #= (k, Waiting w r)
 
 
+-- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
+--   This function requires that appropriate rules have been added with 'addUserRule'.
+--   All @key@ values passed to 'apply' become dependencies of the 'Action'.
+apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
+-- Don't short-circuit [] as we still want error messages
+apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
+    -- this is the only place a user can inject a key into our world, so check they aren't throwing
+    -- in unevaluated bottoms
+    liftIO $ mapM_ (evaluate . rnf) ks
+
+    let tk = typeRep (Proxy :: Proxy key)
+        tv = typeRep (Proxy :: Proxy value)
+    Global{..} <- Action getRO
+    Local{localBlockApply} <- Action getRW
+    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
+    case Map.lookup tk globalRules of
+        Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
+        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
+        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
+
+
+runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
+runIdentify mp k v
+    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
+    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
+
+
+applyKeyValue :: [Key] -> Action [Value]
+applyKeyValue [] = return []
+applyKeyValue ks = do
+    global@Global{..} <- Action getRO
+    Local{localStack} <- Action getRW
+    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) (runIdentify globalRules) localStack ks
+    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
+    return vs
+
+
+runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
+runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
+    let tk = typeKey k
+    BuiltinRule{..} <- case Map.lookup tk globalRules of
+        Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
+        Just r -> return r
+
+    let s = newLocal stack shakeVerbosity
+    time <- offsetTime
+    runAction global s (do
+        res <- builtinRun k (fmap result r) mode
+        liftIO $ evaluate $ rnf res
+
+        -- completed, now track anything required afterwards
+        lintTrackFinished
+        producesCheck
+
+        Action $ fmap ((,) res) getRW) $ \x -> case x of
+            Left e -> do
+                e <- if isNothing shakeLint then return e else handle return $
+                    do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
+                continue . Left . toException =<< shakeException global (showStack stack) e
+            Right (RunResult{..}, Local{..})
+                | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
+                    continue $ Right $ (,) produced $ RunResult runChanged runStore (r{result = runValue})
+                | otherwise -> do
+                    dur <- time
+                    let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
+                                | otherwise = (ChangedRecomputeDiff, step)
+                    continue $ Right $ (,) produced $ RunResult cr runStore Result
+                        {result = runValue
+                        ,changed = c
+                        ,built = step
+                        ,depends = nubDepends $ reverse localDepends
+                        ,execution = doubleToFloat $ dur - localDiscount
+                        ,traces = reverse localTraces}
+                where produced = if localCache /= CacheYes then Nothing else Just $ reverse $ map snd localProduces
+
+
+-- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
+--   use 'apply' to allow parallelism.
+apply1 :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
+apply1 = fmap head . apply . return
+
+
+
 ---------------------------------------------------------------------
 -- QUERY DATABASE
 
@@ -232,21 +319,6 @@ listLive Database{..} = do
     status <- Ids.toList status
     return [k | (_, (k, Ready{})) <- status]
 
-
-listDepends :: Database -> Depends -> IO [Key]
-listDepends Database{..} (Depends xs) =
-    withLock lock $
-        forM xs $ \x ->
-            fst . fromJust <$> Ids.lookup status x
-
-lookupDependencies :: Database -> Key -> IO [Key]
-lookupDependencies Database{..} k =
-    withLock lock $ do
-        intern <- readIORef intern
-        let Just i = Intern.lookup k intern
-        Just (_, Ready r) <- Ids.lookup status i
-        forM (concatMap fromDepends $ depends r) $ \x ->
-            fst . fromJust <$> Ids.lookup status x
 
 
 ---------------------------------------------------------------------
@@ -301,3 +373,14 @@ getDatabase getKey bs
     , (x2, x3, x5, bs) <- binarySplit3 bs
     , (x4, x6) <- getExN bs
     = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
+
+
+
+producesCheck :: Action ()
+producesCheck = do
+    Local{localProduces} <- Action getRW
+    missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
+    when (missing /= []) $ throwM $ errorStructured
+        "Files declared by 'produces' not produced"
+        [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
+        ""

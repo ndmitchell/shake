@@ -36,7 +36,6 @@ import Data.IORef
 import System.Directory
 import System.IO.Extra
 import System.Time.Extra
-import Numeric.Extra
 import qualified Data.ByteString as BS
 
 import Development.Shake.Classes
@@ -160,122 +159,18 @@ checkShakeExtra mp = do
         _ -> return ()
 
 
-lintCurrentDirectory :: FilePath -> String -> IO ()
-lintCurrentDirectory old msg = do
-    now <- getCurrentDirectory
-    when (old /= now) $ throwIO $ errorStructured
-        "Lint checking error - current directory has changed"
-        [("When", Just msg)
-        ,("Wanted",Just old)
-        ,("Got",Just now)]
-        ""
-
-
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
     global@Global{..} <- Action getRO
     liftIO $ fmap (fmap $ fmap fromValue) $ lookupStatus globalDatabase $ newKey k
 
 
--- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
---   This function requires that appropriate rules have been added with 'addUserRule'.
---   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
--- Don't short-circuit [] as we still want error messages
-apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
-    -- this is the only place a user can inject a key into our world, so check they aren't throwing
-    -- in unevaluated bottoms
-    liftIO $ mapM_ (evaluate . rnf) ks
-
-    let tk = typeRep (Proxy :: Proxy key)
-        tv = typeRep (Proxy :: Proxy value)
-    Global{..} <- Action getRO
-    Local{localBlockApply} <- Action getRW
-    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
-    case Map.lookup tk globalRules of
-        Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
-        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
-
-
-runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
-runIdentify mp k v
-    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
-    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
-
-
-applyKeyValue :: [Key] -> Action [Value]
-applyKeyValue [] = return []
-applyKeyValue ks = do
-    global@Global{..} <- Action getRO
-    Local{localStack} <- Action getRW
-    (dur, dep, vs) <- Action $ captureRAW $ build globalPool globalDatabase (BuildKey $ runKey global) (runIdentify globalRules) localStack ks
-    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
-    return vs
-
-
-runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
-runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
-    let tk = typeKey k
-    BuiltinRule{..} <- case Map.lookup tk globalRules of
-        Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-        Just r -> return r
-
-    let s = newLocal stack shakeVerbosity
-    time <- offsetTime
-    runAction global s (do
-        res <- builtinRun k (fmap result r) mode
-        liftIO $ evaluate $ rnf res
-
-        -- completed, now track anything required afterwards
-        lintTrackFinished
-        producesCheck
-
-        Action $ fmap ((,) res) getRW) $ \x -> case x of
-            Left e -> do
-                e <- if isNothing shakeLint then return e else handle return $
-                    do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
-                continue . Left . toException =<< shakeException global (showStack stack) e
-            Right (RunResult{..}, Local{..})
-                | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ (,) produced $ RunResult runChanged runStore (r{result = runValue})
-                | otherwise -> do
-                    dur <- time
-                    let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
-                                | otherwise = (ChangedRecomputeDiff, step)
-                    continue $ Right $ (,) produced $ RunResult cr runStore Result
-                        {result = runValue
-                        ,changed = c
-                        ,built = step
-                        ,depends = nubDepends $ reverse localDepends
-                        ,execution = doubleToFloat $ dur - localDiscount
-                        ,traces = reverse localTraces}
-                where produced = if localCache /= CacheYes then Nothing else Just $ reverse $ map snd localProduces
 
 
 runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)
 runLint mp k v = case Map.lookup (typeKey k) mp of
     Nothing -> return Nothing
     Just BuiltinRule{..} -> builtinLint k v
-
-
--- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
---   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
---   then do nothing with it.
-shakeException :: Global -> [String] -> SomeException -> IO ShakeException
-shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
-    Just e@ShakeException{} -> return e
-    Nothing -> do
-        e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
-        when (shakeStaunch && shakeVerbosity >= Quiet) $
-            globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
-        return e
-
-
--- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
---   use 'apply' to allow parallelism.
-apply1 :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
-apply1 = fmap head . apply . return
 
 
 ---------------------------------------------------------------------
@@ -485,13 +380,3 @@ produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (revers
 -- | A version of 'produces' that does not check.
 producesUnchecked :: [FilePath] -> Action ()
 producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}
-
-
-producesCheck :: Action ()
-producesCheck = do
-    Local{localProduces} <- Action getRW
-    missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
-    when (missing /= []) $ throwM $ errorStructured
-        "Files declared by 'produces' not produced"
-        [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
-        ""

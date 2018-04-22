@@ -1,11 +1,12 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
-    runAction, actionOnException, actionFinally,
+    runAction,
+    actionOnException, actionFinally,
     getShakeOptions, getProgress, runAfter,
     lintTrackRead, lintTrackWrite, lintTrackAllow, lintTrackFinished,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    blockApply, unsafeAllowApply,
+    blockApply, unsafeAllowApply, lintCurrentDirectory, shakeException,
     traced
     ) where
 
@@ -15,14 +16,16 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.DeepSeq
 import Data.Typeable.Extra
+import System.Directory
 import Data.Function
-import Data.Either.Extra
+import Control.Concurrent.Extra
 import Data.Maybe
 import Data.IORef
 import Data.List
 import System.IO.Extra
+import qualified General.Ids as Ids
+import qualified General.Intern as Intern
 
-import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Value
@@ -32,11 +35,36 @@ import General.Cleanup
 import Prelude
 
 
----------------------------------------------------------------------
--- RAW WRAPPERS
+lintCurrentDirectory :: FilePath -> String -> IO ()
+lintCurrentDirectory old msg = do
+    now <- getCurrentDirectory
+    when (old /= now) $ throwIO $ errorStructured
+        "Lint checking error - current directory has changed"
+        [("When", Just msg)
+        ,("Wanted",Just old)
+        ,("Got",Just now)]
+        ""
+
+
+-- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
+--   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
+--   then do nothing with it.
+shakeException :: Global -> [String] -> SomeException -> IO ShakeException
+shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
+    Just e@ShakeException{} -> return e
+    Nothing -> do
+        e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
+        when (shakeStaunch && shakeVerbosity >= Quiet) $
+            globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
+        return e
 
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
 runAction g l (Action x) = runRAW g l x
+
+
+
+---------------------------------------------------------------------
+-- RAW WRAPPERS
 
 -- | Apply a modification, run an action, then run an undo action after.
 --   Doesn't actually require exception handling because we don't have the ability to catch exceptions to the user.
@@ -265,3 +293,19 @@ lintTrackAllow (test :: key -> Bool) = do
     where
         tk = typeRep (Proxy :: Proxy key)
         f k = typeKey k == tk && test (fromKey k)
+
+
+listDepends :: Database -> Depends -> IO [Key]
+listDepends Database{..} (Depends xs) =
+    withLock lock $
+        forM xs $ \x ->
+            fst . fromJust <$> Ids.lookup status x
+
+lookupDependencies :: Database -> Key -> IO [Key]
+lookupDependencies Database{..} k =
+    withLock lock $ do
+        intern <- readIORef intern
+        let Just i = Intern.lookup k intern
+        Just (_, Ready r) <- Ids.lookup status i
+        forM (concatMap fromDepends $ depends r) $ \x ->
+            fst . fromJust <$> Ids.lookup status x
