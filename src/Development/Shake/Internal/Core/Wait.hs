@@ -2,21 +2,16 @@
 
 module Development.Shake.Internal.Core.Wait(
     Wait, newWait, afterWait,
-    Answer(..), Waits(..),
-    rendezvous
+    Waits(..),
+    waitExcept
     ) where
 
 import Control.Monad
 import Data.IORef.Extra
 import Data.Primitive.Array
+import Data.Either
 import Development.Shake.Internal.Errors
 
-
--- | Given a sequence of 'Answer' values the sequence stops
---   when there is a single 'Abort' or all values end up as 'Continue'.
-data Answer a c
-    = Abort a
-    | Continue c
 
 -- | A compuation that either has a result available immediate,
 --   or has a result that can be collected later.
@@ -24,10 +19,6 @@ data Waits a
     = Now a
     | Later (Wait a)
 
-partitionAnswer :: [Answer a c] -> ([a], [c])
-partitionAnswer = foldr f ([],[])
-    where f (Abort    a) ~(as,cs) = (a:as,cs)
-          f (Continue c) ~(as,cs) = (as,c:cs)
 
 partitionCompute :: [Waits a] -> ([a], [Wait a])
 partitionCompute = foldr f ([],[])
@@ -56,10 +47,10 @@ afterWait :: Wait a -> (a -> IO ()) -> IO ()
 afterWait (Wait op ref) act = modifyIORef' ref (\a s -> a s >> act (op s))
 
 
-rendezvous :: [Waits (Answer a c)] -> IO (Waits (Either a [c]))
-rendezvous xs = do
+waitExcept :: [Waits (Either e a)] -> IO (Waits (Either e [a]))
+waitExcept xs = do
     let (now, later) = partitionCompute xs
-    let (abort, continue) = partitionAnswer now
+    let (abort, continue) = partitionEithers now
     if not $ null abort then
         return $ Now $ Left $ head abort
      else if null later then
@@ -70,15 +61,15 @@ rendezvous xs = do
         result <- newArray n $ throwImpure $ errorInternal "rendezvous"
         todo <- newIORef $ length later
         forM_ (zip [0..] xs) $ \(i,x) -> case x of
-            Now (Continue c) -> writeArray result i c
+            Now (Right c) -> writeArray result i c
             Later w -> afterWait w $ \v -> do
                 t <- readIORef todo
                 case v of
                     _ | t == 0 -> return () -- must have already aborted
-                    Abort a -> do
+                    Left a -> do
                         writeIORef todo 0
                         run $ Left a
-                    Continue c -> do
+                    Right c -> do
                         writeArray result i c
                         writeIORef' todo $ t-1
                         when (t == 1) $ do

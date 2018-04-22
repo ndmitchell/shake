@@ -113,12 +113,12 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
 
         buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result Value])
         buildMany stack is test fast slow = do
-            let toAnswer v | Just v <- test v = Abort v
-                toAnswer (Ready v) = Continue v
+            let toAnswer v | Just v <- test v = Left v
+                toAnswer (Ready v) = Right v
             let toCompute (Waiting w _) = Later $ toAnswer <$> w
                 toCompute x = Now $ toAnswer x
 
-            res <- rendezvous =<< mapM (fmap toCompute . reduce stack) is
+            res <- waitExcept =<< mapM (fmap toCompute . reduce stack) is
             case res of
                 Now v -> fast v
                 Later w -> slow $ \slow -> afterWait w slow
