@@ -17,5 +17,5 @@ module Development.Shake.Rule(
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
-import Development.Shake.Internal.Core.Run
+import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Rules
