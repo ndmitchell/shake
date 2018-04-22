@@ -22,7 +22,7 @@ import Data.IORef
 import Data.List
 import System.IO.Extra
 
-import Development.Shake.Internal.Core.Database
+import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Value

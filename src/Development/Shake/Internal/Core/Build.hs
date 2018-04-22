@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, PatternGuards #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Development.Shake.Internal.Core.Database(
+module Development.Shake.Internal.Core.Build(
     Database, withDatabase, assertFinishedDatabase,
     listDepends, lookupDependencies, lookupStatus,
     BuildKey(..), build,
