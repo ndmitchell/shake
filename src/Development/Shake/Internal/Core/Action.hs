@@ -391,7 +391,7 @@ newCacheIO (act :: k -> Action v) = do
                         Global{..} <- Action getRO
                         offset <- liftIO offsetTime
                         Action $ captureRAW $ \k -> waitFence bar $ \v ->
-                            addPoolResume globalPool $ do offset <- liftIO offset; k $ Right (v,offset)
+                            addPool PoolResume globalPool $ do offset <- liftIO offset; k $ Right (v,offset)
                 case res of
                     Left err -> Action $ throwRAW err
                     Right (deps,v) -> do
@@ -425,7 +425,7 @@ unsafeExtraThread act = Action $ do
     stop <- liftIO $ increasePool globalPool
     res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
-    captureRAW $ \continue -> (if isLeft res then addPoolException else addPoolResume) globalPool $ continue res
+    captureRAW $ \continue -> addPool (if isLeft res then PoolException else PoolResume) globalPool $ continue res
 
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
@@ -453,7 +453,7 @@ parallel acts = Action $ do
                     res <- act
                     old <- Action getRW
                     return (old, res)
-            addPoolResume globalPool $ runAction global (localClearMutable local) act2 $ \res -> do
+            addPool PoolResume globalPool $ runAction global (localClearMutable local) act2 $ \res -> do
                 writeIORef result $ Just res
                 modifyVar_ todo $ \v -> case v of
                     Nothing -> return Nothing
@@ -512,7 +512,7 @@ batch mx pred one many
             local2 <- captureRAW $ \k -> do
                 count <- atomicModifyIORef todo $ \(count, bs) -> ((count+1, (b,k):bs), count+1)
                 -- only trigger on the edge so we don't have lots of waiting pool entries
-                (if count == mx then addPoolResume else if count == 1 then addPoolBatch else none)
+                (if count == mx then addPool PoolResume else if count == 1 then addPool PoolBatch else none)
                     globalPool $ go global (localClearMutable local) todo
             modifyRW $ \root -> localMergeMutable root [local2]
     where
@@ -525,9 +525,9 @@ batch mx pred one many
                 else
                     let (xs,ys) = splitAt mx bs
                     in ((count - mx, ys), (xs, count - mx))
-            (if count >= mx then addPoolResume else if count > 0 then addPoolBatch else none)
+            (if count >= mx then addPool PoolResume else if count > 0 then addPool PoolBatch else none)
                     globalPool $ go global local todo
             unless (null now) $
                 runAction global local (do many $ map fst now; Action getRW) $ \x ->
                     forM_ now $ \(_,k) ->
-                        (if isLeft x then addPoolException else addPoolResume) globalPool $ k x
+                        addPool (if isLeft x then PoolException else PoolResume) globalPool $ k x

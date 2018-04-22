@@ -14,7 +14,7 @@ main = shakeTest_ test $ return ()
 
 test build = do
     -- See #474, we should never be running pool actions masked
-    let addPool pool act = addPoolStart pool $ do
+    let add pool act = addPool PoolStart pool $ do
             Unmasked <- getMaskingState
             act
 
@@ -24,7 +24,7 @@ test build = do
             var <- newMVar (0,0) -- (maximum, current)
             runPool deterministic n $ \pool ->
                 forM_ [1..5] $ \i ->
-                    addPool pool $ do
+                    add pool $ do
                         modifyMVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
                         -- requires that all tasks get spawned within 0.1s
                         sleep 0.1
@@ -37,10 +37,10 @@ test build = do
         started <- newBarrier
         stopped <- newBarrier
         res <- try_ $ runPool deterministic 3 $ \pool -> do
-                addPool pool $ do
+                add pool $ do
                     waitBarrier started
                     error "pass"
-                addPool pool $
+                add pool $
                     flip finally (signalBarrier stopped ()) $ do
                         signalBarrier started ()
                         sleep 10
@@ -56,8 +56,8 @@ test build = do
         -- check someone spawned when at zero todo still gets run
         done <- newBarrier
         runPool deterministic 1 $ \pool ->
-            addPool pool $
-                addPool pool $
+            add pool $
+                add pool $
                     signalBarrier done ()
         assertWithin 1 $ waitBarrier done
 
@@ -66,12 +66,12 @@ test build = do
         runPool deterministic 1 $ \pool -> do
             let note c = modifyVar_ res $ return . (c:)
             -- deliberately in a random order
-            addPoolBatch pool $ note 'b'
-            addPoolException pool $ note 'e'
-            addPoolStart pool $ note 's'
-            addPoolStart pool $ note 's'
-            addPoolResume pool $ note 'r'
-            addPoolException pool $ note 'e'
+            addPool PoolBatch pool $ note 'b'
+            addPool PoolException pool $ note 'e'
+            addPool PoolStart pool $ note 's'
+            addPool PoolStart pool $ note 's'
+            addPool PoolResume pool $ note 'r'
+            addPool PoolException pool $ note 'e'
         (=== "bssree") =<< readVar res
 
         -- check that killing a thread pool stops the tasks, bug 545
@@ -79,7 +79,7 @@ test build = do
         died <- newBarrier
         done <- newBarrier
         t <- forkIO $ flip finally (signalBarrier died ()) $ runPool deterministic 1 $ \pool ->
-            addPool pool $
+            add pool $
                 flip onException (signalBarrier done ()) $ do
                     killThread =<< waitBarrier thread
                     sleep 10

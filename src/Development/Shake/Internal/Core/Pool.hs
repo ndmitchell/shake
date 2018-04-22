@@ -13,7 +13,7 @@
 -- * 'addPoolBatch' - rules that might batch if other rules start first.
 module Development.Shake.Internal.Core.Pool(
     Pool, runPool,
-    addPoolException, addPoolResume, addPoolStart, addPoolBatch,
+    addPool, PoolPriority(..),
     increasePool
     ) where
 
@@ -119,18 +119,24 @@ step pool@(Pool var done) op = do
             _ -> return $ Just s
 
 
-addPool (sel, upd) pool act = step pool $ \s ->
-    return s{todo = upd (todo s) $ Bag.insert (void act) $ sel $ todo s}
-
-
 -- | Add a new task to the pool. See the top of the module for the relative ordering
 --   and semantics.
-addPoolException, addPoolResume, addPoolStart :: Pool -> IO a -> IO ()
-addPoolException = addPool lensException
-addPoolResume = addPool lensResume
-addPoolStart = addPool lensStart
-addPoolBatch = addPool lensBatch
+addPool :: PoolPriority -> Pool -> IO a -> IO ()
+addPool priority pool act = step pool $ \s ->
+    return s{todo = upd (todo s) $ Bag.insert (void act) $ sel $ todo s}
+    where (sel, upd) = toLens priority
 
+toLens PoolException = lensException
+toLens PoolResume = lensResume
+toLens PoolStart = lensStart
+toLens PoolBatch = lensBatch
+
+
+data PoolPriority
+    = PoolException
+    | PoolResume
+    | PoolStart
+    | PoolBatch
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
 --   After calling cleanup you should requeue onto a new thread.
@@ -168,7 +174,7 @@ runPool deterministic n act = do
                 _ -> throwIO BlockedIndefinitelyOnMVar
     handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip onException cleanup $ do
         let pool = Pool s done
-        addPoolStart pool $ act pool
+        addPool PoolStart pool $ act pool
         res <- waitBarrier done
         case res of
             Left e -> throwIO e

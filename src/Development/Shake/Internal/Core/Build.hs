@@ -97,8 +97,8 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
 
                 time <- offsetTime
                 go $ \x -> case x of
-                    Left e -> addPoolException pool $ continue $ Left e
-                    Right rs -> addPoolResume pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
+                    Left e -> addPool PoolException pool $ continue $ Left e
+                    Right rs -> addPool PoolResume pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
                 return $ return ()
     where
         identity = runIdentify globalRules
@@ -165,7 +165,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
             (w, done) <- newWait
             when (mode == RunDependenciesChanged) $ whenJust history $ \history ->
                 whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
-            addPoolStart pool $
+            addPool PoolStart pool $
                 buildKey (addStack i k stack) step k r mode $ \res -> do
                     withLock lock $ do
                         let status = either Error (Ready . runValue . snd) res

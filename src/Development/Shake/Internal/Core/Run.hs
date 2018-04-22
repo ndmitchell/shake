@@ -102,7 +102,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                     let global = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules
                     let local = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
-                        addPoolStart pool $ runAction global local act $ \x -> case x of
+                        addPool PoolStart pool $ runAction global local act $ \x -> case x of
                             Left e -> raiseError =<< shakeException global ["Top-level action/want"] e
                             Right x -> return x
                 maybe (return ()) (throwIO . snd) =<< readIORef except
