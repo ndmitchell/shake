@@ -303,8 +303,7 @@ data UserRule a
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself
 data Database = Database
-    {lock :: Lock
-    ,intern :: InternDB
+    {intern :: InternDB
     ,status :: StatusDB
     ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
     }
@@ -313,7 +312,7 @@ data Database = Database
 
 -- global constants of Action
 data Global = Global
-    {globalDatabase :: Database -- ^ Database, contains knowledge of the state of each key
+    {globalDatabase :: Var Database -- ^ Database, contains knowledge of the state of each key
     ,globalPool :: Pool -- ^ Pool, for queuing new elements
     ,globalCleanup :: Cleanup -- ^ Cleanup operations
     ,globalTimestamp :: IO Seconds -- ^ Clock saying how many seconds through the build

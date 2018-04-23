@@ -97,10 +97,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                     killThread tid
                     void $ timeout 1 $ waitBarrier wait
                 history <- loadHistory opts $ Map.map builtinKey ruleinfo
+                databaseVar <- newVar database
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let global = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules history step
+                    let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules history step
                     let local = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
                         addPool PoolStart pool $ runAction global local act $ \x -> case x of
@@ -224,7 +225,6 @@ withDatabase opts diagnostic owitness act = do
                 Just (_, Loaded r) -> incStep $ fromStepResult r
                 _ -> Step 1
         journal stepId stepKey $ toStepResult step
-        lock <- newLock
         act Database{..} step
 
 

@@ -306,20 +306,18 @@ lintTrackAllow (test :: key -> Bool) = do
         f k = typeKey k == tk && test (fromKey k)
 
 
-listDepends :: Database -> Depends -> IO [Key]
-listDepends Database{..} (Depends xs) =
-    withLock lock $
-        forM xs $ \x ->
-            fst . fromJust <$> Ids.lookup status x
+listDepends :: Var Database -> Depends -> IO [Key]
+listDepends db (Depends xs) = withVar db $ \Database{..} ->
+    forM xs $ \x ->
+        fst . fromJust <$> Ids.lookup status x
 
-lookupDependencies :: Database -> Key -> IO [Key]
-lookupDependencies Database{..} k =
-    withLock lock $ do
-        intern <- readIORef intern
-        let Just i = Intern.lookup k intern
-        Just (_, Ready r) <- Ids.lookup status i
-        forM (concatMap fromDepends $ depends r) $ \x ->
-            fst . fromJust <$> Ids.lookup status x
+lookupDependencies :: Var Database -> Key -> IO [Key]
+lookupDependencies db k = withVar db $ \Database{..} -> do
+    intern <- readIORef intern
+    let Just i = Intern.lookup k intern
+    Just (_, Ready r) <- Ids.lookup status i
+    forM (concatMap fromDepends $ depends r) $ \x ->
+        fst . fromJust <$> Ids.lookup status x
 
 
 producesCheck :: Action ()

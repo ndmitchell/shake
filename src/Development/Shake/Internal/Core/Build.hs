@@ -58,8 +58,8 @@ internKey Database{..} k = do
 
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
-    global@Global{globalDatabase=database@Database{..},..} <- Action getRO
-    status <- liftIO $ withLock lock $ do
+    Global{..} <- Action getRO
+    status <- liftIO $ withVar globalDatabase $ \database@Database{..} -> do
         i <- internKey database $ newKey k
         Ids.lookup status i
     return $ case status of
@@ -69,8 +69,9 @@ getDatabaseValue k = do
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Global -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build global@Global{globalDatabase=database@Database{..},globalPool=pool,..} stack ks continue =
-    join $ withLock lock $ do
+build global stack ks continue = join $ withVar (globalDatabase global) $ \database -> build2 global database stack ks continue
+
+build2 global@Global{globalPool=pool,..} database@Database{..} stack ks continue = do
         is <- forM ks $ internKey database
 
         buildMany stack is
@@ -157,7 +158,7 @@ build global@Global{globalDatabase=database@Database{..},globalPool=pool,..} sta
                 whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
             addPool PoolStart pool $
                 runKey global (addStack i k stack) k r mode $ \res -> do
-                    withLock lock $ do
+                    withVar globalDatabase $ \_ -> do
                         let status = either Error (Ready . runValue . snd) res
                         i #= (k, status)
                         done status
