@@ -30,7 +30,6 @@ import Data.IORef
 import Data.List.Extra
 import Data.Either.Extra
 import System.IO.Extra
-import System.Time.Extra
 import General.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
@@ -376,24 +375,15 @@ orderOnlyAction act = Action $ do
 -- | A version of 'Development.Shake.newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
+-- We deliberately don't use localClearMutable because we want to have only one thing continue afterwards
 newCacheIO (act :: k -> Action v) = do
     var :: Var (Map.HashMap k (Fence (Either SomeException ([Depends],v)))) <- newVar Map.empty
     return $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
-                res <- liftIO $ testFence bar
-                (res,offset) <- case res of
-                    Just res -> return (res, 0)
-                    Nothing -> do
-                        Global{..} <- Action getRO
-                        offset <- liftIO offsetTime
-                        Action $ captureRAW $ \k -> waitFence bar $ \v ->
-                            addPool PoolResume globalPool $ do offset <- liftIO offset; k $ Right (v,offset)
-                case res of
-                    Left err -> Action $ throwRAW err
-                    Right (deps,v) -> do
-                        Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s, localDiscount = localDiscount s + offset}
-                        return v
+                (offset, (deps, v)) <- actionFenceRequeue PoolResume bar
+                Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s, localDiscount = localDiscount s + offset}
+                return v
             Nothing -> do
                 bar <- newFence
                 return $ (,) (Map.insert key bar mp) $ do
@@ -405,7 +395,7 @@ newCacheIO (act :: k -> Action v) = do
                             Action $ throwRAW err
                         Right v -> do
                             Local{localDepends=post} <- Action getRW
-                            let deps = take (length post - length pre) post
+                            let deps = dropEnd (length pre) post
                             liftIO $ signalFence bar $ Right (deps, v)
                             return v
 
@@ -417,12 +407,12 @@ newCacheIO (act :: k -> Action v) = do
 --   If the rule blocks (e.g. calls 'withResource') then the extra thread may be used by some other action.
 --   Only really suitable for calling 'cmd' / 'command'.
 unsafeExtraThread :: Action a -> Action a
-unsafeExtraThread act = Action $ do
-    Global{..} <- getRO
+unsafeExtraThread act = do
+    Global{..} <- Action getRO
     stop <- liftIO $ increasePool globalPool
-    res <- tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
+    res <- Action $ tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
-    captureRAW $ \continue -> addPool (if isLeft res then PoolException else PoolResume) globalPool $ continue res
+    actionRequeue (if isLeft res then PoolException else PoolResume) res
 
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
