@@ -43,8 +43,8 @@ import Prelude
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
 
 
-internKey :: InternDB -> StatusDB -> Key -> IO Id
-internKey intern status k = do
+internKey :: Database -> Key -> IO Id
+internKey Database{..} k = do
     is <- readIORef intern
     case Intern.lookup k is of
         Just i -> return i
@@ -58,9 +58,9 @@ internKey intern status k = do
 
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
-    global@Global{globalDatabase=Database{..},..} <- Action getRO
+    global@Global{globalDatabase=database@Database{..},..} <- Action getRO
     status <- liftIO $ withLock lock $ do
-        i <- internKey intern status $ newKey k
+        i <- internKey database $ newKey k
         Ids.lookup status i
     return $ case status of
         Just (_, status) | Just r <- getResult status -> Just $ fromValue <$> result r
@@ -69,9 +69,9 @@ getDatabaseValue k = do
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
 build :: Global -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build global@Global{globalDatabase=Database{..},globalPool=pool,..} stack ks continue =
+build global@Global{globalDatabase=database@Database{..},globalPool=pool,..} stack ks continue =
     join $ withLock lock $ do
-        is <- forM ks $ internKey intern status
+        is <- forM ks $ internKey database
 
         buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)
