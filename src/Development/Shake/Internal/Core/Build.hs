@@ -50,8 +50,9 @@ internKey intern status k = do
         Just i -> return i
         Nothing -> do
             (is, i) <- return $ Intern.add k is
-            writeIORef' intern is
+            -- make sure to write it into Status first to maintain Database invariants
             Ids.insert status i (k,Missing)
+            writeIORef' intern is
             return i
 
 
