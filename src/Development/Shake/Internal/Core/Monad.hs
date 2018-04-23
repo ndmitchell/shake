@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
     getRO, getRW, putRW, modifyRW,
-    catchRAW, tryRAW, throwRAW,
+    catchRAW, tryRAW, throwRAW, finallyRAW,
     captureRAW,
     ) where
 
@@ -141,6 +141,12 @@ throwRAW :: Exception e => e -> RAW ro rw a
 -- Note that while we could directly pass this to the handler
 -- that would avoid triggering the catch, which would mean they built up on the stack
 throwRAW = liftIO . throwIO
+
+finallyRAW :: RAW ro rw a -> RAW ro rw b -> RAW ro rw a
+finallyRAW a undo = do
+    r <- catchRAW a (\e -> undo >> throwRAW e)
+    undo
+    return r
 
 
 ---------------------------------------------------------------------
