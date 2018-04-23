@@ -7,15 +7,16 @@ module Development.Shake.Internal.Resource(
 import Data.Function
 import System.IO.Unsafe
 import Control.Concurrent.Extra
+import General.Concurrent
 import Control.Exception.Extra
 import Data.Tuple.Extra
 import Data.IORef
-import Control.Monad
+import Control.Monad.Extra
 import General.Bilist
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.Action
+import Development.Shake.Internal.Core.Wait2
 import Control.Monad.IO.Class
 import System.Time.Extra
 import Data.Monoid
@@ -35,16 +36,17 @@ withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     Global{..} <- Action getRO
     liftIO $ globalDiagnostic $ return $ show r ++ " waiting to acquire " ++ show i
-    offset <- liftIO offsetTime
-    Action $ captureRAW $ \continue -> acquireResource r globalPool i $ continue $ Right ()
-    res <- Action $ tryRAW $ fromAction $ blockApply ("Within withResource using " ++ show r) $ do
-        offset <- liftIO offset
-        liftIO $ globalDiagnostic $ return $ show r ++ " acquired " ++ show i ++ " in " ++ showDuration offset
+
+    fence <- liftIO $ acquireResource r globalPool i
+    whenJust fence $ \fence -> do
+        (offset, ()) <- actionFenceRequeueBy Right PoolResume fence
         Action $ modifyRW $ \s -> s{localDiscount = localDiscount s + offset}
-        act
-    liftIO $ releaseResource r globalPool i
-    liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
-    Action $ either throwRAW return res
+
+    liftIO $ globalDiagnostic $ return $ show r ++ " running with " ++ show i
+    Action $ fromAction act `finallyRAW` do
+        liftIO $ releaseResource r globalPool i
+        liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
+
 
 
 -- | A type representing an external resource which the build system should respect. There
@@ -68,7 +70,7 @@ data Resource = Resource
         -- ^ Key used for Eq/Ord operations. To make withResources work, we require newResourceIO < newThrottleIO
     ,resourceShow :: String
         -- ^ String used for Show
-    ,acquireResource :: Pool -> Int -> IO () -> IO ()
+    ,acquireResource :: Pool -> Int -> IO (Maybe (Fence ()))
         -- ^ Acquire the resource and call the function.
     ,releaseResource :: Pool -> Int -> IO ()
         -- ^ You should only ever releaseResource that you obtained with acquireResource.
@@ -85,7 +87,7 @@ instance Ord Resource where compare = compare `on` resourceOrd
 data Finite = Finite
     {finiteAvailable :: !Int
         -- ^ number of currently available resources
-    ,finiteWaiting :: Bilist (Int, IO ())
+    ,finiteWaiting :: Bilist (Int, Fence ())
         -- ^ queue of people with how much they want and the action when it is allocated to them
     }
 
@@ -96,26 +98,27 @@ newResourceIO name mx = do
     when (mx < 0) $
         errorIO $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     key <- resourceId
-    var <- newIORef $ Finite mx mempty
+    var <- newVar $ Finite mx mempty
     return $ Resource (negate key) shw (acquire var) (release var)
     where
         shw = "Resource " ++ name
 
-        acquire :: IORef Finite -> Pool -> Int -> IO () -> IO ()
-        acquire var pool want continue
+        acquire :: Var Finite -> Pool -> Int -> IO (Maybe (Fence ()))
+        acquire var pool want
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > mx = errorIO $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
-            | otherwise = join $ atomicModifyIORef var $ \x@Finite{..} ->
+            | otherwise = modifyVar var $ \x@Finite{..} ->
                 if want <= finiteAvailable then
-                    (x{finiteAvailable = finiteAvailable - want}, continue)
-                else
-                    (x{finiteWaiting = finiteWaiting `snoc` (want, addPool PoolResume pool continue)}, return ())
+                    return (x{finiteAvailable = finiteAvailable - want}, Nothing)
+                else do
+                    fence <- newFence
+                    return (x{finiteWaiting = finiteWaiting `snoc` (want, fence)}, Just fence)
 
-        release :: IORef Finite -> Pool -> Int -> IO ()
-        release var _ i = join $ atomicModifyIORef var $ \x -> f x{finiteAvailable = finiteAvailable x + i}
+        release :: Var Finite -> Pool -> Int -> IO ()
+        release var _ i = join $ modifyVar var $ \x -> return $ f x{finiteAvailable = finiteAvailable x + i}
             where
                 f (Finite i (uncons -> Just ((wi,wa),ws)))
-                    | wi <= i = second (wa >>) $ f $ Finite (i-wi) ws
+                    | wi <= i = second (signalFence wa () >>) $ f $ Finite (i-wi) ws
                     | otherwise = first (add (wi,wa)) $ f $ Finite i ws
                 f (Finite i _) = (Finite i mempty, return ())
                 add a s = s{finiteWaiting = a `cons` finiteWaiting s}
@@ -136,7 +139,7 @@ data Throttle
       -- | Some number of resources are available
     = ThrottleAvailable !Int
       -- | Some users are blocked (non-empty), plus an action to call once we go back to Available
-    | ThrottleWaiting (IO ()) (Bilist (Int, IO ()))
+    | ThrottleWaiting (IO ()) (Bilist (Int, Fence ()))
 
 
 -- | A version of 'Development.Shake.newThrottle' that runs in IO, and can be called before calling 'Development.Shake.shake'.
@@ -151,17 +154,20 @@ newThrottleIO name count period = do
     where
         shw = "Throttle " ++ name
 
-        acquire :: Var Throttle -> Pool -> Int -> IO () -> IO ()
-        acquire var pool want continue
+        acquire :: Var Throttle -> Pool -> Int -> IO (Maybe (Fence ()))
+        acquire var pool want
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > count = errorIO $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
-            | otherwise = join $ modifyVar var $ \x -> case x of
+            | otherwise = modifyVar var $ \x -> case x of
                 ThrottleAvailable i
-                    | i >= want -> return (ThrottleAvailable $ i - want, continue)
+                    | i >= want -> return (ThrottleAvailable $ i - want, Nothing)
                     | otherwise -> do
-                        stop <- blockPool pool
-                        return (ThrottleWaiting stop $ (want - i, addPool PoolResume pool continue) `cons` mempty, return ())
-                ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPool PoolResume pool continue), return ())
+                        stop <- keepAlivePool pool
+                        fence <- newFence
+                        return (ThrottleWaiting stop $ (want - i, fence) `cons` mempty, Just fence)
+                ThrottleWaiting stop xs -> do
+                    fence <- newFence
+                    return (ThrottleWaiting stop $ xs `snoc` (want, fence), Just fence)
 
         release :: Var Throttle -> Pool -> Int -> IO ()
         release var _ n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
@@ -169,6 +175,6 @@ newThrottleIO name count period = do
                 ThrottleWaiting stop xs -> f stop n xs
             where
                 f stop i (uncons -> Just ((wi,wa),ws))
-                    | i >= wi = second (wa >>) $ f stop (i-wi) ws
+                    | i >= wi = second (signalFence wa () >>) $ f stop (i-wi) ws
                     | otherwise = (ThrottleWaiting stop $ (wi-i,wa) `cons` ws, return ())
                 f stop i _ = (ThrottleAvailable i, stop)
