@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Wait2(
-    addPoolWait, actionFence, actionFenceRequeue, actionRequeue
+    addPoolWait, actionFence, actionFenceRequeue, actionRequeue,
+    actionFenceRequeueBy
     ) where
 
 import Control.Exception
@@ -34,10 +35,13 @@ actionFence fence = do
         Nothing -> Action $ captureRAW $ waitFence fence
 
 
-actionFenceRequeue :: PoolPriority -> Fence (Either SomeException a) -> Action (Seconds, a)
-actionFenceRequeue pri fence = Action $ do
+actionFenceRequeue :: PoolPriority -> Fence (Either SomeException b) -> Action (Seconds, b)
+actionFenceRequeue = actionFenceRequeueBy id
+
+actionFenceRequeueBy :: (a -> Either SomeException b) -> PoolPriority -> Fence a -> Action (Seconds, b)
+actionFenceRequeueBy op pri fence = Action $ do
     res <- liftIO $ testFence fence
-    case res of
+    case fmap op res of
         Just (Left e) -> throwRAW e
         Just (Right v) -> return (0, v)
         Nothing -> do
@@ -46,7 +50,7 @@ actionFenceRequeue pri fence = Action $ do
             captureRAW $ \continue -> waitFence fence $ \v ->
                 addPool pri globalPool $ do
                     offset <- offset
-                    continue $ (,) offset <$> v
+                    continue $ (,) offset <$> op v
 
 
 actionRequeue :: PoolPriority -> Either SomeException a -> Action a
