@@ -14,6 +14,7 @@ import Data.IORef
 import Control.Monad.Extra
 import General.Bilist
 import Development.Shake.Internal.Core.Pool
+import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Wait2
@@ -43,7 +44,7 @@ withResource r i act = do
         Action $ modifyRW $ \s -> s{localDiscount = localDiscount s + offset}
 
     liftIO $ globalDiagnostic $ return $ show r ++ " running with " ++ show i
-    Action $ fromAction act `finallyRAW` do
+    Action $ fromAction (blockApply ("Within withResource using " ++ show r) act) `finallyRAW` do
         liftIO $ releaseResource r globalPool i
         liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
 
