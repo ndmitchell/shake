@@ -138,6 +138,8 @@ tryRAW :: RAW ro rw a -> RAW ro rw (Either SomeException a)
 tryRAW m = catchRAW (fmap Right m) (return . Left)
 
 throwRAW :: Exception e => e -> RAW ro rw a
+-- Note that while we could directly pass this to the handler
+-- that would avoid triggering the catch, which would mean they built up on the stack
 throwRAW = liftIO . throwIO
 
 
