@@ -224,14 +224,19 @@ withDatabase opts diagnostic owitness act = do
                 _ -> Step 1
         journal stepId stepKey $ toStepResult step
         lock <- newLock
-
-        history <- case shakeCache opts of
-            Nothing -> return Nothing
-            Just x -> do
-                let wit = binaryOpMap $ Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
-                let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
-                Just <$> newHistory wit2 x
+        history <- loadHistory opts owitness
         act Database{..}
+
+
+loadHistory :: ShakeOptions -> Map.HashMap TypeRep (BinaryOp Key) -> IO (Maybe History)
+loadHistory opts owitness =
+    case shakeCache opts of
+        Nothing -> return Nothing
+        Just x -> do
+            let wit = binaryOpMap $ Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
+            let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
+            Just <$> newHistory wit2 x
+
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
