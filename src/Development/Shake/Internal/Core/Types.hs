@@ -306,7 +306,6 @@ data Database = Database
     {lock :: Lock
     ,intern :: InternDB
     ,status :: StatusDB
-    ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
     }
 
@@ -328,6 +327,7 @@ data Global = Global
     ,globalProgress :: IO Progress -- ^ Request current progress state
     ,globalUserRules :: Map.HashMap TypeRep UserRule_
     ,globalHistory :: Maybe History -- ^ The active history, if any
+    ,globalStep :: {-# UNPACK #-} !Step
     }
 
 -- local variables of Action

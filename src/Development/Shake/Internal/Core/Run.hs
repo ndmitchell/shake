@@ -85,11 +85,11 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
             diagnostic $ return "Starting run 3"
-            withDatabase opts diagnostic (Map.map builtinKey ruleinfo) $ \database -> do
+            withDatabase opts diagnostic (Map.map builtinKey ruleinfo) $ \database step -> do
                 wait <- newBarrier
                 let getProgress = do
                         failure <- fmap fst <$> readIORef except
-                        stats <- progress database
+                        stats <- progress database step
                         return stats{isFailure=failure}
                 tid <- flip forkFinally (const $ signalBarrier wait ()) $
                     shakeProgress getProgress
@@ -100,7 +100,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let global = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules history
+                    let global = Global database pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules history step
                     let local = newLocal emptyStack shakeVerbosity
                     forM_ actions $ \act ->
                         addPool PoolStart pool $ runAction global local act $ \x -> case x of
@@ -199,7 +199,7 @@ checkValid diagnostic Database{..} check missing = do
 ---------------------------------------------------------------------
 -- STORAGE
 
-withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep (BinaryOp Key) -> (Database -> IO a) -> IO a
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep (BinaryOp Key) -> (Database -> Step -> IO a) -> IO a
 withDatabase opts diagnostic owitness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
     witness <- return $ Map.fromList
@@ -225,7 +225,7 @@ withDatabase opts diagnostic owitness act = do
                 _ -> Step 1
         journal stepId stepKey $ toStepResult step
         lock <- newLock
-        act Database{..}
+        act Database{..} step
 
 
 loadHistory :: ShakeOptions -> Map.HashMap TypeRep (BinaryOp Key) -> IO (Maybe History)

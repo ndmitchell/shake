@@ -155,7 +155,7 @@ build global@Global{globalDatabase=Database{..},globalPool=pool,..} stack ks con
             when (mode == RunDependenciesChanged) $ whenJust globalHistory $ \history ->
                 whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
             addPool PoolStart pool $
-                runKey global (addStack i k stack) step k r mode $ \res -> do
+                runKey global (addStack i k stack) k r mode $ \res -> do
                     withLock lock $ do
                         let status = either Error (Ready . runValue . snd) res
                         i #= (k, status)
@@ -219,13 +219,12 @@ applyKeyValue ks = do
 runKey
     :: Global
     -> Stack  -- Given the current stack with the key added on
-    -> Step  -- And the current step
     -> Key -- The key to build
     -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
     -> RunMode -- True if any of the children were dirty
     -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
         -- Either an error, or a (the produced files, the result).
-runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
+runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
         Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
@@ -252,11 +251,11 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode cont
                 | otherwise -> do
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
-                                | otherwise = (ChangedRecomputeDiff, step)
+                                | otherwise = (ChangedRecomputeDiff, globalStep)
                     continue $ Right $ (,) produced $ RunResult cr runStore Result
                         {result = runValue
                         ,changed = c
-                        ,built = step
+                        ,built = globalStep
                         ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
