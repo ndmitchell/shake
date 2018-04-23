@@ -152,7 +152,7 @@ build global@Global{globalDatabase=Database{..},globalPool=pool,..} stack ks con
         spawn :: RunMode -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
         spawn mode stack i k r = do
             (w, done) <- newWait
-            when (mode == RunDependenciesChanged) $ whenJust history $ \history ->
+            when (mode == RunDependenciesChanged) $ whenJust globalHistory $ \history ->
                 whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
             addPool PoolStart pool $
                 runKey global (addStack i k stack) step k r mode $ \res -> do
@@ -167,7 +167,7 @@ build global@Global{globalDatabase=Database{..},globalPool=pool,..} stack ks con
                                 " " ++ (if built runValue == changed runValue then "(changed)" else "(unchanged)")
                             unless (runChanged == ChangedNothing) $ do
                                 journal i k runValue{result=runStore}
-                                unless (runChanged == ChangedStore) $ whenJust history $ \history -> whenJust produced $ \produced -> do
+                                unless (runChanged == ChangedStore) $ whenJust globalHistory $ \history -> whenJust produced $ \produced -> do
                                     ds <- forM (depends runValue) $ \(Depends is) ->
                                         forM is $ \i -> do
                                             -- if this didn't match then we couldn't have got here

@@ -306,7 +306,6 @@ data Database = Database
     {lock :: Lock
     ,intern :: InternDB
     ,status :: StatusDB
-    ,history :: Maybe History
     ,step :: {-# UNPACK #-} !Step
     ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
     }
@@ -328,6 +327,7 @@ data Global = Global
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state
     ,globalUserRules :: Map.HashMap TypeRep UserRule_
+    ,globalHistory :: Maybe History -- ^ The active history, if any
     }
 
 -- local variables of Action
