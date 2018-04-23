@@ -11,6 +11,8 @@ import Development.Shake.Internal.Core.Monad
 import System.Time.Extra
 import Control.Monad.IO.Class
 import General.Concurrent
+import Data.Functor
+import Prelude
 
 
 addPoolWait :: PoolPriority -> Action a -> Action (Fence (Either SomeException a))
