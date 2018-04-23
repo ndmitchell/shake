@@ -96,23 +96,23 @@ newResourceIO name mx = do
     when (mx < 0) $
         errorIO $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     key <- resourceId
-    var <- newVar $ Finite mx mempty
+    var <- newIORef $ Finite mx mempty
     return $ Resource (negate key) shw (acquire var) (release var)
     where
         shw = "Resource " ++ name
 
-        acquire :: Var Finite -> Pool -> Int -> IO () -> IO ()
+        acquire :: IORef Finite -> Pool -> Int -> IO () -> IO ()
         acquire var pool want continue
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > mx = errorIO $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
-            | otherwise = join  $ modifyVar var $ \x@Finite{..} -> return $
+            | otherwise = join $ atomicModifyIORef var $ \x@Finite{..} ->
                 if want <= finiteAvailable then
                     (x{finiteAvailable = finiteAvailable - want}, continue)
                 else
                     (x{finiteWaiting = finiteWaiting `snoc` (want, addPool PoolResume pool continue)}, return ())
 
-        release :: Var Finite -> Pool -> Int -> IO ()
-        release var _ i = join $ modifyVar var $ \x -> return $ f x{finiteAvailable = finiteAvailable x + i}
+        release :: IORef Finite -> Pool -> Int -> IO ()
+        release var _ i = join $ atomicModifyIORef var $ \x -> f x{finiteAvailable = finiteAvailable x + i}
             where
                 f (Finite i (uncons -> Just ((wi,wa),ws)))
                     | wi <= i = second (wa >>) $ f $ Finite (i-wi) ws
