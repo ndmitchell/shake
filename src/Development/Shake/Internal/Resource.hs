@@ -26,7 +26,7 @@ import Prelude
 resourceId :: IO Int
 resourceId = unsafePerformIO $ do
     ref <- newIORef 0
-    return $ atomicModifyIORef ref $ \i -> let j = i + 1 in (j, j)
+    return $ atomicModifyIORef' ref $ \i -> let j = i + 1 in (j, j)
 
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
