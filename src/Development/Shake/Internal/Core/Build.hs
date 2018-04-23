@@ -40,17 +40,6 @@ import System.Time.Extra
 import Prelude
 
 
-newtype BuildKey = BuildKey
-    {buildKey
-        :: Stack -- Given the current stack with the key added on
-        -> Step -- And the current step
-        -> Key -- The key to build
-        -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
-        -> RunMode -- True if any of the children were dirty
-        -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
-            -- Either an error, or a (the produced files, the result).
-    }
-
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
 
 
@@ -78,8 +67,8 @@ getDatabaseValue k = do
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Global -> BuildKey -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack ks continue =
+build :: Global -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
+build global@Global{globalDatabase=Database{..},globalPool=pool,..} stack ks continue =
     join $ withLock lock $ do
         is <- forM ks $ internKey intern status
 
@@ -166,7 +155,7 @@ build Global{globalDatabase=Database{..},globalPool=pool,..} BuildKey{..} stack 
             when (mode == RunDependenciesChanged) $ whenJust history $ \history ->
                 whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
             addPool PoolStart pool $
-                buildKey (addStack i k stack) step k r mode $ \res -> do
+                runKey global (addStack i k stack) step k r mode $ \res -> do
                     withLock lock $ do
                         let status = either Error (Ready . runValue . snd) res
                         i #= (k, status)
@@ -222,12 +211,20 @@ applyKeyValue [] = return []
 applyKeyValue ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
-    (dur, dep, vs) <- Action $ captureRAW $ build global (BuildKey $ runKey global) localStack ks
+    (dur, dep, vs) <- Action $ captureRAW $ build global localStack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
 
 
-runKey :: Global -> Stack -> Step -> Key -> Maybe (Result BS.ByteString) -> RunMode -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
+runKey
+    :: Global
+    -> Stack  -- Given the current stack with the key added on
+    -> Step  -- And the current step
+    -> Key -- The key to build
+    -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
+    -> RunMode -- True if any of the children were dirty
+    -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
+        -- Either an error, or a (the produced files, the result).
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack step k r mode continue = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
