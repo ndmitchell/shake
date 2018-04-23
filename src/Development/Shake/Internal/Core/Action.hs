@@ -26,7 +26,7 @@ import System.Directory
 import Data.Function
 import Control.Concurrent.Extra
 import Data.Maybe
-import Data.IORef
+import Data.IORef.Extra
 import Data.List.Extra
 import Data.Either.Extra
 import System.IO.Extra
