@@ -186,7 +186,7 @@ build2 global@Global{globalPool=pool,..} database@Database{..} stack ks continue
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
 -- Don't short-circuit [] as we still want error messages
-apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
+apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
     -- this is the only place a user can inject a key into our world, so check they aren't throwing
     -- in unevaluated bottoms
     liftIO $ mapM_ (evaluate . rnf) ks
@@ -202,20 +202,20 @@ apply (ks :: [key]) = withResultType $ \(p :: Maybe (Action [value])) -> do
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
-runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
-runIdentify mp k v
-    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
-    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
-
-
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
-    global@Global{..} <- Action getRO
+    global <- Action getRO
     Local{localStack} <- Action getRW
     (dur, dep, vs) <- Action $ captureRAW $ build global localStack ks
     Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
     return vs
+
+
+runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
+runIdentify mp k v
+    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
+    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
 
 
 runKey
