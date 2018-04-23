@@ -65,16 +65,16 @@ internKey intern status k = do
             Ids.insert status i (k,Missing)
             return i
 
-lookupStatus :: Database -> Key -> IO (Maybe (Either BS.ByteString Value))
-lookupStatus Database{..} k = withLock lock $ do
-    i <- internKey intern status k
-    maybe Nothing (fmap result . getResult . snd) <$> Ids.lookup status i
 
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
-    global@Global{..} <- Action getRO
-    liftIO $ fmap (fmap $ fmap fromValue) $ lookupStatus globalDatabase $ newKey k
-
+    global@Global{globalDatabase=Database{..},..} <- Action getRO
+    status <- liftIO $ withLock lock $ do
+        i <- internKey intern status $ newKey k
+        Ids.lookup status i
+    return $ case status of
+        Just (_, status) | Just r <- getResult status -> Just $ fromValue <$> result r
+        _ -> Nothing
 
 
 -- | Return either an exception (crash), or (how much time you spent waiting, the value)
