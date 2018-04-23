@@ -131,7 +131,7 @@ waiter period act = void $ forkIO $ do
     sleep period
     act
 
--- Make sure the pool cannot run try until after you have finished with it
+-- Make sure the pool cannot run out of tasks (and thus everything finishes) until after throttled tasks are awoken
 blockPool :: Pool -> IO (IO ())
 blockPool pool = do
     bar <- newBarrier
@@ -174,7 +174,7 @@ newThrottleIO name count period = do
                 ThrottleWaiting stop xs -> return (ThrottleWaiting stop $ xs `snoc` (want, addPool PoolResume pool continue), return ())
 
         release :: Var Throttle -> Pool -> Int -> IO ()
-        release var pool n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
+        release var _ n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
                 ThrottleAvailable i -> (ThrottleAvailable $ i+n, return ())
                 ThrottleWaiting stop xs -> f stop n xs
             where
