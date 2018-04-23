@@ -8,7 +8,7 @@ module Development.Shake.Internal.Core.Types(
     UserRule(..), UserRule_(..),
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo),
     newLocal, localClearMutable, localMergeMutable,
-    Stack, Step(..), Result(..), InternDB, StatusDB, Database(..), Depends(..), Status(..), Trace(..),
+    Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
     getResult, checkStack, showStack, statusType, addStack, incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..), toStepResult, fromStepResult
     ) where
@@ -167,14 +167,20 @@ data Trace = Trace
 instance NFData Trace where
     rnf x = x `seq` () -- all strict atomic fields
 
-newTrace :: String -> Double -> Double -> Trace
+instance BinaryEx Trace where
+    putEx (Trace a b c) = putEx b <> putEx c <> putEx a
+    getEx x | (b,c,a) <- binarySplit2 x = Trace a b c
+
+instance BinaryEx [Trace] where
+    putEx = putExList . map putEx
+    getEx = map getEx . getExList
+
+newTrace :: String -> Seconds -> Seconds -> Trace
 newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFloat stop)
+
 
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
-
-type StatusDB = Ids.Ids (Key, Status)
-type InternDB = IORef (Intern Key)
 
 data Status
     = Ready (Result Value) -- ^ I have a value
@@ -229,6 +235,14 @@ newtype Depends = Depends {fromDepends :: [Id]}
 instance Show Depends where
     -- Appears in diagnostic output and the Depends ctor is just verbose
     show = show . fromDepends
+
+instance BinaryEx Depends where
+    putEx (Depends xs) = putExStorableList xs
+    getEx = Depends . getExStorableList
+
+instance BinaryEx [Depends] where
+    putEx = putExList . map putEx
+    getEx = map getEx . getExList
 
 -- | Afterwards each Id must occur at most once and there are no empty Depends
 nubDepends :: [Depends] -> [Depends]
@@ -301,13 +315,13 @@ data UserRule a
       deriving (Eq,Show,Functor,Typeable)
 
 
--- | Invariant: The database does not have any cycles where a Key depends on itself
+-- | Invariant: The database does not have any cycles where a Key depends on itself.
+--   Everything is mutable. intern and status must form a bijecttion.
 data Database = Database
-    {intern :: InternDB
-    ,status :: StatusDB
-    ,journal :: Id -> Key -> Result BS.ByteString -> IO ()
+    {intern :: IORef (Intern Key) -- ^ Key |-> Id mapping
+    ,status :: Ids.Ids (Key, Status) -- ^ Id |-> (Key, Status) mapping
+    ,journal :: Id -> Key -> Result BS.ByteString -> IO () -- ^ Record all changes to status
     }
-
 
 
 -- global constants of Action
@@ -374,19 +388,3 @@ localMergeMutable root xs = Local
     ,localProduces = concatMap localProduces xs ++ localProduces root
     ,localCache = maximum $ map localCache $ root:xs
     }
-
-instance BinaryEx Depends where
-    putEx (Depends xs) = putExStorableList xs
-    getEx = Depends . getExStorableList
-
-instance BinaryEx [Depends] where
-    putEx = putExList . map putEx
-    getEx = map getEx . getExList
-
-instance BinaryEx Trace where
-    putEx (Trace a b c) = putEx b <> putEx c <> putEx a
-    getEx x | (b,c,a) <- binarySplit2 x = Trace a b c
-
-instance BinaryEx [Trace] where
-    putEx = putExList . map putEx
-    getEx = map getEx . getExList
