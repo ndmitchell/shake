@@ -14,7 +14,7 @@
 module Development.Shake.Internal.Core.Pool(
     Pool, runPool,
     addPool, PoolPriority(..),
-    increasePool
+    increasePool, keepAlivePool
     ) where
 
 import Control.Concurrent.Extra
@@ -144,6 +144,18 @@ increasePool :: Pool -> IO (IO ())
 increasePool pool = do
     step pool $ \s -> return s{threadsLimit = threadsLimit s + 1}
     return $ step pool $ \s -> return s{threadsLimit = threadsLimit s - 1}
+
+
+-- | Make sure the pool cannot run out of tasks (and thus everything finishes) until after the cancel is called.
+--   Ensures that a pool that will requeue in time doesn't go idle.
+keepAlivePool :: Pool -> IO (IO ())
+keepAlivePool pool = do
+    bar <- newBarrier
+    addPool PoolResume pool $ do
+        cancel <- increasePool pool
+        waitBarrier bar
+        cancel
+    return $ signalBarrier bar ()
 
 
 -- | Run all the tasks in the pool on the given number of works.

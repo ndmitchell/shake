@@ -131,16 +131,6 @@ waiter period act = void $ forkIO $ do
     sleep period
     act
 
--- Make sure the pool cannot run out of tasks (and thus everything finishes) until after throttled tasks are awoken
-blockPool :: Pool -> IO (IO ())
-blockPool pool = do
-    bar <- newBarrier
-    addPool PoolResume pool $ do
-        cancel <- increasePool pool
-        waitBarrier bar
-        cancel
-    return $ signalBarrier bar ()
-
 
 data Throttle
       -- | Some number of resources are available
