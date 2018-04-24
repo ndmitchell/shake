@@ -30,6 +30,7 @@ import Data.IORef.Extra
 import Data.List.Extra
 import Data.Either.Extra
 import System.IO.Extra
+import Numeric.Extra
 import General.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
@@ -470,33 +471,35 @@ batch mx pred one many
     | mx <= 0 = error $ "Can't call batchable with <= 0, you used " ++ show mx
     | mx == 1 = pred $ \a -> do b <- one a; many [b]
     | otherwise = do
-        todo :: IORef (Int, [(b, Either SomeException Local -> IO ())]) <- liftIO $ newIORef (0, [])
-        pred $ \a -> Action $ do
-            b <- fromAction $ one a
-            -- optimisation would be to avoid taking the continuation if count >= mx
-            -- but it only saves one pool requeue per mx, which is likely to be trivial
-            -- and the code becomes a lot more special cases
-            global@Global{..} <- getRO
-            local <- getRW
-            local2 <- captureRAW $ \k -> do
-                count <- atomicModifyIORef todo $ \(count, bs) -> ((count+1, (b,k):bs), count+1)
-                -- only trigger on the edge so we don't have lots of waiting pool entries
-                (if count == mx then addPool PoolResume else if count == 1 then addPool PoolBatch else none)
-                    globalPool $ go global (localClearMutable local) todo
-            modifyRW $ \root -> localMergeMutable root [local2]
+        todo :: IORef (Int, [(b, Fence (Either SomeException Local))]) <- liftIO $ newIORef (0, [])
+        pred $ \a -> do
+            b <- one a
+            fence <- liftIO newFence
+            -- add one to the batch
+            count <- liftIO $ atomicModifyIORef todo $ \(count, bs) -> let i = count+1 in ((i, (b,fence):bs), i)
+            requeue todo (==) count
+            (wait, local2) <- actionFenceRequeue fence
+            Action $ modifyRW $ \root -> addDiscount wait $ localMergeMutable root [local2]
     where
-        none _ _ = return ()
+        -- When changing by one, only trigger on (==) so we don't have lots of waiting pool entries
+        -- When changing by many, trigger on (>=) because we don't hit all edges
+        requeue todo trigger count
+            | count `trigger` mx = addPoolWait_ PoolResume $ go todo
+            | count `trigger` 1  = addPoolWait_ PoolBatch  $ go todo
+            | otherwise = return ()
 
-        go global@Global{..} local todo = do
-            (now, count) <- atomicModifyIORef todo $ \(count, bs) ->
-                if count <= mx then
-                    ((0, []), (bs, 0))
-                else
-                    let (xs,ys) = splitAt mx bs
-                    in ((count - mx, ys), (xs, count - mx))
-            (if count >= mx then addPool PoolResume else if count > 0 then addPool PoolBatch else none)
-                    globalPool $ go global local todo
-            unless (null now) $
-                runAction global local (do many $ map fst now; Action getRW) $ \x ->
-                    forM_ now $ \(_,k) ->
-                        addPool (if isLeft x then PoolException else PoolResume) globalPool $ k x
+        go todo = do
+            -- delete at most mx from the batch
+            (now, count) <- liftIO $ atomicModifyIORef todo $ \(count, bs) ->
+                let (now,later) = splitAt mx bs
+                    count2 = max 0 $ count - mx
+                in ((count2, later), (now, count2))
+            requeue todo (>=) count
+
+            unless (null now) $ do
+                res <- Action $ tryRAW $ do
+                    modifyRW localClearMutable
+                    fromAction $ many $ map fst now
+                    res <- getRW
+                    return res{localDiscount = localDiscount res / intToDouble (length now)} -- divide the batch fairly
+                liftIO $ mapM_ (flip signalFence res . snd) now
