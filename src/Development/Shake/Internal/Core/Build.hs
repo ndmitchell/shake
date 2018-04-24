@@ -40,11 +40,13 @@ import System.Time.Extra
 import Prelude
 
 
+---------------------------------------------------------------------
+-- LOW-LEVEL OPERATIONS ON THE DATABASE
 type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
 
 
-internKey :: Database -> Key -> IO Id
-internKey Database{..} k = do
+getKeyId :: Database -> Key -> IO Id
+getKeyId Database{..} k = do
     is <- readIORef intern
     case Intern.lookup k is of
         Just i -> return i
@@ -72,7 +74,7 @@ build :: Global -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depe
 build global stack ks continue = join $ withVar (globalDatabase global) $ \database -> build2 global database stack ks continue
 
 build2 global@Global{globalPool=pool,..} database@Database{..} stack ks continue = do
-        is <- forM ks $ internKey database
+        is <- forM ks $ getKeyId database
 
         buildMany stack is
             (\v -> case v of Error e -> Just e; _ -> Nothing)
