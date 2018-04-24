@@ -15,7 +15,7 @@ import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.History() -- FIXME: Enable soon
-import qualified Development.Shake.Internal.Core.Wait3 as W
+import Development.Shake.Internal.Core.Wait3
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
 import General.Extra
@@ -95,16 +95,16 @@ statusToEither (Ready r) = Right r
 statusToEither (Error e) = Left e
 
 -- | Lookup the value for a single Id, may need to spawn it
-lookupOne :: Global -> Stack -> Database -> Id -> IO (W.Wait (Either SomeException (Result Value)))
+lookupOne :: Global -> Stack -> Database -> Id -> IO (Wait (Either SomeException (Result Value)))
 lookupOne global stack database i = do
     (k, s) <- getIdKeyStatus database i
     case s of
         Waiting _ _ -> retry
         Loaded r -> buildOne global stack database i k (Just r) >> retry
         Missing -> buildOne global stack database i k Nothing >> retry
-        _ -> return $ W.Now $ statusToEither s
+        _ -> return $ Now $ statusToEither s
     where
-        retry = return $ W.Later $ \continue -> do
+        retry = return $ Later $ \continue -> do
             (k, s) <- getIdKeyStatus database i
             case s of
                 Waiting (NoShow w) r -> do
@@ -120,8 +120,8 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         setIdKeyStatus global database i k $ Error e
     Right stack -> do
         setIdKeyStatus global database i k (Waiting (NoShow $ const $ return ()) r)
-        go <- maybe (return $ W.Now RunDependenciesChanged) (buildRunMode global stack database) r
-        W.fromLater go $ \mode ->
+        go <- maybe (return $ Now RunDependenciesChanged) (buildRunMode global stack database) r
+        fromLater go $ \mode ->
             addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 withVar globalDatabase $ \_ -> do
                     let val = either Error (Ready . runValue . snd) res
@@ -134,9 +134,9 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 
 -- | Compute the value for a given RunMode
-buildRunMode :: Global -> Stack -> Database -> Result a -> IO (W.Wait RunMode)
-buildRunMode global stack database me = fmap conv <$> W.firstJustWaitOrdered
-    [W.firstJustWaitUnordered $ map (fmap (fmap test) . lookupOne global stack database) x | Depends x <- depends me]
+buildRunMode :: Global -> Stack -> Database -> Result a -> IO (Wait RunMode)
+buildRunMode global stack database me = fmap conv <$> firstJustWaitOrdered
+    [firstJustWaitUnordered $ map (fmap (fmap test) . lookupOne global stack database) x | Depends x <- depends me]
     where
         conv x = if isJust x then RunDependenciesChanged else RunDependenciesSame
         test (Right dep) | changed dep <= built me = Nothing
@@ -173,16 +173,16 @@ applyKeyValue ks = do
     (is, wait) <- liftIO $ withVar globalDatabase $ \database -> do
         -- FIXME: Test that asking for the same key twice returns them twice in an apply
         is <- mapM (getKeyId database) ks
-        wait <- W.firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global localStack database) $ nubOrd is
-        wait <- flip W.fmapWait (return wait) $ \x -> case x of
+        wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global localStack database) $ nubOrd is
+        wait <- flip fmapWait (return wait) $ \x -> case x of
             Just e -> return $ Left e
             Nothing -> Right <$> mapM (fmap (\(_, Ready r) -> result r) . getIdKeyStatus database) is
         return (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
     case wait of
-        W.Now vs -> either (Action . throwRAW) return vs
-        W.Later k -> do
+        Now vs -> either (Action . throwRAW) return vs
+        Later k -> do
             offset <- liftIO offsetTime
             vs <- Action $ captureRAW $ \continue -> k $ \x ->
                 addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
