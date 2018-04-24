@@ -171,7 +171,6 @@ applyKeyValue ks = do
     Local{localStack} <- Action getRW
 
     (is, wait) <- liftIO $ withVar globalDatabase $ \database -> do
-        -- FIXME: Test that asking for the same key twice returns them twice in an apply
         is <- mapM (getKeyId database) ks
         wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global localStack database) $ nubOrd is
         wait <- flip fmapWait (return wait) $ \x -> case x of
