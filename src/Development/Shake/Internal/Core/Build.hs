@@ -84,7 +84,7 @@ build2 global@Global{globalPool=pool,..} database@Database{..} stack ks continue
                 whenJust (checkStack is stack) $ \(badId, badKey) ->
                     -- everything else gets thrown via Left and can be Staunch'd
                     -- recursion in the rules is considered a worse error, so fails immediately
-                    errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
+                    throwM $ errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
 
                 time <- offsetTime
                 go $ \x -> case x of

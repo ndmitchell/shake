@@ -98,9 +98,9 @@ errorMultipleRulesMatch tk k count
         (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
         else "Modify your rules/defaultRules so only one can produce the above key")
 
-errorRuleRecursion :: [String] -> TypeRep -> String -> IO a
+errorRuleRecursion :: [String] -> TypeRep -> String -> SomeException
 -- may involve both rules and oracle, so report as only rules
-errorRuleRecursion stack tk k = throwIO $ wrap $ toException $ ErrorCall $ errorStructuredContents
+errorRuleRecursion stack tk k = wrap $ toException $ ErrorCall $ errorStructuredContents
     "Build system error - recursion detected"
     [("Key type",Just $ show tk)
     ,("Key value",Just k)]
