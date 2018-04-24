@@ -73,7 +73,6 @@ shakenEx reenter options test rules sleeper = do
     args <- return $ delete "--forward" args
     cwd <- getCurrentDirectory
     let out = "output/" ++ name ++ "/"
-    let obj x = if null x then "." else x
     let change = if not reenter then withCurrentDirectory out else id
     let clean = do
             now <- getCurrentDirectory
@@ -102,8 +101,8 @@ shakenEx reenter options test rules sleeper = do
         args -> do
             t <- tracker
             opts <- return $ shakeOptions
-                {shakeFiles = obj ""
                 ,shakeReport = [obj "report.html"]}
+                {shakeFiles = "."
             opts <- return $ if forward then forwardOptions opts else opts
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd]
