@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
-{-# LANGUAGE Rank2Types, ConstraintKinds #-}
+{-# LANGUAGE Rank2Types, ConstraintKinds, DeriveFunctor #-}
 
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue,
@@ -15,7 +15,8 @@ import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Wait
-import Development.Shake.Internal.Core.History
+import Development.Shake.Internal.Core.History() -- FIXME: Enable soon
+import qualified Development.Shake.Internal.Core.Wait3 as W
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
 import General.Extra
@@ -42,8 +43,6 @@ import Prelude
 
 ---------------------------------------------------------------------
 -- LOW-LEVEL OPERATIONS ON THE DATABASE
-type Returns a = forall b . (a -> IO b) -> (Capture a -> IO b) -> IO b
-
 
 getKeyId :: Database -> Key -> IO Id
 getKeyId Database{..} k = do
@@ -57,130 +56,87 @@ getKeyId Database{..} k = do
             writeIORef' intern is
             return i
 
+getIdKeyStatus :: Database -> Id -> IO (Key, Status)
+getIdKeyStatus Database{..} i = do
+    res <- Ids.lookup status i
+    case res of
+        Nothing -> throwM $ errorInternal $ "interned value missing from database, " ++ show i
+        Just v -> return v
+
+
+setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> IO ()
+setIdKeyStatus Global{..} Database{..} i k v = do
+    globalDiagnostic $ do
+        old <- Ids.lookup status i
+        let changeStatus = maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
+        let changeValue = case v of
+                Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
+                _ -> Nothing
+        return $ changeStatus ++ maybe "" ("\n" ++) changeValue
+    Ids.insert status i (k,v)
+
+
+---------------------------------------------------------------------
+-- QUERIES
 
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
     Global{..} <- Action getRO
-    status <- liftIO $ withVar globalDatabase $ \database@Database{..} -> do
-        i <- internKey database $ newKey k
-        Ids.lookup status i
-    return $ case status of
-        Just (_, status) | Just r <- getResult status -> Just $ fromValue <$> result r
+    (_, status) <- liftIO $ withVar globalDatabase $ \database ->
+        getIdKeyStatus database =<< getKeyId database (newKey k)
+    return $ case getResult status of
+        Just r -> Just $ fromValue <$> result r
         _ -> Nothing
 
 
--- | Return either an exception (crash), or (how much time you spent waiting, the value)
-build :: Global -> Stack -> [Key] -> Capture (Either SomeException (Seconds,Depends,[Value]))
-build global stack ks continue = join $ withVar (globalDatabase global) $ \database -> build2 global database stack ks continue
+---------------------------------------------------------------------
+-- NEW STYLE PRIMITIVES
 
-build2 global@Global{globalPool=pool,..} database@Database{..} stack ks continue = do
-        is <- forM ks $ getKeyId database
+statusToEither (Ready r) = Right r
+statusToEither (Error e) = Left e
 
-        buildMany stack is
-            (\v -> case v of Error e -> Just e; _ -> Nothing)
-            (\v -> return $ continue $ case v of
-                Left e -> Left e
-                Right rs -> Right (0, Depends is, map result rs)) $
-            \go -> do
-                -- only bother doing the stack check if we're actually going to build stuff
-                whenJust (checkStack is stack) $ \(badId, badKey) ->
-                    -- everything else gets thrown via Left and can be Staunch'd
-                    -- recursion in the rules is considered a worse error, so fails immediately
-                    throwM $ errorRuleRecursion (showStack stack ++ [show badKey]) (typeKey badKey) (show badKey)
+-- | Lookup the value for a single Id, may need to spawn it
+lookupOne :: Global -> Stack -> Database -> Id -> IO (W.Wait (Either SomeException (Result Value)))
+lookupOne global stack database i = do
+    (k, s) <- getIdKeyStatus database i
+    case s of
+        Waiting w _ -> return $ W.Later $ \callback ->
+            afterWait w $ callback . statusToEither
+        Loaded r -> buildOne global stack database i k $ Just r
+        Missing -> buildOne global stack database i k Nothing
+        _ -> return $ W.Now $ statusToEither s
 
-                time <- offsetTime
-                go $ \x -> case x of
-                    Left e -> addPool PoolException pool $ continue $ Left e
-                    Right rs -> addPool PoolResume pool $ do dur <- time; continue $ Right (dur, Depends is, map result rs)
-                return $ return ()
+
+-- | Build a key, must currently be either Loaded or Missing
+buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> IO (W.Wait (Either SomeException (Result Value)))
+buildOne global@Global{..} stack database i k r = case addStack2 i k stack of
+    Left e -> do
+        setIdKeyStatus global database i k $ Error e
+        return $ W.Now $ Left e
+    Right stack -> return $ W.Later $ \c -> do
+        (wait, done) <- newWait
+        afterWait wait $ c . statusToEither
+        setIdKeyStatus global database i k (Waiting wait r)
+        go <- maybe (return $ W.Now RunDependenciesChanged) (buildRunMode global stack database) r
+        W.fromLater go $ \mode ->
+            addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
+                withVar globalDatabase $ \_ -> do
+                    let val = either Error (Ready . runValue . snd) res
+                    setIdKeyStatus global database i k val
+                    done val
+                case res of
+                    Right (produced, RunResult{..}) | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
+                    _ -> return ()
+
+
+-- | Compute the value for a given RunMode
+buildRunMode :: Global -> Stack -> Database -> Result a -> IO (W.Wait RunMode)
+buildRunMode global stack database me = fmap conv <$> W.firstJustWaitOrdered
+    [W.firstJustWaitUnordered $ map (fmap (fmap test) . lookupOne global stack database) x | Depends x <- depends me]
     where
-        identity = runIdentify globalRules
-
-        (#=) :: Id -> (Key, Status) -> IO Status
-        i #= (k,v) = do
-            globalDiagnostic $ do
-                old <- Ids.lookup status i
-                return $ maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
-            Ids.insert status i (k,v)
-            return v
-
-        buildMany :: Stack -> [Id] -> (Status -> Maybe a) -> Returns (Either a [Result Value])
-        buildMany stack is test fast slow = do
-            let toAnswer v | Just v <- test v = Left v
-                toAnswer (Ready v) = Right v
-            let toCompute (Waiting w _) = Later $ toAnswer <$> w
-                toCompute x = Now $ toAnswer x
-
-            res <- waitExcept =<< mapM (fmap toCompute . reduce stack) is
-            case res of
-                Now v -> fast v
-                Later w -> slow $ \slow -> afterWait w slow
-
-        -- Rules for each of the following functions
-        -- * Must NOT lock
-        -- * Must have an equal return to what is stored in the db at that point
-        -- * Must return one of the designated subset of values
-
-        reduce :: Stack -> Id -> IO Status {- Ready | Error | Waiting -}
-        reduce stack i = do
-            s <- Ids.lookup status i
-            case s of
-                Nothing -> throwM $ errorInternal $ "interned value missing from database, " ++ show i
-                Just (k, Missing) -> spawn RunDependenciesChanged stack i k Nothing
-                Just (k, Loaded r) -> check stack i k r (depends r)
-                Just (k, res) -> return res
-
-
-        -- | Given a Key and the list of dependencies yet to be checked, check them
-        check :: Stack -> Id -> Key -> Result BS.ByteString -> [Depends] -> IO Status {- Ready | Waiting -}
-        check stack i k r [] = spawn RunDependenciesSame stack i k $ Just r
-        check stack i k r (Depends ds:rest) = do
-            let cont v = if isLeft v then spawn RunDependenciesChanged stack i k $ Just r else check stack i k r rest
-            buildMany (addStack i k stack) ds
-                (\v -> case v of
-                    Error _ -> Just ()
-                    Ready dep | changed dep > built r -> Just ()
-                    _ -> Nothing)
-                cont $
-                \go -> do
-                    (self, done) <- newWait
-                    go $ \v -> do
-                        res <- cont v
-                        case res of
-                            Waiting w _ -> afterWait w done
-                            _ -> done res
-                    i #= (k, Waiting self $ Just r)
-
-
-        -- | Given a Key, queue up execution and return waiting
-        spawn :: RunMode -> Stack -> Id -> Key -> Maybe (Result BS.ByteString) -> IO Status {- Waiting -}
-        spawn mode stack i k r = do
-            (w, done) <- newWait
-            when (mode == RunDependenciesChanged) $ whenJust globalHistory $ \history ->
-                whenM (hasHistory history k) $ putStrLn $ "CACHE: Should have checked here, " ++ show k
-            addPool PoolStart pool $
-                runKey global (addStack i k stack) k r mode $ \res -> do
-                    withVar globalDatabase $ \_ -> do
-                        let status = either Error (Ready . runValue . snd) res
-                        i #= (k, status)
-                        done status
-                    case res of
-                        Right (produced, RunResult{..}) -> do
-                            globalDiagnostic $ return $
-                                "result " ++ showBracket k ++ " = "++ showBracket (result runValue) ++
-                                " " ++ (if built runValue == changed runValue then "(changed)" else "(unchanged)")
-                            unless (runChanged == ChangedNothing) $ do
-                                journal i k runValue{result=runStore}
-                                unless (runChanged == ChangedStore) $ whenJust globalHistory $ \history -> whenJust produced $ \produced -> do
-                                    ds <- forM (depends runValue) $ \(Depends is) ->
-                                        forM is $ \i -> do
-                                            -- if this didn't match then we couldn't have got here
-                                            Just (key, Ready value) <- Ids.lookup status i
-                                            return (key, identity key $ result value)
-                                    addHistory history k ds runStore produced
-                        Left _ ->
-                            globalDiagnostic $ return $ "result " ++ showBracket k ++ " = error"
-            i #= (k, Waiting w r)
+        conv x = if isJust x then RunDependenciesChanged else RunDependenciesSame
+        test (Right dep) | changed dep <= built me = Nothing
+        test _ = Just ()
 
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
@@ -207,18 +163,36 @@ apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
 applyKeyValue ks = do
-    global <- Action getRO
+    global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
-    (dur, dep, vs) <- Action $ captureRAW $ build global localStack ks
-    Action $ modifyRW $ \s -> addDiscount dur $ s{localDepends=dep : localDepends s}
-    return vs
+
+    (is, wait) <- liftIO $ withVar globalDatabase $ \database -> do
+        -- FIXME: Test that asking for the same key twice returns them twice in an apply
+        is <- mapM (getKeyId database) ks
+        wait <- W.firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global localStack database) $ nubOrd is
+        wait <- flip W.fmapWait (return wait) $ \x -> case x of
+            Just e -> return $ Left e
+            Nothing -> Right <$> mapM (fmap (\(_, Ready r) -> result r) . getIdKeyStatus database) is
+        return (is, wait)
+    Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
+
+    case wait of
+        W.Now vs -> either (Action . throwRAW) return vs
+        W.Later k -> do
+            offset <- liftIO offsetTime
+            vs <- Action $ captureRAW $ \continue -> k $ \x ->
+                addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
+            offset <- liftIO offset
+            Action $ modifyRW $ addDiscount offset
+            return vs
 
 
+{-
 runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
     | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
-
+-}
 
 runKey
     :: Global

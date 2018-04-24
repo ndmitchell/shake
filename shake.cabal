@@ -131,6 +131,7 @@ library
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait
         Development.Shake.Internal.Core.Wait2
+        Development.Shake.Internal.Core.Wait3
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -233,6 +234,7 @@ executable shake
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait
         Development.Shake.Internal.Core.Wait2
+        Development.Shake.Internal.Core.Wait3
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -343,6 +345,7 @@ test-suite shake-test
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait
         Development.Shake.Internal.Core.Wait2
+        Development.Shake.Internal.Core.Wait3
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
