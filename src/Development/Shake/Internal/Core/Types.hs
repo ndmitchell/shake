@@ -11,7 +11,7 @@ module Development.Shake.Internal.Core.Types(
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
     getResult, showStack, statusType, addStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
-    stepKey, StepKey(..), toStepResult, fromStepResult
+    stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..),
     ) where
 
 import Control.Monad.IO.Class
@@ -24,7 +24,6 @@ import General.Binary
 import Control.Exception
 import Data.Maybe
 import Control.Concurrent.Extra
-import Development.Shake.Internal.Core.Wait
 import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Errors
 import Data.IORef
@@ -181,11 +180,14 @@ newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFlo
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
 
+newtype NoShow a = NoShow a
+instance Show (NoShow a) where show _ = "NoShow"
+
 data Status
     = Ready (Result Value) -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
     | Loaded (Result BS.ByteString) -- ^ Loaded from the database
-    | Waiting (Wait Status) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
+    | Waiting (NoShow (Status -> IO ())) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 

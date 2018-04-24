@@ -14,7 +14,6 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.Wait
 import Development.Shake.Internal.Core.History() -- FIXME: Enable soon
 import qualified Development.Shake.Internal.Core.Wait3 as W
 import qualified Data.ByteString.Char8 as BS
@@ -100,30 +99,35 @@ lookupOne :: Global -> Stack -> Database -> Id -> IO (W.Wait (Either SomeExcepti
 lookupOne global stack database i = do
     (k, s) <- getIdKeyStatus database i
     case s of
-        Waiting w _ -> return $ W.Later $ \callback ->
-            afterWait w $ callback . statusToEither
-        Loaded r -> buildOne global stack database i k $ Just r
-        Missing -> buildOne global stack database i k Nothing
+        Waiting _ _ -> retry
+        Loaded r -> buildOne global stack database i k (Just r) >> retry
+        Missing -> buildOne global stack database i k Nothing >> retry
         _ -> return $ W.Now $ statusToEither s
+    where
+        retry = return $ W.Later $ \continue -> do
+            (k, s) <- getIdKeyStatus database i
+            case s of
+                Waiting (NoShow w) r -> do
+                    let w2 v = w v >> continue (statusToEither v)
+                    Ids.insert (status database) i (k, Waiting (NoShow w2) r)
+                _ -> continue $ statusToEither s
 
 
--- | Build a key, must currently be either Loaded or Missing
-buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> IO (W.Wait (Either SomeException (Result Value)))
+-- | Build a key, must currently be either Loaded or Missing, changes to Waiting
+buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> IO ()
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
-    Left e -> do
+    Left e ->
         setIdKeyStatus global database i k $ Error e
-        return $ W.Now $ Left e
-    Right stack -> return $ W.Later $ \c -> do
-        (wait, done) <- newWait
-        afterWait wait $ c . statusToEither
-        setIdKeyStatus global database i k (Waiting wait r)
+    Right stack -> do
+        setIdKeyStatus global database i k (Waiting (NoShow $ const $ return ()) r)
         go <- maybe (return $ W.Now RunDependenciesChanged) (buildRunMode global stack database) r
         W.fromLater go $ \mode ->
             addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 withVar globalDatabase $ \_ -> do
                     let val = either Error (Ready . runValue . snd) res
+                    (_, Waiting (NoShow w) _) <- getIdKeyStatus database i
                     setIdKeyStatus global database i k val
-                    done val
+                    w val
                 case res of
                     Right (produced, RunResult{..}) | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
                     _ -> return ()
