@@ -100,9 +100,7 @@ shakenEx reenter options test rules sleeper = do
 
         args -> do
             t <- tracker
-            opts <- return $ shakeOptions
-                ,shakeReport = [obj "report.html"]}
-                {shakeFiles = "."
+            opts <- return shakeOptions{shakeFiles = "."}
             opts <- return $ if forward then forwardOptions opts else opts
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd]
