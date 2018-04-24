@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRule_(..),
-    BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo),
+    BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo), addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
     getResult, checkStack, showStack, statusType, addStack, incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
@@ -352,13 +352,16 @@ data Local = Local
     ,localBlockApply ::  Maybe String -- ^ Reason to block apply, or Nothing to allow
     -- mutable local variables
     ,localDepends :: [Depends] -- ^ Dependencies, built up in reverse
-    ,localDiscount :: !Seconds -- ^ Time spend building dependencies
+    ,localDiscount :: !Seconds -- ^ Time spend building dependencies (may be negative for parallel)
     ,localTraces :: [Trace] -- ^ Traces, built in reverse
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
     ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
     ,localCache :: !Cache -- ^ Is it valid to cache the result
     }
+
+addDiscount :: Seconds -> Local -> Local
+addDiscount s l = l{localDiscount = s + localDiscount l}
 
 data Cache = CacheDefault | CacheYes | CacheNo
     deriving (Eq,Ord)
