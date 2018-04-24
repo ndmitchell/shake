@@ -183,8 +183,11 @@ applyKeyValue ks = do
         Now vs -> either (Action . throwRAW) return vs
         Later k -> do
             offset <- liftIO offsetTime
-            vs <- Action $ captureRAW $ \continue -> k $ \x ->
-                addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
+            vs <- Action $ captureRAW $ \continue ->
+                -- can only manipulate k with the globalDatabase held
+                -- have to EITHER captureRAW always, or take the database twice when adding to the pool
+                withVar globalDatabase $ \_ -> k $ \x ->
+                    addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
             offset <- liftIO offset
             Action $ modifyRW $ addDiscount offset
             return vs
