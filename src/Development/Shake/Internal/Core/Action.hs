@@ -366,7 +366,6 @@ orderOnlyAction act = Action $ do
 -- | A version of 'Development.Shake.newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
--- We deliberately don't use localClearMutable because we want to have only one thing continue afterwards
 newCacheIO (act :: k -> Action v) = do
     var :: Var (Map.HashMap k (Fence (Either SomeException ([Depends],v)))) <- newVar Map.empty
     return $ \key ->
