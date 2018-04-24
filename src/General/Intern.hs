@@ -17,7 +17,7 @@ import Data.List(foldl')
 data Intern a = Intern {-# UNPACK #-} !Word32 !(Map.HashMap a Id)
 
 newtype Id = Id Word32
-    deriving (Eq,Hashable,Binary,Show,NFData,Storable)
+    deriving (Eq,Hashable,Ord,Binary,Show,NFData,Storable)
 
 empty :: Intern a
 empty = Intern 0 Map.empty
