@@ -213,7 +213,7 @@ assertException parts act = do
 
 noTest :: ([String] -> IO ()) -> IO ()
 noTest build = do
-    build ["--abbrev=output=$OUT","-j3"]
+    build ["--abbrev=output=$OUT","-j3","--report"]
     build ["--no-build","--report=-"]
     build []
 
