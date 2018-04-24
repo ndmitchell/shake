@@ -9,7 +9,8 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo), addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
-    getResult, checkStack, showStack, statusType, addStack, incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
+    getResult, checkStack, showStack, statusType, addStack, addStack2,
+    incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..), toStepResult, fromStepResult
     ) where
 
@@ -25,6 +26,7 @@ import Data.Maybe
 import Control.Concurrent.Extra
 import Development.Shake.Internal.Core.Wait
 import Development.Shake.Internal.Core.History
+import Development.Shake.Internal.Errors
 import Data.IORef
 import qualified Data.ByteString.Char8 as BS
 import Numeric.Extra
@@ -138,6 +140,11 @@ showStack (Stack xs _) = reverse $ map (show . snd) xs
 
 showTopStack :: Stack -> String
 showTopStack = maybe "<unknown>" show . topStack
+
+addStack2 :: Id -> Key -> Stack -> Either SomeException Stack
+addStack2 i k stack@(Stack ks is)
+    | i `Set.member` is = Left $ errorRuleRecursion (showStack stack ++ [show k]) (typeKey k) (show k)
+    | otherwise = Right $ Stack ((i,k):ks) (Set.insert i is)
 
 addStack :: Id -> Key -> Stack -> Stack
 addStack x key (Stack xs set) = Stack ((x,key):xs) (Set.insert x set)
