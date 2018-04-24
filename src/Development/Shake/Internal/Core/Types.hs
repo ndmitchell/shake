@@ -384,7 +384,7 @@ localMergeMutable root xs = Local
     -- mutable locals that need integrating
         -- note that a lot of the lists are stored in reverse, assume root happened first
     ,localDepends =  concatMap localDepends xs ++ localDepends root
-    ,localDiscount = localDiscount root + maximum (0:map localDiscount xs)
+    ,localDiscount = sum $ map localDiscount $ root : xs
     ,localTraces = concatMap localTraces xs ++ localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
