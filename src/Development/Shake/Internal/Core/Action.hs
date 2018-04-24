@@ -49,31 +49,6 @@ import General.Concurrent
 import Prelude
 
 
-lintCurrentDirectory :: FilePath -> String -> IO ()
-lintCurrentDirectory old msg = do
-    now <- getCurrentDirectory
-    when (old /= now) $ throwIO $ errorStructured
-        "Lint checking error - current directory has changed"
-        [("When", Just msg)
-        ,("Wanted",Just old)
-        ,("Got",Just now)]
-        ""
-
-
--- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
---   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
---   then do nothing with it.
-shakeException :: Global -> [String] -> SomeException -> IO ShakeException
-shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
-    Just e@ShakeException{} -> return e
-    Nothing -> do
-        e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
-        when (shakeStaunch && shakeVerbosity >= Quiet) $
-            globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
-        return e
-
-
-
 ---------------------------------------------------------------------
 -- RAW WRAPPERS
 
@@ -91,6 +66,19 @@ actionBracket f m = Action $ do
 
 ---------------------------------------------------------------------
 -- EXCEPTION HANDLING
+
+-- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
+--   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
+--   then do nothing with it.
+shakeException :: Global -> [String] -> SomeException -> IO ShakeException
+shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
+    Just e@ShakeException{} -> return e
+    Nothing -> do
+        e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
+        when (shakeStaunch && shakeVerbosity >= Quiet) $
+            globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
+        return e
+
 
 actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act clean = do
@@ -306,6 +294,17 @@ lintTrackAllow (test :: key -> Bool) = do
         f k = typeKey k == tk && test (fromKey k)
 
 
+lintCurrentDirectory :: FilePath -> String -> IO ()
+lintCurrentDirectory old msg = do
+    now <- getCurrentDirectory
+    when (old /= now) $ throwIO $ errorStructured
+        "Lint checking error - current directory has changed"
+        [("When", Just msg)
+        ,("Wanted",Just old)
+        ,("Got",Just now)]
+        ""
+
+
 listDepends :: Var Database -> Depends -> IO [Key]
 listDepends db (Depends xs) = withVar db $ \Database{..} ->
     forM xs $ \x ->
@@ -318,17 +317,6 @@ lookupDependencies db k = withVar db $ \Database{..} -> do
     Just (_, Ready r) <- Ids.lookup status i
     forM (concatMap fromDepends $ depends r) $ \x ->
         fst . fromJust <$> Ids.lookup status x
-
-
-producesCheck :: Action ()
-producesCheck = do
-    Local{localProduces} <- Action getRW
-    missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
-    when (missing /= []) $ throwM $ errorStructured
-        "Files declared by 'produces' not produced"
-        [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
-        ""
-
 
 
 -- | This rule should not be cached because it makes use of untracked dependencies
@@ -351,6 +339,15 @@ produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (revers
 producesUnchecked :: [FilePath] -> Action ()
 producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}
 
+producesCheck :: Action ()
+producesCheck = do
+    Local{localProduces} <- Action getRW
+    missing <- liftIO $ filterM (notM . doesFileExist_) $ map snd $ filter fst localProduces
+    when (missing /= []) $ throwM $ errorStructured
+        "Files declared by 'produces' not produced"
+        [("File " ++ show i, Just x) | (i,x) <- zipFrom 1 missing]
+        ""
+
 
 -- | Run an action but do not depend on anything the action uses.
 --   A more general version of 'orderOnly'.
@@ -362,13 +359,8 @@ orderOnlyAction act = Action $ do
     return res
 
 
-
-
-
-
 ---------------------------------------------------------------------
--- RESOURCES
-
+-- MORE COMPLEX
 
 -- | A version of 'Development.Shake.newCache' that runs in IO, and can be called before calling 'Development.Shake.shake'.
 --   Most people should use 'Development.Shake.newCache' instead.
