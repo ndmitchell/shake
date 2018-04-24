@@ -371,7 +371,7 @@ newCacheIO (act :: k -> Action v) = do
     return $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
-                (offset, (deps, v)) <- actionFenceRequeue PoolResume bar
+                (offset, (deps, v)) <- actionFenceRequeue bar
                 Action $ modifyRW $ \s -> addDiscount offset $ s{localDepends = deps ++ localDepends s}
                 return v
             Nothing -> do
@@ -402,7 +402,10 @@ unsafeExtraThread act = do
     stop <- liftIO $ increasePool globalPool
     res <- Action $ tryRAW $ fromAction $ blockApply "Within unsafeExtraThread" act
     liftIO stop
-    actionRequeue (if isLeft res then PoolException else PoolResume) res
+    -- we start a new thread, giving up ours, to ensure the thread count goes down
+    (wait, res) <- actionAlwaysRequeue res
+    Action $ modifyRW $ addDiscount wait
+    return res
 
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
@@ -423,10 +426,10 @@ parallel acts = do
             res <- act
             old <- Action getRW
             return (old, res)
-    res <- actionFence =<< liftIO (exceptFence waits)
+    (wait, res) <- actionFenceSteal =<< liftIO (exceptFence waits)
     liftIO $ atomicWriteIORef done True
-    let (locals, results) = unzip res
-    Action $ modifyRW $ \root -> localMergeMutable root locals
+    let (waits, locals, results) = unzip3 $ map (\(a,(b,c)) -> (a,b,c)) res
+    Action $ modifyRW $ \root -> addDiscount (wait - sum waits) $ localMergeMutable root locals
     return results
 
 

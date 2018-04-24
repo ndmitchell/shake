@@ -40,7 +40,7 @@ withResource r i act = do
 
     fence <- liftIO $ acquireResource r globalPool i
     whenJust fence $ \fence -> do
-        (offset, ()) <- actionFenceRequeueBy Right PoolResume fence
+        (offset, ()) <- actionFenceRequeueBy Right fence
         Action $ modifyRW $ addDiscount offset
 
     liftIO $ globalDiagnostic $ return $ show r ++ " running with " ++ show i
