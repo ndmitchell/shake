@@ -26,6 +26,7 @@ import System.Directory
 import Data.Function
 import Control.Concurrent.Extra
 import Data.Maybe
+import Data.Tuple.Extra
 import Data.IORef.Extra
 import Data.List.Extra
 import Data.Either.Extra
@@ -470,12 +471,13 @@ batch mx pred one many
     | mx <= 0 = error $ "Can't call batchable with <= 0, you used " ++ show mx
     | mx == 1 = pred $ \a -> do b <- one a; many [b]
     | otherwise = do
-        todo :: IORef (Int, [(b, Fence (Either SomeException Local))]) <- liftIO $ newIORef (0, [])
+        todo :: IORef (Int, [(b, Local, Fence (Either SomeException Local))]) <- liftIO $ newIORef (0, [])
         pred $ \a -> do
             b <- one a
             fence <- liftIO newFence
             -- add one to the batch
-            count <- liftIO $ atomicModifyIORef todo $ \(count, bs) -> let i = count+1 in ((i, (b,fence):bs), i)
+            local <- Action getRW
+            count <- liftIO $ atomicModifyIORef todo $ \(count, bs) -> let i = count+1 in ((i, (b,local,fence):bs), i)
             requeue todo (==) count
             (wait, local2) <- actionFenceRequeue fence
             Action $ modifyRW $ \root -> addDiscount wait $ localMergeMutable root [local2]
@@ -497,8 +499,10 @@ batch mx pred one many
 
             unless (null now) $ do
                 res <- Action $ tryRAW $ do
-                    modifyRW localClearMutable
-                    fromAction $ many $ map fst now
+                    -- make sure we are using one of the local's that we are computing
+                    -- we things like stack, blockApply etc. work as expected
+                    modifyRW $ const $ localClearMutable $ snd3 $ head now
+                    fromAction $ many $ map fst3 now
                     res <- getRW
                     return res{localDiscount = localDiscount res / intToDouble (length now)} -- divide the batch fairly
-                liftIO $ mapM_ (flip signalFence res . snd) now
+                liftIO $ mapM_ (flip signalFence res . thd3) now
