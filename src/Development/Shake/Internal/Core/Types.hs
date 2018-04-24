@@ -132,11 +132,11 @@ fromStepResult = getEx . result
 ---------------------------------------------------------------------
 -- CALL STACK
 
--- Invariant: Stack xs set . HashSet.fromList (map fst xs) == set
-data Stack = Stack [(Id,Key)] !(Set.HashSet Id)
+-- Invariant: Every key must have its Id in the set
+data Stack = Stack [Key] !(Set.HashSet Id)
 
 showStack :: Stack -> [String]
-showStack (Stack xs _) = reverse $ map (show . snd) xs
+showStack (Stack xs _) = reverse $ map show xs
 
 showTopStack :: Stack -> String
 showTopStack = maybe "<unknown>" show . topStack
@@ -144,15 +144,10 @@ showTopStack = maybe "<unknown>" show . topStack
 addStack :: Id -> Key -> Stack -> Either SomeException Stack
 addStack i k stack@(Stack ks is)
     | i `Set.member` is = Left $ errorRuleRecursion (showStack stack ++ [show k]) (typeKey k) (show k)
-    | otherwise = Right $ Stack ((i,k):ks) (Set.insert i is)
+    | otherwise = Right $ Stack (k:ks) (Set.insert i is)
 
 topStack :: Stack -> Maybe Key
-topStack (Stack xs _) = snd <$> listToMaybe xs
-
-checkStack :: [Id] -> Stack -> Maybe (Id,Key)
-checkStack new (Stack xs set)
-    | bad:_ <- filter (`Set.member` set) new = Just (bad, fromJust $ lookup bad xs)
-    | otherwise = Nothing
+topStack (Stack xs _) = listToMaybe xs
 
 emptyStack :: Stack
 emptyStack = Stack [] Set.empty
