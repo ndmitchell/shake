@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
-{-# LANGUAGE Rank2Types, ConstraintKinds, DeriveFunctor #-}
+{-# LANGUAGE Rank2Types, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue,
