@@ -109,7 +109,7 @@ lookupOne global stack database i = do
 
 -- | Build a key, must currently be either Loaded or Missing
 buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> IO (W.Wait (Either SomeException (Result Value)))
-buildOne global@Global{..} stack database i k r = case addStack2 i k stack of
+buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e -> do
         setIdKeyStatus global database i k $ Error e
         return $ W.Now $ Left e
