@@ -10,7 +10,7 @@ import Control.Concurrent.Extra
 import General.Concurrent
 import Control.Exception.Extra
 import Data.Tuple.Extra
-import Data.IORef
+import Data.IORef.Extra
 import Control.Monad.Extra
 import General.Bilist
 import Development.Shake.Internal.Core.Pool
