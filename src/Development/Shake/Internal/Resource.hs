@@ -41,7 +41,7 @@ withResource r i act = do
     fence <- liftIO $ acquireResource r globalPool i
     whenJust fence $ \fence -> do
         (offset, ()) <- actionFenceRequeueBy Right PoolResume fence
-        Action $ modifyRW $ \s -> s{localDiscount = localDiscount s + offset}
+        Action $ modifyRW $ addDiscount offset
 
     liftIO $ globalDiagnostic $ return $ show r ++ " running with " ++ show i
     Action $ fromAction (blockApply ("Within withResource using " ++ show r) act) `finallyRAW` do

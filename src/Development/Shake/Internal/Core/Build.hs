@@ -208,7 +208,7 @@ applyKeyValue ks = do
     global <- Action getRO
     Local{localStack} <- Action getRW
     (dur, dep, vs) <- Action $ captureRAW $ build global localStack ks
-    Action $ modifyRW $ \s -> s{localDiscount=localDiscount s + dur, localDepends=dep : localDepends s}
+    Action $ modifyRW $ \s -> addDiscount dur $ s{localDepends=dep : localDepends s}
     return vs
 
 

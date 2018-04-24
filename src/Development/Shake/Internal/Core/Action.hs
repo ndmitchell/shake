@@ -372,7 +372,7 @@ newCacheIO (act :: k -> Action v) = do
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
                 (offset, (deps, v)) <- actionFenceRequeue PoolResume bar
-                Action $ modifyRW $ \s -> s{localDepends = deps ++ localDepends s, localDiscount = localDiscount s + offset}
+                Action $ modifyRW $ \s -> addDiscount offset $ s{localDepends = deps ++ localDepends s}
                 return v
             Nothing -> do
                 bar <- newFence
