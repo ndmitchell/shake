@@ -1,24 +1,33 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Wait3(
-    Wait(..), firstJustWaitOrdered, firstJustWaitUnordered, fromLater, fmapWait
+    Locked, Wait(..), firstJustWaitOrdered, firstJustWaitUnordered, fromLater, fmapWait, runLocked
     ) where
 
 import Control.Monad
+import Control.Concurrent.Extra
 import Data.IORef.Extra
+import Control.Monad.IO.Class
 
+newtype Locked a = Locked (IO a)
+    deriving (Functor, Applicative, Monad, MonadIO)
+
+runLocked :: Var a -> (a -> Locked b) -> IO b
+runLocked var act = withVar var $ \v -> case act v of Locked x -> x
+
+-- all operations on the Database must be run while Locked
 
 data Wait a = Now a
-            | Later ((a -> IO ()) -> IO ())
+            | Later ((a -> Locked ()) -> Locked ())
               deriving Functor
 
-fromLater :: Wait a -> ((a -> IO ()) -> IO ())
+fromLater :: Wait a -> ((a -> Locked ()) -> Locked ())
 fromLater (Now x) = \f -> f x
 fromLater (Later x) = x
 
 
 -- | Find the first Nothing in any position, waiting on all if you have to
-firstJustWaitUnordered :: [IO (Wait (Maybe a))] -> IO (Wait (Maybe a))
+firstJustWaitUnordered :: [Locked (Wait (Maybe a))] -> Locked (Wait (Maybe a))
 firstJustWaitUnordered = go []
     where
         -- keep a list of those things we might visit later, and ask for each we see in turn
@@ -31,20 +40,20 @@ firstJustWaitUnordered = go []
         go [] [] = return $ Now Nothing
         go [l] [] = return $ Later l
         go ls [] = return $ Later $ \callback -> do
-            ref <- newIORef $ length ls
+            ref <- liftIO $ newIORef $ length ls
             forM_ ls $ \l -> l $ \r -> do
-                old <- readIORef ref
+                old <- liftIO $ readIORef ref
                 when (old > 0) $ case r of
                     Just a -> do
-                        writeIORef' ref 0
+                        liftIO $ writeIORef' ref 0
                         callback $ Just a
                     Nothing -> do
-                        writeIORef' ref $ old-1
+                        liftIO $ writeIORef' ref $ old-1
                         when (old == 1) $ callback Nothing
 
 
 -- | Find the first Nothing in order, waiting one at a time whenever it is necessary
-firstJustWaitOrdered :: [IO (Wait (Maybe a))] -> IO (Wait (Maybe a))
+firstJustWaitOrdered :: [Locked (Wait (Maybe a))] -> Locked (Wait (Maybe a))
 firstJustWaitOrdered [] = return $ Now Nothing
 firstJustWaitOrdered (x:xs) = do
     x <- x
@@ -56,7 +65,7 @@ firstJustWaitOrdered (x:xs) = do
             Just a -> k $ Just a
 
 
-fmapWait :: (a -> IO b) -> IO (Wait a) -> IO (Wait b)
+fmapWait :: (a -> Locked b) -> Locked (Wait a) -> Locked (Wait b)
 fmapWait f x = do
     x <- x
     case x of

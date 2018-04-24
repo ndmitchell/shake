@@ -26,7 +26,6 @@ import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
 import Numeric.Extra
-import Control.Concurrent.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
 import Development.Shake.Internal.Core.Rules
@@ -43,36 +42,40 @@ import Prelude
 ---------------------------------------------------------------------
 -- LOW-LEVEL OPERATIONS ON THE DATABASE
 
-getKeyId :: Database -> Key -> IO Id
+getKeyId :: Database -> Key -> Locked Id
 getKeyId Database{..} k = do
-    is <- readIORef intern
+    is <- liftIO $ readIORef intern
     case Intern.lookup k is of
         Just i -> return i
         Nothing -> do
             (is, i) <- return $ Intern.add k is
             -- make sure to write it into Status first to maintain Database invariants
-            Ids.insert status i (k,Missing)
-            writeIORef' intern is
+            liftIO $ Ids.insert status i (k,Missing)
+            liftIO $ writeIORef' intern is
             return i
 
-getIdKeyStatus :: Database -> Id -> IO (Key, Status)
+getIdKeyStatus :: Database -> Id -> Locked (Key, Status)
 getIdKeyStatus Database{..} i = do
-    res <- Ids.lookup status i
+    res <- liftIO $ Ids.lookup status i
     case res of
         Nothing -> throwM $ errorInternal $ "interned value missing from database, " ++ show i
         Just v -> return v
 
 
-setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> IO ()
-setIdKeyStatus Global{..} Database{..} i k v = do
-    globalDiagnostic $ do
+setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> Locked ()
+setIdKeyStatus Global{..} database@Database{..} i k v = do
+    liftIO $ globalDiagnostic $ do
         old <- Ids.lookup status i
         let changeStatus = maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
         let changeValue = case v of
                 Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                 _ -> Nothing
         return $ changeStatus ++ maybe "" ("\n" ++) changeValue
-    Ids.insert status i (k,v)
+    setIdKeyStatusQuiet database i k v
+
+setIdKeyStatusQuiet :: Database -> Id -> Key -> Status -> Locked ()
+setIdKeyStatusQuiet Database{..} i k v =
+    liftIO $ Ids.insert status i (k,v)
 
 
 ---------------------------------------------------------------------
@@ -81,7 +84,7 @@ setIdKeyStatus Global{..} Database{..} i k v = do
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
     Global{..} <- Action getRO
-    (_, status) <- liftIO $ withVar globalDatabase $ \database ->
+    (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
         getIdKeyStatus database =<< getKeyId database (newKey k)
     return $ case getResult status of
         Just r -> Just $ fromValue <$> result r
@@ -95,7 +98,7 @@ statusToEither (Ready r) = Right r
 statusToEither (Error e) = Left e
 
 -- | Lookup the value for a single Id, may need to spawn it
-lookupOne :: Global -> Stack -> Database -> Id -> IO (Wait (Either SomeException (Result Value)))
+lookupOne :: Global -> Stack -> Database -> Id -> Locked (Wait (Either SomeException (Result Value)))
 lookupOne global stack database i = do
     (k, s) <- getIdKeyStatus database i
     case s of
@@ -109,12 +112,12 @@ lookupOne global stack database i = do
             case s of
                 Waiting (NoShow w) r -> do
                     let w2 v = w v >> continue (statusToEither v)
-                    Ids.insert (status database) i (k, Waiting (NoShow w2) r)
+                    setIdKeyStatusQuiet database i k $ Waiting (NoShow w2) r
                 _ -> continue $ statusToEither s
 
 
 -- | Build a key, must currently be either Loaded or Missing, changes to Waiting
-buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> IO ()
+buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Locked ()
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e ->
         setIdKeyStatus global database i k $ Error e
@@ -122,8 +125,8 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         setIdKeyStatus global database i k (Waiting (NoShow $ const $ return ()) r)
         go <- maybe (return $ Now RunDependenciesChanged) (buildRunMode global stack database) r
         fromLater go $ \mode ->
-            addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
-                withVar globalDatabase $ \_ -> do
+            liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
+                runLocked globalDatabase $ \_ -> do
                     let val = either Error (Ready . runValue . snd) res
                     (_, Waiting (NoShow w) _) <- getIdKeyStatus database i
                     setIdKeyStatus global database i k val
@@ -134,7 +137,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 
 -- | Compute the value for a given RunMode
-buildRunMode :: Global -> Stack -> Database -> Result a -> IO (Wait RunMode)
+buildRunMode :: Global -> Stack -> Database -> Result a -> Locked (Wait RunMode)
 buildRunMode global stack database me = fmap conv <$> firstJustWaitOrdered
     [firstJustWaitUnordered $ map (fmap (fmap test) . lookupOne global stack database) x | Depends x <- depends me]
     where
@@ -170,7 +173,7 @@ applyKeyValue ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
 
-    (is, wait) <- liftIO $ withVar globalDatabase $ \database -> do
+    (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
         is <- mapM (getKeyId database) ks
         wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global localStack database) $ nubOrd is
         wait <- flip fmapWait (return wait) $ \x -> case x of
@@ -186,8 +189,8 @@ applyKeyValue ks = do
             vs <- Action $ captureRAW $ \continue ->
                 -- can only manipulate k with the globalDatabase held
                 -- have to EITHER captureRAW always, or take the database twice when adding to the pool
-                withVar globalDatabase $ \_ -> k $ \x ->
-                    addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
+                runLocked globalDatabase $ \_ -> k $ \x ->
+                    liftIO $ addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
             offset <- liftIO offset
             Action $ modifyRW $ addDiscount offset
             return vs
