@@ -147,26 +147,8 @@ buildRunMode global stack database me = fmap conv <$> firstJustWaitOrdered
         test _ = Just ()
 
 
--- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
---   This function requires that appropriate rules have been added with 'addUserRule'.
---   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
--- Don't short-circuit [] as we still want error messages
-apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
-    -- this is the only place a user can inject a key into our world, so check they aren't throwing
-    -- in unevaluated bottoms
-    liftIO $ mapM_ (evaluate . rnf) ks
-
-    let tk = typeRep (Proxy :: Proxy key)
-        tv = typeRep (Proxy :: Proxy value)
-    Global{..} <- Action getRO
-    Local{localBlockApply} <- Action getRW
-    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
-    case Map.lookup tk globalRules of
-        Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
-        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
-
+---------------------------------------------------------------------
+-- ACTUAL WORKERS
 
 applyKeyValue :: [Key] -> Action [Value]
 applyKeyValue [] = return []
@@ -247,6 +229,30 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
+
+
+---------------------------------------------------------------------
+-- USER key/value WRAPPERS
+
+-- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
+--   This function requires that appropriate rules have been added with 'addUserRule'.
+--   All @key@ values passed to 'apply' become dependencies of the 'Action'.
+apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
+-- Don't short-circuit [] as we still want error messages
+apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
+    -- this is the only place a user can inject a key into our world, so check they aren't throwing
+    -- in unevaluated bottoms
+    liftIO $ mapM_ (evaluate . rnf) ks
+
+    let tk = typeRep (Proxy :: Proxy key)
+        tv = typeRep (Proxy :: Proxy value)
+    Global{..} <- Action getRO
+    Local{localBlockApply} <- Action getRW
+    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
+    case Map.lookup tk globalRules of
+        Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
+        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
+        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
                 where produced = if localCache /= CacheYes then Nothing else Just $ reverse $ map snd localProduces
 
 
