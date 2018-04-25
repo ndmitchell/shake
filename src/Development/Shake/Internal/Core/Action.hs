@@ -309,11 +309,13 @@ lintCurrentDirectory old msg = do
 
 listDepends :: Var Database -> Depends -> IO [Key]
 listDepends db (Depends xs) = withVar db $ \Database{..} ->
+    -- FIXME: Don't actually need the database lock to do this as the results are stable
     forM xs $ \x ->
         fst . fromJust <$> Ids.lookup status x
 
 lookupDependencies :: Var Database -> Key -> IO [Depends]
 lookupDependencies db k = withVar db $ \Database{..} -> do
+    -- FIXME: Don't actually need the database lock to do this as the results are stable
     intern <- readIORef intern
     let Just i = Intern.lookup k intern
     Just (_, Ready r) <- Ids.lookup status i
