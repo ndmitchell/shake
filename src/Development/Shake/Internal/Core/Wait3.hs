@@ -5,9 +5,12 @@ module Development.Shake.Internal.Core.Wait3(
     ) where
 
 import Control.Monad
+import Control.Applicative
 import Control.Concurrent.Extra
 import Data.IORef.Extra
 import Control.Monad.IO.Class
+import Prelude
+
 
 newtype Locked a = Locked (IO a)
     deriving (Functor, Applicative, Monad, MonadIO)
