@@ -111,7 +111,7 @@ lookupOne global stack database i = do
             (k, s) <- getIdKeyStatus database i
             case s of
                 Running (NoShow w) r -> do
-                    let w2 v = w v >> continue (statusToEither v)
+                    let w2 v = w v >> continue v
                     setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
                 _ -> continue $ statusToEither s
 
@@ -127,9 +127,9 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         fromLater go $ \mode ->
             liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
-                    let val = either Error (Ready . runValue . snd) res
+                    let val = fmap (runValue . snd) res
                     (_, Running (NoShow w) _) <- getIdKeyStatus database i
-                    setIdKeyStatus global database i k val
+                    setIdKeyStatus global database i k $ either Error Ready val
                     w val
                 case res of
                     Right (produced, RunResult{..}) | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}

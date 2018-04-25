@@ -188,7 +188,7 @@ data Status
     = Ready (Result Value) -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
     | Loaded (Result BS.ByteString) -- ^ Loaded from the database
-    | Running (NoShow (Status -> Locked ())) (Maybe (Result BS.ByteString)) -- ^ Currently in the process of being checked or built
+    | Running (NoShow (Either SomeException (Result Value) -> Locked ())) (Maybe (Result BS.ByteString)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
