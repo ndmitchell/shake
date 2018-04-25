@@ -125,7 +125,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         fromLater go $ \mode ->
             liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
-                    let val = fmap (runValue . snd) res
+                    let val = fmap runValue res
                     res <- getIdKeyStatus database i
                     w <- case snd res of
                         Running (NoShow w) _ -> return w
@@ -133,7 +133,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     setIdKeyStatus global database i k $ either Error Ready val
                     w val
                 case res of
-                    Right (produced, RunResult{..}) | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
+                    Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
                     _ -> return ()
 
 
@@ -210,7 +210,7 @@ runKey
     -> Key -- The key to build
     -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
     -> RunMode -- True if any of the children were dirty
-    -> Capture (Either SomeException (Maybe [FilePath], RunResult (Result Value)))
+    -> Capture (Either SomeException (RunResult (Result Value)))
         -- Either an error, or a (the produced files, the result).
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue = do
     let tk = typeKey k
@@ -235,12 +235,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                 continue . Left . toException =<< shakeException global (showStack stack) e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ (,) produced $ RunResult runChanged runStore (r{result = runValue})
+                    continue $ Right $ RunResult runChanged runStore (r{result = runValue})
                 | otherwise -> do
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, globalStep)
-                    continue $ Right $ (,) produced $ RunResult cr runStore Result
+                    continue $ Right $ RunResult cr runStore Result
                         {result = runValue
                         ,changed = c
                         ,built = globalStep
