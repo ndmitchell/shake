@@ -139,9 +139,16 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 -- | Compute the value for a given RunMode
 buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Locked (Wait RunMode)
-buildRunMode global stack database me = case me of
-    Nothing -> return $ Now RunDependenciesChanged
-    Just me -> fmap (\b -> if b then RunDependenciesChanged else RunDependenciesSame) <$> buildRunDependenciesChanged global stack database me
+buildRunMode global stack database me = return $ Later $ \continue -> do
+    changed <- case me of
+        Nothing -> return $ Now True
+        Just me -> buildRunDependenciesChanged global stack database me
+    fromLater changed $ \changed ->
+        if not changed then continue RunDependenciesSame else do
+            cache <- buildRunFromCache global stack database
+            fromLater cache $ \cache -> continue $ case cache of
+                Nothing -> RunDependenciesChanged
+                Just x -> RunFromCache x
 
 
 -- | Have the dependencies changed
@@ -151,6 +158,11 @@ buildRunDependenciesChanged global stack database me = fmap isJust <$> firstJust
     where
         test (Right dep) | changed dep <= built me = Nothing
         test _ = Just ()
+
+
+-- | Do we have this entry in the cache
+buildRunFromCache :: Global -> Stack -> Database -> Locked (Wait (Maybe BS.ByteString))
+buildRunFromCache global stack database = return $ Now Nothing
 
 
 ---------------------------------------------------------------------
