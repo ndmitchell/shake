@@ -166,12 +166,10 @@ applyKeyValue ks = do
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
     case wait of
-        Now vs -> either (Action . throwRAW) return vs
+        Now vs -> either throwM return vs
         Later k -> do
             offset <- liftIO offsetTime
             vs <- Action $ captureRAW $ \continue ->
-                -- can only manipulate k with the globalDatabase held
-                -- have to EITHER captureRAW always, or take the database twice when adding to the pool
                 runLocked globalDatabase $ \_ -> k $ \x ->
                     liftIO $ addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
             offset <- liftIO offset
