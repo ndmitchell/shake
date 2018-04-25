@@ -312,13 +312,12 @@ listDepends db (Depends xs) = withVar db $ \Database{..} ->
     forM xs $ \x ->
         fst . fromJust <$> Ids.lookup status x
 
-lookupDependencies :: Var Database -> Key -> IO [Key]
+lookupDependencies :: Var Database -> Key -> IO [Depends]
 lookupDependencies db k = withVar db $ \Database{..} -> do
     intern <- readIORef intern
     let Just i = Intern.lookup k intern
     Just (_, Ready r) <- Ids.lookup status i
-    forM (concatMap fromDepends $ depends r) $ \x ->
-        fst . fromJust <$> Ids.lookup status x
+    return $ depends r
 
 
 -- | This rule should not be cached because it makes use of untracked dependencies
