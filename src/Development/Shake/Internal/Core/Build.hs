@@ -43,20 +43,20 @@ import Prelude
 -- LOW-LEVEL OPERATIONS ON THE DATABASE
 
 getKeyId :: Database -> Key -> Locked Id
-getKeyId Database{..} k = do
-    is <- liftIO $ readIORef intern
+getKeyId Database{..} k = liftIO $ do
+    is <- readIORef intern
     case Intern.lookup k is of
         Just i -> return i
         Nothing -> do
             (is, i) <- return $ Intern.add k is
             -- make sure to write it into Status first to maintain Database invariants
-            liftIO $ Ids.insert status i (k,Missing)
-            liftIO $ writeIORef' intern is
+            Ids.insert status i (k,Missing)
+            writeIORef' intern is
             return i
 
 getIdKeyStatus :: Database -> Id -> Locked (Key, Status)
-getIdKeyStatus Database{..} i = do
-    res <- liftIO $ Ids.lookup status i
+getIdKeyStatus Database{..} i = liftIO $ do
+    res <- Ids.lookup status i
     case res of
         Nothing -> throwM $ errorInternal $ "interned value missing from database, " ++ show i
         Just v -> return v
