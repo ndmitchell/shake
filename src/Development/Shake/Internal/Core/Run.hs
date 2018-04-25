@@ -160,7 +160,7 @@ assertFinishedDatabase :: Database -> IO ()
 assertFinishedDatabase Database{..} = do
     -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
     status <- Ids.toList status
-    let bad = [key | (_, (key, Waiting{})) <- status]
+    let bad = [key | (_, (key, Running{})) <- status]
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
 

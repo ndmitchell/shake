@@ -102,7 +102,7 @@ lookupOne :: Global -> Stack -> Database -> Id -> Locked (Wait (Either SomeExcep
 lookupOne global stack database i = do
     (k, s) <- getIdKeyStatus database i
     case s of
-        Waiting _ _ -> retry
+        Running _ _ -> retry
         Loaded r -> buildOne global stack database i k (Just r) >> retry
         Missing -> buildOne global stack database i k Nothing >> retry
         _ -> return $ Now $ statusToEither s
@@ -110,9 +110,9 @@ lookupOne global stack database i = do
         retry = return $ Later $ \continue -> do
             (k, s) <- getIdKeyStatus database i
             case s of
-                Waiting (NoShow w) r -> do
+                Running (NoShow w) r -> do
                     let w2 v = w v >> continue (statusToEither v)
-                    setIdKeyStatusQuiet database i k $ Waiting (NoShow w2) r
+                    setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
                 _ -> continue $ statusToEither s
 
 
@@ -122,13 +122,13 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e ->
         setIdKeyStatus global database i k $ Error e
     Right stack -> do
-        setIdKeyStatus global database i k (Waiting (NoShow $ const $ return ()) r)
+        setIdKeyStatus global database i k (Running (NoShow $ const $ return ()) r)
         go <- maybe (return $ Now RunDependenciesChanged) (buildRunMode global stack database) r
         fromLater go $ \mode ->
             liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
                     let val = either Error (Ready . runValue . snd) res
-                    (_, Waiting (NoShow w) _) <- getIdKeyStatus database i
+                    (_, Running (NoShow w) _) <- getIdKeyStatus database i
                     setIdKeyStatus global database i k val
                     w val
                 case res of

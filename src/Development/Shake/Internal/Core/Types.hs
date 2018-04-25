@@ -188,7 +188,7 @@ data Status
     = Ready (Result Value) -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
     | Loaded (Result BS.ByteString) -- ^ Loaded from the database
-    | Waiting (NoShow (Status -> Locked ())) (Maybe (Result BS.ByteString)) -- ^ Currently checking if I am valid or building
+    | Running (NoShow (Status -> Locked ())) (Maybe (Result BS.ByteString)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
@@ -197,7 +197,7 @@ instance NFData Status where
         Ready x -> rnfResult rnf x
         Error x -> rnf $ show x -- Best I can do for arbitrary exceptions
         Loaded x -> rnfResult id x
-        Waiting _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
+        Running _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
         Missing -> ()
         where
             -- ignore the unpacked fields
@@ -217,14 +217,14 @@ data Result a = Result
 statusType Ready{} = "Ready"
 statusType Error{} = "Error"
 statusType Loaded{} = "Loaded"
-statusType Waiting{} = "Waiting"
+statusType Running{} = "Running"
 statusType Missing{} = "Missing"
 
 
 getResult :: Status -> Maybe (Result (Either BS.ByteString Value))
 getResult (Ready r) = Just $ Right <$> r
 getResult (Loaded r) = Just $ Left <$> r
-getResult (Waiting _ r) = fmap Left <$> r
+getResult (Running _ r) = fmap Left <$> r
 getResult _ = Nothing
 
 

@@ -63,7 +63,7 @@ progress Database{..} step = do
             then s{countBuilt = countBuilt s + 1, timeBuilt = timeBuilt s + g execution}
             else s{countSkipped = countSkipped s + 1, timeSkipped = timeSkipped s + g execution}
         f s (Loaded Result{..}) = s{countUnknown = countUnknown s + 1, timeUnknown = timeUnknown s + g execution}
-        f s (Waiting _ r) =
+        f s (Running _ r) =
             let (d,c) = timeTodo s
                 t | Just Result{..} <- r = let d2 = d + g execution in d2 `seq` (d2,c)
                   | otherwise = let c2 = c + 1 in c2 `seq` (d,c2)
