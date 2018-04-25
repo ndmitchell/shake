@@ -121,7 +121,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         return $ Now $ Left e
     Right stack -> return $ Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        go <- maybe (return $ Now RunDependenciesChanged) (buildRunMode global stack database) r
+        go <- buildRunMode global stack database r
         fromLater go $ \mode ->
             liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
@@ -138,11 +138,17 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 
 -- | Compute the value for a given RunMode
-buildRunMode :: Global -> Stack -> Database -> Result a -> Locked (Wait RunMode)
-buildRunMode global stack database me = fmap conv <$> firstJustWaitOrdered
+buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Locked (Wait RunMode)
+buildRunMode global stack database me = case me of
+    Nothing -> return $ Now RunDependenciesChanged
+    Just me -> fmap (\b -> if b then RunDependenciesChanged else RunDependenciesSame) <$> buildRunDependenciesChanged global stack database me
+
+
+-- | Have the dependencies changed
+buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Locked (Wait Bool)
+buildRunDependenciesChanged global stack database me = fmap isJust <$> firstJustWaitOrdered
     [firstJustWaitUnordered $ map (fmap (fmap test) . lookupOne global stack database) x | Depends x <- depends me]
     where
-        conv x = if isJust x then RunDependenciesChanged else RunDependenciesSame
         test (Right dep) | changed dep <= built me = Nothing
         test _ = Just ()
 
