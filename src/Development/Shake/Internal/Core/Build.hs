@@ -128,7 +128,10 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
             liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
                     let val = fmap (runValue . snd) res
-                    (_, Running (NoShow w) _) <- getIdKeyStatus database i
+                    res <- getIdKeyStatus database i
+                    w <- case snd res of
+                        Running (NoShow w) _ -> return w
+                        _ -> throwM $ errorInternal "expected waiting but not"
                     setIdKeyStatus global database i k $ either Error Ready val
                     w val
                 case res of
