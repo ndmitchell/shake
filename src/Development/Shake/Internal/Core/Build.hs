@@ -14,7 +14,7 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.History() -- FIXME: Enable soon
+import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Core.Wait3
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
@@ -177,12 +177,11 @@ applyKeyValue ks = do
             return vs
 
 
-{-
 runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
     | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
--}
+
 
 runKey
     :: Global
@@ -217,6 +216,18 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
                     continue $ Right $ RunResult runChanged runStore (r{result = runValue})
                 | otherwise -> do
+                    let depends = nubDepends $ reverse localDepends
+
+                    -- store to the history
+                    when (localCache == CacheYes) $ whenJust globalHistory $ \history -> do
+                        let produced = reverse $ map snd localProduces
+                        deps <- runLocked globalDatabase $ \database ->
+                            -- technically this could be run without the DB lock, since it reads things that are stable
+                            forM depends $ \(Depends is) -> forM is $ \i -> do
+                                (k, status) <- getIdKeyStatus database i
+                                return $ case status of Ready r -> (k, runIdentify globalRules k $ result r)
+                        addHistory history k deps runStore produced
+
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, globalStep)
@@ -224,7 +235,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         {result = runValue
                         ,changed = c
                         ,built = globalStep
-                        ,depends = nubDepends $ reverse localDepends
+                        ,depends = depends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
 
@@ -251,7 +262,6 @@ apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
         Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
         Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
-                where produced = if localCache /= CacheYes then Nothing else Just $ reverse $ map snd localProduces
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
