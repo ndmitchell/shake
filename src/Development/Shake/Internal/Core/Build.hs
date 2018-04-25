@@ -94,35 +94,33 @@ getDatabaseValue k = do
 ---------------------------------------------------------------------
 -- NEW STYLE PRIMITIVES
 
-statusToEither (Ready r) = Right r
-statusToEither (Error e) = Left e
-
 -- | Lookup the value for a single Id, may need to spawn it
 lookupOne :: Global -> Stack -> Database -> Id -> Locked (Wait (Either SomeException (Result Value)))
 lookupOne global stack database i = do
     (k, s) <- getIdKeyStatus database i
     case s of
-        Running _ _ -> retry
-        Loaded r -> buildOne global stack database i k (Just r) >> retry
-        Missing -> buildOne global stack database i k Nothing >> retry
-        _ -> return $ Now $ statusToEither s
-    where
-        retry = return $ Later $ \continue -> do
-            (k, s) <- getIdKeyStatus database i
+        Ready r -> return $ Now $ Right r
+        Error e -> return $ Now $ Left e
+        _ -> return $ Later $ \continue -> do
+            (_, s) <- getIdKeyStatus database i
             case s of
+                Ready r -> continue $ Right r
+                Error e -> continue $ Left e
                 Running (NoShow w) r -> do
                     let w2 v = w v >> continue v
                     setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
-                _ -> continue $ statusToEither s
+                Loaded r -> do wait <- buildOne global stack database i k (Just r); fromLater wait continue
+                Missing -> do wait <- buildOne global stack database i k Nothing; fromLater wait continue
 
 
 -- | Build a key, must currently be either Loaded or Missing, changes to Waiting
-buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Locked ()
+buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Locked (Wait (Either SomeException (Result Value)))
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
-    Left e ->
+    Left e -> do
         setIdKeyStatus global database i k $ Error e
-    Right stack -> do
-        setIdKeyStatus global database i k (Running (NoShow $ const $ return ()) r)
+        return $ Now $ Left e
+    Right stack -> return $ Later $ \continue -> do
+        setIdKeyStatus global database i k (Running (NoShow continue) r)
         go <- maybe (return $ Now RunDependenciesChanged) (buildRunMode global stack database) r
         fromLater go $ \mode ->
             liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
