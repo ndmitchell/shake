@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..),
-    BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo), addDiscount,
+    BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
     getResult, showStack, statusType, addStack,
@@ -371,17 +371,14 @@ data Local = Local
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
     ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
-    ,localCache :: !Cache -- ^ Is it valid to cache the result
+    ,localHistory :: !Bool -- ^ Is it valid to cache the result
     }
 
 addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
-data Cache = CacheDefault | CacheYes | CacheNo
-    deriving (Eq,Ord)
-
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack verb Nothing [] 0 [] [] [] [] CacheDefault
+newLocal stack verb = Local stack verb Nothing [] 0 [] [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -403,5 +400,5 @@ localMergeMutable root xs = Local
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
     ,localProduces = concatMap localProduces xs ++ localProduces root
-    ,localCache = maximum $ map localCache $ root:xs
+    ,localHistory = all localHistory $ root:xs
     }

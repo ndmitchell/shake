@@ -37,7 +37,7 @@ type instance RuleResult AlwaysRerunQ = ()
 --   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
 alwaysRerun :: Action ()
 alwaysRerun = do
-    cacheNever
+    historyDisable
     apply1 $ AlwaysRerunQ ()
 
 defaultRuleRerun :: Rules ()

@@ -12,7 +12,7 @@ module Development.Shake.Internal.Core.Action(
     unsafeExtraThread,
     parallel,
     batch,
-    cacheNever, cacheAllow,
+    historyDisable,
     traced
     ) where
 
@@ -322,16 +322,11 @@ lookupDependencies db k = withVar db $ \Database{..} -> do
     return $ depends r
 
 
--- | This rule should not be cached because it makes use of untracked dependencies
+-- | This rule should not be cached or recorded in the history because it makes use of untracked dependencies
 --   (e.g. files in a system directory or items on the @$PATH@), or is trivial to compute locally.
-cacheNever :: Action ()
-cacheNever = Action $ modifyRW $ \s -> s{localCache = CacheNo}
+historyDisable :: Action ()
+historyDisable = Action $ modifyRW $ \s -> s{localHistory = False}
 
--- | This rule can be cached. Usually called by the 'addBuiltinRule' function to indicate that this rule-type
---   supports caching. Should not usually be called from user code.
---   A rule will only be cached if 'cacheAllow' is called and 'cacheNever' is not called.
-cacheAllow :: Action ()
-cacheAllow = Action $ modifyRW $ \s -> s{localCache = max CacheYes $ localCache s}
 
 -- | This rule the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.
