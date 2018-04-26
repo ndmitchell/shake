@@ -260,7 +260,7 @@ apply1 = fmap head . apply . return
 ---------------------------------------------------------------------
 -- HISTORY STUFF
 
-historyLoad :: ShakeValue k => k -> Int -> Action (Maybe (BS.ByteString, IO ()))
+historyLoad :: ShakeValue k => k -> Int -> Action (Maybe BS.ByteString)
 historyLoad k ver = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
@@ -273,7 +273,7 @@ historyLoad k ver = do
                         let identify = Just . runIdentify globalRules k . result
                         fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
                 lookupHistory history ask (newKey k) ver
-            case res of
+            res <- case res of
                 Now x -> return x
                 Later k -> do
                     offset <- liftIO offsetTime
@@ -283,6 +283,9 @@ historyLoad k ver = do
                     offset <- liftIO offset
                     Action $ modifyRW $ addDiscount offset
                     return res
+            case res of
+                Nothing -> return Nothing
+                Just (res, restore) -> liftIO restore >> return (Just res)
 
 
 historyIsEnabled :: Action Bool

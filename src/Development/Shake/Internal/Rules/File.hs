@@ -291,8 +291,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                 Just (ver, ModeDirect act) -> do
                     cache <- historyLoad o ver
                     case cache of
-                        Just (res, restore) -> do
-                            liftIO restore
+                        Just res -> do
                             let (fileSize, fileHash, _) = binarySplit2 res
                             Just (FileA fileMod _ _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o
                             answer ResultDirect $ FileA fileMod fileSize fileHash
