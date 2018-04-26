@@ -31,6 +31,7 @@ import qualified Test.FilePath as FilePath
 import qualified Test.FilePattern as FilePattern
 import qualified Test.Files as Files
 import qualified Test.Forward as Forward
+import qualified Test.History as History
 import qualified Test.Journal as Journal
 import qualified Test.Lint as Lint
 import qualified Test.Live as Live
@@ -78,6 +79,7 @@ mains =
     ,"filepattern" * FilePattern.main
     ,"files" * Files.main
     ,"forward" * Forward.main
+    ,"history" * History.main
     ,"journal" * Journal.main
     ,"lint" * Lint.main
     ,"live" * Live.main
