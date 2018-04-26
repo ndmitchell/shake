@@ -238,12 +238,18 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         -}
         Just (ResultDirect old) | mode == RunDependenciesSame -> do
             now <- liftIO $ fileStoredValue opts o
+            let noHash (FileA _ _ x) = isNoFileHash x
             case now of
                 Nothing -> rebuild
                 Just now -> case fileEqualValue opts old now of
-                    EqualCheap -> retOld ChangedNothing
-                    EqualExpensive -> retNew ChangedStore $ ResultDirect now
-                    NotEqual -> rebuild
+                    NotEqual ->
+                        rebuild
+                    -- if our last build used no file hashing, but this build should, then we must refresh the hash
+                    EqualCheap | if noHash old then shakeChange == ChangeModtimeAndDigestInput || noHash now else True -> do
+                        liftIO $ print ("CHEAP",o, old, now)
+                        retOld ChangedNothing
+                    _ ->
+                        retNew ChangedStore $ ResultDirect now
         Just (ResultForward old) | mode == RunDependenciesSame -> retOld ChangedNothing
         _ -> rebuild
     where
