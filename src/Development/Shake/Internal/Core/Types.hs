@@ -317,6 +317,16 @@ data UserRule a
     | Alternative (UserRule a) -- ^ Rule defined under 'alternatives', matched in order.
       deriving (Eq,Show,Functor,Typeable)
 
+instance Semigroup (UserRule a) where
+    x <> y = Unordered $ fromUnordered x ++ fromUnordered y
+        where
+            fromUnordered (Unordered xs) = xs
+            fromUnordered x = [x]
+
+instance Monoid (UserRule a) where
+    mempty = Unordered []
+    mappend = (<>)
+
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
 --   Everything is mutable. intern and status must form a bijecttion.

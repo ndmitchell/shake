@@ -53,7 +53,7 @@ import Prelude
 getUserRules :: Typeable a => Action (UserRule a)
 getUserRules = do
     Global{..} <- Action getRO
-    return $ fromMaybe (Unordered []) $ TMap.lookup globalUserRules
+    return $ fromMaybe mempty $ TMap.lookup globalUserRules
 
 
 -- | Get the 'ShakeOptions' that were used.
@@ -101,13 +101,8 @@ data SRules = SRules
     }
 
 instance Semigroup SRules where
-    (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith g x3 y3)
-        where
-            f k _ _ = throwImpure $ errorRuleDefinedMultipleTimes k
-            g x y = Unordered $ fromUnordered x ++ fromUnordered y
-
-            fromUnordered (Unordered xs) = xs
-            fromUnordered x = [x]
+    (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3)
+        where f k _ _ = throwImpure $ errorRuleDefinedMultipleTimes k
 
 instance Monoid SRules where
     mempty = SRules mempty Map.empty TMap.empty

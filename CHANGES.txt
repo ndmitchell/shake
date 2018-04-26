@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add Semigroup/Monoid instances to UserRule
     Improve time recording for unsafeExtraThread, parallel, batch
     #553, improve file-hash performance when nothing changes
 *   Require addBuiltinRule to take a BuiltinCheck argument
