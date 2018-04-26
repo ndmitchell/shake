@@ -285,9 +285,11 @@ type BuiltinRun key value
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 
--- | Check that a serialised value is compatible with the currently computed value.
+-- | Check that a serialised value is compatible with the currently computed value. The returned
+--   identity value should be reasonably short (if it is long, hash it).
 --
---   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noIdentity'.
+--   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noIdentity' and
+--   make sure to call 'cacheNever' if you are ever depended upon.
 type BuiltinIdentity key value = key -> value -> BS.ByteString
 
 data BuiltinRule = BuiltinRule
