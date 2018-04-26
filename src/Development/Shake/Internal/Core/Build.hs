@@ -3,6 +3,7 @@
 
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue,
+    historyIsEnabled, historySave, historyLoad,
     apply, apply1,
     ) where
 
@@ -12,9 +13,9 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
+import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Core.Wait3
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
@@ -122,35 +123,28 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Right stack -> return $ Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
         go <- buildRunMode global stack database k r
-        fromLater go $ \(mode, restore) ->
-            liftIO $ addPool PoolStart globalPool $ do
-                restore
-                runKey global stack k r mode $ \res -> do
-                    runLocked globalDatabase $ \_ -> do
-                        let val = fmap runValue res
-                        res <- getIdKeyStatus database i
-                        w <- case snd res of
-                            Running (NoShow w) _ -> return w
-                            _ -> throwM $ errorInternal "expected waiting but not"
-                        setIdKeyStatus global database i k $ either Error Ready val
-                        w val
-                    case res of
-                        Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
-                        _ -> return ()
+        fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
+            runKey global stack k r mode $ \res -> do
+                runLocked globalDatabase $ \_ -> do
+                    let val = fmap runValue res
+                    res <- getIdKeyStatus database i
+                    w <- case snd res of
+                        Running (NoShow w) _ -> return w
+                        _ -> throwM $ errorInternal "expected waiting but not"
+                    setIdKeyStatus global database i k $ either Error Ready val
+                    w val
+                case res of
+                    Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
+                    _ -> return ()
 
 
 -- | Compute the value for a given RunMode and a restore function to run
-buildRunMode :: Global -> Stack -> Database -> Key -> Maybe (Result a) -> Locked (Wait (RunMode, IO ()))
+buildRunMode :: Global -> Stack -> Database -> Key -> Maybe (Result a) -> Locked (Wait RunMode)
 buildRunMode global stack database k me = return $ Later $ \continue -> do
     changed <- case me of
         Nothing -> return $ Now True
         Just me -> buildRunDependenciesChanged global stack database me
-    fromLater changed $ \changed ->
-        if not changed then continue (RunDependenciesSame, return ()) else do
-            cache <- buildRunFromCache global stack database k
-            fromLater cache $ \cache -> continue $ case cache of
-                Nothing -> (RunDependenciesChanged, return ())
-                Just (x, act) -> (RunFromCache x, act)
+    fromLater changed $ \changed -> continue $ if changed then RunDependenciesChanged else RunDependenciesSame
 
 
 -- | Have the dependencies changed
@@ -160,18 +154,6 @@ buildRunDependenciesChanged global stack database me = fmap isJust <$> firstJust
     where
         test (Right dep) | changed dep <= built me = Nothing
         test _ = Just ()
-
-
--- | Do we have this entry in the cache
-buildRunFromCache :: Global -> Stack -> Database -> Key -> Locked (Wait (Maybe (BS.ByteString, IO ())))
-buildRunFromCache global@Global{..} stack database key = case globalHistory of
-    Nothing -> return $ Now Nothing
-    Just history -> lookupHistory history ask key
-    where
-        ask k = do
-            i <- getKeyId database k
-            let identify = Just . runIdentify globalRules k . result
-            fmap (either (const Nothing) identify) <$> lookupOne global stack database i
 
 
 ---------------------------------------------------------------------
@@ -202,12 +184,6 @@ applyKeyValue ks = do
             offset <- liftIO offset
             Action $ modifyRW $ addDiscount offset
             return vs
-
-
-runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
-runIdentify mp k v
-    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
-    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"
 
 
 runKey
@@ -243,18 +219,6 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
                     continue $ Right $ RunResult runChanged runStore (r{result = runValue})
                 | otherwise -> do
-                    let depends = nubDepends $ reverse localDepends
-
-                    -- store to the history
-                    when (localCache == CacheYes) $ whenJust globalHistory $ \history -> do
-                        let produced = reverse $ map snd localProduces
-                        deps <- runLocked globalDatabase $ \database ->
-                            -- technically this could be run without the DB lock, since it reads things that are stable
-                            forM depends $ \(Depends is) -> forM is $ \i -> do
-                                (k, status) <- getIdKeyStatus database i
-                                return $ case status of Ready r -> (k, runIdentify globalRules k $ result r)
-                        addHistory history 0 k deps runStore produced
-
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, globalStep)
@@ -262,7 +226,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         {result = runValue
                         ,changed = c
                         ,built = globalStep
-                        ,depends = depends
+                        ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
 
@@ -290,3 +254,57 @@ apply ks = do
 --   use 'apply' to allow parallelism.
 apply1 :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
 apply1 = fmap head . apply . return
+
+
+
+---------------------------------------------------------------------
+-- HISTORY STUFF
+
+historyLoad :: ShakeValue k => k -> Int -> Action (Maybe (BS.ByteString, IO ()))
+historyLoad k ver = do
+    global@Global{..} <- Action getRO
+    Local{localStack} <- Action getRW
+    case globalHistory of
+        Nothing -> return Nothing
+        Just history -> do
+            res <- liftIO $ runLocked globalDatabase $ \database -> do
+                let ask k = do
+                        i <- getKeyId database k
+                        let identify = Just . runIdentify globalRules k . result
+                        fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
+                lookupHistory history ask (newKey k) ver
+            case res of
+                Now x -> return x
+                Later k -> do
+                    offset <- liftIO offsetTime
+                    res <- Action $ captureRAW $ \continue ->
+                        runLocked globalDatabase $ \_ -> k $ \x ->
+                            liftIO $ addPool PoolResume globalPool $ continue $ Right x
+                    offset <- liftIO offset
+                    Action $ modifyRW $ addDiscount offset
+                    return res
+
+
+historyIsEnabled :: Action Bool
+historyIsEnabled = Action $
+    (isJust . globalHistory <$> getRO) &&^ (localHistory <$> getRW)
+
+historySave :: ShakeValue k => k -> Int -> BS.ByteString -> Action ()
+historySave k ver store = Action $ do
+    Global{..} <- getRO
+    Local{localHistory, localProduces, localDepends} <- getRW
+    liftIO $ when localHistory $ whenJust globalHistory $ \history -> do
+        let produced = reverse $ map snd localProduces
+        deps <- runLocked globalDatabase $ \database ->
+            -- technically this could be run without the DB lock, since it reads things that are stable
+            forM (reverse localDepends) $ \(Depends is) -> forM is $ \i -> do
+                (k, r) <- getIdKeyStatus database i
+                let fromReady (Ready r) = r
+                return (k, runIdentify globalRules k $ result $ fromReady r)
+        addHistory history (newKey k) ver deps store produced
+
+
+runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
+runIdentify mp k v
+    | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
+    | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"

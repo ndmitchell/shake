@@ -51,17 +51,19 @@ createLink from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
 
 
 data History = History
-    {keyOp :: BinaryOp Key
+    {historyVersion :: Int
+    ,keyOp :: BinaryOp Key
     ,historyRoot :: FilePath
     }
 
-newHistory :: BinaryOp Key -> FilePath -> IO History
-newHistory keyOp historyRoot = return History{..}
+newHistory :: Int -> BinaryOp Key -> FilePath -> IO History
+newHistory historyVersion keyOp historyRoot = return History{..}
 
 
 data Entry = Entry
     {entryKey :: Key
-    ,entryVersion :: !Int
+    ,entryGlobalVersion :: !Int
+    ,entryLocalVersion :: !Int
     ,entryDepends :: [[(Key, BS.ByteString)]]
     ,entryResult :: BS.ByteString
     ,entryFiles :: [(FilePath, FileHash)]
@@ -69,7 +71,8 @@ data Entry = Entry
 
 putEntry :: BinaryOp Key -> Entry -> Builder
 putEntry binop Entry{..} =
-    putEx entryVersion <>
+    putEx entryGlobalVersion <>
+    putEx entryLocalVersion <>
     putExN (putOp binop entryKey) <>
     putExN (putExList $ map (putExList . map putDepend) entryDepends) <>
     putExN (putExList $ map putFile entryFiles) <>
@@ -80,16 +83,17 @@ putEntry binop Entry{..} =
 
 getEntry :: BinaryOp Key -> BS.ByteString -> Entry
 getEntry binop x
-    | (x1, x) <- binarySplit x
-    , (x2, x) <- getExN x
+    | (x1, x2, x) <- binarySplit2 x
     , (x3, x) <- getExN x
-    , (x4, x5) <- getExN x
+    , (x4, x) <- getExN x
+    , (x5, x6) <- getExN x
     = Entry
-        {entryVersion = x1
-        ,entryKey = getOp binop x2
-        ,entryDepends = map (map getDepend . getExList) $ getExList x3
-        ,entryFiles = map getFile $ getExList x4
-        ,entryResult = getEx x5
+        {entryGlobalVersion = x1
+        ,entryLocalVersion = x2
+        ,entryKey = getOp binop x3
+        ,entryDepends = map (map getDepend . getExList) $ getExList x4
+        ,entryFiles = map getFile $ getExList x5
+        ,entryResult = getEx x6
         }
     where
         getDepend x | (a, b) <- getExN x = (getOp binop a, getEx b)
@@ -98,8 +102,8 @@ getEntry binop x
 historyFileDir :: History -> Key -> FilePath
 historyFileDir history key = historyRoot history </> ".shake.cache" </> showHex (abs $ hash key) ""
 
-loadHistoryEntry :: History -> Key -> IO [Entry]
-loadHistoryEntry history key = do
+loadHistoryEntry :: History -> Key -> Int -> IO [Entry]
+loadHistoryEntry history key ver = do
     let file = historyFileDir history key </> "_key"
     b <- doesFileExist_ file
     if not b then return [] else do
@@ -107,17 +111,19 @@ loadHistoryEntry history key = do
             readChunksDirect h maxBound
         unless (BS.null slop) $
             error $ "Corrupted key file, " ++ show file
-        return $ filter (\e -> entryKey e == key) $ map (getEntry $ keyOp history) items
+        let eq Entry{..} = entryKey == key && entryGlobalVersion == historyVersion history && entryLocalVersion == ver
+        return $ filter eq $ map (getEntry $ keyOp history) items
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
-lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Locked (Wait (Maybe (BS.ByteString, IO ())))
-lookupHistory history ask key = do
-    ents <- liftIO $ loadHistoryEntry history key
+lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Int -> Locked (Wait (Maybe (BS.ByteString, IO ())))
+lookupHistory history ask key ver = do
+    ents <- liftIO $ loadHistoryEntry history key ver
     firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
         -- use Nothing to indicate success, Just () to bail out early on mismatch
         let result x = if isJust x then Nothing else Just $ (,) entryResult $ do
                 let dir = historyFileDir history entryKey
+                print ("Restoring", entryFiles)
                 forM_ entryFiles $ \(file, hash) -> do
                     print ("Restore", file)
                     copyFile (dir </> show hash) file
@@ -139,7 +145,7 @@ saveHistoryEntry history entry = do
             copyFile file (dir </> show hash)
 
 
-addHistory :: History -> Int -> Key -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
-addHistory history entryVersion entryKey entryDepends entryResult files = do
+addHistory :: History -> Key -> Int -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
+addHistory history entryKey entryLocalVersion entryDepends entryResult files = do
     hashes <- mapM (getFileHash . fileNameFromString) files
-    saveHistoryEntry history Entry{entryFiles = zip files hashes, ..}
+    saveHistoryEntry history Entry{entryFiles = zip files hashes, entryGlobalVersion = historyVersion history, ..}

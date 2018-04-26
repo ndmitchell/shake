@@ -289,14 +289,27 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                             alwaysRerun
                             retNew ChangedRecomputeDiff ResultPhony
                         Just new -> answer ResultForward new
-                Just (_, ModeDirect act) -> do
-                    act
-                    cacheAllow
-                    producesUnchecked [x]
-                    new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
-                    case new of
-                        Nothing -> retNew ChangedRecomputeDiff ResultPhony
-                        Just new -> answer ResultDirect new
+                Just (ver, ModeDirect act) -> do
+                    liftIO $ print "checking history"
+                    cache <- historyLoad o ver
+                    case cache of
+                        Just (res, restore) -> do
+                            liftIO $ print "loading from history"
+                            liftIO restore
+                            let (fileSize, fileHash, _) = binarySplit2 res
+                            Just (FileA fileMod _ _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o
+                            answer ResultDirect $ FileA fileMod fileSize fileHash
+                        Nothing -> do
+                            liftIO $ print "history miss, rerunning"
+                            act
+                            new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
+                            case new of
+                                Nothing -> retNew ChangedRecomputeDiff ResultPhony
+                                Just new@(FileA _ fileSize fileHash) -> do
+                                    producesUnchecked [x]
+                                    res <- answer ResultDirect new
+                                    historySave o ver $ ruleIdentity opts o $ runValue res
+                                    return res
                 Just (_, ModePhony act) -> do
                     -- See #523 and #524
                     -- Shake runs the dependencies first, but stops when one has changed.

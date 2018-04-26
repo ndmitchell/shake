@@ -12,7 +12,7 @@ module Development.Shake.Rule(
     -- * Lint integration
     lintTrackRead, lintTrackWrite, lintTrackAllow,
     -- * Caching
-    cacheAllow
+    historyIsEnabled, historySave, historyLoad
     ) where
 
 import Development.Shake.Internal.Core.Types

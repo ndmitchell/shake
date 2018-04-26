@@ -235,7 +235,7 @@ loadHistory opts owitness =
         Just x -> do
             let wit = binaryOpMap $ Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
             let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
-            Just <$> newHistory wit2 x
+            Just <$> newHistory (hash $ shakeVersion opts) wit2 x
 
 
 
