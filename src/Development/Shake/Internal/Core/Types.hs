@@ -76,7 +76,6 @@ runAction g l (Action x) = runRAW g l x
 data RunMode
     = RunDependenciesSame -- ^ My dependencies have not changed.
     | RunDependenciesChanged -- ^ At least one of my dependencies from last time have changed, or I have no recorded dependencies.
-    | RunFromCache BS.ByteString -- ^ My value is coming from the cache
       deriving (Eq,Show)
 
 instance NFData RunMode where rnf x = x `seq` ()
