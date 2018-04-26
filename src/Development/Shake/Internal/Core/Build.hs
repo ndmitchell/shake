@@ -121,34 +121,36 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         return $ Now $ Left e
     Right stack -> return $ Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        go <- buildRunMode global stack database r
-        fromLater go $ \mode ->
-            liftIO $ addPool PoolStart globalPool $ runKey global stack k r mode $ \res -> do
-                runLocked globalDatabase $ \_ -> do
-                    let val = fmap runValue res
-                    res <- getIdKeyStatus database i
-                    w <- case snd res of
-                        Running (NoShow w) _ -> return w
-                        _ -> throwM $ errorInternal "expected waiting but not"
-                    setIdKeyStatus global database i k $ either Error Ready val
-                    w val
-                case res of
-                    Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
-                    _ -> return ()
+        go <- buildRunMode global stack database k r
+        fromLater go $ \(mode, restore) ->
+            liftIO $ addPool PoolStart globalPool $ do
+                restore
+                runKey global stack k r mode $ \res -> do
+                    runLocked globalDatabase $ \_ -> do
+                        let val = fmap runValue res
+                        res <- getIdKeyStatus database i
+                        w <- case snd res of
+                            Running (NoShow w) _ -> return w
+                            _ -> throwM $ errorInternal "expected waiting but not"
+                        setIdKeyStatus global database i k $ either Error Ready val
+                        w val
+                    case res of
+                        Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
+                        _ -> return ()
 
 
--- | Compute the value for a given RunMode
-buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Locked (Wait RunMode)
-buildRunMode global stack database me = return $ Later $ \continue -> do
+-- | Compute the value for a given RunMode and a restore function to run
+buildRunMode :: Global -> Stack -> Database -> Key -> Maybe (Result a) -> Locked (Wait (RunMode, IO ()))
+buildRunMode global stack database k me = return $ Later $ \continue -> do
     changed <- case me of
         Nothing -> return $ Now True
         Just me -> buildRunDependenciesChanged global stack database me
     fromLater changed $ \changed ->
-        if not changed then continue RunDependenciesSame else do
-            cache <- buildRunFromCache global stack database
+        if not changed then continue (RunDependenciesSame, return ()) else do
+            cache <- buildRunFromCache global stack database k
             fromLater cache $ \cache -> continue $ case cache of
-                Nothing -> RunDependenciesChanged
-                Just x -> RunFromCache x
+                Nothing -> (RunDependenciesChanged, return ())
+                Just (x, act) -> (RunFromCache x, act)
 
 
 -- | Have the dependencies changed
@@ -161,8 +163,15 @@ buildRunDependenciesChanged global stack database me = fmap isJust <$> firstJust
 
 
 -- | Do we have this entry in the cache
-buildRunFromCache :: Global -> Stack -> Database -> Locked (Wait (Maybe BS.ByteString))
-buildRunFromCache global stack database = return $ Now Nothing
+buildRunFromCache :: Global -> Stack -> Database -> Key -> Locked (Wait (Maybe (BS.ByteString, IO ())))
+buildRunFromCache global@Global{..} stack database key = case globalHistory of
+    Nothing -> return $ Now Nothing
+    Just history -> lookupHistory history ask key
+    where
+        ask k = do
+            i <- getKeyId database k
+            let identify = Just . runIdentify globalRules k . result
+            fmap (either (const Nothing) identify) <$> lookupOne global stack database i
 
 
 ---------------------------------------------------------------------

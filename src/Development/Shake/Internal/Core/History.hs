@@ -1,8 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Development.Shake.Internal.Core.History(
-    History, newHistory, addHistory,
-    hasHistory
+    History, newHistory, addHistory, lookupHistory
     ) where
 
 import Development.Shake.Internal.Value
@@ -16,9 +15,12 @@ import System.Directory
 import System.IO
 import Numeric
 import Development.Shake.Internal.FileInfo
+import Development.Shake.Internal.Core.Wait3
 import Development.Shake.Internal.FileName
 import Data.Monoid
 import Data.Functor
+import Control.Monad.IO.Class
+import Data.Maybe
 import qualified Data.ByteString as BS
 import Prelude
 
@@ -103,8 +105,24 @@ loadHistoryEntry history key = do
             error $ "Corrupted key file, " ++ show file
         return $ filter (\e -> entryKey e == key) $ map (getEntry $ keyOp history) items
 
-hasHistory :: History -> Key -> IO Bool
-hasHistory history key = not . null <$> loadHistoryEntry history key
+
+-- | Given a way to get the identity, see if you can a stored cloud version
+lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Locked (Wait (Maybe (BS.ByteString, IO ())))
+lookupHistory history ask key = do
+    ents <- liftIO $ loadHistoryEntry history key
+    firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
+        -- use Nothing to indicate success, Just () to bail out early on mismatch
+        let result x = if isJust x then Nothing else Just $ (,) entryResult $ do
+                let dir = historyFileDir history entryKey
+                forM_ entryFiles $ \(file, hash) -> do
+                    print ("Restore", file)
+                    copyFile (dir </> show hash) file
+        fmap result <$> firstJustWaitOrdered
+            [ firstJustWaitUnordered
+                [ fmap test <$> ask k | (k, i1) <- kis
+                , let test = maybe (Just ()) (\i2 -> if i1 == i2 then Nothing else Just ())]
+            | kis <- entryDepends]
+
 
 saveHistoryEntry :: History -> Entry -> IO ()
 saveHistoryEntry history entry = do
