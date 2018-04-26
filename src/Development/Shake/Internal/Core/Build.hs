@@ -281,13 +281,10 @@ apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
     liftIO $ mapM_ (evaluate . rnf) ks
 
     let tk = typeRep (Proxy :: Proxy key)
-        tv = typeRep (Proxy :: Proxy value)
     Global{..} <- Action getRO
     Local{localBlockApply} <- Action getRW
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
-    case Map.lookup tk globalRules of
-        Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
+    fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
