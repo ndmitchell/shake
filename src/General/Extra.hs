@@ -3,7 +3,6 @@
 module General.Extra(
     getProcessorCount,
     findGcc,
-    withResultType,
     whenLeft,
     randomElem,
     wrapQuote, showBracket,
@@ -207,11 +206,3 @@ createDirectoryRecursive dir = do
 
 whenLeft :: Applicative m => Either a b -> (a -> m ()) -> m ()
 whenLeft x f = either f (const $ pure ()) x
-
-
----------------------------------------------------------------------
--- Data.Proxy
-
--- Should be Proxy, but that's not available in older GHC 7.6 and before
-withResultType :: (Maybe a -> a) -> a
-withResultType f = f Nothing

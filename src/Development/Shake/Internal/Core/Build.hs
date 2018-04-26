@@ -275,12 +275,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
 -- Don't short-circuit [] as we still want error messages
-apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
+apply ks = do
     -- this is the only place a user can inject a key into our world, so check they aren't throwing
     -- in unevaluated bottoms
     liftIO $ mapM_ (evaluate . rnf) ks
 
-    let tk = typeRep (Proxy :: Proxy key)
+    let tk = typeRep ks
     Local{localBlockApply} <- Action getRW
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
     fmap (map fromValue) $ applyKeyValue $ map newKey ks
