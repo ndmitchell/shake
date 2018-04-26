@@ -99,7 +99,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
         rebuild = do
             putWhen Chatty $ "# " ++ show k
             v <- snd =<< getUserRuleOne k ($ k)
-            cacheAllow
+            -- cacheAllow
             producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
             let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
                   | otherwise = ChangedRecomputeDiff

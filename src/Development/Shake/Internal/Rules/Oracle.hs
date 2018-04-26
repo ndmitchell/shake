@@ -7,7 +7,6 @@ module Development.Shake.Internal.Rules.Oracle(
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
-import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Value
@@ -41,7 +40,7 @@ addOracleFlavor flavor act = do
             Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
-                when (flavor == Cache) cacheAllow
+                -- when (flavor == Cache) cacheAllow
                 new <- OracleA <$> act q
                 let newHash = encodeHash new
                 return $
