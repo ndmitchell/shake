@@ -78,11 +78,8 @@ getUserRuleList test = do
         f v p (Unordered xs) = concatMap (f v p) xs
         f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
         f v p (Versioned v2 x) = f v2 p x
-        f v p (Alternative x) = case f v p x of
-            [] -> []
-            -- a bit weird to use the max priority but the first value
-            -- but that's what the current implementation does...
-            xs -> [(maximum $ map fst xs, snd $ head xs)]
+        f v p (Alternative x) = take 1 $ f v p x
+
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
 getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe (Int, b))

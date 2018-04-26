@@ -53,7 +53,7 @@ test build = do
     assertContents "priority.txt" "100"
 
     build ["altpri.txt","altpri2.txt"]
-    assertContents "altpri.txt" "20"
+    assertContents "altpri.txt" "30"
     assertContents "altpri2.txt" "23"
 
     build ["x","xx"]
