@@ -287,7 +287,6 @@ apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
     case Map.lookup tk globalRules of
         Nothing -> throwM $ errorNoRuleToBuildType tk (show <$> listToMaybe ks) (Just tv)
-        Just BuiltinRule{builtinResult=tv2} | tv /= tv2 -> throwM $ errorInternal $ "result type does not match, " ++ show tv ++ " vs " ++ show tv2
         _ -> fmap (map fromValue) $ applyKeyValue $ map newKey ks
 
 
