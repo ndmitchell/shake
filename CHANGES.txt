@@ -1,7 +1,7 @@
 Changelog for Shake (* = breaking change)
 
-*   Add versioned/Versioned to UserRule
-    Add Semigroup/Monoid instances to UserRule
+    Add versioned for rules
+*   Change all the ways of obtaining user rules, see getUserRuleOne
     Improve time recording for unsafeExtraThread, parallel, batch
     #553, improve file-hash performance when nothing changes
 *   Require addBuiltinRule to take a BuiltinCheck argument

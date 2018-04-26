@@ -8,7 +8,7 @@ module Development.Shake.Rule(
     -- * Calling builtin rules
     apply, apply1,
     -- * User rules
-    UserRule(..), addUserRule, getUserRules, userRuleMatch,
+    addUserRule, getUserRuleList, getUserRuleMaybe, getUserRuleOne,
     -- * Lint integration
     lintTrackRead, lintTrackWrite, lintTrackAllow,
     -- * Caching

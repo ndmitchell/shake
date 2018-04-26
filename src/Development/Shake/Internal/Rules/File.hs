@@ -264,11 +264,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         rebuild = do
             putWhen Chatty $ "# " ++ show o
             x <- return $ fileNameToString x
-            rules <- getUserRules
-            act <- case userRuleMatch rules $ \(FileRule f) -> f x of
-                [] -> return Nothing
-                [r] -> return $ Just r
-                rs  -> throwM $ errorMultipleRulesMatch (typeOf o) (show o) (length rs)
+            act <- getUserRuleMaybe o $ \(FileRule f) -> f x
             let answer ctor new = do
                     let b = case () of
                                 _ | Just old <- old

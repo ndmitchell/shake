@@ -7,8 +7,9 @@ module Development.Shake.Internal.Core.Rules(
     Rules, runRules,
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
-    getShakeOptionsRules, userRuleMatch,
-    getUserRules, addUserRule, alternatives, priority, versioned,
+    getShakeOptionsRules,
+    getUserRulesVersioned, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
+    addUserRule, alternatives, priority, versioned,
     action, withoutActions
     ) where
 
@@ -48,24 +49,29 @@ import Prelude
 ---------------------------------------------------------------------
 -- RULES
 
--- | Get the 'UserRule' value at a given type. This 'UserRule' will capture
---   all rules added, along with things such as 'priority' and 'alternatives'.
---   If any element in the UserRule tree has Versioned, there will also be one at the top level
-getUserRules :: Typeable a => Action (UserRule a)
-getUserRules = do
+-- | Are there any rules which use 'versioned'
+getUserRulesVersioned :: Typeable a => proxy a -> Action Bool
+getUserRulesVersioned (p :: proxy a) = do
     Global{..} <- Action getRO
-    return $ fromMaybe mempty $ TMap.lookup globalUserRules
+    let isVersioned (Versioned _ _ :: UserRule a) = True
+        isVersioned _ = False
+    return $ maybe False isVersioned $ TMap.lookup globalUserRules
 
 
 -- | Get the 'ShakeOptions' that were used.
 getShakeOptionsRules :: Rules ShakeOptions
 getShakeOptionsRules = Rules $ lift ask
 
--- | Give a 'UserRule', and a function that tests a given rule, return the most important values
---   that match. In most cases the caller will raise an error if the rule matching returns anything
---   other than a singleton.
-userRuleMatch :: UserRule a -> (a -> Maybe b) -> [b]
-userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap test u) ++ [[]]
+-- | Get the 'UserRule' value at a given type. This 'UserRule' will capture
+--   all rules added, along with things such as 'priority' and 'alternatives'.
+--   If any element in the UserRule tree has Versioned, there will also be one at the top level
+--   Given a function that tests a given rule, return the most important values
+--   that match. If you can only deal with zero/one results, call 'userRuleMatchMaybe' or 'userRuleMatchOne'.
+getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [b]
+getUserRuleList test = do
+    Global{..} <- Action getRO
+    let rules = fromMaybe mempty $ TMap.lookup globalUserRules
+    return $ head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap test rules) ++ [[]]
     where
         f :: Maybe Double -> UserRule (Maybe a) -> [(Double,a)]
         f p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,x)]) x
@@ -77,6 +83,23 @@ userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap 
             -- a bit weird to use the max priority but the first value
             -- but that's what the current implementation does...
             xs -> [(maximum $ map fst xs, snd $ head xs)]
+
+-- | A version of 'getUserRuleList' that fails if there is more than one result
+getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe b)
+getUserRuleMaybe k test = do
+    res <- getUserRuleList test
+    case res of
+        [] -> return Nothing
+        [x] -> return $ Just x
+        xs -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length xs)
+
+-- | A version of 'getUserRuleList' that fails if there is not exactly one result
+getUserRuleOne :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action b
+getUserRuleOne k test = do
+    res <- getUserRuleList test
+    case res of
+        [x] -> return x
+        xs -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length xs)
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.

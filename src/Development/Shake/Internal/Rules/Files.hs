@@ -14,7 +14,6 @@ import Data.Typeable.Extra
 import General.Binary
 import Prelude
 
-import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Build
@@ -99,10 +98,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
     where
         rebuild = do
             putWhen Chatty $ "# " ++ show k
-            rules :: UserRule (FilesQ -> Maybe (Action FilesA)) <- getUserRules
-            v <- case userRuleMatch rules ($ k) of
-                [r] -> r
-                rs  -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length rs)
+            v <- join $ getUserRuleOne k ($ k)
             cacheAllow
             producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
             let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
