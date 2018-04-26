@@ -32,5 +32,5 @@ lookup (Map mp) = unF <$> Map.lookup (typeRep (Proxy :: Proxy a)) mp
 unionWith :: (forall a . f a -> f a -> f a) -> Map f -> Map f -> Map f
 unionWith f (Map mp1) (Map mp2) = Map $ Map.unionWith (\x1 x2 -> F $ f (unF x1) (unF x2)) mp1 mp2
 
-map :: (forall a . f a -> f a) -> Map f -> Map f
+map :: (forall a . f1 a -> f2 a) -> Map f1 -> Map f2
 map f (Map mp) = Map $ Map.map (\(F a) -> F $ f a) mp
