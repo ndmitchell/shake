@@ -17,7 +17,6 @@ import Data.Tuple.Extra
 import Foreign.Storable
 import Foreign.Ptr
 import System.IO.Unsafe as U
-import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Unsafe as BS
@@ -38,10 +37,10 @@ data BinaryOp v = BinaryOp
     ,getOp :: BS.ByteString -> v
     }
 
-binaryOpMap :: (Eq a, Hashable a, BinaryEx a) => Map.HashMap a (BinaryOp b) -> BinaryOp (a, b)
+binaryOpMap :: (Eq a, Hashable a, BinaryEx a) => (a -> BinaryOp b) -> BinaryOp (a, b)
 binaryOpMap mp = BinaryOp
-    {putOp = \(a, b) -> putExN (putEx a) <> putOp (mp Map.! a) b
-    ,getOp = \bs -> let (bs1,bs2) = getExN bs; a = getEx bs1 in (a, getOp (mp Map.! a) bs2)
+    {putOp = \(a, b) -> putExN (putEx a) <> putOp (mp a) b
+    ,getOp = \bs -> let (bs1,bs2) = getExN bs; a = getEx bs1 in (a, getOp (mp a) bs2)
     }
 
 

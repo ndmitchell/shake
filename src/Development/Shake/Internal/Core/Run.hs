@@ -233,7 +233,8 @@ loadHistory opts owitness =
     case shakeCache opts of
         Nothing -> return Nothing
         Just x -> do
-            let wit = binaryOpMap $ Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
+            let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
+            let wit = binaryOpMap $ \a -> fromMaybe (error $ "loadHistory, couldn't find map for " ++ show a) $ Map.lookup a mp
             let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
             Just <$> newHistory (hash $ shakeVersion opts) wit2 x
 
