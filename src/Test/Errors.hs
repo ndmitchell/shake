@@ -192,7 +192,7 @@ test build = do
         throwTo t (IndexOutOfBounds "test")
         retry 10 $ sleep 0.1 >> assertContents name "1"
 
-    crash ["resource"] ["cannot currently call apply","withResource","resource_name"]
+    crash ["resource"] ["cannot currently introduce a dependency","withResource","resource_name"]
 
     build ["overlap.foo"]
     assertContents "overlap.foo" "overlap.*"

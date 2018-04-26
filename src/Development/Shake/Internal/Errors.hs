@@ -82,21 +82,13 @@ errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
     "You have called _addBuiltinRule_ more than once on the same key type"
 
 errorMultipleRulesMatch :: TypeRep -> String -> Int -> SomeException
-errorMultipleRulesMatch tk k count
-    | specialIsOracleKey tk, count == 0 =
-        errorInternal $ "no oracle match for " ++ show tk -- they are always irrifutable rules
-    | specialIsOracleKey tk = errorStructured
-        "Build system error - duplicate oracles for the same question type"
-        [("Question type",Just $ show tk)
-        ,("Question value",Just k)]
-        "Only one call to addOracle is allowed per question type"
-    | otherwise = errorStructured
-        ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
-        [("Key type",Just $ show tk)
-        ,("Key value",Just k)
-        ,("Rules matched",Just $ show count)]
-        (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
-        else "Modify your rules/defaultRules so only one can produce the above key")
+errorMultipleRulesMatch tk k count = errorStructured
+    ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
+    [("Key type",Just $ show tk)
+    ,("Key value",Just k)
+    ,("Rules matched",Just $ show count)]
+    (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
+    else "Modify your rules/defaultRules so only one can produce the above key")
 
 errorRuleRecursion :: [String] -> TypeRep -> String -> SomeException
 -- may involve both rules and oracle, so report as only rules
@@ -115,12 +107,12 @@ errorComplexRecursion ks = errorStructured
     "Rules may not be recursive"
 
 errorNoApply :: TypeRep -> Maybe String -> String -> SomeException
-errorNoApply tk k msg = structured (specialIsOracleKey tk)
-    "Build system error - cannot currently call _apply_"
+errorNoApply tk k msg = errorStructured
+    "Build system error - cannot currently introduce a dependency (e.g. calling 'apply')"
     [("Reason", Just msg)
-    ,("_Key_ type", Just $ show tk)
-    ,("_Key_ value", k)]
-    "Move the _apply_ call earlier/later"
+    ,("Key type", Just $ show tk)
+    ,("Key value", k)]
+    "Move the call earlier/later"
 
 
 -- Should be in Special, but then we get an import cycle
