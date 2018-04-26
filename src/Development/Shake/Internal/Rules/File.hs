@@ -245,8 +245,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     NotEqual ->
                         rebuild
                     -- if our last build used no file hashing, but this build should, then we must refresh the hash
-                    EqualCheap | if noHash old then shakeChange == ChangeModtimeAndDigestInput || noHash now else True -> do
-                        liftIO $ print ("CHEAP",o, old, now)
+                    EqualCheap | if noHash old then shakeChange == ChangeModtimeAndDigestInput || noHash now else True ->
                         retOld ChangedNothing
                     _ ->
                         retNew ChangedStore $ ResultDirect now
@@ -290,17 +289,14 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                             retNew ChangedRecomputeDiff ResultPhony
                         Just new -> answer ResultForward new
                 Just (ver, ModeDirect act) -> do
-                    liftIO $ print "checking history"
                     cache <- historyLoad o ver
                     case cache of
                         Just (res, restore) -> do
-                            liftIO $ print "loading from history"
                             liftIO restore
                             let (fileSize, fileHash, _) = binarySplit2 res
                             Just (FileA fileMod _ _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o
                             answer ResultDirect $ FileA fileMod fileSize fileHash
                         Nothing -> do
-                            liftIO $ print "history miss, rerunning"
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                             case new of
