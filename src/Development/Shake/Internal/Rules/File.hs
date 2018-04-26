@@ -8,7 +8,7 @@ module Development.Shake.Internal.Rules.File(
     (%>), (|%>), (?>), phony, (~>), phonys,
     resultHasChanged,
     -- * Internal only
-    FileQ(..), FileA, fileStoredValue, fileEqualValue, EqualCost(..), fileForward
+    FileQ(..), FileA(..), fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
 
 import Control.Applicative

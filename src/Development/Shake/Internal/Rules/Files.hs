@@ -18,6 +18,7 @@ import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Errors
 import General.Extra
 import Development.Shake.Internal.FileName
 import Development.Shake.Classes
@@ -26,6 +27,7 @@ import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
 import Development.Shake.Internal.Options
+import Data.Monoid
 
 
 infix 1 &?>, &%>
@@ -59,7 +61,7 @@ defaultRuleFiles :: Rules ()
 defaultRuleFiles = do
     opts <- getShakeOptionsRules
     -- A rule from FilesQ to FilesA. The result value is only useful for linting.
-    addBuiltinRuleEx (ruleLint opts) noIdentity (ruleRun opts $ shakeRebuildApply opts)
+    addBuiltinRuleEx (ruleLint opts) (ruleIdentity opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
 ruleLint opts k (FilesA []) = return Nothing -- in the case of disabling lint
@@ -69,6 +71,14 @@ ruleLint opts k v = do
         Nothing -> Just "<missing>"
         Just now | filesEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
+
+ruleIdentity :: ShakeOptions -> BuiltinIdentity FilesQ FilesA
+ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure $ errorStructured
+    "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
+ruleIdentity opts = \k (FilesA files) ->
+    runBuilder $ putExList [putExStorable size <> putExStorable hash | FileA _ size hash <- files]
+
+
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
 ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
@@ -96,14 +106,27 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
                 Nothing -> rebuild
         _ -> rebuild
     where
-        rebuild = do
-            putWhen Chatty $ "# " ++ show k
-            v <- snd =<< getUserRuleOne k ($ k)
-            -- cacheAllow
-            producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
+        result v = do
             let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
                   | otherwise = ChangedRecomputeDiff
             return $ RunResult c (runBuilder $ putEx v) v
+
+        rebuild = do
+            putWhen Chatty $ "# " ++ show k
+            (ver, act) <- getUserRuleOne k ($ k)
+            cache <- historyLoad k ver
+            case cache of
+                Just res -> do
+                    v <- fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
+                        let (fileSize, fileHash, _) = binarySplit2 res
+                        Just (FileA fileMod _ _) <- liftIO $ fileStoredValue opts file
+                        return $ FileA fileMod fileSize fileHash
+                    result v
+                Nothing -> do
+                    v <- act
+                    producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
+                    historySave k ver $ ruleIdentity opts k v
+                    result v
 
 
 

@@ -25,9 +25,13 @@ main = shakeTest test optionsEnum $ \args -> do
         historyDisable
         writeFile' out =<< reader "In.txt"
 
+    ["OutFiles1.txt","OutFiles2.txt"] &%> \[out1, out2] -> die $ do
+        copyFile' "In.txt" out1
+        copyFile' "In.txt" out2
+
 test build = do
     let setIn = writeFile "In.txt"
-    let outs = ["OutFile.txt","OutOracle.txt"]
+    let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt"]
     let checkOut x = mapM_ (`assertContents` x) outs
 
     build ["clean"]
