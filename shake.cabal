@@ -170,6 +170,7 @@ library
         General.Process
         General.Template
         General.Timing
+        General.TypeMap
         Paths_shake
 
 
@@ -272,6 +273,7 @@ executable shake
         General.Process
         General.Template
         General.Timing
+        General.TypeMap
         Paths_shake
 
 
@@ -384,6 +386,7 @@ test-suite shake-test
         General.Process
         General.Template
         General.Timing
+        General.TypeMap
         Paths_shake
         Run
         Test.Basic
