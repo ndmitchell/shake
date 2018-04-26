@@ -281,7 +281,6 @@ apply (ks :: [key]) = withResultType $ \(_ :: Maybe (Action [value])) -> do
     liftIO $ mapM_ (evaluate . rnf) ks
 
     let tk = typeRep (Proxy :: Proxy key)
-    Global{..} <- Action getRO
     Local{localBlockApply} <- Action getRW
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
     fmap (map fromValue) $ applyKeyValue $ map newKey ks
