@@ -26,6 +26,7 @@ import Data.Typeable.Extra
 import Data.Function
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
+import qualified General.TypeMap as TMap
 import Data.Maybe
 import System.IO.Extra
 import Data.Semigroup (Semigroup (..))
@@ -50,13 +51,9 @@ import Prelude
 -- | Get the 'UserRule' value at a given type. This 'UserRule' will capture
 --   all rules added, along with things such as 'priority' and 'alternatives'.
 getUserRules :: Typeable a => Action (UserRule a)
-getUserRules = f where
-    f :: forall a . Typeable a => Action (UserRule a)
-    f = do
-        Global{..} <- Action getRO
-        return $ case Map.lookup (typeRep (Proxy :: Proxy a)) globalUserRules of
-            Nothing -> Unordered []
-            Just (UserRule_ r) -> fromJust $ cast r
+getUserRules = do
+    Global{..} <- Action getRO
+    return $ fromMaybe (Unordered []) $ TMap.lookup globalUserRules
 
 
 -- | Get the 'ShakeOptions' that were used.
@@ -92,7 +89,7 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, Map.HashMap TypeRep UserRule_)
+runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRule)
 runRules opts (Rules r) = do
     SRules{..} <- runReaderT (execWriterT r) opts
     return (runListBuilder actions, builtinRules, userRules)
@@ -100,20 +97,20 @@ runRules opts (Rules r) = do
 data SRules = SRules
     {actions :: !(ListBuilder (Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
-    ,userRules :: !(Map.HashMap TypeRep{-k-} UserRule_)
+    ,userRules :: !(TMap.Map UserRule) -- (is it versioned, rule)
     }
 
 instance Semigroup SRules where
-    (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (Map.unionWith g x3 y3)
+    (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith g x3 y3)
         where
             f k _ _ = throwImpure $ errorRuleDefinedMultipleTimes k
-            g (UserRule_ x) (UserRule_ y) = UserRule_ $ Unordered $ fromUnordered x ++ fromUnordered (fromJust $ cast y)
+            g x y = Unordered $ fromUnordered x ++ fromUnordered y
 
             fromUnordered (Unordered xs) = xs
             fromUnordered x = [x]
 
 instance Monoid SRules where
-    mempty = SRules mempty Map.empty Map.empty
+    mempty = SRules mempty Map.empty TMap.empty
     mappend = (<>)
 
 instance Semigroup a => Semigroup (Rules a) where
@@ -126,7 +123,7 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
 
 -- | Add a value of type 'UserRule'.
 addUserRule :: Typeable a => a -> Rules ()
-addUserRule r = newRules mempty{userRules = Map.singleton (typeOf r) $ UserRule_ $ UserRule r}
+addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRule r}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
@@ -189,8 +186,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority d = modifyRules $ \s -> s{userRules = Map.map f $ userRules s}
-    where f (UserRule_ s) = UserRule_ $ Priority d s
+priority d = modifyRules $ \s -> s{userRules = TMap.map (Priority d) $ userRules s}
 
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
@@ -206,8 +202,7 @@ priority d = modifyRules $ \s -> s{userRules = Map.map f $ userRules s}
 --   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
 --   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
 alternatives :: Rules () -> Rules ()
-alternatives = modifyRules $ \r -> r{userRules = Map.map f $ userRules r}
-    where f (UserRule_ s) = UserRule_ $ Alternative s
+alternatives = modifyRules $ \r -> r{userRules = TMap.map Alternative $ userRules r}
 
 
 -- | Run an action, usually used for specifying top-level requirements.

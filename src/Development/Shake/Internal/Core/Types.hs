@@ -5,7 +5,7 @@
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
-    UserRule(..), UserRule_(..),
+    UserRule(..),
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, Cache(CacheYes, CacheNo), addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
@@ -27,6 +27,7 @@ import Control.Concurrent.Extra
 import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Core.Wait3
 import Development.Shake.Internal.Errors
+import qualified General.TypeMap as TMap
 import Data.IORef
 import qualified Data.ByteString.Char8 as BS
 import Numeric.Extra
@@ -301,8 +302,6 @@ data BuiltinRule = BuiltinRule
     }
 
 
-data UserRule_ = forall a . Typeable a => UserRule_ (UserRule a)
-
 -- | A 'UserRule' data type, representing user-defined rules associated with a particular type.
 --   As an example 'Development.Shake.?>' and 'Development.Shake.%>' will add entries to the 'UserRule' data type.
 data UserRule a
@@ -342,7 +341,7 @@ data Global = Global
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state
-    ,globalUserRules :: Map.HashMap TypeRep UserRule_
+    ,globalUserRules :: TMap.Map UserRule
     ,globalHistory :: Maybe History -- ^ The active history, if any
     ,globalStep :: {-# UNPACK #-} !Step
     }
