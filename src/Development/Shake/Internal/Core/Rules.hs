@@ -8,7 +8,7 @@ module Development.Shake.Internal.Core.Rules(
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules, userRuleMatch,
-    getUserRules, addUserRule, alternatives, priority,
+    getUserRules, addUserRule, alternatives, priority, versioned,
     action, withoutActions
     ) where
 
@@ -50,6 +50,7 @@ import Prelude
 
 -- | Get the 'UserRule' value at a given type. This 'UserRule' will capture
 --   all rules added, along with things such as 'priority' and 'alternatives'.
+--   If any element in the UserRule tree has Versioned, there will also be one at the top level
 getUserRules :: Typeable a => Action (UserRule a)
 getUserRules = do
     Global{..} <- Action getRO
@@ -70,6 +71,7 @@ userRuleMatch u test = head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap 
         f p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,x)]) x
         f p (Unordered xs) = concatMap (f p) xs
         f p (Priority p2 x) = f (Just $ fromMaybe p2 p) x
+        f p (Versioned _ x) = f p x
         f p (Alternative x) = case f p x of
             [] -> []
             -- a bit weird to use the max priority but the first value
@@ -92,12 +94,19 @@ modifyRules f (Rules r) = Rules $ censor f r
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRule)
 runRules opts (Rules r) = do
     SRules{..} <- runReaderT (execWriterT r) opts
-    return (runListBuilder actions, builtinRules, userRules)
+    let addVersioned (UserRuleVersioned b a) = if b then Versioned 0 a else a
+    return (runListBuilder actions, builtinRules, TMap.map addVersioned userRules)
+
+-- True means Versioned has been applied to it
+data UserRuleVersioned a = UserRuleVersioned Bool (UserRule a)
+
+instance Semigroup (UserRuleVersioned a) where
+    UserRuleVersioned b1 x1 <> UserRuleVersioned b2 x2 = UserRuleVersioned (b1 || b2) (x1 <> x2)
 
 data SRules = SRules
     {actions :: !(ListBuilder (Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
-    ,userRules :: !(TMap.Map UserRule) -- (is it versioned, rule)
+    ,userRules :: !(TMap.Map UserRuleVersioned)
     }
 
 instance Semigroup SRules where
@@ -118,7 +127,7 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
 
 -- | Add a value of type 'UserRule'.
 addUserRule :: Typeable a => a -> Rules ()
-addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRule r}
+addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
@@ -181,7 +190,12 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules () -> Rules ()
-priority d = modifyRules $ \s -> s{userRules = TMap.map (Priority d) $ userRules s}
+priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
+
+
+-- | The version of a rule, defaults to 0 but can be modified.
+versioned :: Int -> Rules () -> Rules ()
+versioned v = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned v x) $ userRules s}
 
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
@@ -197,7 +211,7 @@ priority d = modifyRules $ \s -> s{userRules = TMap.map (Priority d) $ userRules
 --   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
 --   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
 alternatives :: Rules () -> Rules ()
-alternatives = modifyRules $ \r -> r{userRules = TMap.map Alternative $ userRules r}
+alternatives = modifyRules $ \r -> r{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Alternative x) $ userRules r}
 
 
 -- | Run an action, usually used for specifying top-level requirements.

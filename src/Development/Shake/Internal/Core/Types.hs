@@ -315,6 +315,7 @@ data UserRule a
     | Unordered [UserRule a] -- ^ Rules combined with the 'Monad' \/ 'Monoid'.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
     | Alternative (UserRule a) -- ^ Rule defined under 'alternatives', matched in order.
+    | Versioned Int (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
       deriving (Eq,Show,Functor,Typeable)
 
 instance Semigroup (UserRule a) where
