@@ -61,6 +61,7 @@ newHistory keyOp historyRoot = return History{..}
 
 data Entry = Entry
     {entryKey :: Key
+    ,entryVersion :: !Int
     ,entryDepends :: [[(Key, BS.ByteString)]]
     ,entryResult :: BS.ByteString
     ,entryFiles :: [(FilePath, FileHash)]
@@ -68,6 +69,7 @@ data Entry = Entry
 
 putEntry :: BinaryOp Key -> Entry -> Builder
 putEntry binop Entry{..} =
+    putEx entryVersion <>
     putExN (putOp binop entryKey) <>
     putExN (putExList $ map (putExList . map putDepend) entryDepends) <>
     putExN (putExList $ map putFile entryFiles) <>
@@ -78,14 +80,16 @@ putEntry binop Entry{..} =
 
 getEntry :: BinaryOp Key -> BS.ByteString -> Entry
 getEntry binop x
-    | (x1, x) <- getExN x
+    | (x1, x) <- binarySplit x
     , (x2, x) <- getExN x
-    , (x3, x4) <- getExN x
+    , (x3, x) <- getExN x
+    , (x4, x5) <- getExN x
     = Entry
-        {entryKey = getOp binop x1
-        ,entryDepends = map (map getDepend . getExList) $ getExList x2
-        ,entryFiles = map getFile $ getExList x3
-        ,entryResult = getEx x4
+        {entryVersion = x1
+        ,entryKey = getOp binop x2
+        ,entryDepends = map (map getDepend . getExList) $ getExList x3
+        ,entryFiles = map getFile $ getExList x4
+        ,entryResult = getEx x5
         }
     where
         getDepend x | (a, b) <- getExN x = (getOp binop a, getEx b)
@@ -135,7 +139,7 @@ saveHistoryEntry history entry = do
             copyFile file (dir </> show hash)
 
 
-addHistory :: History -> Key -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
-addHistory history entryKey entryDepends entryResult files = do
+addHistory :: History -> Int -> Key -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
+addHistory history entryVersion entryKey entryDepends entryResult files = do
     hashes <- mapM (getFileHash . fileNameFromString) files
     saveHistoryEntry history Entry{entryFiles = zip files hashes, ..}

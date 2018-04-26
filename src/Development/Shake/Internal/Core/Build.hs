@@ -253,7 +253,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                             forM depends $ \(Depends is) -> forM is $ \i -> do
                                 (k, status) <- getIdKeyStatus database i
                                 return $ case status of Ready r -> (k, runIdentify globalRules k $ result r)
-                        addHistory history k deps runStore produced
+                        addHistory history 0 k deps runStore produced
 
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
