@@ -123,9 +123,7 @@ lookupHistory history ask key ver = do
         -- use Nothing to indicate success, Just () to bail out early on mismatch
         let result x = if isJust x then Nothing else Just $ (,) entryResult $ do
                 let dir = historyFileDir history entryKey
-                print ("Restoring", entryFiles)
-                forM_ entryFiles $ \(file, hash) -> do
-                    print ("Restore", file)
+                forM_ entryFiles $ \(file, hash) ->
                     copyFile (dir </> show hash) file
         fmap result <$> firstJustWaitOrdered
             [ firstJustWaitUnordered
