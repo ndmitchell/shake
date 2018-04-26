@@ -36,22 +36,29 @@ addOracleFlavor flavor act = do
         opts <- getShakeOptionsRules
         let skip = shakeRebuildApply opts "" == RebuildLater
 
-        addBuiltinRule noLint (\_ v -> runBuilder $ putEx $ hash v) $ \(OracleQ q) old mode -> case old of
+        addBuiltinRule noLint (\_ v -> runBuilder $ putEx $ hash v) $ \o@(OracleQ q) old mode -> case old of
             Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
-                -- when (flavor == Cache) cacheAllow
-                new <- OracleA <$> act q
-                let newHash = encodeHash new
-                return $
-                    if flavor == Hash then RunResult
-                        (if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff)
-                        newHash
-                        new
-                    else RunResult
-                        (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
-                        (encode' new)
-                        new
+                cache <- if flavor == Cache then historyLoad o 0 else return Nothing
+                case cache of
+                    Just new ->
+                        return $ RunResult (if old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff) new (decode' new)
+                    Nothing -> do
+                        new <- OracleA <$> act q
+                        let newHash = encodeHash new
+                        let newEncode = encode' new
+                        when (flavor == Cache) $
+                            historySave o 0 newEncode
+                        return $
+                            if flavor == Hash then RunResult
+                                (if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff)
+                                newHash
+                                new
+                            else RunResult
+                                (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
+                                newEncode
+                                new
         return askOracle
     where
         encodeHash :: Hashable a => a -> BS.ByteString
