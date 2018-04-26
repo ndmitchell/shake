@@ -276,14 +276,14 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                 Nothing -> do
                     new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
                     answer ResultDirect $ fromJust new
-                Just (ModeForward act) -> do
+                Just (_, ModeForward act) -> do
                     new <- act
                     case new of
                         Nothing -> do
                             alwaysRerun
                             retNew ChangedRecomputeDiff ResultPhony
                         Just new -> answer ResultForward new
-                Just (ModeDirect act) -> do
+                Just (_, ModeDirect act) -> do
                     act
                     cacheAllow
                     producesUnchecked [x]
@@ -291,7 +291,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     case new of
                         Nothing -> retNew ChangedRecomputeDiff ResultPhony
                         Just new -> answer ResultDirect new
-                Just (ModePhony act) -> do
+                Just (_, ModePhony act) -> do
                     -- See #523 and #524
                     -- Shake runs the dependencies first, but stops when one has changed.
                     -- We don't want to run the existing deps first if someone changes the build system,

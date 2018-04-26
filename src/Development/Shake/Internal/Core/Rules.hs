@@ -67,25 +67,25 @@ getShakeOptionsRules = Rules $ lift ask
 --   If any element in the UserRule tree has Versioned, there will also be one at the top level
 --   Given a function that tests a given rule, return the most important values
 --   that match. If you can only deal with zero/one results, call 'userRuleMatchMaybe' or 'userRuleMatchOne'.
-getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [b]
+getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
     let rules = fromMaybe mempty $ TMap.lookup globalUserRules
-    return $ head $ (map snd $ reverse $ groupSort $ f Nothing $ fmap test rules) ++ [[]]
+    return $ head $ (map snd $ reverse $ groupSort $ f 0 Nothing $ fmap test rules) ++ [[]]
     where
-        f :: Maybe Double -> UserRule (Maybe a) -> [(Double,a)]
-        f p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,x)]) x
-        f p (Unordered xs) = concatMap (f p) xs
-        f p (Priority p2 x) = f (Just $ fromMaybe p2 p) x
-        f p (Versioned _ x) = f p x
-        f p (Alternative x) = case f p x of
+        f :: Int -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
+        f v p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
+        f v p (Unordered xs) = concatMap (f v p) xs
+        f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
+        f v p (Versioned v2 x) = f v2 p x
+        f v p (Alternative x) = case f v p x of
             [] -> []
             -- a bit weird to use the max priority but the first value
             -- but that's what the current implementation does...
             xs -> [(maximum $ map fst xs, snd $ head xs)]
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
-getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe b)
+getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe (Int, b))
 getUserRuleMaybe k test = do
     res <- getUserRuleList test
     case res of
@@ -94,7 +94,7 @@ getUserRuleMaybe k test = do
         xs -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length xs)
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
-getUserRuleOne :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action b
+getUserRuleOne :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Int, b)
 getUserRuleOne k test = do
     res <- getUserRuleList test
     case res of
