@@ -1,10 +1,12 @@
 Changelog for Shake (* = breaking change)
 
+    Document Development.Shake.Rule A LOT
+
     Add versioned for rules
 *   Change all the ways of obtaining user rules, see getUserRuleOne
     Improve time recording for unsafeExtraThread, parallel, batch
     #553, improve file-hash performance when nothing changes
-*   Require addBuiltinRule to take a BuiltinCheck argument
+*   Require addBuiltinRule to take a BuiltinIdentity argument
 *   Make the third argument to BuiltinRun a real ADT
     Disable all the lintTrack functions unless lint is enabled
 *   Change the Development.Shake.Rule.track* functions to lintTrack*
