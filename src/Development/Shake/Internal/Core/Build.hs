@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
-{-# LANGUAGE Rank2Types, ConstraintKinds #-}
+{-# LANGUAGE Rank2Types, ConstraintKinds, TupleSections #-}
 
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue,
@@ -272,7 +272,10 @@ historyLoad k ver = do
                         i <- getKeyId database k
                         let identify = Just . runIdentify globalRules k . result
                         fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
-                lookupHistory history ask (newKey k) ver
+                res <- lookupHistory history ask (newKey k) ver
+                flip fmapWait (return res) $ \x -> case x of
+                    Nothing -> return Nothing
+                    Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
             res <- case res of
                 Now x -> return x
                 Later k -> do
@@ -285,7 +288,11 @@ historyLoad k ver = do
                     return res
             case res of
                 Nothing -> return Nothing
-                Just (res, restore) -> liftIO restore >> return (Just res)
+                Just (res, deps, restore) -> do
+                    liftIO $ globalDiagnostic $ return $ "History hit for " ++ show k
+                    liftIO restore
+                    Action $ modifyRW $ \s -> s{localDepends = reverse $ map Depends deps}
+                    return (Just res)
 
 
 historyIsEnabled :: Action Bool
@@ -305,6 +312,7 @@ historySave k ver store = Action $ do
                 let fromReady (Ready r) = r
                 return (k, runIdentify globalRules k $ result $ fromReady r)
         addHistory history (newKey k) ver deps store produced
+        liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 
 runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString

@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.Core.History(
     History, newHistory, addHistory, lookupHistory
@@ -116,12 +116,12 @@ loadHistoryEntry history key ver = do
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
-lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Int -> Locked (Wait (Maybe (BS.ByteString, IO ())))
+lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Int -> Locked (Wait (Maybe (BS.ByteString, [[Key]], IO ())))
 lookupHistory history ask key ver = do
     ents <- liftIO $ loadHistoryEntry history key ver
     firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
         -- use Nothing to indicate success, Just () to bail out early on mismatch
-        let result x = if isJust x then Nothing else Just $ (,) entryResult $ do
+        let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
                 let dir = historyFileDir history entryKey
                 forM_ entryFiles $ \(file, hash) ->
                     copyFile (dir </> show hash) file
