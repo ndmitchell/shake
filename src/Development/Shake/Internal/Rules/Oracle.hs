@@ -40,10 +40,15 @@ addOracleFlavor flavor act = do
             Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do
+                -- can only use cmpHash if flavor == Hash
+                let cmpValue new = if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff
+                let cmpHash newHash = if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff
+
                 cache <- if flavor == Cache then historyLoad o 0 else return Nothing
                 case cache of
-                    Just new ->
-                        return $ RunResult (if old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff) new (decode' new)
+                    Just newEncode -> do
+                        let new = decode' newEncode
+                        return $ RunResult (cmpValue new) newEncode new
                     Nothing -> do
                         new <- OracleA <$> act q
                         let newHash = encodeHash new
@@ -51,14 +56,9 @@ addOracleFlavor flavor act = do
                         when (flavor == Cache) $
                             historySave o 0 newEncode
                         return $
-                            if flavor == Hash then RunResult
-                                (if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff)
-                                newHash
-                                new
-                            else RunResult
-                                (if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff)
-                                newEncode
-                                new
+                            if flavor == Hash
+                                then RunResult (cmpHash newHash) newHash new
+                                else RunResult (cmpValue new) newEncode new
         return askOracle
     where
         encodeHash :: Hashable a => a -> BS.ByteString
