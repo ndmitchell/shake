@@ -290,10 +290,9 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                 Just (ver, ModeDirect act) -> do
                     cache <- historyLoad o ver
                     case cache of
-                        Just res -> do
-                            let (fileSize, fileHash, _) = binarySplit2 res
-                            Just (FileA fileMod _ _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o
-                            answer ResultDirect $ FileA fileMod fileSize fileHash
+                        Just encodedHash -> do
+                            Just (FileA mod size _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o
+                            answer ResultDirect $ FileA mod size $ getExStorable encodedHash
                         Nothing -> do
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
@@ -301,8 +300,9 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                                 Nothing -> retNew ChangedRecomputeDiff ResultPhony
                                 Just new@(FileA _ fileSize fileHash) -> do
                                     producesUnchecked [x]
+                                    when (isNoFileHash fileHash) $ throwImpure errorNoHash
                                     res <- answer ResultDirect new
-                                    historySave o ver $ ruleIdentity opts o $ runValue res
+                                    historySave o ver $ runBuilder $ putExStorable fileHash
                                     return res
                 Just (_, ModePhony act) -> do
                     -- See #523 and #524
