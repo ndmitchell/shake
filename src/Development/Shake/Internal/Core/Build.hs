@@ -304,6 +304,11 @@ historySave k ver store = Action $ do
     Global{..} <- getRO
     Local{localHistory, localProduces, localDepends} <- getRW
     liftIO $ when localHistory $ whenJust globalHistory $ \history -> do
+        -- make sure we throw errors before we get into the history
+        evaluate $ rnf k
+        evaluate ver
+        evaluate store
+
         let produced = reverse $ map snd localProduces
         deps <- runLocked globalDatabase $ \database ->
             -- technically this could be run without the DB lock, since it reads things that are stable
