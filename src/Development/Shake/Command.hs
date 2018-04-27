@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
 
 #if __GLASGOW_HASKELL__ < 710
+-- Older versions of GHC require this pragma, newer versions complain it is deprecated
 {-# LANGUAGE OverlappingInstances #-}
 #endif
 
