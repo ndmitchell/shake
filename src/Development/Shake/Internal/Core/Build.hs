@@ -130,7 +130,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     res <- getIdKeyStatus database i
                     w <- case snd res of
                         Running (NoShow w) _ -> return w
-                        _ -> throwM $ errorInternal "expected waiting but not"
+                        s -> throwM $ errorInternal $ "expected Waiting but got " ++ statusType s ++ ", key " ++ show k
                     setIdKeyStatus global database i k $ either Error Ready val
                     w val
                 case res of
