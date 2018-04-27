@@ -26,6 +26,7 @@ import Development.Shake.Internal.Rules.Rerun
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.FilePattern
 import Development.Shake.FilePath
+import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.Options
 import Data.Monoid
 
@@ -124,7 +125,8 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
                 Nothing -> do
                     FilesA v <- act
                     producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
-                    historySave k ver $ runBuilder $ putExList [putExStorable hash | FileA _ _ hash <- v]
+                    historySave k ver $ runBuilder $ putExList
+                        [if isNoFileHash hash then throwImpure errorNoHash else putExStorable hash | FileA _ _ hash <- v]
                     result $ FilesA v
 
 
