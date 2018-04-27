@@ -51,3 +51,8 @@ test build = do
     mapM_ removeFile outs
     build $ ["--die","--cache"] ++ outs
     checkOut "2"
+
+    setIn "2"
+    removeFile ".shake.database"
+    build $ ["--die","--cache"] ++ outs
+    checkOut "2"
