@@ -8,7 +8,7 @@ module Development.Shake.Internal.Errors(
     errorStructured,
     errorNoRuleToBuildType, errorRuleDefinedMultipleTimes,
     errorMultipleRulesMatch, errorRuleRecursion, errorComplexRecursion, errorNoApply,
-    errorDirectoryNotFile
+    errorDirectoryNotFile, errorNoHash
     ) where
 
 import Data.Tuple.Extra
@@ -89,6 +89,9 @@ errorMultipleRulesMatch tk k count = errorStructured
     ,("Rules matched",Just $ show count)]
     (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
     else "Modify your rules/defaultRules so only one can produce the above key")
+
+errorNoHash :: SomeException
+errorNoHash = errorStructured "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
 
 errorRuleRecursion :: [String] -> TypeRep -> String -> SomeException
 -- may involve both rules and oracle, so report as only rules

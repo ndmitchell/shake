@@ -201,8 +201,7 @@ ruleLint opts k (FileR (Just v) True _) = do
 ruleLint _ _ _ = return Nothing
 
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FileQ FileR
-ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure $ errorStructured
-    "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
+ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure errorNoHash
 ruleIdentity opts = \k v -> case result v of
     Just (FileA _ size hash) -> runBuilder $ putExStorable size <> putExStorable hash
     Nothing -> throwImpure $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
