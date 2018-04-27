@@ -300,9 +300,9 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                                 Nothing -> retNew ChangedRecomputeDiff ResultPhony
                                 Just new@(FileA _ fileSize fileHash) -> do
                                     producesUnchecked [x]
-                                    when (isNoFileHash fileHash) $ throwImpure errorNoHash
                                     res <- answer ResultDirect new
-                                    historySave o ver $ runBuilder $ putExStorable fileHash
+                                    historySave o ver $ runBuilder $
+                                        if isNoFileHash fileHash then throwImpure errorNoHash else putExStorable fileHash
                                     return res
                 Just (_, ModePhony act) -> do
                     -- See #523 and #524
