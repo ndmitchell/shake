@@ -123,7 +123,8 @@ lookupHistory history ask key ver = do
         -- use Nothing to indicate success, Just () to bail out early on mismatch
         let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
                 let dir = historyFileDir history entryKey
-                forM_ entryFiles $ \(file, hash) ->
+                forM_ entryFiles $ \(file, hash) -> do
+                    createDirectoryRecursive $ takeDirectory file
                     copyFile (dir </> show hash) file
         fmap result <$> firstJustWaitOrdered
             [ firstJustWaitUnordered
