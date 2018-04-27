@@ -118,15 +118,14 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
             case cache of
                 Just res -> do
                     v <- fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
-                        let (fileSize, fileHash, _) = binarySplit2 res
-                        Just (FileA fileMod _ _) <- liftIO $ fileStoredValue opts file
-                        return $ FileA fileMod fileSize fileHash
+                        Just (FileA mod size _) <- liftIO $ fileStoredValue opts file
+                        return $ FileA mod size $ getExStorable bin
                     result v
                 Nothing -> do
-                    v <- act
+                    FilesA v <- act
                     producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
-                    historySave k ver $ ruleIdentity opts k v
-                    result v
+                    historySave k ver $ runBuilder $ putExList [putExStorable hash | FileA _ _ hash <- v]
+                    result $ FilesA v
 
 
 
