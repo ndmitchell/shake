@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, PatternGuards, RecordWildCards, CPP #-}
+{-# LANGUAGE DeriveDataTypeable, PatternGuards, RecordWildCards #-}
 
 -- | Errors seen by the user
 module Development.Shake.Internal.Errors(
