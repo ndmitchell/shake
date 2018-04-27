@@ -212,7 +212,16 @@ priority :: Double -> Rules () -> Rules ()
 priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
 
 
--- | The version of a rule, defaults to @\"\"@ but can be modified.
+-- | Indicate that the nested rules have a given version. If you change the semantics of the rule then updating (or adding)
+--   a version will cause the rule to rebuild in some circumstances.
+--
+-- @
+-- 'versioned' \"v1\" $ \"hello.*\" %> \\out ->
+--     'writeFile'' out \"Writes v1 now\" -- previously wrote out v0
+-- @
+--
+--   You should only use 'versioned' to track changes in the build source, for standard runtime dependencies you should use
+--   other mechanisms, e.g. 'Development.Shake.addOracle'.
 versioned :: String -> Rules () -> Rules ()
 versioned v = modifyRules $ \s -> s
     {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned v x) $ userRules s
