@@ -62,11 +62,11 @@ getUserRulesVersioned (p :: proxy a) = do
 getShakeOptionsRules :: Rules ShakeOptions
 getShakeOptionsRules = Rules $ lift ask
 
--- | Get the 'UserRule' value at a given type. This 'UserRule' will capture
+-- | Get the user rule value at a given type. This user rule will capture
 --   all rules added, along with things such as 'priority' and 'alternatives'.
---   If any element in the UserRule tree has Versioned, there will also be one at the top level
+--   If any element in the tree has 'versioned', there will also be one at the top level
 --   Given a function that tests a given rule, return the most important values
---   that match. If you can only deal with zero/one results, call 'userRuleMatchMaybe' or 'userRuleMatchOne'.
+--   that match. If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne'.
 getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
@@ -145,7 +145,7 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
     mappend = (<>)
 
 
--- | Add a value of type 'UserRule'.
+-- | Add a user rule.
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
 

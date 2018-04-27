@@ -289,7 +289,7 @@ type BuiltinLint key value = key -> value -> IO (Maybe String)
 --   identity value should be reasonably short (if it is long, hash it).
 --
 --   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noIdentity' and
---   make sure to call 'cacheNever' if you are ever depended upon.
+--   make sure to call 'historyDisable' if you are ever depended upon.
 type BuiltinIdentity key value = key -> value -> BS.ByteString
 
 data BuiltinRule = BuiltinRule
