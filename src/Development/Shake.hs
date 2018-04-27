@@ -49,7 +49,7 @@ module Development.Shake(
     -- * Core
     shake,
     shakeOptions,
-    Rules, action, withoutActions, alternatives, priority,
+    Rules, action, withoutActions, alternatives, priority, versioned,
     Action, traced,
     liftIO, actionOnException, actionFinally, runAfter,
     ShakeException(..),
