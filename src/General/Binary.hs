@@ -5,7 +5,7 @@ module General.Binary(
     binarySplit, binarySplit2, binarySplit3, unsafeBinarySplit,
     Builder(..), runBuilder, sizeBuilder,
     BinaryEx(..),
-    putExStorable, getExStorable, putExStorableList, getExStorableList,
+    Storable, putExStorable, getExStorable, putExStorableList, getExStorableList,
     putExList, getExList, putExN, getExN
     ) where
 

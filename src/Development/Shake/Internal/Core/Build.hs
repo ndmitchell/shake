@@ -200,7 +200,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
         Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just r -> return r
 
-    let s = newLocal stack shakeVerbosity
+    let s = (newLocal stack shakeVerbosity){localBuiltinVersion = builtinVersion}
     time <- offsetTime
     runAction global s (do
         res <- builtinRun k (fmap result r) mode
@@ -260,10 +260,10 @@ apply1 = fmap head . apply . return
 ---------------------------------------------------------------------
 -- HISTORY STUFF
 
-historyLoad :: ShakeValue k => k -> Int -> Action (Maybe BS.ByteString)
-historyLoad k ver = do
+historyLoad :: ShakeValue k => k -> String -> Action (Maybe BS.ByteString)
+historyLoad k userVersion = do
     global@Global{..} <- Action getRO
-    Local{localStack} <- Action getRW
+    Local{localStack, localBuiltinVersion} <- Action getRW
     case globalHistory of
         Nothing -> return Nothing
         Just history -> do
@@ -272,7 +272,7 @@ historyLoad k ver = do
                         i <- getKeyId database k
                         let identify = Just . runIdentify globalRules k . result
                         fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
-                res <- lookupHistory history ask (newKey k) ver
+                res <- lookupHistory history ask (newKey k) localBuiltinVersion (makeVersion userVersion)
                 flip fmapWait (return res) $ \x -> case x of
                     Nothing -> return Nothing
                     Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
@@ -299,10 +299,10 @@ historyIsEnabled :: Action Bool
 historyIsEnabled = Action $
     (isJust . globalHistory <$> getRO) &&^ (localHistory <$> getRW)
 
-historySave :: ShakeValue k => k -> Int -> BS.ByteString -> Action ()
+historySave :: ShakeValue k => k -> String -> BS.ByteString -> Action ()
 historySave k ver store = Action $ do
     Global{..} <- getRO
-    Local{localHistory, localProduces, localDepends} <- getRW
+    Local{localHistory, localProduces, localDepends, localBuiltinVersion} <- getRW
     liftIO $ when localHistory $ whenJust globalHistory $ \history -> do
         -- make sure we throw errors before we get into the history
         evaluate $ rnf k
@@ -316,7 +316,7 @@ historySave k ver store = Action $ do
                 (k, r) <- getIdKeyStatus database i
                 let fromReady (Ready r) = r
                 return (k, runIdentify globalRules k $ result $ fromReady r)
-        addHistory history (newKey k) ver deps store produced
+        addHistory history (newKey k) localBuiltinVersion (makeVersion ver) deps store produced
         liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 

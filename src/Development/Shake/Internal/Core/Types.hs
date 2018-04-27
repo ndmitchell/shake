@@ -12,6 +12,7 @@ module Development.Shake.Internal.Core.Types(
     getResult, showStack, statusType, addStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..),
+    Version(..), makeVersion
     ) where
 
 import Control.Monad.IO.Class
@@ -296,10 +297,9 @@ data BuiltinRule = BuiltinRule
     {builtinLint :: BuiltinLint Key Value
     ,builtinIdentity :: BuiltinIdentity Key Value
     ,builtinRun :: BuiltinRun Key Value
-    ,builtinResult :: TypeRep
     ,builtinKey :: BinaryOp Key
+    ,builtinVersion :: Version
     }
-
 
 -- | A 'UserRule' data type, representing user-defined rules associated with a particular type.
 --   As an example 'Development.Shake.?>' and 'Development.Shake.%>' will add entries to the 'UserRule' data type.
@@ -314,7 +314,7 @@ data UserRule a
     | Unordered [UserRule a] -- ^ Rules combined with the 'Monad' \/ 'Monoid'.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
     | Alternative (UserRule a) -- ^ Rule defined under 'alternatives', matched in order.
-    | Versioned Int (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
+    | Versioned String (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
       deriving (Eq,Show,Functor,Typeable)
 
 instance Semigroup (UserRule a) where
@@ -360,6 +360,7 @@ data Global = Global
 data Local = Local
     -- constants
     {localStack :: Stack -- ^ The stack that ran to get here.
+    ,localBuiltinVersion :: Version -- ^ The builtinVersion of the rule you are running
     -- stack scoped local variables
     ,localVerbosity :: Verbosity -- ^ Verbosity, may be changed locally
     ,localBlockApply ::  Maybe String -- ^ Reason to block apply, or Nothing to allow
@@ -377,11 +378,11 @@ addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack verb Nothing [] 0 [] [] [] [] True
+newLocal stack verb = Local stack (Version 0) verb Nothing [] 0 [] [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
-localClearMutable Local{..} = (newLocal localStack localVerbosity){localBlockApply=localBlockApply}
+localClearMutable Local{..} = (newLocal localStack localVerbosity){localBlockApply=localBlockApply, localBuiltinVersion=localBuiltinVersion}
 
 -- Merge, works well assuming you clear the variables first
 localMergeMutable :: Local -> [Local] -> Local
@@ -389,6 +390,7 @@ localMergeMutable :: Local -> [Local] -> Local
 localMergeMutable root xs = Local
     -- immutable/stack that need copying
     {localStack = localStack root
+    ,localBuiltinVersion = localBuiltinVersion root
     ,localVerbosity = localVerbosity root
     ,localBlockApply = localBlockApply root
     -- mutable locals that need integrating

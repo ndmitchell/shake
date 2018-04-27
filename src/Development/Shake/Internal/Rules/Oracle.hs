@@ -44,7 +44,7 @@ addOracleFlavor flavor act = do
                 let cmpValue new = if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff
                 let cmpHash newHash = if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff
 
-                cache <- if flavor == Cache then historyLoad o 0 else return Nothing
+                cache <- if flavor == Cache then historyLoad o "" else return Nothing
                 case cache of
                     Just newEncode -> do
                         let new = decode' newEncode
@@ -54,7 +54,7 @@ addOracleFlavor flavor act = do
                         let newHash = encodeHash new
                         let newEncode = encode' new
                         when (flavor == Cache) $
-                            historySave o 0 newEncode
+                            historySave o "" newEncode
                         return $
                             if flavor == Hash
                                 then RunResult (cmpHash newHash) newHash new

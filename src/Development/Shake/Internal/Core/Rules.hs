@@ -67,13 +67,13 @@ getShakeOptionsRules = Rules $ lift ask
 --   If any element in the tree has 'versioned', there will also be one at the top level
 --   Given a function that tests a given rule, return the most important values
 --   that match. If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne'.
-getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
+getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(String, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
     let rules = fromMaybe mempty $ TMap.lookup globalUserRules
-    return $ head $ (map snd $ reverse $ groupSort $ f 0 Nothing $ fmap test rules) ++ [[]]
+    return $ head $ (map snd $ reverse $ groupSort $ f "" Nothing $ fmap test rules) ++ [[]]
     where
-        f :: Int -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
+        f :: String -> Maybe Double -> UserRule (Maybe a) -> [(Double,(String,a))]
         f v p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
         f v p (Unordered xs) = concatMap (f v p) xs
         f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
@@ -82,7 +82,7 @@ getUserRuleList test = do
 
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
-getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe (Int, b))
+getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe (String, b))
 getUserRuleMaybe k test = do
     res <- getUserRuleList test
     case res of
@@ -91,7 +91,7 @@ getUserRuleMaybe k test = do
         xs -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length xs)
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
-getUserRuleOne :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Int, b)
+getUserRuleOne :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (String, b)
 getUserRuleOne k test = do
     res <- getUserRuleList test
     case res of
@@ -114,7 +114,7 @@ modifyRules f (Rules r) = Rules $ censor f r
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRule)
 runRules opts (Rules r) = do
     SRules{..} <- runReaderT (execWriterT r) opts
-    let addVersioned (UserRuleVersioned b a) = if b then Versioned 0 a else a
+    let addVersioned (UserRuleVersioned b a) = if b then Versioned "" a else a
     return (runListBuilder actions, builtinRules, TMap.map addVersioned userRules)
 
 -- True means Versioned has been applied to it
@@ -183,12 +183,11 @@ addBuiltinRuleInternal
     => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
-        v = Proxy :: Proxy value
     let lint_ k v = lint (fromKey k) (fromValue v)
     let check_ k v = check (fromKey k) (fromValue v)
     let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ (typeRep v) binary_}
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ $ Version 0}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -213,9 +212,12 @@ priority :: Double -> Rules () -> Rules ()
 priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
 
 
--- | The version of a rule, defaults to 0 but can be modified.
-versioned :: Int -> Rules () -> Rules ()
-versioned v = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned v x) $ userRules s}
+-- | The version of a rule, defaults to @\"\"@ but can be modified.
+versioned :: String -> Rules () -> Rules ()
+versioned v = modifyRules $ \s -> s
+    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned v x) $ userRules s
+    ,builtinRules = Map.map (\b -> b{builtinVersion = makeVersion v}) $ builtinRules s
+    }
 
 
 -- | Change the matching behaviour of rules so rules do not have to be disjoint, but are instead matched
