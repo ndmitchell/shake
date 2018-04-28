@@ -9,7 +9,7 @@ import Control.Monad
 import Data.List
 
 
-main = shakeTest test [] $ \opts -> do
+main = shakeTest_ test $ do
     want ["even.txt","odd.txt"]
 
     "A1-plus-B" %> \out -> do

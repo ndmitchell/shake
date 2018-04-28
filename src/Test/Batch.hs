@@ -9,7 +9,7 @@ import Test.Type
 import Control.Monad
 
 
-main = shakeTest test [] $ \opts -> do
+main = shakeTest_ test $ do
     let inp x = x -<.> "in"
     file <- newResource "log.txt" 1
     batch 3 ("*.out" %>) (\out -> do need [inp out]; return out) $ \outs -> do
