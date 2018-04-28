@@ -235,7 +235,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 -- USER key/value WRAPPERS
 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
---   This function requires that appropriate rules have been added with 'addUserRule'.
+--   This function requires that appropriate rules have been added with 'addBuiltinRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
 -- Don't short-circuit [] as we still want error messages
@@ -260,6 +260,11 @@ apply1 = fmap head . apply . return
 ---------------------------------------------------------------------
 -- HISTORY STUFF
 
+-- | Load a value from the history. Given a @key@, a version from any user rule
+--   (or @\"\"@), return the payload that was stored by 'historySave'.
+--
+--   If this function returns 'Just' it will also have restored any files that
+--   were saved by 'historySave'.
 historyLoad :: ShakeValue k => k -> String -> Action (Maybe BS.ByteString)
 historyLoad k userVersion = do
     global@Global{..} <- Action getRO
@@ -295,10 +300,18 @@ historyLoad k userVersion = do
                     return (Just res)
 
 
+-- | Is the history enabled.
 historyIsEnabled :: Action Bool
 historyIsEnabled = Action $
     (isJust . globalHistory <$> getRO) &&^ (localHistory <$> getRW)
 
+-- | Save a value to the history. Record a @key@, the version of any user rule
+--   (or @\"\"@), and a payload. Must be run at the end of the rule, after
+--   any dependencies have been captured. If history is enabled, stores the information
+--   in a cache.
+--
+--   This function relies on 'provides' to have been called correctly to describe
+--   which files were written during the execution of this rule.
 historySave :: ShakeValue k => k -> String -> BS.ByteString -> Action ()
 historySave k ver store = Action $ do
     Global{..} <- getRO

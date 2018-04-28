@@ -1,7 +1,6 @@
 Changelog for Shake (* = breaking change)
 
-    Document Development.Shake.Rule A LOT
-
+    #574, extensive documentation of Development.Shake.Rule
 *   Change how alternative and priority rules interact
     Add versioned for rules
 *   Change all the ways of obtaining user rules, see getUserRuleOne

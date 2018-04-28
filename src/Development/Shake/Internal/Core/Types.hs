@@ -73,7 +73,7 @@ runAction g l (Action x) = runRAW g l x
 ---------------------------------------------------------------------
 -- PUBLIC TYPES
 
--- | What mode a rule is running in.
+-- | What mode a rule is running in, passed as an argument to 'BuiltinRun'.
 data RunMode
     = RunDependenciesSame -- ^ My dependencies have not changed.
     | RunDependenciesChanged -- ^ At least one of my dependencies from last time have changed, or I have no recorded dependencies.
@@ -84,7 +84,7 @@ instance NFData RunMode where rnf x = x `seq` ()
 -- | How the output of a rule has changed.
 data RunChanged
     = ChangedNothing -- ^ Nothing has changed.
-    | ChangedStore -- ^ The persisted value has changed, but in a way that should be considered identical.
+    | ChangedStore -- ^ The stored value has changed, but in a way that should be considered identical (used rarely).
     | ChangedRecomputeSame -- ^ I recomputed the value and it was the same.
     | ChangedRecomputeDiff -- ^ I recomputed the value and it was different.
       deriving (Eq,Show)
@@ -95,11 +95,11 @@ instance NFData RunChanged where rnf x = x `seq` ()
 -- | The result of 'BuiltinRun'.
 data RunResult value = RunResult
     {runChanged :: RunChanged
-        -- ^ What has changed from the previous time.
+        -- ^ How has the 'RunResult' changed from what happened last time.
     ,runStore :: BS.ByteString
-        -- ^ Return the new value to store. Often a serialised version of 'runValue'.
+        -- ^ The value to store in the Shake database.
     ,runValue :: value
-        -- ^ Return the produced value.
+        -- ^ The value to return from 'Development.Shake.Rule.apply'.
     } deriving Functor
 
 instance NFData value => NFData (RunResult value) where
@@ -260,17 +260,27 @@ nubDepends = fMany Set.empty
         fOne seen (x:xs) = first (x:) $ fOne (Set.insert x seen) xs
 
 
--- | Define a rule between @key@ and @value@. A rule for a class of artifacts (e.g. /files/) provides:
+-- | Define a rule between @key@ and @value@. As an example, a typical 'BuiltinRun' will look like:
 --
--- * How to identify individual artifacts, given by the @key@ type, e.g. with file names.
+-- > run key oldStore mode = do
+-- >     ...
+-- >     return $ RunResult change newStore newValue
 --
--- * How to describe the state of an artifact, given by the @value@ type, e.g. the file modification time.
+--   Where you have:
 --
--- * How to persist the state of an artifact, using the 'ByteString' values, e.g. seralised @value@.
+-- * @key@, how to identify individual artifacts, e.g. with file names.
 --
---   The arguments comprise the @key@, the value of the previous serialisation or 'Nothing' if the rule
---   has not been run previously, and 'True' to indicate the dependencies have changed or 'False' that
---   they have not.
+-- * @oldStore@, the value stored in the database previously, e.g. the file modification time.
+--
+-- * @mode@, either 'RunDependenciesSame' (none of your dependencies changed, you can probably not rebuild) or
+--   'RunDependenciesChanged' (your dependencies changed, probably rebuild).
+--
+-- * @change@, usually one of either 'ChangedNothing' (no work was required) or 'ChangedRecomputeDiff'
+--   (I reran the rule and it should be considered different).
+--
+-- * @newStore@, the new value to store in the database, which will be passed in next time as @oldStore@.
+--
+-- * @newValue@, the result that 'Development.Shake.Rule.apply' will return when asked for the given @key@.
 type BuiltinRun key value
     = key
     -> Maybe BS.ByteString
@@ -282,15 +292,18 @@ type BuiltinRun key value
 --   passing the @value@ it produced. Return 'Nothing' to indicate the value has not changed and
 --   is acceptable, or 'Just' an error message to indicate failure.
 --
---   For builtin rules where the value is expected to change use 'Development.Shake.Rules.noLint'.
+--   For builtin rules where the value is expected to change, or has no useful checks to perform.
+--   use 'Development.Shake.Rules.noLint'.
 type BuiltinLint key value = key -> value -> IO (Maybe String)
 
 
--- | Check that a serialised value is compatible with the currently computed value. The returned
---   identity value should be reasonably short (if it is long, hash it).
+-- | Produce an identity for a @value@ that can be used to do direct equality. If you have a custom
+--   notion of equality then the result should return only one member from each equivalence class,
+--   as values will be compared for literal equality.
+--   The result of the identity should be reasonably short (if it is excessively long, hash it).
 --
---   For builtin rules where the value is never compatible use 'Development.Shake.Rules.noIdentity' and
---   make sure to call 'historyDisable' if you are ever depended upon.
+--   For rules where the value is never compatible use 'Development.Shake.Rules.noIdentity' and
+--   make sure to call 'Development.Shake.historyDisable' if you are ever depended upon.
 type BuiltinIdentity key value = key -> value -> BS.ByteString
 
 data BuiltinRule = BuiltinRule

@@ -62,11 +62,13 @@ getUserRulesVersioned (p :: proxy a) = do
 getShakeOptionsRules :: Rules ShakeOptions
 getShakeOptionsRules = Rules $ lift ask
 
--- | Get the user rule value at a given type. This user rule will capture
---   all rules added, along with things such as 'priority' and 'alternatives'.
---   If any element in the tree has 'versioned', there will also be one at the top level
---   Given a function that tests a given rule, return the most important values
---   that match. If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne'.
+-- | Get the user rules that were added at a particular type which return 'Just' on a given function.
+--   Return all equally applicable rules, paired with the version of the rule
+--   (set by 'versioned'). Where rules are specified with 'alternatives' or 'priority'
+--   the less-applicable rules will not be returned.
+--
+--   If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne',
+--   which raise informative errors.
 getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(String, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
@@ -82,21 +84,23 @@ getUserRuleList test = do
 
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
-getUserRuleMaybe :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (Maybe (String, b))
-getUserRuleMaybe k test = do
+--   Requires a @key@ for better error messages.
+getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (Maybe (String, b))
+getUserRuleMaybe key test = do
     res <- getUserRuleList test
     case res of
         [] -> return Nothing
         [x] -> return $ Just x
-        xs -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length xs)
+        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (length xs)
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
-getUserRuleOne :: (ShakeValue k, Typeable a) => k -> (a -> Maybe b) -> Action (String, b)
-getUserRuleOne k test = do
+--   Requires a @key@ for better error messages.
+getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (String, b)
+getUserRuleOne key test = do
     res <- getUserRuleList test
     case res of
         [x] -> return x
-        xs -> throwM $ errorMultipleRulesMatch (typeOf k) (show k) (length xs)
+        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (length xs)
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
@@ -145,7 +149,8 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
     mappend = (<>)
 
 
--- | Add a user rule.
+-- | Add a user rule. In general these should be specialised to the type expected by a builtin rule.
+--   The user rules can be retrieved by 'getUserRuleList'.
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
 
@@ -153,7 +158,9 @@ addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned F
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
--- | A suitable 'BuiltinIdentity' that always fails, cannot be run with 'shakeCache'.
+-- | A suitable 'BuiltinIdentity' that always fails with a runtime error, incompatible with 'shakeCache'.
+--   Use this function if you don't care about 'shakeCache', or if your rule provides a dependency that can
+--   never be cached (in which case you should also call 'Development.Shake.historyDisable').
 noIdentity :: Typeable key => BuiltinIdentity key value
 noIdentity k _ = throwImpure $ errorStructured
     "Key type does not support BuiltinIdentity, so does not work with 'shakeCache'"
@@ -162,8 +169,10 @@ noIdentity k _ = throwImpure $ errorStructured
 
 type family RuleResult key -- = value
 
--- | Add a builtin rule, comprising of a lint rule and an action. Each builtin rule must be identified by
---   a unique key.
+-- | Define a builtin rule, passing the functions to run in the right circumstances.
+--   The @key@ and @value@ types will be what is used by 'Development.Shake.apply'.
+--   As a start, you can use 'noLint' and 'noIdentity' as the first two functions,
+--   but are required to supply a suitable 'BuiltinRun'.
 addBuiltinRule
     :: (RuleResult key ~ value, ShakeValue key, ShakeValue value)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
