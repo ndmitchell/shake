@@ -11,6 +11,9 @@ import qualified Data.ByteString.Char8 as BS
 import Test.Type
 
 
+-- WARNING: This code is also reproduced in "Development.Shake.Rule".
+-- If it needs editing, you probably need to edit it there too.
+
 newtype File = File FilePath
     deriving (Show,Eq,Hashable,Binary,NFData)
 type instance RuleResult File = ()
