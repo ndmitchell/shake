@@ -17,6 +17,7 @@ import Prelude
 import qualified Test.Basic as Basic
 import qualified Test.Batch as Batch
 import qualified Test.Benchmark as Benchmark
+import qualified Test.Builtin as Builtin
 import qualified Test.C as C
 import qualified Test.Cache as Cache
 import qualified Test.Command as Command
@@ -65,6 +66,7 @@ mains =
     ["basic" * Basic.main
     ,"batch" * Batch.main
     ,"benchmark" * Benchmark.main
+    ,"builtin" * Builtin.main
     ,"c" * C.main
     ,"cache" * Cache.main
     ,"command" * Command.main

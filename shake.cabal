@@ -392,6 +392,7 @@ test-suite shake-test
         Test.Basic
         Test.Batch
         Test.Benchmark
+        Test.Builtin
         Test.C
         Test.Cache
         Test.Command
