@@ -69,7 +69,10 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"import Control.Concurrent"
             ,"import Control.Exception"
             ,"import Control.Monad"
-            ,"import Data.ByteString(ByteString)"
+            ,"import Data.ByteString(ByteString, pack, unpack)"
+            ,"import qualified Data.ByteString.Char8 as BS"
+            ,"import qualified System.Directory.Extra as IO"
+            ,"import qualified System.IO.Extra as IO"
             ,"import Data.Char"
             ,"import Data.Data"
             ,"import Data.Dynamic"
@@ -127,6 +130,9 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"str2 = \"\""
             ,"def = undefined"
             ,"var = undefined"
+            ,"newValue = undefined"
+            ,"newStore = BS.empty"
+            ,"change = ChangedNothing"
             ,"str = \"\""] ++
             rest
 
@@ -327,7 +333,8 @@ whitelist x | elem x $ words $
     "_shake _shake/build manual chrome://tracing/ compdb " ++
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
-    "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult"
+    "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult " ++
+    "oldStore mode"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"

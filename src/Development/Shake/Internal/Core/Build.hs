@@ -310,7 +310,7 @@ historyIsEnabled = Action $
 --   any dependencies have been captured. If history is enabled, stores the information
 --   in a cache.
 --
---   This function relies on 'provides' to have been called correctly to describe
+--   This function relies on 'produces' to have been called correctly to describe
 --   which files were written during the execution of this rule.
 historySave :: ShakeValue k => k -> String -> BS.ByteString -> Action ()
 historySave k ver store = Action $ do

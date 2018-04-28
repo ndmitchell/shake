@@ -2,7 +2,7 @@
 -- | This module is used for defining new types of rules for Shake build systems, e.g. to support values stored in a database.
 --   Most users will find the built-in set of rules sufficient. The functions in this module are designed for high-performance,
 --   not ease of use or abstraction. As a result, they are difficult to work with and change more often than the other parts of Shake.
---   Before writing a builtin rule you are encouraged to use 'Development.Shake.addOracle' or 'Development.Shake.addOracleCached' if possible.
+--   Before writing a builtin rule you are encouraged to use 'Development.Shake.addOracle' or 'Development.Shake.addOracleCache' if possible.
 --   With all those warnings out the way, read on for the grungy details.
 module Development.Shake.Rule(
     -- * Builtin rules
@@ -79,7 +79,8 @@ import Development.Shake.Internal.Core.Rules
 -- * A @value@ will be @()@ - when the user depends on a file they don't expect any information in return.
 --
 -- * The stored information will be the contents of the file, in it's entirety. Alternative choices would be the modtime or a hash of the contents,
---   but Shake doesn't require that. The stored information in Shake must be stored in a 'ByteString', so we simply 'pack' and 'unpack' to convert.
+--   but Shake doesn't require that. The stored information in Shake must be stored in a 'ByteString', so we simply 'Data.ByteString.pack' and
+--   'Data.ByteString.unpack' to convert.
 --
 -- * We will allow user rules to be defined saying how to build any individual file.
 --
