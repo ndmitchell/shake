@@ -158,12 +158,12 @@ addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned F
 noLint :: BuiltinLint key value
 noLint _ _ = return Nothing
 
--- | A suitable 'BuiltinIdentity' that always fails with a runtime error, incompatible with 'shakeCache'.
---   Use this function if you don't care about 'shakeCache', or if your rule provides a dependency that can
+-- | A suitable 'BuiltinIdentity' that always fails with a runtime error, incompatible with 'shakeShare'.
+--   Use this function if you don't care about 'shakeShare', or if your rule provides a dependency that can
 --   never be cached (in which case you should also call 'Development.Shake.historyDisable').
 noIdentity :: Typeable key => BuiltinIdentity key value
 noIdentity k _ = throwImpure $ errorStructured
-    "Key type does not support BuiltinIdentity, so does not work with 'shakeCache'"
+    "Key type does not support BuiltinIdentity, so does not work with 'shakeShare'"
     [("Key type", Just $ show (typeOf k))] []
 
 

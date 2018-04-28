@@ -91,7 +91,7 @@ errorMultipleRulesMatch tk k count = errorStructured
     else "Modify your rules/defaultRules so only one can produce the above key")
 
 errorNoHash :: SomeException
-errorNoHash = errorStructured "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
+errorNoHash = errorStructured "Cannot use shakeChange=ChangeModTime with shakeShare" [] ""
 
 errorRuleRecursion :: [String] -> TypeRep -> String -> SomeException
 -- may involve both rules and oracle, so report as only rules

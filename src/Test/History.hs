@@ -36,23 +36,23 @@ test build = do
 
     build ["clean"]
     setIn "1"
-    build $ ["--cache","--sleep"] ++ outs
+    build $ ["--share","--sleep"] ++ outs
     checkOut "1"
     setIn "2"
-    build $ ["--cache","--sleep"] ++ outs
+    build $ ["--share","--sleep"] ++ outs
     checkOut "2"
 
     setIn "1"
     assertException [] $ build ["OutFile.txt","--die","--quiet","--sleep"]
-    build $ ["--die","--cache"] ++ outs
+    build $ ["--die","--share"] ++ outs
     checkOut "1"
 
     setIn "2"
     mapM_ removeFile outs
-    build $ ["--die","--cache"] ++ outs
+    build $ ["--die","--share"] ++ outs
     checkOut "2"
 
     setIn "2"
     removeFile ".shake.database"
-    build $ ["--die","--cache"] ++ outs
+    build $ ["--die","--share"] ++ outs
     checkOut "2"

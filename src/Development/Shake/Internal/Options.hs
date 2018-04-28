@@ -199,8 +199,8 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'False'. Ignore any differences in 'shakeVersion'.
     ,shakeColor :: Bool
         -- ^ Defaults to 'False'. Whether to colorize the output.
-    ,shakeCache :: Maybe FilePath
-        -- ^ Defaults to 'Nothing'. Whether to cache outputs.
+    ,shakeShare :: Maybe FilePath
+        -- ^ Defaults to 'Nothing'. Whether to cache outputs in a shared directory.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -232,7 +232,7 @@ fieldsShakeOptions =
     ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
     ,"shakeFlush", "shakeRebuild", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
-    ,"shakeLiveFiles", "shakeVersionIgnore", "shakeProgress", "shakeCache", "shakeOutput", "shakeColor", "shakeExtra"]
+    ,"shakeLiveFiles", "shakeVersionIgnore", "shakeProgress", "shakeShare", "shakeOutput", "shakeColor", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
 unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 y1 y2 y3 =

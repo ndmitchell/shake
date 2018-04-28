@@ -75,7 +75,7 @@ ruleLint opts k v = do
 
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FilesQ FilesA
 ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure $ errorStructured
-    "Cannot use shakeChange=ChangeModTime with shakeCache" [] ""
+    "Cannot use shakeChange=ChangeModTime with shakeShare" [] ""
 ruleIdentity opts = \k (FilesA files) ->
     runBuilder $ putExList [putExStorable size <> putExStorable hash | FileA _ size hash <- files]
 

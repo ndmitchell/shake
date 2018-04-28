@@ -230,7 +230,7 @@ withDatabase opts diagnostic owitness act = do
 
 loadHistory :: ShakeOptions -> Map.HashMap TypeRep (BinaryOp Key) -> IO (Maybe History)
 loadHistory opts owitness =
-    case shakeCache opts of
+    case shakeShare opts of
         Nothing -> return Nothing
         Just x -> do
             let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
