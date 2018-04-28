@@ -25,10 +25,11 @@ let _ghci_make name flags =
 :{
 :def prof_ \x -> return $ unlines
         [_ghci_make "prof" "-rtsopts -threaded -prof -auto-all -caf-all"
-        ,":!.hpc\\prof\\shake +RTS -p -RTS " ++ x
+        ,":!.hpc\\prof\\shake +RTS -P -RTS " ++ x
+        ,":!profiterole shake.prof"
         ]
 :}
-:def prof \x -> return $ unlines [":prof_ " ++ x,":!start shake.prof"]
+:def prof \x -> return $ unlines [":prof_ " ++ x,":!start shake.profiterole.html"]
 
 :{
 :def hpc_ const $ return $ unlines
