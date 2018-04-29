@@ -9,7 +9,7 @@
 # but only a subset is used by Shake
 - message:
   - name: Weeds exported
-  - module: [General.Bilist, General.Ids, General.Intern]
+  - module: [General.Bilist, General.Ids, General.Intern, General.TypeMap]
 
 # These packages are used on older compilers for compatibility methods
 - message:
