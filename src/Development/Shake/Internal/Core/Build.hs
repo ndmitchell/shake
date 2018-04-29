@@ -265,7 +265,7 @@ apply1 = fmap head . apply . return
 --
 --   If this function returns 'Just' it will also have restored any files that
 --   were saved by 'historySave'.
-historyLoad :: ShakeValue k => k -> String -> Action (Maybe BS.ByteString)
+historyLoad :: ShakeValue k => k -> Int -> Action (Maybe BS.ByteString)
 historyLoad k userVersion = do
     global@Global{..} <- Action getRO
     Local{localStack, localBuiltinVersion} <- Action getRW
@@ -277,7 +277,7 @@ historyLoad k userVersion = do
                         i <- getKeyId database k
                         let identify = Just . runIdentify globalRules k . result
                         fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
-                res <- lookupHistory history ask (newKey k) localBuiltinVersion (makeVersion userVersion)
+                res <- lookupHistory history ask (newKey k) localBuiltinVersion (Version userVersion)
                 flip fmapWait (return res) $ \x -> case x of
                     Nothing -> return Nothing
                     Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
@@ -312,7 +312,7 @@ historyIsEnabled = Action $
 --
 --   This function relies on 'produces' to have been called correctly to describe
 --   which files were written during the execution of this rule.
-historySave :: ShakeValue k => k -> String -> BS.ByteString -> Action ()
+historySave :: ShakeValue k => k -> Int -> BS.ByteString -> Action ()
 historySave k ver store = Action $ do
     Global{..} <- getRO
     Local{localHistory, localProduces, localDepends, localBuiltinVersion} <- getRW
@@ -329,7 +329,7 @@ historySave k ver store = Action $ do
                 (k, r) <- getIdKeyStatus database i
                 let fromReady (Ready r) = r
                 return (k, runIdentify globalRules k $ result $ fromReady r)
-        addHistory history (newKey k) localBuiltinVersion (makeVersion ver) deps store produced
+        addHistory history (newKey k) localBuiltinVersion (Version ver) deps store produced
         liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 

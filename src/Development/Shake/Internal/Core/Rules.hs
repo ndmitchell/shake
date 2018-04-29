@@ -69,14 +69,14 @@ getShakeOptionsRules = Rules $ lift ask
 --
 --   If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne',
 --   which raise informative errors.
-getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(String, b)]
+getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
     let rules = fromMaybe mempty $ TMap.lookup globalUserRules
-    return $ head $ (map snd $ reverse $ groupSort $ f "" Nothing $ fmap test rules) ++ [[]]
+    return $ head $ (map snd $ reverse $ groupSort $ f (Version 0) Nothing $ fmap test rules) ++ [[]]
     where
-        f :: String -> Maybe Double -> UserRule (Maybe a) -> [(Double,(String,a))]
-        f v p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
+        f :: Version -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
+        f (Version v) p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
         f v p (Unordered xs) = concatMap (f v p) xs
         f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
         f v p (Versioned v2 x) = f v2 p x
@@ -85,7 +85,7 @@ getUserRuleList test = do
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
 --   Requires a @key@ for better error messages.
-getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (Maybe (String, b))
+getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (Maybe (Int, b))
 getUserRuleMaybe key test = do
     res <- getUserRuleList test
     case res of
@@ -95,7 +95,7 @@ getUserRuleMaybe key test = do
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
 --   Requires a @key@ for better error messages.
-getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (String, b)
+getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (Int, b)
 getUserRuleOne key test = do
     res <- getUserRuleList test
     case res of
@@ -118,7 +118,7 @@ modifyRules f (Rules r) = Rules $ censor f r
 runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRule)
 runRules opts (Rules r) = do
     SRules{..} <- runReaderT (execWriterT r) opts
-    let addVersioned (UserRuleVersioned b a) = if b then Versioned "" a else a
+    let addVersioned (UserRuleVersioned b a) = if b then Versioned (Version 0) a else a
     return (runListBuilder actions, builtinRules, TMap.map addVersioned userRules)
 
 -- True means Versioned has been applied to it
@@ -225,16 +225,16 @@ priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x
 --   a version will cause the rule to rebuild in some circumstances.
 --
 -- @
--- 'versioned' \"v1\" $ \"hello.*\" %> \\out ->
+-- 'versioned' 1 $ \"hello.*\" %> \\out ->
 --     'writeFile'' out \"Writes v1 now\" -- previously wrote out v0
 -- @
 --
 --   You should only use 'versioned' to track changes in the build source, for standard runtime dependencies you should use
 --   other mechanisms, e.g. 'Development.Shake.addOracle'.
-versioned :: String -> Rules () -> Rules ()
+versioned :: Int -> Rules () -> Rules ()
 versioned v = modifyRules $ \s -> s
-    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned v x) $ userRules s
-    ,builtinRules = Map.map (\b -> b{builtinVersion = makeVersion v}) $ builtinRules s
+    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned (Version v) x) $ userRules s
+    ,builtinRules = Map.map (\b -> b{builtinVersion = Version v}) $ builtinRules s
     }
 
 
