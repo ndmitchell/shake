@@ -5,8 +5,9 @@ module General.TypeMap(
     ) where
 
 import qualified Data.HashMap.Strict as Map
-import Data.Typeable
+import Data.Typeable.Extra
 import Unsafe.Coerce
+import Data.Functor
 import Prelude hiding (lookup, map)
 
 

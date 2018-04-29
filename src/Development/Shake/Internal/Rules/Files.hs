@@ -12,7 +12,6 @@ import Data.List.Extra
 import Control.Applicative
 import Data.Typeable.Extra
 import General.Binary
-import Prelude
 
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types
@@ -29,6 +28,7 @@ import Development.Shake.FilePath
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.Options
 import Data.Monoid
+import Prelude
 
 
 infix 1 &?>, &%>
