@@ -73,6 +73,9 @@ withLockFile file act = do
                                Just (pid, _) -> "Shake process ID " ++ show pid ++ " is using this lock.\n") ++
                           show e
 
+#ifndef MIN_VERSION_unix
+#define MIN_VERSION_unix(a,b,c) 0
+#endif
 #if MIN_VERSION_unix(2,8,0)
 openSimpleFd file mode = openFd file mode defaultFileFlags
 #else
