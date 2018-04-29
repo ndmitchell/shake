@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Test.Builtin(main) where
 
@@ -15,10 +15,11 @@ import Test.Type
 -- If it needs editing, you probably need to edit it there too.
 
 newtype File = File FilePath
-    deriving (Show,Eq,Hashable,Binary,NFData)
+    deriving (Show,Eq,Hashable,Binary,NFData,Typeable)
 type instance RuleResult File = ()
 
 data FileRule = FileRule File (Action ())
+    deriving Typeable
 
 addBuiltinFileRule :: Rules ()
 addBuiltinFileRule = addBuiltinRule noLint noIdentity run
