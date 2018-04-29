@@ -60,7 +60,7 @@ withLockFile file act = do
     createDirectoryRecursive $ takeDirectory file
     tryIO $ writeFile file ""
 
-    bracket (openFd file ReadWrite Nothing defaultFileFlags) closeFd $ \fd -> do
+    bracket (openSimpleFd file ReadWrite) closeFd $ \fd -> do
         let lock = (WriteLock, AbsoluteSeek, 0, 0)
         res <- tryIO $ setLock fd lock
         case res of
@@ -72,5 +72,11 @@ withLockFile file act = do
                                Nothing -> ""
                                Just (pid, _) -> "Shake process ID " ++ show pid ++ " is using this lock.\n") ++
                           show e
+
+#if MIN_VERSION_unix(2,8,0)
+openSimpleFd file mode = openFd file mode defaultFileFlags
+#else
+openSimpleFd file mode = openFd file mode Nothing defaultFileFlags
+#endif
 
 #endif
