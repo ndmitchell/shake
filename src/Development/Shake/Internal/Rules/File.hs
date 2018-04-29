@@ -14,7 +14,7 @@ module Development.Shake.Internal.Rules.File(
 import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
-import Data.Typeable
+import Data.Typeable.Extra
 import Data.List
 import Data.Maybe
 import qualified Data.ByteString.Char8 as BS
