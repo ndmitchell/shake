@@ -77,10 +77,11 @@ errorNoRuleToBuildType tk k tv = structured (specialIsOracleKey tk)
     ,("_Result_ type", fmap show tv)]
     "You are missing a call to _addBuiltinRule_, or your call to _apply_ has the wrong _key_ type"
 
-errorRuleDefinedMultipleTimes :: TypeRep-> SomeException
-errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
+errorRuleDefinedMultipleTimes :: TypeRep -> [String] -> SomeException
+errorRuleDefinedMultipleTimes tk locations = structured (specialIsOracleKey tk)
     "Build system error - _rule_ defined twice at one _key_ type"
-    [("_Key_ type", Just $ show tk)]
+    (("_Key_ type", Just $ show tk) :
+     [("Location " ++ show i, Just x) | (i, x) <- zipFrom 1 locations])
     "You have called _addBuiltinRule_ more than once on the same key type"
 
 errorMultipleRulesMatch :: TypeRep -> String -> [Maybe String] -> SomeException

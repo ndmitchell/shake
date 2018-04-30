@@ -16,6 +16,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Control.Monad
 import Data.Binary
 import General.Binary
+import General.Extra
 import Control.Applicative
 import Prelude
 
@@ -30,7 +31,7 @@ type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 
 data Flavor = Norm | Cache | Hash deriving Eq
 
-addOracleFlavor :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => Flavor -> (q -> Action a) -> Rules (q -> Action a)
+addOracleFlavor :: (Located, RuleResult q ~ a, ShakeValue q, ShakeValue a) => Flavor -> (q -> Action a) -> Rules (q -> Action a)
 addOracleFlavor flavor act = do
         -- rebuild is automatic for oracles, skip just means we don't rebuild
         opts <- getShakeOptionsRules
@@ -125,14 +126,14 @@ addOracleFlavor flavor act = do
 --
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
-addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracle = addOracleFlavor Norm
+addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a, Partial) => (q -> Action a) -> Rules (q -> Action a)
+addOracle = withFrozenCallStack $ addOracleFlavor Norm
 
 
 -- | An alternative to to 'addOracle' that relies on the 'hash' function providing a perfect equality,
 --   doesn't support @--skip@, but requires less storage.
-addOracleHash :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracleHash = addOracleFlavor Hash
+addOracleHash :: (RuleResult q ~ a, ShakeValue q, ShakeValue a, Partial) => (q -> Action a) -> Rules (q -> Action a)
+addOracleHash = withFrozenCallStack $ addOracleFlavor Hash
 
 -- | A combination of 'addOracle' and 'newCache' - an action that only runs when its dependencies change,
 --   whose result is stored in the database.
@@ -147,8 +148,8 @@ addOracleHash = addOracleFlavor Hash
 --   An alternative to using 'addOracleCache' is introducing an intermediate file containing the result,
 --   which requires less storage in the Shake database and can be inspected by existing file-system viewing
 --   tools.
-addOracleCache ::(RuleResult q ~ a, ShakeValue q, ShakeValue a) => (q -> Action a) -> Rules (q -> Action a)
-addOracleCache = addOracleFlavor Cache
+addOracleCache ::(RuleResult q ~ a, ShakeValue q, ShakeValue a, Partial) => (q -> Action a) -> Rules (q -> Action a)
+addOracleCache = withFrozenCallStack $ addOracleFlavor Cache
 
 
 -- | Get information previously added with 'addOracle' or 'addOracleCache'.

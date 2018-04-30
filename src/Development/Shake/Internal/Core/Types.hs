@@ -312,6 +312,7 @@ data BuiltinRule = BuiltinRule
     ,builtinRun :: BuiltinRun Key Value
     ,builtinKey :: BinaryOp Key
     ,builtinVersion :: Version
+    ,builtinLocation :: String
     }
 
 -- | A 'UserRule' data type, representing user-defined rules associated with a particular type.

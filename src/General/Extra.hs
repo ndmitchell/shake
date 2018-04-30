@@ -15,7 +15,7 @@ module General.Extra(
     doesFileExist_,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
-    Located, callStackTop,
+    Located, Partial, callStackTop, withFrozenCallStack,
     ) where
 
 import Control.Exception.Extra

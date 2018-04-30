@@ -23,6 +23,7 @@ import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 import Development.Shake.Classes
 import General.Binary
+import General.Extra
 import Data.Typeable.Extra
 import Data.Function
 import Data.List.Extra
@@ -126,7 +127,7 @@ data SRules = SRules
 
 instance Semigroup SRules where
     (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3)
-        where f k _ _ = throwImpure $ errorRuleDefinedMultipleTimes k
+        where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
 instance Monoid SRules where
     mempty = SRules mempty Map.empty TMap.empty
@@ -164,22 +165,24 @@ type family RuleResult key -- = value
 --   The @key@ and @value@ types will be what is used by 'Development.Shake.apply'.
 --   As a start, you can use 'noLint' and 'noIdentity' as the first two functions,
 --   but are required to supply a suitable 'BuiltinRun'.
+--
+--   Raises an error if any other rule exists at this type.
 addBuiltinRule
-    :: (RuleResult key ~ value, ShakeValue key, ShakeValue value)
+    :: (RuleResult key ~ value, ShakeValue key, ShakeValue value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule = addBuiltinRuleInternal $ BinaryOp
+addBuiltinRule = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . return)
 
 addBuiltinRuleEx
-    :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value)
+    :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
 
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
 addBuiltinRuleInternal
-    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value)
+    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
@@ -187,7 +190,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     let check_ k v = check (fromKey k) (fromValue v)
     let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ $ Version 0}
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Version 0) callStackTop}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
