@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards #-}
 
 module General.Extra(
     getProcessorCount,
@@ -14,17 +14,18 @@ module General.Extra(
     withLineBuffering,
     doesFileExist_,
     removeFile_, createDirectoryRecursive,
-    catchIO, tryIO, handleIO
+    catchIO, tryIO, handleIO,
+    Located, callStackTop,
     ) where
 
-import Control.Exception
+import Control.Exception.Extra
 import Data.Char
 import Data.List
 import System.Environment.Extra
+import Development.Shake.FilePath
 import System.IO.Extra
 import System.IO.Unsafe
 import System.Info.Extra
-import System.FilePath
 import System.Random
 import System.Directory
 import System.Exit
@@ -36,6 +37,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.ST
 import GHC.Conc(getNumProcessors)
+import GHC.Stack
 import Prelude
 
 
@@ -174,7 +176,7 @@ isAsyncException e
     | otherwise = False
 
 catchIO :: IO a -> (IOException -> IO a) -> IO a
-catchIO = Control.Exception.catch -- GHC 7.4 has catch in the Prelude as well
+catchIO = Control.Exception.Extra.catch -- GHC 7.4 has catch in the Prelude as well
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try
@@ -206,3 +208,21 @@ createDirectoryRecursive dir = do
 
 whenLeft :: Applicative m => Either a b -> (a -> m ()) -> m ()
 whenLeft x f = either f (const $ pure ()) x
+
+
+---------------------------------------------------------------------
+-- Data.CallStack
+
+type Located = Partial
+
+callStackTop :: Partial => String
+callStackTop = f $ getCallStack $ popCallStack callStack
+    where
+        f ((_, SrcLoc{..}):_) = toStandard srcLocFile ++ ":" ++
+            -- match the format of GHC error messages
+            if srcLocStartLine == srcLocEndLine then
+                show srcLocStartLine ++ ":" ++ show srcLocStartCol ++
+                (if srcLocStartCol == srcLocEndCol then "" else "-" ++ show srcLocEndCol) ++ ":"
+            else
+                show (srcLocStartLine, srcLocStartCol) ++ "-" ++ show (srcLocEndLine, srcLocEndCol) ++ ":"
+        f _ = "unknown location"

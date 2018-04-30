@@ -80,8 +80,8 @@ data Result
     | ResultDirect FileA
     | ResultForward FileA
 
--- | The use rules we use.
-newtype FileRule = FileRule (FilePath -> Maybe Mode)
+-- | The file rules we use, first is the name (as pretty as you can get).
+data FileRule = FileRule String (FilePath -> Maybe Mode)
     deriving Typeable
 
 
@@ -272,7 +272,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         rebuild = do
             putWhen Chatty $ "# " ++ show o
             x <- return $ fileNameToString x
-            act <- getUserRuleMaybe o (const Nothing) $ \(FileRule f) -> f x
+            act <- getUserRuleMaybe o (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f x
             let answer ctor new = do
                     let b = case () of
                                 _ | Just old <- old
@@ -349,7 +349,7 @@ resultHasChanged file = do
 
 -- | Internal method for adding forwarding actions
 fileForward :: (FilePath -> Maybe (Action (Maybe FileA))) -> Rules ()
-fileForward act = addUserRule $ FileRule $ fmap ModeForward . act
+fileForward act = addUserRule $ FileRule "Forwarded" $ fmap ModeForward . act
 
 
 -- | Add a dependency on the file arguments, ensuring they are built before continuing.
@@ -465,7 +465,7 @@ want xs = action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-root help test act = addUserRule $ FileRule $ \x -> if not $ test x then Nothing else Just $ ModeDirect $ do
+root help test act = addUserRule $ FileRule help $ \x -> if not $ test x then Nothing else Just $ ModeDirect $ do
     liftIO $ createDirectoryRecursive $ takeDirectory x
     act x
 
@@ -488,17 +488,22 @@ root help test act = addUserRule $ FileRule $ \x -> if not $ test x then Nothing
 --   question, a Shake rule which behaves this way will fail lint.
 --   Use a phony rule!  For file-producing rules which should be
 --   rerun every execution of Shake, see 'Development.Shake.alwaysRerun'.
-phony :: String -> Action () -> Rules ()
-phony (toStandard -> name) act = phonys $ \s -> if s == name then Just act else Nothing
+phony :: Located => String -> Action () -> Rules ()
+phony oname@(toStandard -> name) act =
+    addPhony ("phony " ++ show oname ++ " at " ++ callStackTop) $ \s -> if s == name then Just act else Nothing
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
-phonys :: (String -> Maybe (Action ())) -> Rules ()
-phonys act = addUserRule $ FileRule $ fmap ModePhony . act
+phonys :: Located => (String -> Maybe (Action ())) -> Rules ()
+phonys = addPhony ("phonys at " ++ callStackTop)
 
 -- | Infix operator alias for 'phony', for sake of consistency with normal
 --   rules.
-(~>) :: String -> Action () -> Rules ()
-(~>) = phony
+(~>) :: Located => String -> Action () -> Rules ()
+(~>) oname@(toStandard -> name) act =
+    addPhony (show oname ++ " ~> at " ++ callStackTop) $ \s -> if s == name then Just act else Nothing
+
+addPhony :: String -> (String -> Maybe (Action ())) -> Rules ()
+addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
@@ -514,21 +519,22 @@ phonys act = addUserRule $ FileRule $ fmap ModePhony . act
 --
 --   If the 'Action' completes successfully the file is considered up-to-date, even if the file
 --   has not changed.
-(?>) :: (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-(?>) test act = priority 0.5 $ root "with ?>" test act
+(?>) :: Located => (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
+(?>) test act = priority 0.5 $ root ("?> at " ++ callStackTop) test act
 
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '%>'.
 --   Think of it as the OR (@||@) equivalent of '%>'.
-(|%>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+(|%>) :: Located => [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (|%>) pats act = do
     let (simp,other) = partition simple pats
     case simp of
         [] -> return ()
-        [p] -> let pp = toStandard p in root "with |%>" (\x -> toStandard x == pp) act
-        ps -> let ps = Set.fromList $ map toStandard pats in root "with |%>" (flip Set.member ps . toStandard) act
+        [p] -> let pp = toStandard p in root help (\x -> toStandard x == pp) act
+        ps -> let ps = Set.fromList $ map toStandard pats in root help (flip Set.member ps . toStandard) act
     unless (null other) $
-        let ps = map (?==) other in priority 0.5 $ root "with |%>" (\x -> any ($ x) ps) act
+        let ps = map (?==) other in priority 0.5 $ root help (\x -> any ($ x) ps) act
+    where help = show pats ++ " |%> at " ++ callStackTop
 
 -- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
 --   Patterns with no wildcards have higher priority than those with wildcards, and no file
@@ -551,5 +557,5 @@ phonys act = addUserRule $ FileRule $ fmap ModePhony . act
 --
 --   If the 'Action' completes successfully the file is considered up-to-date, even if the file
 --   has not changed.
-(%>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
-(%>) test act = (if simple test then id else priority 0.5) $ root (show test) (test ?==) act
+(%>) :: Located => FilePattern -> (FilePath -> Action ()) -> Rules ()
+(%>) test act = (if simple test then id else priority 0.5) $ root (show test ++ " %> at " ++ callStackTop) (test ?==) act
