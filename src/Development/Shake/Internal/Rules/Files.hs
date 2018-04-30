@@ -46,6 +46,7 @@ instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . 
 
 instance Show FilesQ where show (FilesQ xs) = unwords $ map (wrapQuote . show) xs
 
+data FilesRule = FilesRule String (FilesQ -> Maybe (Action FilesA))
 
 filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)
 filesStoredValue opts (FilesQ xs) = fmap FilesA . sequence <$> mapM (fileStoredValue opts) xs
@@ -114,7 +115,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
 
         rebuild = do
             putWhen Chatty $ "# " ++ show k
-            (ver, act) <- getUserRuleOne k (const Nothing) ($ k)
+            (ver, act) <- getUserRuleOne k (\(FilesRule s _) -> Just s) $ \(FilesRule _ f) -> f k
             cache <- historyLoad k ver
             case cache of
                 Just res -> do
@@ -159,7 +160,7 @@ ps &%> act
                     FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
                     return $ if null res then Nothing else Just $ res !! i
         (if all simple ps then id else priority 0.5) $
-            addUserRule $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
+            addUserRule $ FilesRule (show ps ++ " &%> " ++ callStackTop) $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
                     liftIO $ mapM_ createDirectoryRecursive $ nubOrd $ map takeDirectory xs
                     trackAllow xs
@@ -209,7 +210,7 @@ ps &%> act
             FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) ys
             return $ if null res then Nothing else Just $ res !! fromJust (elemIndex x ys)
 
-    addUserRule $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
+    addUserRule $ FilesRule ("&?> " ++ callStackTop) $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
         case checkedTest x of
             Just ys | ys == xs -> Just $ do
                 liftIO $ mapM_ createDirectoryRecursive $ nubOrd $ map takeDirectory xs
