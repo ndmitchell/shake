@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns, TypeFamilies #-}
+{-# LANGUAGE ViewPatterns, TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Files(
     (&?>), (&%>), defaultRuleFiles

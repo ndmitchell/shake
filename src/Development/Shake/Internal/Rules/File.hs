@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances, TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.File(
     need, needHasChanged, needBS, needed, neededBS, want,
