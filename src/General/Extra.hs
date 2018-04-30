@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards #-}
 
 module General.Extra(
@@ -216,6 +217,8 @@ whenLeft x f = either f (const $ pure ()) x
 type Located = Partial
 
 callStackTop :: Partial => String
+
+#if __GLASGOW_HASKELL__ >= 800
 callStackTop = f $ getCallStack $ popCallStack callStack
     where
         f ((_, SrcLoc{..}):_) = toStandard srcLocFile ++ ":" ++
@@ -226,3 +229,9 @@ callStackTop = f $ getCallStack $ popCallStack callStack
             else
                 show (srcLocStartLine, srcLocStartCol) ++ "-" ++ show (srcLocEndLine, srcLocEndCol) ++ ":"
         f _ = "unknown location"
+#else
+callStackTop = "unknown location"
+
+withFrozenCallStack :: a -> a
+withFrozenCallStack = id
+#endif
