@@ -146,8 +146,8 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
 --   on the @.o@. When defining rules that build multiple files, all the 'FilePattern' values must
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
-(&%>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-[p] &%> act = p %> act . return
+(&%>) :: Located => [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+[p] &%> act = withFrozenCallStack $ p %> act . return
 ps &%> act
     | not $ compatible ps = error $ unlines $
         "All patterns to &%> must have the same number and position of // and * wildcards" :
@@ -155,7 +155,7 @@ ps &%> act
     | otherwise = do
         forM_ (zip [0..] ps) $ \(i,p) ->
             (if simple p then id else priority 0.5) $
-                fileForward $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
+                fileForward (show ps ++ " &%> at " ++ callStackTop) $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
                     FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
                     return $ if null res then Nothing else Just $ res !! i
         (if all simple ps then id else priority 0.5) $
@@ -186,7 +186,7 @@ ps &%> act
 -- @
 --
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
-(&?>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
+(&?>) :: Located => (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
 (&?>) test act = priority 0.5 $ do
     let inputOutput suf inp out =
             ["Input" ++ suf ++ ":", "  " ++ inp] ++
@@ -203,7 +203,7 @@ ps &%> act
                 inputOutput "2" bad (fromMaybe ["Nothing"] $ normTest bad)
             Just ys -> Just ys
 
-    fileForward $ \x -> case checkedTest x of
+    fileForward ("&?> at " ++ callStackTop) $ \x -> case checkedTest x of
         Nothing -> Nothing
         Just ys -> Just $ do
             FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) ys

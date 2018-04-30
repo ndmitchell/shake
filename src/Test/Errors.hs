@@ -73,6 +73,8 @@ main = shakeTest test optionsEnum $ \args -> do
     "overlap.txt" %> \out -> writeFile' out "overlap.txt"
     "overlap.t*" %> \out -> writeFile' out "overlap.t*"
     "overlap.*" %> \out -> writeFile' out "overlap.*"
+    ["*.txx","*.tox"] &%> \out -> fail "do not run"
+    ["*p.txx"] &%> \out -> fail "do not run"
 
     "chain.2" %> \out -> do
         src <- readFile' "chain.1"
@@ -198,7 +200,7 @@ test build = do
     assertContents "overlap.foo" "overlap.*"
     build ["overlap.txt"]
     assertContents "overlap.txt" "overlap.txt"
-    crash ["overlap.txx"] ["key matches multiple rules","2","overlap.txx","overlap.t*","overlap.*","Test/Errors.hs"]
+    crash ["overlap.txx"] ["key matches multiple rules","matched:  4","overlap.txx","overlap.t*","overlap.*","*.tox","Test/Errors.hs"]
 
     crash ["tempfile"] ["tempfile-died"]
     src <- readFile "tempfile"
