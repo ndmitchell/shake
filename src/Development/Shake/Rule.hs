@@ -130,7 +130,7 @@ import Development.Shake.Internal.Core.Rules
 -- >             if mode == RunDependenciesSame && fmap BS.unpack old == Just now then
 -- >                 return $ RunResult ChangedNothing (BS.pack now) ()
 -- >             else do
--- >                 (_, act) <- getUserRuleOne key $ \(FileRule k act) -> if k == key then Just act else Nothing
+-- >                 (_, act) <- getUserRuleOne key (const Nothing) $ \(FileRule k act) -> if k == key then Just act else Nothing
 -- >                 act
 -- >                 now <- liftIO $ fileContents key
 -- >                 return $ RunResult ChangedRecomputeDiff (BS.pack now) ()

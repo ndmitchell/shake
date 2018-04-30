@@ -272,7 +272,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         rebuild = do
             putWhen Chatty $ "# " ++ show o
             x <- return $ fileNameToString x
-            act <- getUserRuleMaybe o $ \(FileRule f) -> f x
+            act <- getUserRuleMaybe o (const Nothing) $ \(FileRule f) -> f x
             let answer ctor new = do
                     let b = case () of
                                 _ | Just old <- old

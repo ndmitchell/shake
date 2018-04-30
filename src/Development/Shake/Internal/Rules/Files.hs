@@ -114,7 +114,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
 
         rebuild = do
             putWhen Chatty $ "# " ++ show k
-            (ver, act) <- getUserRuleOne k ($ k)
+            (ver, act) <- getUserRuleOne k (const Nothing) ($ k)
             cache <- historyLoad k ver
             case cache of
                 Just res -> do

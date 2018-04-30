@@ -15,7 +15,9 @@ import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad.IO.Class
 import Data.Typeable
-import Data.List
+import Data.List.Extra
+import Data.Maybe
+
 
 throwM :: MonadIO m => SomeException -> m a
 throwM = liftIO . throwIO
@@ -81,13 +83,14 @@ errorRuleDefinedMultipleTimes tk = structured (specialIsOracleKey tk)
     [("_Key_ type", Just $ show tk)]
     "You have called _addBuiltinRule_ more than once on the same key type"
 
-errorMultipleRulesMatch :: TypeRep -> String -> Int -> SomeException
-errorMultipleRulesMatch tk k count = errorStructured
-    ("Build system error - key matches " ++ (if count == 0 then "no" else "multiple") ++ " rules")
-    [("Key type",Just $ show tk)
+errorMultipleRulesMatch :: TypeRep -> String -> [Maybe String] -> SomeException
+errorMultipleRulesMatch tk k names = errorStructured
+    ("Build system error - key matches " ++ (if null names then "no" else "multiple") ++ " rules")
+    ([("Key type",Just $ show tk)
     ,("Key value",Just k)
-    ,("Rules matched",Just $ show count)]
-    (if count == 0 then "Either add a rule that produces the above key, or stop requiring the above key"
+    ,("Rules matched",Just $ show $ length names)] ++
+    [("Rule " ++ show i, x) | any isJust names, (i, x) <- zipFrom 1 names])
+    (if null names then "Either add a rule that produces the above key, or stop requiring the above key"
     else "Modify your rules/defaultRules so only one can produce the above key")
 
 errorNoHash :: SomeException

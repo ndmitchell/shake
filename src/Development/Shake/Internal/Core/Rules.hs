@@ -83,22 +83,22 @@ getUserRuleList test = do
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
 --   Requires a @key@ for better error messages.
-getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (Maybe (Int, b))
-getUserRuleMaybe key test = do
-    res <- getUserRuleList test
+getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -> (a -> Maybe b) -> Action (Maybe (Int, b))
+getUserRuleMaybe key disp test = do
+    res <- getUserRuleList $ \x -> (,) x <$> test x
     case res of
         [] -> return Nothing
-        [x] -> return $ Just x
-        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (length xs)
+        [x] -> return $ Just $ second snd x
+        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (map (disp . fst . snd) xs)
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
 --   Requires a @key@ for better error messages.
-getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe b) -> Action (Int, b)
-getUserRuleOne key test = do
-    res <- getUserRuleList test
+getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -> (a -> Maybe b) -> Action (Int, b)
+getUserRuleOne key disp test = do
+    res <- getUserRuleList $ \x -> (,) x <$> test x
     case res of
-        [x] -> return x
-        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (length xs)
+        [x] -> return $ second snd x
+        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (map (disp . fst . snd) xs)
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
