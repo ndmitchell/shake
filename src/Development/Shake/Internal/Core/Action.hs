@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds #-}
 
 module Development.Shake.Internal.Core.Action(
-    actionOnException, actionFinally,
+    actionOnException, actionFinally, actionRetry,
     getShakeOptions, getProgress, runAfter,
     lintTrackRead, lintTrackWrite, lintTrackAllow, lintTrackFinished,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -98,6 +98,15 @@ actionOnException = actionBoom False
 -- | After an 'Action', perform some 'IO', even if there is an exception.
 actionFinally :: Action a -> IO b -> Action a
 actionFinally = actionBoom True
+
+
+-- | Retry an 'Action' if it throws an exception, at most /n/ times (where /n/ must be positive).
+--   If you need to call this function, you should probably try and fix the underlying cause (but you also probably know that).
+actionRetry :: Int -> Action a -> Action a
+actionRetry i act
+    | i <= 0 = fail $ "actionRetry first argument must be positive, got " ++ show i
+    | i == 1 = act
+    | otherwise = Action $ catchRAW (fromAction act) $ \_ -> fromAction $ actionRetry (i-1) act
 
 
 ---------------------------------------------------------------------

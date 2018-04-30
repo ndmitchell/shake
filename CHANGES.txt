@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add actionRetry to retry actions if they fail
     #143, give locations when several rules match
     Compatibility with unix-2.8
     Add shakeShare, --share and history functions for shared builds

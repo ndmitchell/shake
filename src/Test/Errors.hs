@@ -11,6 +11,7 @@ import Control.Monad
 import Control.Concurrent
 import General.GetOpt
 import General.Extra
+import Data.IORef
 import Control.Exception.Extra
 import System.Directory as IO
 import System.Time.Extra
@@ -64,6 +65,13 @@ main = shakeTest test optionsEnum $ \args -> do
     "wait" ~> do liftIO $ sleep 10
     catcher "exception1" $ actionOnException $ fail "die"
     catcher "exception2" $ actionOnException $ return ()
+
+    "retry*" %> \out -> do
+        ref <- liftIO $ newIORef 3
+        actionRetry (read [last out]) $ liftIO $ do
+            old <- readIORef ref
+            writeIORef ref $ old - 1
+            if old == 0 then writeFile' out "" else fail "die"
 
     res <- newResource "resource_name" 1
     "resource" %> \out ->
@@ -187,6 +195,10 @@ test build = do
     assertContents "exception1" "1"
     build ["exception2"]
     assertContents "exception2" "0"
+
+    crash ["retry0"] ["positive","0"]
+    crash ["retry1"] ["die"]
+    build ["retry4"]
 
     forM_ ["finally3","finally4"] $ \name -> do
         t <- forkIO $ ignore $ build [name,"--exception"]
