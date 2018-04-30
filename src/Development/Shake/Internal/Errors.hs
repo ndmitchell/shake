@@ -92,7 +92,7 @@ errorMultipleRulesMatch tk k names = errorStructured
     ,("Rules matched",Just $ show $ length names)] ++
     [("Rule " ++ show i, x) | any isJust names, (i, x) <- zipFrom 1 names])
     (if null names then "Either add a rule that produces the above key, or stop requiring the above key"
-    else "Modify your rules/defaultRules so only one can produce the above key")
+    else "Modify your rules so only one can produce the above key")
 
 errorNoHash :: SomeException
 errorNoHash = errorStructured "Cannot use shakeChange=ChangeModTime with shakeShare" [] ""
