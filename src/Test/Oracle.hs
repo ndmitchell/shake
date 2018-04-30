@@ -105,14 +105,14 @@ test build = do
     assertContents ".log" "#!##!"
 
     -- check error messages are good
-    let errors args err = assertException [err] $ build $ "--quiet" : args
+    let errors args err = assertException err $ build $ "--quiet" : args
 
     build ["--def=unit=test","unit.txt"]
     errors ["unit.txt"] -- Building with an an Oracle that has been removed
-        "missing a call to addOracle"
+        ["missing a call to addOracle"]
 
     errors ["int.txt"] -- Building with an Oracle that I know nothing about
-        "missing a call to addOracle"
+        ["missing a call to addOracle"]
 
     errors ["--def=string=1","--def=string=1"] -- Two Oracles defined in one go
-        "oracle defined twice"
+        ["oracle defined twice","Test/Oracle.hs"]
