@@ -5,7 +5,7 @@
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
-    UserRule(..),
+    UserRule(..), UserRuleVersioned(..),
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
@@ -330,6 +330,14 @@ data UserRule a
     | Versioned Version (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
       deriving (Eq,Show,Functor,Typeable)
 
+data UserRuleVersioned a = UserRuleVersioned
+    {userRuleVersioned :: Bool -- ^ Does Versioned exist anywhere within userRuleContents
+    ,userRuleContents :: UserRule a -- ^ The actual rules
+    }
+
+instance Semigroup (UserRuleVersioned a) where
+    UserRuleVersioned b1 x1 <> UserRuleVersioned b2 x2 = UserRuleVersioned (b1 || b2) (x1 <> x2)
+
 instance Semigroup (UserRule a) where
     x <> y = Unordered $ fromUnordered x ++ fromUnordered y
         where
@@ -364,7 +372,7 @@ data Global = Global
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state
-    ,globalUserRules :: TMap.Map UserRule
+    ,globalUserRules :: TMap.Map UserRuleVersioned
     ,globalHistory :: Maybe History -- ^ The active history, if any
     ,globalStep :: {-# UNPACK #-} !Step
     }

@@ -53,9 +53,7 @@ import Prelude
 getUserRulesVersioned :: Typeable a => proxy a -> Action Bool
 getUserRulesVersioned (p :: proxy a) = do
     Global{..} <- Action getRO
-    let isVersioned (Versioned _ _ :: UserRule a) = True
-        isVersioned _ = False
-    return $ maybe False isVersioned $ TMap.lookup globalUserRules
+    return $ maybe False userRuleVersioned (TMap.lookup globalUserRules :: Maybe (UserRuleVersioned a))
 
 
 -- | Get the 'ShakeOptions' that were used.
@@ -72,7 +70,7 @@ getShakeOptionsRules = Rules $ lift ask
 getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
-    let rules = fromMaybe mempty $ TMap.lookup globalUserRules
+    let rules = maybe mempty userRuleContents $ TMap.lookup globalUserRules
     return $ head $ (map snd $ reverse $ groupSort $ f (Version 0) Nothing $ fmap test rules) ++ [[]]
     where
         f :: Version -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
@@ -115,17 +113,10 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRule)
+runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned)
 runRules opts (Rules r) = do
     SRules{..} <- runReaderT (execWriterT r) opts
-    let addVersioned (UserRuleVersioned b a) = if b then Versioned (Version 0) a else a
-    return (runListBuilder actions, builtinRules, TMap.map addVersioned userRules)
-
--- True means Versioned has been applied to it
-data UserRuleVersioned a = UserRuleVersioned Bool (UserRule a)
-
-instance Semigroup (UserRuleVersioned a) where
-    UserRuleVersioned b1 x1 <> UserRuleVersioned b2 x2 = UserRuleVersioned (b1 || b2) (x1 <> x2)
+    return (runListBuilder actions, builtinRules, userRules)
 
 data SRules = SRules
     {actions :: !(ListBuilder (Action ()))
