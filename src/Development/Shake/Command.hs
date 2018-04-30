@@ -571,7 +571,8 @@ type a :-> t = a
 --   When passing file arguments we use @[myfile]@ so that if the @myfile@ variable contains spaces they are properly escaped.
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
---   unable to deduce 'CmdResult'. To avoid this error, use 'cmd_'.
+--   unable to deduce 'CmdResult'. To avoid this error, use 'cmd_'. If you enable @OverloadedStrings@ or @OverloadedLists@
+--   you may have to give type signatures to the arguments, or use the more constrained 'command' instead.
 --
 --   The 'cmd' function can also be run in the 'IO' monad, but then 'Traced' is ignored and command lines are not echoed.
 --   As an example:
