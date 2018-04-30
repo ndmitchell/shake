@@ -7,6 +7,7 @@
     within:
     - Development.Shake.Internal.Progress
     - Development.Shake.Internal.FileInfo
+    - General.Extra
 
 # Warnings currently triggered by the code
 - ignore: {name: "Use fmap"}
