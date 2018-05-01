@@ -102,6 +102,7 @@ lookupOne global stack database i = do
     case s of
         Ready r -> return $ Now $ Right r
         Error e -> return $ Now $ Left e
+        Running{} | Left e <- addStack i k stack -> return $ Now $ Left e
         _ -> return $ Later $ \continue -> do
             (_, s) <- getIdKeyStatus database i
             case s of
