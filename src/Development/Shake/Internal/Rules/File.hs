@@ -318,7 +318,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     retNew ChangedRecomputeDiff ResultPhony
 
 
-apply_ :: (a -> FileName) -> [a] -> Action [FileR]
+apply_ :: Partial => (a -> FileName) -> [a] -> Action [FileR]
 apply_ f = apply . map (FileQ . f)
 
 
@@ -369,8 +369,8 @@ fileForward help act = addUserRule $ FileRule help $ fmap ModeForward . act
 --   This function should not be called with wildcards (e.g. @*.txt@ - use 'getDirectoryFiles' to expand them),
 --   environment variables (e.g. @$HOME@ - use 'getEnv' to expand them) or directories (directories cannot be
 --   tracked directly - track files within the directory instead).
-need :: [FilePath] -> Action ()
-need = void . apply_ fileNameFromString
+need :: Partial => [FilePath] -> Action ()
+need = withFrozenCallStack $ void . apply_ fileNameFromString
 
 
 -- | Like 'need' but returns a list of rebuild dependencies this build.
@@ -390,30 +390,30 @@ need = void . apply_ fileNameFromString
 --   Note that a rule can be run even if no dependency has changed, for example
 --   because of 'shakeRebuild' or because the target has changed or been deleted.
 --   To detect the latter case you may wish to use 'resultHasChanged'.
-needHasChanged :: [FilePath] -> Action [FilePath]
-needHasChanged paths = do
+needHasChanged :: Partial => [FilePath] -> Action [FilePath]
+needHasChanged paths = withFrozenCallStack $ do
     res <- apply_ fileNameFromString paths
     return [a | (a,b) <- zip paths res, hasChanged b]
 
-needBS :: [BS.ByteString] -> Action ()
-needBS = void . apply_ fileNameFromByteString
+needBS :: Partial => [BS.ByteString] -> Action ()
+needBS = withFrozenCallStack $ void . apply_ fileNameFromByteString
 
 -- | Like 'need', but if 'shakeLint' is set, check that the file does not rebuild.
 --   Used for adding dependencies on files that have already been used in this rule.
-needed :: [FilePath] -> Action ()
-needed xs = do
+needed :: Partial => [FilePath] -> Action ()
+needed xs = withFrozenCallStack $ do
     opts <- getShakeOptions
     if isNothing $ shakeLint opts then need xs else neededCheck $ map fileNameFromString xs
 
 
-neededBS :: [BS.ByteString] -> Action ()
-neededBS xs = do
+neededBS :: Partial => [BS.ByteString] -> Action ()
+neededBS xs = withFrozenCallStack $ do
     opts <- getShakeOptions
     if isNothing $ shakeLint opts then needBS xs else neededCheck $ map fileNameFromByteString xs
 
 
-neededCheck :: [FileName] -> Action ()
-neededCheck xs = do
+neededCheck :: Partial => [FileName] -> Action ()
+neededCheck xs = withFrozenCallStack $ do
     opts <- getShakeOptions
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply_ id xs
@@ -459,9 +459,9 @@ trackAllow ps = lintTrackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
 --
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
-want :: [FilePath] -> Rules ()
+want :: Partial => [FilePath] -> Rules ()
 want [] = return ()
-want xs = action $ need xs
+want xs = withFrozenCallStack $ action $ need xs
 
 
 root :: String -> (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
