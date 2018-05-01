@@ -9,7 +9,7 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
-    getResult, showStack, statusType, addStack,
+    getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..),
     Version(..), makeVersion
@@ -134,24 +134,33 @@ fromStepResult = getEx . result
 -- CALL STACK
 
 -- Invariant: Every key must have its Id in the set
-data Stack = Stack [Key] !(Set.HashSet Id)
+data Stack = Stack (Maybe Key) [Either Key [String]] !(Set.HashSet Id) deriving Show
 
-showStack :: Stack -> [String]
-showStack (Stack xs _) = reverse $ map show xs
+exceptionStack :: Stack -> SomeException -> ShakeException
+exceptionStack stack@(Stack _ xs _) = ShakeException (showTopStack stack) $
+    concatMap f (reverse xs) ++ ["* Raised the exception:" | not $ null xs]
+    where
+        f (Left x) = ["* Depends on: " ++ show x]
+        f (Right x) = map ("  at " ++) x
+
 
 showTopStack :: Stack -> String
 showTopStack = maybe "<unknown>" show . topStack
 
 addStack :: Id -> Key -> Stack -> Either SomeException Stack
-addStack i k stack@(Stack ks is)
-    | i `Set.member` is = Left $ errorRuleRecursion (showStack stack ++ [show k]) (typeKey k) (show k)
-    | otherwise = Right $ Stack (k:ks) (Set.insert i is)
+addStack i k (Stack _ ks is)
+    | i `Set.member` is = Left $ toException $ exceptionStack stack2 $ errorRuleRecursion (typeKey k) (show k)
+    | otherwise = Right stack2
+    where stack2 = Stack (Just k) (Left k:ks) (Set.insert i is)
+
+addCallStack :: [String] -> Stack -> Stack
+addCallStack xs (Stack t a b) = Stack t (Right xs:a) b
 
 topStack :: Stack -> Maybe Key
-topStack (Stack xs _) = listToMaybe xs
+topStack (Stack t _ _) = t
 
 emptyStack :: Stack
-emptyStack = Stack [] Set.empty
+emptyStack = Stack Nothing [] Set.empty
 
 
 ---------------------------------------------------------------------

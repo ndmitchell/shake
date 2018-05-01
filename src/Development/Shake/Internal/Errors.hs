@@ -97,15 +97,13 @@ errorMultipleRulesMatch tk k names = errorStructured
 errorNoHash :: SomeException
 errorNoHash = errorStructured "Cannot use shakeChange=ChangeModTime with shakeShare" [] ""
 
-errorRuleRecursion :: [String] -> TypeRep -> String -> SomeException
+errorRuleRecursion :: TypeRep -> String -> SomeException
 -- may involve both rules and oracle, so report as only rules
-errorRuleRecursion stack tk k = wrap $ toException $ ErrorCall $ errorStructuredContents
+errorRuleRecursion tk k = errorStructured
     "Build system error - recursion detected"
     [("Key type",Just $ show tk)
     ,("Key value",Just k)]
     "Rules may not be recursive"
-    where
-        wrap = if null stack then id else toException . ShakeException (last stack) stack
 
 errorComplexRecursion :: [String] -> SomeException
 errorComplexRecursion ks = errorStructured
@@ -132,7 +130,7 @@ specialIsOracleKey t = con == "OracleQ"
 --   Problems when executing rules will be raising using this exception type.
 data ShakeException = ShakeException
     {shakeExceptionTarget :: String -- ^ The target that was being built when the exception occured.
-    ,shakeExceptionStack :: [String]  -- ^ The stack of targets, where the 'shakeExceptionTarget' is last.
+    ,shakeExceptionStack :: [String]  -- ^ A description of the call stack, one entry per line.
     ,shakeExceptionInner :: SomeException -- ^ The underlying exception that was raised.
     }
     deriving Typeable
@@ -142,5 +140,5 @@ instance Exception ShakeException
 instance Show ShakeException where
     show ShakeException{..} = unlines $
         "Error when running Shake build system:" :
-        map ("* " ++) shakeExceptionStack ++
+        shakeExceptionStack ++
         [displayException shakeExceptionInner]

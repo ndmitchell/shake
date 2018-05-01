@@ -72,11 +72,11 @@ actionBracket f m = Action $ do
 -- | Turn a normal exception into a ShakeException, giving it a stack and printing it out if in staunch mode.
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
 --   then do nothing with it.
-shakeException :: Global -> [String] -> SomeException -> IO ShakeException
+shakeException :: Global -> Stack -> SomeException -> IO ShakeException
 shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
     Just e@ShakeException{} -> return e
     Nothing -> do
-        e <- return $ ShakeException (last $ "Unknown call stack" : stk) stk e
+        e <- return $ exceptionStack stk e
         when (shakeStaunch && shakeVerbosity >= Quiet) $
             globalOutput Quiet $ show e ++ "Continuing due to staunch mode"
         return e

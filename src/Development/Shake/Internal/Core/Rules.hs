@@ -114,13 +114,13 @@ newRules = Rules . tell
 modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
 modifyRules f (Rules r) = Rules $ censor f r
 
-runRules :: ShakeOptions -> Rules () -> IO ([Action ()], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned)
+runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned)
 runRules opts (Rules r) = do
     SRules{..} <- runReaderT (execWriterT r) opts
     return (runListBuilder actions, builtinRules, userRules)
 
 data SRules = SRules
-    {actions :: !(ListBuilder (Action ()))
+    {actions :: !(ListBuilder (Stack, Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
     ,userRules :: !(TMap.Map UserRuleVersioned)
     }
@@ -263,8 +263,8 @@ alternatives = modifyRules $ \r -> r{userRules = TMap.map (\(UserRuleVersioned b
 --
 --   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
 --   see 'Development.Shake.want'.
-action :: Action a -> Rules ()
-action a = newRules mempty{actions=newListBuilder $ void a}
+action :: Partial => Action a -> Rules ()
+action act = newRules mempty{actions=newListBuilder (addCallStack callStackFull emptyStack, void act)}
 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing

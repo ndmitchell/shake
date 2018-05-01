@@ -160,15 +160,16 @@ buildRunDependenciesChanged global stack database me = fmap isJust <$> firstJust
 ---------------------------------------------------------------------
 -- ACTUAL WORKERS
 
-applyKeyValue :: [Key] -> Action [Value]
-applyKeyValue [] = return []
-applyKeyValue ks = do
+applyKeyValue :: [String] -> [Key] -> Action [Value]
+applyKeyValue callStack [] = return []
+applyKeyValue callStack ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
+    let stack = addCallStack (if shakeVerbosity globalOptions > Normal then callStack else take 1 callStack) localStack
 
     (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
         is <- mapM (getKeyId database) ks
-        wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global localStack database) $ nubOrd is
+        wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global stack database) $ nubOrd is
         wait <- flip fmapWait (return wait) $ \x -> case x of
             Just e -> return $ Left e
             Nothing -> Right <$> mapM (fmap (\(_, Ready r) -> result r) . getIdKeyStatus database) is
@@ -215,7 +216,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
             Left e -> do
                 e <- if isNothing shakeLint then return e else handle return $
                     do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
-                continue . Left . toException =<< shakeException global (showStack stack) e
+                continue . Left . toException =<< shakeException global stack e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
                     continue $ Right $ RunResult runChanged runStore (r{result = runValue})
@@ -238,7 +239,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 -- | Execute a rule, returning the associated values. If possible, the rules will be run in parallel.
 --   This function requires that appropriate rules have been added with 'addBuiltinRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
-apply :: (RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
+apply :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
 -- Don't short-circuit [] as we still want error messages
 apply ks = do
     -- this is the only place a user can inject a key into our world, so check they aren't throwing
@@ -248,13 +249,13 @@ apply ks = do
     let tk = typeRep ks
     Local{localBlockApply} <- Action getRW
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
-    fmap (map fromValue) $ applyKeyValue $ map newKey ks
+    fmap (map fromValue) $ applyKeyValue callStackFull $ map newKey ks
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
-apply1 :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
-apply1 = fmap head . apply . return
+apply1 :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
+apply1 = withFrozenCallStack $ fmap head . apply . return
 
 
 

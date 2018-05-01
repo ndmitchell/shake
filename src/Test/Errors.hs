@@ -223,7 +223,7 @@ test build = do
     assertMissing src
     build ["tempdir"]
 
-    crash ["--die"] ["Shake","action","death error"]
+    crash ["--die"] ["Shake","Errors.hs","death error"]
 
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []

@@ -16,7 +16,7 @@ module General.Extra(
     doesFileExist_,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
-    Located, Partial, callStackTop, withFrozenCallStack,
+    Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
     ) where
 
 import Control.Exception.Extra
@@ -219,20 +219,24 @@ whenLeft x f = either f (const $ pure ()) x
 type Located = Partial
 
 callStackTop :: Partial => String
+callStackTop = withFrozenCallStack $ head $ callStackFull ++ ["unknown location"]
+
+callStackFull :: Partial => [String]
 
 #if __GLASGOW_HASKELL__ >= 800
-callStackTop = f $ getCallStack $ popCallStack callStack
+
+callStackFull = map f $ getCallStack $ popCallStack callStack
     where
-        f ((_, SrcLoc{..}):_) = toStandard srcLocFile ++ ":" ++
+        f (_, SrcLoc{..}) = toStandard srcLocFile ++ ":" ++
             -- match the format of GHC error messages
             if srcLocStartLine == srcLocEndLine then
                 show srcLocStartLine ++ ":" ++ show srcLocStartCol ++
                 (if srcLocStartCol == srcLocEndCol then "" else "-" ++ show srcLocEndCol) ++ ":"
             else
                 show (srcLocStartLine, srcLocStartCol) ++ "-" ++ show (srcLocEndLine, srcLocEndCol) ++ ":"
-        f _ = "unknown location"
 #else
-callStackTop = "unknown location"
+
+callStackFull = []
 
 withFrozenCallStack :: a -> a
 withFrozenCallStack = id
