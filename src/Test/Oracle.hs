@@ -9,6 +9,8 @@ import Development.Shake.FilePath
 import General.GetOpt
 import Data.List.Extra
 import Data.Tuple.Extra
+import System.Info
+import Data.Version.Extra
 import Test.Type hiding (RandomType)
 import qualified Test.Type as T
 import Control.Monad
@@ -114,5 +116,6 @@ test build = do
     errors ["int.txt"] -- Building with an Oracle that I know nothing about
         ["missing a call to addOracle"]
 
-    errors ["--def=string=1","--def=string=1"] -- Two Oracles defined in one go
-        ["oracle defined twice","Test/Oracle.hs"]
+    errors ["--def=string=1","--def=string=1"] $ -- Two Oracles defined in one go
+        "oracle defined twice" :
+        ["Test/Oracle.hs" | compilerVersion >= readVersion "8.0"] -- when GHC got support for locations

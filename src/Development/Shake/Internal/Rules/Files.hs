@@ -47,6 +47,7 @@ instance Show FilesA where show (FilesA xs) = unwords $ "Files" : map (drop 5 . 
 instance Show FilesQ where show (FilesQ xs) = unwords $ map (wrapQuote . show) xs
 
 data FilesRule = FilesRule String (FilesQ -> Maybe (Action FilesA))
+    deriving Typeable
 
 filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)
 filesStoredValue opts (FilesQ xs) = fmap FilesA . sequence <$> mapM (fileStoredValue opts) xs

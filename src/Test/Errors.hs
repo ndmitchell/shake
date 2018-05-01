@@ -12,6 +12,8 @@ import Control.Concurrent
 import General.GetOpt
 import General.Extra
 import Data.IORef
+import System.Info
+import Data.Version.Extra
 import Control.Exception.Extra
 import System.Directory as IO
 import System.Time.Extra
@@ -212,7 +214,9 @@ test build = do
     assertContents "overlap.foo" "overlap.*"
     build ["overlap.txt"]
     assertContents "overlap.txt" "overlap.txt"
-    crash ["overlap.txx"] ["key matches multiple rules","matched:  4","overlap.txx","overlap.t*","overlap.*","*.tox","Test/Errors.hs"]
+    crash ["overlap.txx"] $
+        ["key matches multiple rules","matched:  4","overlap.txx","overlap.t*","overlap.*","*.tox"] ++
+        ["Test/Errors.hs" | compilerVersion >= readVersion "8.0"] -- when GHC got support for locations
 
     crash ["tempfile"] ["tempfile-died"]
     src <- readFile "tempfile"
