@@ -60,7 +60,10 @@ Shake can use file names that are either absolute (`C:\file.txt`, `/file.txt`) o
 
 #### Q: How can I depend on directories?
 
-Think of directories as containers for files. They exist or don't pretty randomly, but if they have files, they must exist. In particular, you can't depend on a directory with `need` or write a rule to create a directory. Directories are created as needed -- the rule for `bar/baz.exe` will create the `bar` directory if necessary. If you want to depend on a `git clone` having being performed, depend on a particular checked-out file instead (e.g. `README.md`), with the rule to create it being `git clone`.
+Think of directories as containers for files. They exist or don't pretty randomly, but if they have files, they must exist. In particular, you can't depend on a directory with `need` or write a rule to create a directory. Directories are created as needed -- the rule for `bar/baz.exe` will create the `bar` directory if necessary. As some examples of "depending" on directories:
+
+* If you want to depend on a `git clone` having being performed, depend on a particular checked-out file instead (e.g. `README.md`), with the action in the rule to create it being `git clone`.
+* If you want to depend on a `node_modules` having been updated after changing `package.json`, create a stamp file by copying `package.json` after running `npm update` (see [this detailed answer](https://stackoverflow.com/questions/35938956/haskell-shake-special-rule-for-building-directories)).
 
 There is a tracked function `doesDirectoryExist`, to depend on the presence or absence of a directory, but you should not call it on directories which might be created by the build system.
 
