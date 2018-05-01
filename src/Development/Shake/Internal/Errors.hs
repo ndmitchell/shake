@@ -41,10 +41,7 @@ alternatives = let (*) = (,) in
 
 
 errorStructured :: String -> [(String, Maybe String)] -> String -> SomeException
-errorStructured msg args hint = toException $ ErrorCall $ errorStructuredContents msg args hint
-
-errorStructuredContents :: String -> [(String, Maybe String)] -> String -> String
-errorStructuredContents msg args hint = unlines $
+errorStructured msg args hint = toException $ ErrorCall $ unlines $
         [msg ++ ":"] ++
         ["  " ++ a ++ [':' | a /= ""] ++ replicate (as - length a + 2) ' ' ++ b | (a,b) <- args2] ++
         [hint | hint /= ""]
