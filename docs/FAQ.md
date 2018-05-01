@@ -19,7 +19,7 @@ Shake is suitable for all sizes of build systems, from a simple C project to a h
 
 #### Q: Any more documentation?
 
-There is a complete list of [every function in Shake](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) which [can be searched](http://hoogle.haskell.org/?package=shake). Each function comes with documentation and examples.
+There is a complete list of [every function in Shake](https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html) which [can be searched](https://hoogle.haskell.org/?package=shake). Each function comes with documentation and examples.
 
 Much of the theory behind Shake is covered in [a conference paper](https://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf) which was accompanied by [this video](https://www.youtube.com/watch?v=xYCPpXVlqFM) ([slides](https://ndmitchell.com/downloads/slides-shake_before_building-10_sep_2012.pdf)). Since then I've given videoed talks on [small worked examples](https://www.infoq.com/presentations/shake) ([slides](https://ndmitchell.com/downloads/slides-building_stuff_with_shake-20_nov_2014.pdf)) and [how to structure large Shake systems](https://skillsmatter.com/skillscasts/6548-defining-your-own-build-system-with-shake) ([slides](https://ndmitchell.com/downloads/slides-defining_your_own_build_system_with_shake-09_oct_2015.pdf)).
 
