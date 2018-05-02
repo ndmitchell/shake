@@ -204,8 +204,11 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 Right () -> do
                     tot <- start
                     let (mins,secs) = divMod (ceiling tot) (60 :: Int)
-                        time = show mins ++ ":" ++ ['0' | secs < 10] ++ show secs
-                    putWhenLn Normal $ esc "32" $ "Build completed in " ++ time ++ "m"
+                        millis = ceiling (1000 * (tot - fromIntegral (floor tot)))
+                        time = if tot < 60
+                            then show (floor tot) ++ "." ++ ['0' | millis < 10] ++ ['0' | millis < 100] ++ show millis ++ "s"
+                            else show mins ++ ":" ++ ['0' | secs < 10] ++ show secs ++ "." ++ show millis ++ "m"
+                    putWhenLn Normal $ esc "32" $ "Build completed in " ++ time
     where
         opts = removeOverlap userOptions (map snd shakeOptsEx) `mergeOptDescr` userOptions
 
