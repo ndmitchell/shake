@@ -315,7 +315,7 @@ isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
 
 isProgram :: String -> Bool
 isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFilePath x || all isAlpha x || x == "&&") xs
-    where programs = words "excel gcc cl make ghc ghci cabal distcc build tar git fsatrace ninja touch pwd runhaskell rot13 main shake stack rm cat sed sh apt-get build-multiple"
+    where programs = words "excel gcc cl make ghc ghci cabal distcc npm build tar git fsatrace ninja touch pwd runhaskell rot13 main shake stack rm cat sed sh apt-get build-multiple"
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
@@ -334,7 +334,7 @@ whitelist x | elem x $ words $
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult " ++
-    "oldStore mode"
+    "oldStore mode node_modules"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
