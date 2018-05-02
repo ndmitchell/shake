@@ -154,7 +154,8 @@ addStack i k (Stack _ ks is)
     where stack2 = Stack (Just k) (Left k:ks) (Set.insert i is)
 
 addCallStack :: [String] -> Stack -> Stack
-addCallStack xs (Stack t a b) = Stack t (Right xs:a) b
+-- use group/head to squash adjacent duplicates, e.g. a want does an action and a need, both of which get the same location
+addCallStack xs (Stack t a b) = Stack t (Right xs : dropWhile (== Right xs) a) b
 
 topStack :: Stack -> Maybe Key
 topStack (Stack t _ _) = t
