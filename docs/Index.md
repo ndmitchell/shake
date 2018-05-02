@@ -31,7 +31,7 @@ Shake can execute [Ninja files](Ninja.md), allowing integration with [CMake](htt
 
 ## Who uses Shake?
 
-Shake is used by lots of companies, but only a few have declared so publicly.
+Shake is used by lots of companies, but only a few have declared so publicly:
 
 * [Standard Chartered](https://www.standardchartered.com/) have been using Shake since 2009, as described in the section 6 of the [academic paper](https://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf).
 * [factis research GmbH](http://www.factisresearch.com/) use Shake to compile their [Checkpad MED](https://www.checkpad.de/) application, as described in their [blog post](http://funktionale-programmierung.de/2014/01/16/build-system-haskell.html).
@@ -63,9 +63,13 @@ Several open-source projects make key use of Shake:
 * [shake-install](https://github.com/alphaHeavy/shake-install) helps build a set of cabal packages in the correct order.
 * [OpenSUSE Haskell packaging](https://github.com/opensuse-haskell) makes use of Shake to [convert a Stack project to OBS](https://github.com/opensuse-haskell/cabal2obs).
 
-And finally, here are a few tutorials and blog posts:
+Here are a few tutorials and blog posts:
 
 * [Many articles from the author of Shake](https://neilmitchell.blogspot.co.uk/search/label/shake), covering ongoing development.
 * [Writing a simple Blog with Shake and Pandoc](http://declaredvolatile.org/blog/2014-09-14-writing-a-simple-blog-with-shake-and-pandoc/).
+
+Finally, the ideas behind Shake have helped inspire other systems:
+
+* [swift-llbuild](https://github.com/apple/swift-llbuild) used Shake as the inspiration for the mechanism `llbuild` uses to allow additional work to be discovered on the fly.
 
 Do you have a link that should be included above? Let me know with a [tweet to `@ndm_haskell`](https://twitter.com/ndm_haskell).
