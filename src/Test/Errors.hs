@@ -223,7 +223,8 @@ test build = do
     assertMissing src
     build ["tempdir"]
 
-    crash ["--die"] ["Shake","Errors.hs","death error"]
+    crash ["--die"] $ ["Shake","death error"] ++
+        ["Test/Errors.hs" | compilerVersion >= readVersion "8.0"] -- when GHC got support for locations
 
     putStrLn "## BUILD errors"
     (out,_) <- IO.captureOutput $ build []
