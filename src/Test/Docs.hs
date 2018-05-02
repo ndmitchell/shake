@@ -141,6 +141,8 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         need [index]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
+        liftIO $ print =<< System.Directory.getDirectoryContents (root </> "docs")
+        liftIO $ print ("filesMd", filesMd)
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs,
                 not $ any (`isSuffixOf` x) ["-Classes.html", "-FilePath.html"]] ++
