@@ -140,9 +140,9 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
+        -- filesMd on Travis will only include Manual.md, since it's the only one listed in the .cabal
+        -- On AppVeyor, where we build from source, it will check the rest of the website
         filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
-        liftIO $ print =<< System.Directory.getDirectoryContents (root </> "docs")
-        liftIO $ print ("filesMd", filesMd)
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs,
                 not $ any (`isSuffixOf` x) ["-Classes.html", "-FilePath.html"]] ++
