@@ -71,6 +71,7 @@ data Pool = Pool
 data S = S
     {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stacks
     ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit, Set.size threads <= threadsLimit
+    ,threadsCount :: {-# UNPACK #-} !Int -- Set.size threads, but in O(1)
     ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads (accounting only)
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through (accounting only)
     ,todo :: !(Queue (IO ())) -- operations waiting a thread
@@ -78,7 +79,7 @@ data S = S
 
 
 emptyS :: Int -> Bool -> S
-emptyS n deterministic = S Set.empty n 0 0 $ newQueue deterministic
+emptyS n deterministic = S Set.empty n 0 0 0 $ newQueue deterministic
 
 
 worker :: Pool -> IO ()
@@ -99,7 +100,7 @@ step pool@(Pool var done) op = do
         s <- op s
         res <- dequeue $ todo s
         case res of
-            Just (now, todo2) | Set.size (threads s) < threadsLimit s -> do
+            Just (now, todo2) | threadsCount s < threadsLimit s -> do
                 -- spawn a new worker
                 t <- forkFinallyUnmasked (now >> worker pool) $ \res -> case res of
                     Left e -> onVar $ \s -> do
@@ -109,11 +110,10 @@ step pool@(Pool var done) op = do
                         return Nothing
                     Right _ -> do
                         t <- myThreadId
-                        step pool $ \s -> return s{threads = Set.delete t $ threads s}
-                let threads2 = Set.insert t $ threads s
-                return $ Just s{todo = todo2, threads = threads2
-                               ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` Set.size threads2}
-            Nothing | Set.null $ threads s -> do
+                        step pool $ \s -> return s{threads = Set.delete t $ threads s, threadsCount = threadsCount s - 1}
+                return $ Just s{todo = todo2, threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
+                               ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` (threadsCount s + 1)}
+            Nothing | threadsCount s == 0 -> do
                 signalBarrier done $ Right s
                 return Nothing
             _ -> return $ Just s
