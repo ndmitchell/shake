@@ -62,6 +62,7 @@ Several open-source projects make key use of Shake:
 * [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) is in the process of migrating to a Shake-based build system named [Hadrian](https://github.com/snowleopard/hadrian).
 * [shake-install](https://github.com/alphaHeavy/shake-install) helps build a set of cabal packages in the correct order.
 * [OpenSUSE Haskell packaging](https://github.com/opensuse-haskell) makes use of Shake to [convert a Stack project to OBS](https://github.com/opensuse-haskell/cabal2obs).
+* [Pier](https://github.com/judah/pier) is an alternative to [Stack](https://haskellstack.org/) using Shake as the dependency engine.
 
 Here are a few tutorials and blog posts:
 
