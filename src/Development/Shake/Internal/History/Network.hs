@@ -23,8 +23,8 @@ post :: Conn -> String -> LBS.ByteString -> IO LBS.ByteString
 
 #ifndef NETWORK
 
-connect _ = Conn `seq` Nothing
-post _ _ _ = fail "impossible to get here"
+connect _ = Nothing
+post (Conn _) _ _ = fail "impossible to get here"
 
 #else
 
