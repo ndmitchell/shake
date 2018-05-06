@@ -138,6 +138,8 @@ library
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
         Development.Shake.Internal.History.Cloud
+        Development.Shake.Internal.History.Network
+        Development.Shake.Internal.History.Server
         Development.Shake.Internal.History.Types
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
@@ -243,6 +245,8 @@ executable shake
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
         Development.Shake.Internal.History.Cloud
+        Development.Shake.Internal.History.Network
+        Development.Shake.Internal.History.Server
         Development.Shake.Internal.History.Types
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
@@ -356,6 +360,8 @@ test-suite shake-test
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
         Development.Shake.Internal.History.Cloud
+        Development.Shake.Internal.History.Network
+        Development.Shake.Internal.History.Server
         Development.Shake.Internal.History.Types
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
