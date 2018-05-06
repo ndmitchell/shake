@@ -8,13 +8,14 @@ module Development.Shake.Internal.Core.Rules(
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
-    getUserRulesVersioned, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
+    getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
     addUserRule, alternatives, priority, versioned,
     action, withoutActions
     ) where
 
 import Control.Applicative
 import Data.Tuple.Extra
+import Control.Exception
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
@@ -50,16 +51,30 @@ import Prelude
 ---------------------------------------------------------------------
 -- RULES
 
--- | Are there any rules which use 'versioned'
-getUserRulesVersioned :: Typeable a => proxy a -> Action Bool
-getUserRulesVersioned (p :: proxy a) = do
-    Global{..} <- Action getRO
-    return $ maybe False userRuleVersioned (TMap.lookup globalUserRules :: Maybe (UserRuleVersioned a))
-
-
 -- | Get the 'ShakeOptions' that were used.
 getShakeOptionsRules :: Rules ShakeOptions
 getShakeOptionsRules = Rules $ lift ask
+
+
+-- | Internal variant, more flexible, but not such a nice API
+--   Same args as getuserRuleMaybe, but returns (guaranteed version, items, error to throw if wrong number)
+--   Fields are returned lazily, in particular ver can be looked up cheaper
+getUserRuleInternal :: forall key a b . (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -> (a -> Maybe b) -> Action (Maybe Ver, [(Int, b)], SomeException)
+getUserRuleInternal key disp test = do
+    Global{..} <- Action getRO
+    let UserRuleVersioned versioned rules = fromMaybe mempty $ TMap.lookup globalUserRules
+    let ver = if versioned then Nothing else Just $ Ver 0
+    let items = head $ (map snd $ reverse $ groupSort $ f (Ver 0) Nothing rules) ++ [[]]
+    let err = errorMultipleRulesMatch (typeOf key) (show key) (map snd3 items)
+    return (ver, map (\(Ver v,_,x) -> (v,x)) items, err)
+    where
+        f :: Ver -> Maybe Double -> UserRule a -> [(Double,(Ver,Maybe String,b))]
+        f v p (UserRule x) = [(fromMaybe 1 p, (v,disp x,x2)) | Just x2 <- [test x]]
+        f v p (Unordered xs) = concatMap (f v p) xs
+        f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
+        f v p (Versioned v2 x) = f v2 p x
+        f v p (Alternative x) = take 1 $ f v p x
+
 
 -- | Get the user rules that were added at a particular type which return 'Just' on a given function.
 --   Return all equally applicable rules, paired with the version of the rule
@@ -69,37 +84,27 @@ getShakeOptionsRules = Rules $ lift ask
 --   If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne',
 --   which raise informative errors.
 getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
-getUserRuleList test = do
-    Global{..} <- Action getRO
-    let rules = maybe mempty userRuleContents $ TMap.lookup globalUserRules
-    return $ head $ (map snd $ reverse $ groupSort $ f (Ver 0) Nothing $ fmap test rules) ++ [[]]
-    where
-        f :: Ver -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
-        f (Ver v) p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
-        f v p (Unordered xs) = concatMap (f v p) xs
-        f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
-        f v p (Versioned v2 x) = f v2 p x
-        f v p (Alternative x) = take 1 $ f v p x
+getUserRuleList test = snd3 <$> getUserRuleInternal () (const Nothing) test
 
 
 -- | A version of 'getUserRuleList' that fails if there is more than one result
 --   Requires a @key@ for better error messages.
 getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -> (a -> Maybe b) -> Action (Maybe (Int, b))
 getUserRuleMaybe key disp test = do
-    res <- getUserRuleList $ \x -> (,) x <$> test x
-    case res of
+    (_, xs, err) <- getUserRuleInternal key disp test
+    case xs of
         [] -> return Nothing
-        [x] -> return $ Just $ second snd x
-        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (map (disp . fst . snd) xs)
+        [x] -> return $ Just x
+        _ -> throwM err
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
 --   Requires a @key@ for better error messages.
 getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -> (a -> Maybe b) -> Action (Int, b)
 getUserRuleOne key disp test = do
-    res <- getUserRuleList $ \x -> (,) x <$> test x
-    case res of
-        [x] -> return $ second snd x
-        xs -> throwM $ errorMultipleRulesMatch (typeOf key) (show key) (map (disp . fst . snd) xs)
+    (_, xs, err) <- getUserRuleInternal key disp test
+    case xs of
+        [x] -> return x
+        _ -> throwM err
 
 
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.

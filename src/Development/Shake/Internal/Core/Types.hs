@@ -349,6 +349,10 @@ data UserRuleVersioned a = UserRuleVersioned
 instance Semigroup (UserRuleVersioned a) where
     UserRuleVersioned b1 x1 <> UserRuleVersioned b2 x2 = UserRuleVersioned (b1 || b2) (x1 <> x2)
 
+instance Monoid (UserRuleVersioned a) where
+    mempty = UserRuleVersioned False mempty
+    mappend = (<>)
+
 instance Semigroup (UserRule a) where
     x <> y = Unordered $ fromUnordered x ++ fromUnordered y
         where

@@ -213,8 +213,6 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
     -- for Phony, it doesn't make that much sense, but probably isn't harmful?
     let r = rebuildFlags $ fileNameToString x
 
-    -- FIXME: if rules are versioned should be querying before they fire
-    isVersioned <- getUserRulesVersioned (Proxy :: Proxy FileRule)
 
     case old of
         _ | r == RebuildNow -> rebuild
