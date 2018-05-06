@@ -62,10 +62,10 @@ messageCorrupt dbfile err = do
 
 messageDatabaseVersionChange :: FilePath -> BS.ByteString -> BS.ByteString -> [String]
 messageDatabaseVersionChange dbfile old new =
-    ["Error when reading Shake database - invalid version stamp detected:"
-    ,"  File:      " ++ dbfile
-    ,"  Expected:  " ++ disp (BS.unpack new)
-    ,"  Found:     " ++ disp (limit $ BS.unpack old)
+    ["Shake database version changed (either shake library version, or shakeVersion):"
+    ,"  File:         " ++ dbfile
+    ,"  Old version:  " ++ disp (limit $ BS.unpack old)
+    ,"  New version:  " ++ disp (BS.unpack new)
     ,"All rules will be rebuilt"]
     where
         limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
