@@ -55,12 +55,9 @@ getKeyId Database{..} k = liftIO $ do
             writeIORef' intern is
             return i
 
-getIdKeyStatus :: Database -> Id -> Locked (Key, Status)
-getIdKeyStatus Database{..} i = liftIO $ do
-    res <- Ids.lookup status i
-    case res of
-        Nothing -> throwM $ errorInternal $ "interned value missing from database, " ++ show i
-        Just v -> return v
+-- Returns Nothing only if the Id was serialised previously but then the Id disappeared
+getIdKeyStatus :: Database -> Id -> Locked (Maybe (Key, Status))
+getIdKeyStatus Database{..} i = liftIO $ Ids.lookup status i
 
 
 setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> Locked ()
@@ -85,7 +82,7 @@ setIdKeyStatusQuiet Database{..} i k v =
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
 getDatabaseValue k = do
     Global{..} <- Action getRO
-    (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
+    Just (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
         getIdKeyStatus database =<< getKeyId database (newKey k)
     return $ case getResult status of
         Just r -> Just $ fromValue <$> result r
@@ -98,21 +95,23 @@ getDatabaseValue k = do
 -- | Lookup the value for a single Id, may need to spawn it
 lookupOne :: Global -> Stack -> Database -> Id -> Locked (Wait (Either SomeException (Result Value)))
 lookupOne global stack database i = do
-    (k, s) <- getIdKeyStatus database i
-    case s of
-        Ready r -> return $ Now $ Right r
-        Error e -> return $ Now $ Left e
-        Running{} | Left e <- addStack i k stack -> return $ Now $ Left e
-        _ -> return $ Later $ \continue -> do
-            (_, s) <- getIdKeyStatus database i
-            case s of
-                Ready r -> continue $ Right r
-                Error e -> continue $ Left e
-                Running (NoShow w) r -> do
-                    let w2 v = w v >> continue v
-                    setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
-                Loaded r -> do wait <- buildOne global stack database i k (Just r); fromLater wait continue
-                Missing -> do wait <- buildOne global stack database i k Nothing; fromLater wait continue
+    res <- getIdKeyStatus database i
+    case res of
+        Nothing -> return $ Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
+        Just (k, s) -> case s of
+            Ready r -> return $ Now $ Right r
+            Error e -> return $ Now $ Left e
+            Running{} | Left e <- addStack i k stack -> return $ Now $ Left e
+            _ -> return $ Later $ \continue -> do
+                Just (_, s) <- getIdKeyStatus database i
+                case s of
+                    Ready r -> continue $ Right r
+                    Error e -> continue $ Left e
+                    Running (NoShow w) r -> do
+                        let w2 v = w v >> continue v
+                        setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
+                    Loaded r -> do wait <- buildOne global stack database i k (Just r); fromLater wait continue
+                    Missing -> do wait <- buildOne global stack database i k Nothing; fromLater wait continue
 
 
 -- | Build a key, must currently be either Loaded or Missing, changes to Waiting
@@ -129,9 +128,9 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                 runLocked globalDatabase $ \_ -> do
                     let val = fmap runValue res
                     res <- getIdKeyStatus database i
-                    w <- case snd res of
-                        Running (NoShow w) _ -> return w
-                        s -> throwM $ errorInternal $ "expected Waiting but got " ++ statusType s ++ ", key " ++ show k
+                    w <- case res of
+                        Just (_, Running (NoShow w) _) -> return w
+                        _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
                     setIdKeyStatus global database i k $ either Error Ready val
                     w val
                 case res of
@@ -172,7 +171,7 @@ applyKeyValue callStack ks = do
         wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global stack database) $ nubOrd is
         wait <- flip fmapWait (return wait) $ \x -> case x of
             Just e -> return $ Left e
-            Nothing -> Right <$> mapM (fmap (\(_, Ready r) -> result r) . getIdKeyStatus database) is
+            Nothing -> Right <$> mapM (fmap (\(Just (_, Ready r)) -> result r) . getIdKeyStatus database) is
         return (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
@@ -328,9 +327,8 @@ historySave k ver store = Action $ do
         deps <- runLocked globalDatabase $ \database ->
             -- technically this could be run without the DB lock, since it reads things that are stable
             forM (reverse localDepends) $ \(Depends is) -> forM is $ \i -> do
-                (k, r) <- getIdKeyStatus database i
-                let fromReady (Ready r) = r
-                return (k, runIdentify globalRules k $ result $ fromReady r)
+                Just (k, Ready r) <- getIdKeyStatus database i
+                return (k, runIdentify globalRules k $ result r)
         addHistory history (newKey k) localBuiltinVersion (Ver ver) deps store produced
         liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 

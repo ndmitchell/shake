@@ -362,6 +362,7 @@ instance Monoid (UserRule a) where
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
 --   Everything is mutable. intern and status must form a bijecttion.
+--   There may be dangling Id's as a result of version changes.
 data Database = Database
     {intern :: IORef (Intern Key) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (Key, Status) -- ^ Id |-> (Key, Status) mapping
