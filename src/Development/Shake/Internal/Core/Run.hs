@@ -85,7 +85,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
             resetTimings -- so we don't leak memory
         withNumCapabilities shakeThreads $ do
             diagnostic $ return "Starting run 3"
-            withDatabase opts diagnostic (Map.map builtinKey ruleinfo) $ \database step -> do
+            withDatabase opts diagnostic ruleinfo $ \database step -> do
                 wait <- newBarrier
                 let getProgress = do
                         failure <- fmap fst <$> readIORef except
@@ -201,12 +201,12 @@ checkValid diagnostic Database{..} check missing = do
 ---------------------------------------------------------------------
 -- STORAGE
 
-withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep (BinaryOp Key) -> (Database -> Step -> IO a) -> IO a
+withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
 withDatabase opts diagnostic owitness act = do
-    let step = (typeRep (Proxy :: Proxy StepKey), BinaryOp (const mempty) (const stepKey))
+    let step = (typeRep (Proxy :: Proxy StepKey), (Version 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList
-        [ (QTypeRep t, BinaryOp (putDatabase putOp) (getDatabase getOp))
-        | (t,BinaryOp{..}) <- step : Map.toList owitness]
+        [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
+        | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     withStorage opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 

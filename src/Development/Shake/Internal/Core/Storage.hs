@@ -60,9 +60,9 @@ databaseVersion x = "SHAKE-DATABASE-14-" ++ s ++ "\r\n"
 --   rewritten.
 withStorage
     :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
-    => ShakeOptions                      -- ^ Storage options
-    -> (IO String -> IO ())              -- ^ Logging function
-    -> Map.HashMap k (BinaryOp v)           -- ^ Witnesses
+    => ShakeOptions                                    -- ^ Storage options
+    -> (IO String -> IO ())                            -- ^ Logging function
+    -> Map.HashMap k (Version, BinaryOp v)             -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
@@ -170,22 +170,22 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             unexpected x
 
 
-keyName :: Show k => k -> BS.ByteString
-keyName = UTF8.fromString . show
+keyName :: Show k => Version -> k -> BS.ByteString
+keyName (Version v) k = UTF8.fromString $ show v ++ " " ++ show k
 
 
-getWitness :: Show k => BS.ByteString -> Map.HashMap k (BinaryOp v) -> (BS.ByteString -> (k, Id, v))
+getWitness :: Show k => BS.ByteString -> Map.HashMap k (Version, BinaryOp v) -> (BS.ByteString -> (k, Id, v))
 getWitness bs mp
     | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
     | otherwise = ind `seq` mp2 `seq` \bs ->
-            let (k :: Word16,bs2) = binarySplit bs
+            let (k :: Word16, bs2) = binarySplit bs
             in case ind (fromIntegral k) of
                     Nothing -> error $ "Witness type out of bounds, " ++ show k
                     Just f -> f bs2
     where
         limit = fromIntegral (maxBound :: Word16)
         ws :: [BS.ByteString] = getEx bs
-        mp2 = Map.fromList [(keyName k, (k, v)) | (k,v) <- Map.toList mp]
+        mp2 = Map.fromList [(keyName ver k, (k, v)) | (k,(ver,v)) <- Map.toList mp]
         ind = fastAt [ case Map.lookup w mp2 of
                             Nothing -> error $ "Witness type has disappeared, " ++ UTF8.toString w
                             Just (k, BinaryOp{..}) -> \bs ->
@@ -195,12 +195,12 @@ getWitness bs mp
                      | w <- ws]
 
 
-putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
+putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Version, BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
 putWitness mp = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
-        ws = sort $ map keyName $ Map.keys mp
+        ws = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp
         wsMp = Map.fromList $ zip ws [0 :: Word16 ..]
-        mp2 = Map.mapWithKey (\k BinaryOp{..} -> let tag = putEx $ wsMp Map.! keyName k in \(Id w) v -> tag <> putEx w <> putOp v) mp
+        mp2 = Map.mapWithKey (\k (ver,BinaryOp{..}) -> let tag = putEx $ wsMp Map.! keyName ver k in \(Id w) v -> tag <> putEx w <> putOp v) mp
 
 
 withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
