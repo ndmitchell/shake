@@ -26,6 +26,7 @@ import Data.Either.Extra
 import Data.Time
 import Data.Char
 import Data.Word
+import System.Info
 import Development.Shake.Classes
 import Numeric
 import General.Extra
@@ -47,7 +48,7 @@ databaseVersion :: String -> String
 -- THINGS I WANT TO DO ON THE NEXT CHANGE
 -- * Change filepaths to store a 1 byte prefix saying 8bit ASCII or UTF8
 -- * Duration and Time should be stored as number of 1/10000th seconds Int32
-databaseVersion x = "SHAKE-DATABASE-14-" ++ s ++ "\r\n"
+databaseVersion x = "SHAKE-DATABASE-14-" ++ os ++ "-" ++ arch ++ "-" ++  s ++ "\r\n"
     where s = tail $ init $ show x -- call show, then take off the leading/trailing quotes
                                    -- ensures we do not get \r or \n in the user portion
 

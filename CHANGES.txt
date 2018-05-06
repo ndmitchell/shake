@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Make the Shake database version string contain os and arch
     Don't delete the whole database when an oracle disappears
     #300, soften the database version change message
     IMPORTANT: Incompatible on disk format change
