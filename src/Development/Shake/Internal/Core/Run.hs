@@ -33,7 +33,7 @@ import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 import Development.Shake.Internal.Progress
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Profile

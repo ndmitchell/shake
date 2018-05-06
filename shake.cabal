@@ -128,7 +128,6 @@ library
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
-        Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait2
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
@@ -166,6 +165,7 @@ library
         General.Intern
         General.ListBuilder
         General.Makefile
+        General.Pool
         General.Process
         General.Template
         General.Timing
@@ -231,7 +231,6 @@ executable shake
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
-        Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait2
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
@@ -269,6 +268,7 @@ executable shake
         General.Intern
         General.ListBuilder
         General.Makefile
+        General.Pool
         General.Process
         General.Template
         General.Timing
@@ -342,7 +342,6 @@ test-suite shake-test
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.Core.History
         Development.Shake.Internal.Core.Monad
-        Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait2
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
@@ -382,6 +381,7 @@ test-suite shake-test
         General.Intern
         General.ListBuilder
         General.Makefile
+        General.Pool
         General.Process
         General.Template
         General.Timing

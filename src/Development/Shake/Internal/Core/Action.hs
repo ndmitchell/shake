@@ -41,7 +41,7 @@ import qualified General.Intern as Intern
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Wait2

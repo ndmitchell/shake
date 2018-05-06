@@ -39,7 +39,7 @@ import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
 import Data.Tuple.Extra
 
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options

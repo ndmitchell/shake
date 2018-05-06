@@ -8,7 +8,7 @@ module Development.Shake.Internal.Core.Build(
     ) where
 
 import Development.Shake.Classes
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types

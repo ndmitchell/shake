@@ -13,7 +13,7 @@ import Data.Tuple.Extra
 import Data.IORef.Extra
 import Control.Monad.Extra
 import General.Bilist
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad

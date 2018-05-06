@@ -7,7 +7,7 @@ module Development.Shake.Internal.Core.Wait2(
     ) where
 
 import Control.Exception
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad
 import System.Time.Extra

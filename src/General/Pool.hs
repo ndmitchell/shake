@@ -11,7 +11,7 @@
 -- * 'addPoolStart' - rules that haven't yet started.
 --
 -- * 'addPoolBatch' - rules that might batch if other rules start first.
-module Development.Shake.Internal.Core.Pool(
+module General.Pool(
     Pool, runPool,
     addPool, PoolPriority(..),
     increasePool, keepAlivePool

@@ -2,7 +2,7 @@
 module Test.Pool(main) where
 
 import Test.Type
-import Development.Shake.Internal.Core.Pool
+import General.Pool
 
 import Control.Concurrent.Extra
 import Control.Exception.Extra
