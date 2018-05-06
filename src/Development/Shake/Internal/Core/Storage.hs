@@ -125,7 +125,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 corrupt
                 return Nothing) $ do
 
-                load <- evaluate $ loadWitness witness witnessOld
+                (_, load) <- evaluate $ loadWitness witness witnessOld
                 ids <- Ids.empty
                 let go !i = do
                         v <- readChunk h
@@ -136,7 +136,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                                 diagnostic $ return $ "Read " ++ show i ++ " chunks, plus " ++ show slop ++ " slop"
                                 return i
                             Right bs -> do
-                                let (k,id,v) = load bs
+                                let Just (k,id,v) = load bs
                                 evaluate $ rnf k
                                 evaluate $ rnf v
                                 Ids.insert ids id (k,v)
@@ -185,21 +185,21 @@ keyName (Ver v) k = UTF8.fromString $ show v ++ " " ++ show k
 
 type Witness = BS.ByteString
 
-loadWitness :: Show k => Map.HashMap k (Ver, BinaryOp v) -> Witness -> (BS.ByteString -> (k, Id, v))
-loadWitness mp bs = ind `seq` mp2 `seq` \bs ->
+loadWitness :: Show k => Map.HashMap k (Ver, BinaryOp v) -> Witness -> ([String], BS.ByteString -> Maybe (k, Id, v))
+loadWitness mp bs = ind `seq` mp2 `seq` ([], \bs ->
             let (k :: Word16, bs2) = binarySplit bs
             in case ind (fromIntegral k) of
                     Nothing -> error $ "Witness type out of bounds, " ++ show k
-                    Just f -> f bs2
+                    Just f -> f bs2)
     where
         ws :: [BS.ByteString] = getEx bs
         mp2 = Map.fromList [(keyName ver k, (k, v)) | (k,(ver,v)) <- Map.toList mp]
         ind = fastAt [ case Map.lookup w mp2 of
-                            Nothing -> error $ "Witness type has disappeared, " ++ UTF8.toString w
+                            Nothing -> const Nothing
                             Just (k, BinaryOp{..}) -> \bs ->
                                 let (i, bs2) = binarySplit bs
                                     v = getOp bs2
-                                in (k, i, v)
+                                in Just (k, i, v)
                      | w <- ws]
 
 
