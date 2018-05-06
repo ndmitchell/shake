@@ -161,7 +161,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         need ["Main.hs"]
         trackAllow ["dist//*"]
         needSource
-        cmd_ "ghc -fno-code -ignore-package=hashmap " ["-idist/build/autogen","-i" ++ root </> "src","Main.hs"]
+        cmd_ "ghc -fno-code -ignore-package=hashmap -DNO_NETWORK" ["-idist/build/autogen","-i" ++ root </> "src","Main.hs"]
         writeFile' out ""
 
 
