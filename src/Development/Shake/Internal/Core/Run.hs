@@ -13,6 +13,7 @@ import Control.Concurrent.Extra
 import General.Binary
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.History.Shared
+import Development.Shake.Internal.History.Cloud
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
 import Control.Monad.Extra
@@ -96,12 +97,12 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                 addCleanup_ cleanup $ do
                     killThread tid
                     void $ timeout 1 $ waitBarrier wait
-                shared <- loadShared opts $ Map.map builtinKey ruleinfo
+                (shared, cloud) <- loadSharedCloud opts ruleinfo
                 databaseVar <- newVar database
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                    let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared step
+                    let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
                     -- give each action a stack to start with!
                     forM_ actions $ \(stack, act) -> do
                         let local = newLocal stack shakeVerbosity
@@ -229,16 +230,24 @@ withDatabase opts diagnostic owitness act = do
         act Database{..} step
 
 
-loadShared :: ShakeOptions -> Map.HashMap TypeRep (BinaryOp Key) -> IO (Maybe Shared)
-loadShared opts owitness =
-    case shakeShare opts of
-        Nothing -> return Nothing
-        Just x -> do
-            let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
-            let wit = binaryOpMap $ \a -> fromMaybe (error $ "loadHistory, couldn't find map for " ++ show a) $ Map.lookup a mp
-            let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
-            Just <$> newShared (makeVer $ shakeVersion opts) wit2 x
+loadSharedCloud :: ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
+loadSharedCloud opts owitness = do
+    let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
+    let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp
+    let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
+    let keyVers = [(show $ QTypeRep k, builtinVersion v) | (k,v) <- Map.toList owitness]
+    let ver = makeVer $ shakeVersion opts
 
+    shared <- case shakeShare opts of
+        Nothing -> return Nothing
+        Just x -> do Just <$> newShared wit2 ver x
+    cloud <- case shakeCloud opts of
+        [] -> return Nothing
+        urls -> do
+            case newCloud wit2 ver keyVers urls of
+                Nothing -> fail $ "shakeCloud set but Shake not compiled for cloud operation"
+                Just res -> Just <$> res
+    return (shared, cloud)
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)

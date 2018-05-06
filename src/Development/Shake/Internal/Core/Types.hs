@@ -26,6 +26,7 @@ import Data.Maybe
 import General.Extra
 import Control.Concurrent.Extra
 import Development.Shake.Internal.History.Shared
+import Development.Shake.Internal.History.Cloud
 import Development.Shake.Internal.History.Types
 import General.Wait
 import Development.Shake.Internal.Errors
@@ -391,6 +392,7 @@ data Global = Global
     ,globalProgress :: IO Progress -- ^ Request current progress state
     ,globalUserRules :: TMap.Map UserRuleVersioned
     ,globalShared :: Maybe Shared -- ^ The active shared state, if any
+    ,globalCloud :: Maybe Cloud
     ,globalStep :: {-# UNPACK #-} !Step
     }
 

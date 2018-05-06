@@ -56,8 +56,8 @@ data Shared = Shared
     ,sharedRoot :: FilePath
     }
 
-newShared :: Ver -> BinaryOp Key -> FilePath -> IO Shared
-newShared globalVersion keyOp sharedRoot = return Shared{..}
+newShared :: BinaryOp Key -> Ver -> FilePath -> IO Shared
+newShared keyOp globalVersion sharedRoot = return Shared{..}
 
 
 data Entry = Entry
