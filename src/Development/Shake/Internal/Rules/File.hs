@@ -297,7 +297,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)
                             retNew ChangedRecomputeDiff ResultPhony
                         Just new -> answer (ResultForward $ Ver ver) new
                 Just (ver, ModeDirect act) -> do
-                    cache <- historyLoad o ver
+                    cache <- historyLoad ver
                     case cache of
                         Just encodedHash -> do
                             Just (FileA mod size _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o

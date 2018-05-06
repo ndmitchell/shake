@@ -262,44 +262,45 @@ apply1 = withFrozenCallStack $ fmap head . apply . return
 ---------------------------------------------------------------------
 -- HISTORY STUFF
 
--- | Load a value from the history. Given a @key@, a version from any user rule
---   (or @\"\"@), return the payload that was stored by 'historySave'.
+-- | Load a value from the history. Given a version from any user rule
+--   (or @0@), return the payload that was stored by 'historySave'.
 --
 --   If this function returns 'Just' it will also have restored any files that
 --   were saved by 'historySave'.
-historyLoad :: ShakeValue k => k -> Int -> Action (Maybe BS.ByteString)
-historyLoad k userVersion = do
+historyLoad :: Int -> Action (Maybe BS.ByteString)
+historyLoad (Ver -> ver) = do
     global@Global{..} <- Action getRO
     Local{localStack, localBuiltinVersion} <- Action getRW
-    case globalShared of
-        Nothing -> return Nothing
-        Just history -> do
-            res <- liftIO $ runLocked globalDatabase $ \database -> do
-                let ask k = do
-                        i <- getKeyId database k
-                        let identify = Just . runIdentify globalRules k . result
-                        fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
-                res <- lookupShared history ask (newKey k) localBuiltinVersion (Ver userVersion)
-                flip fmapWait (return res) $ \x -> case x of
-                    Nothing -> return Nothing
-                    Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
-            res <- case res of
-                Now x -> return x
-                Later k -> do
-                    offset <- liftIO offsetTime
-                    res <- Action $ captureRAW $ \continue ->
-                        runLocked globalDatabase $ \_ -> k $ \x ->
-                            liftIO $ addPool PoolResume globalPool $ continue $ Right x
-                    offset <- liftIO offset
-                    Action $ modifyRW $ addDiscount offset
-                    return res
-            case res of
+    if isNothing globalShared && isNothing globalCloud then return Nothing else do
+        key <- liftIO $ evaluate $ fromMaybe (error "Can't call historyLoad outside a rule") $ topStack localStack
+        res <- liftIO $ runLocked globalDatabase $ \database -> do
+            let ask k = do
+                    i <- getKeyId database k
+                    let identify = Just . runIdentify globalRules k . result
+                    fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
+            res <- case globalShared of
+                Just shared -> lookupShared shared ask key localBuiltinVersion ver
+                Nothing -> return $ Now Nothing
+            flip fmapWait (return res) $ \x -> case x of
                 Nothing -> return Nothing
-                Just (res, deps, restore) -> do
-                    liftIO $ globalDiagnostic $ return $ "History hit for " ++ show k
-                    liftIO restore
-                    Action $ modifyRW $ \s -> s{localDepends = reverse $ map Depends deps}
-                    return (Just res)
+                Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
+        res <- case res of
+            Now x -> return x
+            Later k -> do
+                offset <- liftIO offsetTime
+                res <- Action $ captureRAW $ \continue ->
+                    runLocked globalDatabase $ \_ -> k $ \x ->
+                        liftIO $ addPool PoolResume globalPool $ continue $ Right x
+                offset <- liftIO offset
+                Action $ modifyRW $ addDiscount offset
+                return res
+        case res of
+            Nothing -> return Nothing
+            Just (res, deps, restore) -> do
+                liftIO $ globalDiagnostic $ return $ "History hit for " ++ show key
+                liftIO restore
+                Action $ modifyRW $ \s -> s{localDepends = reverse $ map Depends deps}
+                return (Just res)
 
 
 -- | Is the history enabled.

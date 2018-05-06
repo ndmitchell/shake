@@ -126,7 +126,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
         _ -> rebuild
     where
         rebuildWith (ver, act) = do
-            cache <- historyLoad k ver
+            cache <- historyLoad ver
             v <- case cache of
                 Just res ->
                     fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
