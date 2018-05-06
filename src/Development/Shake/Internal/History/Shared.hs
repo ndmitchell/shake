@@ -5,6 +5,7 @@ module Development.Shake.Internal.History.Shared(
     ) where
 
 import Development.Shake.Internal.Value
+import Development.Shake.Internal.History.Types
 import Development.Shake.Classes
 import General.Binary
 import General.Extra
@@ -64,8 +65,8 @@ data Entry = Entry
     ,entryGlobalVersion :: !Ver
     ,entryBuiltinVersion :: !Ver
     ,entryUserVersion :: !Ver
-    ,entryDepends :: [[(Key, BS.ByteString)]]
-    ,entryResult :: BS.ByteString
+    ,entryDepends :: [[(Key, BS_Identity)]]
+    ,entryResult :: BS_Store
     ,entryFiles :: [(FilePath, FileHash)]
     } deriving (Show, Eq)
 
@@ -118,7 +119,7 @@ loadSharedEntry shared@Shared{..} key builtinVersion userVersion = do
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
-lookupShared :: Shared -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS.ByteString, [[Key]], IO ())))
+lookupShared :: Shared -> (Key -> Locked (Wait (Maybe BS_Identity))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS_Store, [[Key]], IO ())))
 lookupShared shared ask key builtinVersion userVersion = do
     ents <- liftIO $ loadSharedEntry shared key builtinVersion userVersion
     firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
@@ -146,7 +147,7 @@ saveSharedEntry shared entry = do
             copyFile file (dir </> show hash)
 
 
-addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
+addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
 addShared shared entryKey entryBuiltinVersion entryUserVersion entryDepends entryResult files = do
     hashes <- mapM (getFileHash . fileNameFromString) files
     saveSharedEntry shared Entry{entryFiles = zip files hashes, entryGlobalVersion = globalVersion shared, ..}

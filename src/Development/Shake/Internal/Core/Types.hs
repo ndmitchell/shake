@@ -26,6 +26,7 @@ import Data.Maybe
 import General.Extra
 import Control.Concurrent.Extra
 import Development.Shake.Internal.History.Shared
+import Development.Shake.Internal.History.Types
 import General.Wait
 import Development.Shake.Internal.Errors
 import qualified General.TypeMap as TMap
@@ -122,10 +123,10 @@ newtype StepKey = StepKey ()
 stepKey :: Key
 stepKey = newKey $ StepKey ()
 
-toStepResult :: Step -> Result BS.ByteString
+toStepResult :: Step -> Result BS_Store
 toStepResult i = Result (runBuilder $ putEx i) i i [] 0 []
 
-fromStepResult :: Result BS.ByteString -> Step
+fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
 
 
@@ -198,8 +199,8 @@ instance Show (NoShow a) where show _ = "NoShow"
 data Status
     = Ready (Result Value) -- ^ I have a value
     | Error SomeException -- ^ I have been run and raised an error
-    | Loaded (Result BS.ByteString) -- ^ Loaded from the database
-    | Running (NoShow (Either SomeException (Result Value) -> Locked ())) (Maybe (Result BS.ByteString)) -- ^ Currently in the process of being checked or built
+    | Loaded (Result BS_Store) -- ^ Loaded from the database
+    | Running (NoShow (Either SomeException (Result Value) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
@@ -232,7 +233,7 @@ statusType Running{} = "Running"
 statusType Missing{} = "Missing"
 
 
-getResult :: Status -> Maybe (Result (Either BS.ByteString Value))
+getResult :: Status -> Maybe (Result (Either BS_Store Value))
 getResult (Ready r) = Just $ Right <$> r
 getResult (Loaded r) = Just $ Left <$> r
 getResult (Running _ r) = fmap Left <$> r
@@ -370,7 +371,7 @@ instance Monoid (UserRule a) where
 data Database = Database
     {intern :: IORef (Intern Key) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (Key, Status) -- ^ Id |-> (Key, Status) mapping
-    ,journal :: Id -> Key -> Result BS.ByteString -> IO () -- ^ Record all changes to status
+    ,journal :: Id -> Key -> Result BS_Store -> IO () -- ^ Record all changes to status
     }
 
 
