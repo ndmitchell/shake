@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TupleSections, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.Core.History(
     History, newHistory, addHistory, lookupHistory
