@@ -17,7 +17,7 @@ import General.Pool
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.Wait2
+import Development.Shake.Internal.Core.Pool
 import Control.Monad.IO.Class
 import System.Time.Extra
 import Data.Monoid

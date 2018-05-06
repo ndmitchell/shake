@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Development.Shake.Internal.Core.Wait2(
+module Development.Shake.Internal.Core.Pool(
     addPoolWait, actionFenceSteal, actionFenceRequeue, actionAlwaysRequeue,
     addPoolWait_,
     actionFenceRequeueBy
