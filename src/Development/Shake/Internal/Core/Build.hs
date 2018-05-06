@@ -279,11 +279,17 @@ historyLoad (Ver -> ver) = do
                     let identify = Just . runIdentify globalRules k . result
                     fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
             res <- case globalShared of
-                Just shared -> lookupShared shared ask key localBuiltinVersion ver
                 Nothing -> return $ Now Nothing
+                Just shared -> lookupShared shared ask key localBuiltinVersion ver
+            res <- bindWait (return res) $ \x -> case x of
+                Just res -> return $ Now $ Just res
+                Nothing -> case globalCloud of
+                    Nothing -> return $ Now Nothing
+                    Just cloud -> lookupCloud cloud ask key localBuiltinVersion ver
             flip fmapWait (return res) $ \x -> case x of
                 Nothing -> return Nothing
                 Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
+        -- FIXME: If running with cloud and shared, and you got a hit in cloud, should also add it to shared
         res <- case res of
             Now x -> return x
             Later k -> do
