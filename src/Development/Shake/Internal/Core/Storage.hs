@@ -203,14 +203,17 @@ loadWitness mp bs = ind `seq` mp2 `seq` ([], \bs ->
                      | w <- ws]
 
 
-saveWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (Witness, k -> Id -> v -> Builder)
+saveWitness :: forall k v . (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (Witness, k -> Id -> v -> Builder)
 saveWitness mp
-    | Map.size mp > fromIntegral (maxBound :: Word16) = error "Number of distinct witness types exceeds limit"
-    | otherwise = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
+    | Map.size mp > fromIntegral (maxBound :: Word16) = throwImpure $ errorInternal $ "Number of distinct witness types exceeds limit, got " ++ show (Map.size mp)
+    | otherwise = (runBuilder $ putEx ws, mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
-        ws = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp
-        wsMp = Map.fromList $ zip ws [0 :: Word16 ..]
-        mp2 = Map.mapWithKey (\k (ver,BinaryOp{..}) -> let tag = putEx $ wsMp Map.! keyName ver k in \(Id w) v -> tag <> putEx w <> putOp v) mp
+        -- the entries in the witness table (in a stable order, to make it more likely to get a good equality)
+        ws :: [BS.ByteString] = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp
+
+        wsMp :: Map.HashMap BS.ByteString Word16 = Map.fromList $ zip ws [0 :: Word16 ..]
+
+        mp2 :: Map.HashMap k (Id -> v -> Builder) = Map.mapWithKey (\k (ver,BinaryOp{..}) -> let tag = putEx $ wsMp Map.! keyName ver k in \(Id w) v -> tag <> putEx w <> putOp v) mp
 
 
 withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
