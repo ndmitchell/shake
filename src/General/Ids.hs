@@ -2,7 +2,7 @@
 
 -- Note that argument order is more like IORef than Map, because its mutable
 module General.Ids(
-    Ids, Id,
+    Ids, Id(..),
     empty, insert, lookup,
     null, size, sizeUpperBound,
     forWithKeyM_, for,
