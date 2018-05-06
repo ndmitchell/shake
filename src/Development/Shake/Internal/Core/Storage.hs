@@ -83,7 +83,7 @@ withStorage
     :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
     => ShakeOptions                                    -- ^ Storage options
     -> (IO String -> IO ())                            -- ^ Logging function
-    -> Map.HashMap k (Ver, BinaryOp v)             -- ^ Witnesses
+    -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
