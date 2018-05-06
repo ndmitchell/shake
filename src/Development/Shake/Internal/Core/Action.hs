@@ -3,17 +3,19 @@
 module Development.Shake.Internal.Core.Action(
     actionOnException, actionFinally, actionRetry,
     getShakeOptions, getProgress, runAfter,
-    lintTrackRead, lintTrackWrite, lintTrackAllow, lintTrackFinished,
+    lintTrackRead, lintTrackWrite, lintTrackAllow,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    blockApply, unsafeAllowApply, lintCurrentDirectory, shakeException,
-    producesCheck, produces, producesUnchecked,
+    produces,
     orderOnlyAction,
     newCacheIO,
     unsafeExtraThread,
     parallel,
     batch,
     historyDisable,
-    traced
+    traced,
+    -- Internal only
+    producesUnchecked, producesCheck, lintCurrentDirectory,
+    blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
     ) where
 
 import Control.Exception
