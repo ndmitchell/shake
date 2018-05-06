@@ -3,17 +3,18 @@
 -- Note that argument order is more like IORef than Map, because its mutable
 module General.Ids(
     Ids, Id(..),
-    empty, insert, lookup,
+    empty, insert, lookup, fromList,
     null, size, sizeUpperBound,
     forWithKeyM_, for,
     toList, toMap
     ) where
 
 import Data.IORef.Extra
-import Data.Primitive.Array
+import Data.Primitive.Array hiding (fromList)
 import Control.Exception
 import General.Intern(Id(..))
 import Control.Monad.Extra
+import Data.List.Extra(zipFrom)
 import Data.Maybe
 import Data.Functor
 import qualified Data.HashMap.Strict as Map
@@ -38,6 +39,14 @@ empty = do
     values <- newArray capacity Nothing
     Ids <$> newIORef S{..}
 
+fromList :: [a] -> IO (Ids a)
+fromList xs = do
+    let capacity = length xs
+    let used = capacity
+    values <- newArray capacity Nothing
+    forM_ (zipFrom 0 xs) $ \(i, x) ->
+        writeArray values i $ Just x
+    Ids <$> newIORef S{..}
 
 sizeUpperBound :: Ids a -> IO Int
 sizeUpperBound (Ids ref) = do
