@@ -226,6 +226,11 @@ executable shake
     if !os(windows)
         build-depends: unix
 
+    if flag(cloud)
+        build-depends: network, network-uri
+    else
+        cpp-options: -DNO_NETWORK
+
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
 
@@ -338,6 +343,11 @@ test-suite shake-test
             build-depends: unix >= 2.5.1
     if !os(windows)
         build-depends: unix
+
+    if flag(cloud)
+        build-depends: network, network-uri
+    else
+        cpp-options: -DNO_NETWORK
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
