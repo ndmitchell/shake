@@ -241,7 +241,8 @@ loadSharedCloud opts owitness = do
     shared <- case shakeShare opts of
         Nothing -> return Nothing
         Just x -> Just <$> newShared wit2 ver x
-    cloud <- case newCloud wit2 ver keyVers (shakeCloud opts) of
+    cloud <- case newCloud wit2 ver keyVers $ shakeCloud opts of
+        _ | null $ shakeCloud opts -> return Nothing
         Nothing -> fail "shakeCloud set but Shake not compiled for cloud operation"
         Just res -> Just <$> res
     return (shared, cloud)
