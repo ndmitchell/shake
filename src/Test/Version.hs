@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Test.Version(main) where
 
@@ -13,7 +13,7 @@ newtype Opts = Ver Int
 opts = [Option "" ["ver"] (ReqArg (fmap Ver . readEither) "INT") ""]
 
 newtype Oracle = Oracle ()
-    deriving (Show,Eq,Hashable,Binary,NFData)
+    deriving (Show,Eq,Hashable,Binary,NFData,Typeable)
 type instance RuleResult Oracle = Int
 
 main = shakeTest test opts $ \opts -> do
