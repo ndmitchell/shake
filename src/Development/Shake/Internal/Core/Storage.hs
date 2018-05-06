@@ -127,6 +127,8 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
 
                 (_, load) <- evaluate $ loadWitness witness witnessOld
                 ids <- Ids.empty
+                let raw bs = "[len " ++ show (BS.length bs) ++ "] " ++ concat
+                             [['0' | length c == 1] ++ c | x <- BS8.unpack bs, let c = showHex x ""]
                 let go !i = do
                         v <- readChunk h
                         case v of
@@ -141,8 +143,6 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                                 evaluate $ rnf v
                                 Ids.insert ids id (k,v)
                                 diagnostic $ do
-                                    let raw x = "[len " ++ show (BS.length bs) ++ "] " ++ concat
-                                                [['0' | length c == 1] ++ c | x <- BS8.unpack bs, let c = showHex x ""]
                                     let pretty (Left x) = "FAILURE: " ++ show x
                                         pretty (Right x) = x
                                     x2 <- try_ $ evaluate $ let s = show v in rnf s `seq` s
