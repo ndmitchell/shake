@@ -2,7 +2,7 @@
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
-    Locked, Wait(..), firstJustWaitOrdered, firstJustWaitUnordered, fromLater, fmapWait, runLocked
+    Locked, Wait(..), firstJustWaitOrdered, firstJustWaitUnordered, fromLater, fmapWait, bindWait, runLocked
     ) where
 
 import Control.Monad
@@ -84,3 +84,15 @@ fmapWait f x = do
     case x of
         Now x -> Now <$> f x
         Later x -> return $ Later $ \c -> x $ c <=< f
+
+
+bindWait :: Locked (Wait a) -> (a -> Locked (Wait b)) -> Locked (Wait b)
+bindWait x f = do
+    x <- x
+    case x of
+        Now x -> f x
+        Later x -> return $ Later $ \c -> x $ \v -> do
+            y <- f v
+            case y of
+                Now y -> c y
+                Later y -> y c
