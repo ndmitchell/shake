@@ -14,7 +14,7 @@ import Data.Typeable.Extra
 import General.Binary
 
 import Development.Shake.Internal.Core.Action
-import Development.Shake.Internal.Core.Types
+import Development.Shake.Internal.Core.Types hiding (Result)
 import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Errors
@@ -48,6 +48,13 @@ instance Show FilesQ where show (FilesQ xs) = unwords $ map (wrapQuote . show) x
 
 data FilesRule = FilesRule String (FilesQ -> Maybe (Action FilesA))
     deriving Typeable
+
+data Result = Result Ver FilesA
+
+instance BinaryEx Result where
+    putEx (Result v x) = putExStorable v <> putEx x
+    getEx s = let (a,b) = binarySplit s in Result a $ getEx b
+
 
 filesStoredValue :: ShakeOptions -> FilesQ -> IO (Maybe FilesA)
 filesStoredValue opts (FilesQ xs) = fmap FilesA . sequence <$> mapM (fileStoredValue opts) xs
@@ -84,8 +91,17 @@ ruleIdentity opts = \k (FilesA files) ->
 
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FilesQ FilesA
-ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
+ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
     let r = map (rebuildFlags . fileNameToString . fromFileQ) $ fromFilesQ k
+
+    (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal k (\(FilesRule s _) -> Just s) $ \(FilesRule _ f) -> f k
+    let verEq v = Just v == ruleVer || map (Ver . fst) ruleAct == [v]
+    let rebuild = do
+            putWhen Chatty $ "# " ++ show k
+            case ruleAct of
+                [x] -> rebuildWith x
+                _ -> throwM ruleErr
+
     case old of
         _ | RebuildNow `elem` r -> rebuild
         _ | RebuildLater `elem` r -> case old of
@@ -98,38 +114,33 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old) mode = do
                 now <- liftIO $ filesStoredValue opts k
                 case now of
                     Nothing -> rebuild
-                    Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx now) now
-        Just old | mode == RunDependenciesSame -> do
+                    Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx $ Result (Ver 0) now) now
+        Just (Result ver old) | mode == RunDependenciesSame, verEq ver -> do
             v <- liftIO $ filesStoredValue opts k
             case v of
                 Just v -> case filesEqualValue opts old v of
                     NotEqual -> rebuild
                     EqualCheap -> return $ RunResult ChangedNothing (fromJust o) v
-                    EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx v) v
+                    EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx $ Result ver v) v
                 Nothing -> rebuild
         _ -> rebuild
     where
-        result v = do
-            let c | Just old <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
-                  | otherwise = ChangedRecomputeDiff
-            return $ RunResult c (runBuilder $ putEx v) v
-
-        rebuild = do
-            putWhen Chatty $ "# " ++ show k
-            (ver, act) <- getUserRuleOne k (\(FilesRule s _) -> Just s) $ \(FilesRule _ f) -> f k
+        rebuildWith (ver, act) = do
             cache <- historyLoad k ver
-            case cache of
+            v <- case cache of
                 Just res -> do
-                    v <- fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
+                    fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
                         Just (FileA mod size _) <- liftIO $ fileStoredValue opts file
                         return $ FileA mod size $ getExStorable bin
-                    result v
                 Nothing -> do
                     FilesA v <- act
                     producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
                     historySave k ver $ runBuilder $ putExList
                         [if isNoFileHash hash then throwImpure errorNoHash else putExStorable hash | FileA _ _ hash <- v]
-                    result $ FilesA v
+                    return $ FilesA v
+            let c | Just (Result _ old) <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
+                  | otherwise = ChangedRecomputeDiff
+            return $ RunResult c (runBuilder $ putEx $ Result (Ver ver) v) v
 
 
 
