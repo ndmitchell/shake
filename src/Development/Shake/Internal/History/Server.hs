@@ -26,15 +26,15 @@ newServer :: Conn -> BinaryOp Key -> Ver -> IO Server
 newServer a b c = return $ Server a b c
 
 serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Int], [BS_Identity] -> Bool)]
-serverAllKeys = undefined
+serverAllKeys _ _ = return []
 
 serverOneKey :: Server -> Key -> Ver -> Ver -> [(Key, BS_Identity)] -> IO BuildTree
-serverOneKey = undefined
+serverOneKey _ _ _ _ _ = return $ Depend [] []
 
 
 serverDownloadFiles :: Server -> Key -> [(FileHash, FilePath)] -> IO ()
-serverDownloadFiles = undefined
+serverDownloadFiles _ _ _ = fail "Failed to download the files"
 
 
 serverUpload :: Server -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
-serverUpload = undefined
+serverUpload _ _ _ _ _ _ _  = return ()
