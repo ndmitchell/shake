@@ -1,5 +1,5 @@
 
-module General.Concurrent(
+module General.Fence(
     Fence, newFence, signalFence, waitFence, testFence,
     exceptFence
     ) where

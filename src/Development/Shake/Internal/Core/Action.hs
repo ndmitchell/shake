@@ -49,7 +49,7 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 import General.Cleanup
-import General.Concurrent
+import General.Fence
 import Prelude
 
 

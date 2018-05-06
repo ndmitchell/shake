@@ -7,7 +7,7 @@ module Development.Shake.Internal.Resource(
 import Data.Function
 import System.IO.Unsafe
 import Control.Concurrent.Extra
-import General.Concurrent
+import General.Fence
 import Control.Exception.Extra
 import Data.Tuple.Extra
 import Data.IORef.Extra

@@ -158,7 +158,7 @@ library
         General.Binary
         General.Chunks
         General.Cleanup
-        General.Concurrent
+        General.Fence
         General.Extra
         General.FileLock
         General.GetOpt
@@ -261,7 +261,7 @@ executable shake
         General.Binary
         General.Chunks
         General.Cleanup
-        General.Concurrent
+        General.Fence
         General.Extra
         General.FileLock
         General.GetOpt
@@ -374,7 +374,7 @@ test-suite shake-test
         General.Binary
         General.Chunks
         General.Cleanup
-        General.Concurrent
+        General.Fence
         General.Extra
         General.FileLock
         General.GetOpt
