@@ -25,7 +25,7 @@ import Control.Exception
 import Data.Maybe
 import General.Extra
 import Control.Concurrent.Extra
-import Development.Shake.Internal.Core.History
+import Development.Shake.Internal.History.Shared
 import General.Wait
 import Development.Shake.Internal.Errors
 import qualified General.TypeMap as TMap

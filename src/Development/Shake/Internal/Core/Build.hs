@@ -13,7 +13,7 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
-import Development.Shake.Internal.Core.History
+import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
 import General.Wait

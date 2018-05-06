@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
-module Development.Shake.Internal.Core.History(
+module Development.Shake.Internal.History.Shared(
     History, newHistory, addHistory, lookupHistory
     ) where
 

@@ -12,7 +12,7 @@ import Data.Tuple.Extra
 import Control.Concurrent.Extra
 import General.Binary
 import Development.Shake.Internal.Core.Storage
-import Development.Shake.Internal.Core.History
+import Development.Shake.Internal.History.Shared
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
 import Control.Monad.Extra
