@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Don't delete the whole database when an oracle disappears
     #300, soften the database version change message
     IMPORTANT: Incompatible on disk format change
     #590, print "Build completed" timing with better accuracy
