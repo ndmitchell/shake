@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.History.Shared(
-    History, newHistory, addHistory, lookupHistory
+    Shared, newShared, addShared, lookupShared
     ) where
 
 import Development.Shake.Internal.Value
@@ -49,14 +49,14 @@ createLink from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
 #endif
 -}
 
-data History = History
+data Shared = Shared
     {globalVersion :: !Ver
     ,keyOp :: BinaryOp Key
-    ,historyRoot :: FilePath
+    ,sharedRoot :: FilePath
     }
 
-newHistory :: Ver -> BinaryOp Key -> FilePath -> IO History
-newHistory globalVersion keyOp historyRoot = return History{..}
+newShared :: Ver -> BinaryOp Key -> FilePath -> IO Shared
+newShared globalVersion keyOp sharedRoot = return Shared{..}
 
 
 data Entry = Entry
@@ -101,12 +101,12 @@ getEntry binop x
         getDepend x | (a, b) <- getExN x = (getOp binop a, getEx b)
         getFile x | (b, a) <- binarySplit x = (getEx a, b)
 
-historyFileDir :: History -> Key -> FilePath
-historyFileDir history key = historyRoot history </> ".shake.cache" </> showHex (abs $ hash key) ""
+sharedFileDir :: Shared -> Key -> FilePath
+sharedFileDir shared key = sharedRoot shared </> ".shake.cache" </> showHex (abs $ hash key) ""
 
-loadHistoryEntry :: History -> Key -> Ver -> Ver -> IO [Entry]
-loadHistoryEntry history@History{..} key builtinVersion userVersion = do
-    let file = historyFileDir history key </> "_key"
+loadSharedEntry :: Shared -> Key -> Ver -> Ver -> IO [Entry]
+loadSharedEntry shared@Shared{..} key builtinVersion userVersion = do
+    let file = sharedFileDir shared key </> "_key"
     b <- doesFileExist_ file
     if not b then return [] else do
         (items, slop) <- withFile file ReadMode $ \h ->
@@ -118,13 +118,13 @@ loadHistoryEntry history@History{..} key builtinVersion userVersion = do
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
-lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS.ByteString, [[Key]], IO ())))
-lookupHistory history ask key builtinVersion userVersion = do
-    ents <- liftIO $ loadHistoryEntry history key builtinVersion userVersion
+lookupShared :: Shared -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS.ByteString, [[Key]], IO ())))
+lookupShared shared ask key builtinVersion userVersion = do
+    ents <- liftIO $ loadSharedEntry shared key builtinVersion userVersion
     firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
         -- use Nothing to indicate success, Just () to bail out early on mismatch
         let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
-                let dir = historyFileDir history entryKey
+                let dir = sharedFileDir shared entryKey
                 forM_ entryFiles $ \(file, hash) -> do
                     createDirectoryRecursive $ takeDirectory file
                     copyFile (dir </> show hash) file
@@ -135,18 +135,18 @@ lookupHistory history ask key builtinVersion userVersion = do
             | kis <- entryDepends]
 
 
-saveHistoryEntry :: History -> Entry -> IO ()
-saveHistoryEntry history entry = do
-    let dir = historyFileDir history (entryKey entry)
+saveSharedEntry :: Shared -> Entry -> IO ()
+saveSharedEntry shared entry = do
+    let dir = sharedFileDir shared (entryKey entry)
     createDirectoryRecursive dir
-    withFile (dir </> "_key") AppendMode $ \h -> writeChunkDirect h $ putEntry (keyOp history) entry
+    withFile (dir </> "_key") AppendMode $ \h -> writeChunkDirect h $ putEntry (keyOp shared) entry
     forM_ (entryFiles entry) $ \(file, hash) ->
         -- FIXME: should use a combination of symlinks and making files read-only
         unlessM (doesFileExist_ $ dir </> show hash) $
             copyFile file (dir </> show hash)
 
 
-addHistory :: History -> Key -> Ver -> Ver -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
-addHistory history entryKey entryBuiltinVersion entryUserVersion entryDepends entryResult files = do
+addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
+addShared shared entryKey entryBuiltinVersion entryUserVersion entryDepends entryResult files = do
     hashes <- mapM (getFileHash . fileNameFromString) files
-    saveHistoryEntry history Entry{entryFiles = zip files hashes, entryGlobalVersion = globalVersion history, ..}
+    saveSharedEntry shared Entry{entryFiles = zip files hashes, entryGlobalVersion = globalVersion shared, ..}

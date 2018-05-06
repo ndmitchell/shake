@@ -389,7 +389,7 @@ data Global = Global
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state
     ,globalUserRules :: TMap.Map UserRuleVersioned
-    ,globalHistory :: Maybe History -- ^ The active history, if any
+    ,globalShared :: Maybe Shared -- ^ The active shared state, if any
     ,globalStep :: {-# UNPACK #-} !Step
     }
 

@@ -270,7 +270,7 @@ historyLoad :: ShakeValue k => k -> Int -> Action (Maybe BS.ByteString)
 historyLoad k userVersion = do
     global@Global{..} <- Action getRO
     Local{localStack, localBuiltinVersion} <- Action getRW
-    case globalHistory of
+    case globalShared of
         Nothing -> return Nothing
         Just history -> do
             res <- liftIO $ runLocked globalDatabase $ \database -> do
@@ -278,7 +278,7 @@ historyLoad k userVersion = do
                         i <- getKeyId database k
                         let identify = Just . runIdentify globalRules k . result
                         fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
-                res <- lookupHistory history ask (newKey k) localBuiltinVersion (Ver userVersion)
+                res <- lookupShared history ask (newKey k) localBuiltinVersion (Ver userVersion)
                 flip fmapWait (return res) $ \x -> case x of
                     Nothing -> return Nothing
                     Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
@@ -304,7 +304,7 @@ historyLoad k userVersion = do
 -- | Is the history enabled.
 historyIsEnabled :: Action Bool
 historyIsEnabled = Action $
-    (isJust . globalHistory <$> getRO) &&^ (localHistory <$> getRW)
+    (isJust . globalShared <$> getRO) &&^ (localHistory <$> getRW)
 
 -- | Save a value to the history. Record a @key@, the version of any user rule
 --   (or @\"\"@), and a payload. Must be run at the end of the rule, after
@@ -317,7 +317,7 @@ historySave :: ShakeValue k => k -> Int -> BS.ByteString -> Action ()
 historySave k ver store = Action $ do
     Global{..} <- getRO
     Local{localHistory, localProduces, localDepends, localBuiltinVersion} <- getRW
-    liftIO $ when localHistory $ whenJust globalHistory $ \history -> do
+    liftIO $ when localHistory $ whenJust globalShared $ \history -> do
         -- make sure we throw errors before we get into the history
         evaluate $ rnf k
         evaluate ver
@@ -329,7 +329,7 @@ historySave k ver store = Action $ do
             forM (reverse localDepends) $ \(Depends is) -> forM is $ \i -> do
                 Just (k, Ready r) <- getIdKeyStatus database i
                 return (k, runIdentify globalRules k $ result r)
-        addHistory history (newKey k) localBuiltinVersion (Ver ver) deps store produced
+        addShared history (newKey k) localBuiltinVersion (Ver ver) deps store produced
         liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 
