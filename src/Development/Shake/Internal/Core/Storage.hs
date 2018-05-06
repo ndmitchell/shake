@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, RecordWildCards, FlexibleInstances #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, GeneralizedNewtypeDeriving #-}
 {-
 This module stores the meta-data so its very important its always accurate
 We can't rely on getting any exceptions or termination at the end, so we'd better write out a journal
@@ -14,6 +14,7 @@ import General.Chunks
 import General.Binary
 import General.Intern
 import Development.Shake.Internal.Options
+import Development.Shake.Internal.Errors
 import General.Timing
 import General.FileLock
 import qualified General.Ids as Ids
@@ -146,8 +147,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                                 when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
                                 diagnostic $ return $ "Read " ++ show i ++ " chunks, plus " ++ show slop ++ " slop"
                                 return i
-                            Right bs -> do
-                                let Just (k,id,v) = load bs
+                            Right bs | (id, Just (k,v)) <- load bs -> do
                                 evaluate $ rnf k
                                 evaluate $ rnf v
                                 Ids.insert ids id (k,v)
@@ -157,6 +157,9 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                                     x2 <- try_ $ evaluate $ let s = show v in rnf s `seq` s
                                     return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " " ++ show id ++ " = " ++ pretty x2
                                 go $ i+1
+                            Right bs -> do
+                                diagnostic $ return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " UNKNOWN WITNESS"
+                                go i
                 countItems <- go 0
                 countDistinct <- Ids.sizeUpperBound ids
                 diagnostic $ return $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
@@ -189,40 +192,58 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             unexpected $ unlines x
 
 
-keyName :: Show k => Ver -> k -> BS.ByteString
-keyName (Ver v) k = UTF8.fromString $ show v ++ " " ++ show k
+-- | A list oft witnesses, saved
+type Witnesses = BS.ByteString
 
-type Witness = BS.ByteString
+-- | The version and key, serialised
+newtype Witness = Witness BS.ByteString
+    deriving (Eq, Hashable, Ord)
 
-loadWitness :: Show k => Map.HashMap k (Ver, BinaryOp v) -> Witness -> ([String], BS.ByteString -> Maybe (k, Id, v))
-loadWitness mp bs = ind `seq` mp2 `seq` ([], \bs ->
-            let (k :: Word16, bs2) = binarySplit bs
-            in case ind (fromIntegral k) of
-                    Nothing -> error $ "Witness type out of bounds, " ++ show k
-                    Just f -> f bs2)
+toWitness :: Show k => Ver -> k -> Witness
+toWitness (Ver v) k = Witness $ UTF8.fromString (show k ++ (if v == 0 then "" else ", v" ++ show v))
+
+instance BinaryEx [Witness] where
+    putEx xs = putEx [x | Witness x <- xs]
+    getEx = map Witness . getEx
+
+
+-- | Given the current witness table, and the serialised one from last time, return
+--   (witnesses that got removed, way to deserialise an entry into an Id, and (if the witness remains) the key and value)
+loadWitness :: forall k v . Show k => Map.HashMap k (Ver, BinaryOp v) -> Witnesses -> ([String], BS.ByteString -> (Id, Maybe (k, v)))
+loadWitness mp bs = (,) missing $ seq ind $ \bs ->
+            let (wInd :: Word16, i :: Id, bs2) = binarySplit2 bs
+            in case ind (fromIntegral wInd) of
+                    Nothing -> throwImpure $ errorInternal $ "Witness index out of bounds, " ++ show wInd
+                    Just f -> (i, f bs2)
     where
-        ws :: [BS.ByteString] = getEx bs
-        mp2 = Map.fromList [(keyName ver k, (k, v)) | (k,(ver,v)) <- Map.toList mp]
-        ind = fastAt [ case Map.lookup w mp2 of
-                            Nothing -> const Nothing
-                            Just (k, BinaryOp{..}) -> \bs ->
-                                let (i, bs2) = binarySplit bs
-                                    v = getOp bs2
-                                in Just (k, i, v)
-                     | w <- ws]
+        ws :: [Witness] = getEx bs
+        missing = [UTF8.toString w | (i, Witness w) <- zipFrom 0 ws, isNothing $ fromJust (ind i) BS.empty]
+
+        mp2 :: Map.HashMap Witness (k, BinaryOp v) = Map.fromList [(toWitness ver k, (k, bin)) | (k,(ver,bin)) <- Map.toList mp]
+
+        ind :: (Int -> Maybe (BS.ByteString -> Maybe (k, v))) = seq mp2 $ fastAt $ flip map ws $ \w ->
+            case Map.lookup w mp2 of
+                Nothing -> const Nothing
+                Just (k, BinaryOp{..}) -> \bs -> Just (k, getOp bs)
 
 
-saveWitness :: forall k v . (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (Witness, k -> Id -> v -> Builder)
+saveWitness :: forall k v . (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (Witnesses, k -> Id -> v -> Builder)
 saveWitness mp
     | Map.size mp > fromIntegral (maxBound :: Word16) = throwImpure $ errorInternal $ "Number of distinct witness types exceeds limit, got " ++ show (Map.size mp)
-    | otherwise = (runBuilder $ putEx ws, mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
+    | otherwise = (runBuilder $ putEx ws
+                  ,mpSave `seq` \k -> fromMaybe (throwImpure $ errorInternal $ "Don't know how to save, " ++ show k) $ Map.lookup k mpSave)
     where
         -- the entries in the witness table (in a stable order, to make it more likely to get a good equality)
-        ws :: [BS.ByteString] = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp
+        ws :: [Witness] = sort $ map (\(k,(ver,_)) -> toWitness ver k) $ Map.toList mp
 
-        wsMp :: Map.HashMap BS.ByteString Word16 = Map.fromList $ zip ws [0 :: Word16 ..]
+        -- an index for each of the witness entries
+        wsIndex :: Map.HashMap Witness Word16 = Map.fromList $ zip ws [0 :: Word16 ..]
 
-        mp2 :: Map.HashMap k (Id -> v -> Builder) = Map.mapWithKey (\k (ver,BinaryOp{..}) -> let tag = putEx $ wsMp Map.! keyName ver k in \(Id w) v -> tag <> putEx w <> putOp v) mp
+        -- the save functions
+        mpSave :: Map.HashMap k (Id -> v -> Builder) = flip Map.mapWithKey mp $
+            \k (ver,BinaryOp{..}) ->
+                let tag = putEx $ wsIndex Map.! toWitness ver k
+                in \(Id w) v -> tag <> putEx w <> putOp v
 
 
 withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
