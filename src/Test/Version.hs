@@ -2,12 +2,24 @@
 module Test.Version(main) where
 
 import Development.Shake
+import General.GetOpt
+import Text.Read.Extra
 import Test.Type
 
 
-main = shakeTest_ test $ do
+data Opts = Ver Int
+opts = [Option "" ["ver"] (ReqArg (fmap Ver . readEither) "INT") ""]
+
+
+main = shakeTest test opts $ \opts -> do
     want ["foo.txt"]
     "foo.txt" %> \file -> liftIO $ appendFile file "x"
+
+    let ver = head $ [x | Ver x <- opts] ++ [0]
+    versioned ver $ "ver.txt" %> \out -> liftIO $ appendFile out $ show ver
+    "unver.txt" %> \out -> liftIO $ appendFile out "x"
+    phony "version" $ need ["ver.txt","unver.txt"]
+
 
 test build = do
     writeFile "foo.txt" ""
@@ -31,3 +43,14 @@ test build = do
     assertContents "foo.txt" "xxx"
     build ["--rule-version=final","--silent"]
     assertContents "foo.txt" "xxxx"
+
+    build ["version"]
+    assertContents "ver.txt" "0"
+    assertContents "unver.txt" "x"
+    build ["version","--ver=0"]
+    assertContents "ver.txt" "0"
+    build ["version","--ver=8"]
+    build ["version","--ver=9"]
+    build ["version","--ver=9"]
+    assertContents "ver.txt" "089"
+    assertContents "unver.txt" "x"
