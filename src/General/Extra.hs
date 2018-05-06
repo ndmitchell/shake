@@ -18,6 +18,7 @@ module General.Extra(
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
     Ver(..), makeVer,
+    QTypeRep(..)
     ) where
 
 import Control.Exception.Extra
@@ -25,6 +26,9 @@ import Data.Char
 import Data.List
 import System.Environment.Extra
 import Development.Shake.FilePath
+import Control.DeepSeq
+import Numeric
+import Data.Typeable
 import System.IO.Extra
 import System.IO.Unsafe
 import System.Info.Extra
@@ -255,3 +259,20 @@ newtype Ver = Ver Int
 
 makeVer :: String -> Ver
 makeVer = Ver . hash
+
+
+---------------------------------------------------------------------
+-- Data.Typeable
+
+-- | Like TypeRep, but the Show includes enough information to be unique
+--   so I can rely on @a == b === show a == show b@.
+newtype QTypeRep = QTypeRep {fromQTypeRep :: TypeRep}
+    deriving (Eq,Hashable)
+
+instance NFData QTypeRep where
+    -- Incorrect, but TypeRep doesn't have an NFData until GHC 7.10
+    -- See https://github.com/haskell/deepseq/issues/37
+    rnf (QTypeRep x) = x `seq` ()
+
+instance Show QTypeRep where
+    show (QTypeRep x) = show x ++ " {" ++ showHex (abs $ hashWithSalt 0 x) "" ++ "}"
