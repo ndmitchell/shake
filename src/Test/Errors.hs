@@ -178,7 +178,7 @@ test build = do
     crash ["failcreate"] ["failcreate"]
     crash ["failcreates"] ["failcreates"]
     crash ["recursive_"] ["recursive_","intermediate_","recursive"]
-    crash ["rec1","rec2"] ["rec1","rec2","recursive"]
+    crash ["rec1","rec2"] ["rec1","rec2","indirect recursion","recursive"]
     crash ["systemcmd"] ["systemcmd","random_missing_command"]
     crash ["stack1"] ["stack1","stack2","stack3","crash"]
 
