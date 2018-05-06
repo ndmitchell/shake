@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    IMPORTANT: Incompatible on disk format change
     #590, print "Build completed" timing with better accuracy
     #581, improve the information and display of call stacks
     Add actionRetry to retry actions if they fail
