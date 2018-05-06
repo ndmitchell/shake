@@ -126,6 +126,8 @@ addOracleFlavor flavor act = do
 --
 --   Using these definitions, any rule depending on the version of @shake@
 --   should call @getPkgVersion $ GhcPkgVersion \"shake\"@ to rebuild when @shake@ is upgraded.
+--
+--   If you apply 'versioned' to an oracle it will cause that oracle result to be discarded, and not do early-termination.
 addOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a, Partial) => (q -> Action a) -> Rules (q -> Action a)
 addOracle = withFrozenCallStack $ addOracleFlavor Norm
 

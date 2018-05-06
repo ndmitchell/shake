@@ -1,7 +1,9 @@
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving #-}
 
 module Test.Version(main) where
 
 import Development.Shake
+import Development.Shake.Classes
 import General.GetOpt
 import Text.Read.Extra
 import Test.Type
@@ -10,15 +12,24 @@ import Test.Type
 data Opts = Ver Int
 opts = [Option "" ["ver"] (ReqArg (fmap Ver . readEither) "INT") ""]
 
+newtype Oracle = Oracle ()
+    deriving (Show,Eq,Hashable,Binary,NFData)
+type instance RuleResult Oracle = Int
 
 main = shakeTest test opts $ \opts -> do
-    want ["foo.txt"]
+    want ["foo.txt","ver.txt","oracle.txt"]
+
     "foo.txt" %> \file -> liftIO $ appendFile file "x"
 
     let ver = head $ [x | Ver x <- opts] ++ [0]
     versioned ver $ "ver.txt" %> \out -> liftIO $ appendFile out $ show ver
-    "unver.txt" %> \out -> liftIO $ appendFile out "x"
-    phony "version" $ need ["ver.txt","unver.txt"]
+
+    versioned ver $ addOracleCache $ \(Oracle ()) -> do
+        liftIO $ appendFile "oracle.in" $ show ver
+        return $ ver `mod` 2
+    "oracle.txt" %> \out -> do
+        v <- askOracle $ Oracle ()
+        liftIO $ appendFile out $ show v
 
 
 test build = do
@@ -31,7 +42,7 @@ test build = do
     build ["clean"]
     build []
     assertContents "foo.txt" "x"
-    build ["--rule-version=new","--silent"]
+    build ["--rule-version=new"]
     assertContents "foo.txt" "xx"
     build ["--rule-version=new"]
     assertContents "foo.txt" "xx"
@@ -44,13 +55,18 @@ test build = do
     build ["--rule-version=final","--silent"]
     assertContents "foo.txt" "xxxx"
 
-    build ["version"]
+    build ["clean"]
+    build []
     assertContents "ver.txt" "0"
-    assertContents "unver.txt" "x"
-    build ["version","--ver=0"]
+    assertContents "foo.txt" "x"
+    build ["--ver=0","--silent"]
     assertContents "ver.txt" "0"
-    build ["version","--ver=8"]
-    build ["version","--ver=9"]
-    build ["version","--ver=9"]
-    assertContents "ver.txt" "089"
-    assertContents "unver.txt" "x"
+    build ["--ver=8"]
+    build ["--ver=9","--silent"]
+    build ["--ver=9","--silent"]
+    build ["--ver=3","--silent"]
+    assertContents "ver.txt" "0893"
+    assertContents "oracle.in" "0893"
+    -- when you change version you don't do cutoff
+    assertContents "oracle.txt" "0011"
+    assertContents "foo.txt" "x"
