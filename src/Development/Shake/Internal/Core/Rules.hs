@@ -116,7 +116,7 @@ newtype Rules a = Rules (WriterT SRules (ReaderT ShakeOptions IO) a) -- All IO m
 newRules :: SRules -> Rules ()
 newRules = Rules . tell
 
-modifyRules :: (SRules -> SRules) -> Rules () -> Rules ()
+modifyRules :: (SRules -> SRules) -> Rules a -> Rules a
 modifyRules f (Rules r) = Rules $ censor f r
 
 runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned)
@@ -216,7 +216,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
 -- 'priority' p1 ('priority' p2 r1) === 'priority' p1 r1
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
-priority :: Double -> Rules () -> Rules ()
+priority :: Double -> Rules a -> Rules a
 priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
 
 
@@ -230,9 +230,9 @@ priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x
 --
 --   You should only use 'versioned' to track changes in the build source, for standard runtime dependencies you should use
 --   other mechanisms, e.g. 'Development.Shake.addOracle'.
-versioned :: Int -> Rules () -> Rules ()
+versioned :: Int -> Rules a -> Rules a
 versioned v = modifyRules $ \s -> s
-    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned (Ver v) x) $ userRules s
+    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned (b || v /= 0) $ Versioned (Ver v) x) $ userRules s
     ,builtinRules = Map.map (\b -> b{builtinVersion = Ver v}) $ builtinRules s
     }
 
@@ -249,7 +249,7 @@ versioned v = modifyRules $ \s -> s
 --   In this example @hello.txt@ will match the first rule, instead of raising an error about ambiguity.
 --   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
 --   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
-alternatives :: Rules () -> Rules ()
+alternatives :: Rules a -> Rules a
 alternatives = modifyRules $ \r -> r{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Alternative x) $ userRules r}
 
 
@@ -276,5 +276,5 @@ action act = newRules mempty{actions=newListBuilder (addCallStack callStackFull 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing
 --   command line specification of what to build.
-withoutActions :: Rules () -> Rules ()
+withoutActions :: Rules a -> Rules a
 withoutActions = modifyRules $ \x -> x{actions=mempty}
