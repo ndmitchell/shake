@@ -128,7 +128,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
         rebuildWith (ver, act) = do
             cache <- historyLoad k ver
             v <- case cache of
-                Just res -> do
+                Just res ->
                     fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
                         Just (FileA mod size _) <- liftIO $ fileStoredValue opts file
                         return $ FileA mod size $ getExStorable bin

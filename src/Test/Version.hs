@@ -9,7 +9,7 @@ import Text.Read.Extra
 import Test.Type
 
 
-data Opts = Ver Int
+newtype Opts = Ver Int
 opts = [Option "" ["ver"] (ReqArg (fmap Ver . readEither) "INT") ""]
 
 newtype Oracle = Oracle ()
