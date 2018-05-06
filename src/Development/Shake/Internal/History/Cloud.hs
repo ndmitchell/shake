@@ -26,7 +26,7 @@ data Initial = Initial (Map.HashMap Key Ids.Id) (Ids.Ids (Ver, [Ids.Id], [BS_Ide
 data Cloud = Cloud Server (Barrier Initial)
 
 newCloud :: BinaryOp Key -> Ver -> [(TypeRep, Ver)] -> [String] -> Maybe (IO Cloud)
-newCloud binop globalVer ruleVer urls = flip fmap (connect $ last urls) $ \conn -> do
+newCloud binop globalVer ruleVer urls = flip fmap (if null urls then Nothing else connect $ last urls) $ \conn -> do
     conn <- conn
     server <- newServer conn binop globalVer
     bar <- newBarrier
