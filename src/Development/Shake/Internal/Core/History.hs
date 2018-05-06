@@ -50,20 +50,20 @@ createLink from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
 -}
 
 data History = History
-    {globalVersion :: !Version
+    {globalVersion :: !Ver
     ,keyOp :: BinaryOp Key
     ,historyRoot :: FilePath
     }
 
-newHistory :: Version -> BinaryOp Key -> FilePath -> IO History
+newHistory :: Ver -> BinaryOp Key -> FilePath -> IO History
 newHistory globalVersion keyOp historyRoot = return History{..}
 
 
 data Entry = Entry
     {entryKey :: Key
-    ,entryGlobalVersion :: !Version
-    ,entryBuiltinVersion :: !Version
-    ,entryUserVersion :: !Version
+    ,entryGlobalVersion :: !Ver
+    ,entryBuiltinVersion :: !Ver
+    ,entryUserVersion :: !Ver
     ,entryDepends :: [[(Key, BS.ByteString)]]
     ,entryResult :: BS.ByteString
     ,entryFiles :: [(FilePath, FileHash)]
@@ -104,7 +104,7 @@ getEntry binop x
 historyFileDir :: History -> Key -> FilePath
 historyFileDir history key = historyRoot history </> ".shake.cache" </> showHex (abs $ hash key) ""
 
-loadHistoryEntry :: History -> Key -> Version -> Version -> IO [Entry]
+loadHistoryEntry :: History -> Key -> Ver -> Ver -> IO [Entry]
 loadHistoryEntry history@History{..} key builtinVersion userVersion = do
     let file = historyFileDir history key </> "_key"
     b <- doesFileExist_ file
@@ -118,7 +118,7 @@ loadHistoryEntry history@History{..} key builtinVersion userVersion = do
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
-lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Version -> Version -> Locked (Wait (Maybe (BS.ByteString, [[Key]], IO ())))
+lookupHistory :: History -> (Key -> Locked (Wait (Maybe BS.ByteString))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS.ByteString, [[Key]], IO ())))
 lookupHistory history ask key builtinVersion userVersion = do
     ents <- liftIO $ loadHistoryEntry history key builtinVersion userVersion
     firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
@@ -146,7 +146,7 @@ saveHistoryEntry history entry = do
             copyFile file (dir </> show hash)
 
 
-addHistory :: History -> Key -> Version -> Version -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
+addHistory :: History -> Key -> Ver -> Ver -> [[(Key, BS.ByteString)]] -> BS.ByteString -> [FilePath] -> IO ()
 addHistory history entryKey entryBuiltinVersion entryUserVersion entryDepends entryResult files = do
     hashes <- mapM (getFileHash . fileNameFromString) files
     saveHistoryEntry history Entry{entryFiles = zip files hashes, entryGlobalVersion = globalVersion history, ..}

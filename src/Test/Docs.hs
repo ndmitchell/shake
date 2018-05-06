@@ -8,7 +8,7 @@ import System.Directory
 import Test.Type
 import Control.Monad
 import Data.Char
-import General.Extra hiding (makeVersion)
+import General.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Info

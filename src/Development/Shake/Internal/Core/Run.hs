@@ -203,7 +203,7 @@ checkValid diagnostic Database{..} check missing = do
 
 withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
 withDatabase opts diagnostic owitness act = do
-    let step = (typeRep (Proxy :: Proxy StepKey), (Version 0, BinaryOp (const mempty) (const stepKey)))
+    let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
@@ -237,7 +237,7 @@ loadHistory opts owitness =
             let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
             let wit = binaryOpMap $ \a -> fromMaybe (error $ "loadHistory, couldn't find map for " ++ show a) $ Map.lookup a mp
             let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
-            Just <$> newHistory (makeVersion $ shakeVersion opts) wit2 x
+            Just <$> newHistory (makeVer $ shakeVersion opts) wit2 x
 
 
 

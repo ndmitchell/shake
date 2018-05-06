@@ -72,10 +72,10 @@ getUserRuleList :: Typeable a => (a -> Maybe b) -> Action [(Int, b)]
 getUserRuleList test = do
     Global{..} <- Action getRO
     let rules = maybe mempty userRuleContents $ TMap.lookup globalUserRules
-    return $ head $ (map snd $ reverse $ groupSort $ f (Version 0) Nothing $ fmap test rules) ++ [[]]
+    return $ head $ (map snd $ reverse $ groupSort $ f (Ver 0) Nothing $ fmap test rules) ++ [[]]
     where
-        f :: Version -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
-        f (Version v) p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
+        f :: Ver -> Maybe Double -> UserRule (Maybe a) -> [(Double,(Int,a))]
+        f (Ver v) p (UserRule x) = maybe [] (\x -> [(fromMaybe 1 p,(v,x))]) x
         f v p (Unordered xs) = concatMap (f v p) xs
         f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
         f v p (Versioned v2 x) = f v2 p x
@@ -190,7 +190,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     let check_ k v = check (fromKey k) (fromValue v)
     let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Version 0) callStackTop}
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -227,8 +227,8 @@ priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x
 --   other mechanisms, e.g. 'Development.Shake.addOracle'.
 versioned :: Int -> Rules () -> Rules ()
 versioned v = modifyRules $ \s -> s
-    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned (Version v) x) $ userRules s
-    ,builtinRules = Map.map (\b -> b{builtinVersion = Version v}) $ builtinRules s
+    {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned True $ Versioned (Ver v) x) $ userRules s
+    ,builtinRules = Map.map (\b -> b{builtinVersion = Ver v}) $ builtinRules s
     }
 
 

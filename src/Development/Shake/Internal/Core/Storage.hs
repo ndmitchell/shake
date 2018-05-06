@@ -62,7 +62,7 @@ withStorage
     :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
     => ShakeOptions                                    -- ^ Storage options
     -> (IO String -> IO ())                            -- ^ Logging function
-    -> Map.HashMap k (Version, BinaryOp v)             -- ^ Witnesses
+    -> Map.HashMap k (Ver, BinaryOp v)             -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
@@ -170,11 +170,11 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             unexpected x
 
 
-keyName :: Show k => Version -> k -> BS.ByteString
-keyName (Version v) k = UTF8.fromString $ show v ++ " " ++ show k
+keyName :: Show k => Ver -> k -> BS.ByteString
+keyName (Ver v) k = UTF8.fromString $ show v ++ " " ++ show k
 
 
-getWitness :: Show k => BS.ByteString -> Map.HashMap k (Version, BinaryOp v) -> (BS.ByteString -> (k, Id, v))
+getWitness :: Show k => BS.ByteString -> Map.HashMap k (Ver, BinaryOp v) -> (BS.ByteString -> (k, Id, v))
 getWitness bs mp
     | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
     | otherwise = ind `seq` mp2 `seq` \bs ->
@@ -195,7 +195,7 @@ getWitness bs mp
                      | w <- ws]
 
 
-putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Version, BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
+putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
 putWitness mp = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp

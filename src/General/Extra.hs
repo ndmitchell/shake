@@ -17,7 +17,7 @@ module General.Extra(
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
-    Version(..), makeVersion,
+    Ver(..), makeVer,
     ) where
 
 import Control.Exception.Extra
@@ -248,8 +248,8 @@ withFrozenCallStack = id
 ---------------------------------------------------------------------
 -- Data.Version
 
-newtype Version = Version Int
+newtype Ver = Ver Int
     deriving (Show,Eq,Storable)
 
-makeVersion :: String -> Version
-makeVersion = Version . hash
+makeVer :: String -> Ver
+makeVer = Ver . hash

@@ -321,7 +321,7 @@ data BuiltinRule = BuiltinRule
     ,builtinIdentity :: BuiltinIdentity Key Value
     ,builtinRun :: BuiltinRun Key Value
     ,builtinKey :: BinaryOp Key
-    ,builtinVersion :: Version
+    ,builtinVersion :: Ver
     ,builtinLocation :: String
     }
 
@@ -338,7 +338,7 @@ data UserRule a
     | Unordered [UserRule a] -- ^ Rules combined with the 'Monad' \/ 'Monoid'.
     | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
     | Alternative (UserRule a) -- ^ Rule defined under 'alternatives', matched in order.
-    | Versioned Version (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
+    | Versioned Ver (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
       deriving (Eq,Show,Functor,Typeable)
 
 data UserRuleVersioned a = UserRuleVersioned
@@ -392,7 +392,7 @@ data Global = Global
 data Local = Local
     -- constants
     {localStack :: Stack -- ^ The stack that ran to get here.
-    ,localBuiltinVersion :: Version -- ^ The builtinVersion of the rule you are running
+    ,localBuiltinVersion :: Ver -- ^ The builtinVersion of the rule you are running
     -- stack scoped local variables
     ,localVerbosity :: Verbosity -- ^ Verbosity, may be changed locally
     ,localBlockApply ::  Maybe String -- ^ Reason to block apply, or Nothing to allow
@@ -410,7 +410,7 @@ addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack (Version 0) verb Nothing [] 0 [] [] [] [] True
+newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 [] [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
