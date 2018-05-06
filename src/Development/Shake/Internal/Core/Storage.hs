@@ -55,7 +55,7 @@ databaseVersion x = "SHAKE-DATABASE-14-" ++ s ++ "\r\n"
 --   k ~ TypeRep, v ~ (Key, Status{Value}).
 --
 --   The storage starts with a witness table saying what can be contained.
---   If any entries in the witness table don't  have a current Witness then a fake
+--   If any entries in the witness table don't have a current Witness then a fake
 --   error witness is manufactured. If the witness ever changes the entire DB is
 --   rewritten.
 withStorage
