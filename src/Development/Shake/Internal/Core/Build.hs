@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
-{-# LANGUAGE Rank2Types, ConstraintKinds, TupleSections #-}
+{-# LANGUAGE Rank2Types, ConstraintKinds, TupleSections, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue,
@@ -14,6 +14,7 @@ import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.History.Shared
+import Development.Shake.Internal.History.Cloud
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
 import General.Wait
@@ -314,10 +315,10 @@ historyIsEnabled = Action $
 --   This function relies on 'produces' to have been called correctly to describe
 --   which files were written during the execution of this rule.
 historySave :: Int -> BS.ByteString -> Action ()
-historySave ver store = Action $ do
+historySave (Ver -> ver) store = Action $ do
     Global{..} <- getRO
     Local{localHistory, localProduces, localDepends, localBuiltinVersion, localStack} <- getRW
-    liftIO $ when localHistory $ whenJust globalShared $ \history -> do
+    liftIO $ when (localHistory && (isJust globalShared || isJust globalCloud)) $ do
         -- make sure we throw errors before we get into the history
         evaluate ver
         evaluate store
@@ -330,7 +331,8 @@ historySave ver store = Action $ do
                 Just (k, Ready r) <- getIdKeyStatus database i
                 return (k, runIdentify globalRules k $ result r)
         let k = topStack localStack
-        addShared history key localBuiltinVersion (Ver ver) deps store produced
+        whenJust globalShared $ \shared -> addShared shared key localBuiltinVersion ver deps store produced
+        whenJust globalCloud  $ \cloud  -> addCloud  cloud  key localBuiltinVersion ver deps store produced
         liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 
