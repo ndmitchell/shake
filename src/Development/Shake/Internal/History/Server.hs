@@ -37,4 +37,4 @@ serverDownloadFiles _ _ _ = fail "Failed to download the files"
 
 
 serverUpload :: Server -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
-serverUpload _ _ _ _ _ _ _  = return ()
+serverUpload _ key _ _ _ _ _  = print ("SERVER", "Uploading key", key)

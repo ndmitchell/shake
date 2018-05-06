@@ -285,7 +285,7 @@ historyLoad (Ver -> ver) = do
                 Just res -> return $ Now $ Just res
                 Nothing -> case globalCloud of
                     Nothing -> return $ Now Nothing
-                    Just cloud -> lookupCloud cloud ask key localBuiltinVersion ver
+                    Just cloud -> lookupCloud cloud (runLocked globalDatabase . const) ask key localBuiltinVersion ver
             flip fmapWait (return res) $ \x -> case x of
                 Nothing -> return Nothing
                 Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
