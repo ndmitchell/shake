@@ -113,7 +113,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             outputErr $ messageDatabaseVersionChange dbfile (fromEither oldVer) ver
             corrupt
 
-        let (witnessNew, save) = putWitness witness
+        let (witnessNew, save) = saveWitness witness
         evaluate save
         witnessOld <- readChunk h
         ids <- case witnessOld of
@@ -125,7 +125,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 corrupt
                 return Nothing) $ do
 
-                load <- evaluate $ getWitness witnessOld witness
+                load <- evaluate $ loadWitness witness witnessOld
                 ids <- Ids.empty
                 let go !i = do
                         v <- readChunk h
@@ -183,9 +183,10 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
 keyName :: Show k => Ver -> k -> BS.ByteString
 keyName (Ver v) k = UTF8.fromString $ show v ++ " " ++ show k
 
+type Witness = BS.ByteString
 
-getWitness :: Show k => BS.ByteString -> Map.HashMap k (Ver, BinaryOp v) -> (BS.ByteString -> (k, Id, v))
-getWitness bs mp
+loadWitness :: Show k => Map.HashMap k (Ver, BinaryOp v) -> Witness -> (BS.ByteString -> (k, Id, v))
+loadWitness mp bs
     | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
     | otherwise = ind `seq` mp2 `seq` \bs ->
             let (k :: Word16, bs2) = binarySplit bs
@@ -205,8 +206,8 @@ getWitness bs mp
                      | w <- ws]
 
 
-putWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (BS.ByteString, k -> Id -> v -> Builder)
-putWitness mp = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
+saveWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (Witness, k -> Id -> v -> Builder)
+saveWitness mp = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp
         wsMp = Map.fromList $ zip ws [0 :: Word16 ..]
