@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, RecordWildCards, ScopedTypeVariables #-}
-{-# LANGUAGE ConstraintKinds, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 -- | This module implements the Key/Value types, to abstract over hetrogenous data types.
 module Development.Shake.Internal.Value(

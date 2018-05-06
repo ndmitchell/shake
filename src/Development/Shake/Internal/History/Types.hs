@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.History.Types(
     BS_Store, BS_Identity
