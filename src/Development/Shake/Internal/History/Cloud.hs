@@ -19,6 +19,8 @@ import Data.Typeable
 import General.Binary
 import General.Extra
 import General.Wait
+import Data.Functor
+import Prelude
 
 
 data Initial = Initial (Map.HashMap Key Ids.Id) (Ids.Ids (Ver, [Ids.Id], [BS_Identity] -> Bool))
