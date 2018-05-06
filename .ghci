@@ -1,5 +1,6 @@
 :set -ignore-package=hashmap
 :set -fwarn-unused-binds -fwarn-unused-imports -fwarn-orphans
+:set -DNETWORK
 :set -isrc
 :load src/Test.hs src/Paths.hs
 

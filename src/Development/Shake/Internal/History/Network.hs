@@ -5,7 +5,7 @@ module Development.Shake.Internal.History.Network(
     Conn, connect, post
     ) where
 
-#ifndef NO_NETWORK
+#ifdef NETWORK
 import Network.HTTP
 import Network.URI
 import Data.List
@@ -21,7 +21,7 @@ connect :: String -> Maybe (IO Conn)
 post :: Conn -> String -> LBS.ByteString -> IO LBS.ByteString
 
 
-#ifdef NO_NETWORK
+#ifndef NETWORK
 
 connect _ = Nothing
 post _ _ _ = fail "impossible to get here"
