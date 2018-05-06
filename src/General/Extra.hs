@@ -248,6 +248,8 @@ withFrozenCallStack = id
 ---------------------------------------------------------------------
 -- Data.Version
 
+-- | A version number that indicates change, not ordering or compatibilty.
+--   Always presented as an 'Int' to the user, but a newtype inside the library for safety.
 newtype Ver = Ver Int
     deriving (Show,Eq,Storable)
 
