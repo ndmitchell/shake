@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, CPP #-}
 
 module Development.Shake.Internal.Core.Wait3(
     Locked, Wait(..), firstJustWaitOrdered, firstJustWaitUnordered, fromLater, fmapWait, runLocked
@@ -11,9 +11,18 @@ import Data.IORef.Extra
 import Control.Monad.IO.Class
 import Prelude
 
+#if __GLASGOW_HASKELL__ >= 800
+import Control.Monad.Fail
+#endif
+
 
 newtype Locked a = Locked (IO a)
-    deriving (Functor, Applicative, Monad, MonadIO)
+    deriving (Functor, Applicative, Monad, MonadIO
+#if __GLASGOW_HASKELL__ >= 800
+             ,MonadFail
+#endif
+        )
+
 
 runLocked :: Var a -> (a -> Locked b) -> IO b
 runLocked var act = withVar var $ \v -> case act v of Locked x -> x
