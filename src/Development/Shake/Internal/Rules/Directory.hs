@@ -319,8 +319,9 @@ removeFiles dir pat =
             IO.removeDirectory x
 
 
--- | Remove files, like 'removeFiles', but executed after the build completes successfully.
---   Useful for implementing @clean@ actions that delete files Shake may have open for building.
+-- | Remove files, like 'removeFiles', but executed after the build completes successfully using 'runAfter'.
+--   Useful for implementing @clean@ actions that delete files Shake may have open for building, e.g. 'shakeFiles'.
+--   Where possible, delete the files as a normal part of the build, e.g. using @'liftIO' $ 'removeFiles' dir pats@.
 removeFilesAfter :: FilePath -> [FilePattern] -> Action ()
 removeFilesAfter a b = do
     putLoud $ "Will remove " ++ unwords b ++ " from " ++ a

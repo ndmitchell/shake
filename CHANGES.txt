@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #412, clarify that removeFilesAfter should be used sparingly
     #409, improve the documentation of newCache
     Generalise operations like versioned to Rules a -> Rules a
     Make the Shake database version string contain os and arch
