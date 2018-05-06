@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving #-}
 
 module General.Extra(
     getProcessorCount,
@@ -17,6 +17,7 @@ module General.Extra(
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
+    Version(..), makeVersion,
     ) where
 
 import Control.Exception.Extra
@@ -30,9 +31,11 @@ import System.Info.Extra
 import System.Random
 import System.Directory
 import System.Exit
+import Foreign.Storable
 import Control.Concurrent
 import Data.Maybe
 import Data.Functor
+import Data.Hashable
 import Data.Primitive.Array
 import Control.Applicative
 import Control.Monad
@@ -241,3 +244,12 @@ callStackFull = []
 withFrozenCallStack :: a -> a
 withFrozenCallStack = id
 #endif
+
+---------------------------------------------------------------------
+-- Data.Version
+
+newtype Version = Version Int
+    deriving (Show,Eq,Storable)
+
+makeVersion :: String -> Version
+makeVersion = Version . hash

@@ -11,8 +11,7 @@ module Development.Shake.Internal.Core.Types(
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
-    stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..),
-    Version(..), makeVersion
+    stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..)
     ) where
 
 import Control.Monad.IO.Class
@@ -24,6 +23,7 @@ import Data.Typeable
 import General.Binary
 import Control.Exception
 import Data.Maybe
+import General.Extra
 import Control.Concurrent.Extra
 import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Core.Wait3

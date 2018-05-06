@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards, TupleSections, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.History(
-    Version(..), makeVersion,
     History, newHistory, addHistory, lookupHistory
     ) where
 
@@ -50,13 +49,6 @@ createLink from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
 #endif
 -}
 
-newtype Version = Version Int
-    deriving (Show,Eq,BinaryEx,Storable)
-
-makeVersion :: String -> Version
-makeVersion = Version . hash
-
-
 data History = History
     {globalVersion :: !Version
     ,keyOp :: BinaryOp Key
@@ -79,9 +71,9 @@ data Entry = Entry
 
 putEntry :: BinaryOp Key -> Entry -> Builder
 putEntry binop Entry{..} =
-    putEx entryGlobalVersion <>
-    putEx entryBuiltinVersion <>
-    putEx entryUserVersion <>
+    putExStorable entryGlobalVersion <>
+    putExStorable entryBuiltinVersion <>
+    putExStorable entryUserVersion <>
     putExN (putOp binop entryKey) <>
     putExN (putExList $ map (putExList . map putDepend) entryDepends) <>
     putExN (putExList $ map putFile entryFiles) <>
