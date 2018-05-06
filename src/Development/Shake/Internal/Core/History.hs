@@ -15,7 +15,7 @@ import System.Directory
 import System.IO
 import Numeric
 import Development.Shake.Internal.FileInfo
-import Development.Shake.Internal.Core.Wait3
+import General.Wait
 import Development.Shake.Internal.FileName
 import Data.Monoid
 import Data.Functor

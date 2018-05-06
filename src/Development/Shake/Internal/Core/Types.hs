@@ -26,7 +26,7 @@ import Data.Maybe
 import General.Extra
 import Control.Concurrent.Extra
 import Development.Shake.Internal.Core.History
-import Development.Shake.Internal.Core.Wait3
+import General.Wait
 import Development.Shake.Internal.Errors
 import qualified General.TypeMap as TMap
 import Data.IORef

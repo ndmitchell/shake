@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, CPP #-}
 
-module Development.Shake.Internal.Core.Wait3(
+-- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
+module General.Wait(
     Locked, Wait(..), firstJustWaitOrdered, firstJustWaitUnordered, fromLater, fmapWait, runLocked
     ) where
 

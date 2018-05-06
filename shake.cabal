@@ -130,7 +130,6 @@ library
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait2
-        Development.Shake.Internal.Core.Wait3
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -171,6 +170,7 @@ library
         General.Template
         General.Timing
         General.TypeMap
+        General.Wait
         Paths_shake
 
 
@@ -233,7 +233,6 @@ executable shake
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait2
-        Development.Shake.Internal.Core.Wait3
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -274,6 +273,7 @@ executable shake
         General.Template
         General.Timing
         General.TypeMap
+        General.Wait
         Paths_shake
 
 
@@ -344,7 +344,6 @@ test-suite shake-test
         Development.Shake.Internal.Core.Monad
         Development.Shake.Internal.Core.Pool
         Development.Shake.Internal.Core.Wait2
-        Development.Shake.Internal.Core.Wait3
         Development.Shake.Internal.Core.Rules
         Development.Shake.Internal.Core.Run
         Development.Shake.Internal.Core.Storage
@@ -387,6 +386,7 @@ test-suite shake-test
         General.Template
         General.Timing
         General.TypeMap
+        General.Wait
         Paths_shake
         Run
         Test.Basic

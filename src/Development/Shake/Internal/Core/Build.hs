@@ -16,7 +16,7 @@ import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.History
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Monad
-import Development.Shake.Internal.Core.Wait3
+import General.Wait
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
 import General.Extra
