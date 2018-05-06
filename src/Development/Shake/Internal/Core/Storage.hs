@@ -51,6 +51,27 @@ databaseVersion x = "SHAKE-DATABASE-14-" ++ s ++ "\r\n"
                                    -- ensures we do not get \r or \n in the user portion
 
 
+messageCorrupt :: FilePath -> SomeException -> IO [String]
+messageCorrupt dbfile err = do
+    msg <- showException err
+    return $
+        ("Error when reading Shake database " ++ dbfile) :
+        map ("  "++) (lines msg) ++
+        ["All files will be rebuilt"]
+
+
+messageDatabaseVersionChange :: FilePath -> BS.ByteString -> BS.ByteString -> [String]
+messageDatabaseVersionChange dbfile old new =
+    ["Error when reading Shake database - invalid version stamp detected:"
+    ,"  File:      " ++ dbfile
+    ,"  Expected:  " ++ disp (BS.unpack new)
+    ,"  Found:     " ++ disp (limit $ BS.unpack old)
+    ,"All rules will be rebuilt"]
+    where
+        limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
+        disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
+
+
 -- | Storage of heterogeneous things. In the particular case of Shake,
 --   k ~ TypeRep, v ~ (Key, Status{Value}).
 --
@@ -89,14 +110,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
         oldVer <- readChunkMax h $ fromIntegral $ BS.length ver + 100000
         let verEq = Right ver == oldVer
         when (not shakeVersionIgnore && not verEq && oldVer /= Left BS.empty) $ do
-            let limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
-            let disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
-            outputErr $ unlines
-                ["Error when reading Shake database - invalid version stamp detected:"
-                ,"  File:      " ++ dbfile
-                ,"  Expected:  " ++ disp (BS.unpack ver)
-                ,"  Found:     " ++ disp (limit $ BS.unpack $ fromEither oldVer)
-                ,"All rules will be rebuilt"]
+            outputErr $ messageDatabaseVersionChange dbfile (fromEither oldVer) ver
             corrupt
 
         let (witnessNew, save) = putWitness witness
@@ -107,11 +121,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 resetChunksCorrupt Nothing h
                 return Nothing
             Right witnessOld ->  handleBool (not . isAsyncException) (\err -> do
-                msg <- showException err
-                outputErr $ unlines $
-                    ("Error when reading Shake database " ++ dbfile) :
-                    map ("  "++) (lines msg) ++
-                    ["All files will be rebuilt"]
+                outputErr =<< messageCorrupt dbfile err
                 corrupt
                 return Nothing) $ do
 
@@ -166,8 +176,8 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             t <- getCurrentTime
             appendFile (shakeFiles </> ".shake.storage.log") $ "\n[" ++ show t ++ "]: " ++ trimEnd x ++ "\n"
         outputErr x = do
-            when (shakeVerbosity >= Quiet) $ shakeOutput Quiet x
-            unexpected x
+            when (shakeVerbosity >= Quiet) $ shakeOutput Quiet $ unlines x
+            unexpected $ unlines x
 
 
 keyName :: Show k => Ver -> k -> BS.ByteString
