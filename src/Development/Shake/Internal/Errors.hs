@@ -14,6 +14,7 @@ module Development.Shake.Internal.Errors(
 import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad.IO.Class
+import General.Extra
 import Data.Typeable
 import Data.List.Extra
 import Data.Maybe
@@ -26,8 +27,9 @@ throwImpure :: SomeException -> a
 throwImpure = throw
 
 
-errorInternal :: String -> SomeException
-errorInternal msg = toException $ ErrorCall $ "Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")"
+errorInternal :: Partial => String -> SomeException
+errorInternal msg = toException $ ErrorCall $ unlines $
+    ("Development.Shake: Internal error, please report to Neil Mitchell (" ++ msg ++ ")") : callStackFull
 
 alternatives = let (*) = (,) in
     ["_rule_" * "oracle"
