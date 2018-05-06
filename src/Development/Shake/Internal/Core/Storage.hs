@@ -186,15 +186,12 @@ keyName (Ver v) k = UTF8.fromString $ show v ++ " " ++ show k
 type Witness = BS.ByteString
 
 loadWitness :: Show k => Map.HashMap k (Ver, BinaryOp v) -> Witness -> (BS.ByteString -> (k, Id, v))
-loadWitness mp bs
-    | length ws > limit || Map.size mp > limit = error "Number of distinct witness types exceeds limit"
-    | otherwise = ind `seq` mp2 `seq` \bs ->
+loadWitness mp bs = ind `seq` mp2 `seq` \bs ->
             let (k :: Word16, bs2) = binarySplit bs
             in case ind (fromIntegral k) of
                     Nothing -> error $ "Witness type out of bounds, " ++ show k
                     Just f -> f bs2
     where
-        limit = fromIntegral (maxBound :: Word16)
         ws :: [BS.ByteString] = getEx bs
         mp2 = Map.fromList [(keyName ver k, (k, v)) | (k,(ver,v)) <- Map.toList mp]
         ind = fastAt [ case Map.lookup w mp2 of
@@ -207,7 +204,9 @@ loadWitness mp bs
 
 
 saveWitness :: (Eq k, Hashable k, Show k) => Map.HashMap k (Ver, BinaryOp v) -> (Witness, k -> Id -> v -> Builder)
-saveWitness mp = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
+saveWitness mp
+    | Map.size mp > fromIntegral (maxBound :: Word16) = error "Number of distinct witness types exceeds limit"
+    | otherwise = (runBuilder $ putEx (ws :: [BS.ByteString]), mp2 `seq` \k -> fromMaybe (error $ "Don't know how to save, " ++ show k) $ Map.lookup k mp2)
     where
         ws = sort $ map (\(k,(ver,_)) -> keyName ver k) $ Map.toList mp
         wsMp = Map.fromList $ zip ws [0 :: Word16 ..]
