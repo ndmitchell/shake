@@ -273,9 +273,12 @@ withResources res act
 
 
 -- | Given an action on a key, produce a cached version that will execute the action at most once per key per run.
---   Using the cached result will still result include any dependencies that the action requires.
+--   Using the cached result will still result include any dependencies that the action requires - e.g. if the action
+--   does 'need' then those dependencies will be added to every rule that uses that cache.
 --   Each call to 'newCache' creates a separate cache that is independent of all other calls to 'newCache'.
+--
 --   The operations will not be cached between runs and nothing will be persisted to the Shake database.
+--   For an alternative that does persist the cache, see 'Development.Shake.addOracleCache'.
 --
 --   This function is useful when creating files that store intermediate values,
 --   to avoid the overhead of repeatedly reading from disk, particularly if the file requires expensive parsing.
