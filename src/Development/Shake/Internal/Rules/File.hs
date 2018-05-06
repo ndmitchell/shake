@@ -77,8 +77,8 @@ data Mode
 -- | The results of the various 'Mode' rules.
 data Result
     = ResultPhony
-    | ResultDirect FileA
-    | ResultForward FileA
+    | ResultDirect Ver FileA
+    | ResultForward Ver FileA
 
 -- | The file rules we use, first is the name (as pretty as you can get).
 data FileRule = FileRule String (FilePath -> Maybe Mode)
@@ -122,18 +122,20 @@ instance BinaryEx [FileA] where
 
 fromResult :: Result -> Maybe FileA
 fromResult ResultPhony = Nothing
-fromResult (ResultDirect x) = Just x
-fromResult (ResultForward x) = Just x
+fromResult (ResultDirect _ x) = Just x
+fromResult (ResultForward _ x) = Just x
 
 instance BinaryEx Result where
     putEx ResultPhony = mempty
-    putEx (ResultDirect x) = putEx x
-    putEx (ResultForward x) = putEx (0 :: Word8) <> putEx x
+    putEx (ResultDirect ver x) = putExStorable ver <> putEx x
+    putEx (ResultForward ver x) = putEx (0 :: Word8) <> putExStorable ver <> putEx x
 
     getEx x = case BS.length x of
         0 -> ResultPhony
-        12 -> ResultDirect $ getEx x
-        13 -> ResultForward $ getEx $ BS.tail x
+        i -> if i == sz then f ResultDirect x else f ResultForward $ BS.tail x
+        where
+            sz = sizeOf (undefined :: Ver) + sizeOf (undefined :: FileA)
+            f ctor x = let (a,b) = binarySplit x in ctor a $ getEx b
 
 
 ---------------------------------------------------------------------
@@ -207,12 +209,20 @@ ruleIdentity opts = \k v -> case result v of
     Nothing -> throwImpure $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
-ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old) mode = do
+ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)) oldBin@(fmap getEx -> old) mode = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
     -- for Phony, it doesn't make that much sense, but probably isn't harmful?
-    let r = rebuildFlags $ fileNameToString x
+    let r = rebuildFlags xStr
 
+    (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal o (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f xStr
+    let verEq v = Just v == ruleVer || map (Ver . fst) ruleAct == [v]
+    let rebuild = do
+            putWhen Chatty $ "# " ++ show o
+            case ruleAct of
+                [] -> rebuildWith Nothing
+                [x] -> rebuildWith $ Just x
+                _ -> throwM ruleErr
 
     case old of
         _ | r == RebuildNow -> rebuild
@@ -226,7 +236,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                 now <- liftIO $ fileStoredValue opts o
                 case now of
                     Nothing -> rebuild
-                    Just now -> do alwaysRerun; retNew ChangedStore $ ResultDirect now
+                    Just now -> do alwaysRerun; retNew ChangedStore $ ResultDirect (Ver 0) now
         {-
         _ | r == RebuildNever -> do
             now <- liftIO $ fileStoredValue opts o
@@ -237,7 +247,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                                 | otherwise = ChangedRecomputeDiff
                     retNew diff $ ResultDirect now
         -}
-        Just (ResultDirect old) | mode == RunDependenciesSame -> do
+        Just (ResultDirect ver old) | verEq ver, mode == RunDependenciesSame -> do
             now <- liftIO $ fileStoredValue opts o
             let noHash (FileA _ _ x) = isNoFileHash x
             case now of
@@ -249,14 +259,14 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
                     EqualCheap | if noHash old then shakeChange == ChangeModtimeAndDigestInput || noHash now else True ->
                         retOld ChangedNothing
                     _ ->
-                        retNew ChangedStore $ ResultDirect now
-        Just (ResultForward old) | mode == RunDependenciesSame -> retOld ChangedNothing
+                        retNew ChangedStore $ ResultDirect ver now
+        Just (ResultForward ver old) | verEq ver, mode == RunDependenciesSame -> retOld ChangedNothing
         _ -> rebuild
     where
         -- no need to lint check forward files
         -- but more than that, it goes wrong if you do, see #427
-        fileR (ResultDirect x) = FileR (Just x) True
-        fileR (ResultForward x) = FileR (Just x) False
+        fileR (ResultDirect _ x) = FileR (Just x) True
+        fileR (ResultForward _ x) = FileR (Just x) False
         fileR ResultPhony = FileR Nothing False
         unLint (RunResult a b c) = RunResult a b c{useLint = False}
 
@@ -267,10 +277,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
         retOld c = return $ RunResult c (fromJust oldBin) $ fileR (fromJust old) False
 
         -- actually run the rebuild
-        rebuild = do
-            putWhen Chatty $ "# " ++ show o
-            x <- return $ fileNameToString x
-            act <- getUserRuleMaybe o (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f x
+        rebuildWith act = do
             let answer ctor new = do
                     let b = case () of
                                 _ | Just old <- old
@@ -281,28 +288,28 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x) oldBin@(fmap getEx -> old
             case act of
                 Nothing -> do
                     new <- liftIO $ storedValueError opts True "Error, file does not exist and no rule available:" o
-                    answer ResultDirect $ fromJust new
-                Just (_, ModeForward act) -> do
+                    answer (ResultDirect $ Ver 0)  $ fromJust new
+                Just (ver, ModeForward act) -> do
                     new <- act
                     case new of
                         Nothing -> do
                             alwaysRerun
                             retNew ChangedRecomputeDiff ResultPhony
-                        Just new -> answer ResultForward new
+                        Just new -> answer (ResultForward $ Ver ver) new
                 Just (ver, ModeDirect act) -> do
                     cache <- historyLoad o ver
                     case cache of
                         Just encodedHash -> do
                             Just (FileA mod size _) <- liftIO $ storedValueError opts False "Error, restored the rule but did not produce file:" o
-                            answer ResultDirect $ FileA mod size $ getExStorable encodedHash
+                            answer (ResultDirect $ Ver ver) $ FileA mod size $ getExStorable encodedHash
                         Nothing -> do
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                             case new of
                                 Nothing -> retNew ChangedRecomputeDiff ResultPhony
                                 Just new@(FileA _ fileSize fileHash) -> do
-                                    producesUnchecked [x]
-                                    res <- answer ResultDirect new
+                                    producesUnchecked [xStr]
+                                    res <- answer (ResultDirect $ Ver ver) new
                                     historySave o ver $ runBuilder $
                                         if isNoFileHash fileHash then throwImpure errorNoHash else putExStorable fileHash
                                     return res
