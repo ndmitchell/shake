@@ -6,6 +6,7 @@ module Development.Shake.Internal.History.Cloud(
 
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.History.Types
+import Data.Typeable
 import General.Binary
 import General.Extra
 import General.Wait
@@ -13,7 +14,7 @@ import General.Wait
 
 data Cloud = Cloud
 
-newCloud :: BinaryOp Key -> Ver -> [(String, Ver)] -> [String] -> Maybe (IO Cloud)
+newCloud :: BinaryOp Key -> Ver -> [(TypeRep, Ver)] -> [String] -> Maybe (IO Cloud)
 newCloud _ _ _ _ = Cloud `seq` Nothing
 
 addCloud :: Cloud -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()

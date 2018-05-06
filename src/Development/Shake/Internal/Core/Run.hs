@@ -235,7 +235,7 @@ loadSharedCloud opts owitness = do
     let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
     let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp
     let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
-    let keyVers = [(show $ QTypeRep k, builtinVersion v) | (k,v) <- Map.toList owitness]
+    let keyVers = [(k, builtinVersion v) | (k,v) <- Map.toList owitness]
     let ver = makeVer $ shakeVersion opts
 
     shared <- case shakeShare opts of
