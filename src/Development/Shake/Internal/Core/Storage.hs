@@ -83,7 +83,7 @@ messageMissingTypes dbfile types =
 
 
 -- | Storage of heterogeneous things. In the particular case of Shake,
---   k ~ TypeRep, v ~ (Key, Status{Value}).
+--   k ~ QTypeRep, v ~ (Key, Status{Value}).
 --
 --   The storage starts with a witness table saying what can be contained.
 --   If any entries in the witness table don't have a current Witness then a fake
