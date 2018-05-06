@@ -209,14 +209,14 @@ ruleIdentity opts = \k v -> case result v of
     Nothing -> throwImpure $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
-ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)) oldBin@(fmap getEx -> old) mode = do
+ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)) oldBin@(fmap getEx -> old :: Maybe Result) mode = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
     -- for Phony, it doesn't make that much sense, but probably isn't harmful?
     let r = rebuildFlags xStr
 
     (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal o (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f xStr
-    let verEq v = Just v == ruleVer || map (Ver . fst) ruleAct == [v]
+    let verEq v = Just v == ruleVer || case ruleAct of [] -> v == Ver 0; [(v2,_)] -> v == Ver v2; _ -> False
     let rebuild = do
             putWhen Chatty $ "# " ++ show o
             case ruleAct of
@@ -247,7 +247,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)
                                 | otherwise = ChangedRecomputeDiff
                     retNew diff $ ResultDirect now
         -}
-        Just (ResultDirect ver old) | verEq ver, mode == RunDependenciesSame -> do
+        Just (ResultDirect ver old) | mode == RunDependenciesSame, verEq ver -> do
             now <- liftIO $ fileStoredValue opts o
             let noHash (FileA _ _ x) = isNoFileHash x
             case now of
