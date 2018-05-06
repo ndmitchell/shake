@@ -72,6 +72,14 @@ messageDatabaseVersionChange dbfile old new =
         disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
 
 
+messageMissingTypes :: FilePath -> [String] -> [String]
+messageMissingTypes dbfile types =
+    ["Shake database rules have changed for the following types:"
+    ,"  File:  " ++ dbfile] ++
+    ["  Type:  " ++ x | x <- types] ++
+    ["All rules using these types will be rebuilt"]
+
+
 -- | Storage of heterogeneous things. In the particular case of Shake,
 --   k ~ TypeRep, v ~ (Key, Status{Value}).
 --
@@ -125,7 +133,8 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 corrupt
                 return Nothing) $ do
 
-                (_, load) <- evaluate $ loadWitness witness witnessOld
+                (missing, load) <- evaluate $ loadWitness witness witnessOld
+                when (missing /= []) $ outputErr $ messageMissingTypes dbfile missing
                 ids <- Ids.empty
                 let raw bs = "[len " ++ show (BS.length bs) ++ "] " ++ concat
                              [['0' | length c == 1] ++ c | x <- BS8.unpack bs, let c = showHex x ""]
