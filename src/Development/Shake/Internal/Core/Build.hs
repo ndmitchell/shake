@@ -306,22 +306,22 @@ historyIsEnabled :: Action Bool
 historyIsEnabled = Action $
     (isJust . globalShared <$> getRO) &&^ (localHistory <$> getRW)
 
--- | Save a value to the history. Record a @key@, the version of any user rule
---   (or @\"\"@), and a payload. Must be run at the end of the rule, after
+-- | Save a value to the history. Record the version of any user rule
+--   (or @0@), and a payload. Must be run at the end of the rule, after
 --   any dependencies have been captured. If history is enabled, stores the information
 --   in a cache.
 --
 --   This function relies on 'produces' to have been called correctly to describe
 --   which files were written during the execution of this rule.
-historySave :: ShakeValue k => k -> Int -> BS.ByteString -> Action ()
-historySave k ver store = Action $ do
+historySave :: Int -> BS.ByteString -> Action ()
+historySave ver store = Action $ do
     Global{..} <- getRO
-    Local{localHistory, localProduces, localDepends, localBuiltinVersion} <- getRW
+    Local{localHistory, localProduces, localDepends, localBuiltinVersion, localStack} <- getRW
     liftIO $ when localHistory $ whenJust globalShared $ \history -> do
         -- make sure we throw errors before we get into the history
-        evaluate $ rnf k
         evaluate ver
         evaluate store
+        key <- evaluate $ fromMaybe (error "Can't call historySave outside a rule") $ topStack localStack
 
         let produced = reverse $ map snd localProduces
         deps <- runLocked globalDatabase $ \database ->
@@ -329,7 +329,8 @@ historySave k ver store = Action $ do
             forM (reverse localDepends) $ \(Depends is) -> forM is $ \i -> do
                 Just (k, Ready r) <- getIdKeyStatus database i
                 return (k, runIdentify globalRules k $ result r)
-        addShared history (newKey k) localBuiltinVersion (Ver ver) deps store produced
+        let k = topStack localStack
+        addShared history key localBuiltinVersion (Ver ver) deps store produced
         liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 

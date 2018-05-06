@@ -310,7 +310,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)
                                 Just new@(FileA _ fileSize fileHash) -> do
                                     producesUnchecked [xStr]
                                     res <- answer (ResultDirect $ Ver ver) new
-                                    historySave o ver $ runBuilder $
+                                    historySave ver $ runBuilder $
                                         if isNoFileHash fileHash then throwImpure errorNoHash else putExStorable fileHash
                                     return res
                 Just (_, ModePhony act) -> do

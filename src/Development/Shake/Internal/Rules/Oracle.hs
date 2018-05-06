@@ -55,7 +55,7 @@ addOracleFlavor flavor act = do
                         let newHash = encodeHash new
                         let newEncode = encode' new
                         when (flavor == Cache) $
-                            historySave o 0 newEncode
+                            historySave 0 newEncode
                         return $
                             if flavor == Hash
                                 then RunResult (cmpHash newHash) newHash new

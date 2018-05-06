@@ -135,7 +135,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
                 Nothing -> do
                     FilesA v <- act
                     producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
-                    historySave k ver $ runBuilder $ putExList
+                    historySave ver $ runBuilder $ putExList
                         [if isNoFileHash hash then throwImpure errorNoHash else putExStorable hash | FileA _ _ hash <- v]
                     return $ FilesA v
             let c | Just (Result _ old) <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
