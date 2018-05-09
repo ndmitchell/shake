@@ -58,7 +58,7 @@ The `==` bars are a histogram, allowing quick visual identification of where mos
 
 ## Console output
 
-By default Shake build systems run at `Normal` `Verbosity`, which prints errors and command names. By passing `--verbose` (or `-V`) you can increase the verbosity to `Loud`, which prints full command lines. By passing further `--verbose` flags (or `-VV`) you can increase the verbosity to `Chatty` which also includes when build rules starting being executed, and finally to `Diagnostic`, which is basically a complete list of every decision Shake makes. As a quick visual form of debugging, `Chatty` is sometimes helpful.
+By default Shake build systems run at `Normal` `Verbosity`, which prints errors and command names. By passing `--verbose` (or `-V`) you can increase the verbosity to `Loud`, which prints full command lines. By passing further `--verbose` flags (or `-VV`) you can increase the verbosity to `Chatty` which also includes when build rules starting being executed, and finally to `Diagnostic`, which is almost a complete list of every decision Shake makes. As a quick visual form of debugging, `Chatty` is sometimes helpful.
 
 Sometimes adding your own output can help understand what is happening, using functions such as `putLoud` to write to the console. To compute timing information to print in such messages either use [`duration`](https://hackage.haskell.org/package/extra/docs/System-Time-Extra.html#v:duration) from [the `extra` library](https://hackage.haskell.org/package/extra), or `CmdTime`. As an example:
 

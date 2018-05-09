@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
 
--- | A Ninja style environment, basically a linked-list of mutable hash tables.
+-- | A Ninja style environment, equivalent to a non-empty list of mutable hash tables.
 module Development.Ninja.Env(
     Env, newEnv, scopeEnv, addEnv, askEnv, fromEnv
     ) where

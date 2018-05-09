@@ -79,7 +79,7 @@ import Development.Shake.Internal.Core.Rules
 -- * A @value@ will be @()@ - when the user depends on a file they don't expect any information in return.
 --
 -- * The stored information will be the contents of the file, in it's entirety. Alternative choices would be the modtime or a hash of the contents,
---   but Shake doesn't require that. The stored information in Shake must be stored in a 'ByteString', so we simply 'Data.ByteString.pack' and
+--   but Shake doesn't require that. The stored information in Shake must be stored in a 'ByteString', so we 'Data.ByteString.pack' and
 --   'Data.ByteString.unpack' to convert.
 --
 -- * We will allow user rules to be defined saying how to build any individual file.
@@ -139,6 +139,6 @@ import Development.Shake.Internal.Core.Rules
 --   The only thing we provide is a 'BuiltinRun' function which gets the previous state, and whether any dependency has changed,
 --   and decides whether to rebuild. If something has changed we call 'getUserRuleOne' to find the users rule and rerun it.
 --   The 'RunResult' says what changed (either 'ChangedNothing' or 'ChangedRecomputeDiff' in our cases), gives us a new stored value
---   (just packing the contents) and the @value@ which is simply @()@.
+--   (just packing the contents) and the @value@ which is @()@.
 --
 --   To execute our example we need to also call @addBuiltinFileRule@, and now everything works.

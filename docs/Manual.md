@@ -8,28 +8,28 @@ Shake is a Haskell library for writing build systems -- designed as a replacemen
     import Development.Shake.Command
     import Development.Shake.FilePath
     import Development.Shake.Util
-    
+
     main :: IO ()
     main = shakeArgs shakeOptions{shakeFiles="_build"} $ do
         want ["_build/run" <.> exe]
-    
+
         phony "clean" $ do
             putNormal "Cleaning files in _build"
             removeFilesAfter "_build" ["//*"]
-    
+
         "_build/run" <.> exe %> \out -> do
             cs <- getDirectoryFiles "" ["//*.c"]
             let os = ["_build" </> c -<.> "o" | c <- cs]
             need os
             cmd_ "gcc -o" [out] os
-    
+
         "_build//*.o" %> \out -> do
             let c = dropDirectory1 $ out -<.> "c"
             let m = out -<.> "m"
             cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
             needMakefileDependencies m
 
-This build system builds the executable `_build/run` from all C source files in the current directory. It will rebuild if you add/remove any C files to the directory, if the C files themselves change, or if any headers used by the C files change. All generated files are placed in `_build`, and a `clean` command is provided that will wipe all the generated files. In the rest of this manual we'll explain how the above code works and how to extend it. 
+This build system builds the executable `_build/run` from all C source files in the current directory. It will rebuild if you add/remove any C files to the directory, if the C files themselves change, or if any headers used by the C files change. All generated files are placed in `_build`, and a `clean` command is provided that will wipe all the generated files. In the rest of this manual we'll explain how the above code works and how to extend it.
 
 #### Running this example
 
@@ -128,7 +128,7 @@ Where <tt><i>variable</i></tt> is a name consisting of letters, numbers and unde
 
 An <tt><i>expression</i></tt> is any combination of variables and function calls, for example `out -<.> "txt"`. A list of some common functions is discussed later.
 
-Variables are evaluated by substituting the <tt><i>expression</i></tt> everywhere the <tt><i>variable</i></tt> is used. In the simple example we could have equivalently written: 
+Variables are evaluated by substituting the <tt><i>expression</i></tt> everywhere the <tt><i>variable</i></tt> is used. In the simple example we could have equivalently written:
 
     "*.rot13" %> \out -> do
         need [out -<.> "txt"]
@@ -241,7 +241,7 @@ We first compute the source file `c` (e.g. `"main.c"`) that is associated with t
 Variables local to a rule are defined using `let`, but you can also define top-level variables. Top-level variables are defined before the `main` call, for example:
 
     buildDir = "_build"
- 
+
 You can now use `buildDir` in place of `"_build"` throughout. You can also define parametrised variables (functions) by adding argument names:
 
     buildDir x = "_build" </> x
@@ -268,7 +268,7 @@ phony "<i>name</i>" $ do
     <i>actions</i>
 </pre>
 
-Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are simply run afresh each time they are requested.
+Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are run afresh each time they are requested.
 
 The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell Build.hs clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
 
@@ -286,9 +286,9 @@ As shown before, we can use `runhaskell Build.hs` to execute our build system, b
 
 This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
 
-Now you can run a build by simply typing `stack exec ./build.sh` on Linux, or `stack exec build.bat` on Windows. On Linux you may want to alias `build` to `stack exec ./build.sh`. For the rest of this document we will assume `build` runs the build system.
+Now you can run a build by typing `stack exec ./build.sh` on Linux, or `stack exec build.bat` on Windows. On Linux you may want to alias `build` to `stack exec ./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
-_Warning:_ You should not use the `-threaded` for GHC 7.6 or below because of a [GHC bug](https://ghc.haskell.org/trac/ghc/ticket/7646). If you do turn on `-threaded`, you should include `-qg -qb` in `-with-rtsopts`. 
+_Warning:_ You should not use the `-threaded` for GHC 7.6 or below because of a [GHC bug](https://ghc.haskell.org/trac/ghc/ticket/7646). If you do turn on `-threaded`, you should include `-qg -qb` in `-with-rtsopts`.
 
 #### Command line flags
 
@@ -315,7 +315,7 @@ The progress message will be displayed in the titlebar of the window, for exampl
 
 ![](shake-progress.png)
 
-Progress prediction is likely to be relatively poor during the first build and after running `build clean`, as then Shake has no information about the predicted execution time for each rule. To rebuild from scratch without running clean (because you really want to see the progress bar!) you can use the argument `--always-make`, which assumes all rules need rerunning. 
+Progress prediction is likely to be relatively poor during the first build and after running `build clean`, as then Shake has no information about the predicted execution time for each rule. To rebuild from scratch without running clean (because you really want to see the progress bar!) you can use the argument `--always-make`, which assumes all rules need rerunning.
 
 <span class="target" id="lint"></span>
 
@@ -368,7 +368,7 @@ This runs the `pwd` command through the system shell, after first changing to th
 You can use tracked dependencies on environment variables using the `getEnv` function. As an example:
 
     link <- getEnv "C_LINK_FLAGS"
-    let linkFlags = fromMaybe "" link    
+    let linkFlags = fromMaybe "" link
     cmd_ "gcc -o" [output] inputs linkFlags
 
 This example gets the `$C_LINK_FLAGS` environment variable (which is `Maybe String`, namely a `String` that might be missing), then using `fromMaybe` defines a local variable `linkFlags` that is the empty string when `$C_LINK_FLAGS` is not set. It then passes these flags to `gcc`.
@@ -443,7 +443,7 @@ The standard `%>` operator is actually defined as:
 
     pattern %> actions = (pattern ?==) ?> actions
 
-Where `?==` is a function for matching file patterns. 
+Where `?==` is a function for matching file patterns.
 
 #### Haskell Actions
 
