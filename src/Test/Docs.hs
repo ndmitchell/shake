@@ -55,9 +55,9 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
-            fmap (findCodeMarkdown . lines . noR) $ readFile' $ root </> "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
+            fmap (findCodeMarkdown . lines . checkBlacklist . noR) $ readFile' $ root </> "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
-            fmap (findCodeHaddock . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
+            fmap (findCodeHaddock . checkBlacklist . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
 
         let (imports,rest) = partition ("import " `isPrefixOf`) $ showCode src
         writeFileChanged out $ unlines $
@@ -164,6 +164,9 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
         cmd_ "ghc -fno-code -ignore-package=hashmap" ["-idist/build/autogen","-i" ++ root </> "src","Main.hs"]
         writeFile' out ""
 
+checkBlacklist :: String -> String
+checkBlacklist xs = if null bad then xs else error $ show ("Blacklist", bad)
+    where bad = [(w, x) | x <- map lower $ lines xs, w <- blacklist, w `isInfixOf` x]
 
 ---------------------------------------------------------------------
 -- FIND THE CODE
@@ -177,7 +180,8 @@ findCodeHaddock src =
     | tag <- ["code","pre"]
     , x <- insideTag tag src
     , let bad = nubOrd (insideTag "em" x) \\ italics
-    , if null bad then True else error $ "Bad italics, " ++ show bad]
+    , if null bad then True else error $ "Bad italics, " ++ show bad
+    ]
 
 
 findCodeMarkdown :: [String] -> [Code]
@@ -360,4 +364,18 @@ whitelist x = x `elem`
     ,"$(LitE . StringL . loc_filename <$> location)"
     ,"-d[ FILE], --debug[=FILE]"
     ,"-r[ FILE], --report[=FILE], --profile[=FILE]"
+    ]
+
+blacklist :: [String]
+blacklist =
+    -- from https://twitter.com/jesstelford/status/992756386160234497
+    ["obviously"
+    ,"basically"
+    ,"simply"
+    ,"of course"
+    ,"clearly"
+    ,"everyone knows"
+    -- ,"however"
+    -- ,"so,"
+    -- ,"easy"
     ]
