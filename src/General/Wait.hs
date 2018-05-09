@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, CPP #-}
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
@@ -10,6 +10,12 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.Concurrent.Extra
 import Data.IORef.Extra
+import Control.Applicative
+import Prelude
+
+#if __GLASGOW_HASKELL__ >= 800
+import Control.Monad.Fail
+#endif
 
 
 runWait :: Monad m => Wait m a -> m (Wait m a)
@@ -22,7 +28,11 @@ fromLater (Now x) f = f x
 fromLater (Later x) f = x f
 
 newtype Locked a = Locked (IO a)
-    deriving (Functor, Applicative, Monad, MonadIO)
+    deriving (Functor, Applicative, Monad, MonadIO
+#if __GLASGOW_HASKELL__ >= 800
+             ,MonadFail
+#endif
+        )
 
 runLocked :: Var a -> (a -> Locked b) -> IO b
 runLocked var act = withVar var $ \v -> case act v of Locked x -> x
@@ -56,6 +66,12 @@ instance Monad m => Monad (Wait m) where
 
 instance MonadIO m => MonadIO (Wait m) where
     liftIO = Lift . liftIO . fmap Now
+
+#if __GLASGOW_HASKELL__ >= 800
+instance MonadFail m => MonadFail (Wait m) where
+    fail = Lift . Control.Monad.Fail.fail
+#endif
+
 
 firstJustWaitOrdered :: Monad m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
 firstJustWaitOrdered = firstJustM
