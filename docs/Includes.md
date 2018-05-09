@@ -25,7 +25,7 @@ To detect the included headers without using the compiler we can define `usedHea
 
     usedHeaders src = [init x | x <- lines src, Just x <- [stripPrefix "#include \"" x]]
 
-This function takes the source code of a C file (`src`) and finds all lines that begin `#include "`, then takes the filename afterwards. This function does not work for all C files, but for most projects it is usually easy to write such a function that covers everything allowed by your coding standards.
+This function takes the source code of a C file (`src`) and finds all lines that begin `#include "`, then takes the filename afterwards. This function does not work for all C files, but for most projects it is usually feasible to write such a function that covers everything allowed by your coding standards.
 
 Assuming all interesting headers are only included directly by the C file (a restriction we remove in the next section), we can write the build rule as:
 
@@ -36,7 +36,7 @@ Assuming all interesting headers are only included directly by the C file (a res
         cmd "gcc -c" [c] "-o" [out]
 
 
-This code calls `readFile'` (which automatically calls `need` on the source file), then uses calls `need` on all headers used by the source file, then calls `gcc`. All files have `need` called on them before they are used, so if the C file or any of the header files have build system rules they will be run. 
+This code calls `readFile'` (which automatically calls `need` on the source file), then uses calls `need` on all headers used by the source file, then calls `gcc`. All files have `need` called on them before they are used, so if the C file or any of the header files have build system rules they will be run.
 
 #### Generated transitive imports
 
