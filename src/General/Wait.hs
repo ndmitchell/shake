@@ -45,7 +45,7 @@ data Wait m a = Now a
               | Later ((a -> m ()) -> m ())
                 deriving Functor
 
-instance Monad m => Applicative (Wait m) where
+instance (Monad m, Applicative m) => Applicative (Wait m) where
     pure = Now
     Now x <*> y = x <$> y
     Lift x <*> y = Lift $ (<*> y) <$> x
@@ -53,7 +53,7 @@ instance Monad m => Applicative (Wait m) where
     Later x <*> Lift y = Lift $ do y <- y; return $ Later x <*> y
     Later x <*> Later y = Later $ \c -> x $ \x -> y $ \y -> c $ x y
 
-instance Monad m => Monad (Wait m) where
+instance (Monad m, Applicative m) => Monad (Wait m) where
     return = pure
     (>>) = (*>)
     Now x >>= f = f x
