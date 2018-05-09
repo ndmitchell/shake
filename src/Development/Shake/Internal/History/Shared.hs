@@ -119,19 +119,19 @@ loadSharedEntry shared@Shared{..} key builtinVersion userVersion = do
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
-lookupShared :: Shared -> (Key -> Locked (Wait (Maybe BS_Identity))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS_Store, [[Key]], IO ())))
+lookupShared :: Shared -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupShared shared ask key builtinVersion userVersion = do
     ents <- liftIO $ loadSharedEntry shared key builtinVersion userVersion
-    firstJustWaitUnordered $ flip map ents $ \Entry{..} -> do
+    flip firstJustWaitUnordered ents $ \Entry{..} -> do
         -- use Nothing to indicate success, Just () to bail out early on mismatch
         let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
                 let dir = sharedFileDir shared entryKey
                 forM_ entryFiles $ \(file, hash) -> do
                     createDirectoryRecursive $ takeDirectory file
                     copyFile (dir </> show hash) file
-        fmap result <$> firstJustWaitOrdered
-            [ firstJustWaitUnordered
-                [ fmap test <$> ask k | (k, i1) <- kis
+        result <$> firstJustWaitOrdered id
+            [ firstJustWaitUnordered id
+                [ test <$> ask k | (k, i1) <- kis
                 , let test = maybe (Just ()) (\i2 -> if i1 == i2 then Nothing else Just ())]
             | kis <- entryDepends]
 

@@ -44,8 +44,8 @@ addCloud :: Cloud -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> 
 addCloud (Cloud server _) x1 x2 x3 x4 x5 x6 = void $ forkIO $ serverUpload server x1 x2 x3 x4 x5 x6
 
 
-lookupCloud :: Cloud -> (Locked () -> IO ()) -> (Key -> Locked (Wait (Maybe BS_Identity))) -> Key -> Ver -> Ver -> Locked (Wait (Maybe (BS_Store, [[Key]], IO ())))
-lookupCloud (Cloud server initial) relock ask key builtinVer userVer = return $ Later $ \c ->
+lookupCloud :: Cloud -> (Locked () -> IO ()) -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
+lookupCloud (Cloud server initial) relock ask key builtinVer userVer = Later $ \c ->
     void $ liftIO $ flip forkFinally (relock . c . either (const Nothing) join) $
         timeout 5 $ do
             Initial mp ids <- waitBarrier initial

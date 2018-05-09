@@ -94,16 +94,16 @@ getDatabaseValue k = do
 -- NEW STYLE PRIMITIVES
 
 -- | Lookup the value for a single Id, may need to spawn it
-lookupOne :: Global -> Stack -> Database -> Id -> Locked (Wait (Either SomeException (Result Value)))
+lookupOne :: Global -> Stack -> Database -> Id -> Wait Locked (Either SomeException (Result Value))
 lookupOne global stack database i = do
-    res <- getIdKeyStatus database i
+    res <- quickly $ getIdKeyStatus database i
     case res of
-        Nothing -> return $ Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
+        Nothing -> Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
         Just (k, s) -> case s of
-            Ready r -> return $ Now $ Right r
-            Error e -> return $ Now $ Left e
-            Running{} | Left e <- addStack i k stack -> return $ Now $ Left e
-            _ -> return $ Later $ \continue -> do
+            Ready r -> Now $ Right r
+            Error e -> Now $ Left e
+            Running{} | Left e <- addStack i k stack -> Now $ Left e
+            _ -> Later $ \continue -> do
                 Just (_, s) <- getIdKeyStatus database i
                 case s of
                     Ready r -> continue $ Right r
@@ -111,19 +111,19 @@ lookupOne global stack database i = do
                     Running (NoShow w) r -> do
                         let w2 v = w v >> continue v
                         setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
-                    Loaded r -> do wait <- buildOne global stack database i k (Just r); fromLater wait continue
-                    Missing -> do wait <- buildOne global stack database i k Nothing; fromLater wait continue
+                    Loaded r -> buildOne global stack database i k (Just r) `fromLater` continue
+                    Missing -> buildOne global stack database i k Nothing `fromLater` continue
 
 
 -- | Build a key, must currently be either Loaded or Missing, changes to Waiting
-buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Locked (Wait (Either SomeException (Result Value)))
+buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Wait Locked (Either SomeException (Result Value))
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e -> do
-        setIdKeyStatus global database i k $ Error e
-        return $ Now $ Left e
-    Right stack -> return $ Later $ \continue -> do
+        quickly $ setIdKeyStatus global database i k $ Error e
+        return $ Left e
+    Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        go <- buildRunMode global stack database k r
+        let go = buildRunMode global stack database k r
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
             runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
@@ -140,18 +140,18 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 
 -- | Compute the value for a given RunMode and a restore function to run
-buildRunMode :: Global -> Stack -> Database -> Key -> Maybe (Result a) -> Locked (Wait RunMode)
-buildRunMode global stack database k me = return $ Later $ \continue -> do
+buildRunMode :: Global -> Stack -> Database -> Key -> Maybe (Result a) -> Wait Locked RunMode
+buildRunMode global stack database k me = do
     changed <- case me of
-        Nothing -> return $ Now True
+        Nothing -> return True
         Just me -> buildRunDependenciesChanged global stack database me
-    fromLater changed $ \changed -> continue $ if changed then RunDependenciesChanged else RunDependenciesSame
+    return $ if changed then RunDependenciesChanged else RunDependenciesSame
 
 
 -- | Have the dependencies changed
-buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Locked (Wait Bool)
-buildRunDependenciesChanged global stack database me = fmap isJust <$> firstJustWaitOrdered
-    [firstJustWaitUnordered $ map (fmap (fmap test) . lookupOne global stack database) x | Depends x <- depends me]
+buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Wait Locked Bool
+buildRunDependenciesChanged global stack database me = isJust <$> firstJustWaitOrdered id
+    [firstJustWaitUnordered id $ map (fmap test . lookupOne global stack database) x | Depends x <- depends me]
     where
         test (Right dep) | changed dep <= built me = Nothing
         test _ = Just ()
@@ -169,10 +169,11 @@ applyKeyValue callStack ks = do
 
     (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
         is <- mapM (getKeyId database) ks
-        wait <- firstJustWaitUnordered $ map (fmap (fmap (either Just (const Nothing))) . lookupOne global stack database) $ nubOrd is
-        wait <- flip fmapWait (return wait) $ \x -> case x of
-            Just e -> return $ Left e
-            Nothing -> Right <$> mapM (fmap (\(Just (_, Ready r)) -> result r) . getIdKeyStatus database) is
+        wait <- runWait $ do
+            x <- firstJustWaitUnordered id $ map (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
+            case x of
+                Just e -> return $ Left e
+                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> result r) . getIdKeyStatus database) is
         return (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
@@ -273,22 +274,22 @@ historyLoad (Ver -> ver) = do
     Local{localStack, localBuiltinVersion} <- Action getRW
     if isNothing globalShared && isNothing globalCloud then return Nothing else do
         key <- liftIO $ evaluate $ fromMaybe (error "Can't call historyLoad outside a rule") $ topStack localStack
-        res <- liftIO $ runLocked globalDatabase $ \database -> do
+        res <- liftIO $ runLocked globalDatabase $ \database -> runWait $ do
             let ask k = do
-                    i <- getKeyId database k
+                    i <- quickly $ getKeyId database k
                     let identify = Just . runIdentify globalRules k . result
-                    fmap (either (const Nothing) identify) <$> lookupOne global localStack database i
-            res <- case globalShared of
-                Nothing -> return $ Now Nothing
-                Just shared -> lookupShared shared ask key localBuiltinVersion ver
-            res <- bindWait (return res) $ \x -> case x of
-                Just res -> return $ Now $ Just res
-                Nothing -> case globalCloud of
-                    Nothing -> return $ Now Nothing
-                    Just cloud -> lookupCloud cloud (runLocked globalDatabase . const) ask key localBuiltinVersion ver
-            flip fmapWait (return res) $ \x -> case x of
+                    either (const Nothing) identify <$> lookupOne global localStack database i
+            x <- case globalShared of
                 Nothing -> return Nothing
-                Just (a,b,c) -> Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
+                Just shared -> lookupShared shared ask key localBuiltinVersion ver
+            x <- case x of
+                Just res -> return $ Just res
+                Nothing -> case globalCloud of
+                    Nothing -> return Nothing
+                    Just cloud -> lookupCloud cloud (runLocked globalDatabase . const) ask key localBuiltinVersion ver
+            case x of
+                Nothing -> return Nothing
+                Just (a,b,c) -> quickly $ Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
         -- FIXME: If running with cloud and shared, and you got a hit in cloud, should also add it to shared
         res <- case res of
             Now x -> return x
