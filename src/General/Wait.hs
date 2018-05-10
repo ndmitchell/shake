@@ -64,7 +64,7 @@ instance (Monad m, Applicative m) => Monad (Wait m) where
             Now x -> c x
             Later x -> x c
 
-instance MonadIO m => MonadIO (Wait m) where
+instance (MonadIO m,  Applicative m) => MonadIO (Wait m) where
     liftIO = Lift . liftIO . fmap Now
 
 #if __GLASGOW_HASKELL__ >= 800
@@ -73,7 +73,7 @@ instance MonadFail m => MonadFail (Wait m) where
 #endif
 
 
-firstJustWaitOrdered :: Monad m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
+firstJustWaitOrdered :: (Monad m, Applicative m) => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
 firstJustWaitOrdered = firstJustM
 
 firstJustWaitUnordered :: MonadIO m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
