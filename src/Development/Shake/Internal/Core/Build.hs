@@ -151,7 +151,7 @@ buildRunMode global stack database k me = do
 -- | Have the dependencies changed
 buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Wait Locked Bool
 buildRunDependenciesChanged global stack database me = isJust <$> firstJustWaitOrdered id
-    [firstJustWaitUnordered id $ map (fmap test . lookupOne global stack database) x | Depends x <- depends me]
+    [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends me]
     where
         test (Right dep) | changed dep <= built me = Nothing
         test _ = Just ()
@@ -170,7 +170,7 @@ applyKeyValue callStack ks = do
     (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
         is <- mapM (getKeyId database) ks
         wait <- runWait $ do
-            x <- firstJustWaitUnordered id $ map (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
+            x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
             case x of
                 Just e -> return $ Left e
                 Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> result r) . getIdKeyStatus database) is
