@@ -83,7 +83,7 @@ firstJustWaitUnordered f = go [] . map f
         go :: MonadIO m => [(Maybe a -> m ()) -> m ()] -> [Wait m (Maybe a)] -> Wait m (Maybe a)
         go later (x:xs) = case x of
             Now (Just a) -> Now $ Just a
-            Now Nothing -> Now Nothing
+            Now Nothing -> go later xs
             Later l -> go (l:later) xs
             Lift x -> Lift $ do
                 x <- x
