@@ -311,7 +311,7 @@ One useful feature of Shake is that it can predict the remaining build time, bas
 * Running `build --progress`
 * Setting `shakeOptions{shakeProgress = progressSimple}`
 
-The progress message will be displayed in the titlebar of the window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](https://github.com/ndmitchell/shake) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
+The progress message will be displayed in the titlebar of the window, for example `3m12s (82%)` to indicate that the build is 82% complete and is predicted to take a further 3 minutes and 12 seconds. If you are running Windows 7 or higher and place the [`shake-progress`](https://github.com/ndmitchell/shake/releases/tag/shake-progress-1) utility somewhere on your `%PATH%` then the progress will also be displayed in the taskbar progress indicator:
 
 ![](shake-progress.png)
 
