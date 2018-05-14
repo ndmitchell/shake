@@ -50,6 +50,7 @@ instance (Monad m, Applicative m) => Applicative (Wait m) where
     Now x <*> y = x <$> y
     Lift x <*> y = Lift $ (<*> y) <$> x
     Later x <*> Now y = Later $ \c -> x $ \x -> c $ x y
+    -- Note: We pull the Lift from the right BEFORE the Later, to enable parallelism
     Later x <*> Lift y = Lift $ do y <- y; return $ Later x <*> y
     Later x <*> Later y = Later $ \c -> x $ \x -> y $ \y -> c $ x y
 
