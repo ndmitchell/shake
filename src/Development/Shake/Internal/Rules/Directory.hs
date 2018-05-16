@@ -7,7 +7,7 @@ module Development.Shake.Internal.Rules.Directory(
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv, getEnvWithDefault,
     removeFiles, removeFilesAfter,
-    getDirectoryFilesIO,
+    getDirectoryFilesIO, getDirectoryDirsIO,
     defaultRuleDirectory
     ) where
 
