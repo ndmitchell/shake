@@ -18,6 +18,7 @@ import General.Fence
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Typeable
+import Data.Either.Extra
 import General.Binary
 import General.Extra
 import General.Wait
@@ -65,5 +66,16 @@ lookupCloud :: Cloud -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -
 lookupCloud (Cloud server relock initial) ask key builtinVer userVer = runMaybeT $ do
     mp <- lift $ laterFence initial
     Just (ver, deps, test) <- return $ Map.lookup key mp
-    when (ver /= userVer) $ fail ""
-    fail ""
+    unless (ver == userVer) $ fail ""
+    Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
+    unless (test vs) $ fail ""
+    fence <- liftIO $ newLaterFence relock 10 noBuildTree $ serverOneKey server key builtinVer userVer $ zip deps vs
+    tree <- lift $ laterFence fence
+    f [deps] tree
+    where
+        f :: [[Key]] -> BuildTree -> MaybeT (Wait Locked) (BS_Store, [[Key]], IO ())
+        f ks (Done store xs) = return (store, reverse ks, serverDownloadFiles server key xs)
+        f ks (Depend deps trees) = do
+            Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
+            Just tree <- return $ lookup vs trees
+            f (deps:ks) tree
