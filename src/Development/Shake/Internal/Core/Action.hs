@@ -375,7 +375,7 @@ orderOnlyAction act = Action $ do
 --   Most people should use 'Development.Shake.newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
 newCacheIO (act :: k -> Action v) = do
-    var :: Var (Map.HashMap k (Fence (Either SomeException ([Depends],v)))) <- newVar Map.empty
+    var :: Var (Map.HashMap k (Fence IO (Either SomeException ([Depends],v)))) <- newVar Map.empty
     return $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
@@ -478,7 +478,7 @@ batch mx pred one many
     | mx <= 0 = error $ "Can't call batchable with <= 0, you used " ++ show mx
     | mx == 1 = pred $ \a -> do b <- one a; many [b]
     | otherwise = do
-        todo :: IORef (Int, [(b, Local, Fence (Either SomeException Local))]) <- liftIO $ newIORef (0, [])
+        todo :: IORef (Int, [(b, Local, Fence IO (Either SomeException Local))]) <- liftIO $ newIORef (0, [])
         pred $ \a -> do
             b <- one a
             fence <- liftIO newFence

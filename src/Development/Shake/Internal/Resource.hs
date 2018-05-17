@@ -71,7 +71,7 @@ data Resource = Resource
         -- ^ Key used for Eq/Ord operations. To make withResources work, we require newResourceIO < newThrottleIO
     ,resourceShow :: String
         -- ^ String used for Show
-    ,acquireResource :: Pool -> Int -> IO (Maybe (Fence ()))
+    ,acquireResource :: Pool -> Int -> IO (Maybe (Fence IO ()))
         -- ^ Acquire the resource and call the function.
     ,releaseResource :: Pool -> Int -> IO ()
         -- ^ You should only ever releaseResource that you obtained with acquireResource.
@@ -88,7 +88,7 @@ instance Ord Resource where compare = compare `on` resourceOrd
 data Finite = Finite
     {finiteAvailable :: !Int
         -- ^ number of currently available resources
-    ,finiteWaiting :: Bilist (Int, Fence ())
+    ,finiteWaiting :: Bilist (Int, Fence IO ())
         -- ^ queue of people with how much they want and the action when it is allocated to them
     }
 
@@ -104,7 +104,7 @@ newResourceIO name mx = do
     where
         shw = "Resource " ++ name
 
-        acquire :: Var Finite -> Pool -> Int -> IO (Maybe (Fence ()))
+        acquire :: Var Finite -> Pool -> Int -> IO (Maybe (Fence IO ()))
         acquire var pool want
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > mx = errorIO $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
@@ -140,7 +140,7 @@ data Throttle
       -- | Some number of resources are available
     = ThrottleAvailable !Int
       -- | Some users are blocked (non-empty), plus an action to call once we go back to Available
-    | ThrottleWaiting (IO ()) (Bilist (Int, Fence ()))
+    | ThrottleWaiting (IO ()) (Bilist (Int, Fence IO ()))
 
 
 -- | A version of 'Development.Shake.newThrottle' that runs in IO, and can be called before calling 'Development.Shake.shake'.
@@ -155,7 +155,7 @@ newThrottleIO name count period = do
     where
         shw = "Throttle " ++ name
 
-        acquire :: Var Throttle -> Pool -> Int -> IO (Maybe (Fence ()))
+        acquire :: Var Throttle -> Pool -> Int -> IO (Maybe (Fence IO ()))
         acquire var pool want
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > count = errorIO $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want

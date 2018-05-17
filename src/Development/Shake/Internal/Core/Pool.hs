@@ -23,7 +23,7 @@ priority x = if isLeft x then PoolException else PoolResume
 
 -- | Enqueue an Action into the pool and return a Fence to wait for it.
 --   Returns the value along with how long it spent executing.
-addPoolWait :: PoolPriority -> Action a -> Action (Fence (Either SomeException (Seconds, a)))
+addPoolWait :: PoolPriority -> Action a -> Action (Fence IO (Either SomeException (Seconds, a)))
 addPoolWait pri act = do
     ro@Global{..} <- Action getRO
     rw <- Action getRW
@@ -42,7 +42,7 @@ addPoolWait_ pri act = do
     liftIO $ addPool pri globalPool $ runAction ro rw act $ \_ -> return ()
 
 
-actionFenceSteal :: Fence (Either SomeException a) -> Action (Seconds, a)
+actionFenceSteal :: Fence IO (Either SomeException a) -> Action (Seconds, a)
 actionFenceSteal fence = do
     res <- liftIO $ testFence fence
     case res of
@@ -55,10 +55,10 @@ actionFenceSteal fence = do
                 continue $ (,) offset <$> v
 
 
-actionFenceRequeue :: Fence (Either SomeException b) -> Action (Seconds, b)
+actionFenceRequeue :: Fence IO (Either SomeException b) -> Action (Seconds, b)
 actionFenceRequeue = actionFenceRequeueBy id
 
-actionFenceRequeueBy :: (a -> Either SomeException b) -> Fence a -> Action (Seconds, b)
+actionFenceRequeueBy :: (a -> Either SomeException b) -> Fence IO a -> Action (Seconds, b)
 actionFenceRequeueBy op fence = Action $ do
     res <- liftIO $ testFence fence
     case fmap op res of
