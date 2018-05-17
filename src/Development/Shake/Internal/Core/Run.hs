@@ -16,6 +16,7 @@ import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
+import General.Wait
 import Control.Monad.Extra
 import Data.Typeable.Extra
 import Data.Function
@@ -97,8 +98,8 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
                 addCleanup_ cleanup $ do
                     killThread tid
                     void $ timeout 1 $ waitBarrier wait
-                (shared, cloud) <- loadSharedCloud opts ruleinfo
                 databaseVar <- newVar database
+                (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
 
                 addTiming "Running rules"
                 runPool (shakeThreads == 1) shakeThreads $ \pool -> do
@@ -230,8 +231,8 @@ withDatabase opts diagnostic owitness act = do
         act Database{..} step
 
 
-loadSharedCloud :: ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
-loadSharedCloud opts owitness = do
+loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
+loadSharedCloud var opts owitness = do
     let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
     let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp
     let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
@@ -241,7 +242,7 @@ loadSharedCloud opts owitness = do
     shared <- case shakeShare opts of
         Nothing -> return Nothing
         Just x -> Just <$> newShared wit2 ver x
-    cloud <- case newCloud wit2 ver keyVers $ shakeCloud opts of
+    cloud <- case newCloud (runLocked var . const) wit2 ver keyVers $ shakeCloud opts of
         _ | null $ shakeCloud opts -> return Nothing
         Nothing -> fail "shakeCloud set but Shake not compiled for cloud operation"
         Just res -> Just <$> res

@@ -16,13 +16,12 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Class
 import General.Fence
 import Data.List.Extra
-import qualified General.Ids as Ids
 import qualified Data.HashMap.Strict as Map
 import Data.Typeable
 import General.Binary
 import General.Extra
 import General.Wait
-import Data.Functor
+import Data.Maybe
 import Prelude
 
 
@@ -46,10 +45,8 @@ newCloud relock binop globalVer ruleVer urls = flip fmap (if null urls then Noth
     server <- newServer conn binop globalVer
     fence <- newLaterFence relock 10 Map.empty $ do
         xs <- serverAllKeys server ruleVer
-        listAt
-        Initial
-            (Map.fromList [(k,Ids.Id $ fromIntegral i) | (i,(k,_,_,_)) <- zipFrom 0 xs]) <$>
-            Ids.fromList [(a,map (Ids.Id . fromIntegral) b,c) | (_,a,b,c) <- xs]
+        let at = fastAt [k | (k,_,_,_) <- xs]
+        return $ Map.fromList [(k,(v,mapMaybe at ds,test)) | (k,v,ds,test) <- xs]
     return $ Cloud server relock fence
 
 
@@ -65,21 +62,9 @@ laterFence fence = do
         Nothing -> Later $ waitFence fence
 
 
-
 lookupCloud :: Cloud -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupCloud (Cloud server relock initial) ask key builtinVer userVer = runMaybeT $ do
-    Initial mp ids <- lift $ laterFence initial
-    Just id <- return $ Map.lookup key mp
-    Just (ver, deps, test) <- liftIO $ Ids.lookup ids id
-    Just deps <- sequence <$> mapM (Ids.lookup deps)
+    mp <- lift $ laterFence initial
+    Just (ver, deps, test) <- return $ Map.lookup key mp
+    when (ver /= userVer) $ fail ""
     fail ""
-{-
-            case res of
-                Just (ver, deps, test) | ver == userVer -> do
-                    ks <- mapM (Ids.lookup ids) deps
-                    case ks of
-                    , Just deps <- mapM (Ids.lookup ids) deps
-                     -> do
-                        return Nothing
-                _ -> return Nothing
--}
