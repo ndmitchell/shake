@@ -18,7 +18,7 @@ import Data.Typeable
 
 data BuildTree
     = Depend [Key] [([BS_Identity], BuildTree)]
-    | Done BS_Store [(FilePath, FileHash)]
+    | Done BS_Store [(FileHash, FilePath)]
 
 data Server = Server Conn (BinaryOp Key) Ver
 
