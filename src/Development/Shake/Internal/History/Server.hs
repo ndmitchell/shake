@@ -1,7 +1,7 @@
 
 -- | The endpoints on the cloud server
 module Development.Shake.Internal.History.Server(
-    Server, BuildTree(..),
+    Server, BuildTree(..), noBuildTree,
     newServer,
     serverAllKeys, serverOneKey, serverDownloadFiles,
     serverUpload
@@ -19,6 +19,9 @@ import Data.Typeable
 data BuildTree
     = Depend [Key] [([BS_Identity], BuildTree)]
     | Done BS_Store [(FileHash, FilePath)]
+
+noBuildTree :: BuildTree
+noBuildTree = Depend [] []
 
 data Server = Server Conn (BinaryOp Key) Ver
 
