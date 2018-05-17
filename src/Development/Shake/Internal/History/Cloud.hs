@@ -38,6 +38,13 @@ newLaterFence relock maxTime def act = do
         _ -> def
     return fence
 
+laterFence :: MonadIO m => Fence m a -> Wait m a
+laterFence fence = do
+    res <- liftIO $ testFence fence
+    case res of
+        Just v -> return v
+        Nothing -> Later $ waitFence fence
+
 
 newCloud :: (Locked () -> IO ()) -> BinaryOp Key -> Ver -> [(TypeRep, Ver)] -> [String] -> Maybe (IO Cloud)
 newCloud relock binop globalVer ruleVer urls = flip fmap (if null urls then Nothing else connect $ last urls) $ \conn -> do
@@ -52,14 +59,6 @@ newCloud relock binop globalVer ruleVer urls = flip fmap (if null urls then Noth
 
 addCloud :: Cloud -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
 addCloud (Cloud server _ _) x1 x2 x3 x4 x5 x6 = void $ forkIO $ serverUpload server x1 x2 x3 x4 x5 x6
-
-
-laterFence :: MonadIO m => Fence m a -> Wait m a
-laterFence fence = do
-    res <- liftIO $ testFence fence
-    case res of
-        Just v -> return v
-        Nothing -> Later $ waitFence fence
 
 
 lookupCloud :: Cloud -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
