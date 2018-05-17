@@ -4,13 +4,16 @@
 module General.Wait(
     Locked, runLocked,
     Wait(..), runWait, quickly, fromLater,
-    firstJustWaitUnordered
+    firstJustWaitUnordered, firstLeftWaitUnordered
     ) where
 
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.Concurrent.Extra
 import Data.IORef.Extra
+import Data.List.Extra
+import Data.Primitive.Array
+import GHC.Exts(RealWorld)
 import Control.Applicative
 import Prelude
 
@@ -98,5 +101,40 @@ firstJustWaitUnordered f = go [] . map f
                         liftIO $ writeIORef' ref 0
                         callback $ Just a
                     Nothing -> do
+                        liftIO $ writeIORef' ref $ old-1
+                        when (old == 1) $ callback Nothing
+
+
+firstLeftWaitUnordered :: MonadIO m => (a -> Wait m (Either e b)) -> [a] -> Wait m (Either e [b])
+firstLeftWaitUnordered f xs = do
+        let n = length xs
+        mut <- liftIO $ newArray (length xs) undefined
+        res <- go mut [] $ zipFrom 0 $ map f xs
+        case res of
+            Just e -> return $ Left e
+            Nothing -> liftIO $ Right <$> mapM (readArray mut) [0..n-1]
+    where
+        -- keep a list of those things we might visit later, and ask for each we see in turn
+        go :: MonadIO m => MutableArray RealWorld b -> [(Int, (Either e b -> m ()) -> m ())] -> [(Int, Wait m (Either e b))] -> Wait m (Maybe e)
+        go mut later ((i,x):xs) = case x of
+            Now (Left e) -> Now $ Just e
+            Now (Right b) -> do
+                liftIO $ writeArray mut i b
+                go mut later xs
+            Later l -> go mut ((i,l):later) xs
+            Lift x -> Lift $ do
+                x <- x
+                return $ go mut later ((i,x):xs)
+        go mut [] [] = Now Nothing
+        go mut ls [] = Later $ \callback -> do
+            ref <- liftIO $ newIORef $ length ls
+            forM_ ls $ \(i,l) -> l $ \r -> do
+                old <- liftIO $ readIORef ref
+                when (old > 0) $ case r of
+                    Left a -> do
+                        liftIO $ writeIORef' ref 0
+                        callback $ Just a
+                    Right v -> do
+                        liftIO $ writeArray mut i v
                         liftIO $ writeIORef' ref $ old-1
                         when (old == 1) $ callback Nothing
