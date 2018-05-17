@@ -3,7 +3,8 @@
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
     Locked, runLocked,
-    Wait(..), runWait, quickly, fromLater, firstJustWaitOrdered, firstJustWaitUnordered
+    Wait(..), runWait, quickly, fromLater,
+    firstJustWaitUnordered
     ) where
 
 import Control.Monad.Extra
@@ -73,9 +74,6 @@ instance MonadFail m => MonadFail (Wait m) where
     fail = Lift . Control.Monad.Fail.fail
 #endif
 
-
-firstJustWaitOrdered :: (Monad m, Applicative m) => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
-firstJustWaitOrdered = firstJustM
 
 firstJustWaitUnordered :: MonadIO m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
 firstJustWaitUnordered f = go [] . map f

@@ -129,7 +129,7 @@ lookupShared shared ask key builtinVersion userVersion = do
                 forM_ entryFiles $ \(file, hash) -> do
                     createDirectoryRecursive $ takeDirectory file
                     copyFile (dir </> show hash) file
-        result <$> firstJustWaitOrdered id
+        result <$> firstJustM id
             [ firstJustWaitUnordered id
                 [ test <$> ask k | (k, i1) <- kis
                 , let test = maybe (Just ()) (\i2 -> if i1 == i2 then Nothing else Just ())]
