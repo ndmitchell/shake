@@ -23,6 +23,7 @@ import General.Binary
 import General.Extra
 import General.Wait
 import Data.Maybe
+import Control.Applicative
 import Prelude
 
 
