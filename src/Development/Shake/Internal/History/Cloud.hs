@@ -39,7 +39,7 @@ newLaterFence relock maxTime def act = do
         _ -> def
     return fence
 
-laterFence :: MonadIO m => Fence m a -> Wait m a
+laterFence :: (Applicative m, MonadIO m) => Fence m a -> Wait m a
 laterFence fence = do
     res <- liftIO $ testFence fence
     case res of
