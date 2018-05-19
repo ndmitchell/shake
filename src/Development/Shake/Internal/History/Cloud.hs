@@ -49,14 +49,13 @@ laterFence fence = do
         Nothing -> Later $ waitFence fence
 
 
-newCloud :: (Locked () -> IO ()) -> BinaryOp Key -> Ver -> [(TypeRep, Ver)] -> [String] -> Maybe (IO Cloud)
+newCloud :: (Locked () -> IO ()) -> Map.HashMap TypeRep (BinaryOp Key) -> Ver -> [(TypeRep, Ver)] -> [String] -> Maybe (IO Cloud)
 newCloud relock binop globalVer ruleVer urls = flip fmap (if null urls then Nothing else connect $ last urls) $ \conn -> do
     conn <- conn
     server <- newServer conn binop globalVer
     fence <- newLaterFence relock 10 Map.empty $ do
         xs <- serverAllKeys server ruleVer
-        let at = fastAt [k | (k,_,_,_) <- xs]
-        return $ Map.fromList [(k,(v,mapMaybe at ds,test)) | (k,v,ds,test) <- xs]
+        return $ Map.fromList [(k,(v,ds,test)) | (k,v,ds,test) <- xs]
     return $ Cloud server relock fence
 
 

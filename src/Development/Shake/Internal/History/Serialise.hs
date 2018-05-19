@@ -1,8 +1,10 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, DeriveFunctor, DeriveTraversable #-}
 
 -- | The endpoints on the cloud server
 module Development.Shake.Internal.History.Serialise(
     BuildTree(..),
+    WithTypeReps(..), withTypeReps,
+    WithKeys(..), withKeys, withIds, withoutKeys,
     SendAllKeys(..), RecvAllKeys(..),
     SendOneKey(..), RecvOneKey(..),
     SendDownloadFiles(..),
@@ -12,10 +14,14 @@ module Development.Shake.Internal.History.Serialise(
 import Development.Shake.Internal.History.Bloom
 import General.Extra
 import General.Binary
+import General.Ids
 import Data.List.Extra
+import Development.Shake.Internal.Value
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.History.Types
+import qualified Data.HashMap.Strict as Map
 import Data.Semigroup
+import Data.Typeable
 
 
 data BuildTree key
@@ -39,7 +45,32 @@ instance Eq key => Monoid (BuildTree key) where
     mappend = (<>)
 
 
+data WithTypeReps a = WithTypeReps [BS_QTypeRep] a
+
+instance BinaryEx a => BinaryEx (WithTypeReps a) where
+    putEx = undefined
+    getEx = undefined
+
+withTypeReps :: Traversable f => f TypeRep -> WithTypeReps (f Int)
+withTypeReps = undefined
+
+data WithKeys a = WithKeys [BS_Key] a
+
+instance BinaryEx a => BinaryEx (WithKeys a) where
+    putEx = undefined
+    getEx = undefined
+
+withKeys :: Traversable f => f Key -> WithKeys (f Int)
+withKeys = undefined
+
+withIds :: Traversable f => (Id -> m Key) -> f Id -> m (WithKeys (f Int))
+withIds = undefined
+
+withoutKeys :: Map.HashMap TypeRep (BinaryOp Key) -> WithKeys (f Int) -> f Key
+withoutKeys = undefined
+
 data SendAllKeys typ = SendAllKeys Ver [(typ, Ver)]
+    deriving (Functor, Foldable, Traversable)
 
 instance BinaryEx (SendAllKeys Int) where
     putEx = undefined

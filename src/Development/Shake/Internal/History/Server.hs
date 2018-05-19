@@ -12,19 +12,24 @@ import Development.Shake.Internal.History.Serialise
 import Development.Shake.Internal.Value
 import General.Binary
 import General.Extra
+import qualified Data.HashMap.Strict as Map
+import qualified Data.ByteString.Lazy as LBS
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Network
 import Data.Typeable
 
 
-data Server = Server Conn (BinaryOp Key) Ver
+data Server = Server Conn (Map.HashMap TypeRep (BinaryOp Key)) Ver
 
-newServer :: Conn -> BinaryOp Key -> Ver -> IO Server
+newServer :: Conn -> Map.HashMap TypeRep (BinaryOp Key) -> Ver -> IO Server
 newServer a b c = return $ Server a b c
 
-serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Int], Bloom [BS_Identity])]
-serverAllKeys _ _ = return []
+serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Key], Bloom [BS_Identity])]
+serverAllKeys (Server conn key ver) typs = do
+    res <- post conn "allkeys/v1" $ LBS.fromStrict $ runBuilder $ putEx $ withTypeReps $ SendAllKeys ver typs
+    let RecvAllKeys ans = withoutKeys key $ getEx $ LBS.toStrict res
+    return ans
 
 serverOneKey :: Server -> Key -> Ver -> Ver -> [(Key, BS_Identity)] -> IO (BuildTree Key)
 serverOneKey _ _ _ _ _ = return $ Depend [] []
