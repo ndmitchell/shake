@@ -71,11 +71,11 @@ lookupCloud (Cloud server relock initial) ask key builtinVer userVer = runMaybeT
     unless (ver == userVer) $ fail ""
     Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
     unless (bloomTest bloom vs) $ fail ""
-    fence <- liftIO $ newLaterFence relock 10 noBuildTree $ serverOneKey server key builtinVer userVer $ zip deps vs
+    fence <- liftIO $ newLaterFence relock 10 mempty $ serverOneKey server key builtinVer userVer $ zip deps vs
     tree <- lift $ laterFence fence
     f [deps] tree
     where
-        f :: [[Key]] -> BuildTree -> MaybeT (Wait Locked) (BS_Store, [[Key]], IO ())
+        f :: [[Key]] -> BuildTree Key -> MaybeT (Wait Locked) (BS_Store, [[Key]], IO ())
         f ks (Done store xs) = return (store, reverse ks, serverDownloadFiles server key xs)
         f ks (Depend deps trees) = do
             Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
