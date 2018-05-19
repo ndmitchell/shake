@@ -7,6 +7,7 @@ module Development.Shake.Internal.History.Server(
     serverUpload
     ) where
 
+import Development.Shake.Internal.History.Bloom
 import Development.Shake.Internal.Value
 import General.Binary
 import General.Extra
@@ -28,7 +29,7 @@ data Server = Server Conn (BinaryOp Key) Ver
 newServer :: Conn -> BinaryOp Key -> Ver -> IO Server
 newServer a b c = return $ Server a b c
 
-serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Int], [BS_Identity] -> Bool)]
+serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Int], Bloom [BS_Identity])]
 serverAllKeys _ _ = return []
 
 serverOneKey :: Server -> Key -> Ver -> Ver -> [(Key, BS_Identity)] -> IO BuildTree

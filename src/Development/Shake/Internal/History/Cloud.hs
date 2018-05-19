@@ -8,6 +8,7 @@ import Development.Shake.Internal.Value
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Network
 import Development.Shake.Internal.History.Server
+import Development.Shake.Internal.History.Bloom
 import Control.Concurrent.Extra
 import System.Time.Extra
 import Control.Monad
@@ -27,7 +28,7 @@ import Control.Applicative
 import Prelude
 
 
-type Initial = Map.HashMap Key (Ver, [Key], [BS_Identity] -> Bool)
+type Initial = Map.HashMap Key (Ver, [Key], Bloom [BS_Identity])
 
 data Cloud = Cloud Server (Locked () -> IO ()) (Fence Locked Initial)
 
@@ -66,10 +67,10 @@ addCloud (Cloud server _ _) x1 x2 x3 x4 x5 x6 = void $ forkIO $ serverUpload ser
 lookupCloud :: Cloud -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupCloud (Cloud server relock initial) ask key builtinVer userVer = runMaybeT $ do
     mp <- lift $ laterFence initial
-    Just (ver, deps, test) <- return $ Map.lookup key mp
+    Just (ver, deps, bloom) <- return $ Map.lookup key mp
     unless (ver == userVer) $ fail ""
     Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
-    unless (test vs) $ fail ""
+    unless (bloomTest bloom vs) $ fail ""
     fence <- liftIO $ newLaterFence relock 10 noBuildTree $ serverOneKey server key builtinVer userVer $ zip deps vs
     tree <- lift $ laterFence fence
     f [deps] tree
