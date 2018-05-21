@@ -249,7 +249,7 @@ executable shake
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
-        Development.Shake.Internal.Bloom.Shared
+        Development.Shake.Internal.History.Bloom
         Development.Shake.Internal.History.Cloud
         Development.Shake.Internal.History.Network
         Development.Shake.Internal.History.Server
@@ -370,7 +370,7 @@ test-suite shake-test
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
-        Development.Shake.Internal.Bloom.Shared
+        Development.Shake.Internal.History.Bloom
         Development.Shake.Internal.History.Cloud
         Development.Shake.Internal.History.Network
         Development.Shake.Internal.History.Server
