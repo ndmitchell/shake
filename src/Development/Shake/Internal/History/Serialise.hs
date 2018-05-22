@@ -22,6 +22,8 @@ import Development.Shake.Internal.History.Types
 import qualified Data.HashMap.Strict as Map
 import Data.Semigroup
 import Data.Typeable
+import Data.Traversable
+import Prelude
 
 
 data BuildTree key
