@@ -24,6 +24,7 @@ import General.Binary
 import General.Extra
 import General.Wait
 import Data.Maybe
+import Data.Monoid
 import Control.Applicative
 import Prelude
 
