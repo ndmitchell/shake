@@ -14,6 +14,7 @@ import General.Binary
 import General.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString as BS
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Network
@@ -27,8 +28,8 @@ newServer a b c = return $ Server a b c
 
 serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Key], Bloom [BS_Identity])]
 serverAllKeys (Server conn key ver) typs = do
-    res <- post conn "allkeys/v1" $ LBS.fromStrict $ runBuilder $ putEx $ withTypeReps $ SendAllKeys ver typs
-    let RecvAllKeys ans = withoutKeys key $ getEx $ LBS.toStrict res
+    res <- post conn "allkeys/v1" $ LBS.fromChunks [runBuilder $ putEx $ withTypeReps $ SendAllKeys ver typs]
+    let RecvAllKeys ans = withoutKeys key $ getEx $ BS.concat $ LBS.toChunks res
     return ans
 
 serverOneKey :: Server -> Key -> Ver -> Ver -> [(Key, BS_Identity)] -> IO (BuildTree Key)
