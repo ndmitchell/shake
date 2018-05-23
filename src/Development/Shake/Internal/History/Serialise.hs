@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, DeriveFunctor, DeriveTraversable #-}
+{-# LANGUAGE FlexibleInstances, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 -- | The endpoints on the cloud server
 module Development.Shake.Internal.History.Serialise(
