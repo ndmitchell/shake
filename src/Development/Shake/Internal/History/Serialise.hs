@@ -23,6 +23,7 @@ import qualified Data.HashMap.Strict as Map
 import Data.Semigroup
 import Data.Typeable
 import Data.Traversable
+import Data.Foldable
 import Prelude
 
 
