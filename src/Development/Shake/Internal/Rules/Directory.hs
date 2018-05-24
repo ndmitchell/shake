@@ -7,7 +7,7 @@ module Development.Shake.Internal.Rules.Directory(
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getEnv, getEnvWithDefault,
     removeFiles, removeFilesAfter,
-    getDirectoryFilesIO,
+    getDirectoryFilesIO, getDirectoryDirsIO,
     defaultRuleDirectory
     ) where
 
@@ -242,6 +242,8 @@ getDirectoryFiles dir pat = fmap fromGetDirectoryA $ apply1 $ GetDirectoryFilesQ
 -- > getDirectoryDirs "/Users"
 -- >    -- Return all directories in the /Users directory
 -- >    -- e.g. ["Emily","Henry","Neil"]
+--
+--   For an untracked variant see 'getDirectoryDirsIO'.
 getDirectoryDirs :: FilePath -> Action [FilePath]
 getDirectoryDirs = fmap fromGetDirectoryA . apply1 . GetDirectoryDirsQ
 
@@ -253,12 +255,6 @@ getDirectoryContentsIO :: FilePath -> IO [FilePath]
 -- getDirectoryContents "" is equivalent to getDirectoryContents "." on Windows,
 -- but raises an error on Linux. We smooth out the difference.
 getDirectoryContentsIO dir = fmap (sort . filter (not . all (== '.'))) $ IO.getDirectoryContents $ if dir == "" then "." else dir
-
-
-getDirectoryDirsIO :: FilePath -> IO [FilePath]
-getDirectoryDirsIO dir = filterM f =<< getDirectoryContentsIO dir
-    where f x = IO.doesDirectoryExist $ dir </> x
-
 
 -- | A version of 'getDirectoryFiles' that is in IO, and thus untracked.
 getDirectoryFilesIO :: FilePath -> [FilePattern] -> IO [FilePath]
@@ -274,6 +270,11 @@ getDirectoryFilesIO root pat = f "" $ snd $ walk pat
             files <- filterM (IO.doesFileExist . (root </>)) $ map (dir </>) files
             dirs <- concatMapM (uncurry f) =<< filterM (IO.doesDirectoryExist . (root </>) . fst) (map (first (dir </>)) dirs)
             return $ files ++ dirs
+            
+-- | A version of 'getDirectoryDirs' that is in IO, and thus untracked.
+getDirectoryDirsIO :: FilePath -> IO [FilePath]
+getDirectoryDirsIO dir = filterM f =<< getDirectoryContentsIO dir
+    where f x = IO.doesDirectoryExist $ dir </> x
 
 
 ---------------------------------------------------------------------
