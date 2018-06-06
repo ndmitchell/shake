@@ -16,7 +16,7 @@ module Test.Type(
     BinarySentinel(..), RandomType(..),
     ) where
 
-import Development.Shake hiding (copyFileChanged)
+import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.Forward
 import Development.Shake.Internal.FileName
