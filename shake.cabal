@@ -459,6 +459,7 @@ test-suite shake-test
         Test.Rebuild
         Test.Resources
         Test.Self
+        Test.SelfMake
         Test.Tar
         Test.Tup
         Test.Type

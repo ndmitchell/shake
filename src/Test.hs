@@ -49,6 +49,7 @@ import qualified Test.Random as Random
 import qualified Test.Rebuild as Rebuild
 import qualified Test.Resources as Resources
 import qualified Test.Self as Self
+import qualified Test.SelfMake as SelfMake
 import qualified Test.Tar as Tar
 import qualified Test.Tup as Tup
 import qualified Test.Unicode as Unicode
@@ -98,6 +99,7 @@ mains =
     ,"rebuild" * Rebuild.main
     ,"resources" * Resources.main
     ,"self" * Self.main
+    ,"selfmake" * SelfMake.main
     ,"tar" * Tar.main
     ,"tup" * Tup.main
     ,"unicode" * Unicode.main
