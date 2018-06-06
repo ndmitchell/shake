@@ -49,7 +49,7 @@ main = shakeTest_ noTest $ do
         trackAllow ["**/*.o"]
         ghc $ ["-M",run] ++ flags
         need . filter (\x -> takeExtension x == ".hs") . concatMap snd . parseMakefile =<< liftIO (readFile "Makefile")
-        ghc $ ["-o",out,run,"-j4"] ++ flags
+        ghc $ ["-o",out,run] ++ ["-j4" | compilerVersion >= makeVersion [7,8]] ++ flags
 
     ".pkgs" %> \out -> do
         src <- readFile' $ root </> "shake.cabal"
