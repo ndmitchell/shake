@@ -31,7 +31,6 @@ import Data.List
 import Data.Maybe
 import Data.Either
 import Data.Typeable.Extra
-import qualified Data.ByteString as BS
 import System.Directory.Extra as IO
 import System.Environment.Extra
 import System.Random
@@ -267,9 +266,8 @@ copyDirectoryChanged old new = do
 
 copyFileChanged :: FilePath -> FilePath -> IO ()
 copyFileChanged old new = do
-    good <- IO.doesFileExist new
-    good <- if not good then return False else liftM2 (==) (BS.readFile old) (BS.readFile new)
-    unless good $ copyFile old new
+    unlessM (liftIO $ IO.doesFileExist new &&^ IO.fileEq old new) $
+        copyFile old new
 
 -- The operators %> ?> &*> &?> |?> |*> all have an isomorphism
 data Pat = PatWildcard | PatPredicate | PatOrWildcard | PatAndWildcard | PatAndPredicate
