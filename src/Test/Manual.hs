@@ -19,7 +19,7 @@ test build = do
     copyDirectoryChanged (root </> "docs/manual") dest
     copyDirectoryChanged (root </> "src/Development") $ dest </> "Development"
     copyDirectoryChanged (root </> "src/General") $ dest </> "General"
-    copyFileChanged (root </> "src/Paths.hs") $ dest </> "Paths_shake.hs"
+    copyFileChangedIO (root </> "src/Paths.hs") $ dest </> "Paths_shake.hs"
     (_, gccPath) <- findGcc
     let opts = [Cwd dest, Shell, AddPath [] (maybeToList gccPath)]
     let cmdline = if isWindows then "build.bat" else "/bin/sh build.sh"

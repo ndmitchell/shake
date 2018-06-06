@@ -5,7 +5,7 @@ module Test.Type(
     shakeTest, shakeTest_,
     root,
     noTest, hasTracker,
-    copyDirectoryChanged, copyFileChanged,
+    copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException,
     assertContents, assertContentsUnordered, assertContentsWords,
@@ -261,11 +261,11 @@ copyDirectoryChanged old new = do
     forM_ xs $ \from -> do
         let to = new </> drop (length $ addTrailingPathSeparator old) from
         createDirectoryRecursive $ takeDirectory to
-        copyFileChanged from to
+        copyFileChangedIO from to
 
 
-copyFileChanged :: FilePath -> FilePath -> IO ()
-copyFileChanged old new = do
+copyFileChangedIO :: FilePath -> FilePath -> IO ()
+copyFileChangedIO old new =
     unlessM (liftIO $ IO.doesFileExist new &&^ IO.fileEq old new) $
         copyFile old new
 
