@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 
 module General.Timing(resetTimings, addTiming, printTimings) where
 
@@ -26,7 +27,7 @@ resetTimings = do
 printTimings :: IO ()
 printTimings = do
     now <- timer
-    old <- atomicModifyIORef timings $ \ts -> ([(now, "Start")], ts)
+    old <- atomicModifyIORef timings ([(now, "Start")],)
     putStr $ unlines $ showTimings now $ reverse old
 
 

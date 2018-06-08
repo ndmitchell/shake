@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, CPP, ViewPatterns, ForeignFunctionInterface #-}
+{-# LANGUAGE RecordWildCards, CPP, ViewPatterns, ForeignFunctionInterface, TupleSections #-}
 
 -- | Progress tracking
 module Development.Shake.Internal.Progress(
@@ -90,7 +90,7 @@ instance Applicative (Mealy i) where
             (x, mx) -> (f x, mf <*> mx)
 
 echoMealy :: Mealy i i
-echoMealy = Mealy $ \i -> (i, echoMealy)
+echoMealy = Mealy (,echoMealy)
 
 scanMealy :: (a -> b -> a) -> a -> Mealy i b -> Mealy i a
 scanMealy f z (Mealy m) = Mealy $ \i -> case m i of

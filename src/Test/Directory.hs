@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 
 module Test.Directory(main) where
 
@@ -90,7 +91,7 @@ test build = do
                         writeFile (dir </> s) ""
                 removeFiles dir pat
                 createDirectoryRecursive dir
-                forM_ (map ((,) False) del ++ map ((,) True) keep) $ \(b,s) -> do
+                forM_ (map (False,) del ++ map (True,) keep) $ \(b,s) -> do
                     b2 <- (if hasTrailingPathSeparator s then IO.doesDirectoryExist else IO.doesFileExist) $ dir </> s
                     when (b /= b2) $ do
                         let f b = if b then "present" else "missing"

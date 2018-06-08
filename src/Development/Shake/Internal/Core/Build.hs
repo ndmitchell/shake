@@ -213,7 +213,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
         lintTrackFinished
         producesCheck
 
-        Action $ fmap ((,) res) getRW) $ \x -> case x of
+        Action $ fmap (res,) getRW) $ \x -> case x of
             Left e -> do
                 e <- if isNothing shakeLint then return e else handle return $
                     do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e

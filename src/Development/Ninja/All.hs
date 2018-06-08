@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, ViewPatterns, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards, ViewPatterns, ScopedTypeVariables, TupleSections #-}
 
 module Development.Ninja.All(runNinja) where
 
@@ -68,7 +68,7 @@ runNinja restart file args tool = do
         multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map filepathNormalise) multiples, x <- xs]
         rules <- return $ Map.fromList rules
         pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
-            (,) name <$> newResource (BS.unpack name) depth
+            (name,) <$> newResource (BS.unpack name) depth
 
         action $ do
             -- build the .ninja files, if they change, restart the build

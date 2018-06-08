@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.Core.Pool(
     addPoolWait, actionFenceSteal, actionFenceRequeue, actionAlwaysRequeue,
@@ -52,7 +52,7 @@ actionFenceSteal fence = do
             offset <- offsetTime
             waitFence fence $ \v -> do
                 offset <- offset
-                continue $ (,) offset <$> v
+                continue $ (offset,) <$> v
 
 
 actionFenceRequeue :: Fence IO (Either SomeException b) -> Action (Seconds, b)
@@ -71,7 +71,7 @@ actionFenceRequeueBy op fence = Action $ do
                 let v2 = op v
                 addPool (priority v2) globalPool $ do
                     offset <- offset
-                    continue $ (,) offset <$> v2
+                    continue $ (offset,) <$> v2
 
 
 actionAlwaysRequeue :: Either SomeException a -> Action (Seconds, a)
@@ -81,4 +81,4 @@ actionAlwaysRequeue res = Action $ do
     captureRAW $ \continue ->
         addPool (priority res) globalPool $ do
             offset <- offset
-            continue $ (,) offset <$> res
+            continue $ (offset,) <$> res

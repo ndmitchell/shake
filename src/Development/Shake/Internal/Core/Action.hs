@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections #-}
 
 module Development.Shake.Internal.Core.Action(
     actionOnException, actionFinally, actionRetry,
@@ -342,11 +342,11 @@ historyDisable = Action $ modifyRW $ \s -> s{localHistory = False}
 -- | This rule the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.
 produces :: [FilePath] -> Action ()
-produces xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) True) (reverse xs) ++ localProduces s}
+produces xs = Action $ modifyRW $ \s -> s{localProduces = map (True,) (reverse xs) ++ localProduces s}
 
 -- | A version of 'produces' that does not check.
 producesUnchecked :: [FilePath] -> Action ()
-producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map ((,) False) (reverse xs) ++ localProduces s}
+producesUnchecked xs = Action $ modifyRW $ \s -> s{localProduces = map (False,) (reverse xs) ++ localProduces s}
 
 producesCheck :: Action ()
 producesCheck = do
@@ -384,7 +384,7 @@ newCacheIO (act :: k -> Action v) = do
                 return v
             Nothing -> do
                 bar <- newFence
-                return $ (,) (Map.insert key bar mp) $ do
+                return $ (Map.insert key bar mp,) $ do
                     Local{localDepends=pre} <- Action getRW
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
