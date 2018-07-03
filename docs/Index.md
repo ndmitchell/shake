@@ -41,6 +41,7 @@ Shake is used by lots of companies, but only a few have declared so publicly:
 * [FP Complete](https://www.fpcomplete.com/) use Shake to [create Docker images](https://www.fpcomplete.com/blog/2015/08/stack-docker#images).
 * [Genomics Plc](http://www.genomicsplc.com/) use Shake for the build system, their first major use of Haskell in the company.
 * [codebender](https://codebender.cc/) use Shake to manage JavaScript packages that implement Arduino protocols and handle communication between the browser and Arduino devices.
+* [Swift Navigation](https://www.swiftnav.com/) use Shake for their release process, asa described by [their presentation](https://github.com/swift-nav/shake-before-make/blob/master/Shake.pdf).
 
 There are several libraries providing pre-made rules for Shake:
 
