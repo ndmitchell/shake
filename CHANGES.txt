@@ -84,6 +84,7 @@ Changelog for Shake (* = breaking change)
     Expose 'Process' from Development.Shake
     #495, remove dangling link from LICENSE
     #436, remove Assume, switch to Rebuild
+    Remove --always-make, use --rebuild instead
     #419, remove --assume-old and --assume-new, which never worked
     Remove support for running Makefile scripts
     Add getShakeOptionsRules, to get ShakeOptions in Rules
