@@ -52,9 +52,10 @@ There are several libraries providing pre-made rules for Shake:
 * [shake-minify](https://hackage.haskell.org/package/shake-minify) uses native Haskell code (no external `$PATH` dependencies) to minify CSS and JS files.
 * [shake-pack](https://hackage.haskell.org/package/shake-pack) uses bz2 lib on the system to tar and bzip compress given files.
 
-There is one library taking Shake into a new domain:
+Some libraries push Shake into specific domains:
 
 * [bioshake](https://github.com/PapenfussLab/bioshake) lets users define bioinformatics pipelines in a DSL that is executed in conjunction with Shake, also including support for cluster execution.
+* [Slick](https://hackage.haskell.org/package/slick) is a static site generator written and configured using Haskell. Slick provides a small set of tools and combinators for building static websites on top of the Shake build system.
 
 Several open-source projects make key use of Shake:
 
