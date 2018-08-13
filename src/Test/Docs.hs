@@ -335,7 +335,7 @@ whitelist x | elem x $ words $
     "NoProgress Error src about://tracing " ++
     ".make/i586-linux-gcc/output build " ++
     "/usr/special /usr/special/userbinary " ++
-    "Hidden extension xterm main opts result flagValues argValues " ++
+    "Hidden extension xterm main opts result flagValues argValues fail " ++
     "HEADERS_DIR /path/to/dir CFLAGS let linkFlags temp code out err " ++
     "_shake _shake/build manual chrome://tracing/ compdb " ++
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
