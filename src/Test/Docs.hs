@@ -290,7 +290,7 @@ types = words $
     "Action Resource Rebuild FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
-    "CmdResult ByteString ProcessHandle Rule Monad Monoid Data TypeRep " ++
+    "CmdResult ByteString ProcessHandle Rule Monad MonadFail Monoid Data TypeRep " ++
     "BuiltinRun BuiltinLint BuiltinCheck"
 
 -- | Duplicated identifiers which require renaming
