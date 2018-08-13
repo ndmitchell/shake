@@ -93,7 +93,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"import System.Exit"
             ,"import Control.Applicative"
             ,"import Control.Monad.IO.Class"
-            ,"Control.Monad.Fail"
+            ,"import Control.Monad.Fail"
             ,"import System.IO"] ++
             ["import " ++ replace "_" "." (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
             imports ++
