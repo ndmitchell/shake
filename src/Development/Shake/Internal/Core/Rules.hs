@@ -19,9 +19,7 @@ import Control.Exception
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Writer.Strict
 import Development.Shake.Classes
 import General.Binary
 import General.Extra
@@ -31,6 +29,7 @@ import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.TypeMap as TMap
 import Data.Maybe
+import Data.IORef
 import System.IO.Extra
 import Data.Semigroup (Semigroup (..))
 import Data.Monoid hiding ((<>))
@@ -53,7 +52,7 @@ import Prelude
 
 -- | Get the 'ShakeOptions' that were used.
 getShakeOptionsRules :: Rules ShakeOptions
-getShakeOptionsRules = Rules $ lift ask
+getShakeOptionsRules = Rules $ asks fst
 
 
 -- | Internal variant, more flexible, but not such a nice API
@@ -110,18 +109,27 @@ getUserRuleOne key disp test = do
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (WriterT SRules (ReaderT ShakeOptions IO) a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (ReaderT (ShakeOptions, IORef SRules) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
 
 newRules :: SRules -> Rules ()
-newRules = Rules . tell
+newRules x = Rules $ liftIO . flip modifyIORef' (<> x) =<< asks snd
 
 modifyRules :: (SRules -> SRules) -> Rules a -> Rules a
-modifyRules f (Rules r) = Rules $ censor f r
+modifyRules f (Rules r) = Rules $ do
+    (opts, refOld) <- ask
+    liftIO $ do
+        refNew <- newIORef mempty
+        res <- runReaderT r (opts, refNew)
+        rules <- readIORef refNew
+        modifyIORef' refOld (<> f rules)
+        return res
 
 runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned)
 runRules opts (Rules r) = do
-    SRules{..} <- runReaderT (execWriterT r) opts
+    ref <- newIORef mempty
+    runReaderT r (opts, ref)
+    SRules{..} <- readIORef ref
     return (runListBuilder actions, builtinRules, userRules)
 
 data SRules = SRules

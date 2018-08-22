@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Remove a potential space leak in the Rules monad
     #412, clarify that removeFilesAfter should be used sparingly
     #409, improve the documentation of newCache
     Generalise operations like versioned to Rules a -> Rules a
