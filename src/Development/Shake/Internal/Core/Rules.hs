@@ -29,7 +29,7 @@ import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.TypeMap as TMap
 import Data.Maybe
-import Data.IORef
+import Data.IORef.Extra
 import System.IO.Extra
 import Data.Semigroup (Semigroup (..))
 import Data.Monoid hiding ((<>))
