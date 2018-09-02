@@ -123,8 +123,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
             outputErr $ messageDatabaseVersionChange dbfile (fromEither oldVer) ver
             corrupt
 
-        let (witnessNew, save) = saveWitness witness
-        evaluate save
+        (!witnessNew, !save) <- evaluate $ saveWitness witness
         witnessOld <- readChunk h
         ids <- case witnessOld of
             Left _ -> do
@@ -135,7 +134,7 @@ withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic dia
                 corrupt
                 return Nothing) $ do
 
-                (missing, load) <- evaluate $ loadWitness witness witnessOld
+                (!missing, !load) <- evaluate $ loadWitness witness witnessOld
                 when (missing /= []) $ outputErr $ messageMissingTypes dbfile missing
                 ids <- Ids.empty
                 let raw bs = "[len " ++ show (BS.length bs) ++ "] " ++ concat
