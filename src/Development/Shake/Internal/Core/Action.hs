@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Action(
     actionOnException, actionFinally, actionRetry,
@@ -85,9 +85,9 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 
 
 actionBoom :: Bool -> Action a -> IO b -> Action a
-actionBoom runOnSuccess act clean = do
+actionBoom runOnSuccess act (void -> clean) = do
     Global{..} <- Action getRO
-    undo <- liftIO $ addCleanup globalCleanup $ void clean
+    undo <- liftIO $ addCleanup globalCleanup clean
     -- important to mask_ the undo/clean combo so either both happen or neither
     res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ $ undo >> clean) >> throwRAW e
     liftIO $ mask_ $ undo >> when runOnSuccess (void clean)
