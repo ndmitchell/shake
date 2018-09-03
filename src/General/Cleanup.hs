@@ -31,10 +31,11 @@ runCleanup (Cleanup ref) = do
 
 -- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove (but not perform) that action.
 --   If not removed by the time 'withCleanup' terminates then the cleanup action will be run then.
-addCleanup :: Cleanup -> IO () -> IO (IO ())
+--   Returns True for delete successful, False for already deleted by (potentially by runCleanup).
+addCleanup :: Cleanup -> IO () -> IO (IO Bool)
 addCleanup (Cleanup ref) act = atomicModifyIORef' ref $ \s -> let i = unique s in
     (,) (S (unique s + 1) (Map.insert i act $ items s)) $
-        atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, ())
+        atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, Map.member i $ items s)
 
 addCleanup_ :: Cleanup -> IO () -> IO ()
 -- we could avoid inserting into the Map, but we need to store the pairs anyway

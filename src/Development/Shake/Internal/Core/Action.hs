@@ -89,8 +89,8 @@ actionBoom runOnSuccess act (void -> clean) = do
     Global{..} <- Action getRO
     undo <- liftIO $ addCleanup globalCleanup clean
     -- important to mask_ the undo/clean combo so either both happen or neither
-    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ $ undo >> clean) >> throwRAW e
-    liftIO $ mask_ $ undo >> when runOnSuccess (void clean)
+    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ $ do alive <- undo; when alive clean) >> throwRAW e
+    liftIO $ mask_ $ do alive <- undo; when (alive && runOnSuccess) clean
     return res
 
 -- | If an exception is raised by the 'Action', perform some 'IO'.

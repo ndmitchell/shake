@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #611, fix a race condition in actionFinally that could run handlers twice
     Remove a potential space leak in the Rules monad
     #412, clarify that removeFilesAfter should be used sparingly
     #409, improve the documentation of newCache
