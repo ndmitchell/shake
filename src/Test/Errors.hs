@@ -161,6 +161,12 @@ main = shakeTest test optionsEnum $ \args -> do
         produces [out <.> "also"]
         writeFile' out ""
 
+    "finalfinal" %> \out -> do
+        writeFile' out ""
+        liftIO (sleep 100)
+            `actionFinally` (appendFile out "X" >> sleep 0.1)
+            `actionFinally` appendFile out "Y"
+
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
         liftIO $ putStrLn $ let x = x in x
@@ -271,3 +277,10 @@ test build = do
     -- check that produces works
     build ["produces1"]
     crash ["produces2"] ["produces","produces2.also"]
+
+    -- check finally doesn't run twice, See https://github.com/ndmitchell/shake/issues/611
+    t <- forkIO $ build ["finalfinal","--quiet"]
+    sleep 0.2
+    killThread t
+    sleep 0.3
+    assertContents "finalfinal" "XY"
