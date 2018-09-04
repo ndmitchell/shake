@@ -5,6 +5,7 @@ module General.Template(runTemplate) where
 import System.FilePath.Posix
 import Control.Exception.Extra
 import Data.Char
+import System.IO.Unsafe
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Language.Javascript.Flot as Flot
 import qualified Language.Javascript.JQuery as JQuery
@@ -42,7 +43,11 @@ runTemplate ask = lbsMapLinesIO f
 
 -- Perform a mapM on each line and put the result back together again
 lbsMapLinesIO :: (LBS.ByteString -> IO LBS.ByteString) -> LBS.ByteString -> IO LBS.ByteString
-lbsMapLinesIO f = fmap LBS.unlines . mapM f . LBS.lines
+-- If we do the obvious @fmap LBS.unlines . mapM f@ then all the monadic actions are run on all the lines
+-- before it starts producing the lazy result, killing streaming and having more stack usage.
+-- The real solution (albeit with too many dependencies for something small) is a streaming library,
+-- but a little bit of unsafePerformIO does the trick too.
+lbsMapLinesIO f = return . LBS.unlines . map (unsafePerformIO . f) . LBS.lines
 
 
 ---------------------------------------------------------------------
