@@ -22,7 +22,7 @@ libraries =
 --
 -- * <link href="foo" rel="stylesheet" type="text/css" /> ==> <style type="text/css">[[foo]]</style>
 runTemplate :: (FilePath -> IO LBS.ByteString) -> LBS.ByteString -> IO LBS.ByteString
-runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
+runTemplate ask = lbsMapLinesIO f
     where
         link = LBS.pack "<link href=\""
         script = LBS.pack "<script src=\""
@@ -38,6 +38,11 @@ runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
             Just act -> LBS.readFile =<< act
             Nothing -> errorIO $ "Template library, unknown library: " ++ o
         asker x = ask x
+
+
+-- Perform a mapM on each line and put the result back together again
+lbsMapLinesIO :: (LBS.ByteString -> IO LBS.ByteString) -> LBS.ByteString -> IO LBS.ByteString
+lbsMapLinesIO f = fmap LBS.unlines . mapM f . LBS.lines
 
 
 ---------------------------------------------------------------------
