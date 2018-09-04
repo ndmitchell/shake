@@ -4,7 +4,6 @@ module General.Template(runTemplate) where
 
 import System.FilePath.Posix
 import Control.Exception.Extra
-import Control.Monad.IO.Class
 import Data.Char
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Language.Javascript.Flot as Flot
@@ -22,8 +21,7 @@ libraries =
 -- * <script src="foo"></script> ==> <script>[[foo]]</script>
 --
 -- * <link href="foo" rel="stylesheet" type="text/css" /> ==> <style type="text/css">[[foo]]</style>
-runTemplate :: (Functor m, MonadIO m) => (FilePath -> m LBS.ByteString) -> LBS.ByteString -> m LBS.ByteString
--- Functor constraint is required for GHC 7.8 and before
+runTemplate :: (FilePath -> IO LBS.ByteString) -> LBS.ByteString -> IO LBS.ByteString
 runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
     where
         link = LBS.pack "<link href=\""
@@ -37,8 +35,8 @@ runTemplate ask = fmap LBS.unlines . mapM f . LBS.lines
                 grab = asker . takeWhile (/= '\"') . LBS.unpack
 
         asker o@(splitFileName -> ("lib/",x)) = case lookup x libraries of
-            Just act -> liftIO $ LBS.readFile =<< act
-            Nothing -> liftIO $ errorIO $ "Template library, unknown library: " ++ o
+            Just act -> LBS.readFile =<< act
+            Nothing -> errorIO $ "Template library, unknown library: " ++ o
         asker x = ask x
 
 
