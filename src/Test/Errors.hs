@@ -8,7 +8,7 @@ import Development.Shake.FilePath
 import Test.Type
 import Data.List
 import Control.Monad
-import Control.Concurrent
+import Control.Concurrent.Extra
 import General.GetOpt
 import General.Extra
 import Data.IORef
@@ -163,9 +163,11 @@ main = shakeTest test optionsEnum $ \args -> do
 
     "finalfinal" %> \out -> do
         writeFile' out ""
+        lock <- liftIO newLock
+        let output = withLock lock . appendFile out
         liftIO (sleep 100)
-            `actionFinally` (appendFile out "X" >> sleep 0.1)
-            `actionFinally` appendFile out "Y"
+            `actionFinally` (output "X" >> sleep 0.1)
+            `actionFinally` output "Y"
 
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
