@@ -172,6 +172,8 @@ noIdentity k _ = throwImpure $ errorStructured
     [("Key type", Just $ show (typeOf k))] []
 
 
+-- | The type mapping between the @key@ or a rule and the resulting @value@.
+--   See 'addBuiltinRule' and 'apply'.
 type family RuleResult key -- = value
 
 -- | Define a builtin rule, passing the functions to run in the right circumstances.
