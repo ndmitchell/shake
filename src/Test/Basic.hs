@@ -80,6 +80,10 @@ main = shakeTest_ test $ do
 
     "rerun" %> \out -> do alwaysRerun; liftIO $ appendFile out "."
 
+    let checkKnown file = \out -> do alwaysRerun; ok <- known file; writeFile' out $ if ok then "True" else "False"
+    "check-rerun" %> checkKnown "rerun"
+    "check-slartibartfass" %> checkKnown "slartibartfass"
+
     phony "foo" $
         liftIO $ createDirectoryRecursive "foo"
 
@@ -208,3 +212,9 @@ test build = do
     assertContents "order.log" "YX"
     build ["ordering"]
     assertContents "order.log" "YXYX"
+
+    build ["check-rerun"]
+    assertContents "check-rerun" "True"
+
+    build ["check-slartibartfass"]
+    assertContents "check-slartibartfass" "False"

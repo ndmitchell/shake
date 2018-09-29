@@ -103,6 +103,7 @@ module Development.Shake(
     needHasChanged,
     resultHasChanged,
     batch,
+    known,
     -- * Deprecated
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),

@@ -6,7 +6,7 @@ module Development.Shake.Internal.Rules.File(
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
-    resultHasChanged,
+    resultHasChanged, known,
     -- * Internal only
     FileQ(..), FileA(..), fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
@@ -564,3 +564,13 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 --   has not changed.
 (%>) :: Located => FilePattern -> (FilePath -> Action ()) -> Rules ()
 (%>) test act = (if simple test then id else priority 0.5) $ root (show test ++ " %> at " ++ callStackTop) (test ?==) act
+
+-- | Check wether there is a rule to build 'FilePath'.
+known :: Located => FilePath -> Action Bool
+known fP = do
+    let fN = fileNameFromString fP
+    (_, ruleAct, ruleErr) <- getUserRuleInternal (FileQ fN) (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f fP
+    case ruleAct of
+        [] -> return False
+        [x] -> return True
+        _ -> throwM ruleErr
