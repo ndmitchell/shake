@@ -23,37 +23,10 @@ import Control.Exception
 import Control.Monad.Extra
 import General.Timing
 import General.Extra
-import qualified General.Bag as Bag
+import qualified Data.Heap as Heap
 import qualified Data.HashSet as Set
-
-
----------------------------------------------------------------------
--- UNFAIR/RANDOM QUEUE
-
-data Queue a = Queue
-    {queueException :: Bag.Bag a
-    ,queueResume :: Bag.Bag a
-    ,queueStart :: Bag.Bag a
-    ,queueBatch :: Bag.Bag a
-    }
-
-lensException = (queueException, \x v -> x{queueException=v})
-lensResume = (queueResume, \x v -> x{queueResume=v})
-lensStart = (queueStart, \x v -> x{queueStart=v})
-lensBatch = (queueBatch, \x v -> x{queueBatch=v})
-lenses = [lensException, lensResume, lensStart, lensBatch]
-
-newQueue :: Bool -> Queue a
-newQueue deterministic = Queue b b b b
-    where b = if deterministic then Bag.emptyPure else Bag.emptyRandom
-
-dequeue :: Queue a -> Bag.Randomly (Maybe (a, Queue a))
-dequeue q = firstJustM f lenses
-    where
-        f (sel, upd)
-            | Just x <- Bag.remove $ sel q
-            = do (x,b) <- x; return $ Just (x, upd q b)
-        f _ = return Nothing
+import Data.IORef.Extra
+import System.Random
 
 
 ---------------------------------------------------------------------
@@ -74,33 +47,36 @@ data S = S
     ,threadsCount :: {-# UNPACK #-} !Int -- Set.size threads, but in O(1)
     ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads (accounting only)
     ,threadsSum :: {-# UNPACK #-} !Int -- number of threads we have been through (accounting only)
-    ,todo :: !(Queue (IO ())) -- operations waiting a thread
+    ,rand :: IO Int -- operation to give us the next random Int
+    ,todo :: !(Heap.Heap (Heap.Entry (PoolPriority, Int) (IO ()))) -- operations waiting a thread
     }
 
 
-emptyS :: Int -> Bool -> S
-emptyS n deterministic = S Set.empty n 0 0 0 $ newQueue deterministic
+emptyS :: Int -> Bool -> IO S
+emptyS n deterministic = do
+    rand <- if not deterministic then return randomIO else do
+        ref <- newIORef 0
+        -- no need to be thread-safe - if two threads race they were basically the same time anyway
+        return $ do i <- readIORef ref; writeIORef' ref (i+1); return i
+    return $ S Set.empty n 0 0 0 rand Heap.empty
 
 
 worker :: Pool -> IO ()
 worker pool@(Pool var done) = do
     let onVar act = modifyVar var $ maybe (return (Nothing, return ())) act
-    join $ onVar $ \s -> do
-        res <- dequeue $ todo s
-        case res of
-            Nothing -> return (Just s, return ())
-            Just (now, todo2) -> return (Just s{todo = todo2}, now >> worker pool)
+    join $ onVar $ \s ->return $ case Heap.uncons $ todo s of
+        Nothing -> (Just s, return ())
+        Just (Heap.Entry _ now, todo2) -> (Just s{todo = todo2}, now >> worker pool)
 
 -- | Given a pool, and a function that breaks the S invariants, restore them
 --   They are only allowed to touch threadsLimit or todo
-step :: Pool -> (S -> Bag.Randomly S) -> IO ()
+step :: Pool -> (S -> IO S) -> IO ()
 step pool@(Pool var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
     onVar $ \s -> do
         s <- op s
-        res <- dequeue $ todo s
-        case res of
-            Just (now, todo2) | threadsCount s < threadsLimit s -> do
+        case Heap.uncons $ todo s of
+            Just (Heap.Entry _ now, todo2) | threadsCount s < threadsLimit s -> do
                 -- spawn a new worker
                 t <- forkFinallyUnmasked (now >> worker pool) $ \res -> case res of
                     Left e -> onVar $ \s -> do
@@ -122,14 +98,9 @@ step pool@(Pool var done) op = do
 -- | Add a new task to the pool. See the top of the module for the relative ordering
 --   and semantics.
 addPool :: PoolPriority -> Pool -> IO a -> IO ()
-addPool priority pool act = step pool $ \s ->
-    return s{todo = upd (todo s) $ Bag.insert (void act) $ sel $ todo s}
-    where (sel, upd) = toLens priority
-
-toLens PoolException = lensException
-toLens PoolResume = lensResume
-toLens PoolStart = lensStart
-toLens PoolBatch = lensBatch
+addPool priority pool act = step pool $ \s -> do
+    i <- rand s
+    return s{todo = Heap.insert (Heap.Entry (priority, i) $ void act) $ todo s}
 
 
 data PoolPriority
@@ -137,6 +108,7 @@ data PoolPriority
     | PoolResume
     | PoolStart
     | PoolBatch
+      deriving (Eq,Ord)
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.
 --   After calling cleanup you should requeue onto a new thread.
@@ -164,7 +136,7 @@ keepAlivePool pool = do
 --   called on them (but may not have actually died yet).
 runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool deterministic n act = do
-    s <- newVar $ Just $ emptyS n deterministic
+    s <- newVar . Just =<< emptyS n deterministic
     done <- newBarrier
 
     let cleanup = modifyVar_ s $ \s -> do

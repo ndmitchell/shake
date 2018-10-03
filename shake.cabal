@@ -168,7 +168,6 @@ library
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
         Development.Shake.Internal.Value
-        General.Bag
         General.Bilist
         General.Binary
         General.Chunks
@@ -282,7 +281,6 @@ executable shake
         Development.Shake.Internal.Rules.Rerun
         Development.Shake.Internal.Shake
         Development.Shake.Internal.Value
-        General.Bag
         General.Bilist
         General.Binary
         General.Chunks
@@ -406,7 +404,6 @@ test-suite shake-test
         Development.Shake.Internal.Value
         Development.Shake.Rule
         Development.Shake.Util
-        General.Bag
         General.Bilist
         General.Binary
         General.Chunks
