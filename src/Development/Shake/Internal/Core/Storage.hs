@@ -96,6 +96,11 @@ withStorage
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
+withStorage ShakeOptions{..} diagnostic witness act | shakeFiles == "/dev/null" = do
+    diagnostic $ return "Using in-memory database"
+    ids <- Ids.empty
+    act ids $ \_ _ _ -> return ()
+
 withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
     createDirectoryRecursive shakeFiles
