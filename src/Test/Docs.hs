@@ -88,7 +88,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"import System.Console.GetOpt"
             ,"import System.Directory(setCurrentDirectory)"
             ,"import qualified System.Directory"
-            ,"import System.Environment(lookupEnv, getEnvironment)"
+            ,"import System.Environment(withArgs, lookupEnv, getEnvironment)"
             ,"import System.Process"
             ,"import System.Exit"
             ,"import Control.Applicative"
