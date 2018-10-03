@@ -6,6 +6,7 @@ import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Development.Shake.Util
+import Test.Self(cabalBuildDepends)
 import Test.Type
 
 import Control.Applicative
@@ -54,17 +55,3 @@ main = shakeTest_ noTest $ do
     ".pkgs" %> \out -> do
         src <- readFile' $ root </> "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
-
-
----------------------------------------------------------------------
--- GRAB INFORMATION FROM FILES
-
--- FIXME: Should actually parse the list from the contents of the .cabal file
-cabalBuildDepends :: String -> [String]
-cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
-
-packages = words
-    ("base transformers binary unordered-containers hashable time bytestring primitive " ++
-     "filepath directory process deepseq random utf8-string extra js-jquery js-flot") ++
-    ["old-time" | compilerVersion < makeVersion [7,6]] ++
-    ["semigroups" | compilerVersion < makeVersion [8,0]]

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, TypeFamilies #-}
 
-module Test.Self(main) where
+module Test.Self(main, cabalBuildDepends) where
 
 import Development.Shake
 import Development.Shake.Classes
