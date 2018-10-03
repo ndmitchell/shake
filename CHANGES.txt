@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add reprioritise to change the priority of a running rule
     Add a dependency on heaps package
     #611, fix a race condition in actionFinally that reran handlers
     Remove a potential space leak in the Rules monad

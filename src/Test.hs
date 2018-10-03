@@ -47,6 +47,7 @@ import qualified Test.Pool as Pool
 import qualified Test.Progress as Progress
 import qualified Test.Random as Random
 import qualified Test.Rebuild as Rebuild
+import qualified Test.Reprioritize as Reprioritize
 import qualified Test.Resources as Resources
 import qualified Test.Self as Self
 import qualified Test.SelfMake as SelfMake
@@ -97,6 +98,7 @@ mains =
     ,"progress" * Progress.main
     ,"random" * Random.main
     ,"rebuild" * Rebuild.main
+    ,"reprioritize" * Reprioritize.main
     ,"resources" * Resources.main
     ,"self" * Self.main
     ,"selfmake" * SelfMake.main

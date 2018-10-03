@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.Core.Pool(
-    addPoolWait, actionFenceSteal, actionFenceRequeue, actionAlwaysRequeue,
+    addPoolWait, actionFenceSteal, actionFenceRequeue,
+    actionAlwaysRequeue, actionAlwaysRequeuePriority,
     addPoolWait_,
     actionFenceRequeueBy
     ) where
@@ -75,10 +76,13 @@ actionFenceRequeueBy op fence = Action $ do
 
 
 actionAlwaysRequeue :: Either SomeException a -> Action (Seconds, a)
-actionAlwaysRequeue res = Action $ do
+actionAlwaysRequeue res = actionAlwaysRequeuePriority (priority res) res
+
+actionAlwaysRequeuePriority :: PoolPriority -> Either SomeException a -> Action (Seconds, a)
+actionAlwaysRequeuePriority pri res = Action $ do
     Global{..} <- getRO
     offset <- liftIO offsetTime
     captureRAW $ \continue ->
-        addPool (priority res) globalPool $ do
+        addPool pri globalPool $ do
             offset <- offset
             continue $ (offset,) <$> res

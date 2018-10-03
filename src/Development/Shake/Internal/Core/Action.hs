@@ -11,6 +11,7 @@ module Development.Shake.Internal.Core.Action(
     unsafeExtraThread,
     parallel,
     batch,
+    reprioritize,
     historyDisable,
     traced,
     -- Internal only
@@ -513,3 +514,14 @@ batch mx pred one many
                     res <- getRW
                     return res{localDiscount = localDiscount res / intToDouble (length now)} -- divide the batch fairly
                 liftIO $ mapM_ (flip signalFence res . thd3) now
+
+
+-- | Given a running task, reprioritise so it only continues after all other pending tasks,
+--   and all tasks with a higher priority. Note that 'reprioritize' can only /decrease/ the
+--   priority of a running task, never increase it. Due to parallelism there is no guarantee
+--   that all actions of a higher priority will have /completed/ before the action resumes.
+--   Only useful if the results are being interactively reported or consumed.
+reprioritize :: Double -> Action ()
+reprioritize x = do
+    (wait, _) <- actionAlwaysRequeuePriority (PoolReprioritize $ negate x) $ return ()
+    Action $ modifyRW $ addDiscount wait
