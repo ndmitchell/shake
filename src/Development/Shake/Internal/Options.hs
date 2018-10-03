@@ -136,7 +136,7 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to @.shake@. The directory used for storing Shake metadata files.
         --   All metadata files will be named @'shakeFiles'\/.shake./file-name/@, for some @/file-name/@.
         --   If the 'shakeFiles' directory does not exist it will be created.
-        --   If set to @\"/dev/null\"@ then no shakeFiles are read or written (even on Windows).
+        --   If set to @\"\/dev\/null\"@ then no shakeFiles are read or written (even on Windows).
     ,shakeThreads :: Int
         -- ^ Defaults to @1@. Maximum number of rules to run in parallel, similar to @make --jobs=/N/@.
         --   For many build systems, a number equal to or slightly less than the number of physical processors
