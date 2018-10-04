@@ -113,7 +113,8 @@ withStorage bracket ShakeOptions{..} diagnostic witness act = withLockFileDiagno
         diagnostic $ return "Backup file move to original"
 
     addTiming "Database read"
-    withChunks bracket dbfile shakeFlush $ \h -> do
+    h <- usingChunks bracket dbfile shakeFlush
+    id $ do
 
         let corrupt
                 | not shakeStorageLog = resetChunksCorrupt Nothing h

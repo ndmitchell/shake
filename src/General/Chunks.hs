@@ -3,7 +3,7 @@
 module General.Chunks(
     Chunks,
     readChunk, readChunkMax, writeChunks, writeChunk,
-    restoreChunksBackup, withChunks, resetChunksCompact, resetChunksCorrupt,
+    restoreChunksBackup, usingChunks, resetChunksCompact, resetChunksCorrupt,
     readChunksDirect, writeChunkDirect
     ) where
 
@@ -115,13 +115,13 @@ restoreChunksBackup file = do
         return True
 
 
-withChunks :: Cleanup -> FilePath -> Maybe Seconds -> (Chunks -> IO a) -> IO a
-withChunks bracket file flush act = do
+usingChunks :: Cleanup -> FilePath -> Maybe Seconds -> IO Chunks
+usingChunks cleanup file flush = do
     h <- newEmptyMVar
-    bracketCleanup bracket
+    bracketCleanup cleanup
         (putMVar h =<< openFile file ReadWriteMode)
         (const $ hClose =<< takeMVar h)
-    act $ Chunks file flush h
+    return $ Chunks file flush h
 
 
 -- | The file is being compacted, if the process fails, use a backup.
