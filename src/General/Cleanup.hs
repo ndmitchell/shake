@@ -43,8 +43,10 @@ addCleanup_ :: Cleanup -> IO () -> IO ()
 -- to unregister them in order, so might as well keep it simple
 addCleanup_ c act = void $ addCleanup c act
 
-bracketCleanup :: Cleanup -> IO a -> (a -> IO ()) -> IO a
-bracketCleanup cleanup acquire release = mask_ $ do
-    v <- acquire
-    addCleanup_ cleanup $ release v
-    return v
+bracketCleanup :: Cleanup -> IO a -> (a -> IO ()) -> (a -> IO b) -> IO b
+bracketCleanup cleanup acquire release act = do
+    v <- mask_ $ do
+        v <- acquire
+        addCleanup_ cleanup $ release v
+        return v
+    act v

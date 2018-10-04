@@ -254,7 +254,7 @@ saveWitness mp
 withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
 withLockFileDiagnostic diagnostic file act = do
     diagnostic $ return $ "Before withLockFile on " ++ file
-    res <- withLockFile file $ do
+    res <- withLockFile (Bracket bracket) file $ do
         diagnostic $ return "Inside withLockFile"
         act
     diagnostic $ return "After withLockFile"

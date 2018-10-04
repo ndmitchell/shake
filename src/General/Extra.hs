@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving, Rank2Types #-}
 
 module General.Extra(
     getProcessorCount,
@@ -8,13 +8,14 @@ module General.Extra(
     randomElem,
     wrapQuote, showBracket,
     withs,
+    Bracket(..), runBracket_,
     maximum', maximumBy',
     fastAt,
     forkFinallyUnmasked,
     isAsyncException,
     withLineBuffering,
     doesFileExist_,
-    usingNumCapabilities,
+    withNumCapabilities,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
@@ -50,8 +51,6 @@ import GHC.Conc(getNumProcessors)
 import GHC.Stack
 #endif
 import Prelude
-
-import General.Cleanup
 
 
 ---------------------------------------------------------------------
@@ -147,17 +146,14 @@ randomElem xs = do
 ---------------------------------------------------------------------
 -- System.IO
 
-withLineBuffering :: IO a -> IO a
-withLineBuffering act = do
+withLineBuffering :: Bracket -> IO a -> IO a
+withLineBuffering b act = do
     -- instead of withBuffering avoid two finally handlers and stack depth
     out <- hGetBuffering stdout
     err <- hGetBuffering stderr
-    if out == LineBuffering && err == LineBuffering then act else do
-        hSetBuffering stdout LineBuffering
-        hSetBuffering stderr LineBuffering
-        act `finally` do
-            hSetBuffering stdout out
-            hSetBuffering stderr err
+    if out == LineBuffering && err == LineBuffering then act else
+        runBracket_ b (return ()) (hSetBuffering stdout out >> hSetBuffering stderr err) $
+            hSetBuffering stdout LineBuffering >> hSetBuffering stderr LineBuffering >> act
 
 
 ---------------------------------------------------------------------
@@ -166,6 +162,11 @@ withLineBuffering act = do
 withs :: [(a -> r) -> r] -> ([a] -> r) -> r
 withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
+
+newtype Bracket = Bracket {runBracket :: forall a b. IO a -> (a -> IO ()) -> (a -> IO b) -> IO b}
+
+runBracket_ :: Bracket -> IO a -> IO () -> IO b -> IO b
+runBracket_ b x y z = runBracket b x (const y) (const z)
 
 
 ---------------------------------------------------------------------
@@ -177,12 +178,15 @@ forkFinallyUnmasked act cleanup =
     mask_ $ forkIOWithUnmask $ \unmask ->
         try (unmask act) >>= cleanup
 
-usingNumCapabilities :: Cleanup -> Int -> IO ()
-usingNumCapabilities cleanup new =
-    when rtsSupportsBoundThreads $ do
-        old <- getNumCapabilities
-        when (old /= new) $ do
-            bracketCleanup cleanup (setNumCapabilities new) (const $ setNumCapabilities old)
+withNumCapabilities :: Bracket -> Int -> IO a -> IO a
+withNumCapabilities b new act | not rtsSupportsBoundThreads = act
+withNumCapabilities b new act = do
+    old <- getNumCapabilities
+    if old == new then
+        act
+     else
+        runBracket_ b (return ()) (setNumCapabilities old) $
+            setNumCapabilities new >> act
 
 
 ---------------------------------------------------------------------

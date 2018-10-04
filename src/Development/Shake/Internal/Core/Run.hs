@@ -9,7 +9,7 @@ module Development.Shake.Internal.Core.Run(
 import Control.Exception
 import Control.Applicative
 import Data.Tuple.Extra
-import Control.Concurrent.Extra
+import Control.Concurrent.Extra hiding (withNumCapabilities)
 import General.Binary
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.History.Shared
@@ -52,7 +52,7 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering else id) $ do
+run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering $ Bracket bracket else id) $ do
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
 
     start <- offsetTime
@@ -85,7 +85,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering els
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
-        usingNumCapabilities cleanup shakeThreads
+        withNumCapabilities (Bracket $ bracketCleanup cleanup) shakeThreads $ return ()
         diagnostic $ return "Starting run 3"
         withDatabase opts diagnostic ruleinfo $ \database step -> do
             wait <- newBarrier
