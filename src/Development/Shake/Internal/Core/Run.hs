@@ -87,7 +87,7 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
         resetTimings -- so we don't leak memory
     withNumCapabilities (Bracket $ bracketCleanup cleanup) shakeThreads $ return ()
     diagnostic $ return "Starting run 3"
-    withDatabase opts diagnostic ruleinfo $ \database step -> do
+    withDatabase (Bracket $ bracketCleanup cleanup) opts diagnostic ruleinfo $ \database step -> do
         wait <- newBarrier
         let getProgress = do
                 failure <- fmap fst <$> readIORef except
@@ -203,13 +203,13 @@ checkValid diagnostic Database{..} check missing = do
 ---------------------------------------------------------------------
 -- STORAGE
 
-withDatabase :: ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
-withDatabase opts diagnostic owitness act = do
+withDatabase :: Bracket -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
+withDatabase bracket opts diagnostic owitness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
-    withStorage opts diagnostic witness $ \status journal -> do
+    withStorage bracket opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
         xs <- Ids.toList status

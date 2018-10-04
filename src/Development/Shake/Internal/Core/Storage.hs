@@ -91,17 +91,18 @@ messageMissingTypes dbfile types =
 --   rewritten.
 withStorage
     :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
-    => ShakeOptions                                    -- ^ Storage options
+    => Bracket
+    -> ShakeOptions                                    -- ^ Storage options
     -> (IO String -> IO ())                            -- ^ Logging function
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage ShakeOptions{..} diagnostic witness act | shakeFiles == "/dev/null" = do
+withStorage bracket ShakeOptions{..} diagnostic witness act | shakeFiles == "/dev/null" = do
     diagnostic $ return "Using in-memory database"
     ids <- Ids.empty
     act ids $ \_ _ _ -> return ()
 
-withStorage ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic diagnostic (shakeFiles </> ".shake.lock") $ do
+withStorage bracket ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic bracket diagnostic (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
     createDirectoryRecursive shakeFiles
 
@@ -251,10 +252,10 @@ saveWitness mp
                 in \(Id w) v -> tag <> putEx w <> putOp v
 
 
-withLockFileDiagnostic :: (IO String -> IO ()) -> FilePath -> IO a -> IO a
-withLockFileDiagnostic diagnostic file act = do
+withLockFileDiagnostic :: Bracket -> (IO String -> IO ()) -> FilePath -> IO a -> IO a
+withLockFileDiagnostic bracket diagnostic file act = do
     diagnostic $ return $ "Before withLockFile on " ++ file
-    res <- withLockFile (Bracket bracket) file $ do
+    res <- withLockFile bracket file $ do
         diagnostic $ return "Inside withLockFile"
         act
     diagnostic $ return "After withLockFile"
