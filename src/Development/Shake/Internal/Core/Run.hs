@@ -89,56 +89,56 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     diagnostic $ return "Starting run 3"
     withCleanup $ \cleanup -> do
         (database, step) <- usingDatabase cleanup opts diagnostic ruleinfo
-        do
-            wait <- newBarrier
-            let getProgress = do
-                    failure <- fmap fst <$> readIORef except
-                    stats <- progress database step
-                    return stats{isFailure=failure}
-            tid <- flip forkFinally (const $ signalBarrier wait ()) $
-                shakeProgress getProgress
-            addCleanup_ cleanup $ do
-                killThread tid
-                void $ timeout 1 $ waitBarrier wait
-            databaseVar <- newVar database
-            (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
+        wait <- newBarrier
+        let getProgress = do
+                failure <- fmap fst <$> readIORef except
+                stats <- progress database step
+                return stats{isFailure=failure}
+        tid <- flip forkFinally (const $ signalBarrier wait ()) $
+            shakeProgress getProgress
+        addCleanup_ cleanup $ do
+            killThread tid
+            void $ timeout 1 $ waitBarrier wait
+        databaseVar <- newVar database
+        (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
 
-            addTiming "Running rules"
-            runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
-                -- give each action a stack to start with!
-                forM_ actions $ \(stack, act) -> do
-                    let local = newLocal stack shakeVerbosity
-                    addPool PoolStart pool $ runAction global local act $ \x -> case x of
-                        Left e -> raiseError =<< shakeException global stack e
-                        Right x -> return x
-            maybe (return ()) (throwIO . snd) =<< readIORef except
-            assertFinishedDatabase database
+        addTiming "Running rules"
+        runPool (shakeThreads == 1) shakeThreads $ \pool -> do
+            let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
+            -- give each action a stack to start with!
+            forM_ actions $ \(stack, act) -> do
+                let local = newLocal stack shakeVerbosity
+                addPool PoolStart pool $ runAction global local act $ \x -> case x of
+                    Left e -> raiseError =<< shakeException global stack e
+                    Right x -> return x
+        maybe (return ()) (throwIO . snd) =<< readIORef except
+        assertFinishedDatabase database
 
-            let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
+        let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
-            when (null actions) $
-                putWhen Normal "Warning: No want/action statements, nothing to do"
+        when (null actions) $
+            putWhen Normal "Warning: No want/action statements, nothing to do"
 
-            when (isJust shakeLint) $ do
-                addTiming "Lint checking"
-                lintCurrentDirectory curdir "After completion"
-                checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
-                putWhen Loud "Lint checking succeeded"
-            when (shakeReport /= []) $ do
-                addTiming "Profile report"
-                forM_ shakeReport $ \file -> do
-                    putWhen Normal $ "Writing report to " ++ file
-                    writeProfile file database
-            when (shakeLiveFiles /= []) $ do
-                addTiming "Listing live"
-                diagnostic $ return "Listing live keys"
-                status <- Ids.toList $ status database
-                let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
-                let liveFiles = [show k | (_, (k, Ready{})) <- status, specialIsFileKey $ typeKey k]
-                forM_ shakeLiveFiles $ \file -> do
-                    putWhen Normal $ "Writing live list to " ++ file
-                    (if file == "-" then putStr else writeFile file) $ unlines liveFiles
+        when (isJust shakeLint) $ do
+            addTiming "Lint checking"
+            lintCurrentDirectory curdir "After completion"
+            checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
+            putWhen Loud "Lint checking succeeded"
+        when (shakeReport /= []) $ do
+            addTiming "Profile report"
+            forM_ shakeReport $ \file -> do
+                putWhen Normal $ "Writing report to " ++ file
+                writeProfile file database
+        when (shakeLiveFiles /= []) $ do
+            addTiming "Listing live"
+            diagnostic $ return "Listing live keys"
+            status <- Ids.toList $ status database
+            let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
+            let liveFiles = [show k | (_, (k, Ready{})) <- status, specialIsFileKey $ typeKey k]
+            forM_ shakeLiveFiles $ \file -> do
+                putWhen Normal $ "Writing live list to " ++ file
+                (if file == "-" then putStr else writeFile file) $ unlines liveFiles
+
     -- make sure we clean up the database _before_ we run the after actions
     after <- readIORef after
     unless (null after) $ do
