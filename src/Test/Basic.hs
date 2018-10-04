@@ -35,6 +35,9 @@ main = shakeTest_ test $ do
     phony "cleaner" $
         removeFilesAfter "dir" ["//*"]
 
+    phony "cleandb" $
+        removeFilesAfter "." [".shake.database"]
+
     phony "configure" $
         liftIO $ appendFile "configure" "1"
 
@@ -129,6 +132,10 @@ test build = do
     build ["cleaner"]
     sleep 1 -- sometimes takes a while for the file system to notice
     assertBoolIO (not <$> IO.doesDirectoryExist "dir") "Directory should not exist, cleaner should have removed it"
+
+    assertBoolIO (IO.doesFileExist ".shake.database") "Precondition not met"
+    build ["cleandb"]
+    assertBoolIO (not <$> IO.doesFileExist ".shake.database") "Postcondition not met"
 
     writeFile "zero.txt" ""
     writeFile "configure" ""
