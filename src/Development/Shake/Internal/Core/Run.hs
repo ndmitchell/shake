@@ -211,7 +211,8 @@ withDatabase cleanup opts diagnostic owitness act = do
     witness <- return $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
-    withStorage cleanup opts diagnostic witness $ \status journal -> do
+    (status, journal) <- usingStorage cleanup opts diagnostic witness
+    id $ do
         journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
         xs <- Ids.toList status

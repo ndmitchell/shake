@@ -7,7 +7,7 @@ We store a series of records, and if they contain twice as many records as neede
 -}
 
 module Development.Shake.Internal.Core.Storage(
-    withStorage
+    usingStorage
     ) where
 
 import General.Chunks
@@ -90,20 +90,19 @@ messageMissingTypes dbfile types =
 --   If any entries in the witness table don't have a current Witness then a fake
 --   error witness is manufactured. If the witness ever changes the entire DB is
 --   rewritten.
-withStorage
+usingStorage
     :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
     => Cleanup
     -> ShakeOptions                                    -- ^ Storage options
     -> (IO String -> IO ())                            -- ^ Logging function
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
-    -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
-    -> IO a
-withStorage cleanup ShakeOptions{..} diagnostic witness act | shakeFiles == "/dev/null" = do
+    -> IO (Ids.Ids v, k -> Id -> v -> IO ())
+usingStorage cleanup ShakeOptions{..} diagnostic witness | shakeFiles == "/dev/null" = do
     diagnostic $ return "Using in-memory database"
     ids <- Ids.empty
-    act ids $ \_ _ _ -> return ()
+    return (ids, \_ _ _ -> return ())
 
-withStorage cleanup ShakeOptions{..} diagnostic witness act = do
+usingStorage cleanup ShakeOptions{..} diagnostic witness = do
     let lockFile = shakeFiles </> ".shake.lock"
     diagnostic $ return $ "Before usingLockFile on " ++ lockFile
     usingLockFile cleanup lockFile
@@ -192,8 +191,7 @@ withStorage cleanup ShakeOptions{..} diagnostic witness act = do
 
     addTiming "With database"
     out <- usingWriteChunks cleanup h
-    act ids $ \k i v ->
-        out $ save k i v
+    return (ids, \k i v -> out $ save k i v)
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime
