@@ -103,7 +103,8 @@ withStorage cleanup ShakeOptions{..} diagnostic witness act | shakeFiles == "/de
     ids <- Ids.empty
     act ids $ \_ _ _ -> return ()
 
-withStorage cleanup ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic cleanup diagnostic (shakeFiles </> ".shake.lock") $ do
+withStorage cleanup ShakeOptions{..} diagnostic witness act = do
+    usingLockFileDiagnostic cleanup diagnostic (shakeFiles </> ".shake.lock")
     let dbfile = shakeFiles </> ".shake.database"
     createDirectoryRecursive shakeFiles
 
@@ -252,9 +253,8 @@ saveWitness mp
                 in \(Id w) v -> tag <> putEx w <> putOp v
 
 
-withLockFileDiagnostic :: Cleanup -> (IO String -> IO ()) -> FilePath -> IO a -> IO a
-withLockFileDiagnostic cleanup diagnostic file act = do
-    diagnostic $ return $ "Before withLockFile on " ++ file
-    res <- usingLockFile cleanup file
-    diagnostic $ return "Inside withLockFile"
-    act
+usingLockFileDiagnostic :: Cleanup -> (IO String -> IO ()) -> FilePath -> IO ()
+usingLockFileDiagnostic cleanup diagnostic file = do
+    diagnostic $ return $ "Before usingLockFile on " ++ file
+    usingLockFile cleanup file
+    diagnostic $ return "After usingLockFile"
