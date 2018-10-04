@@ -191,9 +191,9 @@ withStorage cleanup ShakeOptions{..} diagnostic witness act = do
             Ids.empty
 
     addTiming "With database"
-    writeChunks h $ \out ->
-        act ids $ \k i v ->
-            out $ save k i v
+    out <- usingWriteChunks cleanup h
+    act ids $ \k i v ->
+        out $ save k i v
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime

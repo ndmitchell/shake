@@ -2,7 +2,7 @@
 
 module General.Chunks(
     Chunks,
-    readChunk, readChunkMax, writeChunks, writeChunk,
+    readChunk, readChunkMax, usingWriteChunks, writeChunk,
     restoreChunksBackup, usingChunks, resetChunksCompact, resetChunksCorrupt,
     readChunksDirect, writeChunkDirect
     ) where
@@ -66,35 +66,36 @@ writeChunkDirect h x = bs `seq` BS.hPut h bs
 
 
 -- | If 'writeChunks' and any of the reopen operations are interleaved it will cause issues.
-writeChunks :: Chunks -> ((Builder -> IO ()) -> IO a) -> IO a
+usingWriteChunks :: Cleanup -> Chunks -> IO (Builder -> IO ())
 -- We avoid calling flush too often on SSD drives, as that can be slow
 -- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
 -- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
-writeChunks Chunks{..} act = withMVar chunksHandle $ \h -> do
+usingWriteChunks cleanup Chunks{..} = do
+    h <- bracketCleanup cleanup (takeMVar chunksHandle)  (putMVar chunksHandle)
     chan <- newChan -- operations to perform on the file
     kick <- newEmptyMVar -- kicked whenever something is written
     died <- newBarrier -- has the writing thread finished
 
-    flusher <- case chunksFlush of
-        Nothing -> return Nothing
-        Just flush -> fmap Just $ forkIO $ forever $ do
-            takeMVar kick
-            sleep flush
-            tryTakeMVar kick
-            writeChan chan $ hFlush h >> return True
+    whenJust chunksFlush $ \flush ->
+        void $ bracketCleanup cleanup
+            (forkIO $ forever $ do
+                takeMVar kick
+                sleep flush
+                tryTakeMVar kick
+                writeChan chan $ hFlush h >> return True)
+            killThread
 
     root <- myThreadId
-    writer <- flip forkFinally (\e -> do signalBarrier died (); whenLeft e (throwTo root)) $
-        -- only one thread ever writes, ensuring only the final write can be torn
-        whileM $ join $ readChan chan
+    bracketCleanup cleanup
+        (flip forkFinally (\e -> do signalBarrier died (); whenLeft e (throwTo root)) $
+            -- only one thread ever writes, ensuring only the final write can be torn
+            whileM $ join $ readChan chan)
+        (const $ do writeChan chan $ return False; waitBarrier died)
 
-    (act $ \s -> do
-            out <- evaluate $ writeChunkDirect h s -- ensure exceptions occur on this thread
-            writeChan chan $ out >> tryPutMVar kick () >> return True)
-        `finally` do
-            maybe (return ()) killThread flusher
-            writeChan chan $ return False
-            waitBarrier died
+    return $ \s -> do
+        out <- evaluate $ writeChunkDirect h s -- ensure exceptions occur on this thread
+        writeChan chan $ out >> tryPutMVar kick () >> return True
+
 
 writeChunk :: Chunks -> Builder -> IO ()
 writeChunk Chunks{..} x = withMVar chunksHandle $ \h -> writeChunkDirect h x
