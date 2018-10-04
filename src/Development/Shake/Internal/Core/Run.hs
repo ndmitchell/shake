@@ -230,7 +230,6 @@ incrementStep Database{..} = do
             (is, stepId) <- return $ Intern.add stepKey is
             writeIORef intern is
             return stepId
-
     step <- do
         v <- Ids.lookup status stepId
         return $ case v of
