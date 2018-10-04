@@ -88,7 +88,8 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     usingNumCapabilities cleanup shakeThreads
     diagnostic $ return "Starting run 3"
     withCleanup $ \cleanup -> do
-        (database, step) <- usingDatabase cleanup opts diagnostic ruleinfo
+        database <- usingDatabase cleanup opts diagnostic ruleinfo
+        step <- incrementStep database
         wait <- newBarrier
         let getProgress = do
                 failure <- fmap fst <$> readIORef except
@@ -206,7 +207,7 @@ checkValid diagnostic Database{..} check missing = do
 ---------------------------------------------------------------------
 -- STORAGE
 
-usingDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> IO (Database, Step)
+usingDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> IO Database
 usingDatabase cleanup opts diagnostic owitness = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList
@@ -216,22 +217,27 @@ usingDatabase cleanup opts diagnostic owitness = do
     journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
     xs <- Ids.toList status
-    let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+    intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+    return Database{..}
 
-    (mp1, stepId) <- case Intern.lookup stepKey mp1 of
-        Just stepId -> return (mp1, stepId)
+
+incrementStep :: Database -> IO Step
+incrementStep Database{..} = do
+    is <- readIORef intern
+    stepId <- case Intern.lookup stepKey is of
+        Just stepId -> return stepId
         Nothing -> do
-            (mp1, stepId) <- return $ Intern.add stepKey mp1
-            return (mp1, stepId)
+            (is, stepId) <- return $ Intern.add stepKey is
+            writeIORef intern is
+            return stepId
 
-    intern <- newIORef mp1
     step <- do
         v <- Ids.lookup status stepId
         return $ case v of
             Just (_, Loaded r) -> incStep $ fromStepResult r
             _ -> Step 1
     journal stepId stepKey $ toStepResult step
-    return (Database{..}, step)
+    return step
 
 
 loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
