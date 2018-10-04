@@ -38,7 +38,7 @@ import System.Random
 import System.Directory
 import System.Exit
 import Foreign.Storable
-import Control.Concurrent
+import Control.Concurrent.Extra
 import Data.Maybe
 import Data.Functor
 import Data.Hashable
