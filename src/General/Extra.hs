@@ -14,6 +14,7 @@ module General.Extra(
     isAsyncException,
     withLineBuffering,
     doesFileExist_,
+    usingNumCapabilities,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
@@ -49,6 +50,8 @@ import GHC.Conc(getNumProcessors)
 import GHC.Stack
 #endif
 import Prelude
+
+import General.Cleanup
 
 
 ---------------------------------------------------------------------
@@ -173,6 +176,13 @@ forkFinallyUnmasked :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
 forkFinallyUnmasked act cleanup =
     mask_ $ forkIOWithUnmask $ \unmask ->
         try (unmask act) >>= cleanup
+
+usingNumCapabilities :: Cleanup -> Int -> IO ()
+usingNumCapabilities cleanup new =
+    when rtsSupportsBoundThreads $ do
+        old <- getNumCapabilities
+        when (old /= new) $ do
+            bracketCleanup cleanup (setNumCapabilities new) (const $ setNumCapabilities old)
 
 
 ---------------------------------------------------------------------
