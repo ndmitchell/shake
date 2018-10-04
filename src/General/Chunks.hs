@@ -120,8 +120,8 @@ withChunks bracket file flush act = do
     h <- newEmptyMVar
     bracketCleanup_ bracket
         (putMVar h =<< openFile file ReadWriteMode)
-        (hClose =<< takeMVar h) $
-        act $ Chunks file flush h
+        (hClose =<< takeMVar h)
+    act $ Chunks file flush h
 
 
 -- | The file is being compacted, if the process fails, use a backup.

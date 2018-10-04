@@ -47,15 +47,15 @@ withLockFile b file act = do
     createDirectoryRecursive $ takeDirectory file
     let open = withCWString file $ \cfile ->
             c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
-    bracketCleanup b open (void . c_CloseHandle) $ \h ->
-        if h == c_INVALID_HANDLE_VALUE then do
-            err <- c_GetLastError
-            errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
-                      (if err == c_ERROR_SHARING_VIOLATION
-                          then "ERROR_SHARING_VIOLATION - Shake is probably already running."
-                          else "Code " ++ show err ++ ", unknown reason for failure.")
-        else
-            act
+    h <- bracketCleanup b open (void . c_CloseHandle)
+    if h == c_INVALID_HANDLE_VALUE then do
+        err <- c_GetLastError
+        errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
+                    (if err == c_ERROR_SHARING_VIOLATION
+                        then "ERROR_SHARING_VIOLATION - Shake is probably already running."
+                        else "Code " ++ show err ++ ", unknown reason for failure.")
+     else
+        act
 
 #else
 
