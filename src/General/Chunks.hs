@@ -114,10 +114,10 @@ restoreChunksBackup file = do
         return True
 
 
-withChunks :: FilePath -> Maybe Seconds -> (Chunks -> IO a) -> IO a
-withChunks file flush act = do
+withChunks :: Bracket -> FilePath -> Maybe Seconds -> (Chunks -> IO a) -> IO a
+withChunks bracket file flush act = do
     h <- newEmptyMVar
-    bracket_
+    runBracket_ bracket
         (putMVar h =<< openFile file ReadWriteMode)
         (hClose =<< takeMVar h) $
         act $ Chunks file flush h
