@@ -52,7 +52,8 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering $ Bracket bracket else id) $ do
+run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
+    when shakeLineBuffering $ withLineBuffering (Bracket $ bracketCleanup cleanup) $ return ()
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
 
     start <- offsetTime
@@ -81,7 +82,7 @@ run opts@ShakeOptions{..} rs = (if shakeLineBuffering then withLineBuffering $ B
 
     after <- newIORef []
     absent <- newIORef []
-    withCleanup $ \cleanup -> do
+    id $ do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
