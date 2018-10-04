@@ -87,8 +87,9 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
         resetTimings -- so we don't leak memory
     usingNumCapabilities cleanup shakeThreads
     diagnostic $ return "Starting run 3"
-    withCleanup $ \cleanup ->
-        withDatabase cleanup opts diagnostic ruleinfo $ \database step -> do
+    withCleanup $ \cleanup -> do
+        (database, step) <- usingDatabase cleanup opts diagnostic ruleinfo
+        do
             wait <- newBarrier
             let getProgress = do
                     failure <- fmap fst <$> readIORef except
@@ -205,8 +206,8 @@ checkValid diagnostic Database{..} check missing = do
 ---------------------------------------------------------------------
 -- STORAGE
 
-withDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
-withDatabase cleanup opts diagnostic owitness act = do
+usingDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> IO (Database, Step)
+usingDatabase cleanup opts diagnostic owitness = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
@@ -230,7 +231,7 @@ withDatabase cleanup opts diagnostic owitness act = do
             Just (_, Loaded r) -> incStep $ fromStepResult r
             _ -> Step 1
     journal stepId stepKey $ toStepResult step
-    act Database{..} step
+    return (Database{..}, step)
 
 
 loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
