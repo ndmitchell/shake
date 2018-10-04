@@ -255,8 +255,6 @@ saveWitness mp
 withLockFileDiagnostic :: Cleanup -> (IO String -> IO ()) -> FilePath -> IO a -> IO a
 withLockFileDiagnostic cleanup diagnostic file act = do
     diagnostic $ return $ "Before withLockFile on " ++ file
-    res <- withLockFile cleanup file $ do
-        diagnostic $ return "Inside withLockFile"
-        act
-    diagnostic $ return "After withLockFile"
-    return res
+    res <- usingLockFile cleanup file
+    diagnostic $ return "Inside withLockFile"
+    act

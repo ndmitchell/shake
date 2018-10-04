@@ -1,14 +1,14 @@
 {-# LANGUAGE CPP #-}
 
-module General.FileLock(withLockFile) where
+module General.FileLock(usingLockFile) where
 
 import Control.Exception.Extra
 import System.FilePath
 import General.Extra
 import General.Cleanup
 #ifdef mingw32_HOST_OS
+import Control.Monad
 import Data.Bits
-import Data.Functor
 import Data.Word
 import Foreign.Ptr
 import Foreign.C.Types
@@ -39,42 +39,37 @@ c_INVALID_HANDLE_VALUE = intPtrToPtr (-1)
 c_ERROR_SHARING_VIOLATION = 32
 #endif
 
-withLockFile :: Cleanup -> FilePath -> IO a -> IO a
+usingLockFile :: Cleanup -> FilePath -> IO ()
 
 #ifdef mingw32_HOST_OS
 
-withLockFile b file act = do
+usingLockFile b file = do
     createDirectoryRecursive $ takeDirectory file
     let open = withCWString file $ \cfile ->
             c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
     h <- bracketCleanup b open (void . c_CloseHandle)
-    if h == c_INVALID_HANDLE_VALUE then do
+    when (h == c_INVALID_HANDLE_VALUE) $ do
         err <- c_GetLastError
         errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
                     (if err == c_ERROR_SHARING_VIOLATION
                         then "ERROR_SHARING_VIOLATION - Shake is probably already running."
                         else "Code " ++ show err ++ ", unknown reason for failure.")
-     else
-        act
 
 #else
 
-withLockFile cleanup file act = do
+usingLockFile cleanup file = do
     createDirectoryRecursive $ takeDirectory file
     tryIO $ writeFile file ""
 
-    runBracket b (openSimpleFd file ReadWrite) closeFd $ \fd -> do
-        let lock = (WriteLock, AbsoluteSeek, 0, 0)
-        res <- tryIO $ setLock fd lock
-        case res of
-            Right () -> act
-            Left e -> do
-                res <- getLock fd lock
-                errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
-                          (case res of
-                               Nothing -> ""
-                               Just (pid, _) -> "Shake process ID " ++ show pid ++ " is using this lock.\n") ++
-                          show e
+    fd <- bracketCleanup cleanup (openSimpleFd file ReadWrite) closeFd
+    let lock = (WriteLock, AbsoluteSeek, 0, 0)
+    setLock fd lock `catchIO` \e -> do
+        res <- getLock fd lock
+        errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++
+                    (case res of
+                        Nothing -> ""
+                        Just (pid, _) -> "Shake process ID " ++ show pid ++ " is using this lock.\n") ++
+                    show e
 
 #ifndef MIN_VERSION_unix
 #define MIN_VERSION_unix(a,b,c) 0
