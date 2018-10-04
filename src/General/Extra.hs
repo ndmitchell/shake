@@ -13,7 +13,7 @@ module General.Extra(
     fastAt,
     forkFinallyUnmasked,
     isAsyncException,
-    withLineBuffering,
+    usingLineBuffering,
     doesFileExist_,
     withNumCapabilities,
     removeFile_, createDirectoryRecursive,
@@ -30,6 +30,7 @@ import System.Environment.Extra
 import Development.Shake.FilePath
 import Control.DeepSeq
 import Numeric
+import General.Cleanup
 import Data.Typeable
 import System.IO.Extra
 import System.IO.Unsafe
@@ -146,14 +147,13 @@ randomElem xs = do
 ---------------------------------------------------------------------
 -- System.IO
 
-withLineBuffering :: Bracket -> IO a -> IO a
-withLineBuffering b act = do
-    -- instead of withBuffering avoid two finally handlers and stack depth
+usingLineBuffering :: Cleanup -> IO ()
+usingLineBuffering cleanup = do
     out <- hGetBuffering stdout
     err <- hGetBuffering stderr
-    if out == LineBuffering && err == LineBuffering then act else
-        runBracket_ b (return ()) (hSetBuffering stdout out >> hSetBuffering stderr err) $
-            hSetBuffering stdout LineBuffering >> hSetBuffering stderr LineBuffering >> act
+    when (out /= LineBuffering || err /= LineBuffering) $ do
+        addCleanup_ cleanup $ hSetBuffering stdout out >> hSetBuffering stderr err
+        hSetBuffering stdout LineBuffering >> hSetBuffering stderr LineBuffering
 
 
 ---------------------------------------------------------------------
