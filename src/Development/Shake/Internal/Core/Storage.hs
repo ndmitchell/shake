@@ -114,83 +114,81 @@ withStorage bracket ShakeOptions{..} diagnostic witness act = withLockFileDiagno
 
     addTiming "Database read"
     h <- usingChunks bracket dbfile shakeFlush
-    id $ do
+    let corrupt
+            | not shakeStorageLog = resetChunksCorrupt Nothing h
+            | otherwise = do
+                let file = dbfile <.> "corrupt"
+                resetChunksCorrupt (Just file) h
+                unexpected $ "Backup of corrupted file stored at " ++ file ++ "\n"
 
-        let corrupt
-                | not shakeStorageLog = resetChunksCorrupt Nothing h
-                | otherwise = do
-                    let file = dbfile <.> "corrupt"
-                    resetChunksCorrupt (Just file) h
-                    unexpected $ "Backup of corrupted file stored at " ++ file ++ "\n"
+    -- check the version information matches
+    let ver = BS.pack $ databaseVersion shakeVersion
+    oldVer <- readChunkMax h $ fromIntegral $ BS.length ver + 100000
+    let verEq = Right ver == oldVer
+    when (not shakeVersionIgnore && not verEq && oldVer /= Left BS.empty) $ do
+        outputErr $ messageDatabaseVersionChange dbfile (fromEither oldVer) ver
+        corrupt
 
-        -- check the version information matches
-        let ver = BS.pack $ databaseVersion shakeVersion
-        oldVer <- readChunkMax h $ fromIntegral $ BS.length ver + 100000
-        let verEq = Right ver == oldVer
-        when (not shakeVersionIgnore && not verEq && oldVer /= Left BS.empty) $ do
-            outputErr $ messageDatabaseVersionChange dbfile (fromEither oldVer) ver
+    (!witnessNew, !save) <- evaluate $ saveWitness witness
+    witnessOld <- readChunk h
+    ids <- case witnessOld of
+        Left _ -> do
+            resetChunksCorrupt Nothing h
+            return Nothing
+        Right witnessOld ->  handleBool (not . isAsyncException) (\err -> do
+            outputErr =<< messageCorrupt dbfile err
             corrupt
+            return Nothing) $ do
 
-        (!witnessNew, !save) <- evaluate $ saveWitness witness
-        witnessOld <- readChunk h
-        ids <- case witnessOld of
-            Left _ -> do
-                resetChunksCorrupt Nothing h
-                return Nothing
-            Right witnessOld ->  handleBool (not . isAsyncException) (\err -> do
-                outputErr =<< messageCorrupt dbfile err
-                corrupt
-                return Nothing) $ do
+            (!missing, !load) <- evaluate $ loadWitness witness witnessOld
+            when (missing /= []) $ outputErr $ messageMissingTypes dbfile missing
+            ids <- Ids.empty
+            let raw bs = "[len " ++ show (BS.length bs) ++ "] " ++ concat
+                            [['0' | length c == 1] ++ c | x <- BS8.unpack bs, let c = showHex x ""]
+            let go !i = do
+                    v <- readChunk h
+                    case v of
+                        Left e -> do
+                            let slop = fromIntegral $ BS.length e
+                            when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
+                            diagnostic $ return $ "Read " ++ show i ++ " chunks, plus " ++ show slop ++ " slop"
+                            return i
+                        Right bs | (id, Just (k,v)) <- load bs -> do
+                            evaluate $ rnf k
+                            evaluate $ rnf v
+                            Ids.insert ids id (k,v)
+                            diagnostic $ do
+                                let pretty (Left x) = "FAILURE: " ++ show x
+                                    pretty (Right x) = x
+                                x2 <- try_ $ evaluate $ let s = show v in rnf s `seq` s
+                                return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " " ++ show id ++ " = " ++ pretty x2
+                            go $ i+1
+                        Right bs -> do
+                            diagnostic $ return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " UNKNOWN WITNESS"
+                            go i
+            countItems <- go 0
+            countDistinct <- Ids.sizeUpperBound ids
+            diagnostic $ return $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
 
-                (!missing, !load) <- evaluate $ loadWitness witness witnessOld
-                when (missing /= []) $ outputErr $ messageMissingTypes dbfile missing
-                ids <- Ids.empty
-                let raw bs = "[len " ++ show (BS.length bs) ++ "] " ++ concat
-                             [['0' | length c == 1] ++ c | x <- BS8.unpack bs, let c = showHex x ""]
-                let go !i = do
-                        v <- readChunk h
-                        case v of
-                            Left e -> do
-                                let slop = fromIntegral $ BS.length e
-                                when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
-                                diagnostic $ return $ "Read " ++ show i ++ " chunks, plus " ++ show slop ++ " slop"
-                                return i
-                            Right bs | (id, Just (k,v)) <- load bs -> do
-                                evaluate $ rnf k
-                                evaluate $ rnf v
-                                Ids.insert ids id (k,v)
-                                diagnostic $ do
-                                    let pretty (Left x) = "FAILURE: " ++ show x
-                                        pretty (Right x) = x
-                                    x2 <- try_ $ evaluate $ let s = show v in rnf s `seq` s
-                                    return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " " ++ show id ++ " = " ++ pretty x2
-                                go $ i+1
-                            Right bs -> do
-                                diagnostic $ return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " UNKNOWN WITNESS"
-                                go i
-                countItems <- go 0
-                countDistinct <- Ids.sizeUpperBound ids
-                diagnostic $ return $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
+            when (countItems > countDistinct*2 || not verEq || witnessOld /= witnessNew) $ do
+                addTiming "Database compression"
+                resetChunksCompact h $ \out -> do
+                    out $ putEx ver
+                    out $ putEx witnessNew
+                    Ids.forWithKeyM_ ids $ \i (k,v) -> out $ save k i v
+            Just <$> Ids.for ids snd
 
-                when (countItems > countDistinct*2 || not verEq || witnessOld /= witnessNew) $ do
-                    addTiming "Database compression"
-                    resetChunksCompact h $ \out -> do
-                        out $ putEx ver
-                        out $ putEx witnessNew
-                        Ids.forWithKeyM_ ids $ \i (k,v) -> out $ save k i v
-                Just <$> Ids.for ids snd
+    ids <- case ids of
+        Just ids -> return ids
+        Nothing -> do
+            writeChunk h $ putEx ver
+            writeChunk h $ putEx witnessNew
+            Ids.empty
 
-        ids <- case ids of
-            Just ids -> return ids
-            Nothing -> do
-                writeChunk h $ putEx ver
-                writeChunk h $ putEx witnessNew
-                Ids.empty
-
-        addTiming "With database"
-        writeChunks h $ \out ->
-            act ids $ \k i v ->
-                out $ save k i v
+    addTiming "With database"
+    writeChunks h $ \out ->
+        act ids $ \k i v ->
+            out $ save k i v
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime
