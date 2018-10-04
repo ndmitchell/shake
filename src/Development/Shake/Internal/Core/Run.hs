@@ -85,7 +85,7 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     addCleanup_ cleanup $ do
         when (shakeTimings && shakeVerbosity >= Normal) printTimings
         resetTimings -- so we don't leak memory
-    withNumCapabilities (Bracket $ bracketCleanup cleanup) shakeThreads $ return ()
+    usingNumCapabilities cleanup shakeThreads
     diagnostic $ return "Starting run 3"
     withCleanup $ \cleanup -> do
         withDatabase (Bracket $ bracketCleanup cleanup) opts diagnostic ruleinfo $ \database step -> do

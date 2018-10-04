@@ -15,7 +15,7 @@ module General.Extra(
     isAsyncException,
     usingLineBuffering,
     doesFileExist_,
-    withNumCapabilities,
+    usingNumCapabilities,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
@@ -178,15 +178,12 @@ forkFinallyUnmasked act cleanup =
     mask_ $ forkIOWithUnmask $ \unmask ->
         try (unmask act) >>= cleanup
 
-withNumCapabilities :: Bracket -> Int -> IO a -> IO a
-withNumCapabilities b new act | not rtsSupportsBoundThreads = act
-withNumCapabilities b new act = do
+usingNumCapabilities :: Cleanup -> Int -> IO ()
+usingNumCapabilities cleanup new = when rtsSupportsBoundThreads $ do
     old <- getNumCapabilities
-    if old == new then
-        act
-     else
-        runBracket_ b (return ()) (setNumCapabilities old) $
-            setNumCapabilities new >> act
+    when (old /= new) $ do
+        addCleanup_ cleanup $ setNumCapabilities old
+        setNumCapabilities new
 
 
 ---------------------------------------------------------------------
