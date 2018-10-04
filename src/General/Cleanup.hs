@@ -3,7 +3,7 @@
 module General.Cleanup(
     Cleanup, withCleanup,
     addCleanup, addCleanup_,
-    bracketCleanup
+    bracketCleanup, bracketCleanup_
     ) where
 
 import Control.Exception
@@ -50,3 +50,6 @@ bracketCleanup cleanup acquire release act = do
         addCleanup_ cleanup $ release v
         return v
     act v
+
+bracketCleanup_ :: Cleanup -> IO a -> IO () -> IO b -> IO b
+bracketCleanup_ cleanup acquire release act = bracketCleanup cleanup acquire (const release) (const act)

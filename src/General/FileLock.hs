@@ -5,6 +5,7 @@ module General.FileLock(withLockFile) where
 import Control.Exception.Extra
 import System.FilePath
 import General.Extra
+import General.Cleanup
 #ifdef mingw32_HOST_OS
 import Data.Bits
 import Data.Functor
@@ -38,7 +39,7 @@ c_INVALID_HANDLE_VALUE = intPtrToPtr (-1)
 c_ERROR_SHARING_VIOLATION = 32
 #endif
 
-withLockFile :: Bracket -> FilePath -> IO a -> IO a
+withLockFile :: Cleanup -> FilePath -> IO a -> IO a
 
 #ifdef mingw32_HOST_OS
 
@@ -46,7 +47,7 @@ withLockFile b file act = do
     createDirectoryRecursive $ takeDirectory file
     let open = withCWString file $ \cfile ->
             c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
-    runBracket b open (void . c_CloseHandle) $ \h ->
+    bracketCleanup b open (void . c_CloseHandle) $ \h ->
         if h == c_INVALID_HANDLE_VALUE then do
             err <- c_GetLastError
             errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++

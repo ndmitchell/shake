@@ -19,6 +19,7 @@ import Data.Word
 import Data.Monoid
 import General.Binary
 import General.Extra
+import General.Cleanup
 import Prelude
 
 
@@ -114,10 +115,10 @@ restoreChunksBackup file = do
         return True
 
 
-withChunks :: Bracket -> FilePath -> Maybe Seconds -> (Chunks -> IO a) -> IO a
+withChunks :: Cleanup -> FilePath -> Maybe Seconds -> (Chunks -> IO a) -> IO a
 withChunks bracket file flush act = do
     h <- newEmptyMVar
-    runBracket_ bracket
+    bracketCleanup_ bracket
         (putMVar h =<< openFile file ReadWriteMode)
         (hClose =<< takeMVar h) $
         act $ Chunks file flush h

@@ -88,7 +88,7 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     usingNumCapabilities cleanup shakeThreads
     diagnostic $ return "Starting run 3"
     withCleanup $ \cleanup ->
-        withDatabase (Bracket $ bracketCleanup cleanup) opts diagnostic ruleinfo $ \database step -> do
+        withDatabase cleanup opts diagnostic ruleinfo $ \database step -> do
             wait <- newBarrier
             let getProgress = do
                     failure <- fmap fst <$> readIORef except
@@ -205,7 +205,7 @@ checkValid diagnostic Database{..} check missing = do
 ---------------------------------------------------------------------
 -- STORAGE
 
-withDatabase :: Bracket -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
+withDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
 withDatabase bracket opts diagnostic owitness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList

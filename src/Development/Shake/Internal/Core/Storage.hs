@@ -11,6 +11,7 @@ module Development.Shake.Internal.Core.Storage(
     ) where
 
 import General.Chunks
+import General.Cleanup
 import General.Binary
 import General.Intern
 import Development.Shake.Internal.Options
@@ -91,7 +92,7 @@ messageMissingTypes dbfile types =
 --   rewritten.
 withStorage
     :: (Show k, Eq k, Hashable k, NFData k, Show v, NFData v)
-    => Bracket
+    => Cleanup
     -> ShakeOptions                                    -- ^ Storage options
     -> (IO String -> IO ())                            -- ^ Logging function
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
@@ -252,7 +253,7 @@ saveWitness mp
                 in \(Id w) v -> tag <> putEx w <> putOp v
 
 
-withLockFileDiagnostic :: Bracket -> (IO String -> IO ()) -> FilePath -> IO a -> IO a
+withLockFileDiagnostic :: Cleanup -> (IO String -> IO ()) -> FilePath -> IO a -> IO a
 withLockFileDiagnostic bracket diagnostic file act = do
     diagnostic $ return $ "Before withLockFile on " ++ file
     res <- withLockFile bracket file $ do

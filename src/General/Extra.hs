@@ -8,7 +8,6 @@ module General.Extra(
     randomElem,
     wrapQuote, showBracket,
     withs,
-    Bracket(..), runBracket_,
     maximum', maximumBy',
     fastAt,
     forkFinallyUnmasked,
@@ -162,11 +161,6 @@ usingLineBuffering cleanup = do
 withs :: [(a -> r) -> r] -> ([a] -> r) -> r
 withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
-
-newtype Bracket = Bracket {runBracket :: forall a b. IO a -> (a -> IO ()) -> (a -> IO b) -> IO b}
-
-runBracket_ :: Bracket -> IO a -> IO () -> IO b -> IO b
-runBracket_ b x y z = runBracket b x (const y) (const z)
 
 
 ---------------------------------------------------------------------
