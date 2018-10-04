@@ -1,7 +1,9 @@
 
 -- | Code for ensuring cleanup actions are run.
 module General.Cleanup(
-    Cleanup, withCleanup, addCleanup, addCleanup_
+    Cleanup, withCleanup,
+    addCleanup, addCleanup_,
+    bracketCleanup
     ) where
 
 import Control.Exception
@@ -40,3 +42,9 @@ addCleanup_ :: Cleanup -> IO () -> IO ()
 -- we could avoid inserting into the Map, but we need to store the pairs anyway
 -- to unregister them in order, so might as well keep it simple
 addCleanup_ c act = void $ addCleanup c act
+
+bracketCleanup :: Cleanup -> IO a -> (a -> IO ()) -> IO a
+bracketCleanup cleanup acquire release = mask_ $ do
+    v <- acquire
+    addCleanup_ cleanup $ release v
+    return v
