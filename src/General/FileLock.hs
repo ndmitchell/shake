@@ -59,7 +59,7 @@ withLockFile b file act = do
 
 #else
 
-withLockFile bracket file act = do
+withLockFile cleanup file act = do
     createDirectoryRecursive $ takeDirectory file
     tryIO $ writeFile file ""
 

@@ -98,12 +98,12 @@ withStorage
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
     -> (Ids.Ids v -> (k -> Id -> v -> IO ()) -> IO a)  -- ^ Execute
     -> IO a
-withStorage bracket ShakeOptions{..} diagnostic witness act | shakeFiles == "/dev/null" = do
+withStorage cleanup ShakeOptions{..} diagnostic witness act | shakeFiles == "/dev/null" = do
     diagnostic $ return "Using in-memory database"
     ids <- Ids.empty
     act ids $ \_ _ _ -> return ()
 
-withStorage bracket ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic bracket diagnostic (shakeFiles </> ".shake.lock") $ do
+withStorage cleanup ShakeOptions{..} diagnostic witness act = withLockFileDiagnostic cleanup diagnostic (shakeFiles </> ".shake.lock") $ do
     let dbfile = shakeFiles </> ".shake.database"
     createDirectoryRecursive shakeFiles
 
@@ -113,7 +113,7 @@ withStorage bracket ShakeOptions{..} diagnostic witness act = withLockFileDiagno
         diagnostic $ return "Backup file move to original"
 
     addTiming "Database read"
-    h <- usingChunks bracket dbfile shakeFlush
+    h <- usingChunks cleanup dbfile shakeFlush
     let corrupt
             | not shakeStorageLog = resetChunksCorrupt Nothing h
             | otherwise = do
@@ -253,9 +253,9 @@ saveWitness mp
 
 
 withLockFileDiagnostic :: Cleanup -> (IO String -> IO ()) -> FilePath -> IO a -> IO a
-withLockFileDiagnostic bracket diagnostic file act = do
+withLockFileDiagnostic cleanup diagnostic file act = do
     diagnostic $ return $ "Before withLockFile on " ++ file
-    res <- withLockFile bracket file $ do
+    res <- withLockFile cleanup file $ do
         diagnostic $ return "Inside withLockFile"
         act
     diagnostic $ return "After withLockFile"

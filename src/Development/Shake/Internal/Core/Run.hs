@@ -206,12 +206,12 @@ checkValid diagnostic Database{..} check missing = do
 -- STORAGE
 
 withDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> (Database -> Step -> IO a) -> IO a
-withDatabase bracket opts diagnostic owitness act = do
+withDatabase cleanup opts diagnostic owitness act = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     witness <- return $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
-    withStorage bracket opts diagnostic witness $ \status journal -> do
+    withStorage cleanup opts diagnostic witness $ \status journal -> do
         journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
         xs <- Ids.toList status
