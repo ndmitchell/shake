@@ -212,26 +212,25 @@ withDatabase cleanup opts diagnostic owitness act = do
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
-    id $ do
-        journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
+    journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
-        xs <- Ids.toList status
-        let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+    xs <- Ids.toList status
+    let mp1 = Intern.fromList [(k, i) | (i, (k,_)) <- xs]
 
-        (mp1, stepId) <- case Intern.lookup stepKey mp1 of
-            Just stepId -> return (mp1, stepId)
-            Nothing -> do
-                (mp1, stepId) <- return $ Intern.add stepKey mp1
-                return (mp1, stepId)
+    (mp1, stepId) <- case Intern.lookup stepKey mp1 of
+        Just stepId -> return (mp1, stepId)
+        Nothing -> do
+            (mp1, stepId) <- return $ Intern.add stepKey mp1
+            return (mp1, stepId)
 
-        intern <- newIORef mp1
-        step <- do
-            v <- Ids.lookup status stepId
-            return $ case v of
-                Just (_, Loaded r) -> incStep $ fromStepResult r
-                _ -> Step 1
-        journal stepId stepKey $ toStepResult step
-        act Database{..} step
+    intern <- newIORef mp1
+    step <- do
+        v <- Ids.lookup status stepId
+        return $ case v of
+            Just (_, Loaded r) -> incStep $ fromStepResult r
+            _ -> Step 1
+    journal stepId stepKey $ toStepResult step
+    act Database{..} step
 
 
 loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
