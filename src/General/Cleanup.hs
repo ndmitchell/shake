@@ -11,7 +11,10 @@ import Data.IORef.Extra
 import Data.List.Extra
 
 
-data S = S {unique :: {-# UNPACK #-} !Int, items :: !(Map.HashMap Int (IO ()))}
+data S = S
+    {unique :: {-# UNPACK #-} !Int -- next index to be used to items
+    ,items :: !(Map.HashMap Int (IO ()))
+    }
 
 newtype Cleanup = Cleanup (IORef S)
 
