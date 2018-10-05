@@ -52,21 +52,19 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts rs =
-    withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -> do
+run opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
+    diagnostic $ return "Starting run"
+    (actions, ruleinfo, userRules) <- runRules opts rs
+    checkShakeExtra shakeExtra
+    curdir <- getCurrentDirectory
 
-        diagnostic $ return "Starting run"
-        (actions, ruleinfo, userRules) <- runRules opts rs
-        checkShakeExtra shakeExtra
-        curdir <- getCurrentDirectory
+    after <- withCleanup $ \cleanup -> do
+        databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
+        shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
+        actualRun opts ruleinfo userRules databaseVar curdir output diagnostic shared_cloud actions
 
-        after <- withCleanup $ \cleanup -> do
-            databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
-            shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
-            actualRun opts ruleinfo userRules databaseVar curdir output diagnostic shared_cloud actions
-
-        -- make sure we clean up the database _before_ we run the after actions
-        completeAfter opts Nothing after
+    -- make sure we clean up the database _before_ we run the after actions
+    completeAfter opts after
 
 
 actualRun opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions =
@@ -130,9 +128,9 @@ actualRun opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output dia
         readIORef after
 
 
-completeAfter :: ShakeOptions -> Maybe Lock -> [IO ()] -> IO ()
-completeAfter opts lock [] = return ()
-completeAfter opts lock after = withInit opts lock $ \ShakeOptions{..} diagnostic output -> do
+completeAfter :: ShakeOptions -> [IO ()] -> IO ()
+completeAfter opts [] = return ()
+completeAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
     let n = show $ length after
     diagnostic $ return $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after
@@ -140,11 +138,11 @@ completeAfter opts lock after = withInit opts lock $ \ShakeOptions{..} diagnosti
         putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
 
 
-withInit :: ShakeOptions -> Maybe Lock -> (ShakeOptions -> (IO String -> IO ()) -> (Verbosity -> String -> IO ()) -> IO a) -> IO a
-withInit opts lock act =
+withInit :: ShakeOptions -> (ShakeOptions -> (IO String -> IO ()) -> (Verbosity -> String -> IO ()) -> IO a) -> IO a
+withInit opts act =
     withCleanup $ \cleanup -> do
         opts@ShakeOptions{..} <- usingShakeOptions cleanup opts
-        (diagnostic, output) <- outputFunctions opts <$> maybe newLock return lock
+        (diagnostic, output) <- outputFunctions opts <$> newLock
         act opts diagnostic output
 
 
