@@ -59,6 +59,7 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
     (actions, ruleinfo, userRules) <- runRules opts rs
 
     except <- newIORef (Nothing :: Maybe (String, ShakeException))
+    let getFailure = fmap fst <$> readIORef except
     let raiseError err
             | not shakeStaunch = throwIO err
             | otherwise = do
@@ -79,16 +80,7 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
             resetTimings -- so we don't leak memory
         database <- usingDatabase cleanup opts diagnostic ruleinfo
         step <- incrementStep database
-        wait <- newBarrier
-        let getProgress = do
-                failure <- fmap fst <$> readIORef except
-                stats <- progress database step
-                return stats{isFailure=failure}
-        tid <- flip forkFinally (const $ signalBarrier wait ()) $
-            shakeProgress getProgress
-        addCleanup_ cleanup $ do
-            killThread tid
-            void $ timeout 1 $ waitBarrier wait
+        getProgress <- usingProgress cleanup opts database step getFailure
         databaseVar <- newVar database
         (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
 
@@ -163,6 +155,21 @@ outputFunctions opts@ShakeOptions{..} outputLock = (diagnostic, output)
                    | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
         output v = outputLocked v . shakeAbbreviationsApply opts
 
+
+usingProgress :: Cleanup -> ShakeOptions -> Database -> Step -> IO (Maybe String) -> IO (IO Progress)
+usingProgress cleanup ShakeOptions{..} database step getFailure = do
+    wait <- newBarrier
+    let getProgress = do
+            failure <- getFailure
+            stats <- progress database step
+            return stats{isFailure=failure}
+    allocateCleanup cleanup
+        (flip forkFinally (const $ signalBarrier wait ()) $
+            shakeProgress getProgress)
+        (\tid -> do
+            killThread tid
+            void $ timeout 1 $ waitBarrier wait)
+    return getProgress
 
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
 checkShakeExtra mp = do
