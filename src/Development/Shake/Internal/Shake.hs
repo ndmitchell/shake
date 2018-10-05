@@ -27,4 +27,3 @@ shake opts r = do
         defaultRuleFiles
         defaultRuleDirectory
         defaultRuleRerun
-    return ()
