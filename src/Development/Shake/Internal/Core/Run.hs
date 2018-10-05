@@ -58,15 +58,6 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
     start <- offsetTime
     (actions, ruleinfo, userRules) <- runRules opts rs
 
-    except <- newIORef (Nothing :: Maybe (String, ShakeException))
-    let getFailure = fmap fst <$> readIORef except
-    let raiseError err
-            | not shakeStaunch = throwIO err
-            | otherwise = do
-                let named = shakeAbbreviationsApply opts . shakeExceptionTarget
-                atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
-                -- no need to print exceptions here, they get printed when they are wrapped
-
     curdir <- getCurrentDirectory
     diagnostic $ return "Starting run 2"
     checkShakeExtra shakeExtra
@@ -78,6 +69,16 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
+
+        except <- newIORef (Nothing :: Maybe (String, ShakeException))
+        let getFailure = fmap fst <$> readIORef except
+        let raiseError err
+                | not shakeStaunch = throwIO err
+                | otherwise = do
+                    let named = shakeAbbreviationsApply opts . shakeExceptionTarget
+                    atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
+                    -- no need to print exceptions here, they get printed when they are wrapped
+
         database <- usingDatabase cleanup opts diagnostic ruleinfo
         step <- incrementStep database
         getProgress <- usingProgress cleanup opts database step getFailure
