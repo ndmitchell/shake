@@ -57,12 +57,9 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
     diagnostic $ return "Starting run"
     start <- offsetTime
     (actions, ruleinfo, userRules) <- runRules opts rs
-
-    curdir <- getCurrentDirectory
-    diagnostic $ return "Starting run 2"
     checkShakeExtra shakeExtra
+    curdir <- getCurrentDirectory
 
-    diagnostic $ return "Starting run 3"
     after <- withCleanup $ \cleanup -> do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
@@ -78,14 +75,16 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
                     -- no need to print exceptions here, they get printed when they are wrapped
 
         database <- usingDatabase cleanup opts diagnostic ruleinfo
-        step <- incrementStep database
-        getProgress <- usingProgress cleanup opts database step getFailure
         databaseVar <- newVar database
         (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
 
 
         after <- newIORef []
         absent <- newIORef []
+        step <- incrementStep database
+        getProgress <- usingProgress cleanup opts database step getFailure
+        lintCurrentDirectory curdir "When running"
+
         addTiming "Running rules"
         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
             let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
