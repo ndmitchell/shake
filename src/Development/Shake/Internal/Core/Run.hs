@@ -74,11 +74,11 @@ run opts rs = withCleanup $ \cleanup -> do
 
     after <- newIORef []
     absent <- newIORef []
-    addCleanup_ cleanup $ do
-        when (shakeTimings && shakeVerbosity >= Normal) printTimings
-        resetTimings -- so we don't leak memory
     diagnostic $ return "Starting run 3"
     withCleanup $ \cleanup -> do
+        addCleanup_ cleanup $ do
+            when (shakeTimings && shakeVerbosity >= Normal) printTimings
+            resetTimings -- so we don't leak memory
         database <- usingDatabase cleanup opts diagnostic ruleinfo
         step <- incrementStep database
         wait <- newBarrier
