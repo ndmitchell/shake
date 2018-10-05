@@ -55,9 +55,7 @@ run :: ShakeOptions -> Rules () -> IO ()
 run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     when shakeLineBuffering $ usingLineBuffering cleanup
     opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
-
-    start <- offsetTime
-    (actions, ruleinfo, userRules) <- runRules opts rs
+    usingNumCapabilities cleanup shakeThreads
 
     outputLocked <- do
         lock <- newLock
@@ -66,7 +64,10 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     let diagnostic | shakeVerbosity < Diagnostic = const $ return ()
                    | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
     let output v = outputLocked v . shakeAbbreviationsApply opts
+
     diagnostic $ return "Starting run"
+    start <- offsetTime
+    (actions, ruleinfo, userRules) <- runRules opts rs
 
     except <- newIORef (Nothing :: Maybe (String, ShakeException))
     let raiseError err
@@ -85,7 +86,6 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     addCleanup_ cleanup $ do
         when (shakeTimings && shakeVerbosity >= Normal) printTimings
         resetTimings -- so we don't leak memory
-    usingNumCapabilities cleanup shakeThreads
     diagnostic $ return "Starting run 3"
     withCleanup $ \cleanup -> do
         database <- usingDatabase cleanup opts diagnostic ruleinfo
