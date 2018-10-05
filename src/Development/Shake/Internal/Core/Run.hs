@@ -64,19 +64,24 @@ data RunState = RunState
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
+run opts rs = do
+    after <- withCleanup $ \cleanup -> do
+        state <- open cleanup opts rs
+        actualRun state
+    -- make sure we clean up the database _before_ we run the after actions
+    completeAfter opts after
+
+
+open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
+open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
     diagnostic $ return "Starting run"
     (actions, ruleinfo, userRules) <- runRules opts rs
     checkShakeExtra shakeExtra
     curdir <- getCurrentDirectory
 
-    after <- withCleanup $ \cleanup -> do
-        databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
-        (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
-        actualRun RunState{..}
-
-    -- make sure we clean up the database _before_ we run the after actions
-    completeAfter opts after
+    databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
+    (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
+    return RunState{..}
 
 
 actualRun :: RunState -> IO [IO ()]
