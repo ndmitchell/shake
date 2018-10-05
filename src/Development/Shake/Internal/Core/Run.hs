@@ -62,10 +62,8 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
     diagnostic $ return "Starting run 2"
     checkShakeExtra shakeExtra
 
-    after <- newIORef []
-    absent <- newIORef []
     diagnostic $ return "Starting run 3"
-    withCleanup $ \cleanup -> do
+    after <- withCleanup $ \cleanup -> do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
@@ -85,6 +83,9 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
         databaseVar <- newVar database
         (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
 
+
+        after <- newIORef []
+        absent <- newIORef []
         addTiming "Running rules"
         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
             let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
@@ -120,8 +121,9 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
                 putWhen Normal $ "Writing live list to " ++ file
                 (if file == "-" then putStr else writeFile file) $ unlines xs
 
+        readIORef after
+
     -- make sure we clean up the database _before_ we run the after actions
-    after <- readIORef after
     unless (null after) $ do
         let n = show $ length after
         diagnostic $ return $ "Running " ++ n ++ " after actions"
