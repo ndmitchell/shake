@@ -7,10 +7,7 @@ import General.Timing
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Rules
 
-import Development.Shake.Internal.Rules.Directory
-import Development.Shake.Internal.Rules.File
-import Development.Shake.Internal.Rules.Files
-import Development.Shake.Internal.Rules.Rerun
+import Development.Shake.Internal.Rules.Default
 
 
 -- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".
@@ -23,7 +20,4 @@ shake opts r = do
     addTiming "Function shake"
     run opts $ do
         r
-        defaultRuleFile
-        defaultRuleFiles
-        defaultRuleDirectory
-        defaultRuleRerun
+        defaultRules
