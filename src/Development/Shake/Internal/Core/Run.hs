@@ -60,20 +60,20 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
     curdir <- getCurrentDirectory
 
     after <- withCleanup $ \cleanup -> do
-        addCleanup_ cleanup $ do
-            when (shakeTimings && shakeVerbosity >= Normal) printTimings
-            resetTimings -- so we don't leak memory
-
-        database <- usingDatabase cleanup opts diagnostic ruleinfo
-        databaseVar <- newVar database
-        (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
-        actualRun cleanup opts ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions
+        databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
+        shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
+        actualRun opts ruleinfo userRules databaseVar curdir output diagnostic shared_cloud actions
 
     -- make sure we clean up the database _before_ we run the after actions
     completeAfter opts Nothing after
 
 
-actualRun cleanup opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions = do
+actualRun opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions =
+    withCleanup $ \cleanup -> do
+        addCleanup_ cleanup $ do
+            when (shakeTimings && shakeVerbosity >= Normal) printTimings
+            resetTimings -- so we don't leak memory
+
         start <- offsetTime
         database <- readVar databaseVar
         except <- newIORef (Nothing :: Maybe (String, ShakeException))
