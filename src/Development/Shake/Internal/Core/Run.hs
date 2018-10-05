@@ -125,12 +125,12 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
         let n = show $ length after
         diagnostic $ return $ "Running " ++ n ++ " after actions"
         (time, _) <- duration $ sequence_ $ reverse after
-        when (shakeTimings && shakeVerbosity >= Normal) $ do
+        when (shakeTimings && shakeVerbosity >= Normal) $
             putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
 
 
 withInit :: ShakeOptions -> Maybe Lock -> (ShakeOptions -> (IO String -> IO ()) -> (Verbosity -> String -> IO ()) -> IO a) -> IO a
-withInit opts lock act = do
+withInit opts lock act =
     withCleanup $ \cleanup -> do
         opts@ShakeOptions{..} <- usingShakeOptions cleanup opts
         (diagnostic, output) <- outputFunctions opts <$> maybe newLock return lock
