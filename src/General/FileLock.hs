@@ -47,7 +47,7 @@ usingLockFile b file = do
     createDirectoryRecursive $ takeDirectory file
     let open = withCWString file $ \cfile ->
             c_CreateFileW cfile (c_GENERIC_READ .|. c_GENERIC_WRITE) c_FILE_SHARE_NONE nullPtr c_OPEN_ALWAYS c_FILE_ATTRIBUTE_NORMAL nullPtr
-    h <- bracketCleanup b open (void . c_CloseHandle)
+    h <- allocateCleanup b open (void . c_CloseHandle)
     when (h == c_INVALID_HANDLE_VALUE) $ do
         err <- c_GetLastError
         errorIO $ "Shake failed to acquire a file lock on " ++ file ++ "\n" ++

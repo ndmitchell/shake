@@ -71,13 +71,13 @@ usingWriteChunks :: Cleanup -> Chunks -> IO (Builder -> IO ())
 -- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
 -- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
 usingWriteChunks cleanup Chunks{..} = do
-    h <- bracketCleanup cleanup (takeMVar chunksHandle)  (putMVar chunksHandle)
+    h <- allocateCleanup cleanup (takeMVar chunksHandle)  (putMVar chunksHandle)
     chan <- newChan -- operations to perform on the file
     kick <- newEmptyMVar -- kicked whenever something is written
     died <- newBarrier -- has the writing thread finished
 
     whenJust chunksFlush $ \flush ->
-        void $ bracketCleanup cleanup
+        void $ allocateCleanup cleanup
             (forkIO $ forever $ do
                 takeMVar kick
                 sleep flush
@@ -86,7 +86,7 @@ usingWriteChunks cleanup Chunks{..} = do
             killThread
 
     root <- myThreadId
-    bracketCleanup cleanup
+    allocateCleanup cleanup
         (flip forkFinally (\e -> do signalBarrier died (); whenLeft e (throwTo root)) $
             -- only one thread ever writes, ensuring only the final write can be torn
             whileM $ join $ readChan chan)
@@ -119,7 +119,7 @@ restoreChunksBackup file = do
 usingChunks :: Cleanup -> FilePath -> Maybe Seconds -> IO Chunks
 usingChunks cleanup file flush = do
     h <- newEmptyMVar
-    bracketCleanup cleanup
+    allocateCleanup cleanup
         (putMVar h =<< openFile file ReadWriteMode)
         (const $ hClose =<< takeMVar h)
     return $ Chunks file flush h

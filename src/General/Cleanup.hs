@@ -3,7 +3,7 @@
 module General.Cleanup(
     Cleanup, withCleanup,
     addCleanup, addCleanup_,
-    bracketCleanup
+    allocateCleanup
     ) where
 
 import Control.Exception
@@ -43,8 +43,8 @@ addCleanup_ :: Cleanup -> IO () -> IO ()
 -- to unregister them in order, so might as well keep it simple
 addCleanup_ c act = void $ addCleanup c act
 
-bracketCleanup :: Cleanup -> IO a -> (a -> IO ()) -> IO a
-bracketCleanup cleanup acquire release =
+allocateCleanup :: Cleanup -> IO a -> (a -> IO ()) -> IO a
+allocateCleanup cleanup acquire release =
     mask_ $ do
         v <- acquire
         addCleanup_ cleanup $ release v
