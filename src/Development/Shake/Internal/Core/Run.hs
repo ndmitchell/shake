@@ -52,20 +52,21 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -> do
+run opts rs =
+    withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -> do
 
-    diagnostic $ return "Starting run"
-    (actions, ruleinfo, userRules) <- runRules opts rs
-    checkShakeExtra shakeExtra
-    curdir <- getCurrentDirectory
+        diagnostic $ return "Starting run"
+        (actions, ruleinfo, userRules) <- runRules opts rs
+        checkShakeExtra shakeExtra
+        curdir <- getCurrentDirectory
 
-    after <- withCleanup $ \cleanup -> do
-        databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
-        shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
-        actualRun opts ruleinfo userRules databaseVar curdir output diagnostic shared_cloud actions
+        after <- withCleanup $ \cleanup -> do
+            databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
+            shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
+            actualRun opts ruleinfo userRules databaseVar curdir output diagnostic shared_cloud actions
 
-    -- make sure we clean up the database _before_ we run the after actions
-    completeAfter opts Nothing after
+        -- make sure we clean up the database _before_ we run the after actions
+        completeAfter opts Nothing after
 
 
 actualRun opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions =
