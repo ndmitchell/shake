@@ -51,6 +51,17 @@ import Prelude
 ---------------------------------------------------------------------
 -- MAKE
 
+data RunState = RunState
+    {opts :: ShakeOptions
+    ,ruleinfo :: Map.HashMap TypeRep BuiltinRule
+    ,userRules :: TMap.Map UserRuleVersioned
+    ,databaseVar :: Var Database
+    ,curdir :: FilePath
+    ,shared :: Maybe Shared
+    ,cloud :: Maybe Cloud
+    ,actions :: [(Stack, Action ())]
+    }
+
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
 run opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
@@ -61,15 +72,15 @@ run opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
 
     after <- withCleanup $ \cleanup -> do
         databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
-        shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
-        actualRun opts ruleinfo userRules databaseVar curdir shared_cloud actions
+        (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
+        actualRun RunState{..}
 
     -- make sure we clean up the database _before_ we run the after actions
     completeAfter opts after
 
 
-actualRun :: ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> TMap.Map UserRuleVersioned -> Var Database -> FilePath -> (Maybe Shared, Maybe Cloud) -> [(Stack, Action ())] -> IO [IO ()]
-actualRun opts ruleinfo userRules databaseVar curdir (shared, cloud) actions =
+actualRun :: RunState -> IO [IO ()]
+actualRun RunState{..} =
     withCleanup $ \cleanup -> withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
