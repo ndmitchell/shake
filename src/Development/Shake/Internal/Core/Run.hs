@@ -134,6 +134,7 @@ run opts rs = withCleanup $ \cleanup -> do
     -- make sure we clean up the database _before_ we run the after actions
     after <- readIORef after
     unless (null after) $ do
+        diagnostic $ return $ "Running " ++ show (length after) ++ " after actions"
         addTiming "Running runAfter"
         sequence_ $ reverse after
 
