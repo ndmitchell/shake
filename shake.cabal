@@ -122,6 +122,7 @@ library
         Development.Shake.Classes
         Development.Shake.Command
         Development.Shake.Config
+        Development.Shake.Database
         Development.Shake.FilePath
         Development.Shake.Forward
         Development.Shake.Rule
@@ -244,6 +245,7 @@ executable shake
         Development.Shake
         Development.Shake.Classes
         Development.Shake.Command
+        Development.Shake.Database
         Development.Shake.FilePath
         Development.Shake.Internal.Args
         Development.Shake.Internal.CmdOption
@@ -364,6 +366,7 @@ test-suite shake-test
         Development.Shake.Classes
         Development.Shake.Command
         Development.Shake.Config
+        Development.Shake.Database
         Development.Shake.FilePath
         Development.Shake.Forward
         Development.Shake.Internal.Args

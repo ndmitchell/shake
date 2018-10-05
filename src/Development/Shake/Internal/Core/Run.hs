@@ -1,9 +1,13 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds, TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(
-    run
+    RunState,
+    open,
+    run,
+    shakeRunAfters,
+    liveFilesState
     ) where
 
 import Control.Exception
@@ -62,15 +66,6 @@ data RunState = RunState
     ,actions :: [(Stack, Action ())]
     }
 
--- | Internal main function (not exported publicly)
-run :: ShakeOptions -> Rules () -> IO ()
-run opts rs = do
-    after <- withCleanup $ \cleanup -> do
-        state <- open cleanup opts rs
-        actualRun state
-    -- make sure we clean up the database _before_ we run the after actions
-    completeAfter opts after
-
 
 open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
 open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
@@ -84,8 +79,8 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output 
     return RunState{..}
 
 
-actualRun :: RunState -> IO [IO ()]
-actualRun RunState{..} =
+run :: RunState -> [Action ()] -> IO [IO ()]
+run RunState{..} actions2 =
     withCleanup $ \cleanup -> withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
@@ -112,7 +107,7 @@ actualRun RunState{..} =
         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
             let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
             -- give each action a stack to start with!
-            forM_ actions $ \(stack, act) -> do
+            forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                 let local = newLocal stack shakeVerbosity
                 addPool PoolStart pool $ runAction global local act $ \x -> case x of
                     Left e -> raiseError =<< shakeException global stack e
@@ -146,9 +141,9 @@ actualRun RunState{..} =
         readIORef after
 
 
-completeAfter :: ShakeOptions -> [IO ()] -> IO ()
-completeAfter opts [] = return ()
-completeAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
+shakeRunAfters :: ShakeOptions -> [IO ()] -> IO ()
+shakeRunAfters opts [] = return ()
+shakeRunAfters opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
     let n = show $ length after
     diagnostic $ return $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after
@@ -220,6 +215,11 @@ assertFinishedDatabase Database{..} = do
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
 
+
+liveFilesState :: RunState -> IO [FilePath]
+liveFilesState RunState{..} = do
+    database <- readVar databaseVar
+    liveFiles database
 
 liveFiles :: Database -> IO [FilePath]
 liveFiles database = do

@@ -10,12 +10,11 @@ module Development.Shake.Internal.Args(
 import Development.Shake.Internal.Paths
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
-import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Demo
 import Development.Shake.FilePath
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
-import Development.Shake.Internal.Rules.Default
+import Development.Shake.Database
 import General.Timing
 import General.GetOpt
 
@@ -41,11 +40,11 @@ import Prelude
 --
 --   To use command line flags to modify 'ShakeOptions' see 'shakeArgs'.
 shake :: ShakeOptions -> Rules () -> IO ()
-shake opts r = do
+shake opts rules = do
     addTiming "Function shake"
-    run opts $ do
-        r
-        defaultRules
+    (_, after) <- shakeWithDatabase opts rules $ \db ->
+        shakeRunDatabase db []
+    shakeRunAfters opts after
 
 
 -- | Run a build system using command line arguments for configuration.
