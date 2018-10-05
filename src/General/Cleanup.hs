@@ -1,7 +1,7 @@
 
 -- | Code for ensuring cleanup actions are run.
 module General.Cleanup(
-    Cleanup, withCleanup,
+    Cleanup, newCleanup, withCleanup,
     addCleanup, addCleanup_,
     allocateCleanup
     ) where
@@ -25,10 +25,16 @@ newtype Cleanup = Cleanup (IORef S)
 --   will be run by the time it exits. The 'addCleanup' actions will be run in reverse order.
 withCleanup :: (Cleanup -> IO a) -> IO a
 withCleanup act = do
+    (c, clean) <- newCleanup
+    act c `finally` clean
+
+newCleanup :: IO (Cleanup, IO ())
+newCleanup = do
     ref <- newIORef $ S 0 Map.empty
-    act (Cleanup ref) `finally` do
-        items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
-        mapM_ snd $ sortOn (negate . fst) $ Map.toList items
+    let clean = do
+            items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
+            mapM_ snd $ sortOn (negate . fst) $ Map.toList items
+    return (Cleanup ref, clean)
 
 -- | Add a cleanup action to a 'Cleanup' scope, returning a way to remove (but not perform) that action.
 --   If not removed by the time 'withCleanup' terminates then the cleanup action will be run then.
