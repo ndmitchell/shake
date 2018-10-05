@@ -16,6 +16,7 @@ import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
+import qualified General.TypeMap as TMap
 import General.Wait
 import Control.Monad.Extra
 import Data.Typeable.Extra
@@ -61,14 +62,15 @@ run opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
     after <- withCleanup $ \cleanup -> do
         databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
         shared_cloud <- loadSharedCloud databaseVar opts ruleinfo
-        actualRun opts ruleinfo userRules databaseVar curdir output diagnostic shared_cloud actions
+        actualRun opts ruleinfo userRules databaseVar curdir shared_cloud actions
 
     -- make sure we clean up the database _before_ we run the after actions
     completeAfter opts after
 
 
-actualRun opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions =
-    withCleanup $ \cleanup -> do
+actualRun :: ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> TMap.Map UserRuleVersioned -> Var Database -> FilePath -> (Maybe Shared, Maybe Cloud) -> [(Stack, Action ())] -> IO [IO ()]
+actualRun opts ruleinfo userRules databaseVar curdir (shared, cloud) actions =
+    withCleanup $ \cleanup -> withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
