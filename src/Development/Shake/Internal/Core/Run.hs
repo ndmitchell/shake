@@ -123,12 +123,17 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
         readIORef after
 
     -- make sure we clean up the database _before_ we run the after actions
-    unless (null after) $ do
-        let n = show $ length after
-        diagnostic $ return $ "Running " ++ n ++ " after actions"
-        (time, _) <- duration $ sequence_ $ reverse after
-        when (shakeTimings && shakeVerbosity >= Normal) $
-            putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
+    completeAfter opts Nothing after
+
+
+completeAfter :: ShakeOptions -> Maybe Lock -> [IO ()] -> IO ()
+completeAfter opts lock [] = return ()
+completeAfter opts lock after = withInit opts lock $ \ShakeOptions{..} diagnostic output -> do
+    let n = show $ length after
+    diagnostic $ return $ "Running " ++ n ++ " after actions"
+    (time, _) <- duration $ sequence_ $ reverse after
+    when (shakeTimings && shakeVerbosity >= Normal) $
+        putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
 
 
 withInit :: ShakeOptions -> Maybe Lock -> (ShakeOptions -> (IO String -> IO ()) -> (Verbosity -> String -> IO ()) -> IO a) -> IO a
