@@ -52,18 +52,8 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
-    when shakeLineBuffering $ usingLineBuffering cleanup
-    opts@ShakeOptions{..} <- if shakeThreads /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
-    usingNumCapabilities cleanup shakeThreads
-
-    outputLocked <- do
-        lock <- newLock
-        return $ \v msg -> withLock lock $ shakeOutput v msg
-
-    let diagnostic | shakeVerbosity < Diagnostic = const $ return ()
-                   | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
-    let output v = outputLocked v . shakeAbbreviationsApply opts
+run opts rs = withCleanup $ \cleanup -> do
+    (opts@ShakeOptions{..}, diagnostic, output) <- usingShakeOptions cleanup opts
 
     diagnostic $ return "Starting run"
     start <- offsetTime
@@ -145,6 +135,22 @@ run opts@ShakeOptions{..} rs = withCleanup $ \cleanup -> do
     unless (null after) $ do
         addTiming "Running runAfter"
         sequence_ $ reverse after
+
+
+usingShakeOptions :: Cleanup -> ShakeOptions -> IO (ShakeOptions, IO String -> IO (), Verbosity -> String -> IO ())
+usingShakeOptions cleanup opts = do
+    opts@ShakeOptions{..} <- if shakeThreads opts /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
+
+    when shakeLineBuffering $ usingLineBuffering cleanup
+    usingNumCapabilities cleanup shakeThreads
+
+    outputLock <- newLock
+    let outputLocked v msg = withLock outputLock $ shakeOutput v msg
+
+    let diagnostic | shakeVerbosity < Diagnostic = const $ return ()
+                   | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
+    let output v = outputLocked v . shakeAbbreviationsApply opts
+    return (opts, diagnostic, output)
 
 
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
