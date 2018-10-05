@@ -55,7 +55,6 @@ run :: ShakeOptions -> Rules () -> IO ()
 run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -> do
 
     diagnostic $ return "Starting run"
-    start <- offsetTime
     (actions, ruleinfo, userRules) <- runRules opts rs
     checkShakeExtra shakeExtra
     curdir <- getCurrentDirectory
@@ -65,6 +64,18 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
 
+        database <- usingDatabase cleanup opts diagnostic ruleinfo
+        databaseVar <- newVar database
+        (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
+        actualRun cleanup opts ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions
+
+    -- make sure we clean up the database _before_ we run the after actions
+    completeAfter opts Nothing after
+
+
+actualRun cleanup opts@ShakeOptions{..} ruleinfo userRules databaseVar curdir output diagnostic (shared, cloud) actions = do
+        start <- offsetTime
+        database <- readVar databaseVar
         except <- newIORef (Nothing :: Maybe (String, ShakeException))
         let getFailure = fmap fst <$> readIORef except
         let raiseError err
@@ -73,11 +84,6 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
                     let named = shakeAbbreviationsApply opts . shakeExceptionTarget
                     atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
                     -- no need to print exceptions here, they get printed when they are wrapped
-
-        database <- usingDatabase cleanup opts diagnostic ruleinfo
-        databaseVar <- newVar database
-        (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
-
 
         after <- newIORef []
         absent <- newIORef []
@@ -121,9 +127,6 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
                 (if file == "-" then putStr else writeFile file) $ unlines xs
 
         readIORef after
-
-    -- make sure we clean up the database _before_ we run the after actions
-    completeAfter opts Nothing after
 
 
 completeAfter :: ShakeOptions -> Maybe Lock -> [IO ()] -> IO ()
