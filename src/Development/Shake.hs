@@ -125,7 +125,6 @@ import Development.Shake.Internal.Derived
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Progress
 import Development.Shake.Internal.Args
-import Development.Shake.Internal.Shake
 
 import Development.Shake.Command
 import Development.Shake.Internal.FilePattern

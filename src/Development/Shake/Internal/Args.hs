@@ -3,17 +3,19 @@
 -- | Command line parsing flags.
 module Development.Shake.Internal.Args(
     shakeOptDescrs,
+    shake,
     shakeArgs, shakeArgsWith, shakeArgsOptionsWith
     ) where
 
 import Development.Shake.Internal.Paths
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Demo
 import Development.Shake.FilePath
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
-import Development.Shake.Internal.Shake
+import Development.Shake.Internal.Rules.Default
 import General.Timing
 import General.GetOpt
 
@@ -31,6 +33,19 @@ import System.Environment
 import System.Exit
 import System.Time.Extra
 import Prelude
+
+
+-- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".
+--   Use 'ShakeOptions' to specify how the system runs, and 'Rules' to specify what to build. The function will throw
+--   an exception if the build fails.
+--
+--   To use command line flags to modify 'ShakeOptions' see 'shakeArgs'.
+shake :: ShakeOptions -> Rules () -> IO ()
+shake opts r = do
+    addTiming "Function shake"
+    run opts $ do
+        r
+        defaultRules
 
 
 -- | Run a build system using command line arguments for configuration.
