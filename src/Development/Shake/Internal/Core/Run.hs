@@ -52,9 +52,7 @@ import Prelude
 
 -- | Internal main function (not exported publicly)
 run :: ShakeOptions -> Rules () -> IO ()
-run opts rs = withCleanup $ \cleanup -> do
-    opts@ShakeOptions{..} <- usingShakeOptions cleanup opts
-    (diagnostic, output) <- outputFunctions opts <$> newLock
+run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -> do
 
     diagnostic $ return "Starting run"
     start <- offsetTime
@@ -139,6 +137,14 @@ run opts rs = withCleanup $ \cleanup -> do
         (time, _) <- duration $ sequence_ $ reverse after
         when (shakeTimings && shakeVerbosity >= Normal) $ do
             putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
+
+
+withInit :: ShakeOptions -> Maybe Lock -> (ShakeOptions -> (IO String -> IO ()) -> (Verbosity -> String -> IO ()) -> IO a) -> IO a
+withInit opts lock act = do
+    withCleanup $ \cleanup -> do
+        opts@ShakeOptions{..} <- usingShakeOptions cleanup opts
+        (diagnostic, output) <- outputFunctions opts <$> maybe newLock return lock
+        act opts diagnostic output
 
 
 usingShakeOptions :: Cleanup -> ShakeOptions -> IO ShakeOptions
