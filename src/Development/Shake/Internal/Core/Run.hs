@@ -114,12 +114,10 @@ run opts rs = withInit opts Nothing $ \opts@ShakeOptions{..} diagnostic output -
         when (shakeLiveFiles /= []) $ do
             addTiming "Listing live"
             diagnostic $ return "Listing live keys"
-            status <- Ids.toList $ status database
-            let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
-            let liveFiles = [show k | (_, (k, Ready{})) <- status, specialIsFileKey $ typeKey k]
+            xs <- liveFiles database
             forM_ shakeLiveFiles $ \file -> do
                 putWhen Normal $ "Writing live list to " ++ file
-                (if file == "-" then putStr else writeFile file) $ unlines liveFiles
+                (if file == "-" then putStr else writeFile file) $ unlines xs
 
     -- make sure we clean up the database _before_ we run the after actions
     after <- readIORef after
@@ -194,6 +192,13 @@ assertFinishedDatabase Database{..} = do
     let bad = [key | (_, (key, Running{})) <- status]
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
+
+
+liveFiles :: Database -> IO [FilePath]
+liveFiles database = do
+    status <- Ids.toList $ status database
+    let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
+    return [show k | (_, (k, Ready{})) <- status, specialIsFileKey $ typeKey k]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
