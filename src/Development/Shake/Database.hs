@@ -12,6 +12,7 @@ module Development.Shake.Database(
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.Functor
 import Data.IORef
 import General.Cleanup
 import Development.Shake.Internal.Errors
