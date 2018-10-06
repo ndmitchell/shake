@@ -188,14 +188,18 @@ import Development.Shake.Internal.Rules.Rerun
 
 infix 1 **>, ?>>, *>>
 
+
+{-# DEPRECATED (**>) "Use |%> instead" #-}
 -- | /Deprecated:/ Alias for '|%>'.
 (**>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (**>) = (|%>)
 
+{-# DEPRECATED (?>>) "Use &?> instead" #-}
 -- | /Deprecated:/ Alias for '&?>'.
 (?>>) :: (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
 (?>>) = (&?>)
 
+{-# DEPRECATED (*>>) "Use &%> instead" #-}
 -- | /Deprecated:/ Alias for '&%>'.
 (*>>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 (*>>) = (&%>)
@@ -206,14 +210,17 @@ infix 1 **>, ?>>, *>>
 
 infix 1 *>, |*>, &*>
 
+{-# DEPRECATED (*>) "Use %> instead" #-}
 -- | /Deprecated:/ Alias for '%>'. Note that @*>@ clashes with a Prelude operator in GHC 7.10.
 (*>) :: FilePattern -> (FilePath -> Action ()) -> Rules ()
 (*>) = (%>)
 
+{-# DEPRECATED (|*>) "Use |%> instead" #-}
 -- | /Deprecated:/ Alias for '|%>'.
 (|*>) :: [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (|*>) = (|%>)
 
+{-# DEPRECATED (&*>) "Use &%> instead" #-}
 -- | /Deprecated:/ Alias for '&%>'.
 (&*>) :: [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
 (&*>) = (&%>)
