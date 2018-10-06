@@ -61,7 +61,7 @@ usingLockFile cleanup file = do
     createDirectoryRecursive $ takeDirectory file
     tryIO $ writeFile file ""
 
-    fd <- bracketCleanup cleanup (openSimpleFd file ReadWrite) closeFd
+    fd <- allocateCleanup cleanup (openSimpleFd file ReadWrite) closeFd
     let lock = (WriteLock, AbsoluteSeek, 0, 0)
     setLock fd lock `catchIO` \e -> do
         res <- getLock fd lock
