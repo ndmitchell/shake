@@ -1,6 +1,5 @@
 
--- | This module reexports the six necessary type classes that every 'Rule' type must support.
---   You can use this module to define new rules without depending on the @binary@, @deepseq@ and @hashable@ packages.
+-- | Module in development
 module Development.Shake.Database(
     ShakeDatabase,
     shakeOpenDatabase,
@@ -11,8 +10,11 @@ module Development.Shake.Database(
     ) where
 
 import Control.Exception
-import Data.Functor
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.IORef
 import General.Cleanup
+import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
@@ -37,5 +39,11 @@ shakeLiveFilesDatabase (ShakeDatabase s) = liveFilesState s
 
 shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
 shakeRunDatabase (ShakeDatabase s) as = do
+    (refs, as) <- fmap unzip $ forM as $ \a -> do
+        ref <- newIORef Nothing
+        return (ref, liftIO . writeIORef ref . Just =<< a)
     after <- run s $ map void as
-    return ([], after)
+    results <- mapM readIORef refs
+    case sequence results of
+        Just result -> return (result, after)
+        Nothing -> throwM $ errorInternal "Expected all results were written, but some where not"
