@@ -229,7 +229,7 @@ infix 1 *>, |*>, &*>
 ---------------------------------------------------------------------
 -- DEPRECATED SINCE 0.16.1, NOV 2017
 
--- | /Depreciated:/ Replace @'askOracleWith' q a@ by @'askOracle' q@
+-- | /Deprecated:/ Replace @'askOracleWith' q a@ by @'askOracle' q@
 --   since the 'RuleResult' type family now fixes the result type.
 askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
 askOracleWith question _ = askOracle question
