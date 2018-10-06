@@ -1,5 +1,5 @@
 
--- | This module reexports the six necessary type classes that every 'Rule' type must support.
+-- | This module reexports the six necessary type classes that many rule types must support through 'ShakeValue'.
 --   You can use this module to define new rules without depending on the @binary@, @deepseq@ and @hashable@ packages.
 module Development.Shake.Classes(
     Show(..), Typeable(..), Eq(..), Hashable(..), Binary(..), NFData(..)
