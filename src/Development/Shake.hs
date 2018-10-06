@@ -38,7 +38,7 @@
 --
 -- * The theory behind Shake is described in an ICFP 2012 paper,
 --   <https://ndmitchell.com/downloads/paper-shake_before_building-10_sep_2012.pdf Shake Before Building -- Replacing Make with Haskell>.
---   The <https://www.youtube.com/watch?v=xYCPpXVlqFM associated talk> forms a short overview of Shake .
+--   The <https://www.youtube.com/watch?v=xYCPpXVlqFM associated talk> forms a short overview of Shake.
 module Development.Shake(
     -- * Writing a build system
     -- $writing
