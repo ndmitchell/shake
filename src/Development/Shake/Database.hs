@@ -21,6 +21,7 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
+import Prelude
 
 
 newtype ShakeDatabase = ShakeDatabase RunState
