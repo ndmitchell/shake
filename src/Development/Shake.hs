@@ -46,6 +46,9 @@ module Development.Shake(
     -- * GHC build flags
     -- $flags
 
+    -- * Other Shake modules
+    -- $modules
+
     -- * Core
     shake,
     shakeOptions,
@@ -181,6 +184,39 @@ import Development.Shake.Internal.Rules.Rerun
 --     to disable parallel garbage collection. Parallel garbage collection in Shake
 --     programs typically goes slower than sequential garbage collection, while occupying many cores that
 --     could be used for running system commands.
+
+-- $modules
+--
+--   The main Shake module is this one, "Development.Shake", which should be sufficient for most
+--   people writing build systems using Shake. However, Shake provides some additional modules,
+--
+-- * "Development.Shake.Classes" provides convenience exports of the classes Shake relies on,
+--   in particular 'Binary', 'Hashable' and 'NFData'. Useful for deriving these types using
+--   @GeneralizedNewtypeDeriving@ without adding dependencies on the associated packages.
+--
+-- * "Development.Shake.Command" provides the command line wrappers. These are reexported by
+--   "Development.Shake", but if you want to reuse just the command-line running functionality
+--   in a non-Shake program you can import just that.
+--
+-- * "Development.Shake.Config" provides a way to write configuration files that are tracked.
+--   The configuration files are in the Ninja format. Useful for users of bigger systems who
+--   want to track the build rules not in Haskell.
+--
+-- * "Development.Shake.Database" provides lower level primitives to drive Shake, particularly
+--   useful if you want to run multiple Shake runs in a row without reloading from the database.
+--
+-- * "Development.Shake.FilePath" is an extension of "System.FilePath" with a few additional
+--   methods and safer extension manipulation code.
+--
+-- * "Development.Shake.Forward" is an alternative take on build systems, where you write the
+--   rules as a script where steps are skipped, rather than as a set of dependencies. Only really
+--   works if you use @fsatrace@.
+--
+-- * "Development.Shake.Rule" provides tools for writing your own types of Shake rules. Useful
+--   if you need something new, like a rule that queries a database or similar.
+--
+-- * "Development.Shake.Util" has general utilities that are useful for build systems, e.g.
+--   reading @Makefile@ syntax and alternative forms of argument parsing.
 
 
 ---------------------------------------------------------------------
