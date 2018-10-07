@@ -5,7 +5,7 @@ module General.Ids(
     Ids, Id(..),
     empty, insert, lookup, fromList,
     null, size, sizeUpperBound,
-    forWithKeyM_, forCopy,
+    forWithKeyM_, forCopy, forMutate,
     toList, toMap
     ) where
 
@@ -91,6 +91,17 @@ forCopy (Ids ref) f = do
                 go $ i+1
     go 0
     Ids <$> newIORef (S capacity used values2)
+
+
+forMutate :: Ids a -> (a -> a) -> IO ()
+forMutate (Ids ref) f = do
+    S{..} <- readIORef ref
+    let go !i | i >= used = return ()
+              | otherwise = do
+                v <- readArray values i
+                whenJust v $ \v -> writeArray values i $ Just $ f v
+                go $ i+1
+    go 0
 
 
 toListUnsafe :: Ids a -> IO [(Id, a)]
