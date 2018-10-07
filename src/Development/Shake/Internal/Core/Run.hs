@@ -5,6 +5,7 @@
 module Development.Shake.Internal.Core.Run(
     RunState,
     open,
+    reset,
     run,
     shakeRunAfter,
     liveFilesState
@@ -77,6 +78,17 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output 
     databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
     (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
     return RunState{..}
+
+
+-- Prepare for a fresh run by changing Result to Loaded
+reset :: RunState -> IO ()
+reset RunState{..} = withVar databaseVar $ \database -> do
+    Ids.forMutate (status database) $ \(k, s) -> (k, f s)
+    where
+        f (Ready r) = Loaded (snd <$> r)
+        f (Error _ x) = maybe Missing Loaded x
+        f (Running _ x) = maybe Missing Loaded x -- shouldn't ever happen, but Loaded is least worst
+        f x = x
 
 
 run :: RunState -> Bool -> [Action ()] -> IO [IO ()]
