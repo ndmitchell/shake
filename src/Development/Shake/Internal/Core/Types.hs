@@ -8,7 +8,7 @@ module Development.Shake.Internal.Core.Types(
     UserRule(..), UserRuleVersioned(..),
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
-    Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..),
+    Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..), BS_Store,
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..)
