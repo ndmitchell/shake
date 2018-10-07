@@ -14,49 +14,49 @@ import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent.Extra
 import Prelude
 
-import qualified Test.Basic as Basic
-import qualified Test.Batch as Batch
-import qualified Test.Benchmark as Benchmark
-import qualified Test.Builtin as Builtin
-import qualified Test.C as C
-import qualified Test.Cache as Cache
-import qualified Test.Command as Command
-import qualified Test.Config as Config
-import qualified Test.Digest as Digest
-import qualified Test.Directory as Directory
-import qualified Test.Docs as Docs
-import qualified Test.Errors as Errors
-import qualified Test.Existence as Existence
-import qualified Test.FileLock as FileLock
-import qualified Test.FilePath as FilePath
-import qualified Test.FilePattern as FilePattern
-import qualified Test.Files as Files
-import qualified Test.Forward as Forward
-import qualified Test.History as History
-import qualified Test.Journal as Journal
-import qualified Test.Lint as Lint
-import qualified Test.Live as Live
-import qualified Test.Manual as Manual
-import qualified Test.Match as Match
-import qualified Test.Monad as Monad
-import qualified Test.Ninja as Ninja
-import qualified Test.Oracle as Oracle
-import qualified Test.OrderOnly as OrderOnly
-import qualified Test.Parallel as Parallel
-import qualified Test.Pool as Pool
-import qualified Test.Progress as Progress
-import qualified Test.Random as Random
-import qualified Test.Rebuild as Rebuild
-import qualified Test.Reprioritize as Reprioritize
-import qualified Test.Resources as Resources
-import qualified Test.Self as Self
-import qualified Test.SelfMake as SelfMake
-import qualified Test.Tar as Tar
-import qualified Test.Tup as Tup
-import qualified Test.Unicode as Unicode
-import qualified Test.Util as Util
-import qualified Test.Verbosity as Verbosity
-import qualified Test.Version as Version
+import qualified Test.Basic
+import qualified Test.Batch
+import qualified Test.Benchmark
+import qualified Test.Builtin
+import qualified Test.C
+import qualified Test.Cache
+import qualified Test.Command
+import qualified Test.Config
+import qualified Test.Digest
+import qualified Test.Directory
+import qualified Test.Docs
+import qualified Test.Errors
+import qualified Test.Existence
+import qualified Test.FileLock
+import qualified Test.FilePath
+import qualified Test.FilePattern
+import qualified Test.Files
+import qualified Test.Forward
+import qualified Test.History
+import qualified Test.Journal
+import qualified Test.Lint
+import qualified Test.Live
+import qualified Test.Manual
+import qualified Test.Match
+import qualified Test.Monad
+import qualified Test.Ninja
+import qualified Test.Oracle
+import qualified Test.OrderOnly
+import qualified Test.Parallel
+import qualified Test.Pool
+import qualified Test.Progress
+import qualified Test.Random
+import qualified Test.Rebuild
+import qualified Test.Reprioritize
+import qualified Test.Resources
+import qualified Test.Self
+import qualified Test.SelfMake
+import qualified Test.Tar
+import qualified Test.Tup
+import qualified Test.Unicode
+import qualified Test.Util
+import qualified Test.Verbosity
+import qualified Test.Version
 
 import qualified Run
 
@@ -65,49 +65,49 @@ fakes = ["clean" * clean, "test" * test, "make" * makefile, "filetime" * filetim
     where (*) = (,)
 
 mains =
-    ["basic" * Basic.main
-    ,"batch" * Batch.main
-    ,"benchmark" * Benchmark.main
-    ,"builtin" * Builtin.main
-    ,"c" * C.main
-    ,"cache" * Cache.main
-    ,"command" * Command.main
-    ,"config" * Config.main
-    ,"digest" * Digest.main
-    ,"directory" * Directory.main
-    ,"docs" * Docs.main
-    ,"errors" * Errors.main
-    ,"existence" * Existence.main
-    ,"filelock" * FileLock.main
-    ,"filepath" * FilePath.main
-    ,"filepattern" * FilePattern.main
-    ,"files" * Files.main
-    ,"forward" * Forward.main
-    ,"history" * History.main
-    ,"journal" * Journal.main
-    ,"lint" * Lint.main
-    ,"live" * Live.main
-    ,"manual" * Manual.main
-    ,"match" * Match.main
-    ,"monad" * Monad.main
-    ,"ninja" * Ninja.main
-    ,"oracle" * Oracle.main
-    ,"orderonly" * OrderOnly.main
-    ,"parallel" * Parallel.main
-    ,"pool" * Pool.main
-    ,"progress" * Progress.main
-    ,"random" * Random.main
-    ,"rebuild" * Rebuild.main
-    ,"reprioritize" * Reprioritize.main
-    ,"resources" * Resources.main
-    ,"self" * Self.main
-    ,"selfmake" * SelfMake.main
-    ,"tar" * Tar.main
-    ,"tup" * Tup.main
-    ,"unicode" * Unicode.main
-    ,"util" * Util.main
-    ,"verbosity" * Verbosity.main
-    ,"version" * Version.main]
+    ["basic" * Test.Basic.main
+    ,"batch" * Test.Batch.main
+    ,"benchmark" * Test.Benchmark.main
+    ,"builtin" * Test.Builtin.main
+    ,"c" * Test.C.main
+    ,"cache" * Test.Cache.main
+    ,"command" * Test.Command.main
+    ,"config" * Test.Config.main
+    ,"digest" * Test.Digest.main
+    ,"directory" * Test.Directory.main
+    ,"docs" * Test.Docs.main
+    ,"errors" * Test.Errors.main
+    ,"existence" * Test.Existence.main
+    ,"filelock" * Test.FileLock.main
+    ,"filepath" * Test.FilePath.main
+    ,"filepattern" * Test.FilePattern.main
+    ,"files" * Test.Files.main
+    ,"forward" * Test.Forward.main
+    ,"history" * Test.History.main
+    ,"journal" * Test.Journal.main
+    ,"lint" * Test.Lint.main
+    ,"live" * Test.Live.main
+    ,"manual" * Test.Manual.main
+    ,"match" * Test.Match.main
+    ,"monad" * Test.Monad.main
+    ,"ninja" * Test.Ninja.main
+    ,"oracle" * Test.Oracle.main
+    ,"orderonly" * Test.OrderOnly.main
+    ,"parallel" * Test.Parallel.main
+    ,"pool" * Test.Pool.main
+    ,"progress" * Test.Progress.main
+    ,"random" * Test.Random.main
+    ,"rebuild" * Test.Rebuild.main
+    ,"reprioritize" * Test.Reprioritize.main
+    ,"resources" * Test.Resources.main
+    ,"self" * Test.Self.main
+    ,"selfmake" * Test.SelfMake.main
+    ,"tar" * Test.Tar.main
+    ,"tup" * Test.Tup.main
+    ,"unicode" * Test.Unicode.main
+    ,"util" * Test.Util.main
+    ,"verbosity" * Test.Verbosity.main
+    ,"version" * Test.Version.main]
     where (*) = (,)
 
 
