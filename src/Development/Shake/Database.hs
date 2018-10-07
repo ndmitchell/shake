@@ -4,6 +4,7 @@ module Development.Shake.Database(
     ShakeDatabase,
     shakeOpenDatabase,
     shakeWithDatabase,
+    shakeOneShotDatabase,
     shakeRunDatabase,
     shakeLiveFilesDatabase,
     shakeRunAfter
@@ -31,6 +32,9 @@ shakeOpenDatabase opts rules = do
     (cleanup, clean) <- newCleanup
     return (ShakeDatabase <$> open cleanup opts (rules >> defaultRules), clean)
 
+shakeOneShotDatabase :: ShakeDatabase -> IO ()
+shakeOneShotDatabase _ = return ()
+
 shakeWithDatabase :: ShakeOptions -> Rules () -> (ShakeDatabase -> IO a) -> IO a
 shakeWithDatabase opts rules act = do
     (db, clean) <- shakeOpenDatabase opts rules
@@ -44,7 +48,8 @@ shakeRunDatabase (ShakeDatabase s) as = do
     (refs, as) <- fmap unzip $ forM as $ \a -> do
         ref <- newIORef Nothing
         return (ref, liftIO . writeIORef ref . Just =<< a)
-    after <- run s True $ map void as
+    let oneShot = True
+    after <- run s oneShot $ map void as
     results <- mapM readIORef refs
     case sequence results of
         Just result -> return (result, after)

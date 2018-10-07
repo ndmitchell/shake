@@ -42,7 +42,8 @@ import Prelude
 shake :: ShakeOptions -> Rules () -> IO ()
 shake opts rules = do
     addTiming "Function shake"
-    (_, after) <- shakeWithDatabase opts rules $ \db ->
+    (_, after) <- shakeWithDatabase opts rules $ \db -> do
+        shakeOneShotDatabase db
         shakeRunDatabase db []
     shakeRunAfter opts after
 
