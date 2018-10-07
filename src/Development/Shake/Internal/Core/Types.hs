@@ -199,7 +199,7 @@ instance Show (NoShow a) where show _ = "NoShow"
 
 data Status
     = Ready (Result Value) -- ^ I have a value
-    | Error SomeException -- ^ I have been run and raised an error
+    | Error SomeException (Maybe (Result BS_Store)) -- ^ I have been run and raised an error
     | Loaded (Result BS_Store) -- ^ Loaded from the database
     | Running (NoShow (Either SomeException (Result Value) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
@@ -208,7 +208,7 @@ data Status
 instance NFData Status where
     rnf x = case x of
         Ready x -> rnfResult rnf x
-        Error x -> rnfException x
+        Error x y -> rnfException x `seq` maybe () (rnfResult id) y
         Loaded x -> rnfResult id x
         Running _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
         Missing -> ()

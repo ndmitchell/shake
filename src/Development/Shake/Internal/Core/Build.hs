@@ -101,13 +101,13 @@ lookupOne global stack database i = do
         Nothing -> Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
         Just (k, s) -> case s of
             Ready r -> Now $ Right r
-            Error e -> Now $ Left e
+            Error e _ -> Now $ Left e
             Running{} | Left e <- addStack i k stack -> Now $ Left e
             _ -> Later $ \continue -> do
                 Just (_, s) <- getIdKeyStatus database i
                 case s of
                     Ready r -> continue $ Right r
-                    Error e -> continue $ Left e
+                    Error e _ -> continue $ Left e
                     Running (NoShow w) r -> do
                         let w2 v = w v >> continue v
                         setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
@@ -119,7 +119,7 @@ lookupOne global stack database i = do
 buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Wait Locked (Either SomeException (Result Value))
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e -> do
-        quickly $ setIdKeyStatus global database i k $ Error e
+        quickly $ setIdKeyStatus global database i k $ mkError e
         return $ Left e
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
@@ -132,11 +132,13 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     w <- case res of
                         Just (_, Running (NoShow w) _) -> return w
                         _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
-                    setIdKeyStatus global database i k $ either Error Ready val
+                    setIdKeyStatus global database i k $ either mkError Ready val
                     w val
                 case res of
                     Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
                     _ -> return ()
+    where
+        mkError e = if globalOneShot then Error e Nothing else Error e r
 
 
 -- | Compute the value for a given RunMode and a restore function to run
