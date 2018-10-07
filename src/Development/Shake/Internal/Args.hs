@@ -44,7 +44,7 @@ shake opts rules = do
     addTiming "Function shake"
     (_, after) <- shakeWithDatabase opts rules $ \db ->
         shakeRunDatabase db []
-    shakeRunAfters opts after
+    shakeRunAfter opts after
 
 
 -- | Run a build system using command line arguments for configuration.

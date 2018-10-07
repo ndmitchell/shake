@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Run(
     RunState,
     open,
     run,
-    shakeRunAfters,
+    shakeRunAfter,
     liveFilesState
     ) where
 
@@ -141,9 +141,9 @@ run RunState{..} actions2 =
         readIORef after
 
 
-shakeRunAfters :: ShakeOptions -> [IO ()] -> IO ()
-shakeRunAfters opts [] = return ()
-shakeRunAfters opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
+shakeRunAfter :: ShakeOptions -> [IO ()] -> IO ()
+shakeRunAfter opts [] = return ()
+shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
     let n = show $ length after
     diagnostic $ return $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after

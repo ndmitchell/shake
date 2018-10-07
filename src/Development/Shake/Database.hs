@@ -6,7 +6,7 @@ module Development.Shake.Database(
     shakeWithDatabase,
     shakeRunDatabase,
     shakeLiveFilesDatabase,
-    shakeRunAfters
+    shakeRunAfter
     ) where
 
 import Control.Exception
