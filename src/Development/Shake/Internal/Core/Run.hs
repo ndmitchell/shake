@@ -79,8 +79,8 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output 
     return RunState{..}
 
 
-run :: RunState -> [Action ()] -> IO [IO ()]
-run RunState{..} actions2 =
+run :: RunState -> Bool -> [Action ()] -> IO [IO ()]
+run RunState{..} oneshot actions2 =
     withCleanup $ \cleanup -> withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
         addCleanup_ cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
@@ -105,7 +105,7 @@ run RunState{..} actions2 =
 
         addTiming "Running rules"
         runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-            let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step
+            let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step oneshot
             -- give each action a stack to start with!
             forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                 let local = newLocal stack shakeVerbosity

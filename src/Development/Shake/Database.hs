@@ -44,7 +44,7 @@ shakeRunDatabase (ShakeDatabase s) as = do
     (refs, as) <- fmap unzip $ forM as $ \a -> do
         ref <- newIORef Nothing
         return (ref, liftIO . writeIORef ref . Just =<< a)
-    after <- run s $ map void as
+    after <- run s True $ map void as
     results <- mapM readIORef refs
     case sequence results of
         Just result -> return (result, after)
