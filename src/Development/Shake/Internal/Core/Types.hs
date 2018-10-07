@@ -208,11 +208,14 @@ data Status
 instance NFData Status where
     rnf x = case x of
         Ready x -> rnfResult rnf x
-        Error x -> rnf $ show x -- Best I can do for arbitrary exceptions
+        Error x -> rnfException x
         Loaded x -> rnfResult id x
         Running _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
         Missing -> ()
         where
+            -- best we can do for an arbitrary exception
+            rnfException = rnf . show
+
             -- ignore the unpacked fields
             -- complex because ByteString lacks NFData in GHC 7.4 and below
             rnfResult by (Result a _ _ b _ c) = by a `seq` rnf b `seq` rnf c `seq` ()
