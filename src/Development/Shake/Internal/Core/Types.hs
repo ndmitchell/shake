@@ -124,8 +124,8 @@ newtype StepKey = StepKey ()
 stepKey :: Key
 stepKey = newKey $ StepKey ()
 
-toStepResult :: Step -> Result BS_Store
-toStepResult i = Result (runBuilder $ putEx i) i i [] 0 []
+toStepResult :: Step -> Result (Value, BS_Store)
+toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
 
 fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result

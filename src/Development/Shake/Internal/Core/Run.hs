@@ -291,7 +291,9 @@ incrementStep Database{..} = do
         return $ case v of
             Just (_, Loaded r) -> incStep $ fromStepResult r
             _ -> Step 1
-    journal stepId stepKey $ toStepResult step
+    let stepRes = toStepResult step
+    Ids.insert status stepId (stepKey, Ready stepRes)
+    journal stepId stepKey $ fmap snd stepRes
     return step
 
 
