@@ -237,7 +237,7 @@ checkValid diagnostic Database{..} check missing = do
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
         (key, Ready Result{..}) -> do
-            good <- check key result
+            good <- check key $ fst result
             diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
             return $ [(key, result, now) | Just now <- [good]] ++ seen
         _ -> return seen

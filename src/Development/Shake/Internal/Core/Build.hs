@@ -94,7 +94,7 @@ getDatabaseValue k = do
 -- NEW STYLE PRIMITIVES
 
 -- | Lookup the value for a single Id, may need to spawn it
-lookupOne :: Global -> Stack -> Database -> Id -> Wait Locked (Either SomeException (Result Value))
+lookupOne :: Global -> Stack -> Database -> Id -> Wait Locked (Either SomeException (Result (Value, BS_Store)))
 lookupOne global stack database i = do
     res <- quickly $ getIdKeyStatus database i
     case res of
@@ -116,7 +116,7 @@ lookupOne global stack database i = do
 
 
 -- | Build a key, must currently be either Loaded or Missing, changes to Waiting
-buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Wait Locked (Either SomeException (Result Value))
+buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteString) -> Wait Locked (Either SomeException (Result (Value, BS_Store)))
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e -> do
         quickly $ setIdKeyStatus global database i k $ mkError e
@@ -175,7 +175,7 @@ applyKeyValue callStack ks = do
             x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
             case x of
                 Just e -> return $ Left e
-                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> result r) . getIdKeyStatus database) is
+                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . getIdKeyStatus database) is
         return (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
@@ -197,7 +197,7 @@ runKey
     -> Key -- The key to build
     -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
     -> RunMode -- True if any of the children were dirty
-    -> Capture (Either SomeException (RunResult (Result Value)))
+    -> Capture (Either SomeException (RunResult (Result (Value, BS_Store))))
         -- Either an error, or a (the produced files, the result).
 runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue = do
     let tk = typeKey k
@@ -222,19 +222,20 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                 continue . Left . toException =<< shakeException global stack e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ RunResult runChanged runStore (r{result = runValue})
+                    continue $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
                 | otherwise -> do
                     dur <- time
                     let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                 | otherwise = (ChangedRecomputeDiff, globalStep)
                     continue $ Right $ RunResult cr runStore Result
-                        {result = runValue
+                        {result = mkResult runValue runStore
                         ,changed = c
                         ,built = globalStep
                         ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
-
+            where
+                mkResult value store = (value, if globalOneShot then mempty else store)
 
 ---------------------------------------------------------------------
 -- USER key/value WRAPPERS
@@ -279,7 +280,7 @@ historyLoad (Ver -> ver) = do
         res <- liftIO $ runLocked globalDatabase $ \database -> runWait $ do
             let ask k = do
                     i <- quickly $ getKeyId database k
-                    let identify = Just . runIdentify globalRules k . result
+                    let identify = Just . runIdentify globalRules k . fst . result
                     either (const Nothing) identify <$> lookupOne global localStack database i
             x <- case globalShared of
                 Nothing -> return Nothing
@@ -339,7 +340,7 @@ historySave (Ver -> ver) store = Action $ do
             -- technically this could be run without the DB lock, since it reads things that are stable
             forM (reverse localDepends) $ \(Depends is) -> forM is $ \i -> do
                 Just (k, Ready r) <- getIdKeyStatus database i
-                return (k, runIdentify globalRules k $ result r)
+                return (k, runIdentify globalRules k $ fst $ result r)
         let k = topStack localStack
         whenJust globalShared $ \shared -> addShared shared key localBuiltinVersion ver deps store produced
         whenJust globalCloud  $ \cloud  -> addCloud  cloud  key localBuiltinVersion ver deps store produced

@@ -203,16 +203,16 @@ instance Show (NoShow a) where show _ = "NoShow"
 type OneShot a = a
 
 data Status
-    = Ready (Result Value) -- ^ I have a value
+    = Ready (Result (Value, OneShot BS_Store)) -- ^ I have a value
     | Error SomeException (OneShot (Maybe (Result BS_Store))) -- ^ I have been run and raised an error
     | Loaded (Result BS_Store) -- ^ Loaded from the database
-    | Running (NoShow (Either SomeException (Result Value) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
+    | Running (NoShow (Either SomeException (Result (Value, BS_Store)) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
 instance NFData Status where
     rnf x = case x of
-        Ready x -> rnfResult rnf x
+        Ready x -> rnfResult (\(a,b) -> b `seq` rnf a) x
         Error x y -> rnfException x `seq` maybe () (rnfResult id) y
         Loaded x -> rnfResult id x
         Running _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
@@ -243,7 +243,7 @@ statusType Missing{} = "Missing"
 
 
 getResult :: Status -> Maybe (Result (Either BS_Store Value))
-getResult (Ready r) = Just $ Right <$> r
+getResult (Ready r) = Just $ Right . fst <$> r
 getResult (Loaded r) = Just $ Left <$> r
 getResult (Running _ r) = fmap Left <$> r
 getResult _ = Nothing
