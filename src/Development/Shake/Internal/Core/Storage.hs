@@ -180,7 +180,7 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
                     out $ putEx ver
                     out $ putEx witnessNew
                     Ids.forWithKeyM_ ids $ \i (k,v) -> out $ save k i v
-            Just <$> Ids.for ids snd
+            Just <$> Ids.forCopy ids snd
 
     ids <- case ids of
         Just ids -> return ids

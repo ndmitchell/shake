@@ -5,7 +5,7 @@ module General.Ids(
     Ids, Id(..),
     empty, insert, lookup, fromList,
     null, size, sizeUpperBound,
-    forWithKeyM_, for,
+    forWithKeyM_, forCopy,
     toList, toMap
     ) where
 
@@ -80,8 +80,8 @@ forWithKeyM_ (Ids ref) f = do
                 go $ i+1
     go 0
 
-for :: Ids a -> (a -> b) -> IO (Ids b)
-for (Ids ref) f = do
+forCopy :: Ids a -> (a -> b) -> IO (Ids b)
+forCopy (Ids ref) f = do
     S{..} <- readIORef ref
     values2 <- newArray capacity Nothing
     let go !i | i >= used = return ()
