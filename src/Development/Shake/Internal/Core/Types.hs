@@ -197,9 +197,14 @@ newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFlo
 newtype NoShow a = NoShow a
 instance Show (NoShow a) where show _ = "NoShow"
 
+-- Things stored under OneShot are not required if we only do one compilation,
+-- but are if we do multiple, as we have to reset the database each time.
+-- globalOneShot controls that, and gives us a small memory optimisation.
+type OneShot a = a
+
 data Status
     = Ready (Result Value) -- ^ I have a value
-    | Error SomeException (Maybe (Result BS_Store)) -- ^ I have been run and raised an error
+    | Error SomeException (OneShot (Maybe (Result BS_Store))) -- ^ I have been run and raised an error
     | Loaded (Result BS_Store) -- ^ Loaded from the database
     | Running (NoShow (Either SomeException (Result Value) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
