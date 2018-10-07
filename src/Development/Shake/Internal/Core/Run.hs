@@ -117,7 +117,7 @@ run RunState{..} actions2 =
 
         let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
-        when (null actions) $
+        when (null actions && null actions2) $
             putWhen Normal "Warning: No want/action statements, nothing to do"
 
         when (isJust shakeLint) $ do
