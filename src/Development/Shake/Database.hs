@@ -39,7 +39,8 @@ shakeOpenDatabase opts rules = do
     (cleanup, clean) <- newCleanup
     use <- newVar $ Open False False
     let alloc =
-            ShakeDatabase use <$> open cleanup opts (rules >> defaultRules)
+            withOpen use "shakeOpenDatabase" id $ \_ ->
+                ShakeDatabase use <$> open cleanup opts (rules >> defaultRules)
     let free = do
             modifyVar_ use $ \x -> case x of
                     Using s -> fail $ "Can't close while running, " ++ s
