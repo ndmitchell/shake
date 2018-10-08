@@ -22,6 +22,7 @@ import qualified Test.C
 import qualified Test.Cache
 import qualified Test.Command
 import qualified Test.Config
+import qualified Test.Database
 import qualified Test.Digest
 import qualified Test.Directory
 import qualified Test.Docs
@@ -73,6 +74,7 @@ mains =
     ,"cache" * Test.Cache.main
     ,"command" * Test.Command.main
     ,"config" * Test.Config.main
+    ,"database" * Test.Database.main
     ,"digest" * Test.Digest.main
     ,"directory" * Test.Directory.main
     ,"docs" * Test.Docs.main
