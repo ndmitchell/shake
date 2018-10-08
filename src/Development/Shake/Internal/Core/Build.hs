@@ -235,7 +235,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = reverse localTraces}
             where
-                mkResult value store = (value, if globalOneShot then mempty else store)
+                mkResult value store = (value, if globalOneShot then BS.empty else store)
 
 ---------------------------------------------------------------------
 -- USER key/value WRAPPERS
