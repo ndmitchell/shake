@@ -82,6 +82,7 @@ main = shakeTest_ (unless brokenHaddock . noTest) $ do
             ,"import Data.Monoid"
             ,"import Development.Shake hiding ((*>),trackAllow)"
             ,"import Development.Shake.Classes"
+            ,"import Development.Shake.Database"
             ,"import Development.Shake.Rule hiding (trackAllow)"
             ,"import Development.Shake.Util"
             ,"import Development.Shake.FilePath"
@@ -291,7 +292,7 @@ types = words $
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
     "CmdResult ByteString ProcessHandle Rule Monad MonadFail Monoid Data TypeRep " ++
-    "BuiltinRun BuiltinLint BuiltinCheck"
+    "BuiltinRun BuiltinLint BuiltinCheck ShakeDatabase"
 
 -- | Duplicated identifiers which require renaming
 dupes :: [String]
@@ -341,7 +342,7 @@ whitelist x | elem x $ words $
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult " ++
-    "oldStore mode node_modules llbuild"
+    "oldStore mode node_modules llbuild Makefile"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
