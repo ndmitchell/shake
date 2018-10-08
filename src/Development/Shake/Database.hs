@@ -43,7 +43,7 @@ shakeOpenDatabase opts rules = do
                 ShakeDatabase use <$> open cleanup opts (rules >> defaultRules)
     let free = do
             modifyVar_ use $ \x -> case x of
-                    Using s -> fail $ "Can't close while running, " ++ s
+                    Using s -> throwM $ errorStructured "Error when calling shakeOpenDatabase close function, currently running" [("Existing call", Just s)] ""
                     _ -> return Closed
             clean
     return (alloc, free)
@@ -51,8 +51,8 @@ shakeOpenDatabase opts rules = do
 withOpen :: Var UseState -> String -> (UseState -> UseState) -> (UseState -> IO a) -> IO a
 withOpen var name final act = mask $ \restore -> do
     o <- modifyVar var $ \x -> case x of
-        Using s -> fail "Already using"
-        Closed -> fail "Already closed"
+        Using s -> throwM $ errorStructured ("Error when calling " ++ name ++ ", currently running") [("Existing call", Just s)] ""
+        Closed -> throwM $ errorStructured ("Error when calling " ++ name ++ ", already closed") [] ""
         o@Open{} -> return (Using name, o)
     let clean = writeVar var $ final o
     res <- restore (act o) `onException` clean
@@ -78,7 +78,7 @@ shakeRunDatabase (ShakeDatabase use s) as =
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do
         when openRequiresReset $ do
             when openOneShot $
-                fail "You applied one shot and you're running it twice"
+                throwM $ errorStructured "Error when calling shakeRunDatabase twice, after calling shakeOneShotDatabase" [] ""
             reset s
         (refs, as) <- fmap unzip $ forM as $ \a -> do
             ref <- newIORef Nothing

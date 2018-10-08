@@ -58,10 +58,10 @@ test _ = do
         signalBarrier threads ts
         results <- show <$> mapM waitBarrier results
         assertBool ("ab123c" `isInfixOf` results) "Contains ab123c"
-        assertBool ("Already using" `isInfixOf` results) "Contains Already using"
+        assertBool ("currently running" `isInfixOf` results) "Contains 'currently using'"
 
     close
-    assertException ["Already closed"] $ void $ shakeRunDatabase db []
+    assertException ["already closed"] $ void $ shakeRunDatabase db []
 
     shakeRunAfter opts after
     assertBoolIO (not <$> IO.doesFileExist "log.txt") "Log must be deleted"
