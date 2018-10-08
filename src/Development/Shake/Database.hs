@@ -1,6 +1,18 @@
 {-# LANGUAGE RecordWildCards #-}
 
--- |
+-- | Lower-level primitives to drive Shake, which are wrapped into the
+--   'Development.Shake.shake' function. Useful if you want to perform multiple Shake
+--   runs in a row without reloading from the database.
+--   Sometimes used in conjunction with @'shakeFiles'=\"\/dev\/null\"@.
+--   Using these functions you can approximate the 'Development.Shake.shake' experience with:
+--
+-- @
+-- shake opts rules = do
+--     (_, after) \<- 'shakeWithDatabase' opts rules $ \\db -> do
+--         'shakeOneShotDatabase' db
+--         'shakeRunDatabase' db []
+--     'shakeRunAfter' opts after
+-- @
 module Development.Shake.Database(
     ShakeDatabase,
     shakeOpenDatabase,
@@ -31,9 +43,16 @@ data UseState
     | Using String
     | Open {openOneShot :: Bool, openRequiresReset :: Bool}
 
-
+-- | The type of an open Shake database. Created with
+--   'shakeOpenDatabase' or 'shakeWithDatabase'. Used with
+--   'shakeRunDatabase'. You may not execute simultaneous calls using 'ShakeDatabase'
+--   on separate threads (it will raise an error).
 data ShakeDatabase = ShakeDatabase (Var UseState) RunState
 
+-- | Given some options and rules, return a pair. The first component opens the database,
+--   the second cleans it up. The creation /does not/ need to be run masked, because the
+--   cleanup is able to run at any point. Most users should prefer 'shakeWithDatabase'
+--   which handles exceptions duration creation properly.
 shakeOpenDatabase :: ShakeOptions -> Rules () -> IO (IO ShakeDatabase, IO ())
 shakeOpenDatabase opts rules = do
     (cleanup, clean) <- newCleanup
@@ -59,20 +78,31 @@ withOpen var name final act = mask $ \restore -> do
     clean
     return res
 
+-- | Declare that a just-openned database will be used to call 'shakeRunDatabase' at most once.
+--   If so, an optimisation can be applied to retain less memory.
 shakeOneShotDatabase :: ShakeDatabase -> IO ()
 shakeOneShotDatabase (ShakeDatabase use db) =
     withOpen use "shakeOneShotDatabase" (\o -> o{openOneShot=True}) $ \_ -> return ()
 
+-- | Given some options and rules, create a 'ShakeDatabase' that can be used to run
+--   executions.
 shakeWithDatabase :: ShakeOptions -> Rules () -> (ShakeDatabase -> IO a) -> IO a
 shakeWithDatabase opts rules act = do
     (db, clean) <- shakeOpenDatabase opts rules
     (act =<< db) `finally` clean
 
+-- | Given a 'ShakeDatabase', what files did the execution ensure were up-to-date
+--   in the previous call to 'shakeRunDatabase'. Corresponds to the list of files
+--   written out to 'shakeLiveFiles'.
 shakeLiveFilesDatabase :: ShakeDatabase -> IO [FilePath]
 shakeLiveFilesDatabase (ShakeDatabase use s) =
     withOpen use "shakeLiveFilesDatabase" id $ \_ ->
         liveFilesState s
 
+-- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
+--   plus the list of 'Action' given here. Returns the results from the explicitly passed
+--   actions along with a list of actions to run after the database was closed, as added with
+--   'runAfter' and 'removeFilesAfter'.
 shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
 shakeRunDatabase (ShakeDatabase use s) as =
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do

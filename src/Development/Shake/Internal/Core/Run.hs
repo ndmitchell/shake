@@ -153,6 +153,9 @@ run RunState{..} oneshot actions2 =
         readIORef after
 
 
+-- | Run a set of IO actions, treated as \"after\" actions, typically returned from
+--   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics
+--   etc as specified in the 'ShakeOptions'.
 shakeRunAfter :: ShakeOptions -> [IO ()] -> IO ()
 shakeRunAfter opts [] = return ()
 shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
