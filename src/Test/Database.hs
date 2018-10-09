@@ -53,10 +53,12 @@ test _ = do
     assertWithin 10 $ do
         threads <- newBarrier
         results <- replicateM 2 newBarrier
-        ts <- forM results $ \result -> forkFinally (void $ shakeRunDatabase db [need ["sleep"]]) $ \r -> do
+        ts <- forM results $ \result -> forkFinally (void $ shakeRunDatabase db [need ["sleep"]]) $ \r -> mask_ $ do
+            print $ "Failed with " ++ show r
             signalBarrier result r
             threads <- waitBarrier threads
-            forM_ threads $ \t -> throwTo t $ ErrorCall "ab123c"
+            me <- myThreadId
+            forM_ threads $ \t -> when (t /= me) $ throwTo t $ ErrorCall "ab123c"
         signalBarrier threads ts
         results <- show <$> mapM waitBarrier results
         assertBool ("ab123c" `isInfixOf` results) "Contains ab123c"
