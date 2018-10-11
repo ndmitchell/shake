@@ -219,9 +219,8 @@ sleepFileTime :: IO ()
 sleepFileTime = sleep 1
 
 
-sleepFileTimeCalibrate :: IO (IO ())
-sleepFileTimeCalibrate = do
-    let file = "output/calibrate"
+sleepFileTimeCalibrate :: FilePath -> IO (IO ())
+sleepFileTimeCalibrate file = do
     createDirectoryRecursive $ takeDirectory file
     -- with 10 measurements can get a bit slow, see #451
     -- if it rounds to a second then 1st will be a fraction, but 2nd will be full second

@@ -138,7 +138,7 @@ main = do
             ,unwords ["  ", exePath, "self",  "--jobs=2", "--trace"]
             ,""
             ,"Which will build Shake, using Shake, on 2 threads."]
-        Just main -> main =<< sleepFileTimeCalibrate
+        Just main -> main =<< sleepFileTimeCalibrate "output/calibrate"
 
 
 makefile :: IO () -> IO ()
