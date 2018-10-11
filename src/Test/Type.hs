@@ -82,14 +82,15 @@ shakenEx reenter options test rules sleeper = do
                 createDirectoryRecursive now
     unless reenter $ createDirectoryRecursive out
     case args of
-        "test":extra -> do
+        "test":args -> do
+            when (args /= []) $ fail "Unexpected additional arguments to 'test'"
             putStrLn $ "## TESTING " ++ name
-            -- if the extra arguments are not --quiet/--loud it's probably going to go wrong
-            -- as it is, they do go wrong for random, so disabling for now
-            change $ test (\args -> withArgs (name:args {- ++ extra -}) $ shakenEx True options test rules sleeper)
+            change $ test (\args -> withArgs (name:args) $ shakenEx True options test rules sleeper)
             putStrLn $ "## FINISHED TESTING " ++ name
 
-        "clean":_ -> change clean
+        "clean":args -> do
+            when (args /= []) $ fail "Unexpected additional arguments to 'clean'"
+            change clean
 
         "perturb":args -> forever $ do
             del <- removeFilesRandom out
