@@ -151,7 +151,7 @@ usingLineBuffering cleanup = do
     out <- hGetBuffering stdout
     err <- hGetBuffering stderr
     when (out /= LineBuffering || err /= LineBuffering) $ do
-        addCleanup_ cleanup $ hSetBuffering stdout out >> hSetBuffering stderr err
+        register cleanup $ hSetBuffering stdout out >> hSetBuffering stderr err
         hSetBuffering stdout LineBuffering >> hSetBuffering stderr LineBuffering
 
 
@@ -176,7 +176,7 @@ usingNumCapabilities :: Cleanup -> Int -> IO ()
 usingNumCapabilities cleanup new = when rtsSupportsBoundThreads $ do
     old <- getNumCapabilities
     when (old /= new) $ do
-        addCleanup_ cleanup $ setNumCapabilities old
+        register cleanup $ setNumCapabilities old
         setNumCapabilities new
 
 

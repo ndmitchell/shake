@@ -88,10 +88,10 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException in
 actionBoom :: Bool -> Action a -> IO b -> Action a
 actionBoom runOnSuccess act (void -> clean) = do
     Global{..} <- Action getRO
-    undo <- liftIO $ addCleanup globalCleanup clean
+    key <- liftIO $ register globalCleanup clean
     -- important to mask_ the undo/clean combo so either both happen or neither
-    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (mask_ $ do alive <- undo; when alive clean) >> throwRAW e
-    liftIO $ mask_ $ do alive <- undo; when (alive && runOnSuccess) clean
+    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (release key) >> throwRAW e
+    liftIO $ if runOnSuccess then release key else unprotect key
     return res
 
 -- | If an exception is raised by the 'Action', perform some 'IO' then reraise the exception.

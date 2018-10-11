@@ -94,7 +94,7 @@ reset RunState{..} = withVar databaseVar $ \database ->
 run :: RunState -> Bool -> [Action ()] -> IO [IO ()]
 run RunState{..} oneshot actions2 =
     withCleanup $ \cleanup -> withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
-        addCleanup_ cleanup $ do
+        register cleanup $ do
             when (shakeTimings && shakeVerbosity >= Normal) printTimings
             resetTimings -- so we don't leak memory
 
@@ -198,7 +198,7 @@ usingProgress cleanup ShakeOptions{..} database step getFailure = do
             failure <- getFailure
             stats <- progress database step
             return stats{isFailure=failure}
-    allocateCleanup cleanup
+    allocate cleanup
         (flip forkFinally (const $ signalBarrier wait ()) $
             shakeProgress getProgress)
         (\tid -> do
