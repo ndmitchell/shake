@@ -94,7 +94,7 @@ actionBoom runOnSuccess act (void -> clean) = do
     liftIO $ mask_ $ do alive <- undo; when (alive && runOnSuccess) clean
     return res
 
--- | If an exception is raised by the 'Action', perform some 'IO'.
+-- | If an exception is raised by the 'Action', perform some 'IO' then reraise the exception.
 actionOnException :: Action a -> IO b -> Action a
 actionOnException = actionBoom False
 
