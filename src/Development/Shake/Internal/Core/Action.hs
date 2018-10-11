@@ -424,7 +424,6 @@ parallel [] = return []
 parallel [x] = return <$> x
 parallel acts = do
     global@Global{..} <- Action getRO
-    local <- Action getRW
 
     done <- liftIO $ newIORef False
     waits <- forM acts $ \act ->
