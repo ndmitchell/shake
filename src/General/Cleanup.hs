@@ -31,7 +31,7 @@ withCleanup act = do
 newCleanup :: IO (Cleanup, IO ())
 newCleanup = do
     ref <- newIORef $ S 0 Map.empty
-    let clean = do
+    let clean = mask_ $ do
             items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
             mapM_ snd $ sortOn (negate . fst) $ Map.toList items
     return (Cleanup ref, clean)
