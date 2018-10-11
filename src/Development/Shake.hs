@@ -106,7 +106,7 @@ module Development.Shake(
     needHasChanged,
     resultHasChanged,
     batch,
-    reprioritize,
+    deprioritize,
     -- * Deprecated
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),

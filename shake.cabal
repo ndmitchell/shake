@@ -436,6 +436,7 @@ test-suite shake-test
         Test.Command
         Test.Config
         Test.Database
+        Test.Deprioritize
         Test.Digest
         Test.Directory
         Test.Docs
@@ -461,7 +462,6 @@ test-suite shake-test
         Test.Progress
         Test.Random
         Test.Rebuild
-        Test.Reprioritize
         Test.Resources
         Test.Self
         Test.SelfMake

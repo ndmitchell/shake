@@ -108,7 +108,7 @@ data PoolPriority
     | PoolResume
     | PoolStart
     | PoolBatch
-    | PoolReprioritize Double
+    | PoolDeprioritize Double
       deriving (Eq,Ord)
 
 -- | Temporarily increase the pool by 1 thread. Call the cleanup action to restore the value.

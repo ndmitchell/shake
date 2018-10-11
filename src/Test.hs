@@ -48,7 +48,7 @@ import qualified Test.Pool
 import qualified Test.Progress
 import qualified Test.Random
 import qualified Test.Rebuild
-import qualified Test.Reprioritize
+import qualified Test.Deprioritize
 import qualified Test.Resources
 import qualified Test.Self
 import qualified Test.SelfMake
@@ -75,6 +75,7 @@ mains =
     ,"command" * Test.Command.main
     ,"config" * Test.Config.main
     ,"database" * Test.Database.main
+    ,"deprioritize" * Test.Deprioritize.main
     ,"digest" * Test.Digest.main
     ,"directory" * Test.Directory.main
     ,"docs" * Test.Docs.main
@@ -100,7 +101,6 @@ mains =
     ,"progress" * Test.Progress.main
     ,"random" * Test.Random.main
     ,"rebuild" * Test.Rebuild.main
-    ,"reprioritize" * Test.Reprioritize.main
     ,"resources" * Test.Resources.main
     ,"self" * Test.Self.main
     ,"selfmake" * Test.SelfMake.main

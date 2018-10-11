@@ -1,5 +1,5 @@
 
-module Test.Reprioritize(main) where
+module Test.Deprioritize(main) where
 
 import Development.Shake
 import Test.Type
@@ -12,11 +12,11 @@ main = shakeTest_ test $ do
         log "0"
         writeFile' out ""
     "*.p1" %> \out -> do
-        reprioritize 1
+        deprioritize 1
         log "1"
         writeFile' out ""
     "*.p2" %> \out -> do
-        reprioritize 2
+        deprioritize 2
         log "2"
         writeFile' out ""
 
