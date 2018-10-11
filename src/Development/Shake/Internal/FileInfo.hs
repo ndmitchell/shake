@@ -117,7 +117,6 @@ instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . 
 getFileInfo x = BS.useAsCString (fileNameToByteString x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
-        code <- peekFileAttributes fad
         let peek = do
                 code <- peekFileAttributes fad
                 if testBit code 4 then
