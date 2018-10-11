@@ -20,6 +20,7 @@ import qualified Test.Benchmark
 import qualified Test.Builtin
 import qualified Test.C
 import qualified Test.Cache
+import qualified Test.Cleanup
 import qualified Test.Command
 import qualified Test.Config
 import qualified Test.Database
@@ -72,6 +73,7 @@ mains =
     ,"builtin" * Test.Builtin.main
     ,"c" * Test.C.main
     ,"cache" * Test.Cache.main
+    ,"cleanup" * Test.Cleanup.main
     ,"command" * Test.Command.main
     ,"config" * Test.Config.main
     ,"database" * Test.Database.main

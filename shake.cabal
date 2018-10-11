@@ -433,6 +433,7 @@ test-suite shake-test
         Test.Builtin
         Test.C
         Test.Cache
+        Test.Cleanup
         Test.Command
         Test.Config
         Test.Database
