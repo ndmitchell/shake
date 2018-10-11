@@ -28,6 +28,6 @@ newListBuilder = One
 runListBuilder :: ListBuilder a -> [a]
 runListBuilder x = f x []
     where
-        f Zero acc = []
+        f Zero acc = acc
         f (One x) acc = x : acc
         f (Add x y) acc = f x (f y acc)
