@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, DeriveDataTypeable #-}
 
 -- Initially copied from https://raw.githubusercontent.com/snoyberg/conduit/master/resourcet/test/main.hs
 -- on 2018-10-11
