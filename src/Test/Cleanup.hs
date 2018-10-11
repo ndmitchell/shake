@@ -12,9 +12,7 @@ import Control.Exception
 import Test.Type
 
 
-main = shakeTest_ test $ return ()
-
-test build = do
+main = testSimple $ do
     do -- survives releasing bottom
         x <- newIORef (0 :: Int)
         handle (\(_ :: SomeException) -> return ()) $ withCleanup $ \cleanup -> do

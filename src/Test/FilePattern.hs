@@ -10,7 +10,6 @@ import Data.List.Extra
 import Test.Type
 import Test.QuickCheck hiding ((===))
 
-main = shakeTest_ test $ return ()
 
 
 newtype Pattern = Pattern FilePattern deriving (Show,Eq)
@@ -27,7 +26,7 @@ instance Arbitrary Path where
     shrink (Path x) = map Path $ shrinkList (\x -> ['/' | x == '\\']) x
 
 
-test build = do
+main = testSimple $ do
     internalTest
     let norm = filter (/= ".") . split isPathSeparator
     let f b pat file = do

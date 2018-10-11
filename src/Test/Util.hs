@@ -5,10 +5,7 @@ import Development.Shake.Util
 import Test.Type
 
 
-main = shakeTest_ test $ return ()
-
-
-test build = do
+main = testSimple $ do
     parseMakefile "" === []
     parseMakefile "a:b c\ndef : ee" === [("a",["b","c"]),("def",["ee"])]
     parseMakefile "a: #comment\n#comment : b\nc : d" === [("a",[]),("c",["d"])]

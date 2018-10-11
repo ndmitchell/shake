@@ -13,9 +13,6 @@ import qualified Development.Shake.Internal.FileName as BS
 import System.Info.Extra
 
 
-main = shakeTest_ test $ return ()
-
-
 newtype File = File String deriving Show
 
 instance Arbitrary File where
@@ -23,7 +20,7 @@ instance Arbitrary File where
     shrink (File x) = map File $ shrink x
 
 
-test build = do
+main = testSimple $ do
     let infix 1 ===
         a === b = a Test.Type.=== b -- duplicate definition in QuickCheck 2.7 and above
 

@@ -9,10 +9,7 @@ import Data.Maybe
 import System.Info.Extra
 
 
-main = shakeTest_ test $
-    action $ fail "The 'manual' example should only be used in test mode"
-
-test build = do
+main = testSimple $ do
     -- we use .git as our destination, despite not being a real git repo
     -- so that search tools ignore it, and I don't get dupes for every source file
     let dest = ".git"

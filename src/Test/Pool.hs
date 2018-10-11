@@ -9,10 +9,7 @@ import Control.Exception.Extra
 import Control.Monad
 
 
-main = shakeTest_ test $ return ()
-
-
-test build = do
+main = testSimple $ do
     -- See #474, we should never be running pool actions masked
     let add pool act = addPool PoolStart pool $ do
             Unmasked <- getMaskingState
@@ -23,7 +20,7 @@ test build = do
         forM_ [1..6] $ \n -> do
             var <- newVar (0,0) -- (maximum, current)
             runPool deterministic n $ \pool ->
-                forM_ [1..5] $ \i ->
+                replicateM_ 5 $
                     add pool $ do
                         modifyVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
                         -- requires that all tasks get spawned within 0.1s
