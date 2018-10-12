@@ -7,7 +7,7 @@ import Development.Shake.FilePath
 import Control.Monad.Extra
 import Test.Type
 
-main = shakeTest_ test $ forwardRule $ do
+main = testBuild test $ forwardRule $ do
     let src = root </> "src/Test/C"
     cs <- getDirectoryFiles src ["*.c"]
     os <- forP cs $ \c -> do

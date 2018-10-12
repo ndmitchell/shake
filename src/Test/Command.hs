@@ -21,7 +21,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Prelude
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     -- shake_helper must be in a subdirectory so we can test placing that subdir on the $PATH
     let helper = toNative $ "helper/shake_helper" <.> exe
     let name !> test = do want [name]

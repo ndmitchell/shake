@@ -5,7 +5,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     "foo" %> \ out -> do
         need ["bar"]
         writeFile' out ""

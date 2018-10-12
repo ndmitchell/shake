@@ -16,7 +16,7 @@ newtype Zero = Zero () deriving (Eq, Show, NFData, Typeable, Hashable, Binary)
 
 type instance RuleResult Zero = Zero
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     addOracle $ \Zero{} -> do
         liftIO $ createDirectoryRecursive "dir"
         liftIO $ setCurrentDirectory "dir"

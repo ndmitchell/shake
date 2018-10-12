@@ -6,7 +6,7 @@ import System.FilePath
 import Test.Type
 
 
-main = shakeTest_ noTest $ do
+main = testBuild noTest $ do
     want ["result.tar"]
     "result.tar" %> \out -> do
         contents <- fmap (map (root </>)) $ readFileLines $ root </> "src/Test/Tar/list.txt"

@@ -2,7 +2,7 @@
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
-    shakeTest, shakeTest_, testSimple,
+    shakeTest, testBuild, testSimple,
     root,
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
@@ -49,15 +49,15 @@ shakeTest
 shakeTest f opts g = shakenEx False opts f
     (\os args -> if null args then g os else want args >> withoutActions (g os))
 
-shakeTest_
+testBuild
     :: (([String] -> IO ()) -> IO ()) -- ^ The test driver
     -> Rules () -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest_ f g = shakeTest f [] (const g)
+testBuild f g = shakeTest f [] (const g)
 
 testSimple :: IO () -> IO () -> IO ()
-testSimple act = shakeTest_ (const act) (return ())
+testSimple act = testBuild (const act) (return ())
 
 
 shakenEx

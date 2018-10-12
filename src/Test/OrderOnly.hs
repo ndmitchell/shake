@@ -7,7 +7,7 @@ import System.Directory(removeFile)
 import Control.Exception.Extra
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     "bar.txt" %> \out -> do
         alwaysRerun
         writeFile' out =<< liftIO (readFile "bar.in")

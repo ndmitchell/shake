@@ -11,7 +11,7 @@ import Control.Monad
 import Data.IORef
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     -- test I have good Ord and Show
     do
         r1 <- newResource "test" 2

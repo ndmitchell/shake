@@ -6,7 +6,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     want ["Out.txt","Out2.txt"]
 
     "Out.txt" %> \out -> do

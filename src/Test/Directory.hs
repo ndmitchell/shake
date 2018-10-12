@@ -28,7 +28,7 @@ showEsc = concatMap f
           f x = [x]
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     "*.contents" %> \out ->
         writeFileLines out =<< getDirectoryContents (readEsc $ dropExtension out)
     "*.dirs" %> \out ->

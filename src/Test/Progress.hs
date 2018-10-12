@@ -9,7 +9,7 @@ import Data.Monoid
 import Prelude
 
 
-main = shakeTest_ test $ return ()
+main = testBuild test $ return ()
 
 
 -- | Given a list of todo times, get out a list of how long is predicted

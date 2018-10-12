@@ -6,7 +6,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     let output x file = writeFile' file x
 
     ["or*","*or"] |%> output ""

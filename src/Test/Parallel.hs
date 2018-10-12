@@ -9,7 +9,7 @@ import Control.Concurrent.Extra
 import Data.IORef
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     "AB.txt" %> \out -> do
         -- need [obj "A.txt", obj "B.txt"]
         (text1,text2) <- readFile' "A.txt" `par` readFile' "B.txt"
@@ -26,7 +26,7 @@ main = shakeTest_ test $ do
 
     phony "parallel" $ do
         active <- liftIO $ newIORef 0
-        peak <- liftIO $ newIORef 0    
+        peak <- liftIO $ newIORef 0
         void $ parallel $ replicate 8 $ liftIO $ do
             now <- atomicModifyIORef active $ dupe . succ
             atomicModifyIORef peak $ dupe . max now

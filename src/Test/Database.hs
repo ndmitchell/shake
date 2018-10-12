@@ -15,9 +15,6 @@ import Data.Functor
 import Prelude
 
 
-main = shakeTest_ test $ return ()
-
-
 rules = do
     "*.out" %> \out -> do
         liftIO $ appendFile "log.txt" "x"
@@ -26,7 +23,7 @@ rules = do
 
     phony "sleep" $ liftIO $ sleep 20
 
-test _ = do
+main = testSimple $ do
     let opts = shakeOptions{shakeFiles="/dev/null"}
     writeFile "a.in" "a"
     writeFile "b.in" "b"

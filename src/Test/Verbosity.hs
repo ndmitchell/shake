@@ -5,7 +5,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     "in.txt" %> \out -> do
         a <- getVerbosity
         b <- withVerbosity Normal getVerbosity

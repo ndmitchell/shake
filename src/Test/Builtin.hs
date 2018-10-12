@@ -44,7 +44,7 @@ fileNeed :: FilePath -> Action ()
 fileNeed = apply1 . File
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     addBuiltinFileRule
 
     fileRule "a.txt" $ return ()

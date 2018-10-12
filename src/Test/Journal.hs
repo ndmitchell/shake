@@ -14,7 +14,7 @@ rebuilt :: IORef Int
 rebuilt = unsafePerformIO $ newIORef 0
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     want ["a.out","b.out","c.out"]
     "*.out" %> \out -> do
         liftIO $ atomicModifyIORef rebuilt $ \a -> (a+1,())

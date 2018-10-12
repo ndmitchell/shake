@@ -11,7 +11,7 @@ import Data.Maybe
 import Prelude
 
 
-main = shakeTest_ noTest $ do
+main = testBuild noTest $ do
     -- Example inspired by http://gittup.org/tup/ex_multiple_directories.html
     usingConfigFile $ root </> "src/Test/Tup/root.cfg"
 

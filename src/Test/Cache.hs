@@ -7,7 +7,7 @@ import Data.Char
 import Test.Type
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     vowels <- newCache $ \file -> do
         src <- readFile' file
         liftIO $ appendFile "trace.txt" "1"

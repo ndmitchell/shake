@@ -11,7 +11,7 @@ import System.Info.Extra
 import Test.Type
 
 
-main = shakeTest_ test $
+main = testBuild test $
     action $ do
         putNormal "Starting sleep"
         liftIO $ sleep 5

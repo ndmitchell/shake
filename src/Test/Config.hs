@@ -10,7 +10,7 @@ import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     want ["hsflags.var","cflags.var","none.var","keys"]
     usingConfigFile "config"
     "*.var" %> \out -> do

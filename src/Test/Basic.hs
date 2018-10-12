@@ -13,7 +13,7 @@ import Data.Functor
 import Prelude
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     "AB.txt" %> \out -> do
         need ["A.txt", "B.txt"]
         text1 <- readFile' "A.txt"

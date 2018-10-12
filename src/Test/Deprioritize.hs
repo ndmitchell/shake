@@ -5,7 +5,7 @@ import Development.Shake
 import Test.Type
 
 
-main = shakeTest_ test $ do
+main = testBuild test $ do
     file <- newResource "log.txt" 1
     let log x = withResource file 1 $ liftIO $ appendFile "log.txt" x
     "*.p0" %> \out -> do
