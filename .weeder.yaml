@@ -17,6 +17,7 @@
   - depends: [old-time, semigroups]
 
 # Things that are related to the 'cloud' flag
+# Remove as part of https://github.com/ndmitchell/shake/issues/621
 - message:
   - name: Redundant build-depends entry
   - depends: [network, network-uri]
