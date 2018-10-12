@@ -37,7 +37,7 @@ import Development.Shake.Internal.Rules.OrderOnly(orderOnlyBS)
 -- | Given the Ninja source file, a list of file arguments, a tool name.
 --   Return a bool if you should restart and the rules.
 runNinja :: IO () -> FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()))
-runNinja restart file args (Just "compdb") = do
+runNinja _ file args (Just "compdb") = do
     dir <- getCurrentDirectory
     Ninja{..} <- parse file =<< newEnv
     rules <- return $ Map.fromList [r | r <- rules, BS.unpack (fst r) `elem` args]
@@ -57,9 +57,9 @@ runNinja restart file args (Just "compdb") = do
     putStr $ printCompDb xs
     return Nothing
 
-runNinja restart file args (Just x) = errorIO $ "Unknown tool argument, expected 'compdb', got " ++ x
+runNinja _ _ _ (Just x) = errorIO $ "Unknown tool argument, expected 'compdb', got " ++ x
 
-runNinja restart file args tool = do
+runNinja restart file args Nothing = do
     addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file =<< newEnv
     return $ Just $ do
@@ -286,7 +286,7 @@ splitArgs = f Gap
                     | otherwise -> add (replicate ((a+1) `div` 2) '\\') $ f s ('\"':xs)
             xs -> add (replicate (a+1) '\\') $ f s xs
         f s (x:xs) = add [x] $ f s xs
-        f s [] = [[]]
+        f _ [] = [[]]
 
         add a (b:c) = (a++b):c
         add a [] = [a]
