@@ -194,7 +194,7 @@ findCodeMarkdown (x:xs) | indented x && not (isBlank x) =
         indented x = length (takeWhile isSpace x) >= 4
 findCodeMarkdown (x:xs) = map (Code . return) (evens $ splitOn "`" x) ++ findCodeMarkdown xs
     where
-        evens (x:y:xs) = y : evens xs
+        evens (_:x:xs) = x : evens xs
         evens _ = []
 findCodeMarkdown [] = []
 
@@ -222,10 +222,10 @@ undefDots x | Just x <- stripSuffix "..." x, Just (x,_) <- stripInfix "..." x = 
     where new = if words x `disjoint` ["cmd","cmd_","Development.Shake.cmd","Development.Shake.cmd_"] then "undefined" else "[\"\"]"
 
 showStmt :: Int -> [String] -> [String]
-showStmt i [] = []
+showStmt _ [] = []
 showStmt i xs | isDecl $ unlines xs = map f xs
     where f x = if fst (word1 x) `elem` dupes then "_" ++ show i ++ "_" ++ x else x
-showStmt i (x:xs) | fst (word1 x) `elem` types = ["type Code_" ++ show i ++ " = " ++ x]
+showStmt i [x] | fst (word1 x) `elem` types = ["type Code_" ++ show i ++ " = " ++ x]
 showStmt i [x] | length (words x) <= 2 = ["code_" ++ show i ++ " = (" ++ x ++ ")"] -- deal with operators and sections
 showStmt i xs | all isPredicate xs, length xs > 1 =
     zipWith (\j x -> "code_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] xs
@@ -324,6 +324,7 @@ isEnvVar x | Just x <- stripPrefix "$" x = all validChar x
 isProgram :: String -> Bool
 isProgram (words -> x:xs) = x `elem` programs && all (\x -> isCmdFlag x || isFilePath x || all isAlpha x || x == "&&") xs
     where programs = words "excel gcc cl make ghc ghci cabal distcc npm build tar git fsatrace ninja touch pwd runhaskell rot13 main shake stack rm cat sed sh apt-get build-multiple"
+isProgram _ = False
 
 -- | Should a fragment be whitelisted and not checked
 whitelist :: String -> Bool
