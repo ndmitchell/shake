@@ -108,7 +108,7 @@ firstJustWaitUnordered f = go [] . map f
 firstLeftWaitUnordered :: (Applicative m, MonadIO m) => (a -> Wait m (Either e b)) -> [a] -> Wait m (Either e [b])
 firstLeftWaitUnordered f xs = do
         let n = length xs
-        mut <- liftIO $ newArray (length xs) undefined
+        mut <- liftIO $ newArray n undefined
         res <- go mut [] $ zipFrom 0 $ map f xs
         case res of
             Just e -> return $ Left e
