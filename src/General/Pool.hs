@@ -62,7 +62,7 @@ emptyS n deterministic = do
 
 
 worker :: Pool -> IO ()
-worker pool@(Pool var done) = do
+worker pool@(Pool var _) = do
     let onVar act = modifyVar var $ maybe (return (Nothing, return ())) act
     join $ onVar $ \s ->return $ case Heap.uncons $ todo s of
         Nothing -> (Just s, return ())

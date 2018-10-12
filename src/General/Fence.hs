@@ -26,7 +26,7 @@ newFence = Fence <$> newIORef (Left $ const $ return ())
 signalFence :: MonadIO m => Fence m a -> a -> m ()
 signalFence (Fence ref) v = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of
     Left queue -> (Right v, queue v)
-    Right v -> error "Shake internal error, signalFence called twice on one Fence"
+    Right _ -> error "Shake internal error, signalFence called twice on one Fence"
 
 waitFence :: MonadIO m => Fence m a -> (a -> m ()) -> m ()
 waitFence (Fence ref) call = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of

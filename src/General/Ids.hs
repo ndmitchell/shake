@@ -110,7 +110,7 @@ toListUnsafe (Ids ref) = do
 
     -- execute in O(1) stack
     -- see https://neilmitchell.blogspot.co.uk/2015/09/making-sequencemapm-for-io-take-o1-stack.html
-    let index r i | i >= used = []
+    let index _ i | i >= used = []
         index r i | IO io <- readArray values i = case io r of
             (# r, Nothing #) -> index r (i+1)
             (# r, Just v  #) -> (Id $ fromIntegral i, v) : index r (i+1)
@@ -121,7 +121,7 @@ toListUnsafe (Ids ref) = do
 toList :: Ids a -> IO [(Id, a)]
 toList ids = do
     xs <- toListUnsafe ids
-    let demand (x:xs) = demand xs
+    let demand (_:xs) = demand xs
         demand [] = ()
     evaluate $ demand xs
     return xs

@@ -33,11 +33,11 @@ add k (Intern v mp) = (Intern v2 $ Map.insert k (Id v2) mp, Id v2)
 
 
 lookup :: (Eq a, Hashable a) => a -> Intern a -> Maybe Id
-lookup k (Intern n mp) = Map.lookup k mp
+lookup k (Intern _ mp) = Map.lookup k mp
 
 
 toList :: Intern a -> [(a, Id)]
-toList (Intern a b) = Map.toList b
+toList (Intern _ mp) = Map.toList mp
 
 
 fromList :: (Eq a, Hashable a) => [(a, Id)] -> Intern a

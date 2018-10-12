@@ -99,7 +99,7 @@ instance BinaryEx BS.ByteString where
 
 instance BinaryEx LBS.ByteString where
     putEx x = Builder (fromIntegral $ LBS.length x) $ \ptr i -> do
-        let go i [] = return ()
+        let go _ [] = return ()
             go i (x:xs) = do
                 let n = BS.length x
                 BS.useAsCString x $ \bs -> BS.memcpy (ptr `plusPtr` i) (castPtr bs) (fromIntegral n)
@@ -199,7 +199,7 @@ getExStorableList = \bs -> unsafePerformIO $ BS.useAsCStringLen bs $ \(p, size) 
 --     BS
 putExList :: [Builder] -> Builder
 putExList xs = Builder (sum $ map (\b -> sizeBuilder b + 4) xs) $ \p i -> do
-    let go i [] = return ()
+    let go _ [] = return ()
         go i (Builder n b:xs) = do
             pokeByteOff p i (fromIntegral n :: Word32)
             b p (i+4)
