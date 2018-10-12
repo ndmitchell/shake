@@ -69,7 +69,7 @@ data RunState = RunState
 
 
 open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
-open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
+open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
     diagnostic $ return "Starting run"
     (actions, ruleinfo, userRules) <- runRules opts rs
     checkShakeExtra shakeExtra
@@ -157,8 +157,8 @@ run RunState{..} oneshot actions2 =
 --   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics
 --   etc as specified in the 'ShakeOptions'.
 shakeRunAfter :: ShakeOptions -> [IO ()] -> IO ()
-shakeRunAfter opts [] = return ()
-shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic output -> do
+shakeRunAfter _ [] = return ()
+shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic _ -> do
     let n = show $ length after
     diagnostic $ return $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after
@@ -250,7 +250,7 @@ checkValid diagnostic Database{..} check missing = do
     diagnostic $ return "Starting validity/lint checking"
 
     -- Do not use a forM here as you use too much stack space
-    bad <- (\f -> foldM f [] status) $ \seen (i,v) -> case v of
+    bad <- (\f -> foldM f [] status) $ \seen (_,v) -> case v of
         (key, Ready Result{..}) -> do
             good <- check key $ fst result
             diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"

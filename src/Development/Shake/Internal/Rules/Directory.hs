@@ -123,7 +123,7 @@ queryRule witness query = addBuiltinRuleEx
     (\k old -> do
         new <- query k
         return $ if old == new then Nothing else Just $ show new)
-    (\k v -> runBuilder $ putEx $ witness v)
+    (\_ v -> runBuilder $ putEx $ witness v)
     (\k old _ -> liftIO $ do
         new <- query k
         let wnew = witness new

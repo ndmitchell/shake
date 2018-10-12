@@ -204,12 +204,12 @@ ruleLint _ _ _ = return Nothing
 
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FileQ FileR
 ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure errorNoHash
-ruleIdentity opts = \k v -> case result v of
+ruleIdentity _ = \k v -> case result v of
     Just (FileA _ size hash) -> runBuilder $ putExStorable size <> putExStorable hash
     Nothing -> throwImpure $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
-ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)) oldBin@(fmap getEx -> old :: Maybe Result) mode = do
+ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) oldBin@(fmap getEx -> old :: Maybe Result) mode = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes
     -- for Phony, it doesn't make that much sense, but probably isn't harmful?
@@ -227,7 +227,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)
     case old of
         _ | r == RebuildNow -> rebuild
         _ | r == RebuildLater -> case old of
-            Just old ->
+            Just _ ->
                 -- ignoring the currently stored value, which may trigger lint has changed
                 -- so disable lint on this file
                 unLint <$> retOld ChangedNothing
@@ -260,7 +260,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)
                         retOld ChangedNothing
                     _ ->
                         retNew ChangedStore $ ResultDirect ver now
-        Just (ResultForward ver old) | verEq ver, mode == RunDependenciesSame -> retOld ChangedNothing
+        Just (ResultForward ver _) | verEq ver, mode == RunDependenciesSame -> retOld ChangedNothing
         _ -> rebuild
     where
         -- no need to lint check forward files
@@ -307,7 +307,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ x@(fileNameToString -> xStr)
                             new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                             case new of
                                 Nothing -> retNew ChangedRecomputeDiff ResultPhony
-                                Just new@(FileA _ fileSize fileHash) -> do
+                                Just new@(FileA _ _ fileHash) -> do
                                     producesUnchecked [xStr]
                                     res <- answer (ResultDirect $ Ver ver) new
                                     historySave ver $ runBuilder $

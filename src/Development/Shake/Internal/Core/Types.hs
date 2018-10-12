@@ -271,7 +271,7 @@ instance BinaryEx [Depends] where
 nubDepends :: [Depends] -> [Depends]
 nubDepends = fMany Set.empty
     where
-        fMany seen [] = []
+        fMany _ [] = []
         fMany seen (Depends d:ds) = [Depends d2 | d2 /= []] ++ fMany seen2 ds
             where (d2,seen2) = fOne seen d
 

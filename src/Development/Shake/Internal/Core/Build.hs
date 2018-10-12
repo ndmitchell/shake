@@ -163,7 +163,7 @@ buildRunDependenciesChanged global stack database me = isJust <$> firstJustM id
 -- ACTUAL WORKERS
 
 applyKeyValue :: [String] -> [Key] -> Action [Value]
-applyKeyValue callStack [] = return []
+applyKeyValue _ [] = return []
 applyKeyValue callStack ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW

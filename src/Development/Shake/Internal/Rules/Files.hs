@@ -63,7 +63,7 @@ filesEqualValue :: ShakeOptions -> FilesA -> FilesA -> EqualCost
 filesEqualValue opts (FilesA xs) (FilesA ys)
     | length xs /= length ys = NotEqual
     | otherwise = foldr and_ EqualCheap $ zipWith (fileEqualValue opts) xs ys
-        where and_ NotEqual x = NotEqual
+        where and_ NotEqual _ = NotEqual
               and_ EqualCheap x = x
               and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
 
@@ -74,7 +74,7 @@ defaultRuleFiles = do
     addBuiltinRuleEx (ruleLint opts) (ruleIdentity opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
-ruleLint opts k (FilesA []) = return Nothing -- in the case of disabling lint
+ruleLint _ _ (FilesA []) = return Nothing -- in the case of disabling lint
 ruleLint opts k v = do
     now <- filesStoredValue opts k
     return $ case now of
@@ -85,7 +85,7 @@ ruleLint opts k v = do
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FilesQ FilesA
 ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure $ errorStructured
     "Cannot use shakeChange=ChangeModTime with shakeShare" [] ""
-ruleIdentity opts = \k (FilesA files) ->
+ruleIdentity _ = \_ (FilesA files) ->
     runBuilder $ putExList [putExStorable size <> putExStorable hash | FileA _ size hash <- files]
 
 
@@ -105,7 +105,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
     case old of
         _ | RebuildNow `elem` r -> rebuild
         _ | RebuildLater `elem` r -> case old of
-            Just old ->
+            Just _ ->
                 -- ignoring the currently stored value, which may trigger lint has changed
                 -- so disable lint on this file
                 return $ RunResult ChangedNothing (fromJust o) $ FilesA []

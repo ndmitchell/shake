@@ -97,7 +97,7 @@ usingStorage
     -> (IO String -> IO ())                            -- ^ Logging function
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
     -> IO (Ids.Ids v, k -> Id -> v -> IO ())
-usingStorage cleanup ShakeOptions{..} diagnostic witness | shakeFiles == "/dev/null" = do
+usingStorage _ ShakeOptions{..} diagnostic _ | shakeFiles == "/dev/null" = do
     diagnostic $ return "Using in-memory database"
     ids <- Ids.empty
     return (ids, \_ _ _ -> return ())

@@ -125,7 +125,7 @@ firstLeftWaitUnordered f xs = do
             Lift x -> Lift $ do
                 x <- x
                 return $ go mut later ((i,x):xs)
-        go mut [] [] = Now Nothing
+        go _ [] [] = Now Nothing
         go mut ls [] = Later $ \callback -> do
             ref <- liftIO $ newIORef $ length ls
             forM_ ls $ \(i,l) -> l $ \r -> do

@@ -423,7 +423,7 @@ parallel :: [Action a] -> Action [a]
 parallel [] = return []
 parallel [x] = return <$> x
 parallel acts = do
-    global@Global{..} <- Action getRO
+    Global{..} <- Action getRO
 
     done <- liftIO $ newIORef False
     waits <- forM acts $ \act ->

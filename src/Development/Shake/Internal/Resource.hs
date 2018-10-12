@@ -105,7 +105,7 @@ newResourceIO name mx = do
         shw = "Resource " ++ name
 
         acquire :: Var Finite -> Pool -> Int -> IO (Maybe (Fence IO ()))
-        acquire var pool want
+        acquire var _ want
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > mx = errorIO $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
             | otherwise = modifyVar var $ \x@Finite{..} ->

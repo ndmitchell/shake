@@ -107,6 +107,6 @@ cacheAction name action = do
 cache :: (forall r . CmdArguments r => r) -> Action ()
 cache cmd = do
     let CmdArgument args = cmd
-    let isDull ['-',x] = True; isDull _ = False
+    let isDull ['-',_] = True; isDull _ = False
     let name = head $ filter (not . isDull) (drop 1 $ rights args) ++ ["unknown"]
     cacheAction ("command " ++ toStandard name ++ " #" ++ upper (showHex (abs $ hash $ show args) "")) cmd
