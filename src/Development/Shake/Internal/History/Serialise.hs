@@ -91,7 +91,11 @@ instance BinaryEx (SendOneKey Int) where
     getEx = undefined
     putEx = undefined
 
-type RecvOneKey key = BuildTree key
+newtype RecvOneKey key = RecvOneKey (BuildTree key)
+
+instance BinaryEx (RecvOneKey Int) where
+    getEx = undefined
+    putEx = undefined
 
 data SendDownloadFiles key = SendDownloadFiles Ver key Ver Ver [(FilePath, FileSize, FileHash)]
 
