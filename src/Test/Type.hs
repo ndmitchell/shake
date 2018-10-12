@@ -57,7 +57,7 @@ shakeTest_
 shakeTest_ f g = shakeTest f [] (const g)
 
 testSimple :: IO () -> IO () -> IO ()
-testSimple act _ = act
+testSimple act = shakeTest_ (const act) (return ())
 
 
 shakenEx
