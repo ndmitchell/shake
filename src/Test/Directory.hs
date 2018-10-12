@@ -9,7 +9,7 @@ import Data.List
 import Data.Function
 import Control.Monad
 import General.Extra
-import System.Directory(getCurrentDirectory, createDirectory)
+import System.Directory(createDirectory)
 import qualified System.Directory as IO
 import qualified System.IO.Extra as IO
 
@@ -46,7 +46,6 @@ main = shakeTest_ test $ do
         writeFileLines out $ zipWith ((++) `on` bool) fs ds
 
     "dots" %> \out -> do
-        cwd <- liftIO getCurrentDirectory
         b1 <- liftM2 (==) (getDirectoryContents ".") (getDirectoryContents "")
         b2 <- liftM2 (==) (getDirectoryDirs ".") (getDirectoryDirs "")
         b3 <- liftM2 (==) (getDirectoryFiles "." ["*.txt"]) (getDirectoryFiles "" ["*.txt"])
