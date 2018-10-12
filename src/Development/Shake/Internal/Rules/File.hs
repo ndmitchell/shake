@@ -533,10 +533,10 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 (|%>) :: Located => [FilePattern] -> (FilePath -> Action ()) -> Rules ()
 (|%>) pats act = do
     let (simp,other) = partition simple pats
-    case simp of
+    case map toStandard simp of
         [] -> return ()
-        [p] -> let pp = toStandard p in root help (\x -> toStandard x == pp) act
-        ps -> let ps = Set.fromList $ map toStandard pats in root help (flip Set.member ps . toStandard) act
+        [p] -> root help (\x -> toStandard x == p) act
+        ps -> let set = Set.fromList ps in root help (flip Set.member set . toStandard) act
     unless (null other) $
         let ps = map (?==) other in priority 0.5 $ root help (\x -> any ($ x) ps) act
     where help = show pats ++ " |%> at " ++ callStackTop

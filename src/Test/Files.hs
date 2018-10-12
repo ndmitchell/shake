@@ -34,6 +34,9 @@ main = shakeTest_ test $ do
         writeFile' a "a"
         writeFile' b "b"
 
+    ["or1.txt","or2.txt","or*.txt"] |%> \x -> do
+        writeFile' x x
+
     (\x -> let dir = takeDirectory x in
            if takeFileName dir /= "pred" then Nothing else Just [dir </> "a.txt",dir </> "b.txt"]) &?> \outs ->
         mapM_ (`writeFile'` "") outs
@@ -56,3 +59,6 @@ test build = do
     build ["A1-plus-B"]
     removeFile "A2"
     build ["A1-plus-B"]
+
+    build ["or2.txt","or4.txt"]
+    assertContents "or4.txt" "or4.txt"
