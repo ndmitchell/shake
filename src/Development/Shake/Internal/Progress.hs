@@ -217,8 +217,8 @@ progressDisplay sample disp prog = do
             sleep sample
             p <- prog
             t <- time
-            ((secs,perc,debug), mealy) <- return $ runMealy mealy (t, p)
-            -- putStrLn debug
+            ((secs,perc,_debug), mealy) <- return $ runMealy mealy (t, p)
+            -- putStrLn _debug
             disp $ formatMessage secs perc ++ maybe "" (\err -> ", Failure! " ++ err) (isFailure p)
             loop time mealy
 
