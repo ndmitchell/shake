@@ -81,7 +81,7 @@ withOpen var name final act = mask $ \restore -> do
 -- | Declare that a just-openned database will be used to call 'shakeRunDatabase' at most once.
 --   If so, an optimisation can be applied to retain less memory.
 shakeOneShotDatabase :: ShakeDatabase -> IO ()
-shakeOneShotDatabase (ShakeDatabase use db) =
+shakeOneShotDatabase (ShakeDatabase use _) =
     withOpen use "shakeOneShotDatabase" (\o -> o{openOneShot=True}) $ \_ -> return ()
 
 -- | Given some options and rules, create a 'ShakeDatabase' that can be used to run

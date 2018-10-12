@@ -71,7 +71,7 @@ getUserRuleInternal key disp test = do
         f v p (UserRule x) = [(fromMaybe 1 p, (v,disp x,x2)) | Just x2 <- [test x]]
         f v p (Unordered xs) = concatMap (f v p) xs
         f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
-        f v p (Versioned v2 x) = f v2 p x
+        f _ p (Versioned v x) = f v p x
         f v p (Alternative x) = take 1 $ f v p x
 
 
