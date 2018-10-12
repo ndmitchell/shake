@@ -86,12 +86,13 @@ parse = f False True . lexer
     where
         -- str = I have ever seen a Str go past (equivalent to "can I be satisfied by no paths")
         -- slash = I am either at the start, or my previous character was Slash
-        f str slash [] = [Lit "" | slash]
-        f str slash (Str "**":xs) = Skip : f True False xs
-        f str slash (Str x:xs) = parseLit x : f True False xs
-        f str slash (SlashSlash:Slash:xs) | not str = Skip1 : f str True xs
-        f str slash (SlashSlash:xs) = Skip : f str False xs
-        f str slash (Slash:xs) = [Lit "" | not str] ++ f str True xs
+        f str slash = \case
+            [] -> [Lit "" | slash]
+            Str "**":xs -> Skip : f True False xs
+            Str x:xs -> parseLit x : f True False xs
+            SlashSlash:Slash:xs | not str -> Skip1 : f str True xs
+            SlashSlash:xs -> Skip : f str False xs
+            Slash:xs -> [Lit "" | not str] ++ f str True xs
 
 
 parseLit :: String -> Pat
@@ -99,6 +100,7 @@ parseLit "*" = Star
 parseLit x = case split (== '*') x of
     [x] -> Lit x
     pre:xs | Just (mid,post) <- unsnoc xs -> Stars pre mid post
+    _ -> Lit ""
 
 
 internalTest :: IO ()
@@ -148,7 +150,7 @@ optimise [] =[]
 isRelativePattern :: FilePattern -> Bool
 isRelativePattern ('*':'*':xs)
     | [] <- xs = True
-    | x:xs <- xs, isPathSeparator x = True
+    | x:_ <- xs, isPathSeparator x = True
 isRelativePattern _ = False
 
 -- | A non-absolute 'FilePath'.
