@@ -6,6 +6,7 @@ import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
 import Development.Shake hiding (addEnv)
+import Development.Shake.Classes
 import qualified Data.ByteString as BS8
 import qualified Data.ByteString.Char8 as BS
 
@@ -173,7 +174,7 @@ needDeps Ninja{..} phonysMp = \build xs -> do -- eta reduced so 'builds' is shar
         builds = Map.fromList $ singles ++ [(x,y) | (xs,y) <- multiples, x <- xs]
 
         -- do list difference, assuming a small initial set, most of which occurs early in the list
-        difference :: [Str] -> [Str] -> [Str]
+        difference :: (Eq a, Hashable a) => [a] -> [a] -> [a]
         difference [] ys = []
         difference xs ys = f (Set.fromList xs) ys
             where
