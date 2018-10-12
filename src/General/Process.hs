@@ -84,13 +84,13 @@ optimiseBuffers :: ProcessOpts -> IO (ProcessOpts, IO ())
 optimiseBuffers po@ProcessOpts{..} = return (po{poStdout = nubOrd poStdout, poStderr = nubOrd poStderr}, return ())
 
 stdStream :: (FilePath -> Handle) -> [Destination] -> [Destination] -> StdStream
-stdStream file [DestEcho] other = Inherit
+stdStream _ [DestEcho] _ = Inherit
 stdStream file [DestFile x] other | other == [DestFile x] || DestFile x `notElem` other = UseHandle $ file x
-stdStream file _ _ = CreatePipe
+stdStream _ _ _ = CreatePipe
 
 
 stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
-stdIn file [] = (Inherit, const $ return ())
+stdIn _ [] = (Inherit, const $ return ())
 stdIn file [SrcFile x] = (UseHandle $ file x, const $ return ())
 stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
     forM_ src $ \x -> case x of
@@ -107,7 +107,7 @@ ignoreSigPipe = handleIO $ \e -> case e of
 
 
 withTimeout :: Maybe Double -> IO () -> IO a -> IO a
-withTimeout Nothing stop go = go
+withTimeout Nothing _ go = go
 withTimeout (Just s) stop go = bracket (forkIO $ sleep s >> stop) killThread $ const go
 
 
