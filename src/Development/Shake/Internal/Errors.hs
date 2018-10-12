@@ -57,7 +57,7 @@ structured :: Bool -> String -> [(String, Maybe String)] -> String -> SomeExcept
 structured alt msg args hint = errorStructured (f msg) (map (first f) args) (f hint)
     where
         f = filter (/= '_') . (if alt then g else id)
-        g xs | (a,b):_ <- filter (\(a,b) -> a `isPrefixOf` xs) alternatives = b ++ g (drop (length a) xs)
+        g xs | res:_ <- [to ++ g rest | (from, to) <- alternatives, Just rest <- [stripPrefix from xs]] = res
         g (x:xs) = x : g xs
         g [] = []
 
