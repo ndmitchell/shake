@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, ViewPatterns #-}
+{-# LANGUAGE PatternGuards, ViewPatterns, TupleSections, LambdaCase #-}
 
 module Development.Shake.Internal.FilePattern(
     -- * Primitive API, as exposed
@@ -66,8 +66,9 @@ data Pat = Lit String -- ^ foo
                                         -- e.g. *foo*bar = Stars "" ["foo"] "bar"
             deriving (Show,Eq,Ord)
 
-isLit Lit{} = True; isLit _ = False
-fromLit (Lit x) = x
+fromLit :: Pat -> Maybe String
+fromLit (Lit x) = Just x
+fromLit _ = Nothing
 
 
 data Lexeme = Str String | Slash | SlashSlash
@@ -306,7 +307,9 @@ walk ps = (any (\p -> isEmpty p || not (null $ match p [""])) ps2, f ps2)
         ps2 = map (filter (/= Lit ".") . optimise . parse) ps
 
         f (nubOrd -> ps)
-            | all isLit fin, all (isLit . fst) nxt = WalkTo (map fromLit fin, map (fromLit *** f) nxt)
+            | Just fin <- mapM fromLit fin
+            , Just nxt <- mapM (\(a,b) -> (,f b) <$> fromLit a) nxt
+            = WalkTo (fin, nxt)
             | otherwise = Walk $ \xs ->
                 (if finStar then xs else filter (\x -> any (`matchOne` x) fin) xs
                 ,[(x, f ys) | x <- xs, let ys = concat [b | (a,b) <- nxt, matchOne a x], not $ null ys])
