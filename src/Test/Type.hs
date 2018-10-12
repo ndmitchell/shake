@@ -296,7 +296,7 @@ newtype BinarySentinel a = BinarySentinel ()
     deriving (Eq,Show,NFData,Typeable,Hashable)
 
 instance forall a . Typeable a => Binary (BinarySentinel a) where
-    put (BinarySentinel x) = put $ show (typeRep (Proxy :: Proxy a))
+    put (BinarySentinel ()) = put $ show (typeRep (Proxy :: Proxy a))
     get = do
         x <- get
         let want = show (typeRep (Proxy :: Proxy a))

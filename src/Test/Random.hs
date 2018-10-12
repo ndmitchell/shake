@@ -79,7 +79,7 @@ test build = do
             writeFile ("input-" ++ show i ++ ".txt") $ show $ Single i
         logic <- randomLogic
         runLogic [] logic
-        chng <- filterM (const randomIO) inputRange   
+        chng <- filterM (const randomIO) inputRange
         forM_ chng $ \i ->
             writeFile ("input-" ++ show i ++ ".txt") $ show $ Single $ negate i
         runLogic chng logic
@@ -135,7 +135,7 @@ randomLogic = do
     rules <- randomRIO (1,100)
     f rules $ map Input inputRange
     where
-        f 0 avail = return []
+        f 0 _ = return []
         f i avail = do
             needs <- randomRIO (0,3)
             xs <- replicateM needs $ do

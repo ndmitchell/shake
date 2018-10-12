@@ -55,7 +55,7 @@ main = shakeTest test opt $ \args -> do
                 liftIO $ appendFile ".log" "."
                 writeFile' out =<< askOracle key
             forM_ [val | Define nam val <- args, nam == name] $ \val ->
-                addOracle $ \(k :: a) -> return val
+                addOracle $ \(_ :: a) -> return val
     add "string" ""
     add "unit" ()
     add "int" (0 :: Int)

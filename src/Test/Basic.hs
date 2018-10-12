@@ -77,7 +77,7 @@ main = shakeTest_ test $ do
     ["sep" </> "3.txt", "sep" </> "4.txt", "sep" </> "5.*", "sep/6.txt"] |%> \out -> writeFile' out ""
     ["sep" </> "7.txt"] |%> \out -> writeFile' out ""
 
-    "ids/source" %> \out -> return ()
+    "ids/source" %> \_ -> return ()
     "ids/out" %> \out -> do need =<< readFileLines "ids/source"; writeFile' out ""
     "ids/*" %> \out -> do alwaysRerun; trace (takeFileName out); writeFile' out $ takeFileName out
 

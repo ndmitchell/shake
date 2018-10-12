@@ -66,10 +66,10 @@ main = testSimple $ do
 
     -- catch does not scope too far
     res <- try $ run 1 "test" $
-        fmap (either show id) $ tryRAW $ captureRAW $ \k -> throwIO Overflow
+        fmap (either show id) $ tryRAW $ captureRAW $ \_ -> throwIO Overflow
     res === Left Overflow
     res <- try $ run 1 "test" $ do
-        captureRAW $ \k -> throwIO Overflow
+        captureRAW $ \_ -> throwIO Overflow
         return "x"
     res === Left Overflow
     -- test for GHC bug 11555

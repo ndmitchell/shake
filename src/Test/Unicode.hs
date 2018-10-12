@@ -50,7 +50,7 @@ test build = do
         let ext x = decode pre <.> x
         res <- try_ $ writeFile (ext "source") "x"
         case res of
-            Left err ->
+            Left _ ->
                 putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
             Right _ -> do
                 build ["--prefix=" ++ pre, "--want=" ++ pre <.> "out", "--sleep"]

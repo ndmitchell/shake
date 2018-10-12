@@ -39,11 +39,11 @@ main = shakeTest test optionsEnum $ \args -> do
     ["failcreates", "failcreates2"] &%> \_ ->
         writeFile' "failcreates" ""
 
-    "recursive_" %> \out -> need ["intermediate_"]
-    "intermediate_" %> \out -> need ["recursive_"]
+    "recursive_" %> \_ -> need ["intermediate_"]
+    "intermediate_" %> \_ -> need ["recursive_"]
 
-    "rec1" %> \out -> need ["rec2"]
-    "rec2" %> \out -> need ["rec1"]
+    "rec1" %> \_ -> need ["rec2"]
+    "rec2" %> \_ -> need ["rec1"]
 
     "systemcmd" %> \_ ->
         cmd "random_missing_command"
@@ -76,15 +76,15 @@ main = shakeTest test optionsEnum $ \args -> do
             if old == 0 then writeFile' out "" else fail "die"
 
     res <- newResource "resource_name" 1
-    "resource" %> \out ->
+    "resource" %> \_ ->
         withResource res 1 $
             need ["resource-dep"]
 
     "overlap.txt" %> \out -> writeFile' out "overlap.txt"
     "overlap.t*" %> \out -> writeFile' out "overlap.t*"
     "overlap.*" %> \out -> writeFile' out "overlap.*"
-    ["*.txx","*.tox"] &%> \out -> fail "do not run"
-    ["*p.txx"] &%> \out -> fail "do not run"
+    ["*.txx","*.tox"] &%> \_ -> fail "do not run"
+    ["*p.txx"] &%> \_ -> fail "do not run"
 
     "chain.2" %> \out -> do
         src <- readFile' "chain.1"
@@ -135,7 +135,7 @@ main = shakeTest test optionsEnum $ \args -> do
         else
             writeFileChanged out src
 
-    "fast_failure" %> \out -> do
+    "fast_failure" %> \_ -> do
         liftIO $ sleep 0.1
         fail "die"
     "slow_success" %> \out -> do
