@@ -86,8 +86,7 @@ shakenEx reenter options test rules sleeper = do
                 createDirectoryRecursive now
     unless reenter $ createDirectoryRecursive out
     case args of
-        "test":args -> do
-            when (args /= []) $ fail "Unexpected additional arguments to 'test'"
+        "test":_ -> do
             putStrLn $ "## TESTING " ++ name
             change $ test (\args -> withArgs (name:args) $ shakenEx True options test rules sleeper)
             putStrLn $ "## FINISHED TESTING " ++ name
