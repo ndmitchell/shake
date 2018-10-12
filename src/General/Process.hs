@@ -25,6 +25,7 @@ import qualified Data.ByteString.Internal as BS(createAndTrim)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import General.Extra
+import Development.Shake.Internal.Errors
 import Prelude
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
@@ -178,6 +179,7 @@ process po = do
                             DestEcho -> hPutStrLn hh
                             DestFile x -> hPutStrLn (outHandle x)
                             DestString x -> addBuffer x . (++ "\n")
+                            DestBytes{} -> throwImpure $ errorInternal "Not reachable due to isBinary condition"
                         forkWait $ whileM $
                             ifM (hIsEOF h) (return False) $ do
                                 src <- hGetLine h
@@ -190,6 +192,7 @@ process po = do
                             DestEcho -> forkWait $ hPutStr hh src
                             DestFile x -> forkWait $ hPutStr (outHandle x) src
                             DestString x -> do addBuffer x src; return $ return ()
+                            DestBytes{} -> throwImpure $ errorInternal "Not reachable due to isBinary condition"
                         return $ sequence_ $ wait1 : waits
 
                 whenJust inh $ snd $ stdIn inHandle poStdin
