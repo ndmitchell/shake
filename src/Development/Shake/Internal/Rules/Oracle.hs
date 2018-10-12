@@ -99,9 +99,6 @@ addOracleFlavor flavor act = do
 --   If the result of an oracle does not change it will not invalidate any rules depending on it.
 --   To always rerun files rules see 'Development.Shake.alwaysRerun'.
 --
--- * If the value returned by 'askOracle' is ignored then 'askOracleWith' may help avoid ambiguous type messages.
---   Alternatively, use the result of 'addOracle', which is 'askOracle' restricted to the correct type.
---
 --   As a more complex example, consider tracking Haskell package versions:
 --
 -- @
