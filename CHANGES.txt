@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+*   Don't export the body of the Typeable type class
     Mark deprecated operators as DEPRECATED
     Improve async exception safety in some corner cases
     Support shakeFiles=/dev/null to avoid any database
