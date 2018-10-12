@@ -5,7 +5,7 @@ module Development.Shake.Internal.Profile(writeProfile) where
 import General.Template
 import Data.Tuple.Extra
 import Data.Function
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import System.FilePath
 import Numeric.Extra
