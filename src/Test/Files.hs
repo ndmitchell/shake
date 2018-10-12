@@ -34,7 +34,7 @@ main = shakeTest_ test $ do
         writeFile' a "a"
         writeFile' b "b"
 
-    ["or1.txt","or2.txt","or*.txt"] |%> \x -> do
+    ["or1.txt","or2.txt","or*.txt"] |%> \x ->
         writeFile' x x
 
     (\x -> let dir = takeDirectory x in
