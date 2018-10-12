@@ -3,7 +3,7 @@
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
     Locked, runLocked,
-    Wait(..), runWait, quickly, fromLater,
+    Wait(Now,Later), runWait, quickly, fromLater,
     firstJustWaitUnordered, firstLeftWaitUnordered
     ) where
 
