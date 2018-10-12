@@ -160,6 +160,8 @@ needDeps Ninja{..} phonysMp = \build xs -> do -- eta reduced so 'builds' is shar
         -- first find which dependencies are generated files
         xs <- return $ filter (`Map.member` builds) xs
         -- now try and find them as dependencies
+        -- performance note: allDependencies generates lazily, and difference consumes lazily,
+        -- with the property that in the common case it won't generate much of the list at all
         let bad = xs `difference` allDependencies build
         case bad of
             [] -> return ()
@@ -175,19 +177,19 @@ needDeps Ninja{..} phonysMp = \build xs -> do -- eta reduced so 'builds' is shar
 
         -- do list difference, assuming a small initial set, most of which occurs early in the list
         difference :: (Eq a, Hashable a) => [a] -> [a] -> [a]
-        difference [] ys = []
+        difference [] _ = []
         difference xs ys = f (Set.fromList xs) ys
             where
                 f xs [] = Set.toList xs
-                f xs (y:ys) | y `Set.member` xs = if Set.null xs2 then [] else f xs2 ys
-                    where xs2 = Set.delete y xs
-                f xs (y:ys) = f xs ys
+                f xs (y:ys)
+                    | y `Set.member` xs = let xs2 = Set.delete y xs in if Set.null xs2 then [] else f xs2 ys
+                    | otherwise = f xs ys
 
         -- find all dependencies of a rule, no duplicates, with all dependencies of this rule listed first
         allDependencies :: Build -> [FileStr]
         allDependencies rule = f Set.empty [] [rule]
             where
-                f seen [] [] = []
+                f _ [] [] = []
                 f seen [] (x:xs) = f seen (map filepathNormalise $ concatMap (resolvePhony phonysMp) $ depsNormal x ++ depsImplicit x ++ depsOrderOnly x) xs
                 f seen (x:xs) rest | x `Set.member` seen = f seen xs rest
                                    | otherwise = x : f (Set.insert x seen) xs (maybeToList (Map.lookup x builds) ++ rest)
