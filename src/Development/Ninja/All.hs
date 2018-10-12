@@ -53,7 +53,7 @@ runNinja restart file args (Just "compdb") = do
         forM_ buildBind $ \(a,b) -> addEnv env a b
         addBinds env ruleBind
         commandline <- fmap BS.unpack $ askVar env $ BS.pack "command"
-        return $ CompDb dir commandline $ BS.unpack $ head depsNormal
+        return $ CompDb dir commandline $ BS.unpack file
     putStr $ printCompDb xs
     return Nothing
 
