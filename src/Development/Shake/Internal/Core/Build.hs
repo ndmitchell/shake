@@ -123,7 +123,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         return $ Left e
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        let go = buildRunMode global stack database k r
+        let go = buildRunMode global stack database r
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
             runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
@@ -142,8 +142,8 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 
 
 -- | Compute the value for a given RunMode and a restore function to run
-buildRunMode :: Global -> Stack -> Database -> Key -> Maybe (Result a) -> Wait Locked RunMode
-buildRunMode global stack database k me = do
+buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Wait Locked RunMode
+buildRunMode global stack database me = do
     changed <- case me of
         Nothing -> return True
         Just me -> buildRunDependenciesChanged global stack database me
