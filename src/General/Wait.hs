@@ -67,7 +67,7 @@ instance (Monad m, Applicative m) => Monad (Wait m) where
         x <- runWait $ f x
         case x of
             Now x -> c x
-            Later x -> x c
+            _ -> fromLater x c
 
 instance (MonadIO m,  Applicative m) => MonadIO (Wait m) where
     liftIO = Lift . liftIO . fmap Now

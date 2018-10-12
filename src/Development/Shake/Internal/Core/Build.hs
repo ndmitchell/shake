@@ -181,10 +181,10 @@ applyKeyValue callStack ks = do
 
     case wait of
         Now vs -> either throwM return vs
-        Later k -> do
+        _ -> do
             offset <- liftIO offsetTime
             vs <- Action $ captureRAW $ \continue ->
-                runLocked globalDatabase $ \_ -> k $ \x ->
+                runLocked globalDatabase $ \_ -> fromLater wait $ \x ->
                     liftIO $ addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
             offset <- liftIO offset
             Action $ modifyRW $ addDiscount offset
@@ -296,10 +296,10 @@ historyLoad (Ver -> ver) = do
         -- FIXME: If running with cloud and shared, and you got a hit in cloud, should also add it to shared
         res <- case res of
             Now x -> return x
-            Later k -> do
+            _ -> do
                 offset <- liftIO offsetTime
                 res <- Action $ captureRAW $ \continue ->
-                    runLocked globalDatabase $ \_ -> k $ \x ->
+                    runLocked globalDatabase $ \_ -> fromLater res $ \x ->
                         liftIO $ addPool PoolResume globalPool $ continue $ Right x
                 offset <- liftIO offset
                 Action $ modifyRW $ addDiscount offset
