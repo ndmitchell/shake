@@ -246,7 +246,7 @@ instance Data ShakeOptions where
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
         x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k` x24 `k`
         Hidden y1 `k` Hidden y2 `k` Hidden y3
-    gunfold k z c = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
@@ -280,8 +280,8 @@ newtype Hidden a = Hidden {fromHidden :: a}
 instance Show (Hidden a) where show _ = "<hidden>"
 
 instance Typeable a => Data (Hidden a) where
-    gfoldl k z = z
-    gunfold k z c = error "Development.Shake.Types.ShakeProgress: gunfold not implemented - data type has no constructors"
+    gfoldl _ z = z
+    gunfold _ _ _ = error "Development.Shake.Types.ShakeProgress: gunfold not implemented - data type has no constructors"
     toConstr _ = error "Development.Shake.Types.ShakeProgress: toConstr not implemented - data type has no constructors"
     dataTypeOf _ = tyHidden
 
