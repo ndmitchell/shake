@@ -178,6 +178,7 @@ matchOne :: Pat -> String -> Bool
 matchOne (Lit x) y = x == y
 matchOne x@Stars{} y = isJust $ matchStars x y
 matchOne Star _ = True
+matchOne p _ = throwImpure $ errorInternal $ "unreachablePattern, matchOne " ++ show p
 
 
 -- Only return the first (all patterns left-most) valid star matching
@@ -191,7 +192,7 @@ matchStars (Stars pre mid post) x = do
         stripInfixes (m:ms) x = do
             (a,x) <- stripInfix m x
             (a:) <$> stripInfixes ms x
-
+matchStars p _ = throwImpure $ errorInternal $ "unreachablePattern, matchStars " ++ show p
 
 -- | Match a 'FilePattern' against a 'FilePath', There are three special forms:
 --

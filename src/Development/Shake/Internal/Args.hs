@@ -10,6 +10,7 @@ module Development.Shake.Internal.Args(
 import Development.Shake.Internal.Paths
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
+import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Demo
 import Development.Shake.FilePath
 import Development.Shake.Internal.Rules.File
@@ -332,6 +333,7 @@ shakeOptsEx =
             Just ("record",file) -> Right ([ProgressRecord $ if null file then "progress.txt" else tail file], id)
             Just ("replay",file) -> Right ([ProgressReplay $ if null file then "progress.txt" else tail file], id)
             _ -> func x
+        progress _ = throwImpure $ errorInternal "incomplete pattern, progress"
 
         outputDebug output Nothing = output
         outputDebug output (Just file) = \v msg -> do
