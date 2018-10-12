@@ -188,6 +188,7 @@ lexxExprs stopColon x = case lexxExpr stopColon True x of
         '\r' -> new a $ dropN x
         '\n' -> new a x
         '\0' -> new a c_x
+        _ -> error "unexpected expression in Ninja"
     where
         new a x = add a ([], x)
         add (Exprs []) x = x
