@@ -10,6 +10,7 @@ module Development.Shake.Internal.Progress(
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Exception.Extra
+import Control.Monad
 import System.Environment.Extra
 import System.Directory
 import System.Process
@@ -327,18 +328,17 @@ progressProgram = do
     case exe of
         Nothing -> return $ const $ return ()
         Just exe -> do
-            ref <- newIORef Nothing
+            lastArgs <- newIORef Nothing -- the arguments we passed to shake-progress last time
             return $ \msg -> do
                 let failure = " Failure! " `isInfixOf` msg
                 let perc = let (a,b) = break (== '%') msg
                            in if null b then "" else reverse $ takeWhile isDigit $ reverse a
-                let key = (failure, perc)
-                same <- atomicModifyIORef ref $ \old -> (Just key, old == Just key)
                 let state | perc == "" = "NoProgress"
                           | failure = "Error"
                           | otherwise = "Normal"
-                rawSystem exe $ ["--title=" ++ msg, "--state=" ++ state] ++ ["--value=" ++ perc | perc /= ""]
-                return ()
+                let args = ["--title=" ++ msg, "--state=" ++ state] ++ ["--value=" ++ perc | perc /= ""]
+                same <- atomicModifyIORef lastArgs $ \old -> (Just args, old == Just args)
+                unless same $ void $ rawSystem exe args
 
 
 -- | A simple method for displaying progress messages, suitable for using as 'Development.Shake.shakeProgress'.
