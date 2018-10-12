@@ -12,7 +12,7 @@ data Opt = Timestamp String | Pattern Pat
 opts = [Option "" ["timestamp"] (ReqArg (Right . Timestamp) "VALUE") "Value used to detect what has rebuilt when"
        ,Option "" ["pattern"] (ReqArg (fmap Pattern . readEither) "PATTERN")  "Which file rules to use (%>, &?> etc)"]
 
-main = shakeTest test opts $ \args -> do
+main = testBuildArgs test opts $ \args -> do
     let timestamp = concat [x | Timestamp x <- args]
     let p = last $ PatWildcard : [x | Pattern x <- args]
     want ["a.txt"]

@@ -2,7 +2,7 @@
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
-    shakeTest, testBuild, testSimple,
+    testBuildArgs, testBuild, testSimple,
     root,
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
@@ -40,13 +40,13 @@ import System.Time.Extra
 import Prelude
 
 
-shakeTest
+testBuildArgs
     :: (([String] -> IO ()) -> IO ()) -- ^ The test driver
     -> [OptDescr (Either String a)] -- ^ Arguments the test can accept
     -> ([a] -> Rules ()) -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-shakeTest f opts g = shakenEx False opts f
+testBuildArgs f opts g = shakenEx False opts f
     (\os args -> if null args then g os else want args >> withoutActions (g os))
 
 testBuild
@@ -54,7 +54,7 @@ testBuild
     -> Rules () -- ^ The Shake script under test
     -> IO () -- ^ Sleep function, driven by passing @--sleep@
     -> IO ()
-testBuild f g = shakeTest f [] (const g)
+testBuild f g = testBuildArgs f [] (const g)
 
 testSimple :: IO () -> IO () -> IO ()
 testSimple act = testBuild (const act) (return ())

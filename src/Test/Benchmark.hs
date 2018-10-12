@@ -13,7 +13,7 @@ opts = [Option "" ["depth"  ] (ReqArg (fmap Depth   . readEither) "INT") ""
        ,Option "" ["breadth"] (ReqArg (fmap Breadth . readEither) "INT") ""]
 
 -- | Given a breadth and depth come up with a set of build files
-main = shakeTest test opts $ \opts -> do
+main = testBuildArgs test opts $ \opts -> do
     let depth   = last $ 75 : [x | Depth   x <- opts]
     let breadth = last $ 75 : [x | Breadth x <- opts]
 

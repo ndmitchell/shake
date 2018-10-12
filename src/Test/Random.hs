@@ -34,7 +34,7 @@ data Logic = Logic Int [[Source]]
 
 arg = [Option "" ["arg"] (ReqArg Right "") ""]
 
-main = shakeTest test arg $ \args -> do
+main = testBuildArgs test arg $ \args -> do
     let toFile (Input i) = "input-" ++ show i ++ ".txt"
         toFile (Output i) = "output-" ++ show i ++ ".txt"
         toFile Bang = error "BANG"

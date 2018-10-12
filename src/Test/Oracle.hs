@@ -38,7 +38,7 @@ type instance RuleResult T.RandomType = Int
 data Define = Define String String -- this type produces this result
 opt = [Option "" ["def"] (ReqArg (Right . uncurry Define . second tail . breakOn "=") "type=value") ""]
 
-main = shakeTest test opt $ \args -> do
+main = testBuildArgs test opt $ \args -> do
     addOracle $ \(T.RandomType _) -> return 42
     addOracle $ \(RandomType _) -> return (-42)
     "randomtype.txt" %> \out -> do

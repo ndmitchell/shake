@@ -19,7 +19,7 @@ import Prelude
 
 opts = Option "" ["arg"] (ReqArg Right "") ""
 
-main = shakeTest test [opts] $ \opts -> do
+main = testBuildArgs test [opts] $ \opts -> do
     let real = "real" `elem` opts
     action $ if real
         then cmd "ninja" opts

@@ -16,7 +16,7 @@ newtype Oracle = Oracle ()
     deriving (Show,Eq,Hashable,Binary,NFData,Typeable)
 type instance RuleResult Oracle = Int
 
-main = shakeTest test opts $ \opts -> do
+main = testBuildArgs test opts $ \opts -> do
     want ["foo.txt","ver.txt","oracle.txt"]
 
     "foo.txt" %> \file -> liftIO $ appendFile file "x"

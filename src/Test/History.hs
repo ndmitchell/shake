@@ -14,7 +14,7 @@ data Args = Die deriving (Eq,Enum,Bounded,Show)
 
 type instance RuleResult FilePath = String
 
-main = shakeTest test optionsEnum $ \args -> do
+main = testBuildArgs test optionsEnum $ \args -> do
     let die :: a -> a
         die x = if Die `elem` args then error "Die" else x
 

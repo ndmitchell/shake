@@ -29,7 +29,7 @@ instance Binary BadBinary where
     put (BadBinary x) = put x
     get = do x <- get; if x == "bad" then error "get: BadBinary \"bad\"" else return $ BadBinary x
 
-main = shakeTest test optionsEnum $ \args -> do
+main = testBuildArgs test optionsEnum $ \args -> do
     "norule" %> \_ ->
         need ["norule_isavailable"]
 
