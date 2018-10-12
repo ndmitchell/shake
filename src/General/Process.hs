@@ -154,7 +154,7 @@ process po = do
                 wait <- forM streams $ \(h, hh, dest) -> do
                     -- no point tying the streams together if one is being streamed directly
                     let isTied = not (poStdout `disjoint` poStderr) && length streams == 2
-                    let isBinary = not $ any isDestString dest && not (any isDestBytes dest)
+                    let isBinary = any isDestBytes dest || not (any isDestString dest)
                     when isTied $ hSetBuffering h LineBuffering
                     when (DestEcho `elem` dest) $ do
                         buf <- hGetBuffering hh
