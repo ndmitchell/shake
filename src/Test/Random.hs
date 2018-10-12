@@ -106,10 +106,12 @@ test build = do
                 j <- randomRIO (1::Int,8)
                 build $ ("-j" ++ show j) : map ((++) "--arg=" . show) (xs ++ map Want wants)
 
-                let value i = case [ys | Logic j ys <- xs, j == i] of
-                        [ys] -> Multiple $ flip map ys $ map $ \i -> case i of
+                let value i =
+                        let ys = head [ys | Logic j ys <- xs, j == i]
+                        in Multiple $ flip map ys $ map $ \i -> case i of
                             Input i -> Single $ if i `elem` negated then negate i else i
                             Output i -> value i
+                            Bang -> error "BANG"
                 forM_ (concat wants) $ \i -> do
                     let wanted = value i
                     got <- fmap read $ IO.readFile' $ "output-" ++ show i ++ ".txt"
@@ -128,6 +130,7 @@ addBang xs = do
             i <- randomRIO (0, length xs)
             let (before,after) = splitAt i xs
             return $ Logic log $ before ++ [Bang] : after
+        f x = return x
 
 
 randomLogic :: IO [Logic] -- only Logic constructors
