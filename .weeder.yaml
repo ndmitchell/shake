@@ -15,3 +15,11 @@
 - message:
   - name: Redundant build-depends entry
   - depends: [old-time, semigroups]
+
+# Things that are related to the 'cloud' flag
+- message:
+  - name: Redundant build-depends entry
+  - depends: [network, network-uri]
+- message:
+  - name: Weeds exported
+  - module: [Development.Shake.Internal.History.Bloom, Development.Shake.Internal.History.Serialise]
