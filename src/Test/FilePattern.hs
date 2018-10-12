@@ -210,6 +210,6 @@ walker a b = f (split isPathSeparator b) $ snd $ walk [a]
     where
         f (".":xs) w = f xs w
         f (x:xs) (Walk op) = f (x:xs) $ WalkTo $ op [x]
-        f [x]    (WalkTo (file, dir)) = x `elem` file
-        f (x:xs) (WalkTo (file, dir)) | Just w <- lookup x dir = f xs w
+        f [x]    (WalkTo (file, _  )) = x `elem` file
+        f (x:xs) (WalkTo (_   , dir)) | Just w <- lookup x dir = f xs w
         f _ _ = False
