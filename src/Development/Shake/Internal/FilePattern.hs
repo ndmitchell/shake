@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, ViewPatterns, TupleSections, LambdaCase #-}
+{-# LANGUAGE PatternGuards, ViewPatterns, TupleSections #-}
 
 module Development.Shake.Internal.FilePattern(
     -- * Primitive API, as exposed
@@ -87,7 +87,7 @@ parse = f False True . lexer
     where
         -- str = I have ever seen a Str go past (equivalent to "can I be satisfied by no paths")
         -- slash = I am either at the start, or my previous character was Slash
-        f str slash = \case
+        f str slash = \x -> case x of
             [] -> [Lit "" | slash]
             Str "**":xs -> Skip : f True False xs
             Str x:xs -> parseLit x : f True False xs
