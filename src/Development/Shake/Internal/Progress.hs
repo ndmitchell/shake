@@ -34,7 +34,7 @@ import Prelude
 
 #ifdef mingw32_HOST_OS
 
-import Foreign
+import Foreign.Ptr
 import Foreign.C.Types
 
 #ifdef x86_64_HOST_ARCH
