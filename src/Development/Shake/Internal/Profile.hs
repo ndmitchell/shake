@@ -146,9 +146,13 @@ generateTrace xs = jsonListLines $
     showEntries 0 [y{prfCommand=prfName x} | x <- xs, y <- prfTraces x] ++
     showEntries 1 (concatMap prfTraces xs)
     where
-        showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortBy (compare `on` prfStart) xs
-        alloc as r | (a1,an:a2) <- break (\a -> prfStop a <= prfStart r) as = (a1++r:a2, (length a1,r))
+        showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortOn prfStart xs
+
+        alloc :: [ProfileTrace] -> ProfileTrace -> ([ProfileTrace], (Int, ProfileTrace))
+        -- FIXME: I don't really understand what this code is doing, or the invariants it ensures
+        alloc as r | (a1,_:a2) <- break (\a -> prfStop a <= prfStart r) as = (a1++r:a2, (length a1,r))
                    | otherwise = (as++[r], (length as,r))
+
         showEntry pid (tid, ProfileTrace{..}) = jsonObject
             [("args","{}"), ("ph",show "X"), ("cat",show "target")
             ,("name",show prfCommand), ("tid",show tid), ("pid",show pid)
