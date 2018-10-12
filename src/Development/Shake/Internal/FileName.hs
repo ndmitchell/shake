@@ -74,7 +74,7 @@ filepathNormalise xs
         g i (x:xs) | x == dotDot = g (i+1) xs
         g i (x:xs) | x == dot = g i xs
         g 0 (x:xs) = x : g 0 xs
-        g i (x:xs) = g (i-1) xs
+        g i (_:xs) = g (i-1) xs -- equivalent to eliminating ../x
 
         split = BS.splitWith sep
 

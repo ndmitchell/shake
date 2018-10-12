@@ -115,7 +115,7 @@ normaliseEx xs | a:b:xs <- xs, isWindows && sep a && sep b = '/' : f ('/':xs) --
         g i ("..":xs) = g (i+1) xs
         g i (".":xs) = g i xs
         g 0 (x:xs) = x : g 0 xs
-        g i (x:xs) = g (i-1) xs
+        g i (_:xs) = g (i-1) xs -- equivalent to eliminating ../x
 
         split xs = if null ys then [] else a : split b
             where (a,b) = break sep ys
