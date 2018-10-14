@@ -563,4 +563,4 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 --   If the 'Action' completes successfully the file is considered up-to-date, even if the file
 --   has not changed.
 (%>) :: Located => FilePattern -> (FilePath -> Action ()) -> Rules ()
-(%>) test act = (if simple test then id else priority 0.5) $ root (show test ++ " %> at " ++ callStackTop) (test ?==) act
+(%>) test act = withFrozenCallStack $ (if simple test then id else priority 0.5) $ root (show test ++ " %> at " ++ callStackTop) (test ?==) act
