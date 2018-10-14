@@ -248,7 +248,7 @@ parseFSAT = mapMaybe f . lines
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
 commandExplicitIO funcName opts results exe args = do
-    let (grabStdout, grabStderr) = both or $ unzip $ for results $ \r -> case r of
+    let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
             ResultStdouterr{} -> (True, True)

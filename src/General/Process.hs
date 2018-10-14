@@ -165,7 +165,7 @@ process po = do
 
                     if isBinary then do
                         hSetBinaryMode h True
-                        dest <- return $ for dest $ \d -> case d of
+                        dest <- return $ flip map dest $ \d -> case d of
                             DestEcho -> BS.hPut hh
                             DestFile x -> BS.hPut (outHandle x)
                             DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
@@ -175,7 +175,7 @@ process po = do
                             mapM_ ($ src) dest
                             notM $ hIsEOF h
                      else if isTied then do
-                        dest <- return $ for dest $ \d -> case d of
+                        dest <- return $ flip map dest $ \d -> case d of
                             DestEcho -> hPutStrLn hh
                             DestFile x -> hPutStrLn (outHandle x)
                             DestString x -> addBuffer x . (++ "\n")
