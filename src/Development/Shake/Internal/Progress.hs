@@ -55,8 +55,8 @@ foreign import CALLCONV "Windows.h SetConsoleTitleA" c_setConsoleTitle :: Ptr CC
 
 progress :: Database -> Step -> IO Progress
 progress Database{..} step = do
-    xs <- Ids.toList status
-    return $! foldl' f mempty $ map (snd . snd) xs
+    xs <- Ids.elems status
+    return $! foldl' f mempty $ map snd xs
     where
         g = floatToDouble
 

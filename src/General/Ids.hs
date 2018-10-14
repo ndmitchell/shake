@@ -6,7 +6,7 @@ module General.Ids(
     empty, insert, lookup, fromList,
     null, size, sizeUpperBound,
     forWithKeyM_, forCopy, forMutate,
-    toList, toMap
+    toList, elems, toMap
     ) where
 
 import Data.IORef.Extra
@@ -126,6 +126,8 @@ toList ids = do
     evaluate $ demand xs
     return xs
 
+elems :: Ids a -> IO [a]
+elems ids = map snd <$> toList ids
 
 null :: Ids a -> IO Bool
 null ids = (== 0) <$> sizeUpperBound ids

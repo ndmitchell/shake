@@ -225,8 +225,8 @@ runLint mp k v = case Map.lookup (typeKey k) mp of
 assertFinishedDatabase :: Database -> IO ()
 assertFinishedDatabase Database{..} = do
     -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
-    status <- Ids.toList status
-    let bad = [key | (_, (key, Running{})) <- status]
+    status <- Ids.elems status
+    let bad = [key | (key, Running{}) <- status]
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
 
@@ -238,19 +238,19 @@ liveFilesState RunState{..} = do
 
 liveFiles :: Database -> IO [FilePath]
 liveFiles database = do
-    status <- Ids.toList $ status database
+    status <- Ids.elems $ status database
     let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
-    return [show k | (_, (k, Ready{})) <- status, specialIsFileKey $ typeKey k]
+    return [show k | (k, Ready{}) <- status, specialIsFileKey $ typeKey k]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
 checkValid diagnostic Database{..} check missing = do
-    status <- Ids.toList status
+    status <- Ids.elems status
     intern <- readIORef intern
     diagnostic $ return "Starting validity/lint checking"
 
     -- Do not use a forM here as you use too much stack space
-    bad <- (\f -> foldM f [] status) $ \seen (_,v) -> case v of
+    bad <- (\f -> foldM f [] status) $ \seen v -> case v of
         (key, Ready Result{..}) -> do
             good <- check key $ fst result
             diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
