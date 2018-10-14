@@ -8,7 +8,8 @@ module Development.Shake.Internal.Core.Run(
     reset,
     run,
     shakeRunAfter,
-    liveFilesState
+    liveFilesState,
+    errorsState
     ) where
 
 import Control.Exception
@@ -241,6 +242,12 @@ liveFiles database = do
     status <- Ids.elems $ status database
     let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
     return [show k | (k, Ready{}) <- status, specialIsFileKey $ typeKey k]
+
+errorsState :: RunState -> IO [(String, SomeException)]
+errorsState RunState{..} = do
+    database <- readVar databaseVar
+    status <- Ids.elems $ status database
+    return [(show k, e) | (k, Error e _) <- status]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()

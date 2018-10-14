@@ -2,7 +2,7 @@
 module Test.Database(main) where
 
 import Control.Concurrent.Extra
-import Control.Exception
+import Control.Exception.Extra
 import Control.Monad
 import Data.List
 import Development.Shake
@@ -20,6 +20,8 @@ rules = do
         liftIO $ appendFile "log.txt" "x"
         copyFile' (out -<.> "in") out
         removeFilesAfter "." ["log.txt"]
+
+    "*.err" %> \out -> fail out
 
     phony "sleep" $ liftIO $ sleep 20
 
@@ -66,3 +68,8 @@ main = testSimple $ do
 
     shakeRunAfter opts after
     assertBoolIO (not <$> IO.doesFileExist "log.txt") "Log must be deleted"
+
+    errs <- shakeWithDatabase opts{shakeStaunch=True, shakeVerbosity=Silent} rules $ \db -> do
+        assertException ["Error when running"] $ void $ shakeRunDatabase db [need ["foo.err","bar.err"]]
+        shakeErrorsDatabase db
+    sort (map fst errs) === ["bar.err","foo.err"]

@@ -20,6 +20,7 @@ module Development.Shake.Database(
     shakeOneShotDatabase,
     shakeRunDatabase,
     shakeLiveFilesDatabase,
+    shakeErrorsDatabase,
     shakeRunAfter
     ) where
 
@@ -98,6 +99,28 @@ shakeLiveFilesDatabase :: ShakeDatabase -> IO [FilePath]
 shakeLiveFilesDatabase (ShakeDatabase use s) =
     withOpen use "shakeLiveFilesDatabase" id $ \_ ->
         liveFilesState s
+
+-- | Given a 'ShakeDatabase', what files did the execution reach an error on last time.
+--   Some special considerations when using this function:
+--
+-- * The presence of an error does not mean the build will fail, specifically if a
+--   previously required dependency was run and raised an error, then the thing that previously
+--   required it will be run. If the build system has changed in an untracked manner,
+--   the build may succeed this time round.
+--
+-- * If the previous run actually failed then 'shakeRunDatabase' will have thrown an exception.
+--   You probably want to catch that exception so you can make the call to 'shakeErrorsDatabase'.
+--
+-- * You may see a single failure reported multiple times, with increasingly large call stacks, showing
+--   the ways in which the error lead to further errors throughout.
+--
+-- * The 'SomeException' values are highly likely to be of type 'ShakeException'.
+--
+-- * If you want as many errors as possile in one run set @'shakeStaunch'=True@.
+shakeErrorsDatabase :: ShakeDatabase -> IO [(String, SomeException)]
+shakeErrorsDatabase (ShakeDatabase use s) =
+    withOpen use "shakeErrorsDatabase" id $ \_ ->
+        errorsState s
 
 -- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
 --   plus the list of 'Action' given here. Returns the results from the explicitly passed
