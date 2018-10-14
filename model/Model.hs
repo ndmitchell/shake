@@ -11,7 +11,7 @@ import Util
 import Test
 
 props :: [(String, Property)]
-props = [("model" ++ show i ++ ": " ++ s, p) | (i,ps) <- zip [0..] [prop0, prop1, prop2], (s,p) <- ps]
+props = [("model" ++ show i ++ ": " ++ s, p) | (i,ps) <- zipFrom 0 [prop0, prop1, prop2], (s,p) <- ps]
 
 
 -- Simple evaluation.

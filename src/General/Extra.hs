@@ -24,7 +24,7 @@ module General.Extra(
 
 import Control.Exception.Extra
 import Data.Char
-import Data.List
+import Data.List.Extra
 import System.Environment.Extra
 import Development.Shake.FilePath
 import Control.DeepSeq
@@ -91,7 +91,7 @@ fastAt xs = \i -> if i < 0 || i >= n then Nothing else Just $ indexArray arr i
         arr = runST $ do
             let n = length xs
             arr <- newArray n undefined
-            forM_ (zip [0..] xs) $ \(i,x) ->
+            forM_ (zipFrom 0 xs) $ \(i,x) ->
                 writeArray arr i x
             unsafeFreezeArray arr
 

@@ -166,7 +166,7 @@ ps &%> act
         "All patterns to &%> must have the same number and position of // and * wildcards" :
         ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = do
-        forM_ (zip [0..] ps) $ \(i,p) ->
+        forM_ (zipFrom 0 ps) $ \(i,p) ->
             (if simple p then id else priority 0.5) $
                 fileForward (show ps ++ " &%> at " ++ callStackTop) $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
                     FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
