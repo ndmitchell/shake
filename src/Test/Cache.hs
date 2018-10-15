@@ -3,6 +3,7 @@ module Test.Cache(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import System.Directory
 import Data.Char
 import Test.Type
 
@@ -14,6 +15,14 @@ main = testBuild test $ do
         return $ length $ filter isDigit src
     "*.out*" %> \x ->
         writeFile' x . show =<< vowels (dropExtension x <.> "txt")
+
+    startCompiler <- newCache $ \() -> do
+        liftIO $ writeFile "compiler.txt" "on"
+        runAfter $ writeFile "compiler.txt" "off"
+
+    "*.lang" %> \out -> do
+        startCompiler ()
+        liftIO $ copyFile "compiler.txt" out
 
 
 test build = do
@@ -36,3 +45,10 @@ test build = do
     build ["vowels.out1","-j3","--sleep"]
     assertContents "trace.txt" "111"
     assertContents "vowels.out1" "4"
+
+    build ["foo.lang","bar.lang"]
+    assertContents "foo.lang" "on"
+    assertContents "compiler.txt" "off"
+    writeFile "compiler.txt" "unstarted"
+    build ["foo.lang","bar.lang"]
+    assertContents "compiler.txt" "unstarted"
