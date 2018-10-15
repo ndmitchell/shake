@@ -67,6 +67,15 @@ Think of directories as containers for files. They exist or don't pretty randoml
 
 There is a tracked function `doesDirectoryExist`, to depend on the presence or absence of a directory, but you should not call it on directories which might be created by the build system.
 
+#### Q: Does Shake work with Continuous Integration?
+
+Shake works well when run by Continuous Integration (CI) systems. There are a few tweaks that sometimes make Shake work even better for CI:
+
+* Setting `shakeProgress` to `progressDisplay 5 putStrLn` will print the progress information to stdout every 5 seconds. In many CI systems, you can tag this information to display it through the UI - e.g. [TeamCity](https://confluence.jetbrains.com/display/TCD9/Build+Script+Interaction+with+TeamCity#BuildScriptInteractionwithTeamCity-ReportingBuildProgress) spots messages of the form `##teamcity[progressMessage 'message goes here']`.
+* Setting `shakeCommandOptions` to `EchoStdout True` will ensure that the standard output of all failing commands is captured in the final error messages.
+* Setting `shakeStaunch` to `True` will cause the CI to find as many errors as it can - taking longer to fail, but producing a great number of errors when it does.
+* Using `shakeErrorsDatabase` you can collect the exceptions for many build rules, allowing them to be presented in a CI dashbaord.
+
 #### Q: What GHC bugs has Shake found?
 
 For some reason, Shake tends to find a reasonable number of serious bugs in GHC, given how few bugs there are generally in GHC. I suspect the reason is a combination of thorough testing including with GHC pre-releases. Some of the best bugs found by Shake are:
