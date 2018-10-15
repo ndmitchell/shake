@@ -155,7 +155,7 @@ skeleton mode dir cssOut = do
         dropWhile (~/= "<p id=footer>") footer
     where
         remode xs = if mode == Debug then xs else map f xs
-            where f (TagOpen "a" at) = TagOpen "a" $ for at $ second $ \v ->
+            where f (TagOpen "a" at) = TagOpen "a" $ flip map at $ second $ \v ->
                       if v == "index.html" then "."
                       else if takeExtension v == ".html" then dropExtension v else v
                   f x = x
@@ -175,4 +175,3 @@ skeleton mode dir cssOut = do
 
 inside :: String -> [Tag String] -> [Tag String]
 inside tag = takeWhile (~/= TagClose tag) . dropWhile (~/= TagOpen tag [])
-
