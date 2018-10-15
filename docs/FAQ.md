@@ -1,5 +1,7 @@
 # FAQ
 
+This page includes the more commonly asked questions. For less frequently asked questions, or to ask your own question, see the `shake-build-system` tag on [StackOverflow](https://stackoverflow.com/questions/tagged/shake-build-system).
+
 #### Q: What else is on this website?
 
 * [User manual](Manual.md) -- the place to start, which also serves as a tutorial.
