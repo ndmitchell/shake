@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.17, released 2018-10-15
     Add Database module for repeated execution from one database
 *   Don't export the body of the Typeable type class
     Mark deprecated operators as DEPRECATED
