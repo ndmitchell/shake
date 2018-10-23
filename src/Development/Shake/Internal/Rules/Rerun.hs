@@ -31,7 +31,7 @@ type instance RuleResult AlwaysRerunQ = ()
 --     'Development.Shake.writeFileChanged' out stdout
 -- @
 --
---   In make, the @.PHONY@ attribute on file-producing rules has a similar effect.
+--   In @make@, the @.PHONY@ attribute on file-producing rules has a similar effect.
 --
 --   Note that 'alwaysRerun' is applied when a rule is executed. Modifying an existing rule
 --   to insert 'alwaysRerun' will /not/ cause that rule to rerun next time.
