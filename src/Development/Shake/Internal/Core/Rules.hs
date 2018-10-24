@@ -183,7 +183,7 @@ type family RuleResult key -- = value
 --
 --   Raises an error if any other rule exists at this type.
 addBuiltinRule
-    :: (RuleResult key ~ value, ShakeValue key, ShakeValue value, Partial)
+    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
