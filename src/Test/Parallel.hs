@@ -35,8 +35,13 @@ main = testBuild test $ do
         peak <- liftIO $ readIORef peak
         writeFile' "parallel" $ show peak
 
+    "parallels" %> \out -> do
+        xs <- parallel $ replicate 5 $ parallel $ map return [1..5]
+        writeFile' out $ show xs
+
 
 test build = do
+    build ["clean"]
     writeFile "A.txt" "AAA"
     writeFile "B.txt" "BBB"
     build ["AB.txt","--sleep"]
@@ -51,3 +56,6 @@ test build = do
     assertContents "parallel" "1"
     build ["parallel","-j5"]
     assertContents "parallel" "5"
+
+    build ["parallels"]
+    assertContents "parallels" $ show $ replicate 5 [1..5]
