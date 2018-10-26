@@ -469,7 +469,7 @@ parallel acts = do
 --   If Shake ever has nothing else to do it will run batches before they are at the maximum,
 --   so you may see much smaller batches, especially at high parallelism settings.
 batch
-    :: Int   -- ^ Maximum number to run in a single batch, e.g. @3@.
+    :: Int   -- ^ Maximum number to run in a single batch, e.g. @3@, must be positive.
     -> ((a -> Action ()) -> Rules ()) -- ^ Way to match an entry, e.g. @\"*.ext\" '%>'@.
     -> (a -> Action b)  -- ^ Preparation to run individually on each, e.g. using 'need'.
     -> ([b] -> Action ())  -- ^ Combination action to run on all, e.g. using 'cmd'.
