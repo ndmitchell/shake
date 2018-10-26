@@ -35,7 +35,7 @@ main = testBuild test $ do
         o <- resultHasChanged out
         writeFileLines out $ xs ++ ["On" | o]
 
-    batch maxBound ("batch_max.*" %>) return $ \outs -> do
+    batch maxBound ("batch_max.*" %>) return $ \outs ->
         forM_ outs $ \out -> writeFile' out $ show $ length outs
 
 
@@ -90,5 +90,5 @@ test build = do
         build $ ["On", "--sleep"] ++ args
         assertContents "On" "On\n"
 
-    build $ ["batch_max." ++ show i | i <- [1..100]]
+    build ["batch_max." ++ show i | i <- [1..100]]
     assertContents "batch_max.72" "100"
