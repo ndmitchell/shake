@@ -500,7 +500,7 @@ batch mx pred one many
             -- delete at most mx from the batch
             (now, count) <- liftIO $ atomicModifyIORef todo $ \(count, bs) ->
                 let (now,later) = splitAt mx bs
-                    count2 = max 0 $ count - mx
+                    count2 = if count > mx then count - mx else 0
                 in ((count2, later), (now, count2))
             requeue todo (>=) count
 

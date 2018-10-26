@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #622, avoid potential maxBound overflow in batch
     Reduce the context required for addBuiltinRule
 0.17, released 2018-10-15
     Add Database module for repeated execution from one database
