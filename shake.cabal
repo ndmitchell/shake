@@ -448,6 +448,7 @@ test-suite shake-test
         Test.FilePattern
         Test.Files
         Test.Forward
+        Test.GetTargets
         Test.History
         Test.Journal
         Test.Lint

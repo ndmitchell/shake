@@ -2,7 +2,7 @@
 {-# LANGUAGE ViewPatterns, TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Files(
-    (&?>), (&%>), defaultRuleFiles
+    (&?>), (&%>), buildAll, buildAllWithDocs, defaultRuleFiles
     ) where
 
 import Control.Monad
@@ -160,24 +160,59 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
 (&%>) :: Located => [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-[p] &%> act = withFrozenCallStack $ p %> act . return
-ps &%> act
+ps &%> act =
+    withFrozenCallStack $
+      buildAll' Nothing "&%>" callStackTop ps act
+
+-- | Function alias for '&%>'.
+buildAll :: Located => [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
+buildAll ps act =
+    withFrozenCallStack $
+      buildAll' Nothing "buildAll" callStackTop ps act
+
+-- | Like 'buildAll' or '&%>' but associates the given documentation with the target..
+buildAllWithDocs
+    :: Located
+    => String -- ^ Documentation that describes the target
+    -> [FilePattern]
+    -> ([FilePath] -> Action ())
+    -> Rules ()
+buildAllWithDocs doc ps act =
+    withFrozenCallStack $
+      buildAll' (Just doc) "buildAll" callStackTop ps act
+
+buildAll'
+    :: Located
+    => Maybe String -- ^ Optional documentation
+    -> String -- ^ Operator name
+    -> String -- ^ CallStack
+    -> [FilePattern]
+    -> ([FilePath] -> Action ())
+    -> Rules ()
+buildAll' mbDoc name stack [p] act = p %> act . return
+buildAll' mbDoc name stack ps  act
     | not $ compatible ps = error $ unlines $
-        "All patterns to &%> must have the same number and position of // and * wildcards" :
+        ("All patterns to " ++ name ++
+         " must have the same number and position of // and * wildcards") :
         ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
-    | otherwise = withFrozenCallStack $ do
-        forM_ (zipFrom 0 ps) $ \(i,p) ->
+    | otherwise = do
+        forM_ (zipFrom 0 ps) $ \(i,p) -> do
+            documentTarget p mbDoc
             (if simple p then id else priority 0.5) $
-                fileForward (show ps ++ " &%> at " ++ callStackTop) $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
-                    FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
+                fileForward (show ps ++ name ++ " at " ++ stack) $ let op = (p ?==) in \file ->
+                  if not $ op file then Nothing else Just $ do
+                    FilesA res <- apply1 $ FilesQ $
+                      map (FileQ . fileNameFromString . substitute (extract p file)) ps
                     return $ if null res then Nothing else Just $ res !! i
         (if all simple ps then id else priority 0.5) $
-            addUserRule $ FilesRule (show ps ++ " &%> " ++ callStackTop) $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
-                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
+            addUserRule $ FilesRule (show ps ++ name ++ " " ++ stack) $ \(FilesQ xs_) ->
+                let xs = map (fileNameToString . fromFileQ) xs_ in
+                if not $ length xs == length ps && and (zipWith (?==) ps xs)
+                  then Nothing else Just $ do
                     liftIO $ mapM_ createDirectoryRecursive $ nubOrd $ map takeDirectory xs
                     trackAllow xs
                     act xs
-                    getFileTimes "&%>" xs_
+                    getFileTimes name xs_
 
 
 -- | Define a rule for building multiple files at the same time, a more powerful
