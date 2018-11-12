@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add actionCatch, to catch exceptions in Action
     #622, avoid potential maxBound overflow in batch
     Reduce the context required for addBuiltinRule
 0.17, released 2018-10-15

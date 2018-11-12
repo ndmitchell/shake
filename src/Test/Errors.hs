@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE TypeFamilies, GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
 
 module Test.Errors(main) where
 
@@ -169,6 +169,12 @@ main = testBuildArgs test optionsEnum $ \args -> do
             `actionFinally` (output "X" >> sleep 0.1)
             `actionFinally` output "Y"
 
+    let catching out = flip actionCatch $ \(e :: SomeException) -> writeFile' out $ show e
+    "catch1" %> \out -> catching out $ fail "magic1"
+    "catch2" %> \out -> catching out $ liftIO $ killThread =<< myThreadId
+    "catch3.1" %> \out -> fail "magic3"
+    "catch3.2" %> \out -> catching out $ need ["catch3.1"]
+
     -- not tested by default since only causes an error when idle GC is turned on
     phony "block" $
         liftIO $ putStrLn $ let x = x in x
@@ -286,3 +292,8 @@ test build = do
     killThread t
     sleep 0.3
     assertContents "finalfinal" "XY"
+
+    build ["catch1"]
+    assertContents "catch1" "magic1"
+    crash ["catch2"] [show ThreadKilled]
+    crash ["catch3.2"] ["magic3"]

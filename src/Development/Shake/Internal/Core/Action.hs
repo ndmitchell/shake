@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Action(
-    actionOnException, actionFinally, actionRetry,
+    actionOnException, actionFinally, actionCatch, actionRetry,
     getShakeOptions, getProgress, runAfter,
     lintTrackRead, lintTrackWrite, lintTrackAllow,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
@@ -101,6 +101,19 @@ actionOnException = actionBoom False
 -- | After an 'Action', perform some 'IO', even if there is an exception.
 actionFinally :: Action a -> IO b -> Action a
 actionFinally = actionBoom True
+
+-- | If a syncronous exception is raised by the 'Action', perform some handler.
+--   Note that there is no guarantee that the handler will run on shutdown (use 'actionFinally' for that),
+--   and that 'actionCatch' /cannot/ catch exceptions thrown by dependencies, e.g. raised by 'need'
+--   (to do so would allow untracked dependencies on failure conditions).
+actionCatch :: Exception e => Action a -> (e -> Action a) -> Action a
+actionCatch act hdl = Action $ catchRAW (fromAction act) $ \e ->
+    case () of
+        _ | not $ isAsyncException e
+          , Nothing <- fromException e :: Maybe ShakeException
+          , Just e <- fromException e
+          -> fromAction $ hdl e
+        _ -> throwRAW e
 
 
 -- | Retry an 'Action' if it throws an exception, at most /n/ times (where /n/ must be positive).
