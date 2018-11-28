@@ -335,7 +335,7 @@ resultHasChanged :: FilePath -> Action Bool
 resultHasChanged file = do
     let filename = FileQ $ fileNameFromString file
     res <- getDatabaseValue filename
-    old <- return $ case res of
+    old <- return $ case result <$> res of
         Nothing -> Nothing
         Just (Left bs) -> fromAnswer $ getEx bs
         Just (Right v) -> answer v

@@ -80,13 +80,13 @@ setIdKeyStatusQuiet Database{..} i k v =
 ---------------------------------------------------------------------
 -- QUERIES
 
-getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Either BS.ByteString value))
+getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Result (Either BS.ByteString value)))
 getDatabaseValue k = do
     Global{..} <- Action getRO
     Just (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
         getIdKeyStatus database =<< getKeyId database (newKey k)
     return $ case getResult status of
-        Just r -> Just $ fromValue <$> result r
+        Just r -> Just $ fmap fromValue <$> r
         _ -> Nothing
 
 
