@@ -402,7 +402,7 @@ data Global = Global
     ,globalShared :: Maybe Shared -- ^ The active shared state, if any
     ,globalCloud :: Maybe Cloud
     ,globalStep :: {-# UNPACK #-} !Step
-    ,globalOneShot :: {-# UNPACK #-} !Bool -- ^ I am running in one-shot mode so don't need to store BS's for Result/Error
+    ,globalOneShot :: Bool -- ^ I am running in one-shot mode so don't need to store BS's for Result/Error
     }
 
 -- local variables of Action
