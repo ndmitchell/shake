@@ -378,7 +378,7 @@ need :: Partial => [FilePath] -> Action ()
 need = withFrozenCallStack $ void . apply_ fileNameFromString
 
 
--- | Like 'need' but returns a list of rebuild dependencies this build.
+-- | Like 'need' but returns a list of rebuilt dependencies since the calling rule last built successfully.
 --
 --   The following example writes a list of changed dependencies to a file as its action.
 --
@@ -397,8 +397,19 @@ need = withFrozenCallStack $ void . apply_ fileNameFromString
 --   To detect the latter case you may wish to use 'resultHasChanged'.
 needHasChanged :: Partial => [FilePath] -> Action [FilePath]
 needHasChanged paths = withFrozenCallStack $ do
-    res <- apply_ fileNameFromString paths
-    return [a | (a,b) <- zip paths res, hasChanged b]
+    apply_ fileNameFromString paths
+    self <- getCurrentKey
+    selfVal <- case self of
+        Nothing -> return Nothing
+        Just self -> getDatabaseValueGeneric self
+    case selfVal of
+        Nothing -> return paths -- never build before or not a key, so everything has changed
+        Just selfVal -> flip filterM paths $ \path -> do
+            pathVal <- getDatabaseValue (FileQ $ fileNameFromString path)
+            return $ case pathVal of
+                Just pathVal | changed pathVal > built selfVal -> True
+                _ -> False
+
 
 needBS :: Partial => [BS.ByteString] -> Action ()
 needBS = withFrozenCallStack $ void . apply_ fileNameFromByteString

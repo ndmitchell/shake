@@ -64,6 +64,10 @@ test build = do
     writeFile "ABn.txt" "bogus"
     build ["ABn.txt", "--sleep"]
     assertContents "ABn.txt" ""
+    writeFile "Bn.txt" "1"
+    build ["Bn.txt", "--sleep"]
+    build ["ABn.txt"]
+    assertContents "ABn.txt" "Bn.txt\n"
 
     forM_ [[],["--usepredicate"]] $ \args -> do
         writeFile "An.in" "1"
