@@ -2,7 +2,7 @@
 {-# LANGUAGE Rank2Types, ConstraintKinds, TupleSections, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Build(
-    getDatabaseValue,
+    getDatabaseValue, getDatabaseValueGeneric,
     historyIsEnabled, historySave, historyLoad,
     apply, apply1,
     ) where
@@ -81,13 +81,15 @@ setIdKeyStatusQuiet Database{..} i k v =
 -- QUERIES
 
 getDatabaseValue :: (RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action (Maybe (Result (Either BS.ByteString value)))
-getDatabaseValue k = do
+getDatabaseValue k =
+    fmap (fmap $ fmap $ fmap fromValue) $ getDatabaseValueGeneric $ newKey k
+
+getDatabaseValueGeneric :: Key -> Action (Maybe (Result (Either BS.ByteString Value)))
+getDatabaseValueGeneric k = do
     Global{..} <- Action getRO
     Just (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
-        getIdKeyStatus database =<< getKeyId database (newKey k)
-    return $ case getResult status of
-        Just r -> Just $ fmap fromValue <$> r
-        _ -> Nothing
+        getIdKeyStatus database =<< getKeyId database k
+    return $ getResult status
 
 
 ---------------------------------------------------------------------
