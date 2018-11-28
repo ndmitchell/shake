@@ -63,8 +63,6 @@ data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
 data FileR = FileR { answer :: !(Maybe FileA) -- ^ Raw information about the file built by this rule.
                                            --   Set to 'Nothing' to prevent linting some times.
                    , useLint :: !Bool       -- ^ Should we lint the resulting file
-                   , hasChanged :: !Bool    -- ^ Whether the file changed this build. Transient
-                                           --   information, that doesn't get serialized.
                    }
     deriving (Typeable)
 
@@ -98,13 +96,13 @@ instance NFData FileA where
     rnf (FileA a b c) = rnf a `seq` rnf b `seq` rnf c
 
 instance NFData FileR where
-    rnf (FileR a b c) = rnf a `seq` rnf b `seq` rnf c
+    rnf (FileR a b) = rnf a `seq` rnf b
 
 instance Show FileA where
     show (FileA m s h) = "File {mod=" ++ show m ++ ",size=" ++ show s ++ ",digest=" ++ show h ++ "}"
 
 instance Show FileR where
-    show FileR{..} = show answer ++ if hasChanged then " recomputed" else " not recomputed"
+    show FileR{..} = show answer
 
 instance Storable FileA where
     sizeOf _ = 4 * 3 -- 4 Word32's
@@ -194,7 +192,7 @@ defaultRuleFile = do
     addBuiltinRuleEx (ruleLint opts) (ruleIdentity opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FileQ FileR
-ruleLint opts k (FileR (Just v) True _) = do
+ruleLint opts k (FileR (Just v) True) = do
     now <- fileStoredValue opts k
     return $ case now of
         Nothing -> Just "<missing>"
@@ -271,10 +269,10 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
         unLint (RunResult a b c) = RunResult a b c{useLint = False}
 
         retNew :: RunChanged -> Answer -> Action (RunResult FileR)
-        retNew c v = return $ RunResult c (runBuilder $ putEx v) $ fileR v (c == ChangedRecomputeDiff)
+        retNew c v = return $ RunResult c (runBuilder $ putEx v) $ fileR v
 
         retOld :: RunChanged -> Action (RunResult FileR)
-        retOld c = return $ RunResult c (fromJust oldBin) $ fileR (fromJust old) False
+        retOld c = return $ RunResult c (fromJust oldBin) $ fileR (fromJust old)
 
         -- actually run the rebuild
         rebuildWith act = do
@@ -434,7 +432,7 @@ neededCheck xs = withFrozenCallStack $ do
     pre <- liftIO $ mapM (fileStoredValue opts . FileQ) xs
     post <- apply_ id xs
     let bad = [ (x, if isJust a then "File change" else "File created")
-              | (x, a, FileR (Just b) _ _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
+              | (x, a, FileR (Just b) _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
         [] -> return ()
         (file,msg):_ -> throwM $ errorStructured
