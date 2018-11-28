@@ -17,6 +17,7 @@ module Development.Shake.Internal.Core.Action(
     -- Internal only
     producesUnchecked, producesCheck, lintCurrentDirectory,
     blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
+    getCurrentKey
     ) where
 
 import Control.Exception
@@ -536,3 +537,7 @@ deprioritize :: Double -> Action ()
 deprioritize x = do
     (wait, _) <- actionAlwaysRequeuePriority (PoolDeprioritize $ negate x) $ return ()
     Action $ modifyRW $ addDiscount wait
+
+
+getCurrentKey :: Action (Maybe Key)
+getCurrentKey = Action $ topStack . localStack <$> getRW
