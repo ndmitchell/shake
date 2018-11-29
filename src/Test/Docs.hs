@@ -49,7 +49,7 @@ main = testBuild (unless brokenHaddock . noTest) $ do
         needSource
         trackAllow ["dist//*"]
         dist <- liftIO $ canonicalizePath "dist"
-        cmd (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
+        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
     "Part_*.hs" %> \out -> do
         need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
