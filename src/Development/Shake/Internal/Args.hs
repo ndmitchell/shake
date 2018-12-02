@@ -100,6 +100,7 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 --   be @[]@.
 --
 -- * @argValues@ is a list of non-flag arguments, which are often treated as files and passed to 'want'.
+--   If arguments are specified then typically the 'want' calls from the rules are discarded using 'withoutActions'.
 --
 -- * @result@ should produce a 'Nothing' to indicate that no building needs to take place, or a 'Just'
 --   providing the rules that should be used.
@@ -113,12 +114,14 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 -- flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
 --
 -- main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
---     if null targets then 'want' [\"result.exe\"] else 'want' targets
 --     let compiler = if DistCC \`elem\` flags then \"distcc\" else \"gcc\"
---     \"*.o\" '%>' \\out -> do
---         'need' ...
---         'cmd' compiler ...
---     ...
+--     let rules = do
+--         \"*.o\" '%>' \\out -> do
+--             'need' ...
+--             'cmd' compiler ...
+--         'want' [\"target.exe\"]
+--         ...
+--     if null targets then rules else 'want' targets >> 'withoutActions' rules
 -- @
 --
 --   Now you can pass @--distcc@ to use the @distcc@ compiler.
