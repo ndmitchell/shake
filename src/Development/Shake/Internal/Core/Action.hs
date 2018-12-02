@@ -354,7 +354,7 @@ historyDisable :: Action ()
 historyDisable = Action $ modifyRW $ \s -> s{localHistory = False}
 
 
--- | This rule the following files, in addition to any defined by its target.
+-- | This rule builds the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.
 produces :: [FilePath] -> Action ()
 produces xs = Action $ modifyRW $ \s -> s{localProduces = map (True,) (reverse xs) ++ localProduces s}
