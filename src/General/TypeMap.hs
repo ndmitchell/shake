@@ -1,13 +1,14 @@
 {-# LANGUAGE ExistentialQuantification, ConstraintKinds, KindSignatures, GADTs, ScopedTypeVariables, Rank2Types #-}
 
 module General.TypeMap(
-    Map, empty, singleton, insert, map, lookup, unionWith
+    Map, empty, singleton, insert, map, lookup, unionWith, toList, size
     ) where
 
 import qualified Data.HashMap.Strict as Map
 import Data.Typeable.Extra
 import Unsafe.Coerce
 import Data.Functor
+import qualified Prelude
 import Prelude hiding (lookup, map)
 
 
@@ -35,3 +36,9 @@ unionWith f (Map mp1) (Map mp2) = Map $ Map.unionWith (\x1 x2 -> F $ f (unF x1) 
 
 map :: (forall a . f1 a -> f2 a) -> Map f1 -> Map f2
 map f (Map mp) = Map $ Map.map (\(F a) -> F $ f a) mp
+
+toList :: (forall a . f a -> b) -> Map f -> [b]
+toList f (Map mp) = Prelude.map (\(F a) -> f a) $ Map.elems mp
+
+size :: Map f -> Int
+size (Map mp) = Map.size mp
