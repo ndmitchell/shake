@@ -5,7 +5,7 @@
 module Development.Shake.Internal.Core.Types(
     BuiltinRun, BuiltinLint, BuiltinIdentity,
     RunMode(..), RunResult(..), RunChanged(..),
-    UserRule(..), UserRuleVersioned(..),
+    UserRule(..), UserRuleVersioned(..), userRuleSize,
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..), BS_Store,
@@ -372,6 +372,13 @@ instance Semigroup (UserRule a) where
 instance Monoid (UserRule a) where
     mempty = Unordered []
     mappend = (<>)
+
+userRuleSize :: UserRule a -> Int
+userRuleSize UserRule{} = 1
+userRuleSize (Unordered xs) = sum $ map userRuleSize xs
+userRuleSize (Priority _ x) = userRuleSize x
+userRuleSize (Alternative x) = userRuleSize x
+userRuleSize (Versioned _ x) = userRuleSize x
 
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.

@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    In diagnostic mode, show the number of actions/rules/user rules
 0.17.2, released 2018-11-29
     Make needHasChanged work even between runs
 0.17.1, released 2018-11-14
