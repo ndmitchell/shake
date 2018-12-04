@@ -364,10 +364,7 @@ instance Monoid (UserRuleVersioned a) where
     mappend = (<>)
 
 instance Semigroup (UserRule a) where
-    x <> y = Unordered $ fromUnordered x ++ fromUnordered y
-        where
-            fromUnordered (Unordered xs) = xs
-            fromUnordered x = [x]
+    x <> y = Unordered [x,y]
 
 instance Monoid (UserRule a) where
     mempty = Unordered []
