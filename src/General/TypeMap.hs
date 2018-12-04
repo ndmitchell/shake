@@ -12,7 +12,7 @@ import qualified Prelude
 import Prelude hiding (lookup, map)
 
 
-data F f = forall a . F (f a)
+data F f = forall a . F !(f a)
 
 unF :: F f -> f a
 unF x = case x of F x -> unsafeCoerce x
