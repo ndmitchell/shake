@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.17.3, released 2018-12-04
     #632, remove O(n^2) behaviour when constructing user rules
     In diagnostic mode, show the number of actions/rules/user rules
 0.17.2, released 2018-11-29
