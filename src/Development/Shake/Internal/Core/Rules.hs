@@ -112,8 +112,8 @@ getUserRuleOne key disp test = do
 newtype Rules a = Rules (ReaderT (ShakeOptions, IORef SRules) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix)
 
-modifyRules :: (SRules -> SRules) -> Rules ()
-modifyRules f = Rules $ liftIO . flip modifyIORef' f =<< asks snd
+newRules :: SRules -> Rules ()
+newRules x = Rules $ liftIO . flip modifyIORef' (<> x) =<< asks snd
 
 modifyRulesScoped :: (SRules -> SRules) -> Rules a -> Rules a
 modifyRulesScoped f (Rules r) = Rules $ do
@@ -157,7 +157,7 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
 -- | Add a user rule. In general these should be specialised to the type expected by a builtin rule.
 --   The user rules can be retrieved by 'getUserRuleList'.
 addUserRule :: Typeable a => a -> Rules ()
-addUserRule r = modifyRules $ (<>) mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
+addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
@@ -205,7 +205,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     let check_ k v = check (fromKey k) (fromValue v)
     let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    modifyRules $ (<>) mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
+    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
 
 
 -- | Change the priority of a given set of rules, where higher priorities take precedence.
@@ -281,7 +281,7 @@ alternatives = modifyRulesScoped $ \r -> r{userRules = TMap.map (\(UserRuleVersi
 --   For the standard requirement of only 'Development.Shake.need'ing a fixed list of files in the 'action',
 --   see 'Development.Shake.want'.
 action :: Partial => Action a -> Rules ()
-action act = modifyRules $ (<>) mempty{actions=newListBuilder (addCallStack callStackFull emptyStack, void act)}
+action act = newRules mempty{actions=newListBuilder (addCallStack callStackFull emptyStack, void act)}
 
 
 -- | Remove all actions specified in a set of rules, usually used for implementing
