@@ -115,8 +115,8 @@ newtype Rules a = Rules (ReaderT (ShakeOptions, IORef SRules) IO a) -- All IO mu
 newRules :: SRules -> Rules ()
 newRules x = Rules $ liftIO . flip modifyIORef' (<> x) =<< asks snd
 
-modifyRules :: (SRules -> SRules) -> Rules a -> Rules a
-modifyRules f (Rules r) = Rules $ do
+modifyRulesScoped :: (SRules -> SRules) -> Rules a -> Rules a
+modifyRulesScoped f (Rules r) = Rules $ do
     (opts, refOld) <- ask
     liftIO $ do
         refNew <- newIORef mempty
@@ -227,7 +227,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
 -- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
 -- @
 priority :: Double -> Rules a -> Rules a
-priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
+priority d = modifyRulesScoped $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
 
 
 -- | Indicate that the nested rules have a given version. If you change the semantics of the rule then updating (or adding)
@@ -241,7 +241,7 @@ priority d = modifyRules $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x
 --   You should only use 'versioned' to track changes in the build source, for standard runtime dependencies you should use
 --   other mechanisms, e.g. 'Development.Shake.addOracle'.
 versioned :: Int -> Rules a -> Rules a
-versioned v = modifyRules $ \s -> s
+versioned v = modifyRulesScoped $ \s -> s
     {userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned (b || v /= 0) $ Versioned (Ver v) x) $ userRules s
     ,builtinRules = Map.map (\b -> b{builtinVersion = Ver v}) $ builtinRules s
     }
@@ -260,7 +260,7 @@ versioned v = modifyRules $ \s -> s
 --   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
 --   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
 alternatives :: Rules a -> Rules a
-alternatives = modifyRules $ \r -> r{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Alternative x) $ userRules r}
+alternatives = modifyRulesScoped $ \r -> r{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Alternative x) $ userRules r}
 
 
 -- | Run an action, usually used for specifying top-level requirements.
@@ -287,4 +287,4 @@ action act = newRules mempty{actions=newListBuilder (addCallStack callStackFull 
 -- | Remove all actions specified in a set of rules, usually used for implementing
 --   command line specification of what to build.
 withoutActions :: Rules a -> Rules a
-withoutActions = modifyRules $ \x -> x{actions=mempty}
+withoutActions = modifyRulesScoped $ \x -> x{actions=mempty}
