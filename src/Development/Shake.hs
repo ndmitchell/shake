@@ -169,7 +169,7 @@ import Development.Shake.Internal.Rules.Rerun
 --
 --   For large build systems the choice of GHC flags can have a significant impact. We recommend:
 --
--- > ghc --make MyBuildSystem -threaded -rtsopts "-with-rtsopts=-I0 -qg -qb"
+-- > ghc --make MyBuildSystem -threaded -rtsopts "-with-rtsopts=-I0 -qg"
 --
 --   * @-rtsopts@: Allow the setting of further GHC options at runtime.
 --
@@ -180,7 +180,7 @@ import Development.Shake.Internal.Rules.Rerun
 --     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
 --     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
 --
---   * With GHC 7.8 and later you may add @-threaded@, and pass the options @-qg -qb@ to @-with-rtsopts@
+--   * With GHC 7.8 and later you may add @-threaded@, and pass the options @-qg@ to @-with-rtsopts@
 --     to disable parallel garbage collection. Parallel garbage collection in Shake
 --     programs typically goes slower than sequential garbage collection, while occupying many cores that
 --     could be used for running system commands.

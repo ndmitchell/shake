@@ -288,7 +288,7 @@ This script creates a folder named `_shake` for the build system objects to live
 
 Now you can run a build by typing `stack exec ./build.sh` on Linux, or `stack exec build.bat` on Windows. On Linux you may want to alias `build` to `stack exec ./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
-_Warning:_ You should not use the `-threaded` for GHC 7.6 or below because of a [GHC bug](https://ghc.haskell.org/trac/ghc/ticket/7646). If you do turn on `-threaded`, you should include `-qg -qb` in `-with-rtsopts`.
+_Warning:_ You should not use the `-threaded` for GHC 7.6 or below because of a [GHC bug](https://ghc.haskell.org/trac/ghc/ticket/7646). If you do turn on `-threaded`, you should include `-qg` in `-with-rtsopts`.
 
 #### Command line flags
 
