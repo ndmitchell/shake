@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.17.4, released 2019-01-10
     Add shakeProfileDatabase to generate profile information
     Don't suggest -qb (irrelevant with -qg)
 0.17.3, released 2018-12-04
