@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add shakeProfileDatabase to generate profile information
     Don't suggest -qb (irrelevant with -qg)
 0.17.3, released 2018-12-04
     #632, remove O(n^2) behaviour when constructing user rules

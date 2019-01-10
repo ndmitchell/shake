@@ -9,6 +9,7 @@ module Development.Shake.Internal.Core.Run(
     run,
     shakeRunAfter,
     liveFilesState,
+    profileState,
     errorsState
     ) where
 
@@ -242,6 +243,11 @@ liveFilesState :: RunState -> IO [FilePath]
 liveFilesState RunState{..} = do
     database <- readVar databaseVar
     liveFiles database
+
+profileState :: RunState -> FilePath -> IO ()
+profileState RunState{..} file = do
+    database <- readVar databaseVar
+    writeProfile file database
 
 liveFiles :: Database -> IO [FilePath]
 liveFiles database = do

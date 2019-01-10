@@ -48,6 +48,8 @@ main = testSimple $ do
     live <- shakeLiveFilesDatabase db
     sort live === ["a.in","a.out"]
 
+    shakeProfileDatabase db "-"
+
     -- check that parallel runs blow up, and that we can throw async exceptions to kill it
     assertWithin 10 $ do
         threads <- newBarrier

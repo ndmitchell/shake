@@ -20,6 +20,7 @@ module Development.Shake.Database(
     shakeOneShotDatabase,
     shakeRunDatabase,
     shakeLiveFilesDatabase,
+    shakeProfileDatabase,
     shakeErrorsDatabase,
     shakeRunAfter
     ) where
@@ -99,6 +100,13 @@ shakeLiveFilesDatabase :: ShakeDatabase -> IO [FilePath]
 shakeLiveFilesDatabase (ShakeDatabase use s) =
     withOpen use "shakeLiveFilesDatabase" id $ \_ ->
         liveFilesState s
+
+-- | Given a 'ShakeDatabase', generate profile information to the given file about the latest run.
+--   See 'shakeReport' for the types of file that can be generated.
+shakeProfileDatabase :: ShakeDatabase -> FilePath -> IO ()
+shakeProfileDatabase (ShakeDatabase use s) file =
+    withOpen use "shakeProfileDatabase" id $ \_ ->
+        profileState s file
 
 -- | Given a 'ShakeDatabase', what files did the execution reach an error on last time.
 --   Some special considerations when using this function:
