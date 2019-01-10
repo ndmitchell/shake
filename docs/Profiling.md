@@ -71,7 +71,7 @@ A useful step to understand performance of the zero build is to add a `putStrLn`
 
 ## HTML profile reports
 
-In order to explore performance of the build system in greater detail you can use the HTML profile reports. To generate an HTML report, run `build --profile`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. There is a help page included in the profiling output, and a [profiling tutorial/demo](https://cdn.rawgit.com/ndmitchell/shake/35fbe03c8d3bafeae17b58af89497ff3fdd54b22/html/demo.html).
+In order to explore performance of the build system in greater detail you can use the HTML profile reports. To generate an HTML report, run `build --profile`, which will generate an interactive HTML profile named `report.html`. This report lets you examine what happened in that run, what takes most time to run, what rules depend on what etc. There is a help page included in the profiling output, and a [profiling tutorial/demo](https://rawcdn.githack.com/ndmitchell/shake/35fbe03c8d3bafeae17b58af89497ff3fdd54b22/html/demo.html).
 
 You can also get all the raw information in JSON format by specifying `--profile=output.json`.
 
