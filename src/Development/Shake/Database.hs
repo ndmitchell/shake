@@ -133,7 +133,7 @@ shakeErrorsDatabase (ShakeDatabase use s) =
 -- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
 --   plus the list of 'Action' given here. Returns the results from the explicitly passed
 --   actions along with a list of actions to run after the database was closed, as added with
---   'runAfter' and 'removeFilesAfter'.
+--   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
 shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
 shakeRunDatabase (ShakeDatabase use s) as =
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do
