@@ -290,7 +290,7 @@ shakeOptsEx =
     ,no  $ Option ""  ["numeric-version"] (NoArg $ Right ([NumericVersion],id)) "Print just the version number and exit."
     ,yes $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
     ,yes $ Option ""  ["rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files."
-    ,yes $ Option ""  ["no-rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNormal, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files if necessary."
+    ,yes $ Option ""  ["no-rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNormal, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files if necessary (default)."
     ,yes $ Option ""  ["skip"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildLater, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files this run."
 --    ,yes $ Option ""  ["skip-forever"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNever, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files until they change."
     ,yes $ Option "r" ["report","profile"] (OptArg (\x -> Right ([], \s -> s{shakeReport=shakeReport s ++ [fromMaybe "report.html" x]})) "FILE") "Write out profiling information [to report.html]."
