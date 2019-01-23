@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, ExplicitForAll, ScopedTypeVariables, Rank2Types #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables, Rank2Types #-}
 
 module General.Binary(
     BinaryOp(..), binaryOpMap,

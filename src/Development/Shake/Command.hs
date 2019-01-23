@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
+{-# LANGUAGE FlexibleInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
 
 #if __GLASGOW_HASKELL__ < 710
