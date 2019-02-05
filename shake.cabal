@@ -176,6 +176,7 @@ library
         General.Extra
         General.FileLock
         General.GetOpt
+        General.Heap
         General.Ids
         General.Intern
         General.ListBuilder
@@ -289,6 +290,7 @@ executable shake
         General.Extra
         General.FileLock
         General.GetOpt
+        General.Heap
         General.Ids
         General.Intern
         General.ListBuilder
@@ -412,6 +414,7 @@ test-suite shake-test
         General.Extra
         General.FileLock
         General.GetOpt
+        General.Heap
         General.Ids
         General.Intern
         General.ListBuilder
