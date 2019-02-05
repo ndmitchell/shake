@@ -43,6 +43,7 @@ module General.Heap
 import Data.Monoid (Monoid(mappend, mempty))
 import Data.Foldable hiding (minimum, concatMap)
 import Data.Function (on)
+import Prelude hiding (foldr)
 
 -- The implementation of 'Heap' must internally hold onto the dictionary entry for ('<='),
 -- so that it can be made 'Foldable'. Confluence in the absence of incoherent instances
