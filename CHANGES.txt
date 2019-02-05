@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Remove dependency on heaps
 0.17.4, released 2019-01-10
     Add shakeProfileDatabase to generate profile information
     Don't suggest -qb (irrelevant with -qg)
