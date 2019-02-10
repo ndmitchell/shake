@@ -61,7 +61,7 @@ data FileA = FileA {-# UNPACK #-} !ModTime {-# UNPACK #-} !FileSize FileHash
 
 -- | Result of a File rule, may contain raw file information and whether the rule did run this build
 data FileR = FileR { answer :: !(Maybe FileA) -- ^ Raw information about the file built by this rule.
-                                           --   Set to 'Nothing' to prevent linting some times.
+                                              --   Set to 'Nothing' for 'phony' files.
                    , useLint :: !Bool       -- ^ Should we lint the resulting file
                    }
     deriving (Typeable)
