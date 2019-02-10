@@ -18,6 +18,8 @@ main = testBuildArgs test optionsEnum $ \args -> do
     let die :: a -> a
         die x = if Die `elem` args then error "Die" else x
 
+    phony "Phony" $ return ()
+
     "OutFile.txt" %> \out -> die $ copyFile' "In.txt" out
 
     reader <- addOracleCache $ \x -> die (readFile' x)
@@ -36,23 +38,23 @@ test build = do
 
     build ["clean"]
     setIn "1"
-    build $ ["--share","--sleep"] ++ outs
+    build $ ["--share","--sleep","Phony"] ++ outs
     checkOut "1"
     setIn "2"
-    build $ ["--share","--sleep"] ++ outs
+    build $ ["--share","--sleep","Phony"] ++ outs
     checkOut "2"
 
     setIn "1"
     assertException [] $ build ["OutFile.txt","--die","--quiet","--sleep"]
-    build $ ["--die","--share"] ++ outs
+    build $ ["--die","--share","Phony"] ++ outs
     checkOut "1"
 
     setIn "2"
     mapM_ removeFile outs
-    build $ ["--die","--share"] ++ outs
+    build $ ["--die","--share","Phony"] ++ outs
     checkOut "2"
 
     setIn "2"
     removeFile ".shake.database"
-    build $ ["--die","--share"] ++ outs
+    build $ ["--die","--share","Phony"] ++ outs
     checkOut "2"
