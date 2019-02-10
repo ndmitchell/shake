@@ -304,7 +304,9 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
                             act
                             new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                             case new of
-                                Nothing -> retNew ChangedRecomputeDiff AnswerPhony
+                                Nothing -> do
+                                    alwaysRerun
+                                    retNew ChangedRecomputeDiff AnswerPhony
                                 Just new@(FileA _ _ fileHash) -> do
                                     producesUnchecked [xStr]
                                     res <- answer (AnswerDirect $ Ver ver) new
