@@ -19,6 +19,9 @@ main = testBuildArgs test optionsEnum $ \args -> do
         die x = if Die `elem` args then error "Die" else x
 
     phony "Phony" $ return ()
+    "Phony.txt" %> \out -> do
+        need ["Phony"]
+        copyFile' "In.txt" out
 
     "OutFile.txt" %> \out -> die $ copyFile' "In.txt" out
 
@@ -33,28 +36,28 @@ main = testBuildArgs test optionsEnum $ \args -> do
 
 test build = do
     let setIn = writeFile "In.txt"
-    let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt"]
+    let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt","Phony.txt"]
     let checkOut x = mapM_ (`assertContents` x) outs
 
     build ["clean"]
     setIn "1"
-    build $ ["--share","--sleep","Phony"] ++ outs
+    build $ ["--share","--sleep"] ++ outs
     checkOut "1"
     setIn "2"
-    build $ ["--share","--sleep","Phony"] ++ outs
+    build $ ["--share","--sleep"] ++ outs
     checkOut "2"
 
     setIn "1"
     assertException [] $ build ["OutFile.txt","--die","--quiet","--sleep"]
-    build $ ["--die","--share","Phony"] ++ outs
+    build $ ["--die","--share"] ++ outs
     checkOut "1"
 
     setIn "2"
     mapM_ removeFile outs
-    build $ ["--die","--share","Phony"] ++ outs
+    build $ ["--die","--share"] ++ outs
     checkOut "2"
 
     setIn "2"
     removeFile ".shake.database"
-    build $ ["--die","--share","Phony"] ++ outs
+    build $ ["--die","--share"] ++ outs
     checkOut "2"
