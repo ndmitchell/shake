@@ -38,7 +38,7 @@ createLinkBool from to = withCWString from $ \cfrom -> withCWString to $ \cto ->
 #else
 
 createLinkBool from to = createLink from to >> return Nothing
-    `catch` \(e :: IOException) -> Just $ show e
+    `catch` \(e :: IOException) -> return $ Just $ show e
 
 #endif
 
