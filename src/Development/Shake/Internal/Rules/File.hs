@@ -291,6 +291,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
                     new <- act
                     case new of
                         Nothing -> do
+                            -- Not 100% sure how you get here, but I think it involves RebuildLater and multi-file rules
                             historyDisable
                             retNew ChangedRecomputeDiff AnswerPhony
                         Just new -> answer (AnswerForward $ Ver ver) new
@@ -305,6 +306,9 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
                             new <- liftIO $ storedValueError opts False "Error, rule finished running but did not produce file:" o
                             case new of
                                 Nothing -> do
+                                    -- rule ran, but didn't compute an answer, because shakeCreationCheck=False
+                                    -- I think it should probably not return phony, but return a different valid-but-no-file
+                                    -- but it's just too rare to bother
                                     historyDisable
                                     retNew ChangedRecomputeDiff AnswerPhony
                                 Just new@(FileA _ _ fileHash) -> do
