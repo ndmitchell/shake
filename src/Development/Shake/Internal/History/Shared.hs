@@ -6,13 +6,13 @@ module Development.Shake.Internal.History.Shared(
 
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.History.Types
+import Development.Shake.Internal.History.Symlink
 import Development.Shake.Classes
 import General.Binary
 import General.Extra
 import General.Chunks
 import Control.Monad.Extra
 import System.FilePath
-import System.Directory
 import System.IO
 import Numeric
 import Development.Shake.Internal.FileInfo
@@ -25,30 +25,6 @@ import Data.Maybe
 import qualified Data.ByteString as BS
 import Prelude
 
-{-
-#ifndef mingw32_HOST_OS
-import System.Posix.Files(createLink)
-#else
-
-import Foreign.Ptr
-import Foreign.C.Types
-import Foreign.C.String
-
-#ifdef x86_64_HOST_ARCH
-#define CALLCONV ccall
-#else
-#define CALLCONV stdcall
-#endif
-
-foreign import CALLCONV unsafe "Windows.h CreateHardLinkW" c_CreateHardLinkW :: Ptr CWchar -> Ptr CWchar -> Ptr () -> IO Bool
-
-createLink :: FilePath -> FilePath -> IO ()
-createLink from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
-    res <- c_CreateHardLinkW cfrom cto nullPtr
-    unless res $ error $ show ("Failed to createLink", from, to)
-
-#endif
--}
 
 data Shared = Shared
     {globalVersion :: !Ver
@@ -128,7 +104,7 @@ lookupShared shared ask key builtinVersion userVersion = do
                 let dir = sharedFileDir shared entryKey
                 forM_ entryFiles $ \(file, hash) -> do
                     createDirectoryRecursive $ takeDirectory file
-                    copyFile (dir </> show hash) file
+                    copyFileLink (dir </> show hash) file
         result <$> firstJustM id
             [ firstJustWaitUnordered id
                 [ test <$> ask k | (k, i1) <- kis
@@ -142,9 +118,8 @@ saveSharedEntry shared entry = do
     createDirectoryRecursive dir
     withFile (dir </> "_key") AppendMode $ \h -> writeChunkDirect h $ putEntry (keyOp shared) entry
     forM_ (entryFiles entry) $ \(file, hash) ->
-        -- FIXME: should use a combination of symlinks and making files read-only
         unlessM (doesFileExist_ $ dir </> show hash) $
-            copyFile file (dir </> show hash)
+            copyFileLink file (dir </> show hash)
 
 
 addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
