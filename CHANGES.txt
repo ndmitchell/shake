@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Use symlinks for --shared
     #643, add MonadFail Rules
 0.17.5, released 2019-02-05
     Remove dependency on heaps

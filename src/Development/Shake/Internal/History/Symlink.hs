@@ -1,19 +1,26 @@
-{-# LANGUAGE RecordWildCards, TupleSections #-}
+{-# LANGUAGE CPP #-}
 
 module Development.Shake.Internal.History.Symlink(
     copyFileLink
     ) where
 
+import Control.Monad.Extra
+import General.Extra
 import System.Directory
+import System.FilePath
 
-{-
-#ifndef mingw32_HOST_OS
-import System.Posix.Files(createLink)
-#else
 
+#ifdef mingw32_HOST_OS
 import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
+#else
+import System.Posix.Files(createLink)
+#endif
+
+createLinkBool :: FilePath -> FilePath -> IO (Maybe String)
+
+#ifdef mingw32_HOST_OS
 
 #ifdef x86_64_HOST_ARCH
 #define CALLCONV ccall
@@ -21,16 +28,29 @@ import Foreign.C.String
 #define CALLCONV stdcall
 #endif
 
-foreign import CALLCONV unsafe "Windows.h CreateHardLinkW" c_CreateHardLinkW :: Ptr CWchar -> Ptr CWchar -> Ptr () -> IO Bool
+foreign import CALLCONV unsafe "Windows.h CreateHardLinkW " c_CreateHardLinkW :: Ptr CWchar -> Ptr CWchar -> Ptr () -> IO Bool
 
-createLink :: FilePath -> FilePath -> IO ()
-createLink from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
-    res <- c_CreateHardLinkW cfrom cto nullPtr
-    unless res $ error $ show ("Failed to createLink", from, to)
+createLinkBool from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
+    res <- c_CreateHardLinkW cto cfrom nullPtr
+    return $ if res then Nothing else Just "Failed."
+
+#else
+
+createLinkBool from to = createLink from to >> return Nothing
+    `catch` \(e :: IOException) -> Just $ show e
 
 #endif
--}
 
 
 copyFileLink :: FilePath -> FilePath -> IO ()
-copyFileLink from to = copyFile from to
+copyFileLink from to = do
+    createDirectoryRecursive $ takeDirectory to
+    removeFile_ to
+    b <- createLinkBool from to
+    whenJust b $ \_ -> do
+        copyFile from to
+    -- making files read only stops them from easily deleting
+    when False $
+        forM_ [from, to] $ \x -> do
+            perm <- getPermissions x
+            setPermissions x perm{writable=False}

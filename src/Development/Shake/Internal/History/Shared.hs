@@ -103,7 +103,6 @@ lookupShared shared ask key builtinVersion userVersion = do
         let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
                 let dir = sharedFileDir shared entryKey
                 forM_ entryFiles $ \(file, hash) -> do
-                    createDirectoryRecursive $ takeDirectory file
                     copyFileLink (dir </> show hash) file
         result <$> firstJustM id
             [ firstJustWaitUnordered id
