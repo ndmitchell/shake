@@ -334,10 +334,10 @@ historyIsEnabled = Action $ do
 --   This function relies on 'produces' to have been called correctly to describe
 --   which files were written during the execution of this rule.
 historySave :: Int -> BS.ByteString -> Action ()
-historySave (Ver -> ver) store = Action $ do
+historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
     Global{..} <- getRO
-    Local{localHistory, localProduces, localDepends, localBuiltinVersion, localStack} <- getRW
-    liftIO $ when (localHistory && (isJust globalShared || isJust globalCloud)) $ do
+    Local{localProduces, localDepends, localBuiltinVersion, localStack} <- getRW
+    liftIO $ do
         -- make sure we throw errors before we get into the history
         evaluate ver
         evaluate store
