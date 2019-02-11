@@ -168,7 +168,7 @@ forNothingM (x:xs) f = do
     v <- f x
     case v of
         Nothing -> return Nothing
-        Just v -> fmap (v:) <$> forNothingM xs f
+        Just v -> liftM (v:) `liftM` forNothingM xs f
 
 
 ---------------------------------------------------------------------
