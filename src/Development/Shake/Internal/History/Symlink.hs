@@ -47,7 +47,7 @@ copyFileLink from to = do
     createDirectoryRecursive $ takeDirectory to
     removeFile_ to
     b <- createLinkBool from to
-    whenJust b $ \_ -> do
+    whenJust b $ \_ ->
         copyFile from to
     -- making files read only stops them from easily deleting
     when False $
