@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 
 module Development.Shake.Internal.History.Symlink(
     copyFileLink
@@ -15,7 +15,6 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 #else
-import Control.Exception
 import System.Posix.Files(createLink)
 #endif
 
@@ -37,8 +36,7 @@ createLinkBool from to = withCWString from $ \cfrom -> withCWString to $ \cto ->
 
 #else
 
-createLinkBool from to = createLink from to >> return Nothing
-    `catch` \(e :: IOException) -> return $ Just $ show e
+createLinkBool from to = handleIO (return . Just . show) $ createLink from to >> return Nothing
 
 #endif
 
