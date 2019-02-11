@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, ScopedTypeVariables #-}
 
 module Development.Shake.Internal.History.Symlink(
     copyFileLink
@@ -15,6 +15,7 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 #else
+import Control.Exception
 import System.Posix.Files(createLink)
 #endif
 
