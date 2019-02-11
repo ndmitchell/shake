@@ -284,7 +284,7 @@ historyLoad (Ver -> ver) = do
         res <- liftIO $ runLocked globalDatabase $ \database -> runWait $ do
             let ask k = do
                     i <- quickly $ getKeyId database k
-                    let identify = Just . runIdentify globalRules k . fst . result
+                    let identify = runIdentify globalRules k . fst . result
                     either (const Nothing) identify <$> lookupOne global localStack database i
             x <- case globalShared of
                 Nothing -> return Nothing
@@ -346,16 +346,19 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
         let produced = reverse $ map snd localProduces
         deps <- runLocked globalDatabase $ \database ->
             -- technically this could be run without the DB lock, since it reads things that are stable
-            forM (reverse localDepends) $ \(Depends is) -> forM is $ \i -> do
+            forNothingM (reverse localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
                 Just (k, Ready r) <- getIdKeyStatus database i
-                return (k, runIdentify globalRules k $ fst $ result r)
+                return $ (k,) <$> runIdentify globalRules k (fst $ result r)
         let k = topStack localStack
-        whenJust globalShared $ \shared -> addShared shared key localBuiltinVersion ver deps store produced
-        whenJust globalCloud  $ \cloud  -> addCloud  cloud  key localBuiltinVersion ver deps store produced
-        liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
+        case deps of
+            Nothing -> liftIO $ globalDiagnostic $ return $ "Dependency with no identity for " ++ show k
+            Just deps -> do
+                whenJust globalShared $ \shared -> addShared shared key localBuiltinVersion ver deps store produced
+                whenJust globalCloud  $ \cloud  -> addCloud  cloud  key localBuiltinVersion ver deps store produced
+                liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 
-runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> BS.ByteString
+runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> Maybe (BS.ByteString)
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
     | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"

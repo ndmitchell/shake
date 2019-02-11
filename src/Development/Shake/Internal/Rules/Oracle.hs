@@ -37,7 +37,7 @@ addOracleFlavor flavor act = do
         opts <- getShakeOptionsRules
         let skip = shakeRebuildApply opts "" == RebuildLater
 
-        addBuiltinRule noLint (\_ v -> runBuilder $ putEx $ hash v) $ \(OracleQ q) old mode -> case old of
+        addBuiltinRule noLint (\_ v -> Just $ runBuilder $ putEx $ hash v) $ \(OracleQ q) old mode -> case old of
             Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
                 return $ RunResult ChangedNothing old $ decode' old
             _ -> do

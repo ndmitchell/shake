@@ -7,7 +7,7 @@ module General.Extra(
     whenLeft,
     randomElem,
     wrapQuote, showBracket,
-    withs,
+    withs, forNothingM,
     maximum', maximumBy',
     fastAt,
     forkFinallyUnmasked,
@@ -161,6 +161,14 @@ usingLineBuffering cleanup = do
 withs :: [(a -> r) -> r] -> ([a] -> r) -> r
 withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
+
+forNothingM :: Monad m => [a] -> (a -> m (Maybe b)) -> m (Maybe [b])
+forNothingM [] f = return $ Just []
+forNothingM (x:xs) f = do
+    v <- f x
+    case v of
+        Nothing -> return Nothing
+        Just v -> fmap (v:) <$> forNothingM xs f
 
 
 ---------------------------------------------------------------------

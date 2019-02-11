@@ -176,9 +176,7 @@ noLint _ _ = return Nothing
 --   Use this function if you don't care about 'shakeShare', or if your rule provides a dependency that can
 --   never be cached (in which case you should also call 'Development.Shake.historyDisable').
 noIdentity :: Typeable key => BuiltinIdentity key value
-noIdentity k _ = throwImpure $ errorStructured
-    "Key type does not support BuiltinIdentity, so does not work with 'shakeShare'"
-    [("Key type", Just $ show (typeOf k))] []
+noIdentity _ _ = Nothing
 
 
 -- | The type mapping between the @key@ or a rule and the resulting @value@.

@@ -203,8 +203,8 @@ ruleLint _ _ _ = return Nothing
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FileQ FileR
 ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure errorNoHash
 ruleIdentity _ = \k v -> case answer v of
-    Just (FileA _ size hash) -> runBuilder $ putExStorable size <> putExStorable hash
-    Nothing -> throwImpure $ errorInternal $ "File.ruleIdentity has no result for " ++ show k
+    Just (FileA _ size hash) -> Just $ runBuilder $ putExStorable size <> putExStorable hash
+    Nothing -> Nothing
 
 ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) oldBin@(fmap getEx -> old :: Maybe Answer) mode = do

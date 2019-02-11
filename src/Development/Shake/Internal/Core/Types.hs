@@ -322,9 +322,9 @@ type BuiltinLint key value = key -> value -> IO (Maybe String)
 --   as values will be compared for literal equality.
 --   The result of the identity should be reasonably short (if it is excessively long, hash it).
 --
---   For rules where the value is never compatible use 'Development.Shake.Rules.noIdentity' and
---   make sure to call 'Development.Shake.historyDisable' if you are ever depended upon.
-type BuiltinIdentity key value = key -> value -> BS.ByteString
+--   For rules where the value is never compatible use 'Development.Shake.Rules.noIdentity', which
+--   returns 'Nothing'. This will disable shared caches of anything that depends on it.
+type BuiltinIdentity key value = key -> value -> Maybe (BS.ByteString)
 
 data BuiltinRule = BuiltinRule
     {builtinLint :: BuiltinLint Key Value
