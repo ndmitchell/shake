@@ -317,10 +317,14 @@ historyLoad (Ver -> ver) = do
                 return (Just res)
 
 
--- | Is the history enabled.
+-- | Is the history enabled, returns 'True' if you have a 'shakeShare' or 'shakeCloud',
+--   and haven't called 'historyDisable' so far in this rule.
 historyIsEnabled :: Action Bool
-historyIsEnabled = Action $
-    (isJust . globalShared <$> getRO) &&^ (localHistory <$> getRW)
+historyIsEnabled = Action $ do
+    Global{..} <- getRO
+    Local{localHistory} <- getRW
+    return $ localHistory && (isJust globalShared || isJust globalCloud)
+
 
 -- | Save a value to the history. Record the version of any user rule
 --   (or @0@), and a payload. Must be run at the end of the rule, after
