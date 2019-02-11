@@ -142,9 +142,8 @@ runPool deterministic n act = do
 
     let cleanup = modifyVar_ s $ \s -> do
             -- if someone kills our thread, make sure we kill our child threads
-            case s of
-                Just s -> mapM_ killThread $ Set.toList $ threads s
-                Nothing -> return ()
+            whenJust s $
+                mapM_ killThread . Set.toList . threads
             return Nothing
 
     let ghc10793 = do
