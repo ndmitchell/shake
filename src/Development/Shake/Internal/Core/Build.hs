@@ -358,7 +358,7 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
                 liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
 
 
-runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> Maybe (BS.ByteString)
+runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> Maybe BS.ByteString
 runIdentify mp k v
     | Just BuiltinRule{..} <- Map.lookup (typeKey k) mp = builtinIdentity k v
     | otherwise = throwImpure $ errorInternal "runIdentify can't find rule"

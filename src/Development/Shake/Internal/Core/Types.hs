@@ -324,7 +324,7 @@ type BuiltinLint key value = key -> value -> IO (Maybe String)
 --
 --   For rules where the value is never compatible use 'Development.Shake.Rules.noIdentity', which
 --   returns 'Nothing'. This will disable shared caches of anything that depends on it.
-type BuiltinIdentity key value = key -> value -> Maybe (BS.ByteString)
+type BuiltinIdentity key value = key -> value -> Maybe BS.ByteString
 
 data BuiltinRule = BuiltinRule
     {builtinLint :: BuiltinLint Key Value
