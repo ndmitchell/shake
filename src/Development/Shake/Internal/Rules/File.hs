@@ -502,7 +502,7 @@ root help test act = addUserRule $ FileRule help $ \x -> if not $ test x then No
 --   similar effect.  However, while in make it is acceptable to omit
 --   the @.PHONY@ attribute as long as you don't create the file in
 --   question, a Shake rule which behaves this way will fail lint.
---   Use a phony rule!  For file-producing rules which should be
+--   For file-producing rules which should be
 --   rerun every execution of Shake, see 'Development.Shake.alwaysRerun'.
 phony :: Located => String -> Action () -> Rules ()
 phony oname@(toStandard -> name) act =
