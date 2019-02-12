@@ -54,7 +54,7 @@ There are several libraries providing pre-made rules for Shake:
 
 Some libraries push Shake into specific domains:
 
-* [bioshake](https://github.com/PapenfussLab/bioshake) lets users define bioinformatics pipelines in a DSL that is executed in conjunction with Shake, also including support for cluster execution.
+* [bioshake](https://github.com/PapenfussLab/bioshake) lets users define bioinformatics pipelines in a DSL that is executed in conjunction with Shake, also including support for cluster execution. There is also [a paper](https://www.biorxiv.org/content/biorxiv/early/2019/01/24/529479.full.pdf) describing the system.
 * [Slick](https://hackage.haskell.org/package/slick) is a static site generator written and configured using Haskell. Slick provides a small set of tools and combinators for building static websites on top of the Shake build system.
 
 Several open-source projects make key use of Shake:
