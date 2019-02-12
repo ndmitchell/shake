@@ -111,6 +111,7 @@ main = testBuild (unless brokenHaddock . noTest) $ do
             ,"time_elapsed = 1.1"
             ,"old = \"\""
             ,"new = \"\""
+            ,"myvar = \"\""
             ,"myfile = \"\""
             ,"inputs = [\"\"]"
             ,"files = [\"\"]"
