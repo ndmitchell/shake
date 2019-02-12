@@ -542,11 +542,14 @@ type a :-> t = a
 -- | Execute a system command. Before running 'cmd' make sure you 'Development.Shake.need' any files
 --   that are used by the command.
 --
--- * @String@ arguments are treated as whitespace separated arguments.
+-- * @String@ arguments are treated as a list of whitespace separated arguments.
 --
--- * @[String]@ arguments are treated as literal arguments.
+-- * @[String]@ arguments are treated as a list of literal arguments.
 --
 -- * 'CmdOption' arguments are used as options.
+--
+--   Typically only string literals should be passed as @String@ arguments. When using variables
+--   prefer @[myvar]@ so that if @myvar@ contains spaces they are properly escaped.
 --
 --   As some examples, here are some calls, and the resulting command string:
 --
@@ -567,8 +570,6 @@ type a :-> t = a
 -- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"                         -- run a command, recording the output
 -- 'cmd' ('Cwd' \"generated\") \"gcc -c\" [myfile] :: 'Action' ()         -- run a command in a directory
 -- @
---
---   When passing file arguments we use @[myfile]@ so that if the @myfile@ variable contains spaces they are properly escaped.
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
 --   unable to deduce 'CmdResult'. To avoid this error, use 'cmd_'. If you enable @OverloadedStrings@ or @OverloadedLists@
