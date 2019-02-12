@@ -561,7 +561,7 @@ type a :-> t = a
 --   More examples, including return values, see this translation of the examples given for the 'command' function:
 --
 -- @
--- 'cmd_' \"gcc -c myfile.c\"                                         -- compile a file, throwing an exception on failure
+-- 'cmd_' \"gcc -c myfile.c\"                                       -- compile a file, throwing an exception on failure
 -- 'Exit' c <- 'cmd' \"gcc -c\" [myfile]                              -- run a command, recording the exit code
 -- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"                -- run a command, recording the exit code and error output
 -- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"                         -- run a command, recording the output
