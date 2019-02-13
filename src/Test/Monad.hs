@@ -4,6 +4,7 @@ module Test.Monad(main) where
 import Test.Type
 import Development.Shake.Internal.Core.Monad
 
+import Data.Either.Extra
 import Data.IORef
 import Control.Concurrent
 import Control.Exception
@@ -21,7 +22,7 @@ run ro rw m = do
 
 
 main = testSimple $ do
-    let conv x = either (Left . fromException) Right x :: Either (Maybe ArithException) Int
+    let conv x = mapLeft fromException x :: Either (Maybe ArithException) Int
     let dump rw = liftIO . (=== rw) =<< getRW
 
     -- test the basics plus exception handling
@@ -74,7 +75,7 @@ main = testSimple $ do
     res === Left Overflow
     -- test for GHC bug 11555
     runRAW 1 "test" (throw Overflow :: RAW Int String ()) $ \res ->
-        either (Left . fromException) Right res === Left (Just Overflow)
+        mapLeft fromException res === Left (Just Overflow)
 
     -- catch works properly if continuation called multiple times
     ref <- newIORef []
