@@ -37,10 +37,6 @@ Must keep a list of active threads, so can raise exceptions in a timely manner
 If any worker throws an exception, must signal to all the other workers
 -}
 
-data Pool = Pool
-    !(Var (Maybe S)) -- Current state, 'Nothing' to say we are aborting
-    !(Barrier (Either SomeException S)) -- Barrier to signal that we are finished
-
 data S = S
     {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stacks
     ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit, Set.size threads <= threadsLimit
@@ -59,6 +55,11 @@ emptyS n deterministic = do
         -- no need to be thread-safe - if two threads race they were basically the same time anyway
         return $ do i <- readIORef ref; writeIORef' ref (i+1); return i
     return $ S Set.empty n 0 0 0 rand Heap.empty
+
+
+data Pool = Pool
+    !(Var (Maybe S)) -- Current state, 'Nothing' to say we are aborting
+    !(Barrier (Either SomeException S)) -- Barrier to signal that we are finished
 
 
 worker :: Pool -> IO ()
