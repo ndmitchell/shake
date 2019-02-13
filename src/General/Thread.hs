@@ -21,8 +21,8 @@ allocateThread cleanup act = do
     bar <- newBarrier
     parent <- myThreadId
     ignore <- newIORef False
-    void $ allocate cleanup (do
-        mask_ $ forkIOWithUnmask $ \unmask -> do
+    void $ allocate cleanup
+        (mask_ $ forkIOWithUnmask $ \unmask -> do
             res :: Either SomeException () <- try $ unmask act
             unlessM (readIORef ignore) $ whenLeft res $ throwTo parent
             signalBarrier bar ()

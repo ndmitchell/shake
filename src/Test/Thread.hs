@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, DeriveDataTypeable #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections #-}
 
 module Test.Thread(main) where
 
@@ -15,7 +15,7 @@ main = testSimple $ do
     ref <- newIORef 0
     let finish = atomicModifyIORef ref $ \x -> (x+1, ())
     let finished want = do
-            got <- atomicModifyIORef ref $ \x -> (0, x)
+            got <- atomicModifyIORef ref (0,)
             want === got
 
     pauser <- newEmptyMVar
