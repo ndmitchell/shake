@@ -89,6 +89,7 @@ library
         extra >= 1.6.14,
         filepath,
         hashable >= 1.1.2.3,
+        heaps >= 0.3.6.1,
         js-flot,
         js-jquery,
         primitive,
@@ -177,7 +178,6 @@ library
         General.Extra
         General.FileLock
         General.GetOpt
-        General.Heap
         General.Ids
         General.Intern
         General.ListBuilder
@@ -209,6 +209,7 @@ executable shake
         extra >= 1.6.14,
         filepath,
         hashable >= 1.1.2.3,
+        heaps >= 0.3.6.1,
         js-flot,
         js-jquery,
         primitive,
@@ -292,7 +293,6 @@ executable shake
         General.Extra
         General.FileLock
         General.GetOpt
-        General.Heap
         General.Ids
         General.Intern
         General.ListBuilder
@@ -329,6 +329,7 @@ test-suite shake-test
         extra >= 1.6.14,
         filepath,
         hashable >= 1.1.2.3,
+        heaps >= 0.3.6.1,
         js-flot,
         js-jquery,
         primitive,
@@ -417,7 +418,6 @@ test-suite shake-test
         General.Extra
         General.FileLock
         General.GetOpt
-        General.Heap
         General.Ids
         General.Intern
         General.ListBuilder
