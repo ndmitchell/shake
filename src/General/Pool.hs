@@ -69,8 +69,9 @@ worker pool@(Pool var _) = do
         Nothing -> (Just s, return ())
         Just (Heap.Entry _ now, todo2) -> (Just s{todo = todo2}, now >> worker pool)
 
--- | Given a pool, and a function that breaks the S invariants, restore them
---   They are only allowed to touch threadsLimit or todo
+-- | Given a pool, and a function that breaks the S invariants, restore them.
+--   They are only allowed to touch threadsLimit or todo.
+--   Assumes only requires spawning a most one job (e.g. can't increase the pool by more than one at a time)
 step :: Pool -> (S -> IO S) -> IO ()
 step pool@(Pool var done) op = do
     let onVar act = modifyVar_ var $ maybe (return Nothing) act
