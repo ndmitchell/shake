@@ -7,6 +7,7 @@ import General.Pool
 import Control.Concurrent.Extra
 import Control.Exception.Extra
 import Control.Monad
+import Data.Either.Extra
 
 
 main = testSimple $ do
@@ -72,14 +73,16 @@ main = testSimple $ do
         (=== "bssree") =<< readVar res
 
         -- check that killing a thread pool stops the tasks, bug 545
+        -- and propagates the right exception
         thread <- newBarrier
         died <- newBarrier
         done <- newBarrier
-        t <- forkIO $ flip finally (signalBarrier died ()) $ runPool deterministic 1 $ \pool ->
+        t <- flip forkFinally (signalBarrier died) $ runPool deterministic 1 $ \pool ->
             add pool $
                 flip onException (signalBarrier done ()) $ do
-                    killThread =<< waitBarrier thread
+                    flip throwTo (ErrorCall "bad") =<< waitBarrier thread
                     sleep 10
         signalBarrier thread t
         assertWithin 1 $ waitBarrier done
-        assertWithin 1 $ waitBarrier died
+        res <- assertWithin 1 $ waitBarrier died
+        mapLeft fromException res === Left (Just (ErrorCall "bad"))
