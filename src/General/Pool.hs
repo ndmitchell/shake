@@ -24,7 +24,7 @@ import Control.Exception
 import Control.Monad.Extra
 import General.Timing
 import General.Extra
-import qualified General.Heap as Heap
+import qualified Data.Heap as Heap
 import qualified Data.HashSet as Set
 import Data.IORef.Extra
 import System.Random
