@@ -185,6 +185,7 @@ library
         General.Pool
         General.Process
         General.Template
+        General.Thread
         General.Timing
         General.TypeMap
         General.Wait
@@ -300,6 +301,7 @@ executable shake
         General.Pool
         General.Process
         General.Template
+        General.Thread
         General.Timing
         General.TypeMap
         General.Wait
@@ -425,6 +427,7 @@ test-suite shake-test
         General.Pool
         General.Process
         General.Template
+        General.Thread
         General.Timing
         General.TypeMap
         General.Wait
@@ -470,6 +473,7 @@ test-suite shake-test
         Test.Self
         Test.SelfMake
         Test.Tar
+        Test.Thread
         Test.Tup
         Test.Type
         Test.Unicode

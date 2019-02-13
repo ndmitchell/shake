@@ -54,6 +54,7 @@ import qualified Test.Resources
 import qualified Test.Self
 import qualified Test.SelfMake
 import qualified Test.Tar
+import qualified Test.Thread
 import qualified Test.Tup
 import qualified Test.Unicode
 import qualified Test.Util
@@ -107,6 +108,7 @@ mains =
     ,"self" * Test.Self.main
     ,"selfmake" * Test.SelfMake.main
     ,"tar" * Test.Tar.main
+    ,"thread" * Test.Thread.main
     ,"tup" * Test.Tup.main
     ,"unicode" * Test.Unicode.main
     ,"util" * Test.Util.main
