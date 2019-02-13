@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 
 -- | Thread pool implementation. The three names correspond to the following
 --   priority levels (highest to lowest):
@@ -62,39 +63,44 @@ data Pool = Pool
     !(Barrier (Either SomeException S)) -- Barrier to signal that we are finished
 
 
+withPool :: Pool -> (S -> IO (Maybe S, IO ())) -> IO ()
+withPool (Pool var _) f = join $ modifyVar var $ \s -> case s of
+    Nothing -> return (Nothing, return ())
+    Just s -> f s
+
+withPool_ :: Pool -> (S -> IO (Maybe S)) -> IO ()
+withPool_ pool act = withPool pool $ fmap (, return()) . act
+
+
 worker :: Pool -> IO ()
-worker pool@(Pool var _) = do
-    let onVar act = modifyVar var $ maybe (return (Nothing, return ())) act
-    join $ onVar $ \s -> return $ case Heap.uncons $ todo s of
-        Nothing -> (Just s, return ())
-        Just (Heap.Entry _ now, todo2) -> (Just s{todo = todo2}, now >> worker pool)
+worker pool = withPool pool $ \s -> return $ case Heap.uncons $ todo s of
+    Nothing -> (Just s, return ())
+    Just (Heap.Entry _ now, todo2) -> (Just s{todo = todo2}, now >> worker pool)
 
 -- | Given a pool, and a function that breaks the S invariants, restore them.
 --   They are only allowed to touch threadsLimit or todo.
 --   Assumes only requires spawning a most one job (e.g. can't increase the pool by more than one at a time)
 step :: Pool -> (S -> IO S) -> IO ()
-step pool@(Pool var done) op = do
-    let onVar act = modifyVar_ var $ maybe (return Nothing) act
-    onVar $ \s -> do
-        s <- op s
-        case Heap.uncons $ todo s of
-            Just (Heap.Entry _ now, todo2) | threadsCount s < threadsLimit s -> do
-                -- spawn a new worker
-                t <- forkFinallyUnmasked (now >> worker pool) $ \res -> case res of
-                    Left e -> onVar $ \s -> do
-                        t <- myThreadId
-                        mapM_ killThread $ Set.toList $ Set.delete t $ threads s
-                        signalBarrier done $ Left e
-                        return Nothing
-                    Right _ -> do
-                        t <- myThreadId
-                        step pool $ \s -> return s{threads = Set.delete t $ threads s, threadsCount = threadsCount s - 1}
-                return $ Just s{todo = todo2, threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
-                               ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` (threadsCount s + 1)}
-            Nothing | threadsCount s == 0 -> do
-                signalBarrier done $ Right s
-                return Nothing
-            _ -> return $ Just s
+step pool@(Pool _ done) op = withPool_ pool $ \s -> do
+    s <- op s
+    case Heap.uncons $ todo s of
+        Just (Heap.Entry _ now, todo2) | threadsCount s < threadsLimit s -> do
+            -- spawn a new worker
+            t <- forkFinallyUnmasked (now >> worker pool) $ \res -> case res of
+                Left e -> withPool_ pool $ \s -> do
+                    t <- myThreadId
+                    mapM_ killThread $ Set.toList $ Set.delete t $ threads s
+                    signalBarrier done $ Left e
+                    return Nothing
+                Right _ -> do
+                    t <- myThreadId
+                    step pool $ \s -> return s{threads = Set.delete t $ threads s, threadsCount = threadsCount s - 1}
+            return $ Just s{todo = todo2, threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
+                            ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` (threadsCount s + 1)}
+        Nothing | threadsCount s == 0 -> do
+            signalBarrier done $ Right s
+            return Nothing
+        _ -> return $ Just s
 
 
 -- | Add a new task to the pool. See the top of the module for the relative ordering
@@ -141,11 +147,11 @@ runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool deterministic n act = do
     s <- newVar . Just =<< emptyS n deterministic
     done <- newBarrier
+    let pool = Pool s done
 
-    let cleanup = modifyVar_ s $ \s -> do
+    let cleanup = withPool_ pool $ \s -> do
             -- if someone kills our thread, make sure we kill our child threads
-            whenJust s $
-                mapM_ killThread . Set.toList . threads
+            mapM_ killThread $ Set.toList $ threads s
             return Nothing
 
     let ghc10793 = do
@@ -159,7 +165,6 @@ runPool deterministic n act = do
                 Just (Left e) -> throwIO e
                 _ -> throwIO BlockedIndefinitelyOnMVar
     handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip onException cleanup $ do
-        let pool = Pool s done
         addPool PoolStart pool $ act pool
         res <- waitBarrier done
         case res of
