@@ -157,9 +157,11 @@ hasTracker = do
   t <- tracker
   return $ t == LintFSATrace
 
+assertFail :: String -> IO a
+assertFail msg = error $ "ASSERTION FAILED: " ++ msg
 
 assertBool :: Bool -> String -> IO ()
-assertBool b msg = unless b $ error $ "ASSERTION FAILED: " ++ msg
+assertBool b msg = unless b $ assertFail msg
 
 assertBoolIO :: IO Bool -> String -> IO ()
 assertBoolIO b msg = do b <- b; assertBool b msg
@@ -180,10 +182,12 @@ assertMissing file = do
     b <- IO.doesFileExist file
     assertBool (not b) $ "File was expected to be missing, but exists: " ++ file
 
-assertWithin :: Seconds -> IO () -> IO ()
+assertWithin :: Seconds -> IO a -> IO a
 assertWithin n act = do
     t <- timeout n act
-    when (isNothing t) $ assertBool False $ "Expected to complete within " ++ show n ++ " seconds, but did not"
+    case t of
+        Nothing -> assertFail $ "Expected to complete within " ++ show n ++ " seconds, but did not"
+        Just v -> return v
 
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
