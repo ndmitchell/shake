@@ -37,7 +37,7 @@ main = testSimple $ do
         res <- try_ $ runPool deterministic 3 $ \pool -> do
                 add pool $ do
                     waitBarrier started
-                    error "pass"
+                    throwIO Underflow
                 add pool $
                     flip finally (signalBarrier stopped ()) $ do
                         signalBarrier started ()
@@ -45,9 +45,7 @@ main = testSimple $ do
                         modifyVar_ good $ const $ return False
         -- note that the pool finishing means we started killing our threads
         -- not that they have actually died
-        case res of
-            Left e | Just (ErrorCall "pass") <- fromException e -> return ()
-            _ -> fail $ "Wrong type of result, got " ++ show res
+        mapLeft fromException res === Left (Just Underflow)
         waitBarrier stopped
         assertBoolIO (readVar good) "Must be true"
 
@@ -80,9 +78,9 @@ main = testSimple $ do
         t <- flip forkFinally (signalBarrier died) $ runPool deterministic 1 $ \pool ->
             add pool $
                 flip onException (signalBarrier done ()) $ do
-                    flip throwTo (ErrorCall "bad") =<< waitBarrier thread
+                    flip throwTo Overflow =<< waitBarrier thread
                     sleep 10
         signalBarrier thread t
         assertWithin 1 $ waitBarrier done
         res <- assertWithin 1 $ waitBarrier died
-        mapLeft fromException res === Left (Just (ErrorCall "bad"))
+        mapLeft fromException res === Left (Just Overflow)
