@@ -40,7 +40,7 @@ module General.Heap
     , uncons            -- O(1)\/O(log n) :: Heap a -> Maybe (a, Heap a)
     ) where
 
-import Data.Monoid
+import Data.Monoid (Monoid(mappend, mempty))
 import Data.Foldable hiding (minimum, concatMap)
 import Data.Function (on)
 import Prelude hiding (foldr)
