@@ -20,6 +20,7 @@ import Data.Monoid
 import General.Binary
 import General.Extra
 import General.Cleanup
+import General.Thread
 import Prelude
 
 
@@ -77,20 +78,17 @@ usingWriteChunks cleanup Chunks{..} = do
     died <- newBarrier -- has the writing thread finished
 
     whenJust chunksFlush $ \flush ->
-        void $ allocate cleanup
-            (forkIO $ forever $ do
-                takeMVar kick
-                sleep flush
-                tryTakeMVar kick
-                writeChan chan $ hFlush h >> return True)
-            killThread
+        allocateThread cleanup $ forever $ do
+            takeMVar kick
+            sleep flush
+            tryTakeMVar kick
+            writeChan chan $ hFlush h >> return True
 
-    root <- myThreadId
-    allocate cleanup
-        (flip forkFinally (\e -> do signalBarrier died (); whenLeft e (throwTo root)) $
-            -- only one thread ever writes, ensuring only the final write can be torn
-            whileM $ join $ readChan chan)
-        (const $ do writeChan chan $ return False; waitBarrier died)
+    -- pump the thread while we are running
+    -- once we abort, let everything finish flushing
+    allocateThread cleanup $ forever (join $ readChan chan) `finally` do
+        writeChan chan $ return False
+        whileM $ join $ readChan chan
 
     return $ \s -> do
         out <- evaluate $ writeChunkDirect h s -- ensure exceptions occur on this thread

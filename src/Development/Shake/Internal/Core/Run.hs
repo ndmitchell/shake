@@ -50,6 +50,7 @@ import Development.Shake.Internal.Profile
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 import General.Timing
+import General.Thread
 import General.Extra
 import General.Cleanup
 import Data.Monoid
@@ -201,17 +202,11 @@ outputFunctions opts@ShakeOptions{..} outputLock = (diagnostic, output)
 
 usingProgress :: Cleanup -> ShakeOptions -> Database -> Step -> IO (Maybe String) -> IO (IO Progress)
 usingProgress cleanup ShakeOptions{..} database step getFailure = do
-    wait <- newBarrier
     let getProgress = do
             failure <- getFailure
             stats <- progress database step
             return stats{isFailure=failure}
-    allocate cleanup
-        (flip forkFinally (const $ signalBarrier wait ()) $
-            shakeProgress getProgress)
-        (\tid -> do
-            killThread tid
-            void $ timeout 1 $ waitBarrier wait)
+    allocateThread cleanup $ shakeProgress getProgress
     return getProgress
 
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
