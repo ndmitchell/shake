@@ -10,7 +10,6 @@ import Control.Concurrent.Extra
 import Control.Exception
 import General.Extra
 import Control.Monad.Extra
-import Data.IORef
 
 
 -- | Run the given action in a separate thread.
@@ -20,11 +19,11 @@ allocateThread :: Cleanup -> IO () -> IO ()
 allocateThread cleanup act = do
     bar <- newBarrier
     parent <- myThreadId
-    ignore <- newIORef False
+    ignore <- newVar False
     void $ allocate cleanup
         (mask_ $ forkIOWithUnmask $ \unmask -> do
             res :: Either SomeException () <- try $ unmask act
-            unlessM (readIORef ignore) $ whenLeft res $ throwTo parent
+            unlessM (readVar ignore) $ whenLeft res $ throwTo parent
             signalBarrier bar ()
         )
-        (\t -> do writeIORef ignore True; killThread t; waitBarrier bar)
+        (\t -> do writeVar ignore True; killThread t; waitBarrier bar)
