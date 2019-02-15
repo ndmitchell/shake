@@ -163,7 +163,7 @@ runPool deterministic n act = do
             case res of
                 Just (Left e) -> throwIO e
                 _ -> throwIO BlockedIndefinitelyOnMVar
-    handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip finally cleanup $ do
+    flip finally cleanup $ handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ do
         addPool PoolStart pool $ act pool
         res <- waitBarrier done
         case res of
