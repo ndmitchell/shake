@@ -22,8 +22,9 @@ newtype Cleanup = Cleanup (IORef S)
 data ReleaseKey = ReleaseKey (IORef S) {-# UNPACK #-} !Int
 
 
--- | Run with some cleanup scope. Regardless of exceptions/threads, all 'addCleanup' actions
---   will be run by the time it exits. The 'addCleanup' actions will be run in reverse order.
+-- | Run with some cleanup scope. Regardless of exceptions/threads, all 'register' actions
+--   will be run by the time it exits.
+--   The 'register' actions will be run in reverse order, i.e. the last to be added will be run first.
 withCleanup :: (Cleanup -> IO a) -> IO a
 withCleanup act = do
     (c, clean) <- newCleanup
