@@ -56,3 +56,14 @@ main = testSimple $ do
         throw Overflow
         return 1
     finished 1
+
+    putStrLn "## withThreadsBoth, both succeed"
+    isAnswer (2,3) $ withThreadsBoth (return 2) (return 3)
+
+    putStrLn "## withThreadsBoth, left fails"
+    isException Overflow $ withThreadsBoth (pause >> throw Overflow >> return 1) ((unpause >> return 3) `finally` finish)
+    finished 1
+
+    putStrLn "## withThreadsBoth, right fails"
+    isException Overflow $ flip withThreadsBoth (pause >> throw Overflow >> return 1) ((unpause >> return 3) `finally` finish)
+    finished 1

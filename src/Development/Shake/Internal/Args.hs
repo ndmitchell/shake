@@ -17,10 +17,10 @@ import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
 import Development.Shake.Database
 import General.Timing
+import General.Thread
 import General.GetOpt
 
 import Data.Tuple.Extra
-import Control.Concurrent
 import Control.Exception.Extra
 import Control.Monad
 import Data.Char
@@ -187,10 +187,8 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         shakeOpts <- if null progressRecords then return shakeOpts else do
             t <- offsetTime
             return shakeOpts{shakeProgress = \p ->
-                bracket
-                    (forkIO $ shakeProgress shakeOpts p)
-                    killThread
-                    $ const $ progressDisplay 1 (const $ return ()) $ do
+                void $ withThreadsBoth (shakeProgress shakeOpts p) $
+                    progressDisplay 1 (const $ return ()) $ do
                         p <- p
                         t <- t
                         forM_ progressRecords $ \file ->
