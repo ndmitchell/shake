@@ -84,3 +84,11 @@ main = testSimple $ do
         assertWithin 1 $ waitBarrier done
         res <- assertWithin 1 $ waitBarrier died
         mapLeft fromException res === Left (Just Overflow)
+
+        -- check that killing a thread pool aborts all threads before it returns
+        started <- newBarrier
+        var <- newVar False
+        try_ $ runPool deterministic 2 $ \pool -> do
+            add pool $ try_ $ (do signalBarrier started (); sleep 10) `finally` (do sleep 1; writeVar var True)
+            add pool $ do waitBarrier started; throw Overflow
+        (=== True) =<< readVar var
