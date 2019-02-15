@@ -85,10 +85,11 @@ usingWriteChunks cleanup Chunks{..} = do
             writeChan chan $ hFlush h >> return True
 
     -- pump the thread while we are running
-    -- once we abort, let everything finish flushing
-    allocateThread cleanup $ forever (join $ readChan chan) `finally` do
-        writeChan chan $ return False
-        whileM $ join $ readChan chan
+    -- once we abort, let everything finish flushing first
+    -- the mask_ is very important - we don't want to abort until everything finishes
+    allocateThread cleanup $ mask_ $ whileM $ join $ readChan chan
+    -- this cleanup will run before we attempt to kill the thread
+    register cleanup $ writeChan chan $ return False
 
     return $ \s -> do
         out <- evaluate $ writeChunkDirect h s -- ensure exceptions occur on this thread
