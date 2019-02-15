@@ -10,7 +10,6 @@ module General.Extra(
     withs, forNothingM,
     maximum', maximumBy',
     fastAt,
-    forkFinallyUnmasked,
     isAsyncException,
     usingLineBuffering,
     doesFileExist_,
@@ -173,12 +172,6 @@ forNothingM (x:xs) f = do
 
 ---------------------------------------------------------------------
 -- Control.Concurrent
-
--- | Like 'forkFinally', but the inner thread is unmasked even if you started masked.
-forkFinallyUnmasked :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
-forkFinallyUnmasked act cleanup =
-    mask_ $ forkIOWithUnmask $ \unmask ->
-        try (unmask act) >>= cleanup
 
 usingNumCapabilities :: Cleanup -> Int -> IO ()
 usingNumCapabilities cleanup new = when rtsSupportsBoundThreads $ do

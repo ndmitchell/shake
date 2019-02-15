@@ -23,7 +23,7 @@ import System.Time.Extra
 import Control.Exception
 import Control.Monad.Extra
 import General.Timing
-import General.Extra
+import General.Thread
 import qualified Data.Heap as Heap
 import qualified Data.HashSet as Set
 import Data.IORef.Extra
@@ -39,7 +39,8 @@ If any worker throws an exception, must signal to all the other workers
 -}
 
 data S = S
-    {threads :: !(Set.HashSet ThreadId) -- IMPORTANT: Must be strict or we leak thread stacks
+    {alive :: !Bool -- True until there's an exception, after which don't spawn more tasks
+    ,threads :: !(Set.HashSet Thread) -- IMPORTANT: Must be strict or we leak thread stacks
     ,threadsLimit :: {-# UNPACK #-} !Int -- user supplied thread limit, Set.size threads <= threadsLimit
     ,threadsCount :: {-# UNPACK #-} !Int -- Set.size threads, but in O(1)
     ,threadsMax :: {-# UNPACK #-} !Int -- high water mark of Set.size threads (accounting only)
@@ -55,52 +56,52 @@ emptyS n deterministic = do
         ref <- newIORef 0
         -- no need to be thread-safe - if two threads race they were basically the same time anyway
         return $ do i <- readIORef ref; writeIORef' ref (i+1); return i
-    return $ S Set.empty n 0 0 0 rand Heap.empty
+    return $ S True Set.empty n 0 0 0 rand Heap.empty
 
 
 data Pool = Pool
-    !(Var (Maybe S)) -- Current state, 'Nothing' to say we are aborting
+    !(Var S) -- Current state, 'alive' = False to say we are aborting
     !(Barrier (Either SomeException S)) -- Barrier to signal that we are finished
 
 
-withPool :: Pool -> (S -> IO (Maybe S, IO ())) -> IO ()
-withPool (Pool var _) f = join $ modifyVar var $ \s -> case s of
-    Nothing -> return (Nothing, return ())
-    Just s -> f s
+withPool :: Pool -> (S -> IO (S, IO ())) -> IO ()
+withPool (Pool var _) f = join $ modifyVar var $ \s ->
+    if alive s then f s else return (s, return ())
 
-withPool_ :: Pool -> (S -> IO (Maybe S)) -> IO ()
+withPool_ :: Pool -> (S -> IO S) -> IO ()
 withPool_ pool act = withPool pool $ fmap (, return()) . act
 
 
 worker :: Pool -> IO ()
 worker pool = withPool pool $ \s -> return $ case Heap.uncons $ todo s of
-    Nothing -> (Just s, return ())
-    Just (Heap.Entry _ now, todo2) -> (Just s{todo = todo2}, now >> worker pool)
+    Nothing -> (s, return ())
+    Just (Heap.Entry _ now, todo2) -> (s{todo = todo2}, now >> worker pool)
 
 -- | Given a pool, and a function that breaks the S invariants, restore them.
 --   They are only allowed to touch threadsLimit or todo.
 --   Assumes only requires spawning a most one job (e.g. can't increase the pool by more than one at a time)
 step :: Pool -> (S -> IO S) -> IO ()
-step pool@(Pool _ done) op = withPool_ pool $ \s -> do
+-- mask_ is so we don't spawn and not record it
+step pool@(Pool _ done) op = mask_ $ withPool_ pool $ \s -> do
     s <- op s
     case Heap.uncons $ todo s of
         Just (Heap.Entry _ now, todo2) | threadsCount s < threadsLimit s -> do
             -- spawn a new worker
-            t <- forkFinallyUnmasked (now >> worker pool) $ \res -> case res of
+            t <- newThreadFinally (now >> worker pool) $ \t res -> case res of
                 Left e -> withPool_ pool $ \s -> do
-                    t <- myThreadId
-                    mapM_ killThread $ Set.toList $ Set.delete t $ threads s
                     signalBarrier done $ Left e
-                    return Nothing
-                Right _ -> do
-                    t <- myThreadId
-                    step pool $ \s -> return s{threads = Set.delete t $ threads s, threadsCount = threadsCount s - 1}
-            return $ Just s{todo = todo2, threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
-                            ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` (threadsCount s + 1)}
+                    return (remThread t s){alive = False}
+                Right _ ->
+                    step pool $ return . remThread t
+            return (addThread t s){todo = todo2}
         Nothing | threadsCount s == 0 -> do
             signalBarrier done $ Right s
-            return Nothing
-        _ -> return $ Just s
+            return s{alive = False}
+        _ -> return s
+    where
+        addThread t s = s{threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
+                         ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` (threadsCount s + 1)}
+        remThread t s = s{threads = Set.delete t $ threads s, threadsCount = threadsCount s - 1}
 
 
 -- | Add a new task to the pool. See the top of the module for the relative ordering
@@ -145,14 +146,12 @@ keepAlivePool pool = do
 --   called on them (but may not have actually died yet).
 runPool :: Bool -> Int -> (Pool -> IO ()) -> IO () -- run all tasks in the pool
 runPool deterministic n act = do
-    s <- newVar . Just =<< emptyS n deterministic
+    s <- newVar =<< emptyS n deterministic
     done <- newBarrier
     let pool = Pool s done
 
-    let cleanup = withPool_ pool $ \s -> do
-            -- if someone kills our thread, make sure we kill our child threads
-            mapM_ killThread $ Set.toList $ threads s
-            return Nothing
+    -- if someone kills our thread, make sure we kill our child threads
+    let cleanup = join $ modifyVar s $ \s -> return (s{alive=False}, stopThreads $ Set.toList $ threads s)
 
     let ghc10793 = do
             -- if this thread dies because it is blocked on an MVar there's a chance we have
@@ -164,7 +163,7 @@ runPool deterministic n act = do
             case res of
                 Just (Left e) -> throwIO e
                 _ -> throwIO BlockedIndefinitelyOnMVar
-    handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip onException cleanup $ do
+    handle (\BlockedIndefinitelyOnMVar -> ghc10793) $ flip finally cleanup $ do
         addPool PoolStart pool $ act pool
         res <- waitBarrier done
         case res of
