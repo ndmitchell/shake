@@ -65,5 +65,5 @@ main = testSimple $ do
     finished 1
 
     putStrLn "## withThreadsBoth, right fails"
-    isException Overflow $ flip withThreadsBoth (pause >> throw Overflow >> return 1) ((unpause >> return 3) `finally` finish)
+    isException Overflow $ withThreadsBoth ((unpause >> return 3) `finally` finish) (pause >> throw Overflow >> return 1)
     finished 1
