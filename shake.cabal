@@ -457,7 +457,6 @@ test-suite shake-test
         Test.FilePattern
         Test.Files
         Test.Forward
-        Test.GetTargets
         Test.History
         Test.Journal
         Test.Lint
@@ -477,6 +476,7 @@ test-suite shake-test
         Test.Self
         Test.SelfMake
         Test.Tar
+        Test.Targets
         Test.Thread
         Test.Tup
         Test.Type
