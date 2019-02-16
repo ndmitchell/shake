@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Make sure all thread pool threads terminate before shake returns
     #646, change the identity property to require a Maybe
     Use symlinks for --shared
     #643, add MonadFail Rules
