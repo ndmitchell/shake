@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, ViewPatterns #-}
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards, FlexibleInstances #-}
 
 module Development.Shake.Internal.Core.Types(
@@ -23,6 +23,7 @@ import Data.Typeable
 import General.Binary
 import Control.Exception
 import Data.Maybe
+import Data.List.Extra
 import General.Extra
 import Control.Concurrent.Extra
 import Development.Shake.Internal.History.Shared
@@ -139,9 +140,13 @@ fromStepResult = getEx . result
 data Stack = Stack (Maybe Key) [Either Key [String]] !(Set.HashSet Id) deriving Show
 
 exceptionStack :: Stack -> SomeException -> ShakeException
-exceptionStack stack@(Stack _ xs _) = ShakeException (showTopStack stack) $
-    concatMap f (reverse xs) ++ ["* Raised the exception:" | not $ null xs]
+exceptionStack stack@(Stack _ xs1 _) (callStackFromException -> (xs2, e)) =
+    ShakeException
+        (showTopStack stack)
+        (xs ++ ["* Raised the exception:" | not $ null xs])
+        e
     where
+        xs = concatMap f $ reverse xs1 ++ [Right xs2]
         f (Left x) = ["* Depends on: " ++ show x]
         f (Right x) = map ("  at " ++) x
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving, Rank2Types #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving, ViewPatterns, Rank2Types #-}
 
 module General.Extra(
     getProcessorCount,
@@ -16,7 +16,7 @@ module General.Extra(
     usingNumCapabilities,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO,
-    Located, Partial, callStackTop, callStackFull, withFrozenCallStack,
+    Located, Partial, callStackTop, callStackFull, withFrozenCallStack, callStackFromException,
     Ver(..), makeVer,
     QTypeRep(..)
     ) where
@@ -235,6 +235,8 @@ callStackTop :: Partial => String
 callStackTop = withFrozenCallStack $ head $ callStackFull ++ ["unknown location"]
 
 callStackFull :: Partial => [String]
+callStackFromException :: SomeException -> ([String], SomeException)
+
 
 #if __GLASGOW_HASKELL__ >= 800
 
@@ -244,9 +246,12 @@ parseCallStack = reverse . map trimStart . drop 1 . lines
 callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
 
 callStackFromException (fromException -> Just (ErrorCallWithLocation msg loc)) = (parseCallStack loc, toException $ ErrorCall msg)
+callStackFromException e = ([], e)
+
 #else
 
 callStackFull = []
+callStackFromException e = ([], e)
 
 withFrozenCallStack :: a -> a
 withFrozenCallStack = id
