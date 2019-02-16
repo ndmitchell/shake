@@ -237,8 +237,11 @@ traced msg act = do
     Global{..} <- Action getRO
     Local{localStack} <- Action getRW
     start <- liftIO globalTimestamp
-    putNormal $ "# " ++ msg ++ " (for " ++ showTopStack localStack ++ ")"
-    res <- liftIO act
+    let key = showTopStack localStack
+    putNormal $ "# " ++ msg ++ " (for " ++ key ++ ")"
+    res <- liftIO $
+        (shakeTrace globalOptions key msg True >> act)
+            `finally` shakeTrace globalOptions key msg False
     stop <- liftIO globalTimestamp
     let trace = newTrace msg start stop
     liftIO $ evaluate $ rnf trace
