@@ -1,4 +1,3 @@
-{-# LANGUAGE TupleSections #-}
 
 module General.Timing(resetTimings, addTiming, getTimings) where
 
