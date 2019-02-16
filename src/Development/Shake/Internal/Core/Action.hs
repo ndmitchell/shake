@@ -269,29 +269,29 @@ lintTrackRead ks = do
 
 lintTrackFinished :: Action ()
 lintTrackFinished = do
+    -- only called when isJust shakeLint
     Global{..} <- Action getRO
-    when (isJust $ shakeLint globalOptions) $ do
-        Local{..} <- Action getRW
-        liftIO $ do
-            deps <- concatMapM (listDepends globalDatabase) localDepends
+    Local{..} <- Action getRW
+    liftIO $ do
+        deps <- concatMapM (listDepends globalDatabase) localDepends
 
-            -- check 4a
-            bad <- return $ localTrackUsed \\ deps
-            unless (null bad) $ do
-                let n = length bad
-                throwM $ errorStructured
-                    ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
-                    [("Used", Just $ show x) | x <- bad]
-                    ""
+        -- check 4a
+        bad <- return $ localTrackUsed \\ deps
+        unless (null bad) $ do
+            let n = length bad
+            throwM $ errorStructured
+                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+                [("Used", Just $ show x) | x <- bad]
+                ""
 
-            -- check 4b
-            bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
-            unless (null bad) $ do
-                let n = length bad
-                throwM $ errorStructured
-                    ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
-                    [("Used", Just $ show x) | x <- bad]
-                    ""
+        -- check 4b
+        bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
+        unless (null bad) $ do
+            let n = length bad
+            throwM $ errorStructured
+                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+                [("Used", Just $ show x) | x <- bad]
+                ""
 
 
 -- | Track that a key has been changed/written by the action preceding it when 'shakeLint' is active.
