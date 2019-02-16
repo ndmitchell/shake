@@ -137,8 +137,9 @@ shakeArgsOptionsWith
     -> IO ()
 shakeArgsOptionsWith baseOpts userOptions rules = do
     addTiming "shakeArgsWith"
+    let baseOpts2 = removeOverlap userOptions $ map snd shakeOptsEx
     args <- getArgs
-    let (flag1,files,errs) = getOpt opts args
+    let (flag1,files,errs) = getOpt (baseOpts2 `mergeOptDescr` userOptions) args
         (self,user) = partitionEithers flag1
         (flagsExtra,flagsShake) = first concat $ unzip self
         progressReplays = [x | ProgressReplay x <- flagsExtra]
@@ -169,8 +170,10 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     _ -> return []
 
             putWhen Quiet $ unlines $
-                ("Usage: " ++ progName ++ " [options] [target] ...") : "" :
-                "Options:" : showOptDescr opts ++ extra
+                ("Usage: " ++ progName ++ " [options] [target] ...") :
+                (if null baseOpts2 then [] else "" : (if null userOptions then "Options:" else "Standard options:") : showOptDescr baseOpts2) ++
+                (if null userOptions then [] else "" : "Extra options:" : showOptDescr userOptions) ++
+                extra
 
     when (errs /= []) $ do
         putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
@@ -244,8 +247,6 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 Right () -> do
                     tot <- start
                     putWhenLn Normal $ esc "32" $ "Build completed in " ++ showDuration tot
-    where
-        opts = removeOverlap userOptions (map snd shakeOptsEx) `mergeOptDescr` userOptions
 
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns
