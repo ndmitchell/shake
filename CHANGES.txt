@@ -1,7 +1,6 @@
 Changelog for Shake (* = breaking change)
 
     #642, detect files that change with --lint-watch
-    Make sure lint detects current directory violations sooner
     #649, add --share-list and --share-remove to work with the cache
     #626, improve the display of error messages with call stacks
     Make sure exceptions don't change based on verbosity setting
