@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, Rank2Types, ScopedTypeVariables, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | A module for producing forward-defined build systems, in contrast to standard backwards-defined
@@ -60,20 +60,31 @@ import qualified Data.HashMap.Strict as Map
 
 
 {-# NOINLINE forwards #-}
-forwards :: IORef (Map.HashMap ForwardQ (Action ()))
+forwards :: IORef (Map.HashMap Forward (Action Forward))
 forwards = unsafePerformIO $ newIORef Map.empty
 
-newtype ForwardQ = ForwardQ (TypeRep, String, BS.ByteString) -- the type, the Show, the payload
+newtype Forward = Forward (TypeRep, String, BS.ByteString) -- the type, the Show, the payload
     deriving (Hashable,Typeable,Eq,NFData,Binary)
+
+mkForward :: (Typeable a, Show a, Binary a) => a -> Forward
+mkForward x = Forward (typeOf x, show x, encode' x)
+
+unForward :: forall a . (Typeable a, Show a, Binary a) => Forward -> a
+unForward (Forward (got,_,x))
+    | got /= want = error $ "Failed to match forward type, wanted " ++ show want ++ ", got " ++ show got
+    | otherwise = decode' x
+    where want = typeRep (Proxy :: Proxy a)
 
 encode' :: Binary a => a -> BS.ByteString
 encode' = BS.concat . LBS.toChunks . encode
 
+decode' :: Binary a => BS.ByteString -> a
+decode' = decode . LBS.fromChunks . return
 
-type instance RuleResult ForwardQ = ()
+type instance RuleResult Forward = Forward
 
-instance Show ForwardQ where
-    show (ForwardQ (_,x,_)) = x
+instance Show Forward where
+    show (Forward (_,x,_)) = x
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()
@@ -88,13 +99,14 @@ forwardRule :: Action () -> Rules ()
 forwardRule act = do
     addBuiltinRule noLint noIdentity $ \k old mode ->
         case old of
-            Just old | mode == RunDependenciesSame -> return $ RunResult ChangedNothing old ()
+            Just old | mode == RunDependenciesSame -> return $ RunResult ChangedNothing old (decode' old)
             _ -> do
                 res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
                 case res of
-                    Nothing -> liftIO $ errorIO "Failed to find action name"
-                    Just act -> act
-                return $ RunResult ChangedRecomputeSame BS.empty ()
+                    Nothing -> liftIO $ errorIO $ "Failed to find action name, " ++ show k
+                    Just act -> do
+                        new <- act
+                        return $ RunResult ChangedRecomputeSame (encode' new) new
     action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
@@ -103,12 +115,12 @@ forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
 
 
 -- | Cache an action. The name of the action must be unique for all different actions.
-cacheAction :: (Typeable a, Binary a, Show a) => a -> Action () -> Action ()
-cacheAction key action = do
-    let key = ForwardQ (typeOf key, show key, encode' key)
-    liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key action mp, ())
-    _ :: [()] <- apply [key]
+cacheAction :: (Typeable a, Binary a, Show a, Typeable b, Binary b, Show b) => a -> Action b -> Action b
+cacheAction (mkForward -> key) (action :: Action b) = do
+    liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key (mkForward <$> action) mp, ())
+    res <- apply1 key
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
+    return $ unForward res
 
 -- | Apply caching to an external command.
 cache :: (forall r . CmdArguments r => r) -> Action ()
