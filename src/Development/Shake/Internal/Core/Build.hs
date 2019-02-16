@@ -222,7 +222,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
             producesCheck
 
         Action $ fmap (res,) getRW) $ \x -> case x of
-            Left e -> do
+            Left e ->
                 continue . Left . toException =<< shakeException global stack e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
