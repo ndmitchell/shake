@@ -96,7 +96,7 @@ fastAt xs = \i -> if i < 0 || i >= n then Nothing else Just $ indexArray arr i
             unsafeFreezeArray arr
 
 zipWithExact :: Partial => (a -> b -> c) -> [a] -> [b] -> [c]
-zipWithExact f as bs = g as bs
+zipWithExact f = g
     where
         g [] [] = []
         g (a:as) (b:bs) = f a b : g as bs
