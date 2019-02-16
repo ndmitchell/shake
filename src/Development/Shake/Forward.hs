@@ -48,7 +48,7 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Data.IORef
 import Data.Either
-import Data.Typeable
+import Data.Typeable.Extra
 import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
@@ -57,6 +57,8 @@ import Data.Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as Map
+import Data.Functor
+import Prelude
 
 
 {-# NOINLINE forwards #-}
