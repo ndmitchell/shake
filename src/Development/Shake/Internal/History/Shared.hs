@@ -1,7 +1,9 @@
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module Development.Shake.Internal.History.Shared(
-    Shared, newShared, addShared, lookupShared
+    Shared, newShared,
+    addShared, lookupShared,
+    removeShared, listShared
     ) where
 
 import Development.Shake.Internal.Value
@@ -12,6 +14,7 @@ import General.Binary
 import General.Extra
 import General.Chunks
 import Control.Monad.Extra
+import System.Directory.Extra
 import System.FilePath
 import System.IO
 import Numeric
@@ -125,3 +128,29 @@ addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -
 addShared shared entryKey entryBuiltinVersion entryUserVersion entryDepends entryResult files = do
     hashes <- mapM (getFileHash . fileNameFromString) files
     saveSharedEntry shared Entry{entryFiles = zip files hashes, entryGlobalVersion = globalVersion shared, ..}
+
+
+removeShared :: Shared -> (Key -> Bool) -> IO ()
+removeShared Shared{..} test = do
+    dirs <- listDirectories $ sharedRoot </> ".shake.cache"
+    deleted <- forM dirs $ \dir -> do
+        (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
+            readChunksDirect h maxBound
+        -- if any key matches, clean them all out
+        let b = any (test . entryKey . getEntry keyOp) items
+        when b $ removeDirectoryRecursive dir
+        return b
+    liftIO $ putStrLn $ "Deleted " ++ show (length (filter id deleted)) ++ " entries"
+
+listShared :: Shared -> IO ()
+listShared Shared{..} = do
+    dirs <- listDirectories $ sharedRoot </> ".shake.cache"
+    forM_ dirs $ \dir -> do
+        putStrLn $ "Directory: " ++ dir
+        (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
+            readChunksDirect h maxBound
+        forM_ items $ \item -> do
+            let Entry{..} = getEntry keyOp item
+            putStrLn $ "  Key: " ++ show entryKey
+            forM_ entryFiles $ \(file,_) ->
+                putStrLn $ "    File: " ++ file

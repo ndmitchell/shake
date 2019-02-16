@@ -12,6 +12,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Demo
+import Development.Shake.Internal.Core.Action
 import Development.Shake.FilePath
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
@@ -144,6 +145,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         progressRecords = [x | ProgressRecord x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
         printDirectory = last $ False : [x | PrintDirectory x <- flagsExtra]
+        shareRemoves = [x | ShareRemove x <- flagsExtra]
         oshakeOpts = foldl' (flip ($)) baseOpts flagsShake
         shakeOpts = oshakeOpts {shakeLintInside = map (toStandard . normalise . addTrailingPathSeparator) $
                                                   shakeLintInside oshakeOpts
@@ -204,7 +206,17 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 Nothing -> return (False, shakeOpts, Right ())
                 Just (shakeOpts, rules) -> do
                     res <- try_ $ shake shakeOpts $
-                        if NoBuild `elem` flagsExtra then withoutActions rules else rules
+                        if NoBuild `elem` flagsExtra then
+                            withoutActions rules
+                        else if ShareList `elem` flagsExtra || not (null shareRemoves) then do
+                            action $ do
+                                unless (null shareRemoves) $
+                                    actionShareRemove shareRemoves
+                                when (ShareList `elem` flagsExtra)
+                                    actionShareList
+                            withoutActions rules
+                        else
+                            rules
                     return (True, shakeOpts, res)
 
         if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
@@ -244,6 +256,8 @@ data Extra = ChangeDirectory FilePath
            | ProgressRecord FilePath
            | ProgressReplay FilePath
            | Demo
+           | ShareList
+           | ShareRemove String
              deriving Eq
 
 
@@ -296,6 +310,8 @@ shakeOptsEx =
     ,yes $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
     ,yes $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
     ,yes $ Option ""  ["share"] (OptArg (\x -> Right ([], \s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s})) "DIRECTORY") "Shared cache location."
+    ,no  $ Option ""  ["share-list"] (NoArg $ Right ([ShareList], ensureShare)) "List the shared cache files."
+    ,no  $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
     ,yes $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
     ,no  $ Option ""  ["sleep"] (NoArg $ Right ([Sleep],id)) "Sleep for a second before building."
     ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
@@ -349,3 +365,5 @@ shakeOptsEx =
         ensureHash ChangeModtime = ChangeModtimeAndDigest
         ensureHash ChangeModtimeAndDigestInput = ChangeModtimeAndDigest
         ensureHash x = x
+
+        ensureShare s = s{shakeShare = Just $ fromMaybe "." $ shakeShare s}

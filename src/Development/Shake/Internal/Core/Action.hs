@@ -17,7 +17,8 @@ module Development.Shake.Internal.Core.Action(
     -- Internal only
     producesUnchecked, producesCheck, lintCurrentDirectory,
     blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
-    getCurrentKey
+    getCurrentKey,
+    actionShareList, actionShareRemove
     ) where
 
 import Control.Exception
@@ -43,6 +44,7 @@ import qualified General.Intern as Intern
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Monad
+import Development.Shake.Internal.History.Shared
 import General.Pool
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
@@ -541,3 +543,20 @@ deprioritize x = do
 
 getCurrentKey :: Action (Maybe Key)
 getCurrentKey = Action $ topStack . localStack <$> getRW
+
+
+-- | Hooked up to --share-remove
+actionShareRemove :: [String] -> Action ()
+actionShareRemove substrs = do
+    Global{..} <- Action getRO
+    case globalShared of
+        Nothing -> throwM $ errorInternal "actionShareRemove with no shared"
+        Just x -> liftIO $ removeShared x $ \k -> any (`isInfixOf` show k) substrs
+
+-- | Hooked up to --share-list
+actionShareList :: Action ()
+actionShareList = do
+    Global{..} <- Action getRO
+    case globalShared of
+        Nothing -> throwM $ errorInternal "actionShareList with no shared"
+        Just x -> liftIO $ listShared x
