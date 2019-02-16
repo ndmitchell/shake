@@ -217,7 +217,6 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 
         -- completed, now track anything required afterwards
         globalRuleFinished k
-        lintTrackFinished
         producesCheck
 
         Action $ fmap (res,) getRW) $ \x -> case x of

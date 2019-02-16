@@ -134,7 +134,9 @@ run RunState{..} oneshot actions2 =
             lintCurrentDirectory curdir "When running"
 
             let ruleFinished
-                    | isJust shakeLint = liftIO . lintCurrentDirectory curdir . show
+                    | isJust shakeLint = \k -> do
+                        liftIO $ lintCurrentDirectory curdir $ show k
+                        lintTrackFinished
                     | otherwise = const $ return ()
 
             addTiming "Running rules"
