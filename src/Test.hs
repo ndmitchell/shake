@@ -34,6 +34,7 @@ import qualified Test.FilePath
 import qualified Test.FilePattern
 import qualified Test.Files
 import qualified Test.Forward
+import qualified Test.GetTargets
 import qualified Test.History
 import qualified Test.Journal
 import qualified Test.Lint
@@ -89,6 +90,7 @@ mains =
     ,"filepattern" * Test.FilePattern.main
     ,"files" * Test.Files.main
     ,"forward" * Test.Forward.main
+    ,"gettargets" * Test.GetTargets.main
     ,"history" * Test.History.main
     ,"journal" * Test.Journal.main
     ,"lint" * Test.Lint.main

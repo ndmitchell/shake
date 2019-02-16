@@ -5,8 +5,12 @@ module Development.Shake.Internal.Rules.File(
     need, needHasChanged, needBS, needed, neededBS, want,
     trackRead, trackWrite, trackAllow,
     defaultRuleFile,
-    (%>), (|%>), (?>), phony, (~>), phonys,
+    (%>), (|%>), (?>), phony, phonyWithDocs, phonys,
     resultHasChanged,
+    -- * Aliases
+    (~>), build, buildAny,
+    -- * Documented rules
+    buildWithDocs, buildAnyWithDocs,
     -- * Internal only
     FileQ(..), FileA(..), fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
@@ -509,22 +513,44 @@ root help test act = addUserRule $ FileRule help $ \x -> if not $ test x then No
 --   For file-producing rules which should be
 --   rerun every execution of Shake, see 'Development.Shake.alwaysRerun'.
 phony :: Located => String -> Action () -> Rules ()
-phony oname@(toStandard -> name) act =
-    addPhony ("phony " ++ show oname ++ " at " ++ callStackTop) $ \s -> if s == name then Just act else Nothing
+phony name act = phony' phonyDoc "phony" callStackTop name act
+
+-- | Infix operator alias for 'phony', for sake of consistency with normal
+--   rules.
+(~>) :: Located => String -> Action () -> Rules ()
+(~>) name act = phony' phonyDoc "~>" callStackTop name act
+
+phonyDoc :: String
+phonyDoc = "A phony target"
+
+-- | Like 'phony' but allows overriding the default documentation of the target.
+phonyWithDocs
+    :: Located
+    => String -- ^ Documentation that describes the target
+    -> String -- ^ Name of the target
+    -> Action ()
+    -> Rules ()
+phonyWithDocs doc name act = phony' doc "phonyWithDocs" callStackTop name act
+
+phony'
+    :: Located
+    => String -- ^ Documentation
+    -> String -- ^ Operator name
+    -> String -- ^ CallStack
+    -> String -- ^ Target name
+    -> Action ()
+    -> Rules ()
+phony' doc opName stack oname@(toStandard -> name) act = do
+    documentTarget name (Just doc)
+    addPhony (opName ++ show oname ++ " at " ++ stack) $ \s ->
+      if s == name then Just act else Nothing
 
 -- | A predicate version of 'phony', return 'Just' with the 'Action' for the matching rules.
 phonys :: Located => (String -> Maybe (Action ())) -> Rules ()
 phonys = addPhony ("phonys at " ++ callStackTop)
 
--- | Infix operator alias for 'phony', for sake of consistency with normal
---   rules.
-(~>) :: Located => String -> Action () -> Rules ()
-(~>) oname@(toStandard -> name) act =
-    addPhony (show oname ++ " ~> at " ++ callStackTop) $ \s -> if s == name then Just act else Nothing
-
 addPhony :: String -> (String -> Maybe (Action ())) -> Rules ()
 addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
-
 
 -- | Define a rule to build files. If the first argument returns 'True' for a given file,
 --   the second argument will be used to build it. Usually '%>' is sufficient, but '?>' gives
@@ -542,11 +568,38 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 (?>) :: Located => (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
 (?>) test act = priority 0.5 $ root ("?> at " ++ callStackTop) test act
 
-
 -- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '%>'.
 --   Think of it as the OR (@||@) equivalent of '%>'.
 (|%>) :: Located => [FilePattern] -> (FilePath -> Action ()) -> Rules ()
-(|%>) pats act = do
+(|%>) pats act =
+    withFrozenCallStack $
+      buildAny' Nothing (" |%> at " ++ callStackTop) pats act
+
+-- | Function alias for '|%>'.
+buildAny ::  Located => [FilePattern] -> (FilePath -> Action ()) -> Rules ()
+buildAny pats act =
+    withFrozenCallStack $
+      buildAny' Nothing (" buildAny at " ++ callStackTop) pats act
+
+-- | Like 'buildAny' or '|%>' but associates the given documentation with the target.
+buildAnyWithDocs
+    :: Located
+    => String -- ^ Documentation that describes the target
+    -> [FilePattern]
+    -> (FilePath -> Action ())
+    -> Rules ()
+buildAnyWithDocs doc pats act =
+    withFrozenCallStack $
+      buildAny' (Just doc) (" buildAnyWithDocs at " ++ callStackTop) pats act
+
+buildAny'
+    :: Maybe String
+    -> String
+    -> [FilePattern]
+    -> (FilePath -> Action ())
+    -> Rules ()
+buildAny' mbDoc msg pats act = do
+    forM_ pats $ \pat -> documentTarget pat mbDoc
     let (simp,other) = partition simple pats
     case map toStandard simp of
         [] -> return ()
@@ -554,7 +607,7 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
         ps -> let set = Set.fromList ps in root help (flip Set.member set . toStandard) act
     unless (null other) $
         let ps = map (?==) other in priority 0.5 $ root help (\x -> any ($ x) ps) act
-    where help = show pats ++ " |%> at " ++ callStackTop
+    where help = show pats ++ msg
 
 -- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
 --   Patterns with no wildcards have higher priority than those with wildcards, and no file
@@ -578,4 +631,29 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 --   If the 'Action' completes successfully the file is considered up-to-date, even if the file
 --   has not changed.
 (%>) :: Located => FilePattern -> (FilePath -> Action ()) -> Rules ()
-(%>) test act = withFrozenCallStack $ (if simple test then id else priority 0.5) $ root (show test ++ " %> at " ++ callStackTop) (test ?==) act
+(%>) test act = withFrozenCallStack $ build' Nothing (" %> at " ++ callStackTop) test act
+
+-- | Function alias for '%>'.
+build :: Located => FilePattern -> (FilePath -> Action ()) -> Rules ()
+build test act = withFrozenCallStack $ build' Nothing (" build at " ++ callStackTop) test act
+
+-- | Like 'build' or '%>' but associates the given documentation with the target.
+buildWithDocs
+    :: Located
+    => String -- ^ Documentation that describes the target
+    -> FilePattern
+    -> (FilePath -> Action ())
+    -> Rules ()
+buildWithDocs doc test act =
+    withFrozenCallStack $ build' (Just doc) (" buildWithDocs at " ++ callStackTop) test act
+
+build'
+    :: Maybe String
+    -> String
+    -> FilePattern
+    -> (FilePath -> Action ())
+    -> Rules ()
+build' mbDoc msg test act = do
+  documentTarget test mbDoc
+  (if simple test then id else priority 0.5) $
+    root (show test ++ msg) (test ?==) act

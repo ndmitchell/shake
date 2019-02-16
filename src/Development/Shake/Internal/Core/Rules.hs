@@ -2,15 +2,15 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, ConstraintKinds #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rules, runRules,
+    Rules, runRules, getTargets, Target(..),
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
-    addUserRule, alternatives, priority, versioned,
+    addUserRule, documentTarget, alternatives, priority, versioned,
     action, withoutActions
     ) where
 
@@ -24,7 +24,7 @@ import Control.Monad.Trans.Reader
 import Development.Shake.Classes
 import General.Binary
 import General.Extra
-import Data.Typeable.Extra
+import Data.Data
 import Data.Function
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
@@ -134,25 +134,61 @@ modifyRulesScoped f (Rules r) = Rules $ do
         modifyIORef' refOld (<> f rules)
         return res
 
-runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned)
+runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned, [Target])
 runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    return (runListBuilder actions, builtinRules, userRules)
+    return (runListBuilder actions, builtinRules, userRules, runListBuilder targets)
+
+-- | Get all the targets explicitly registered in the given rules. The names in
+-- 'phony' and '~>' as well as the file patterns in '%>', '|%>' and '&%>' are
+-- registered as targets.
+--
+-- One application for retrieving the targets from the rules is for implementing
+-- a shell autocomplete feature. To implement autocompletion most shells require
+-- the program to output the list of arguments it supports. In this case we want
+-- to output "someTarget" and "someFile" when the program is invoked with the
+-- "autocomplete" command.
+--
+-- @
+-- main = do
+--   let rules = do
+--         phony "someTarget" $ pure ()
+--         "someFile" %> \\_ -> pure ()
+--   shakeArgsWith shakeOptions [] $ \\_flags targets ->
+--     case targets of
+--       "autocomplete" : _args -> do
+--          targets <- getTargets shakeOptions rules
+--          forM_ targets $ \\t ->
+--            putStrLn $ target t ++
+--              maybe "" (\\doc -> ":" ++ doc) (documentation t)
+--          pure Nothing
+--       target : _args -> pure $ Just $ want [ target ] >> rules
+-- @
+getTargets :: ShakeOptions -> Rules () -> IO [Target]
+getTargets opts rs = do
+  (_actions, _ruleinfo, _userRules, targets) <- runRules opts rs
+  return targets
+
+data Target = Target
+    {target :: !String
+    ,documentation :: !(Maybe String)
+    } deriving (Eq,Ord,Show,Read,Data,Typeable)
 
 data SRules = SRules
     {actions :: !(ListBuilder (Stack, Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
     ,userRules :: !(TMap.Map UserRuleVersioned)
+    ,targets :: !(ListBuilder Target)
     }
 
 instance Semigroup SRules where
-    (SRules x1 x2 x3) <> (SRules y1 y2 y3) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3)
+    (SRules x1 x2 x3 x4) <> (SRules y1 y2 y3 y4) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4)
         where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
 instance Monoid SRules where
-    mempty = SRules mempty Map.empty TMap.empty
+    mempty = SRules mempty Map.empty TMap.empty mempty
     mappend = (<>)
 
 instance Semigroup a => Semigroup (Rules a) where
@@ -167,6 +203,15 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
 --   The user rules can be retrieved by 'getUserRuleList'.
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
+
+-- | Register a 'Target' with some optional documentation.
+--
+-- The registered targets in a @Rules@ can be retrieved using 'getTargets'.
+documentTarget
+    :: String -- ^ Target name or file pattern
+    -> Maybe String -- ^ Optional documentation that describes this target
+    -> Rules ()
+documentTarget t mbDoc = newRules mempty{targets = newListBuilder $ Target t mbDoc}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value

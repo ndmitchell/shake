@@ -5,7 +5,7 @@ module Development.Ninja.All(runNinja) where
 import Development.Ninja.Env
 import Development.Ninja.Type
 import Development.Ninja.Parse
-import Development.Shake hiding (addEnv)
+import Development.Shake hiding (addEnv,build)
 import Development.Shake.Classes
 import qualified Data.ByteString as BS8
 import qualified Data.ByteString.Char8 as BS

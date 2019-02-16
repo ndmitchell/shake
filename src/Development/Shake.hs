@@ -62,6 +62,8 @@ module Development.Shake(
     getShakeExtra, getShakeExtraRules, addShakeExtra,
     -- ** Command line
     shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs,
+    -- ** Targets
+    getTargets, Target(..), documentTarget,
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress,
     -- ** Verbosity
@@ -81,11 +83,15 @@ module Development.Shake(
     withTempFile, withTempDir,
     withTempFileWithin, withTempDirWithin,
     -- * File rules
-    need, want, (%>), (|%>), (?>), phony, (~>), phonys,
+    need, want, (%>), (|%>), (?>), phony, phonyWithDocs, phonys,
     (&%>), (&?>),
     orderOnly, orderOnlyAction,
     FilePattern, (?==), (<//>), filePattern,
     needed, trackRead, trackWrite, trackAllow,
+    -- * Aliases
+    (~>), build, buildAny, buildAll,
+    -- * Documented rules
+    buildWithDocs, buildAnyWithDocs, buildAllWithDocs,
     -- * Directory rules
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getDirectoryFilesIO,
