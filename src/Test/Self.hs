@@ -48,20 +48,20 @@ main = testBuild noTest $ do
         need os
         ghc $ ["-o",out] ++ os
 
-    "//*.deps" %> \out -> do
+    "**/*.deps" %> \out -> do
         dep <- readFileLines $ out -<.> "dep"
         let xs = map (moduleToFile "deps") dep
         need xs
         ds <- nubOrd . sort . (++) dep <$> concatMapM readFileLines xs
         writeFileLines out ds
 
-    "//*.dep" %> \out -> do
+    "**/*.dep" %> \out -> do
         src <- readFile' $ root </> "src" </> fixPaths (out -<.> "hs")
         let xs = hsImports src
         xs <- filterM (doesFileExist . (\x -> root </> "src" </> x) . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
-    ["//*.o","//*.hi"] &%> \[out,_] -> do
+    ["**/*.o","**/*.hi"] &%> \[out,_] -> do
         deps <- readFileLines $ out -<.> "deps"
         let hs = root </> "src" </> fixPaths (out -<.> "hs")
         need $ hs : map (moduleToFile "hi") deps
