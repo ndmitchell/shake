@@ -238,15 +238,12 @@ callStackFull :: Partial => [String]
 
 #if __GLASGOW_HASKELL__ >= 800
 
-callStackFull = map f $ getCallStack $ popCallStack callStack
-    where
-        f (_, SrcLoc{..}) = toStandard srcLocFile ++ ":" ++
-            -- match the format of GHC error messages
-            if srcLocStartLine == srcLocEndLine then
-                show srcLocStartLine ++ ":" ++ show srcLocStartCol ++
-                (if srcLocStartCol == srcLocEndCol then "" else "-" ++ show srcLocEndCol) ++ ":"
-            else
-                show (srcLocStartLine, srcLocStartCol) ++ "-" ++ show (srcLocEndLine, srcLocEndCol) ++ ":"
+-- | Invert 'prettyCallStack', which GHC pre-applies in certain cases
+parseCallStack = reverse . map trimStart . drop 1 . lines
+
+callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
+
+callStackFromException (fromException -> Just (ErrorCallWithLocation msg loc)) = (parseCallStack loc, toException $ ErrorCall msg)
 #else
 
 callStackFull = []
