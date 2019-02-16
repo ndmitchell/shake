@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 
 module General.ListBuilder(
     ListBuilder, runListBuilder, newListBuilder
@@ -5,12 +6,13 @@ module General.ListBuilder(
 
 import Data.Semigroup (Semigroup (..))
 import Data.Monoid hiding ((<>))
-import Prelude()
+import Prelude(Functor)
 
 data ListBuilder a
     = Zero
     | One a
     | Add (ListBuilder a) (ListBuilder a)
+      deriving Functor
 
 
 instance Semigroup (ListBuilder a) where
