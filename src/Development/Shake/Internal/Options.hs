@@ -234,7 +234,7 @@ shakeOptions = ShakeOptions
 
 fieldsShakeOptions =
     ["shakeFiles", "shakeThreads", "shakeVersion", "shakeVerbosity", "shakeStaunch", "shakeReport"
-    ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeCommandOptions"
+    ,"shakeLint", "shakeLintInside", "shakeLintIgnore", "shakeLintWatch", "shakeCommandOptions"
     ,"shakeFlush", "shakeRebuild", "shakeAbbreviations", "shakeStorageLog"
     ,"shakeLineBuffering", "shakeTimings", "shakeRunCommands", "shakeChange", "shakeCreationCheck"
     ,"shakeLiveFiles", "shakeVersionIgnore", "shakeProgress", "shakeShare", "shakeCloud", "shakeOutput", "shakeColor", "shakeExtra"]
