@@ -164,7 +164,6 @@ filetime _ = do
     vars <- forM [a,b,c,d] $ \xs ->
         onceFork $ mapM_ (getFileInfo . fileNameFromByteString) xs
     sequence_ vars
-    printTimings
 
 
 clean :: IO () -> IO ()
