@@ -6,7 +6,7 @@ import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath
 import Test.Type
-import Data.List
+import Data.List.Extra
 import Control.Monad
 import Control.Concurrent.Extra
 import General.GetOpt
@@ -180,7 +180,8 @@ main = testBuildArgs test optionsEnum $ \args -> do
         liftIO $ putStrLn $ let x = x in x
 
 test build = do
-    let crash args parts = assertException parts (build $ "--quiet" : args)
+    -- on Windows, file paths may end up with \ separators, make sure we can still match them
+    let crash args parts = assertExceptionAfter (replace "\\" "/") parts (build $ "--quiet" : args)
     build ["clean"]
 
     writeFile "chain.1" "x"
