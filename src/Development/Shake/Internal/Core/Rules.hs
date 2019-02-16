@@ -5,12 +5,13 @@
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rules, runRules, getTargets, Target(..),
+    Rules, runRules,
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
-    addUserRule, documentTarget, alternatives, priority, versioned,
+    addUserRule, alternatives, priority, versioned,
+    getTargets, addTarget, withTargetDocs, withoutTargets,
     action, withoutActions
     ) where
 
@@ -166,10 +167,10 @@ runRules opts (Rules r) = do
 --          pure Nothing
 --       target : _args -> pure $ Just $ want [ target ] >> rules
 -- @
-getTargets :: ShakeOptions -> Rules () -> IO [Target]
+getTargets :: ShakeOptions -> Rules () -> IO [(String, Maybe String)]
 getTargets opts rs = do
-  (_actions, _ruleinfo, _userRules, targets) <- runRules opts rs
-  return targets
+    (_actions, _ruleinfo, _userRules, targets) <- runRules opts rs
+    return [(target, documentation) | Target{..} <- targets]
 
 data Target = Target
     {target :: !String
@@ -207,11 +208,13 @@ addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned F
 -- | Register a 'Target' with some optional documentation.
 --
 -- The registered targets in a @Rules@ can be retrieved using 'getTargets'.
-documentTarget
-    :: String -- ^ Target name or file pattern
-    -> Maybe String -- ^ Optional documentation that describes this target
-    -> Rules ()
-documentTarget t mbDoc = newRules mempty{targets = newListBuilder $ Target t mbDoc}
+addTarget :: String -> Rules ()
+addTarget t = newRules mempty{targets = newListBuilder $ Target t Nothing}
+
+withTargetDocs :: String -> Rules () -> Rules ()
+withTargetDocs d = modifyRulesScoped $ \x -> x{targets = f <$> targets x}
+    where f (Target a b) = Target a $ Just $ fromMaybe d b
+
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
@@ -340,3 +343,7 @@ action act = newRules mempty{actions=newListBuilder (addCallStack callStackFull 
 --   command line specification of what to build.
 withoutActions :: Rules a -> Rules a
 withoutActions = modifyRulesScoped $ \x -> x{actions=mempty}
+
+-- | Remove all targets specified in a set of rules, typically because they are internal details.
+withoutTargets :: Rules a -> Rules a
+withoutTargets = modifyRulesScoped $ \x -> x{targets=mempty}

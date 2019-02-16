@@ -10,54 +10,45 @@ main _sleeper = do
 
 rules :: Rules ()
 rules = do
-  phony "phony1" $ return ()
+  withTargetDocs "A phony target" $ phony "phony1" $ return ()
 
   "file1" %> \_ -> return ()
   ["file2", "file3"] |%> \_ -> return ()
   ["file4", "file5"] &%> \_ -> return ()
 
-  build "file6" $ \_ -> return ()
-  buildAny ["file7", "file8"] $ \_ -> return ()
-  buildAll ["file9", "file10"] $ \_ -> return ()
+  "file6" %> \_ -> return ()
+  ["file7", "file8"] |%> \_ -> return ()
+  ["file9", "file10"] &%> \_ -> return ()
 
-  phonyWithDocs
-    "Builds something really good"
-    "phony2" $ return ()
+  withTargetDocs "Builds something really good" $ phony "phony2" $ return ()
+  withTargetDocs "bad docs" $ do
+    withTargetDocs "a great file" $ "file11" %> \_ -> return ()
+    withTargetDocs "awesome files" $ ["file12", "file13"] &%> \_ -> return ()
+    phony "Foo" $ return ()
+    withoutTargets $ phony "Bar" $ return ()
 
-  buildWithDocs
-    "a great file"
-    "file11" $ \_ -> return ()
 
-  buildAnyWithDocs
-    "awesome files"
-    ["file12", "file13"] $ \_ -> return ()
-
-  buildAllWithDocs
-    "just briliant"
-    ["file14", "file15"] $ \_ -> return ()
-
-expected :: [Target]
+expected :: [(String, Maybe String)]
 expected =
-    [ Target "phony1" (Just "A phony target")
+    [ "phony1" * Just "A phony target"
 
-    , Target "file1"  Nothing
-    , Target "file2"  Nothing
-    , Target "file3"  Nothing
-    , Target "file4"  Nothing
-    , Target "file5"  Nothing
+    , "file1" *  Nothing
+    , "file2" *  Nothing
+    , "file3" *  Nothing
+    , "file4" *  Nothing
+    , "file5" *  Nothing
 
-    , Target "file6"  Nothing
-    , Target "file7"  Nothing
-    , Target "file8"  Nothing
-    , Target "file9"  Nothing
-    , Target "file10" Nothing
+    , "file6" *  Nothing
+    , "file7" *  Nothing
+    , "file8" *  Nothing
+    , "file9" *  Nothing
+    , "file10" * Nothing
 
-    , Target "phony2" (Just "Builds something really good")
+    , "phony2" * Just "Builds something really good"
 
-    , Target "file11" (Just "a great file")
-    , Target "file12" (Just "awesome files")
-    , Target "file13" (Just "awesome files")
-    , Target "file14" (Just "just briliant")
-    , Target "file15" (Just "just briliant")
-
+    , "file11" * Just "a great file"
+    , "file12" * Just "awesome files"
+    , "file13" * Just "awesome files"
+    , "Foo" * Just "bad docs"
     ]
+    where (*) = (,)
