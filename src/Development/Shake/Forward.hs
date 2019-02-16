@@ -65,17 +65,18 @@ import Prelude
 forwards :: IORef (Map.HashMap Forward (Action Forward))
 forwards = unsafePerformIO $ newIORef Map.empty
 
-newtype Forward = Forward (TypeRep, String, BS.ByteString) -- the type, the Show, the payload
+-- I'd like to use TypeRep, but it doesn't have any instances in older versions
+newtype Forward = Forward (String, String, BS.ByteString) -- the type, the Show, the payload
     deriving (Hashable,Typeable,Eq,NFData,Binary)
 
 mkForward :: (Typeable a, Show a, Binary a) => a -> Forward
-mkForward x = Forward (typeOf x, show x, encode' x)
+mkForward x = Forward (show $ typeOf x, show x, encode' x)
 
 unForward :: forall a . (Typeable a, Show a, Binary a) => Forward -> a
 unForward (Forward (got,_,x))
     | got /= want = error $ "Failed to match forward type, wanted " ++ show want ++ ", got " ++ show got
     | otherwise = decode' x
-    where want = typeRep (Proxy :: Proxy a)
+    where want = show $ typeRep (Proxy :: Proxy a)
 
 encode' :: Binary a => a -> BS.ByteString
 encode' = BS.concat . LBS.toChunks . encode
