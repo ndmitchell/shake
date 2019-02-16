@@ -171,7 +171,7 @@ applyKeyValue _ [] = return []
 applyKeyValue callStack ks = do
     global@Global{..} <- Action getRO
     Local{localStack} <- Action getRW
-    let stack = addCallStack (if shakeVerbosity globalOptions > Normal then callStack else take 1 callStack) localStack
+    let stack = addCallStack callStack localStack
 
     (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
         is <- mapM (getKeyId database) ks
