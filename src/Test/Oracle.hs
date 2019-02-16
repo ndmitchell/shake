@@ -107,7 +107,7 @@ test build = do
     assertContents ".log" "#!##!"
 
     -- check error messages are good
-    let errors args err = assertException err $ build $ "--quiet" : args
+    let errors args err = assertExceptionAfter (replace "\\" "/") err $ build $ "--quiet" : args
 
     build ["--def=unit=test","unit.txt"]
     errors ["unit.txt"] -- Building with an an Oracle that has been removed
