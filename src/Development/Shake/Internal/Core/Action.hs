@@ -77,8 +77,8 @@ actionBracket f m = Action $ do
 --   If the exception is already a ShakeException (e.g. it's a child of ours who failed and we are rethrowing)
 --   then do nothing with it.
 shakeException :: Global -> Stack -> SomeException -> IO ShakeException
-shakeException Global{globalOptions=ShakeOptions{..},..} stk e@(SomeException inner) = case cast inner of
-    Just e@ShakeException{} -> return e
+shakeException Global{globalOptions=ShakeOptions{..},..} stk e = case fromException e of
+    Just (e :: ShakeException) -> return e
     Nothing -> do
         e <- return $ exceptionStack stk e
         when (shakeStaunch && shakeVerbosity >= Quiet) $
