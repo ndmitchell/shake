@@ -111,7 +111,7 @@ run RunState{..} oneshot actions2 =
 
         res <- withCleanup $ \cleanup -> do
             register cleanup $ do
-                when (shakeTimings && shakeVerbosity >= Normal) $ do
+                when (shakeTimings && shakeVerbosity >= Normal) $
                     writeIORef timingsToShow . Just =<< getTimings
                 resetTimings
 
