@@ -10,6 +10,7 @@ module General.Extra(
     withs, forNothingM,
     maximum', maximumBy',
     fastAt,
+    zipWithExact,
     isAsyncException,
     usingLineBuffering,
     doesFileExist_,
@@ -93,6 +94,13 @@ fastAt xs = \i -> if i < 0 || i >= n then Nothing else Just $ indexArray arr i
             forM_ (zipFrom 0 xs) $ \(i,x) ->
                 writeArray arr i x
             unsafeFreezeArray arr
+
+zipWithExact :: Partial => (a -> b -> c) -> [a] -> [b] -> [c]
+zipWithExact f as bs = g as bs
+    where
+        g [] [] = []
+        g (a:as) (b:bs) = f a b : g as bs
+        g _ _ = error "zipWithExacts: unequal lengths"
 
 
 ---------------------------------------------------------------------
