@@ -134,7 +134,7 @@ abort pid = do
 
 withFiles :: IOMode -> [FilePath] -> ((FilePath -> Handle) -> IO a) -> IO a
 withFiles mode files act = withs (map (`withFile` mode) files) $ \handles ->
-    act $ \x -> fromJust $ lookup x $ zip files handles
+    act $ \x -> fromJust $ lookup x $ zipExact files handles
 
 
 -- General approach taken from readProcessWithExitCode

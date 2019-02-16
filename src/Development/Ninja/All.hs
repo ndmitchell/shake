@@ -231,7 +231,7 @@ data CompDb = CompDb
     deriving Show
 
 printCompDb :: [CompDb] -> String
-printCompDb xs = unlines $ ["["] ++ concat (zipWith f [1..] xs) ++ ["]"]
+printCompDb xs = unlines $ ["["] ++ concat (zipWithFrom f 1 xs) ++ ["]"]
     where
         n = length xs
         f i CompDb{..} =

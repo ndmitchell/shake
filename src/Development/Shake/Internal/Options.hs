@@ -14,6 +14,7 @@ import Data.Tuple.Extra
 import Data.Maybe
 import Data.Dynamic
 import Control.Monad
+import General.Extra
 import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.FilePattern
 import qualified Data.ByteString.Char8 as BS
@@ -255,7 +256,7 @@ instance Data ShakeOptions where
 instance Show ShakeOptions where
     show x = "ShakeOptions {" ++ intercalate ", " inner ++ "}"
         where
-            inner = zipWith (\x y -> x ++ " = " ++ y) fieldsShakeOptions $ gmapQ f x
+            inner = zipWithExact (\x y -> x ++ " = " ++ y) fieldsShakeOptions $ gmapQ f x
 
             f x | Just x <- cast x = show (x :: Int)
                 | Just x <- cast x = show (x :: FilePath)

@@ -126,8 +126,8 @@ saveSharedEntry shared entry = do
 
 addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
 addShared shared entryKey entryBuiltinVersion entryUserVersion entryDepends entryResult files = do
-    hashes <- mapM (getFileHash . fileNameFromString) files
-    saveSharedEntry shared Entry{entryFiles = zip files hashes, entryGlobalVersion = globalVersion shared, ..}
+    files <- mapM (\x -> (x,) <$> getFileHash (fileNameFromString x)) files
+    saveSharedEntry shared Entry{entryFiles = files, entryGlobalVersion = globalVersion shared, ..}
 
 
 removeShared :: Shared -> (Key -> Bool) -> IO ()

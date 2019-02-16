@@ -107,7 +107,7 @@ errorRuleRecursion tk k = errorStructured
 errorComplexRecursion :: [String] -> SomeException
 errorComplexRecursion ks = errorStructured
     "Build system error - indirect recursion detected"
-    [("Key value " ++ show i, Just k) | (i, k) <- zip [1..] ks]
+    [("Key value " ++ show i, Just k) | (i, k) <- zipFrom 1 ks]
     "Rules may not be recursive"
 
 errorNoApply :: TypeRep -> Maybe String -> String -> SomeException

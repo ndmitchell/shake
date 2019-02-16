@@ -62,7 +62,7 @@ filesStoredValue opts (FilesQ xs) = fmap FilesA . sequence <$> mapM (fileStoredV
 filesEqualValue :: ShakeOptions -> FilesA -> FilesA -> EqualCost
 filesEqualValue opts (FilesA xs) (FilesA ys)
     | length xs /= length ys = NotEqual
-    | otherwise = foldr and_ EqualCheap $ zipWith (fileEqualValue opts) xs ys
+    | otherwise = foldr and_ EqualCheap $ zipWithExact (fileEqualValue opts) xs ys
         where and_ NotEqual _ = NotEqual
               and_ EqualCheap x = x
               and_ EqualExpensive x = if x == NotEqual then NotEqual else EqualExpensive
@@ -129,7 +129,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
             cache <- historyLoad ver
             v <- case cache of
                 Just res ->
-                    fmap FilesA $ forM (zip (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
+                    fmap FilesA $ forM (zipExact (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
                         Just (FileA mod size _) <- liftIO $ fileStoredValue opts file
                         return $ FileA mod size $ getExStorable bin
                 Nothing -> do
@@ -174,7 +174,7 @@ ps &%> act
         (if all simple ps then id else priority 0.5) $ do
             mapM_ addTarget ps
             addUserRule $ FilesRule (show ps ++ " &%> " ++ callStackTop) $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
-                if not $ length xs == length ps && and (zipWith (?==) ps xs) then Nothing else Just $ do
+                if not $ length xs == length ps && and (zipWithExact (?==) ps xs) then Nothing else Just $ do
                     liftIO $ mapM_ createDirectoryRecursive $ nubOrd $ map takeDirectory xs
                     trackAllow xs
                     act xs
@@ -245,4 +245,4 @@ getFileTimes name xs = do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to produce " ++ show missing ++
                     " file" ++ (if missing == 1 then "" else "s") ++ " (out of " ++ show (length xs) ++ ")" ++
-                    concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zip xs ys]
+                    concat ["\n  " ++ fileNameToString x ++ if isNothing y then " - MISSING" else "" | (FileQ x,y) <- zipExact xs ys]
