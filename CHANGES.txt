@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #626, improve the display of error messages with call stacks
     Make sure exceptions don't change based on verbosity setting
     Make sure all thread pool threads terminate before shake returns
     #646, change the identity property to require a Maybe
