@@ -216,8 +216,10 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
         liftIO $ evaluate $ rnf res
 
         -- completed, now track anything required afterwards
-        globalRuleFinished k
-        producesCheck
+        when (runChanged res `elem` [ChangedRecomputeSame,ChangedRecomputeDiff]) $ do
+            -- if the users code didn't run you don't have to check anything (we assume builtin rules are correct)
+            globalRuleFinished k
+            producesCheck
 
         Action $ fmap (res,) getRW) $ \x -> case x of
             Left e -> do
