@@ -1,11 +1,13 @@
 {-# LANGUAGE TupleSections #-}
 
-module General.Timing(resetTimings, addTiming, printTimings) where
+module General.Timing(resetTimings, addTiming, getTimings) where
 
 import Data.IORef
 import System.IO.Unsafe
+import Data.Tuple.Extra
 import Numeric.Extra
 import System.Time.Extra
+
 
 {-# NOINLINE timer #-}
 timer :: IO Seconds
@@ -23,12 +25,12 @@ resetTimings = do
     writeIORef timings [(now, "Start")]
 
 
--- | Print all withTiming information and clear the information.
-printTimings :: IO ()
-printTimings = do
+-- | Print all withTiming information and clear it.
+getTimings :: IO [String]
+getTimings = do
     now <- timer
-    old <- atomicModifyIORef timings ([(now, "Start")],)
-    putStr $ unlines $ showTimings now $ reverse old
+    old <- atomicModifyIORef timings dupe
+    return $ showTimings now $ reverse old
 
 
 addTiming :: String -> IO ()

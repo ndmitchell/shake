@@ -102,64 +102,78 @@ reset RunState{..} = withVar databaseVar $ \database ->
 
 run :: RunState -> Bool -> [Action ()] -> IO [IO ()]
 run RunState{..} oneshot actions2 =
-    withCleanup $ \cleanup -> withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
-        register cleanup $ do
-            when (shakeTimings && shakeVerbosity >= Normal) printTimings
-            resetTimings -- so we don't leak memory
+    withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
 
-        start <- offsetTime
-        database <- readVar databaseVar
-        except <- newIORef (Nothing :: Maybe (String, ShakeException))
-        let getFailure = fmap fst <$> readIORef except
-        let raiseError err
-                | not shakeStaunch = throwIO err
-                | otherwise = do
-                    let named = shakeAbbreviationsApply opts . shakeExceptionTarget
-                    atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
-                    -- no need to print exceptions here, they get printed when they are wrapped
+        -- timings are a bit delicate, we want to make sure we clear them before we leave (so each run is fresh)
+        -- but we also want to only print them if there is no exception, and have to caputre them before we clear them
+        -- we use this variable to stash them away, then print after the exception handling block
+        timingsToShow <- newIORef Nothing
 
-        after <- newIORef []
-        absent <- newIORef []
-        step <- incrementStep database
-        getProgress <- usingProgress cleanup opts database step getFailure
-        lintCurrentDirectory curdir "When running"
+        res <- withCleanup $ \cleanup -> do
+            register cleanup $ do
+                when (shakeTimings && shakeVerbosity >= Normal) $ do
+                    writeIORef timingsToShow . Just =<< getTimings
+                    resetTimings
 
-        addTiming "Running rules"
-        runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-            let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step oneshot
-            -- give each action a stack to start with!
-            forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
-                let local = newLocal stack shakeVerbosity
-                addPool PoolStart pool $ runAction global local act $ \x -> case x of
-                    Left e -> raiseError =<< shakeException global stack e
-                    Right x -> return x
-        maybe (return ()) (throwIO . snd) =<< readIORef except
-        assertFinishedDatabase database
+            start <- offsetTime
+            database <- readVar databaseVar
+            except <- newIORef (Nothing :: Maybe (String, ShakeException))
+            let getFailure = fmap fst <$> readIORef except
+            let raiseError err
+                    | not shakeStaunch = throwIO err
+                    | otherwise = do
+                        let named = shakeAbbreviationsApply opts . shakeExceptionTarget
+                        atomicModifyIORef except $ \v -> (Just $ fromMaybe (named err, err) v, ())
+                        -- no need to print exceptions here, they get printed when they are wrapped
 
-        let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
+            after <- newIORef []
+            absent <- newIORef []
+            step <- incrementStep database
+            getProgress <- usingProgress cleanup opts database step getFailure
+            lintCurrentDirectory curdir "When running"
 
-        when (null actions && null actions2) $
-            putWhen Normal "Warning: No want/action statements, nothing to do"
+            addTiming "Running rules"
+            runPool (shakeThreads == 1) shakeThreads $ \pool -> do
+                let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step oneshot
+                -- give each action a stack to start with!
+                forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
+                    let local = newLocal stack shakeVerbosity
+                    addPool PoolStart pool $ runAction global local act $ \x -> case x of
+                        Left e -> raiseError =<< shakeException global stack e
+                        Right x -> return x
+            maybe (return ()) (throwIO . snd) =<< readIORef except
+            assertFinishedDatabase database
 
-        when (isJust shakeLint) $ do
-            addTiming "Lint checking"
-            lintCurrentDirectory curdir "After completion"
-            checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
-            putWhen Loud "Lint checking succeeded"
-        when (shakeReport /= []) $ do
-            addTiming "Profile report"
-            forM_ shakeReport $ \file -> do
-                putWhen Normal $ "Writing report to " ++ file
-                writeProfile file database
-        when (shakeLiveFiles /= []) $ do
-            addTiming "Listing live"
-            diagnostic $ return "Listing live keys"
-            xs <- liveFiles database
-            forM_ shakeLiveFiles $ \file -> do
-                putWhen Normal $ "Writing live list to " ++ file
-                (if file == "-" then putStr else writeFile file) $ unlines xs
+            let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
-        readIORef after
+            when (null actions && null actions2) $
+                putWhen Normal "Warning: No want/action statements, nothing to do"
+
+            when (isJust shakeLint) $ do
+                addTiming "Lint checking"
+                lintCurrentDirectory curdir "After completion"
+                checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
+                putWhen Loud "Lint checking succeeded"
+            when (shakeReport /= []) $ do
+                addTiming "Profile report"
+                forM_ shakeReport $ \file -> do
+                    putWhen Normal $ "Writing report to " ++ file
+                    writeProfile file database
+            when (shakeLiveFiles /= []) $ do
+                addTiming "Listing live"
+                diagnostic $ return "Listing live keys"
+                xs <- liveFiles database
+                forM_ shakeLiveFiles $ \file -> do
+                    putWhen Normal $ "Writing live list to " ++ file
+                    (if file == "-" then putStr else writeFile file) $ unlines xs
+
+            res <- readIORef after
+            addTiming "Cleanup"
+            return res
+
+        whenJustM (readIORef timingsToShow) $
+            putStr . unlines
+        return res
 
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
