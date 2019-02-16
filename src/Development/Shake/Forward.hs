@@ -66,14 +66,21 @@ forwards :: IORef (Map.HashMap Forward (Action Forward))
 forwards = unsafePerformIO $ newIORef Map.empty
 
 -- I'd like to use TypeRep, but it doesn't have any instances in older versions
-newtype Forward = Forward (String, String, BS.ByteString) -- the type, the Show, the payload
+newtype Forward = Forward (String, String, Wrap BS.ByteString) -- the type, the Show, the payload
     deriving (Hashable,Typeable,Eq,NFData,Binary)
 
+-- No NFData ByteString instance until GHC 7.6
+newtype Wrap a = Wrap a
+    deriving (Hashable,Typeable,Eq,Binary)
+
+instance NFData (Wrap a) where
+    rnf x = x `seq` ()
+
 mkForward :: (Typeable a, Show a, Binary a) => a -> Forward
-mkForward x = Forward (show $ typeOf x, show x, encode' x)
+mkForward x = Forward (show $ typeOf x, show x, Wrap $ encode' x)
 
 unForward :: forall a . (Typeable a, Show a, Binary a) => Forward -> a
-unForward (Forward (got,_,x))
+unForward (Forward (got,_,Wrap x))
     | got /= want = error $ "Failed to match forward type, wanted " ++ show want ++ ", got " ++ show got
     | otherwise = decode' x
     where want = show $ typeRep (Proxy :: Proxy a)
