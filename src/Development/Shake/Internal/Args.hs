@@ -157,17 +157,28 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                                }
     let putWhen v msg = when (shakeVerbosity oshakeOpts >= v) $ shakeOutput oshakeOpts v msg
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
-    let showHelp = do
+    let showHelp long = do
             progName <- getProgName
-            putWhen Quiet $ unlines $ ("Usage: " ++ progName ++ " [options] [target] ...") : "Options:" : showOptDescr opts
+            extra <- if not long then return [] else do
+                -- run the rules as simply as we can
+                rs <- rules shakeOpts [] []
+                case rs of
+                    Just (_, rs) -> do
+                        xs <- getTargets shakeOpts rs
+                        return $ "" : "Targets:" : ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
+                    _ -> return []
+
+            putWhen Quiet $ unlines $
+                ("Usage: " ++ progName ++ " [options] [target] ...") : "" :
+                "Options:" : showOptDescr opts ++ extra
 
     when (errs /= []) $ do
         putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
-        showHelp
+        showHelp False
         exitFailure
 
     if Help `elem` flagsExtra then
-        showHelp
+        showHelp True
      else if Version `elem` flagsExtra then
         putWhenLn Normal $ "Shake build system, version " ++ shakeVersionString
      else if NumericVersion `elem` flagsExtra then
