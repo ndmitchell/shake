@@ -48,11 +48,14 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Data.IORef
 import Data.Either
+import Data.Typeable
 import Data.List.Extra
 import Control.Exception.Extra
 import Numeric
 import System.IO.Unsafe
+import Data.Binary
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as Map
 
 
@@ -60,13 +63,17 @@ import qualified Data.HashMap.Strict as Map
 forwards :: IORef (Map.HashMap ForwardQ (Action ()))
 forwards = unsafePerformIO $ newIORef Map.empty
 
-newtype ForwardQ = ForwardQ String
+newtype ForwardQ = ForwardQ (TypeRep, String, BS.ByteString) -- the type, the Show, the payload
     deriving (Hashable,Typeable,Eq,NFData,Binary)
+
+encode' :: Binary a => a -> BS.ByteString
+encode' = BS.concat . LBS.toChunks . encode
+
 
 type instance RuleResult ForwardQ = ()
 
 instance Show ForwardQ where
-    show (ForwardQ x) = x
+    show (ForwardQ (_,x,_)) = x
 
 -- | Run a forward-defined build system.
 shakeForward :: ShakeOptions -> Action () -> IO ()
@@ -96,9 +103,9 @@ forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
 
 
 -- | Cache an action. The name of the action must be unique for all different actions.
-cacheAction :: String -> Action () -> Action ()
-cacheAction name action = do
-    let key = ForwardQ name
+cacheAction :: (Typeable a, Binary a, Show a) => a -> Action () -> Action ()
+cacheAction key action = do
+    let key = ForwardQ (typeOf key, show key, encode' key)
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key action mp, ())
     _ :: [()] <- apply [key]
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
@@ -109,4 +116,10 @@ cache cmd = do
     let CmdArgument args = cmd
     let isDull ['-',_] = True; isDull _ = False
     let name = head $ filter (not . isDull) (drop 1 $ rights args) ++ ["unknown"]
-    cacheAction ("command " ++ toStandard name ++ " #" ++ upper (showHex (abs $ hash $ show args) "")) cmd
+    cacheAction (Command $ toStandard name ++ " #" ++ upper (showHex (abs $ hash $ show args) "")) cmd
+
+newtype Command = Command String
+    deriving (Typeable, Binary)
+
+instance Show Command where
+    show (Command x) = "command " ++ x
