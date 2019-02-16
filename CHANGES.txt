@@ -1,6 +1,7 @@
 Changelog for Shake (* = breaking change)
 
     #625, make --help show the list of targets
+    #625, add addTarget/getTargets to track the available targets
     #416, generalise Forward.cacheAction to be in label and output
     #642, detect files that change with --lint-watch
     #649, add --share-list and --share-remove to work with the cache

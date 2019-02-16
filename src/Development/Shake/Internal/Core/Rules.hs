@@ -142,31 +142,11 @@ runRules opts (Rules r) = do
     SRules{..} <- readIORef ref
     return (runListBuilder actions, builtinRules, userRules, runListBuilder targets)
 
--- | Get all the targets explicitly registered in the given rules. The names in
--- 'phony' and '~>' as well as the file patterns in '%>', '|%>' and '&%>' are
--- registered as targets.
---
--- One application for retrieving the targets from the rules is for implementing
--- a shell autocomplete feature. To implement autocompletion most shells require
--- the program to output the list of arguments it supports. In this case we want
--- to output "someTarget" and "someFile" when the program is invoked with the
--- "autocomplete" command.
---
--- @
--- main = do
---   let rules = do
---         phony "someTarget" $ pure ()
---         "someFile" %> \\_ -> pure ()
---   shakeArgsWith shakeOptions [] $ \\_flags targets ->
---     case targets of
---       "autocomplete" : _args -> do
---          targets <- getTargets shakeOptions rules
---          forM_ targets $ \\t ->
---            putStrLn $ target t ++
---              maybe "" (\\doc -> ":" ++ doc) (documentation t)
---          pure Nothing
---       target : _args -> pure $ Just $ want [ target ] >> rules
--- @
+-- | Get all targets registered in the given rules. The names in
+--   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
+--   in 'Development.Shake.%>', 'Development.Shake.|%>' and 'Development.Shake.&%>' are
+--   registered as targets, plus any explicit calls to 'addTarget'.
+--   Returns the command, paired with the documentation (if any).
 getTargets :: ShakeOptions -> Rules () -> IO [(String, Maybe String)]
 getTargets opts rs = do
     (_actions, _ruleinfo, _userRules, targets) <- runRules opts rs
@@ -205,15 +185,23 @@ instance (Semigroup a, Monoid a) => Monoid (Rules a) where
 addUserRule :: Typeable a => a -> Rules ()
 addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned False $ UserRule r}
 
--- | Register a 'Target' with some optional documentation.
---
--- The registered targets in a @Rules@ can be retrieved using 'getTargets'.
+-- | Register a target, as available when passing @--help@ or through 'getTargets'.
+--   Called automatically by rules such as 'Development.Shake.phony' and
+--   'Development.Shake.%>' - to avoid that use 'withoutTargets'.
+--   To add documentation to a target use 'withTargetDocs'.
 addTarget :: String -> Rules ()
 addTarget t = newRules mempty{targets = newListBuilder $ Target t Nothing}
 
+-- | For all 'addTarget' targets within the 'Rules' prodivde the specified documentation, if they
+--   don't already have documentation.
 withTargetDocs :: String -> Rules () -> Rules ()
 withTargetDocs d = modifyRulesScoped $ \x -> x{targets = f <$> targets x}
     where f (Target a b) = Target a $ Just $ fromMaybe d b
+
+-- | Remove all targets specified in a set of rules, typically because they are internal details.
+--   Overrides 'addTarget'.
+withoutTargets :: Rules a -> Rules a
+withoutTargets = modifyRulesScoped $ \x -> x{targets=mempty}
 
 
 -- | A suitable 'BuiltinLint' that always succeeds.
@@ -343,7 +331,3 @@ action act = newRules mempty{actions=newListBuilder (addCallStack callStackFull 
 --   command line specification of what to build.
 withoutActions :: Rules a -> Rules a
 withoutActions = modifyRulesScoped $ \x -> x{actions=mempty}
-
--- | Remove all targets specified in a set of rules, typically because they are internal details.
-withoutTargets :: Rules a -> Rules a
-withoutTargets = modifyRulesScoped $ \x -> x{targets=mempty}
