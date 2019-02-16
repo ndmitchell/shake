@@ -403,7 +403,7 @@ data Global = Global
     ,globalOutput :: Verbosity -> String -> IO () -- ^ Output function
     ,globalOptions  :: ShakeOptions -- ^ Shake options
     ,globalDiagnostic :: IO String -> IO () -- ^ Debugging function
-    ,globalCurDir :: FilePath -- ^ getCurrentDirectory when we started
+    ,globalRuleFinished :: Key -> Action () -- ^ actions to run after each rule
     ,globalAfter :: IORef [IO ()] -- ^ Operations to run on success, e.g. removeFilesAfter
     ,globalTrackAbsent :: IORef [(Key, Key)] -- ^ Tracked things, in rule fst, snd must be absent
     ,globalProgress :: IO Progress -- ^ Request current progress state

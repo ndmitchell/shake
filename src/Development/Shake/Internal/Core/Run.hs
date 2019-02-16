@@ -17,6 +17,7 @@ import Control.Exception
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra hiding (withNumCapabilities)
+import Control.Monad.IO.Class
 import General.Binary
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.History.Shared
@@ -132,9 +133,13 @@ run RunState{..} oneshot actions2 =
             getProgress <- usingProgress cleanup opts database step getFailure
             lintCurrentDirectory curdir "When running"
 
+            let ruleFinished
+                    | isJust shakeLint = liftIO . lintCurrentDirectory curdir . show
+                    | otherwise = const $ return ()
+
             addTiming "Running rules"
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic curdir after absent getProgress userRules shared cloud step oneshot
+                let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity

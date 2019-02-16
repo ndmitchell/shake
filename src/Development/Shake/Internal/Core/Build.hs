@@ -216,13 +216,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
         liftIO $ evaluate $ rnf res
 
         -- completed, now track anything required afterwards
+        globalRuleFinished k
         lintTrackFinished
         producesCheck
 
         Action $ fmap (res,) getRW) $ \x -> case x of
             Left e -> do
-                e <- if isNothing shakeLint then return e else handle return $
-                    do lintCurrentDirectory globalCurDir $ "Running " ++ show k; return e
                 continue . Left . toException =<< shakeException global stack e
             Right (RunResult{..}, Local{..})
                 | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
