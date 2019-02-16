@@ -10,7 +10,7 @@ module General.Extra(
     withs, forNothingM,
     maximum', maximumBy',
     fastAt,
-    zipWithExact,
+    zipExact, zipWithExact,
     isAsyncException,
     usingLineBuffering,
     doesFileExist_,
@@ -101,6 +101,9 @@ zipWithExact f as bs = g as bs
         g [] [] = []
         g (a:as) (b:bs) = f a b : g as bs
         g _ _ = error "zipWithExacts: unequal lengths"
+
+zipExact :: Partial => [a] -> [b] -> [(a,b)]
+zipExact = zipWithExact (,)
 
 
 ---------------------------------------------------------------------
