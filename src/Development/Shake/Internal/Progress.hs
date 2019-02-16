@@ -220,7 +220,9 @@ progressDisplay sample disp prog = do
             t <- time
             ((secs,perc,_debug), mealy) <- return $ runMealy mealy (t, p)
             -- putStrLn _debug
-            disp $ formatMessage secs perc ++ maybe "" (", Failure! " ++) (isFailure p)
+            let done = countSkipped p + countBuilt p
+            let todo = done + countUnknown p + countTodo p
+            disp $ formatMessage secs perc ++ " [" ++ show done ++ "/" ++ show todo ++ "]" ++ maybe "" (", Failure! " ++) (isFailure p)
             loop time mealy
 
 

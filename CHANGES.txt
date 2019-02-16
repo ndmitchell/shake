@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Make the progress message display a more traditional count
     #638, add shakeTrace to record start/stop of traced commands
     Show user-added options separately
     #625, make --help show the list of targets
