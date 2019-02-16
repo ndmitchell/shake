@@ -113,7 +113,7 @@ run RunState{..} oneshot actions2 =
             register cleanup $ do
                 when (shakeTimings && shakeVerbosity >= Normal) $ do
                     writeIORef timingsToShow . Just =<< getTimings
-                    resetTimings
+                resetTimings
 
             start <- offsetTime
             database <- readVar databaseVar
