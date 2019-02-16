@@ -133,11 +133,13 @@ run RunState{..} oneshot actions2 =
             getProgress <- usingProgress cleanup opts database step getFailure
             lintCurrentDirectory curdir "When running"
 
+            watch <- lintWatch shakeLintWatch
             let ruleFinished
                     | isJust shakeLint = \k -> do
                         liftIO $ lintCurrentDirectory curdir $ show k
                         lintTrackFinished
-                    | otherwise = const $ return ()
+                        liftIO $ watch $ show k
+                    | otherwise = liftIO . watch . show
 
             addTiming "Running rules"
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do

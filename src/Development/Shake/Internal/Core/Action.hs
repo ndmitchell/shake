@@ -15,7 +15,7 @@ module Development.Shake.Internal.Core.Action(
     historyDisable,
     traced,
     -- Internal only
-    producesUnchecked, producesCheck, lintCurrentDirectory,
+    producesUnchecked, producesCheck, lintCurrentDirectory, lintWatch,
     blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
     getCurrentKey,
     actionShareList, actionShareRemove
@@ -28,6 +28,8 @@ import Control.Monad.IO.Class
 import Control.DeepSeq
 import Data.Typeable.Extra
 import System.Directory
+import System.FilePattern
+import System.FilePattern.Directory
 import Data.Function
 import Control.Concurrent.Extra
 import Data.Maybe
@@ -50,6 +52,8 @@ import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Pool
 import Development.Shake.Internal.Value
+import Development.Shake.Internal.FileInfo
+import Development.Shake.Internal.FileName
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 import General.Cleanup
@@ -333,6 +337,24 @@ lintCurrentDirectory old msg = do
         ,("Wanted",Just old)
         ,("Got",Just now)]
         ""
+
+lintWatch :: [FilePattern] -> IO (String -> IO ())
+lintWatch [] = return $ const $ return ()
+lintWatch pats = do
+    let op = getDirectoryFiles "." pats -- cache parsing of the pats
+    let record = do xs <- op; forM xs $ \x -> (x,) <$> getFileInfo (fileNameFromString x)
+    old <- record
+    return $ \msg -> do
+        now <- record
+        when (old /= now) $ throwIO $ errorStructured
+            "Lint checking error - watched files have changed"
+            (("When", Just msg) : changes (Map.fromList old) (Map.fromList now))
+            ""
+    where
+        changes old now =
+            [("Created", Just x) | x <- Map.keys $ Map.difference now old] ++
+            [("Deleted", Just x) | x <- Map.keys $ Map.difference old now] ++
+            [("Changed", Just x) | x <- Map.keys $ Map.filter id $ Map.intersectionWith (/=) old now]
 
 
 listDepends :: Var Database -> Depends -> IO [Key]

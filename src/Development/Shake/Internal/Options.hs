@@ -164,6 +164,8 @@ data ShakeOptions = ShakeOptions
         -- ^ Directories in which the files will be tracked by the linter.
     ,shakeLintIgnore :: [FilePattern]
         -- ^ File patterns which are ignored from linter tracking, a bit like calling 'Development.Shake.trackAllow' in every rule.
+    ,shakeLintWatch :: [FilePattern]
+        -- ^ File patterns whose modification causes an error. Raises an error even if 'shakeLint' is 'Nothing'.
     ,shakeCommandOptions :: [CmdOption]
         -- ^ Defaults to @[]@. Additional options to be passed to all command invocations.
     ,shakeFlush :: Maybe Double
@@ -224,7 +226,7 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] Nothing [] [] [] (Just 10) [] [] False True False
+    ".shake" 1 "1" Normal False [] Nothing [] [] [] [] (Just 10) [] [] False True False
     True ChangeModtime True [] False False Nothing []
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
@@ -238,15 +240,15 @@ fieldsShakeOptions =
     ,"shakeLiveFiles", "shakeVersionIgnore", "shakeProgress", "shakeShare", "shakeCloud", "shakeOutput", "shakeColor", "shakeExtra"]
 tyShakeOptions = mkDataType "Development.Shake.Types.ShakeOptions" [conShakeOptions]
 conShakeOptions = mkConstr tyShakeOptions "ShakeOptions" fieldsShakeOptions Prefix
-unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 y1 y2 y3 =
-    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 (fromHidden y1) (fromHidden y2) (fromHidden y3)
+unhide x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 y1 y2 y3 =
+    ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 (fromHidden y1) (fromHidden y2) (fromHidden y3)
 
 instance Data ShakeOptions where
-    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 y1 y2 y3) =
+    gfoldl k z (ShakeOptions x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 y1 y2 y3) =
         z unhide `k` x1 `k` x2 `k` x3 `k` x4 `k` x5 `k` x6 `k` x7 `k` x8 `k` x9 `k` x10 `k` x11 `k`
-        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k` x24 `k`
+        x12 `k` x13 `k` x14 `k` x15 `k` x16 `k` x17 `k` x18 `k` x19 `k` x20 `k` x21 `k` x22 `k` x23 `k` x24 `k` x25 `k`
         Hidden y1 `k` Hidden y2 `k` Hidden y3
-    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
+    gunfold k z _ = k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ k $ z unhide
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
