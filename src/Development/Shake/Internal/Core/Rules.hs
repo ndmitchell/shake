@@ -25,6 +25,7 @@ import Control.Monad.Trans.Reader
 import Development.Shake.Classes
 import General.Binary
 import General.Extra
+import Data.Typeable.Extra
 import Data.Data
 import Data.Function
 import Data.List.Extra
