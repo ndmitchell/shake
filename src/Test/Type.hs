@@ -7,7 +7,7 @@ module Test.Type(
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
-    assertBool, assertBoolIO, assertException,
+    assertBool, assertBoolIO, assertException, assertExceptionAfter,
     assertContents, assertContentsUnordered, assertContentsWords,
     assertExists, assertMissing,
     (===),
@@ -206,14 +206,16 @@ assertContentsWords = assertContentsOn (unwords . words)
 assertContentsUnordered :: FilePath -> [String] -> IO ()
 assertContentsUnordered file xs = assertContentsOn (unlines . sort . lines) file (unlines xs)
 
-assertException :: [String] -> IO () -> IO ()
-assertException parts act = do
+assertExceptionAfter :: (String -> String) -> [String] -> IO () -> IO ()
+assertExceptionAfter tweak parts act = do
     res <- try_ act
     case res of
-        Left err -> let s = show err in forM_ parts $ \p ->
+        Left err -> let s = tweak $ show err in forM_ parts $ \p ->
             assertBool (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
         Right _ -> error $ "Expected an exception containing " ++ show parts ++ ", but succeeded"
 
+assertException :: [String] -> IO () -> IO ()
+assertException = assertExceptionAfter id
 
 noTest :: ([String] -> IO ()) -> IO ()
 noTest build = do
