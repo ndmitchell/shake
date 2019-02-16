@@ -1,4 +1,4 @@
-module Test.GetTargets(main) where
+module Test.Targets(main) where
 
 import Development.Shake
 import Test.Type

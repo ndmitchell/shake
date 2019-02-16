@@ -34,7 +34,6 @@ import qualified Test.FilePath
 import qualified Test.FilePattern
 import qualified Test.Files
 import qualified Test.Forward
-import qualified Test.GetTargets
 import qualified Test.History
 import qualified Test.Journal
 import qualified Test.Lint
@@ -55,6 +54,7 @@ import qualified Test.Resources
 import qualified Test.Self
 import qualified Test.SelfMake
 import qualified Test.Tar
+import qualified Test.Targets
 import qualified Test.Thread
 import qualified Test.Tup
 import qualified Test.Unicode
@@ -90,7 +90,6 @@ mains =
     ,"filepattern" * Test.FilePattern.main
     ,"files" * Test.Files.main
     ,"forward" * Test.Forward.main
-    ,"gettargets" * Test.GetTargets.main
     ,"history" * Test.History.main
     ,"journal" * Test.Journal.main
     ,"lint" * Test.Lint.main
@@ -110,6 +109,7 @@ mains =
     ,"self" * Test.Self.main
     ,"selfmake" * Test.SelfMake.main
     ,"tar" * Test.Tar.main
+    ,"targets" * Test.Targets.main
     ,"thread" * Test.Thread.main
     ,"tup" * Test.Tup.main
     ,"unicode" * Test.Unicode.main
