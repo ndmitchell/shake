@@ -26,6 +26,7 @@ main = testBuild test $ do
 
 
 test build = do
+    build ["clean"]
     writeFile "trace.txt" ""
     writeFile "vowels.txt" "abc123a"
     build ["vowels.out1","vowels.out2","-j3","--sleep"]
