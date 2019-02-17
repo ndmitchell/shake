@@ -36,8 +36,7 @@ import Prelude
 
 #ifdef mingw32_HOST_OS
 
-import Foreign.Ptr
-import Foreign.C.Types
+import Foreign.C.String
 
 #ifdef x86_64_HOST_ARCH
 #define CALLCONV ccall
@@ -45,7 +44,7 @@ import Foreign.C.Types
 #define CALLCONV stdcall
 #endif
 
-foreign import CALLCONV "Windows.h SetConsoleTitleA" c_setConsoleTitle :: Ptr CChar -> IO Bool
+foreign import CALLCONV "Windows.h SetConsoleTitleW" c_setConsoleTitle :: CWString -> IO Bool
 
 #endif
 
@@ -305,7 +304,7 @@ progressTitlebar :: String -> IO ()
 progressTitlebar x
     | xterm = BS.putStr $ BS.pack $ escWindowTitle x
 #ifdef mingw32_HOST_OS
-    | otherwise = BS.useAsCString (BS.pack x) $ \x -> c_setConsoleTitle x >> return ()
+    | otherwise = void $ withCWString x c_setConsoleTitle
 #else
     | otherwise = return ()
 #endif

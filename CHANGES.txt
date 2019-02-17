@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Make --progress on Windows work with non-ASCII characters
     #18, add --compact for a Bazel/Buck style output
     Make the progress message display a more traditional count
     #638, add shakeTrace to record start/stop of traced commands
