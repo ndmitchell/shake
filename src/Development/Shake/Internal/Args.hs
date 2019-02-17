@@ -308,10 +308,10 @@ shakeOptsEx =
     ,yes $ Option ""  ["digest-or"] (noArg ([], \s -> s{shakeChange=ChangeModtimeOrDigest})) "Files change when modtime or digest change."
     ,yes $ Option ""  ["digest-not"] (noArg ([], \s -> s{shakeChange=ChangeModtime})) "Files change when modtime changes."
     ,extr $ Option ""  ["exception"] (noArg [Exception]) "Throw exceptions directly."
-    ,yes $ Option ""  ["flush"] (intArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
+    ,opts $ Option ""  ["flush"] (reqIntArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
     ,opts $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
     ,extr $ Option "h" ["help"] (noArg [Help]) "Print this message and exit."
-    ,yes $ Option "j" ["jobs"] (optIntArg 0 "jobs" "N" $ \i s -> s{shakeThreads=fromMaybe 0 i}) "Allow N jobs/threads at once [default CPUs]."
+    ,opts $ Option "j" ["jobs"] (optArgInt 0 "jobs" "N" $ \i s -> s{shakeThreads=fromMaybe 0 i}) "Allow N jobs/threads at once [default CPUs]."
     ,opts $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
     ,opts $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
     ,opts $ Option ""  ["lint-watch"] (reqArg "PATTERN" $ \x s -> s{shakeLintWatch=shakeLintWatch s ++ [x]}) "Error if any of the patterns are created (expensive)."
@@ -336,7 +336,7 @@ shakeOptsEx =
     ,extr $ Option ""  ["sleep"] (noArg [Sleep]) "Sleep for a second before building."
     ,opts $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,opts $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (progress $ optIntArg 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
+    ,yes $ Option "p" ["progress"] (progress $ optArgInt 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
     ,opts $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,opts $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Print less (pass repeatedly for even less)."
     ,extr $ Option ""  ["no-time"] (noArg [NoTime]) "Don't print build time."
@@ -360,11 +360,13 @@ shakeOptsEx =
         noArg = NoArg . Right
         reqArg a f = ReqArg (Right . f) a
         optArg a f = OptArg (Right . f) a
-        intArg mn flag a f = flip ReqArg a $ \x -> case reads x of
-            [(i,"")] | i >= mn -> Right ([],f i)
+
+        reqIntArg mn flag a f = flip ReqArg a $ \x -> case reads x of
+            [(i,"")] | i >= mn -> Right (f i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
-        optIntArg mn flag a f = flip OptArg a $ maybe (Right ([], f Nothing)) $ \x -> case reads x of
-            [(i,"")] | i >= mn -> Right ([],f $ Just i)
+
+        optArgInt mn flag a f = flip OptArg a $ maybe (Right (f Nothing)) $ \x -> case reads x of
+            [(i,"")] | i >= mn -> Right (f $ Just i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
 
         reqArgPair flag a f = flip ReqArg a $ \x -> case break (== '=') x of
@@ -374,7 +376,7 @@ shakeOptsEx =
         progress (OptArg func msg) = flip OptArg msg $ \x -> case break (== '=') `fmap` x of
             Just ("record",file) -> Right ([ProgressRecord $ if null file then "progress.txt" else tail file], id)
             Just ("replay",file) -> Right ([ProgressReplay $ if null file then "progress.txt" else tail file], id)
-            _ -> func x
+            _ -> ([],) <$> func x
         progress _ = throwImpure $ errorInternal "incomplete pattern, progress"
 
         outputDebug output Nothing = output
