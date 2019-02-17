@@ -3,6 +3,7 @@
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Thread(
     withThreadsBoth,
+    withThreadSlave,
     allocateThread,
     Thread, newThreadFinally, stopThreads
     ) where
@@ -70,6 +71,15 @@ withThreadsBoth act1 act2 = do
         waitBarrier bar1
         waitBarrier bar2
         either throwIO return res
+
+
+-- | Run an action in a separate thread.
+--   After the first action terminates, the thread will be killed.
+--   If the action raises an exception it will be rethrown on the parent thread.
+withThreadSlave :: IO () -> IO a -> IO a
+withThreadSlave slave act = withCleanup $ \cleanup -> do
+    allocateThread cleanup slave
+    act
 
 
 -- | Run the given action in a separate thread.
