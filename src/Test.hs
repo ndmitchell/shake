@@ -2,9 +2,10 @@
 module Test(main) where
 
 import Control.Applicative
-import Control.Exception
-import Control.Monad
+import Control.Exception.Extra
+import Control.Monad.Extra
 import Data.Maybe
+import System.Directory
 import System.Environment.Extra
 import General.Timing
 import Development.Shake.Internal.FileInfo
@@ -123,12 +124,14 @@ main :: IO ()
 main = do
     resetTimings
     xs <- getArgs
-    exePath <- getExecutablePath
     case flip lookup (fakes ++ mains) =<< listToMaybe xs of
         _ | null xs -> do
             putStrLn "******************************************************************"
             putStrLn "** Running shake test suite, run with '--help' to see arguments **"
             putStrLn "******************************************************************"
+            unlessM (doesFileExist "shake.cabal") $ do
+                putStrLn ""
+                errorIO "\nERROR: Must run the test suite from a directory containing the Shake repo."
             withArgs ["test"] main
             withArgs ["random","test","3m"] main
         Nothing -> putStrLn $ unlines
@@ -139,9 +142,11 @@ main = do
             ,""
             ,"As an example, try:"
             ,""
-            ,unwords ["  ", exePath, "self",  "--jobs=2", "--trace"]
+            ,"  shake-test self --jobs=2 --trace"
             ,""
-            ,"Which will build Shake, using Shake, on 2 threads."]
+            ,"Which will build Shake, using Shake, on 2 threads."
+            ,"You must run the test suite from a directory containing the Shake repo."
+            ]
         Just main -> main =<< sleepFileTimeCalibrate "output/calibrate"
 
 
