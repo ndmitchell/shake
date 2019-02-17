@@ -300,7 +300,7 @@ shakeOptsEx =
     ,opts $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
     ,opts $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
     ,extr $ Option ""  ["compact"] (noArg [Compact]) "Use a compact Bazel/Buck style output."
-    ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
+    ,opts $ Option "d" ["debug"] (optArg "FILE" $ \x s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x}) "Print lots of debugging information."
     ,extr  $ Option ""  ["demo"] (noArg [Demo]) "Run in demo mode."
     ,yes $ Option ""  ["digest"] (noArg ([], \s -> s{shakeChange=ChangeDigest})) "Files change when digest changes."
     ,yes $ Option ""  ["digest-and"] (noArg ([], \s -> s{shakeChange=ChangeModtimeAndDigest})) "Files change when modtime and digest change."
@@ -317,19 +317,19 @@ shakeOptsEx =
     ,opts $ Option ""  ["lint-watch"] (reqArg "PATTERN" $ \x s -> s{shakeLintWatch=shakeLintWatch s ++ [x]}) "Error if any of the patterns are created (expensive)."
     ,opts $ Option ""  ["lint-fsatrace"] (noArg $ \s -> s{shakeLint=Just LintFSATrace}) "Use fsatrace to do validation."
     ,opts $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
-    ,yes $ Option ""  ["live"] (OptArg (\x -> Right ([], \s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]})) "FILE") "List the files that are live [to live.txt]."
+    ,opts $ Option ""  ["live"] (optArg "FILE" $ \x s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]}) "List the files that are live [to live.txt]."
     ,opts $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,extr $ Option ""  ["numeric-version"] (noArg [NumericVersion]) "Print just the version number and exit."
     ,opts $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
-    ,yes $ Option ""  ["rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files."
-    ,yes $ Option ""  ["no-rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNormal, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files if necessary (default)."
-    ,yes $ Option ""  ["skip"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildLater, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files this run."
+    ,opts $ Option ""  ["rebuild"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]}) "Rebuild matching files."
+    ,opts $ Option ""  ["no-rebuild"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNormal, fromMaybe "**" x)]}) "Rebuild matching files if necessary (default)."
+    ,opts $ Option ""  ["skip"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildLater, fromMaybe "**" x)]}) "Don't rebuild matching files this run."
 --    ,yes $ Option ""  ["skip-forever"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNever, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files until they change."
-    ,yes $ Option "r" ["report","profile"] (OptArg (\x -> Right ([], \s -> s{shakeReport=shakeReport s ++ [fromMaybe "report.html" x]})) "FILE") "Write out profiling information [to report.html]."
+    ,opts $ Option "r" ["report","profile"] (optArg "FILE" $ \x s -> s{shakeReport=shakeReport s ++ [fromMaybe "report.html" x]}) "Write out profiling information [to report.html]."
     ,opts $ Option ""  ["no-reports"] (noArg $ \s -> s{shakeReport=[]}) "Turn off --report."
     ,opts $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
     ,opts $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
-    ,yes $ Option ""  ["share"] (OptArg (\x -> Right ([], \s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s})) "DIRECTORY") "Shared cache location."
+    ,opts $ Option ""  ["share"] (optArg "DIRECTORY" $ \x s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s}) "Shared cache location."
     ,no  $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
     ,no  $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
     ,opts $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
@@ -359,6 +359,7 @@ shakeOptsEx =
 
         noArg = NoArg . Right
         reqArg a f = ReqArg (Right . f) a
+        optArg a f = OptArg (Right . f) a
         intArg mn flag a f = flip ReqArg a $ \x -> case reads x of
             [(i,"")] | i >= mn -> Right ([],f i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
