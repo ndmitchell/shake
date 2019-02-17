@@ -12,6 +12,7 @@ module General.Extra(
     fastAt,
     zipExact, zipWithExact,
     isAsyncException,
+    showDurationSecs,
     usingLineBuffering,
     doesFileExist_,
     usingNumCapabilities,
@@ -32,11 +33,13 @@ import Numeric
 import General.Cleanup
 import Data.Typeable
 import System.IO.Extra
+import System.Time.Extra
 import System.IO.Unsafe
 import System.Info.Extra
 import System.Random
 import System.Directory
 import System.Exit
+import Numeric.Extra
 import Foreign.Storable
 import Control.Concurrent.Extra
 import Data.Maybe
@@ -163,6 +166,13 @@ usingLineBuffering cleanup = do
     when (out /= LineBuffering || err /= LineBuffering) $ do
         register cleanup $ hSetBuffering stdout out >> hSetBuffering stderr err
         hSetBuffering stdout LineBuffering >> hSetBuffering stderr LineBuffering
+
+
+---------------------------------------------------------------------
+-- System.Time
+
+showDurationSecs :: Seconds -> String
+showDurationSecs = replace ".00s" "s" . showDuration . intToDouble . round
 
 
 ---------------------------------------------------------------------
