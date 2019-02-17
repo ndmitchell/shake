@@ -259,7 +259,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
 --   in 'ShakeOptions'. The command line flags are @make@ compatible where possbile, but additional
 --   flags have been added for the extra options Shake supports.
 shakeOptDescrs :: [OptDescr (Either String (ShakeOptions -> ShakeOptions))]
-shakeOptDescrs = [fmapOptDescr snd o | (True, o) <- shakeOptsEx]
+shakeOptDescrs = [fmapFmapOptDescr snd o | (True, o) <- shakeOptsEx]
 
 data Extra = ChangeDirectory FilePath
            | Version
@@ -347,8 +347,8 @@ shakeOptsEx =
     ,extr $ Option ""  ["no-print-directory"] (noArg [PrintDirectory False]) "Turn off -w, even if it was turned on implicitly."
     ]
     where
-        opts o = (True, fmapOptDescr ([],) o)
-        extr o = (False, fmapOptDescr (,id) o)
+        opts o = (True, fmapFmapOptDescr ([],) o)
+        extr o = (False, fmapFmapOptDescr (,id) o)
 
         yes = (,) True
         no  = (,) False

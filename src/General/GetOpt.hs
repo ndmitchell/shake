@@ -2,7 +2,7 @@
 module General.GetOpt(
     OptDescr(..), ArgDescr(..),
     getOpt,
-    fmapOptDescr,
+    fmapOptDescr, fmapFmapOptDescr,
     showOptDescr,
     mergeOptDescr,
     removeOverlap,
@@ -25,11 +25,14 @@ getOpt opts args = (flagGood, files, flagBad ++ errs)
 
 
 -- fmap is only an instance in later GHC 7.8 and above, so fake our own version
-fmapOptDescr :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
+fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
 fmapOptDescr f (Option a b c d) = Option a b (g c) d
-    where g (NoArg a) = NoArg $ fmap f a
-          g (ReqArg a b) = ReqArg (fmap f . a) b
-          g (OptArg a b) = OptArg (fmap f . a) b
+    where g (NoArg a) = NoArg $ f a
+          g (ReqArg a b) = ReqArg (f . a) b
+          g (OptArg a b) = OptArg (f . a) b
+
+fmapFmapOptDescr :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
+fmapFmapOptDescr f = fmapOptDescr (fmap f)
 
 
 showOptDescr :: [OptDescr a] -> [String]
@@ -59,7 +62,7 @@ removeOverlap bad = mapMaybe f
                   b2 = filter (not . flip Set.member long) b
 
 mergeOptDescr :: [OptDescr (Either String a)] -> [OptDescr (Either String b)] -> [OptDescr (Either String (Either a b))]
-mergeOptDescr xs ys = map (fmapOptDescr Left) xs ++ map (fmapOptDescr Right) ys
+mergeOptDescr xs ys = map (fmapFmapOptDescr Left) xs ++ map (fmapFmapOptDescr Right) ys
 
 optionsEnum :: (Enum a, Bounded a, Show a) => [OptDescr (Either String a)]
 optionsEnum = optionsEnumDesc [(x, "Flag " ++ lower (show x) ++ ".") | x <- [minBound..maxBound]]
