@@ -10,6 +10,7 @@ import Development.Shake.Internal.Progress
 import System.Time.Extra
 import Control.Exception
 import General.Thread
+import General.EscCodes
 import Data.IORef
 import Control.Monad
 
@@ -40,12 +41,12 @@ addTrace key msg start time s
 
 
 display :: Seconds -> S -> (S, String)
-display time s = (s{sOutput=[], sUnwind=length post}, "\ESC[" ++ show (sUnwind s) ++ "A" ++ unlines (map pad $ pre ++ post))
+display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
     where
         pre = sOutput s
         post = "" : ("Progress: " ++ sProgress s) : map f (sTraces s)
 
-        pad x = x ++ "\ESC[K"
+        pad x = x ++ escClearLine
         f Nothing = " *"
         f (Just (k,m,t)) = " * " ++ k ++ " (" ++ m ++ " " ++ showDuration (time - t) ++ ")"
 

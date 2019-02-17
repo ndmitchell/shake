@@ -25,6 +25,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
 import General.Template
+import General.EscCodes
 import System.IO.Unsafe
 import Development.Shake.Internal.Paths
 import Data.Monoid
@@ -302,7 +303,7 @@ xterm = unsafePerformIO $
 --   On Windows, if not detected as an xterm, this function uses the @SetConsoleTitle@ API.
 progressTitlebar :: String -> IO ()
 progressTitlebar x
-    | xterm = BS.putStr $ BS.pack $ "\ESC]0;" ++ x ++ "\BEL"
+    | xterm = BS.putStr $ BS.pack $ escWindowTitle x
 #ifdef mingw32_HOST_OS
     | otherwise = BS.useAsCString (BS.pack x) $ \x -> c_setConsoleTitle x >> return ()
 #else

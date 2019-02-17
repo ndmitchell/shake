@@ -247,11 +247,11 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     if Exception `elem` flagsExtra then
                         throwIO err
                     else do
-                        putWhenLn Quiet $ esc "31" $ show err
+                        putWhenLn Quiet $ esc Red $ show err
                         exitFailure
                 Right () -> do
                     tot <- start
-                    putWhenLn Normal $ esc "32" $ "Build completed in " ++ showDuration tot
+                    putWhenLn Normal $ esc Green $ "Build completed in " ++ showDuration tot
 
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns
@@ -279,11 +279,11 @@ data Extra = ChangeDirectory FilePath
              deriving Eq
 
 
-escape :: String -> String -> String
-escape code x = "\ESC[" ++ code ++ "m" ++ x ++ "\ESC[0m"
+escape :: Color -> String -> String
+escape color x = escForeground color ++ x ++ escNormal
 
 outputColor :: (Verbosity -> String -> IO ()) -> Verbosity -> String -> IO ()
-outputColor output v msg = output v $ escape "34" msg
+outputColor output v msg = output v $ escape Blue msg
 
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
