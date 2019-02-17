@@ -10,7 +10,7 @@ module Development.Shake.Internal.Progress(
 import Control.Applicative
 import Data.Tuple.Extra
 import Control.Exception.Extra
-import Control.Monad
+import Control.Monad.Extra
 import System.Directory
 import System.Process
 import System.FilePath
@@ -292,15 +292,15 @@ jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}
 --   environment variable @$TERM@ is set to @xterm@ this uses xterm escape sequences.
 --   On Windows, if not detected as an xterm, this function uses the @SetConsoleTitle@ API.
 progressTitlebar :: String -> IO ()
-progressTitlebar x = do
-    b <- checkEscCodes
-    if b then
-        BS.putStr $ BS.pack $ escWindowTitle x
-    else do
+progressTitlebar x = unlessM win lin
+    where
 #ifdef mingw32_HOST_OS
-        withCWString x c_setConsoleTitleW
+        win = withCWString x c_setConsoleTitleW
+#else
+        win = return False
 #endif
-        return ()
+
+        lin = whenM checkEscCodes $ BS.putStr $ BS.pack $ escWindowTitle x
 
 
 -- | Call the program @shake-progress@ if it is on the @$PATH@. The program is called with
