@@ -302,11 +302,11 @@ shakeOptsEx =
     ,extr $ Option ""  ["compact"] (noArg [Compact]) "Use a compact Bazel/Buck style output."
     ,opts $ Option "d" ["debug"] (optArg "FILE" $ \x s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x}) "Print lots of debugging information."
     ,extr  $ Option ""  ["demo"] (noArg [Demo]) "Run in demo mode."
-    ,yes $ Option ""  ["digest"] (noArg ([], \s -> s{shakeChange=ChangeDigest})) "Files change when digest changes."
-    ,yes $ Option ""  ["digest-and"] (noArg ([], \s -> s{shakeChange=ChangeModtimeAndDigest})) "Files change when modtime and digest change."
-    ,yes $ Option ""  ["digest-and-input"] (noArg ([], \s -> s{shakeChange=ChangeModtimeAndDigestInput})) "Files change on modtime (and digest for inputs)."
-    ,yes $ Option ""  ["digest-or"] (noArg ([], \s -> s{shakeChange=ChangeModtimeOrDigest})) "Files change when modtime or digest change."
-    ,yes $ Option ""  ["digest-not"] (noArg ([], \s -> s{shakeChange=ChangeModtime})) "Files change when modtime changes."
+    ,opts $ Option ""  ["digest"] (noArg $ \s -> s{shakeChange=ChangeDigest}) "Files change when digest changes."
+    ,opts $ Option ""  ["digest-and"] (noArg $ \s -> s{shakeChange=ChangeModtimeAndDigest}) "Files change when modtime and digest change."
+    ,opts $ Option ""  ["digest-and-input"] (noArg $ \s -> s{shakeChange=ChangeModtimeAndDigestInput}) "Files change on modtime (and digest for inputs)."
+    ,opts $ Option ""  ["digest-or"] (noArg $ \s -> s{shakeChange=ChangeModtimeOrDigest}) "Files change when modtime or digest change."
+    ,opts $ Option ""  ["digest-not"] (noArg $ \s -> s{shakeChange=ChangeModtime}) "Files change when modtime changes."
     ,extr $ Option ""  ["exception"] (noArg [Exception]) "Throw exceptions directly."
     ,opts $ Option ""  ["flush"] (reqIntArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
     ,opts $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
@@ -330,13 +330,13 @@ shakeOptsEx =
     ,opts $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
     ,opts $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
     ,opts $ Option ""  ["share"] (optArg "DIRECTORY" $ \x s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s}) "Shared cache location."
-    ,no  $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
-    ,no  $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
+    ,hide  $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
+    ,hide $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
     ,opts $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
     ,extr $ Option ""  ["sleep"] (noArg [Sleep]) "Sleep for a second before building."
     ,opts $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,opts $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
-    ,yes $ Option "p" ["progress"] (progress $ optArgInt 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
+    ,both $ Option "p" ["progress"] (progress $ optArgInt 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
     ,opts $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
     ,opts $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Print less (pass repeatedly for even less)."
     ,extr $ Option ""  ["no-time"] (noArg [NoTime]) "Don't print build time."
@@ -349,9 +349,8 @@ shakeOptsEx =
     where
         opts o = (True, fmapFmapOptDescr ([],) o)
         extr o = (False, fmapFmapOptDescr (,id) o)
-
-        yes = (,) True
-        no  = (,) False
+        both o = (True, o)
+        hide o = (False, o) -- I do modify the options, but not in a meaningful way
 
         move :: Verbosity -> (Int -> Int) -> Verbosity
         move x by = toEnum $ min (fromEnum mx) $ max (fromEnum mn) $ by $ fromEnum x
