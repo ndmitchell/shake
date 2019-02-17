@@ -295,7 +295,7 @@ shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOp
 shakeOptsEx =
     [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,extr $ Option ""  ["no-build"] (noArg [NoBuild]) "Don't build anything."
-    ,extr $ Option "C" ["directory"] (ReqArg (\x -> Right [ChangeDirectory x]) "DIRECTORY") "Change to DIRECTORY before doing anything."
+    ,extr $ Option "C" ["directory"] (reqArg "DIRECTORY" $ \x -> [ChangeDirectory x]) "Change to DIRECTORY before doing anything."
 --    ,yes $ Option ""  ["cloud"] (reqArg "URL" $ \x s -> s{shakeCloud=shakeCloud s ++ [x]}) "HTTP server providing a cloud cache."
     ,opts $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
     ,opts $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
@@ -314,11 +314,11 @@ shakeOptsEx =
     ,yes $ Option "j" ["jobs"] (optIntArg 0 "jobs" "N" $ \i s -> s{shakeThreads=fromMaybe 0 i}) "Allow N jobs/threads at once [default CPUs]."
     ,opts $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
     ,opts $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
-    ,yes $ Option ""  ["lint-watch"] (reqArg "PATTERN" $ \x s -> s{shakeLintWatch=shakeLintWatch s ++ [x]}) "Error if any of the patterns are created (expensive)."
+    ,opts $ Option ""  ["lint-watch"] (reqArg "PATTERN" $ \x s -> s{shakeLintWatch=shakeLintWatch s ++ [x]}) "Error if any of the patterns are created (expensive)."
     ,opts $ Option ""  ["lint-fsatrace"] (noArg $ \s -> s{shakeLint=Just LintFSATrace}) "Use fsatrace to do validation."
     ,opts $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
     ,yes $ Option ""  ["live"] (OptArg (\x -> Right ([], \s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]})) "FILE") "List the files that are live [to live.txt]."
-    ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
+    ,opts $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,extr $ Option ""  ["numeric-version"] (noArg [NumericVersion]) "Print just the version number and exit."
     ,opts $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
     ,yes $ Option ""  ["rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files."
@@ -327,7 +327,7 @@ shakeOptsEx =
 --    ,yes $ Option ""  ["skip-forever"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNever, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files until they change."
     ,yes $ Option "r" ["report","profile"] (OptArg (\x -> Right ([], \s -> s{shakeReport=shakeReport s ++ [fromMaybe "report.html" x]})) "FILE") "Write out profiling information [to report.html]."
     ,opts $ Option ""  ["no-reports"] (noArg $ \s -> s{shakeReport=[]}) "Turn off --report."
-    ,yes $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
+    ,opts $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
     ,opts $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
     ,yes $ Option ""  ["share"] (OptArg (\x -> Right ([], \s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s})) "DIRECTORY") "Shared cache location."
     ,no  $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
@@ -358,7 +358,7 @@ shakeOptsEx =
             where (mn,mx) = (asTypeOf minBound x, asTypeOf maxBound x)
 
         noArg = NoArg . Right
-        reqArg a f = ReqArg (\x -> Right ([], f x)) a
+        reqArg a f = ReqArg (Right . f) a
         intArg mn flag a f = flip ReqArg a $ \x -> case reads x of
             [(i,"")] | i >= mn -> Right ([],f i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
