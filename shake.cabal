@@ -136,6 +136,7 @@ library
         Development.Ninja.Type
         Development.Shake.Internal.Args
         Development.Shake.Internal.CmdOption
+        Development.Shake.Internal.CompactUI
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
@@ -253,6 +254,7 @@ executable shake
         Development.Shake.FilePath
         Development.Shake.Internal.Args
         Development.Shake.Internal.CmdOption
+        Development.Shake.Internal.CompactUI
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared
@@ -378,6 +380,7 @@ test-suite shake-test
         Development.Shake.Forward
         Development.Shake.Internal.Args
         Development.Shake.Internal.CmdOption
+        Development.Shake.Internal.CompactUI
         Development.Shake.Internal.Core.Action
         Development.Shake.Internal.Core.Build
         Development.Shake.Internal.History.Shared

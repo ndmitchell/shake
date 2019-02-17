@@ -11,6 +11,7 @@ import Development.Shake.Internal.Paths
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Errors
+import Development.Shake.Internal.CompactUI
 import Development.Shake.Internal.Demo
 import Development.Shake.Internal.Core.Action
 import Development.Shake.FilePath
@@ -215,8 +216,12 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
             when printDirectory $ do
                 curdir <- getCurrentDirectory
                 putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
+            (shakeOpts, ui) <-
+                if Compact `elem` flagsExtra
+                then second withThreadSlave <$> compactUI shakeOpts
+                else return (shakeOpts, id)
             rules <- rules shakeOpts user files
-            case rules of
+            ui $ case rules of
                 Nothing -> return (False, shakeOpts, Right ())
                 Just (shakeOpts, rules) -> do
                     res <- try_ $ shake shakeOpts $
@@ -270,6 +275,7 @@ data Extra = ChangeDirectory FilePath
            | Demo
            | ShareList
            | ShareRemove String
+           | Compact
              deriving Eq
 
 
@@ -293,6 +299,7 @@ shakeOptsEx =
 --    ,yes $ Option ""  ["cloud"] (reqArg "URL" $ \x s -> s{shakeCloud=shakeCloud s ++ [x]}) "HTTP server providing a cloud cache."
     ,yes $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
     ,yes $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
+    ,no  $ Option ""  ["compact"] (NoArg $ Right ([Compact], id)) "Use a compact Bazel/Buck style output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
     ,no  $ Option ""  ["demo"] (NoArg $ Right ([Demo], id)) "Run in demo mode."
     ,yes $ Option ""  ["digest"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeDigest})) "Files change when digest changes."
