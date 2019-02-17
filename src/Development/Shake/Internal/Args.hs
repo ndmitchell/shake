@@ -293,7 +293,7 @@ outputColor output v msg = output v $ escape "34" msg
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
 shakeOptsEx =
-    [yes $ Option "a" ["abbrev"] (pairArg "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
+    [opts $ Option "a" ["abbrev"] (reqArgPair "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
     ,extr $ Option ""  ["no-build"] (noArg [NoBuild]) "Don't build anything."
     ,extr $ Option "C" ["directory"] (reqArg "DIRECTORY" $ \x -> [ChangeDirectory x]) "Change to DIRECTORY before doing anything."
 --    ,yes $ Option ""  ["cloud"] (reqArg "URL" $ \x s -> s{shakeCloud=shakeCloud s ++ [x]}) "HTTP server providing a cloud cache."
@@ -366,8 +366,9 @@ shakeOptsEx =
         optIntArg mn flag a f = flip OptArg a $ maybe (Right ([], f Nothing)) $ \x -> case reads x of
             [(i,"")] | i >= mn -> Right ([],f $ Just i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
-        pairArg flag a f = flip ReqArg a $ \x -> case break (== '=') x of
-            (a,'=':b) -> Right ([],f (a,b))
+
+        reqArgPair flag a f = flip ReqArg a $ \x -> case break (== '=') x of
+            (a,'=':b) -> Right $ f (a,b)
             _ -> Left $ "the `--" ++ flag ++ "' option requires an = in the argument"
 
         progress (OptArg func msg) = flip OptArg msg $ \x -> case break (== '=') `fmap` x of
