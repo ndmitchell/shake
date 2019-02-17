@@ -72,4 +72,4 @@ compactUI opts = do
         ,shakeVerbosity = Quiet
         }
     let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)
-    return (opts, forever (tick >> sleep 0.2) `finally` tick)
+    return (opts, forever (tick >> sleep 0.4) `finally` tick)
