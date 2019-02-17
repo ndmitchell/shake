@@ -11,7 +11,6 @@ import Control.Applicative
 import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad
-import System.Environment.Extra
 import System.Directory
 import System.Process
 import System.FilePath
@@ -26,7 +25,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
 import General.Template
 import General.EscCodes
-import System.IO.Unsafe
 import Development.Shake.Internal.Paths
 import Data.Monoid
 import System.Time.Extra
@@ -44,7 +42,7 @@ import Foreign.C.String
 #define CALLCONV stdcall
 #endif
 
-foreign import CALLCONV "Windows.h SetConsoleTitleW" c_setConsoleTitle :: CWString -> IO Bool
+foreign import CALLCONV "Windows.h SetConsoleTitleW" c_setConsoleTitleW :: CWString -> IO Bool
 
 #endif
 
@@ -290,24 +288,19 @@ jsonList xs = zipWith (:) ('[':repeat ',') xs ++ ["]"]
 jsonObject xs = "{" ++ intercalate ", " [show a ++ ":" ++ b | (a,b) <- xs] ++ "}"
 
 
-{-# NOINLINE xterm #-}
-xterm :: Bool
-xterm = unsafePerformIO $
-    -- Terminal.app uses "xterm-256color" as its env variable
-    maybe False ("xterm" `isPrefixOf`) <$> lookupEnv "TERM"
-
-
 -- | Set the title of the current console window to the given text. If the
 --   environment variable @$TERM@ is set to @xterm@ this uses xterm escape sequences.
 --   On Windows, if not detected as an xterm, this function uses the @SetConsoleTitle@ API.
 progressTitlebar :: String -> IO ()
-progressTitlebar x
-    | xterm = BS.putStr $ BS.pack $ escWindowTitle x
+progressTitlebar x = do
+    b <- checkEscCodes
+    if b then
+        BS.putStr $ BS.pack $ escWindowTitle x
+    else do
 #ifdef mingw32_HOST_OS
-    | otherwise = void $ withCWString x c_setConsoleTitle
-#else
-    | otherwise = return ()
+        withCWString x c_setConsoleTitleW
 #endif
+        return ()
 
 
 -- | Call the program @shake-progress@ if it is on the @$PATH@. The program is called with
