@@ -210,7 +210,9 @@ progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
 progressDisplay sample disp prog = do
     disp "Starting..." -- no useful info at this stage
     time <- offsetTime
-    catchJust (\x -> if x == ThreadKilled then Just () else Nothing) (loop time $ message echoMealy) (const $ disp "Finished")
+    catchJust (\x -> if x == ThreadKilled then Just () else Nothing)
+        (loop time $ message echoMealy)
+        (const $ do t <- time; disp $ "Finished in " ++ showDuration t)
     where
         loop :: IO Double -> Mealy (Double, Progress) (Double, Double, String) -> IO ()
         loop time mealy = do
