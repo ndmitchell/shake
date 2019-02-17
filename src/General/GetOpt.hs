@@ -2,7 +2,7 @@
 module General.GetOpt(
     OptDescr(..), ArgDescr(..),
     getOpt,
-    fmapOptDescr, fmapFmapOptDescr,
+    fmapFmapOptDescr,
     showOptDescr,
     mergeOptDescr,
     removeOverlap,
