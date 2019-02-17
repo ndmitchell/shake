@@ -29,7 +29,6 @@ import System.Time
 import Development.Shake.Internal.Errors
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
-import Foreign.C.Types
 import Foreign.C.String
 
 #else
@@ -137,8 +136,8 @@ getFileInfo x = BS.useAsCString (fileNameToByteString x) $ \file ->
 #define CALLCONV stdcall
 #endif
 
-foreign import CALLCONV unsafe "Windows.h GetFileAttributesExA" c_GetFileAttributesExA :: Ptr CChar  -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
-foreign import CALLCONV unsafe "Windows.h GetFileAttributesExW" c_GetFileAttributesExW :: Ptr CWchar -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import CALLCONV unsafe "Windows.h GetFileAttributesExA" c_GetFileAttributesExA :: CString  -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
+foreign import CALLCONV unsafe "Windows.h GetFileAttributesExW" c_GetFileAttributesExW :: CWString -> Int32 -> Ptr WIN32_FILE_ATTRIBUTE_DATA -> IO Bool
 
 data WIN32_FILE_ATTRIBUTE_DATA
 

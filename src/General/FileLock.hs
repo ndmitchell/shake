@@ -11,7 +11,6 @@ import Control.Monad
 import Data.Bits
 import Data.Word
 import Foreign.Ptr
-import Foreign.C.Types
 import Foreign.C.String
 #else
 import System.IO
@@ -26,7 +25,7 @@ import System.Posix.IO
 #define CALLCONV stdcall
 #endif
 
-foreign import CALLCONV unsafe "Windows.h CreateFileW" c_CreateFileW :: Ptr CWchar -> Word32 -> Word32 -> Ptr () -> Word32 -> Word32 -> Ptr () -> IO (Ptr ())
+foreign import CALLCONV unsafe "Windows.h CreateFileW" c_CreateFileW :: CWString -> Word32 -> Word32 -> Ptr () -> Word32 -> Word32 -> Ptr () -> IO (Ptr ())
 foreign import CALLCONV unsafe "Windows.h CloseHandle" c_CloseHandle :: Ptr () -> IO Bool
 foreign import CALLCONV unsafe "Windows.h GetLastError" c_GetLastError :: IO Word32
 
