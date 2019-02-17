@@ -44,7 +44,7 @@ display :: Seconds -> S -> (S, String)
 display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
     where
         pre = sOutput s
-        post = "" : ("Progress: " ++ sProgress s) : map f (sTraces s)
+        post = "" : (escForeground Green ++ "Progress: " ++ sProgress s ++ escNormal) : map f (sTraces s)
 
         pad x = x ++ escClearLine
         f Nothing = " *"
