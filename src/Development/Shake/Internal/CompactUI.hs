@@ -12,7 +12,7 @@ import Control.Exception
 import General.Thread
 import General.EscCodes
 import Data.IORef
-import Control.Monad
+import Control.Monad.Extra
 
 
 data S = S
@@ -54,6 +54,8 @@ display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++
 -- | Run a compact UI, with the ShakeOptions modifier, combined with
 compactUI :: ShakeOptions -> IO (ShakeOptions, IO ())
 compactUI opts = do
+    unlessM checkEscCodes $ do
+        putStrLn "Your terminal does not appear to support escape codes, --compact mode may not work"
     ref <- newIORef emptyS
     let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
     time <- offsetTime
