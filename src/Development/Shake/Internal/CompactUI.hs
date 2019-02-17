@@ -60,7 +60,7 @@ display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++
 -- | Run a compact UI, with the ShakeOptions modifier, combined with
 compactUI :: ShakeOptions -> IO (ShakeOptions, IO ())
 compactUI opts = do
-    unlessM checkEscCodes $ do
+    unlessM checkEscCodes $
         putStrLn "Your terminal does not appear to support escape codes, --compact mode may not work"
     ref <- newIORef emptyS
     let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
