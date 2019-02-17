@@ -16,7 +16,6 @@ import General.Extra
 import Control.Monad.Extra
 
 
-
 data Thread = Thread ThreadId (Barrier ())
 
 instance Eq Thread where
