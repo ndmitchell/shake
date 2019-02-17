@@ -297,8 +297,8 @@ shakeOptsEx =
     ,extr $ Option ""  ["no-build"] (NoArg $ Right [NoBuild]) "Don't build anything."
     ,extr $ Option "C" ["directory"] (ReqArg (\x -> Right [ChangeDirectory x]) "DIRECTORY") "Change to DIRECTORY before doing anything."
 --    ,yes $ Option ""  ["cloud"] (reqArg "URL" $ \x s -> s{shakeCloud=shakeCloud s ++ [x]}) "HTTP server providing a cloud cache."
-    ,yes $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
-    ,yes $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
+    ,opts $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
+    ,opts $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
     ,extr $ Option ""  ["compact"] (NoArg $ Right [Compact]) "Use a compact Bazel/Buck style output."
     ,yes $ Option "d" ["debug"] (OptArg (\x -> Right ([], \s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x})) "FILE") "Print lots of debugging information."
     ,extr  $ Option ""  ["demo"] (NoArg $ Right [Demo]) "Run in demo mode."
@@ -309,44 +309,45 @@ shakeOptsEx =
     ,yes $ Option ""  ["digest-not"] (NoArg $ Right ([], \s -> s{shakeChange=ChangeModtime})) "Files change when modtime changes."
     ,extr $ Option ""  ["exception"] (NoArg $ Right [Exception]) "Throw exceptions directly."
     ,yes $ Option ""  ["flush"] (intArg 1 "flush" "N" (\i s -> s{shakeFlush=Just i})) "Flush metadata every N seconds."
-    ,yes $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
+    ,opts $ Option ""  ["never-flush"] (noArg $ \s -> s{shakeFlush=Nothing}) "Never explicitly flush metadata."
     ,extr $ Option "h" ["help"] (NoArg $ Right [Help]) "Print this message and exit."
     ,yes $ Option "j" ["jobs"] (optIntArg 0 "jobs" "N" $ \i s -> s{shakeThreads=fromMaybe 0 i}) "Allow N jobs/threads at once [default CPUs]."
-    ,yes $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
-    ,yes $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
+    ,opts $ Option "k" ["keep-going"] (noArg $ \s -> s{shakeStaunch=True}) "Keep going when some targets can't be made."
+    ,opts $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
     ,yes $ Option ""  ["lint-watch"] (reqArg "PATTERN" $ \x s -> s{shakeLintWatch=shakeLintWatch s ++ [x]}) "Error if any of the patterns are created (expensive)."
-    ,yes $ Option ""  ["lint-fsatrace"] (noArg $ \s -> s{shakeLint=Just LintFSATrace}) "Use fsatrace to do validation."
-    ,yes $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
+    ,opts $ Option ""  ["lint-fsatrace"] (noArg $ \s -> s{shakeLint=Just LintFSATrace}) "Use fsatrace to do validation."
+    ,opts $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
     ,yes $ Option ""  ["live"] (OptArg (\x -> Right ([], \s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]})) "FILE") "List the files that are live [to live.txt]."
     ,yes $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,extr $ Option ""  ["numeric-version"] (NoArg $ Right [NumericVersion]) "Print just the version number and exit."
-    ,yes $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
+    ,opts $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
     ,yes $ Option ""  ["rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files."
     ,yes $ Option ""  ["no-rebuild"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNormal, fromMaybe "**" x)]})) "PATTERN") "Rebuild matching files if necessary (default)."
     ,yes $ Option ""  ["skip"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildLater, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files this run."
 --    ,yes $ Option ""  ["skip-forever"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNever, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files until they change."
     ,yes $ Option "r" ["report","profile"] (OptArg (\x -> Right ([], \s -> s{shakeReport=shakeReport s ++ [fromMaybe "report.html" x]})) "FILE") "Write out profiling information [to report.html]."
-    ,yes $ Option ""  ["no-reports"] (noArg $ \s -> s{shakeReport=[]}) "Turn off --report."
+    ,opts $ Option ""  ["no-reports"] (noArg $ \s -> s{shakeReport=[]}) "Turn off --report."
     ,yes $ Option ""  ["rule-version"] (reqArg "VERSION" $ \x s -> s{shakeVersion=x}) "Version of the build rules."
-    ,yes $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
+    ,opts $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
     ,yes $ Option ""  ["share"] (OptArg (\x -> Right ([], \s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s})) "DIRECTORY") "Shared cache location."
     ,no  $ Option ""  ["share-list"] (NoArg $ Right ([ShareList], ensureShare)) "List the shared cache files."
     ,no  $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
-    ,yes $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
+    ,opts $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
     ,extr $ Option ""  ["sleep"] (NoArg $ Right [Sleep]) "Sleep for a second before building."
-    ,yes $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
-    ,yes $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
+    ,opts $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
+    ,opts $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
     ,yes $ Option "p" ["progress"] (progress $ optIntArg 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
-    ,yes $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
-    ,yes $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Print less (pass repeatedly for even less)."
+    ,opts $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
+    ,opts $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Print less (pass repeatedly for even less)."
     ,extr $ Option ""  ["no-time"] (NoArg $ Right [NoTime]) "Don't print build time."
-    ,yes $ Option ""  ["timings"] (noArg $ \s -> s{shakeTimings=True}) "Print phase timings."
-    ,yes $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) succ}) "Print more (pass repeatedly for even more)."
+    ,opts $ Option ""  ["timings"] (noArg $ \s -> s{shakeTimings=True}) "Print phase timings."
+    ,opts $ Option "V" ["verbose","trace"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) succ}) "Print more (pass repeatedly for even more)."
     ,extr $ Option "v" ["version"] (NoArg $ Right [Version]) "Print the version number and exit."
     ,extr $ Option "w" ["print-directory"] (NoArg $ Right [PrintDirectory True]) "Print the current directory."
     ,extr $ Option ""  ["no-print-directory"] (NoArg $ Right [PrintDirectory False]) "Turn off -w, even if it was turned on implicitly."
     ]
     where
+        opts o = (True, fmapOptDescr ([],) o)
         extr o = (False, fmapOptDescr (,id) o)
 
         yes = (,) True
@@ -356,7 +357,7 @@ shakeOptsEx =
         move x by = toEnum $ min (fromEnum mx) $ max (fromEnum mn) $ by $ fromEnum x
             where (mn,mx) = (asTypeOf minBound x, asTypeOf maxBound x)
 
-        noArg f = NoArg $ Right ([], f)
+        noArg = NoArg . Right
         reqArg a f = ReqArg (\x -> Right ([], f x)) a
         intArg mn flag a f = flip ReqArg a $ \x -> case reads x of
             [(i,"")] | i >= mn -> Right ([],f i)
