@@ -12,7 +12,6 @@ import System.FilePath
 
 #ifdef mingw32_HOST_OS
 import Foreign.Ptr
-import Foreign.C.Types
 import Foreign.C.String
 #else
 import System.Posix.Files(createLink)
@@ -28,7 +27,7 @@ createLinkBool :: FilePath -> FilePath -> IO (Maybe String)
 #define CALLCONV stdcall
 #endif
 
-foreign import CALLCONV unsafe "Windows.h CreateHardLinkW " c_CreateHardLinkW :: Ptr CWchar -> Ptr CWchar -> Ptr () -> IO Bool
+foreign import CALLCONV unsafe "Windows.h CreateHardLinkW " c_CreateHardLinkW :: CWString -> CWString -> Ptr () -> IO Bool
 
 createLinkBool from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
     res <- c_CreateHardLinkW cto cfrom nullPtr
