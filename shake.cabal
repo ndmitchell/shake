@@ -177,6 +177,7 @@ library
         General.Chunks
         General.Cleanup
         General.Fence
+        General.EscCodes
         General.Extra
         General.FileLock
         General.GetOpt
@@ -295,6 +296,7 @@ executable shake
         General.Chunks
         General.Cleanup
         General.Fence
+        General.EscCodes
         General.Extra
         General.FileLock
         General.GetOpt
@@ -423,6 +425,7 @@ test-suite shake-test
         General.Chunks
         General.Cleanup
         General.Fence
+        General.EscCodes
         General.Extra
         General.FileLock
         General.GetOpt

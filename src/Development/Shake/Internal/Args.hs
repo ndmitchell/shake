@@ -21,11 +21,11 @@ import Development.Shake.Database
 import General.Timing
 import General.Thread
 import General.GetOpt
+import General.EscCodes
 
 import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad
-import Data.Char
 import Data.Either
 import Data.Functor
 import Data.List
@@ -279,11 +279,6 @@ data Extra = ChangeDirectory FilePath
              deriving Eq
 
 
-unescape :: String -> String
-unescape ('\ESC':'[':xs) = unescape $ drop 1 $ dropWhile (not . isAlpha) xs
-unescape (x:xs) = x : unescape xs
-unescape [] = []
-
 escape :: String -> String -> String
 escape code x = "\ESC[" ++ code ++ "m" ++ x ++ "\ESC[0m"
 
@@ -381,7 +376,7 @@ shakeOptsEx =
         outputDebug output Nothing = output
         outputDebug output (Just file) = \v msg -> do
             when (v /= Diagnostic) $ output v msg
-            appendFile file $ unescape msg ++ "\n"
+            appendFile file $ removeEscCodes msg ++ "\n"
 
         prog i p = do
             program <- progressProgram
