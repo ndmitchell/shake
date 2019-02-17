@@ -25,6 +25,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
 import General.Template
 import General.EscCodes
+import General.Extra
 import Development.Shake.Internal.Paths
 import Data.Monoid
 import System.Time.Extra
@@ -220,7 +221,10 @@ progressDisplay sample disp prog = do
             -- putStrLn _debug
             let done = countSkipped p + countBuilt p
             let todo = done + countUnknown p + countTodo p
-            disp $ formatMessage secs perc ++ " [" ++ show done ++ "/" ++ show todo ++ "]" ++ maybe "" (", Failure! " ++) (isFailure p)
+            disp $
+                "Running for " ++ showDurationSecs t ++ " [" ++ show done ++ "/" ++ show todo ++ "]" ++
+                ", predicted " ++ formatMessage secs perc ++
+                maybe "" (", Failure! " ++) (isFailure p)
             loop time mealy
 
 
