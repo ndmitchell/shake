@@ -8,6 +8,7 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Progress
 
 import System.Time.Extra
+import General.Extra
 import Control.Exception
 import General.Thread
 import General.EscCodes
@@ -44,11 +45,16 @@ display :: Seconds -> S -> (S, String)
 display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
     where
         pre = sOutput s
-        post = "" : (escForeground Green ++ "Progress: " ++ sProgress s ++ escNormal) : map f (sTraces s)
+        post = "" : (escForeground Green ++ "Status: " ++ sProgress s ++ escNormal) : map f (sTraces s)
 
         pad x = x ++ escClearLine
         f Nothing = " *"
-        f (Just (k,m,t)) = " * " ++ k ++ " (" ++ m ++ " " ++ showDuration (time - t) ++ ")"
+        f (Just (k,m,t)) = " * " ++ k ++ " (" ++ g (time - t) m ++ ")"
+
+        g i m | showDurationSecs i == "0s" = m
+              | i < 10 = s
+              | otherwise = escForeground (if i > 20 then Red else Yellow) ++ s ++ escNormal
+            where s = m ++ " " ++ showDurationSecs i
 
 
 -- | Run a compact UI, with the ShakeOptions modifier, combined with
