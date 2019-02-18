@@ -1,42 +1,44 @@
-// GENERATED CODE - DO NOT MODIFY
-// SOURCE IS IN THE ts/ DIRECTORY
-
+/*jsl:option explicit*/
+/*jsl:import shake-util.js*/
 "use strict";
-var Summary = (function () {
+//////////////////////////////////////////////////////////////////////
+// SUMMARY
+var Summary = /** @class */ (function () {
     function Summary() {
-        this.count = 0;
-        this.countLast = 0;
-        this.highestRun = 0;
-        this.sumExecution = 0;
-        this.maxExecution = 0;
-        this.maxExecutionName = "";
+        this.count = 0; // number of rules run
+        this.countLast = 0; // number of rules run in the last run
+        this.highestRun = 0; // highest run you have seen (add 1 to get the count of runs)
+        this.sumExecution = 0; // build time in total
+        this.maxExecution = 0; // longest build rule
+        this.maxExecutionName = ""; // longest build rule
         this.countTrace = 0;
-        this.countTraceLast = 0;
+        this.countTraceLast = 0; // traced commands run
         this.sumTrace = 0;
-        this.sumTraceLast = 0;
-        this.maxTrace = 0;
-        this.maxTraceName = "";
-        this.maxTraceStopLast = 0;
+        this.sumTraceLast = 0; // time running traced commands
+        this.maxTrace = 0; // longest traced command
+        this.maxTraceName = ""; // longest trace command
+        this.maxTraceStopLast = 0; // time the last traced command stopped
     }
     return Summary;
-})();
+}());
 function summary(dat) {
     var res = new Summary();
+    // Fold over dat to produce the summary
     res.count = dat.length;
-    for (var _i = 0; _i < dat.length; _i++) {
-        var e = dat[_i];
+    for (var _i = 0, dat_1 = dat; _i < dat_1.length; _i++) {
+        var e = dat_1[_i];
         var isLast = e.built === 0;
         res.countLast += isLast ? 1 : 0;
         res.sumExecution += e.execution;
         res.maxExecution = Math.max(res.maxExecution, e.execution);
         if (res.maxExecution === e.execution)
             res.maxExecutionName = e.name;
-        res.highestRun = Math.max(res.highestRun, e.changed);
+        res.highestRun = Math.max(res.highestRun, e.changed); // changed is always greater or equal to built
         var traces = e.traces;
         if (!traces)
             continue;
-        for (var _a = 0; _a < traces.length; _a++) {
-            var t_1 = traces[_a];
+        for (var _a = 0, traces_1 = traces; _a < traces_1.length; _a++) {
+            var t_1 = traces_1[_a];
             var time = t_1.stop - t_1.start;
             res.countTrace += 1;
             res.countTraceLast += isLast ? 1 : 0;
@@ -59,12 +61,14 @@ function showSummary(sum) {
         "Last run gave an average parallelism of " + (sum.maxTraceStopLast === 0 ? 0 : sum.sumTraceLast / sum.maxTraceStopLast).toFixed(2) + " times over " + showTime(sum.maxTraceStopLast) + "."
     ];
 }
-var Prepare = (function () {
+var Prepare = /** @class */ (function () {
     function Prepare() {
     }
     return Prepare;
-})();
+}());
+// Mutate the input data, adding in rdeps, being the 1-level reverse dependencies
 function addRdeps(dat) {
+    // find the reverse dependencies
     var rdeps = [];
     for (var i = 0; i < dat.length; i++)
         rdeps[i] = {};
@@ -83,6 +87,8 @@ function addRdeps(dat) {
     }
     return res;
 }
+// Given an array of indices, calculate the cost to rebuild if all of them change
+// You must call addRdeps and addCost first
 function calcRebuildCosts(dat, xs) {
     var seen = {};
     var tot = 0;
@@ -99,16 +105,19 @@ function calcRebuildCosts(dat, xs) {
     if (xs.length === 1 && dat[xs[0]].depends.length === 1)
         tot = dat[dat[xs[0]].depends[0]].cost + dat[xs[0]].execution;
     else {
-        for (var _i = 0; _i < xs.length; _i++) {
-            var x = xs[_i];
+        for (var _i = 0, xs_1 = xs; _i < xs_1.length; _i++) {
+            var x = xs_1[_i];
             f(x);
         }
     }
     return tot;
 }
+// Mutate the dat data, adding in cost, being the cost to rebuild if this item changes
 function addCost(dat) {
     var res = dat;
     for (var i = 0; i < dat.length; i++) {
+        // This call is type safe because calcRebuildCosts only ever looks at earlier items,
+        // and those earlier items all have their cost filled in
         res[i].cost = calcRebuildCosts(res, [i]);
     }
     return res;
@@ -122,12 +131,12 @@ function prepare(dat_) {
     function findDirect(key) {
         var c = cache(toHash, function (r) {
             var want = {};
-            for (var _i = 0; _i < dat.length; _i++) {
-                var e = dat[_i];
+            for (var _i = 0, dat_2 = dat; _i < dat_2.length; _i++) {
+                var e = dat_2[_i];
                 if (testRegExp(r, e.name)) {
                     var deps = (e)[key];
-                    for (var _a = 0; _a < deps.length; _a++) {
-                        var j = deps[_a];
+                    for (var _a = 0, deps_1 = deps; _a < deps_1.length; _a++) {
+                        var j = deps_1[_a];
                         want[j] = null;
                     }
                 }
@@ -144,8 +153,8 @@ function prepare(dat_) {
                 if ((j in want) || testRegExp(r, dat[j].name)) {
                     want[j] = null;
                     var deps = (dat[j])[key];
-                    for (var _i = 0; _i < deps.length; _i++) {
-                        var k = deps[_i];
+                    for (var _i = 0, deps_2 = deps; _i < deps_2.length; _i++) {
+                        var k = deps_2[_i];
                         want[k] = null;
                     }
                 }
@@ -163,14 +172,16 @@ function prepare(dat_) {
         thisDependsOnTransitive: findTransitive("rdeps", true)
     };
 }
+/////////////////////////////////////////////////////////////////////
+// RULES
 function colorAnd(c1, c2) {
     return c1 === null ? c2 : c1 === c2 ? c1 : undefined;
 }
-var Result = (function () {
+var Result = /** @class */ (function () {
     function Result() {
     }
     return Result;
-})();
+}());
 function ruleFilter(dat, query) {
     queryData = dat;
     var f = readQuery(query);
@@ -196,11 +207,11 @@ function ruleFilter(dat, query) {
     }
     return res;
 }
-var ResultTable = (function () {
+var ResultTable = /** @class */ (function () {
     function ResultTable() {
     }
     return ResultTable;
-})();
+}());
 function ruleTable(dat, query) {
     function bools(x, y) {
         return x === "" ? y : x === y ? x : "both";
@@ -224,14 +235,16 @@ function ruleTable(dat, query) {
     }
     return ans;
 }
-var ResultGraph = (function () {
+var ResultGraph = /** @class */ (function () {
     function ResultGraph() {
     }
     return ResultGraph;
-})();
+}());
 function ruleGraph(dat, query) {
     var res = ruleFilter(dat, query);
-    var map = {};
+    var map = {}; // which nodes a node lives at
+    // loop through each value in res, putting it into map (these are parents)
+    // for any not present, descend through the dat.original list, if you aren't included, add, if you are included, skip
     var direct = {};
     var ind = -1;
     for (var s in res) {
@@ -275,6 +288,8 @@ function ruleGraph(dat, query) {
     }
     return ans;
 }
+/////////////////////////////////////////////////////////////////////
+// COMMANDS
 function commandFilter(last, dat, query) {
     queryData = dat;
     var f = readQuery(query);
@@ -308,19 +323,19 @@ function commandFilter(last, dat, query) {
     }
     return res;
 }
-var CommandTable = (function () {
+var CommandTable = /** @class */ (function () {
     function CommandTable() {
     }
     return CommandTable;
-})();
+}());
 function commandTable(dat, query) {
     var res = commandFilter(false, dat, query);
     var ans = [];
     for (var s in res) {
         var xs = res[s].items;
         var time = 0;
-        for (var _i = 0; _i < xs.length; _i++) {
-            var t_2 = xs[_i];
+        for (var _i = 0, xs_2 = xs; _i < xs_2.length; _i++) {
+            var t_2 = xs_2[_i];
             time += t_2.stop - t_2.start;
         }
         ans.push({ name: s, count: xs.length, text: res[s].text, back: res[s].back, time: time });
@@ -335,9 +350,9 @@ function commandPlot(dat, query, buckets) {
         var ts = res[s].items;
         var xs = [];
         for (var i = 0; i <= buckets; i++)
-            xs.push(0);
-        for (var _i = 0; _i < ts.length; _i++) {
-            var t_3 = ts[_i];
+            xs.push(0); // fill with 1 more element, but the last bucket will always be 0
+        for (var _i = 0, ts_1 = ts; _i < ts_1.length; _i++) {
+            var t_3 = ts_1[_i];
             var start = t_3.start * buckets / end;
             var stop = t_3.stop * buckets / end;
             if (Math.floor(start) === Math.floor(stop))
@@ -353,6 +368,8 @@ function commandPlot(dat, query, buckets) {
     }
     return ans;
 }
+/////////////////////////////////////////////////////////////////////
+// ENVIRONMENT
 function readQuery(query) {
     if (query === "")
         return function () { return true; };
@@ -372,6 +389,7 @@ function readQuery(query) {
         }
     };
 }
+// These are global variables mutated/queried by query execution
 var queryData = {};
 var queryKey = 0;
 var queryVal = {};
@@ -462,15 +480,15 @@ function command(r, groupName) {
         return true;
     }
 }
-"use strict";
 function initProgress() {
     $(function () {
         $(".version").html("Generated by <a href='https://shakebuild.com'>Shake " + version + "</a>.");
         $("#output").html("");
-        for (var _i = 0; _i < progress.length; _i++) {
-            var x = progress[_i];
+        for (var _i = 0, progress_1 = progress; _i < progress_1.length; _i++) {
+            var x = progress_1[_i];
             var actual = [];
             var ideal = [];
+            // Start at t = 5 seconds, since the early progress jumps a lot
             for (var t = 5; t < x.values.length; t++) {
                 var y = x.values[t];
                 actual.push([y.idealSecs, y.actualSecs]);
@@ -488,9 +506,11 @@ function initProgress() {
         }
     });
 }
-"use strict";
 function t(a, b, c) { return { start: a, stop: b, command: c }; }
-var dat1 = [{ name: "Functional", built: 0, changed: 3, depends: [], execution: 1, traces: [t(0, 1, "gen")] },
+var dat1 = 
+// Haskell depends on Functional, C and Cpp depend on Imperative
+// Exe depends on Haskell/C/Cpp
+[{ name: "Functional", built: 0, changed: 3, depends: [], execution: 1, traces: [t(0, 1, "gen")] },
     { name: "Imperative", built: 0, changed: 0, depends: [], execution: 2, traces: [t(0, 1, "gen"), t(1, 2, "gen")] },
     { name: "HsSource", built: 3, changed: 3, depends: [], execution: 0 },
     { name: "Haskell", built: 3, changed: 3, depends: [0, 2], execution: 8, traces: [t(1, 8.9, "ghc")] },
@@ -541,8 +561,8 @@ function test() {
     return "passed";
 }
 function console_table(xs) {
-    if ("table" in console)
-        console["table"](xs);
+    if (console.table)
+        console.table(xs);
     else if (xs.length === 0)
         console.log("No data");
     else {
@@ -575,10 +595,11 @@ function pad(n, s) {
         res += " ";
     return res;
 }
-"use strict";
 var prepared = prepare(profile);
 var currentTable = null;
-var Report = (function () {
+/////////////////////////////////////////////////////////////////////
+// REPORT
+var Report = /** @class */ (function () {
     function Report(mode_, query_) {
         if (mode_ === void 0) { mode_ = "summary"; }
         if (query_ === void 0) { query_ = ""; }
@@ -588,7 +609,7 @@ var Report = (function () {
         this.query = query_;
     }
     return Report;
-})();
+}());
 var report = new Report(null, null);
 function reportEq(r1, r2) {
     return r1.mode === r2.mode && r1.query === r2.query && r1.sort === r2.sort && r1.sortRev === r2.sortRev;
@@ -636,12 +657,15 @@ function setReport(set, replace, run) {
                 window.history.pushState(report, title, url);
         }
         catch (e) {
+            // Chrome disallows replaceState from origin null
         }
     }
     $("#link").attr("href", reportToURL(report));
     if (run)
         runReport();
 }
+/////////////////////////////////////////////////////////////////////
+// TABLE SHOWING
 var rightAlign = { count: null, time: null, cost: null, run: null, leaf: null, unchanged: null };
 var twoColumns = { cost: null, time: null };
 var defaultRevSort = { run: null, name: null };
@@ -674,8 +698,8 @@ function showTable(xs) {
         res += "</td>";
     }
     res += "</tr>";
-    for (var _i = 0; _i < xs.length; _i++) {
-        var x = xs[_i];
+    for (var _i = 0, xs_3 = xs; _i < xs_3.length; _i++) {
+        var x = xs_3[_i];
         res += "<tr";
         if (x["back"])
             res += " style='background-color:" + x["back"] + ";'";
@@ -711,6 +735,7 @@ function showPlot(series, options) {
         options = currentPlot.options;
     }
     currentPlot = { series: series, options: options, width: width, height: height };
+    // Fudge factors to get it displaying nicely, seems Flot goes outside its bounds
     var div = $("<div>").width(width - 20).height(height - 10);
     $("#output").html("").append(div);
     $.plot(div, series, options);
@@ -743,7 +768,7 @@ function runReport() {
                         var data = [];
                         for (var j = 0; j < x.length; j++)
                             data.push([j, x[j]]);
-                        ys.push({ label: s_3, data: data, color: xs[s_3].back, avg: sum(x) / x.length });
+                        ys.push({ label: s_3, /* values:x, */ data: data, color: xs[s_3].back, avg: sum(x) / x.length });
                     }
                     if (ys.length === 0) {
                         $("#output").html("No data found, " +
@@ -815,6 +840,8 @@ function runReport() {
             $("#output ." + s).text(e[s]);
     }
 }
+/////////////////////////////////////////////////////////////////////
+// STATE NAVIGATION
 function example(mode, query) {
     setReport(function (_) { return new Report(mode, query); }, false, true);
     return false;
@@ -855,8 +882,8 @@ function initProfile() {
         });
     });
 }
-"use strict";
 jQuery.fn.enable = function (x) {
+    // Set the values to enabled/disabled
     return this.each(function () {
         if (x)
             $(this).removeAttr('disabled');
@@ -864,9 +891,13 @@ jQuery.fn.enable = function (x) {
             $(this).attr('disabled', 'disabled');
     });
 };
+/////////////////////////////////////////////////////////////////////
+// BROWSER HELPER METHODS
+// Given "?foo=bar&baz=1" returns {foo:"bar",baz:"1"}
 function uriQueryParameters(s) {
+    // From https://stackoverflow.com/questions/901115/get-querystring-values-with-jquery/3867610#3867610
     var params = {};
-    var a = /\+/g;
+    var a = /\+/g; // Regex for replacing addition symbol with a space
     var r = /([^&=]+)=?([^&]*)/g;
     var d = function (s) { return decodeURIComponent(s.replace(a, " ")); };
     var q = s.substring(1);
@@ -879,6 +910,8 @@ function uriQueryParameters(s) {
     return params;
 }
 ;
+/////////////////////////////////////////////////////////////////////
+// STRING FORMATTING
 function showTime(x) {
     function digits(x) { var s = String(x); return s.length === 1 ? "0" + s : s; }
     if (x >= 3600) {
@@ -900,10 +933,12 @@ function plural(n, not1, is1) {
     if (is1 === void 0) { is1 = ""; }
     return n === 1 ? is1 : not1;
 }
+/////////////////////////////////////////////////////////////////////
+// MISC
 function sum(xs) {
     var res = 0;
-    for (var _i = 0; _i < xs.length; _i++) {
-        var x = xs[_i];
+    for (var _i = 0, xs_4 = xs; _i < xs_4.length; _i++) {
+        var x = xs_4[_i];
         res += x;
     }
     return res;
@@ -966,10 +1001,10 @@ function mapUnion(xs, ys) {
 function concatNub(xss) {
     var res = [];
     var seen = {};
-    for (var _i = 0; _i < xss.length; _i++) {
-        var xs = xss[_i];
-        for (var _a = 0; _a < xs.length; _a++) {
-            var x = xs[_a];
+    for (var _i = 0, xss_1 = xss; _i < xss_1.length; _i++) {
+        var xs = xss_1[_i];
+        for (var _a = 0, xs_5 = xs; _a < xs_5.length; _a++) {
+            var x = xs_5[_a];
             var v = x;
             if (!(v in seen)) {
                 seen[v] = null;
