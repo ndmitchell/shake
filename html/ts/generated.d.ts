@@ -18,10 +18,10 @@ interface Trace {
 
 interface Profile {
     name: string; // Name of the thing I built
+    execution: seconds; // Seconds I took to execute
     built: timestamp; // Timestamp at which I was built
     changed: timestamp; // Timestamp at which I last changed
     depends: int[]; // Which 0-based indexes I depended on (always lower than my index)
-    execution: seconds; // Seconds I took to execute
     traces?: Trace[]; // List of traces
 }
 
