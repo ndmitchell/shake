@@ -14,6 +14,6 @@ function include(path) {
 global.window = {};
 global.jQuery = {fn : {}};
 
-include("profile-data.js");
-include("shake.js", "test();");
+include("data/profile-data.js");
+include("shake.js");
 test();
