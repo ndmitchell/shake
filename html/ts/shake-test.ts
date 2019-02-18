@@ -75,8 +75,8 @@ function test() : string
 
 function console_table(xs: MapString<any>[]): void
 {
-    if ("table" in console)
-        (<any>console)["table"](xs);
+    if (console.table)
+        console.table(xs);
     else if (xs.length === 0)
         console.log("No data");
     else
