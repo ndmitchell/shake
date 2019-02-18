@@ -170,7 +170,9 @@ generateJSON = jsonListLines . map showEntry
             ,("execution", showDP 4 prfExecution)] ++
             [("traces", jsonList $ map showTrace prfTraces) | not $ null prfTraces]
         showTrace ProfileTrace{..} = jsonObject
-            [("command",show prfCommand), ("start",show prfStart), ("stop",show prfStop)]
+            [("command",show prfCommand), ("start",showTime prfStart), ("stop",showTime prfStop)]
+        showTime x = if '.' `elem` y then dropWhileEnd (== '.') $ dropWhileEnd (== '0') y else y
+            where y = showDP 4 x
 
 jsonListLines xs = "[" ++ intercalate "\n," xs ++ "\n]"
 jsonList xs = "[" ++ intercalate "," xs ++ "]"
