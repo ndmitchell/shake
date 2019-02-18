@@ -272,8 +272,8 @@ generateSummary xs = flip concatMap xs $ \(file,xs) ->
 generateHTML :: [(FilePath, [ProgressEntry])] -> IO LBS.ByteString
 generateHTML xs = do
     report <- readDataFileHTML "progress.html"
-    let f name | name == "progress-data.js" = return $ LBS.pack $ "var progress =\n" ++ generateJSON xs
-               | name == "version.js" = return $ LBS.pack $ "var version = " ++ show shakeVersionString
+    let f name | name == "data/progress-data.js" = return $ LBS.pack $ "var progress =\n" ++ generateJSON xs
+               | name == "data/version.js" = return $ LBS.pack $ "var version = " ++ show shakeVersionString
                | otherwise = readDataFileHTML name
     runTemplate f report
 
