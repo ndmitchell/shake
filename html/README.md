@@ -22,10 +22,10 @@ There are a number of Javascript files:
 
 Before doing any work you need the jQuery and Flot Javascript dependencies. These can be found in the `js-jquery` and `js-flot` repos. Copy the associated Javascript files into a `lib` directory, renaming to take away version numbers and `.min` parts.
 
-To build and test `shake.js` run:
+To build and test `shake.js` from `html` run:
 
-    cd ts && tsc   # generated shake.js
-    cd ts && tslint --project . --config tslint.json  # run the linter
-    node shake.js   # run the tests
+    tsc -p ts   # generated shake.js
+    tslint --project ts --config ts/tslint.json  # run the linter
+    node test.js   # run the tests
 
 To test out the `profile.html` just open it after doing the above steps.
