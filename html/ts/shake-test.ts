@@ -4,17 +4,19 @@
 
 function t(a: seconds, b: seconds, c: string): Trace { return { start: a, stop: b, command: c }; }
 
-var dat1 : Profile[] =
+var raw1 : Profile2[] =
     // Haskell depends on Functional, C and Cpp depend on Imperative
     // Exe depends on Haskell/C/Cpp
-    [{name:"Functional", built:0, changed:3, depends:[], execution:1, traces:[t(0,1,"gen")]}
-    ,{name:"Imperative", built:0, changed:0, depends:[], execution:2, traces:[t(0,1,"gen"),t(1,2,"gen")]}
-    ,{name:"HsSource",   built:3, changed:3, depends:[], execution:0}
-    ,{name:"Haskell",    built:3, changed:3, depends:[0,2], execution:8, traces:[t(1,8.9,"ghc")]}
-    ,{name:"C",          built:0, changed:0, depends:[1], execution:15, traces:[t(2,16.9,"gcc")]}
-    ,{name:"Cpp",       built:0, changed:0, depends:[1], execution:10, traces:[t(2,10,"gcc")]}
-    ,{name:"Exe",        built:0, changed:0, depends:[3,4,5], execution:5, traces:[t(17,22,"link")]}
+    [["Functional", 1,  0, 3, [], [["gen",0,1]]]
+    ,["Imperative", 2,  0, 0, [], [["gen",0,1],["gen",1,2]]]
+    ,["HsSource",   0,  3, 3, [], []]
+    ,["Haskell",    8,  3, 3, [0,2], [["ghc",1,8.9]]]
+    ,["C",          15, 0, 0, [1], [["gcc",2,16.9]]]
+    ,["Cpp",        10, 0, 0, [1], [["gcc",2,10]]]
+    ,["Exe",        5,  0, 0, [3,4,5], [["link",17,22]]]
     ];
+
+var dat1 : Profile[] = raw1.map(legacyProfile);
 
 
 function test() : string
