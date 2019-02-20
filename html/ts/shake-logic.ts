@@ -27,8 +27,6 @@ function legacyProfile(x : Profile2) : Profile
 
 class Summary {
     sumExecution: seconds = 0 // build time in total
-    maxExecution: seconds = 0 // longest build rule
-    maxExecutionName: string = "" // longest build rule
     countTraceLast : int = 0 // traced commands run
     maxTraceStopLast: seconds = 0 // time the last traced command stopped
 }
@@ -41,8 +39,6 @@ function summary(dat: Profile[]): Summary
     for (const e of dat) {
         var isLast = e.built === 0;
         res.sumExecution += e.execution;
-        res.maxExecution = Math.max(res.maxExecution, e.execution);
-        if (res.maxExecution === e.execution) res.maxExecutionName = e.name;
         var traces = e.traces;
         if (!traces) continue;
         for (const t of traces) {
