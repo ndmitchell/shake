@@ -6,7 +6,8 @@ declare const version: string;
 /////////////////////////////////////////////////////////////////////
 // PROFILE DATA
 
-declare const profile: Profile2[];
+// var rather than const, because we override it when testing
+declare var profile: Profile2[];
 
 declare type timestamp = int
 
