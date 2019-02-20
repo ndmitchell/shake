@@ -91,8 +91,21 @@ function rename(from: string, to: string = ""): boolean {
     return true;
 }
 
+let slowestRule_Cache: string | null = null; // Index of the slowest rule
 function slowestRule(): string {
-    return queryData.summary.maxExecutionName;
+    if (slowestRule_Cache === null)
+    {
+        let time = -1;
+        let name = "";
+        for (const p of profile)
+        {
+            if (p[1] <= time) continue;
+            name = p[0];
+            time = p[1];
+        }
+        slowestRule_Cache = name;
+    }
+    return slowestRule_Cache;
 }
 
 function /* export */ leaf(): boolean {
