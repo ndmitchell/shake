@@ -6,8 +6,7 @@ declare const version: string;
 /////////////////////////////////////////////////////////////////////
 // PROFILE DATA
 
-// var rather than const, because we override it when testing
-declare let profile: Profile2[];
+declare const profileRaw: ProfileRaw[];
 
 declare type timestamp = int
 
@@ -26,19 +25,19 @@ interface Profile {
     traces?: Trace[]; // List of traces
 }
 
-type Trace2 =
+type TraceRaw =
     [string
     ,seconds
     ,seconds
     ]
 
-type Profile2 =
+type ProfileRaw =
     [string
     ,seconds
     ,timestamp
     ,timestamp
     ,int[]
-    ,Trace2[]
+    ,TraceRaw[]
     ]
 
 /////////////////////////////////////////////////////////////////////

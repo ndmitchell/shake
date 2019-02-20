@@ -2,8 +2,16 @@
 
 type Search = MapString<int[]>;
 
-function search(change: (s: Search) => void): HTMLElement {
+function createSearch(change: (s: Search) => void): HTMLElement {
     return null; // return <input type="text" value="true" />;
+}
+
+function fullSearch() : Search
+{
+    let res = {};
+    for (const i in profile)
+        res[profile[i].name] = [i];
+    return res;
 }
 
 function ruleFilter(dat: Prepare, query: string): MapString<Result> {

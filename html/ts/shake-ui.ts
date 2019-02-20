@@ -1,7 +1,8 @@
 /* tslint:disable */
 "use strict";
 
-var prepared = prepare(profile.map(legacyProfile));
+let profile = profileRaw.map(unrawProfile);
+var prepared = prepare(profile);
 var currentTable: MapString<any>[] = null;
 
 /////////////////////////////////////////////////////////////////////
@@ -208,10 +209,7 @@ function runReport()
         switch(report.mode)
         {
         case "summary":
-            let mp : MapString<int[]> = {};
-            for (let i = 0; i < profile.length; i++)
-                mp[i] = [i];
-            $("#output").empty().append(reportSummary(mp));
+            $("#output").empty().append(reportSummary(fullSearch()));
             break;
 
         case "cmd-plot": {

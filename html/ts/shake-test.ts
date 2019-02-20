@@ -3,7 +3,7 @@
 
 function t(a: seconds, b: seconds, c: string): Trace { return { start: a, stop: b, command: c }; }
 
-var raw1 : Profile2[] =
+var raw1 : ProfileRaw[] =
     // Haskell depends on Functional, C and Cpp depend on Imperative
     // Exe depends on Haskell/C/Cpp
     [["Functional", 1,  0, 3, [], [["gen",0,1]]]
@@ -15,7 +15,7 @@ var raw1 : Profile2[] =
     ,["Exe",        5,  0, 0, [3,4,5], [["link",17,22]]]
     ];
 
-var dat1 : Profile[] = raw1.map(legacyProfile);
+var dat1 : Profile[] = raw1.map(unrawProfile);
 
 
 function test() : string
@@ -46,11 +46,8 @@ function test() : string
     }
 
     var tab1 = prepare(dat1);
-    profile = raw1;
-    let mp : MapString<int[]> = {};
-    for (let i = 0; i < profile.length; i++)
-        mp[i] = [i];
-    var ssum1 = reportSummary(mp).innerText;
+    profile = dat1;
+    var ssum1 = reportSummary(fullSearch()).innerText;
     console.log(ssum1);
     var want = ["4 runs" ,"7 rules","5 rebuilt","7 traced","6 in","build time is 41.00s","38.80s is traced"
                ,"longest rule takes 15.00s","longest traced command takes 14.90s","parallelism of 1.40","22.00s"];
