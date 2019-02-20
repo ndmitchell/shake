@@ -27,16 +27,10 @@ function legacyProfile(x : Profile2) : Profile
 // SUMMARY
 
 class Summary {
-    count: int = 0; // number of rules run
-    countLast: int = 0 // number of rules run in the last run
-    highestRun: timestamp = 0 // highest run you have seen (add 1 to get the count of runs)
     sumExecution: seconds = 0 // build time in total
     maxExecution: seconds = 0 // longest build rule
     maxExecutionName: string = "" // longest build rule
-    countTrace: int = 0; countTraceLast : int = 0 // traced commands run
-    sumTrace: seconds = 0; sumTraceLast: seconds = 0 // time running traced commands
-    maxTrace: seconds = 0 // longest traced command
-    maxTraceName: string = "" // longest trace command
+    countTraceLast : int = 0 // traced commands run
     maxTraceStopLast: seconds = 0 // time the last traced command stopped
 }
 
@@ -45,24 +39,16 @@ function summary(dat: Profile[]): Summary
     const res = new Summary();
 
     // Fold over dat to produce the summary
-    res.count = dat.length;
     for (const e of dat) {
         var isLast = e.built === 0;
-        res.countLast += isLast ? 1 : 0;
         res.sumExecution += e.execution;
         res.maxExecution = Math.max(res.maxExecution, e.execution);
         if (res.maxExecution === e.execution) res.maxExecutionName = e.name;
-        res.highestRun = Math.max(res.highestRun, e.changed); // changed is always greater or equal to built
         var traces = e.traces;
         if (!traces) continue;
         for (const t of traces) {
             var time = t.stop - t.start;
-            res.countTrace += 1;
             res.countTraceLast += isLast ? 1 : 0;
-            res.sumTrace += time;
-            res.sumTraceLast += isLast ? time : 0;
-            res.maxTrace = Math.max(res.maxTrace, time);
-            if (res.maxTrace == time) res.maxTraceName = t.command;
             res.maxTraceStopLast = Math.max(res.maxTraceStopLast, isLast ? t.stop : 0);
         }
     }
