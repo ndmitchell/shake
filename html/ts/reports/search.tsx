@@ -41,7 +41,7 @@ function readQuery(query: string): () => boolean {
     if (query === "") return () => true;
     var f: () => boolean;
     try {
-        f = <() => boolean>(new Function("return " + query));
+        f = (new Function("return " + query)) as (() => boolean);
     } catch (e) {
         throw { user: true, name: "parse", query: query, message: e.toString() };
     }
@@ -56,9 +56,9 @@ function readQuery(query: string): () => boolean {
 
 
 // These are global variables mutated/queried by query execution
-var queryData: Prepare = <Prepare>{};
+var queryData: Prepare = {} as Prepare;
 var queryKey: int = 0;
-var queryVal: ProfileEx = <ProfileEx>{};
+var queryVal: ProfileEx = {} as ProfileEx;
 var queryName: string = "";
 var queryGroup: string = null;
 var queryBackColor: color = null;
