@@ -1,4 +1,4 @@
-/*jsl:option explicit*/
+/* tslint:disable */
 "use strict";
 
 type key = string | number;

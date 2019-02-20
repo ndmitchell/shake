@@ -3,13 +3,11 @@
     "extends": [
         "tslint:recommended"
     ],
-    "jsRules": {},
     "rules": {
         "max-line-length": false,
         "curly": false,
         "trailing-comma": "never",
         "arrow-parens": [true, "ban-single-arg-parens"],
         "forin": false
-    },
-    "rulesDirectory": []
+    }
 }

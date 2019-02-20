@@ -7,7 +7,7 @@ declare const version: string;
 // PROFILE DATA
 
 // var rather than const, because we override it when testing
-declare var profile: Profile2[];
+declare let profile: Profile2[];
 
 declare type timestamp = int
 

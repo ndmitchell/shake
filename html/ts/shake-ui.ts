@@ -1,5 +1,4 @@
-/*jsl:option explicit*/
-/*jsl:import shake-logic.js*/
+/* tslint:disable */
 "use strict";
 
 var prepared = prepare(profile.map(legacyProfile));

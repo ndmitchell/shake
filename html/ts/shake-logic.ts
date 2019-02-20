@@ -1,5 +1,4 @@
-/*jsl:option explicit*/
-/*jsl:import shake-util.js*/
+/* tslint:disable */
 "use strict";
 
 function legacyTrace(x : Trace2) : Trace

@@ -1,5 +1,4 @@
-/*jsl:option explicit*/
-/*jsl:import shake-logic.js*/
+/* tslint:disable */
 "use strict";
 
 function t(a: seconds, b: seconds, c: string): Trace { return { start: a, stop: b, command: c }; }
