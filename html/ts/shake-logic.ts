@@ -69,17 +69,6 @@ function summary(dat: Profile[]): Summary
     return res;
 }
 
-function showSummary(sum : Summary) : string[]
-{
-    return ["This database has tracked " + (sum.highestRun + 1) + " run" + plural(sum.highestRun + 1) + "."
-        , "There are " + sum.count + " rules (" + sum.countLast + " rebuilt in the last run)."
-        , "Building required " + sum.countTrace + " traced commands (" + sum.countTraceLast + " in the last run)."
-        , "The total (unparallelised) build time is " + showTime(sum.sumExecution) + " of which " + showTime(sum.sumTrace) + " is traced commands."
-        , "The longest rule takes " + showTime(sum.maxExecution) + " (" + sum.maxExecutionName + ") and the longest traced command takes " + showTime(sum.maxTrace) + " (" + sum.maxTraceName + ")."
-        , "Last run gave an average parallelism of " + (sum.maxTraceStopLast === 0 ? 0 : sum.sumTraceLast / sum.maxTraceStopLast).toFixed(2) + " times over " + showTime(sum.maxTraceStopLast) + "."
-    ];
-}
-
 
 /////////////////////////////////////////////////////////////////////
 // PREPARATION

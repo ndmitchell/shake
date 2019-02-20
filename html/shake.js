@@ -69,15 +69,6 @@ function summary(dat) {
     }
     return res;
 }
-function showSummary(sum) {
-    return ["This database has tracked " + (sum.highestRun + 1) + " run" + plural(sum.highestRun + 1) + ".",
-        "There are " + sum.count + " rules (" + sum.countLast + " rebuilt in the last run).",
-        "Building required " + sum.countTrace + " traced commands (" + sum.countTraceLast + " in the last run).",
-        "The total (unparallelised) build time is " + showTime(sum.sumExecution) + " of which " + showTime(sum.sumTrace) + " is traced commands.",
-        "The longest rule takes " + showTime(sum.maxExecution) + " (" + sum.maxExecutionName + ") and the longest traced command takes " + showTime(sum.maxTrace) + " (" + sum.maxTraceName + ").",
-        "Last run gave an average parallelism of " + (sum.maxTraceStopLast === 0 ? 0 : sum.sumTraceLast / sum.maxTraceStopLast).toFixed(2) + " times over " + showTime(sum.maxTraceStopLast) + "."
-    ];
-}
 var Prepare = /** @class */ (function () {
     function Prepare() {
     }
@@ -524,17 +515,18 @@ function initProgress() {
     });
 }
 function t(a, b, c) { return { start: a, stop: b, command: c }; }
-var dat1 = 
+var raw1 = 
 // Haskell depends on Functional, C and Cpp depend on Imperative
 // Exe depends on Haskell/C/Cpp
-[{ name: "Functional", built: 0, changed: 3, depends: [], execution: 1, traces: [t(0, 1, "gen")] },
-    { name: "Imperative", built: 0, changed: 0, depends: [], execution: 2, traces: [t(0, 1, "gen"), t(1, 2, "gen")] },
-    { name: "HsSource", built: 3, changed: 3, depends: [], execution: 0 },
-    { name: "Haskell", built: 3, changed: 3, depends: [0, 2], execution: 8, traces: [t(1, 8.9, "ghc")] },
-    { name: "C", built: 0, changed: 0, depends: [1], execution: 15, traces: [t(2, 16.9, "gcc")] },
-    { name: "Cpp", built: 0, changed: 0, depends: [1], execution: 10, traces: [t(2, 10, "gcc")] },
-    { name: "Exe", built: 0, changed: 0, depends: [3, 4, 5], execution: 5, traces: [t(17, 22, "link")] }
+[["Functional", 1, 0, 3, [], [["gen", 0, 1]]],
+    ["Imperative", 2, 0, 0, [], [["gen", 0, 1], ["gen", 1, 2]]],
+    ["HsSource", 0, 3, 3, [], []],
+    ["Haskell", 8, 3, 3, [0, 2], [["ghc", 1, 8.9]]],
+    ["C", 15, 0, 0, [1], [["gcc", 2, 16.9]]],
+    ["Cpp", 10, 0, 0, [1], [["gcc", 2, 10]]],
+    ["Exe", 5, 0, 0, [3, 4, 5], [["link", 17, 22]]]
 ];
+var dat1 = raw1.map(legacyProfile);
 function test() {
     function assert(b) {
         if (!b)
@@ -555,11 +547,15 @@ function test() {
         }
     }
     var tab1 = prepare(dat1);
-    var ssum1 = showSummary(tab1.summary);
+    profile = raw1;
+    var mp = {};
+    for (var i = 0; i < profile.length; i++)
+        mp[i] = [i];
+    var ssum1 = reportSummary(mp).innerText;
     console.log(ssum1);
     var want = ["4 runs", "7 rules", "5 rebuilt", "7 traced", "6 in", "build time is 41.00s", "38.80s is traced",
         "longest rule takes 15.00s", "longest traced command takes 14.90s", "parallelism of 1.40", "22.00s"];
-    assertRegex(new RegExp(want.join(".*")), ssum1.join(" "));
+    assertRegex(new RegExp(want.join(".*")), ssum1);
     var par1 = commandPlot(tab1, "group('x')", 10)['x'];
     console.log(par1);
     var pars1 = par1.items.map(function (i) { return Math.round(i * 10) / 10; });
@@ -1072,6 +1068,7 @@ function reportSummary(filter) {
             var i = _a[_i];
             var e = legacyProfile(profile[i]);
             var isLast = e.built === 0;
+            count++;
             countLast += isLast ? 1 : 0;
             sumExecution += e.execution;
             maxExecution = Math.max(maxExecution, e.execution);

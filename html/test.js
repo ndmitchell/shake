@@ -11,9 +11,32 @@ function include(path) {
 
 // Stub enough things to ignore UI pieces
 
+class HTMLElement {
+    constructor (str) {
+        this.innerText = str;
+    }
+    appendChild(x) {
+        this.innerText += x.innerText;
+    }
+    setAttribute() {}
+}
+
+function createElement(typ) {
+    return new HTMLElement("");
+}
+
+function createTextNode(str) {
+    return new HTMLElement(str);
+}
+
 global.window = {};
 global.jQuery = {fn : {}};
+global.document = {
+    createElement: createElement,
+    createTextNode: createTextNode
+};
 
 include("data/profile-data.js");
+include("data/version.js");
 include("shake.js");
 test();
