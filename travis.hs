@@ -32,9 +32,9 @@ main = do
 
     -- check the TypeScript pieces
     cmd "sudo apt-get --allow-unauthenticated install nodejs"
-    cmd "npm install -g tsc"
-    cmd "npm install -g tslint"
+    cmd "npm install -g typescript"
     cmd "tsc --project html/ts"
+    cmd "npm install -g tslint"
     cmd "tslint --project html/ts"
     cmd "cd html && node test.js"
 
