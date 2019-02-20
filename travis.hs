@@ -30,6 +30,14 @@ main = do
     args <- getArgs
     unless (null args) $ error "Terminating early"
 
+    -- check the TypeScript pieces
+    cmd "apt-get install node"
+    cmd "npm install -g tsc"
+    cmd "npm install -g tslint"
+    cmd "tsc --project html/ts"
+    cmd "tslint --project html/ts"
+    cmd "cd html && node test.js"
+
     -- grab ninja
     cmd "git clone https://github.com/martine/ninja"
     cmd "cd ninja && ./configure.py --bootstrap"
