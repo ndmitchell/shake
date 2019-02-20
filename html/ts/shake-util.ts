@@ -187,3 +187,30 @@ function concatNub<T extends key>(xss : T[][]) : T[]
     }
     return res;
 }
+
+// Use JSX with el instead of React.createElement
+// Originally from https://gist.github.com/sergiodxa/a493c98b7884128081bb9a281952ef33
+
+// our element factory
+function createElement(type : string, props? : MapString<any>, ..._children : any[]) {
+    // if _children is an array of array take the first value, else take the full array
+    const children = Array.isArray(_children[0]) ? _children[0] : _children;
+
+    const element = document.createElement(type);
+
+    for (let name in props || {}) {
+        if (name.substr(0, 2) == "on")
+            element.addEventListener(name.substr(2), props[name]);
+        else
+            element.setAttribute(name, props[name]);
+    }
+    for (let child of children)
+    {
+        let c = typeof child === 'object' ? child : document.createTextNode(child.toString());
+        element.appendChild(c);
+    }
+    return element;
+}
+
+// How .tsx gets desugared
+const React = {createElement: createElement};

@@ -2,6 +2,8 @@
     "compilerOptions": {
         "target": "es5",
         "outFile": "../shake.js",
-        "newLine": "lf"
+        "newLine": "lf",
+        "jsx": "react",
+        "alwaysStrict": true
     }
 }
