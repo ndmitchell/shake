@@ -18,6 +18,7 @@ function reportSummary(filter : MapString<int[]>) : HTMLElement {
         {
             let e = legacyProfile(profile[i]);
             var isLast = e.built === 0;
+            count++;
             countLast += isLast ? 1 : 0;
             sumExecution += e.execution;
             maxExecution = Math.max(maxExecution, e.execution);
