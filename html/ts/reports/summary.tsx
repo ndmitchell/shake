@@ -1,5 +1,5 @@
 
-function reportSummary(filter: MapString<int[]>): HTMLElement {
+function reportSummary(filter: Search): HTMLElement {
     let count: int = 0; // number of rules run
     let countLast: int = 0; // number of rules run in the last run
     let highestRun: timestamp = 0; // highest run you have seen (add 1 to get the count of runs)
