@@ -2,16 +2,14 @@
 
 type Search = MapString<int[]>;
 
-function search(change : (s:Search) => void) : HTMLElement
-{
+function search(change: (s: Search) => void): HTMLElement {
     return null; // return <input type="text" value="true" />;
 }
 
-function ruleFilter(dat: Prepare, query: string): MapString<Result>
-{
+function ruleFilter(dat: Prepare, query: string): MapString<Result> {
     queryData = dat;
-    var f = readQuery(query);
-    var res: MapString<Result> = {};
+    const f = readQuery(query);
+    const res: MapString<Result> = {};
 
     for (queryKey = 0; queryKey < dat.original.length; queryKey++) {
         queryVal = dat.original[queryKey];
@@ -24,7 +22,7 @@ function ruleFilter(dat: Prepare, query: string): MapString<Result>
             if (!(queryGroup in res))
                 res[queryGroup] = { items: [queryKey], text: queryTextColor, back: queryBackColor };
             else {
-                var c = res[queryGroup];
+                const c = res[queryGroup];
                 c.items.push(queryKey);
                 c.text = colorAnd(c.text, queryTextColor);
                 c.back = colorAnd(c.back, queryBackColor);
@@ -39,7 +37,7 @@ function ruleFilter(dat: Prepare, query: string): MapString<Result>
 
 function readQuery(query: string): () => boolean {
     if (query === "") return () => true;
-    var f: () => boolean;
+    let f: () => boolean;
     try {
         f = (new Function("return " + query)) as (() => boolean);
     } catch (e) {
@@ -56,15 +54,15 @@ function readQuery(query: string): () => boolean {
 
 
 // These are global variables mutated/queried by query execution
-var queryData: Prepare = {} as Prepare;
-var queryKey: int = 0;
-var queryVal: ProfileEx = {} as ProfileEx;
-var queryName: string = "";
-var queryGroup: string = null;
-var queryBackColor: color = null;
-var queryTextColor: color = null;
+let queryData: Prepare = {} as Prepare;
+let queryKey: int = 0;
+let queryVal: ProfileEx = {} as ProfileEx;
+let queryName: string = "";
+let queryGroup: string = null;
+let queryBackColor: color = null;
+let queryTextColor: color = null;
 
-function childOf(r : string | RegExp) { return queryData.dependsOnThis(queryKey, r); }
+function childOf(r: string | RegExp) { return queryData.dependsOnThis(queryKey, r); }
 function parentOf(r: string | RegExp) { return queryData.thisDependsOn(queryKey, r); }
 function ancestorOf(r: string | RegExp) { return queryData.dependsOnThisTransitive(queryKey, r); }
 function descendantOf(r: string | RegExp) { return queryData.thisDependsOnTransitive(queryKey, r); }
@@ -76,13 +74,13 @@ function /* export */ group(x: string): boolean {
     return true;
 }
 
-function backColor(c: color, b = true) : boolean {
+function backColor(c: color, b: boolean = true): boolean {
     if (b)
         queryBackColor = c;
     return true;
 }
 
-function textColor(c: color, b = true): boolean{
+function textColor(c: color, b = true): boolean {
     if (b === undefined || b)
         queryTextColor = c;
     return true;
@@ -103,7 +101,7 @@ function /* export */ leaf(): boolean {
 
 function run(): number;
 function run(i: timestamp): boolean;
-function run(i? : any): any {
+function run(i?: any): any {
     if (i === undefined)
         return queryVal.built;
     else
@@ -115,12 +113,12 @@ function /* export */ unchanged(): boolean {
 }
 
 function named(): string;
-function named(r: string | RegExp, groupName?: string): boolean
-function /* export */ named(r?:any, groupName?:any): any {
+function named(r: string | RegExp, groupName?: string): boolean;
+function /* export */ named(r?: any, groupName?: any): any {
     if (r === undefined)
         return queryName;
 
-    var res = execRegExp(r, queryName);
+    const res = execRegExp(r, queryName);
     if (res === null) {
         if (groupName === undefined)
             return false;
@@ -130,7 +128,7 @@ function /* export */ named(r?:any, groupName?:any): any {
         }
     }
     if (res.length !== 1) {
-        for (var i = 1; i < res.length; i++)
+        for (let i = 1; i < res.length; i++)
             group(res[i]);
     }
     return true;
@@ -138,17 +136,17 @@ function /* export */ named(r?:any, groupName?:any): any {
 
 function command(): string;
 function command(r: string | RegExp, groupName?: string): boolean;
-function /* export */ command(r?:any, groupName?:any) : any {
-    var n = (queryVal.traces || []).length;
+function /* export */ command(r?: any, groupName?: any): any {
+    const n = (queryVal.traces || []).length;
     if (r === undefined)
         return n === 0 ? "" : queryVal.traces[0].command;
 
     for (const t of queryVal.traces) {
-        var res = execRegExp(r, t.command);
+        const res = execRegExp(r, t.command);
         if (res === null)
             continue;
         if (res.length !== 1) {
-            for (var j = 1; j < res.length; j++)
+            for (let j = 1; j < res.length; j++)
                 group(res[j]);
         }
         return true;
