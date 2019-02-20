@@ -8,6 +8,7 @@ import Data.Function
 import Data.List.Extra
 import Data.Maybe
 import System.FilePath
+import System.IO.Extra
 import Numeric.Extra
 import General.Extra
 import Development.Shake.Internal.Errors
@@ -104,9 +105,9 @@ writeProfile out db = writeProfileInternal out =<< toReport db
 
 writeProfileInternal :: FilePath -> [ProfileEntry] -> IO ()
 writeProfileInternal out xs
-    | takeExtension out == ".js" = writeFile out $ "var shake = \n" ++ generateJSON xs
-    | takeExtension out == ".json" = writeFile out $ generateJSON xs
-    | takeExtension out == ".trace" = writeFile out $ generateTrace xs
+    | takeExtension out == ".js" = writeFileBinary out $ "var shake = \n" ++ generateJSON xs
+    | takeExtension out == ".json" = writeFileBinary out $ generateJSON xs
+    | takeExtension out == ".trace" = writeFileBinary out $ generateTrace xs
     | out == "-" = putStr $ unlines $ generateSummary xs
     -- NOTE: On my laptop writing 1.5Mb of profile report takes 0.6s.
     --       This is fundamentals of my laptop, not a Haskell profiling issue.
