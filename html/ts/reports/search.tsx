@@ -101,7 +101,7 @@ function /* export */ leaf(): boolean {
 
 function run(): number;
 function run(i: timestamp): boolean;
-function run(i?: any): any {
+function run(i?: timestamp): number | boolean {
     if (i === undefined)
         return queryVal.built;
     else
@@ -114,7 +114,7 @@ function /* export */ unchanged(): boolean {
 
 function named(): string;
 function named(r: string | RegExp, groupName?: string): boolean;
-function /* export */ named(r?: any, groupName?: any): any {
+function /* export */ named(r?: string | RegExp, groupName?: string): string | boolean {
     if (r === undefined)
         return queryName;
 
