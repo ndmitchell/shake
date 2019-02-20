@@ -22,7 +22,7 @@ interface Profile {
     built: timestamp; // Timestamp at which I was built
     changed: timestamp; // Timestamp at which I last changed
     depends: int[]; // Which 0-based indexes I depended on (always lower than my index)
-    traces?: Trace[]; // List of traces
+    traces: Trace[]; // List of traces
 }
 
 type TraceRaw =
@@ -36,8 +36,8 @@ type ProfileRaw =
     ,seconds
     ,timestamp
     ,timestamp
-    ,int[]
-    ,TraceRaw[]
+    ,int[] // Optional
+    ,TraceRaw[] // Optional
     ]
 
 /////////////////////////////////////////////////////////////////////
