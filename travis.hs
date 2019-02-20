@@ -31,6 +31,7 @@ main = do
     unless (null args) $ error "Terminating early"
 
     -- check the TypeScript pieces
+    cmd "sudo apt-get --allow-unauthenticated install nodejs"
     cmd "npm install -g tsc"
     cmd "npm install -g tslint"
     cmd "tsc --project html/ts"
