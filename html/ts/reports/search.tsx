@@ -70,6 +70,14 @@ let queryGroup: string = null;
 let queryBackColor: color = null;
 let queryTextColor: color = null;
 
+function before(r: string | RegExp): boolean {
+    return true;
+}
+
+function after(r: string | RegExp): boolean {
+    return true;
+}
+
 function childOf(r: string | RegExp) { return queryData.dependsOnThis(queryKey, r); }
 function parentOf(r: string | RegExp) { return queryData.thisDependsOn(queryKey, r); }
 function ancestorOf(r: string | RegExp) { return queryData.dependsOnThisTransitive(queryKey, r); }
