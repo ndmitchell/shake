@@ -1,5 +1,7 @@
 
 
+// A mapping from names (rule names or those matched from rule parts)
+// to the indicies in profiles.
 type Search = MapString<int[]>;
 
 function createSearch(change: (s: Search) => void): HTMLElement {
@@ -107,21 +109,19 @@ function rename(from: string, to: string = ""): boolean {
     return true;
 }
 
-let slowestRule_Cache: string | null = null; // Index of the slowest rule
-function slowestRule(): string {
-    if (slowestRule_Cache === null)
+const slowestRule_Cache = lazy(() => {
+    let time = -1;
+    let name = "";
+    for (const p of profile)
     {
-        let time = -1;
-        let name = "";
-        for (const p of profile)
-        {
-            if (p[1] <= time) continue;
-            name = p[0];
-            time = p[1];
-        }
-        slowestRule_Cache = name;
+        if (p[1] <= time) continue;
+        name = p[0];
+        time = p[1];
     }
-    return slowestRule_Cache;
+    return name;
+});
+function /* export */ slowestRule(): string {
+    return slowestRule_Cache();
 }
 
 function /* export */ leaf(): boolean {

@@ -136,6 +136,18 @@ function cache<K, V>(key: (k: K) => string, op: (k: K) => V): (k: K) => V
     };
 }
 
+function lazy<V>(thunk: () => V): () => V {
+    let store: V = null;
+    let done = false;
+    return () => {
+        if (!done) {
+            store = thunk();
+            done = true;
+        }
+        return store;
+    };
+}
+
 function mapEq<V>(xs: MapString<V>, ys: MapString<V>) : boolean
 {
     function f(a: MapString<V>, b: MapString<V>)
