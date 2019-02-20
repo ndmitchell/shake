@@ -6,7 +6,7 @@ declare const version: string;
 /////////////////////////////////////////////////////////////////////
 // PROFILE DATA
 
-declare const profile: Profile[];
+declare const profile: Profile2[];
 
 declare type timestamp = int
 
@@ -25,6 +25,20 @@ interface Profile {
     traces?: Trace[]; // List of traces
 }
 
+type Trace2 =
+    [string
+    ,seconds
+    ,seconds
+    ]
+
+type Profile2 =
+    [string
+    ,seconds
+    ,timestamp
+    ,timestamp
+    ,int[]
+    ,Trace2[]
+    ]
 
 /////////////////////////////////////////////////////////////////////
 // PROGRESS DATA

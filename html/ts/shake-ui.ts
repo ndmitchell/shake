@@ -2,7 +2,7 @@
 /*jsl:import shake-logic.js*/
 "use strict";
 
-var prepared = prepare(profile);
+var prepared = prepare(profile.map(legacyProfile));
 var currentTable: MapString<any>[] = null;
 
 /////////////////////////////////////////////////////////////////////

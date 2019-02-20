@@ -163,15 +163,15 @@ generateTrace xs = jsonListLines $
 generateJSON :: [ProfileEntry] -> String
 generateJSON = jsonListLines . map showEntry
     where
-        showEntry ProfileEntry{..} = jsonObject $
-            [("name", show prfName)
-            ,("execution", showTime prfExecution)
-            ,("built", show prfBuilt)
-            ,("changed", show prfChanged)
-            ,("depends", show prfDepends)] ++
-            [("traces", jsonList $ map showTrace prfTraces) | not $ null prfTraces]
-        showTrace ProfileTrace{..} = jsonObject
-            [("command",show prfCommand), ("start",showTime prfStart), ("stop",showTime prfStop)]
+        showEntry ProfileEntry{..} = jsonList $
+            [show prfName
+            ,showTime prfExecution
+            ,show prfBuilt
+            ,show prfChanged] ++
+            [show prfDepends | not (null prfDepends) || not (null prfTraces)] ++
+            [jsonList $ map showTrace prfTraces | not (null prfTraces)]
+        showTrace ProfileTrace{..} = jsonList
+            [show prfCommand, showTime prfStart, showTime prfStop]
         showTime x = if '.' `elem` y then dropWhileEnd (== '.') $ dropWhileEnd (== '0') y else y
             where y = showDP 4 x
 
