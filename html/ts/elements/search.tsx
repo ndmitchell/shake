@@ -3,7 +3,7 @@
 type Search = MapString<int[]>;
 
 function createSearch(change: (s: Search) => void): HTMLElement {
-    return null; // return <input type="text" value="true" />;
+    return <input type="text" value="true" />;
 }
 
 function fullSearch() : Search
