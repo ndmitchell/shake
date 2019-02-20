@@ -105,7 +105,7 @@ writeProfile out db = writeProfileInternal out =<< toReport db
 
 writeProfileInternal :: FilePath -> [ProfileEntry] -> IO ()
 writeProfileInternal out xs
-    | takeExtension out == ".js" = writeFileBinary out $ "var shake = \n" ++ generateJSON xs
+    | takeExtension out == ".js" = writeFileBinary out $ "var profile = \n" ++ generateJSON xs
     | takeExtension out == ".json" = writeFileBinary out $ generateJSON xs
     | takeExtension out == ".trace" = writeFileBinary out $ generateTrace xs
     | out == "-" = putStr $ unlines $ generateSummary xs
