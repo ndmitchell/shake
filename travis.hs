@@ -32,9 +32,7 @@ main = do
     unless (null args) $ error "Terminating early"
 
     -- check the TypeScript pieces
-    if isMac then
-        cmd "brew install node"
-    else
+    unless isMac $
         cmd "sudo apt-get --allow-unauthenticated install nodejs"
     cmd "npm install -g typescript"
     cmd "tsc --project html/ts"
