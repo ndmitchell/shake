@@ -33,7 +33,7 @@ main = do
 
     -- check the TypeScript pieces
     unless isMac $
-        cmd "sudo apt-get --allow-unauthenticated install nodejs"
+        void $ cmd "sudo apt-get --allow-unauthenticated install nodejs"
     cmd "npm install -g typescript"
     cmd "tsc --project html/ts"
     cmd "npm install -g tslint"
