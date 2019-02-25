@@ -48,7 +48,7 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Data.IORef
 import Data.Either
-import Data.Typeable.Extra
+import Data.Typeable
 import Data.List.Extra
 import Control.Exception.Extra
 import Numeric

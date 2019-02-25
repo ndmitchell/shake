@@ -27,7 +27,7 @@ import qualified General.Intern as Intern
 import qualified General.TypeMap as TMap
 import General.Wait
 import Control.Monad.Extra
-import Data.Typeable.Extra
+import Data.Typeable
 import Data.Function
 import Data.Either.Extra
 import Data.List.Extra

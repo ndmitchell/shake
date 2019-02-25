@@ -14,7 +14,7 @@ module General.EscCodes(
 
 import Data.Char
 import System.IO
-import System.Environment.Extra
+import System.Environment
 import System.IO.Unsafe
 import Data.Functor
 import Prelude

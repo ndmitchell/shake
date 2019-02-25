@@ -4,7 +4,7 @@ module Test.Benchmark(main) where
 import General.GetOpt
 import Development.Shake
 import Test.Type
-import Text.Read.Extra
+import Text.Read
 import Development.Shake.FilePath
 
 
