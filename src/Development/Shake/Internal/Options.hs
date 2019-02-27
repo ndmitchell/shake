@@ -17,6 +17,7 @@ import Control.Monad
 import General.Extra
 import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.History.Shared
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Internal.CmdOption
@@ -203,7 +204,7 @@ data ShakeOptions = ShakeOptions
         -- ^ Defaults to 'False'. Ignore any differences in 'shakeVersion'.
     ,shakeColor :: Bool
         -- ^ Defaults to 'False'. Whether to colorize the output.
-    ,shakeShare :: Maybe FilePath
+    ,shakeShare :: Maybe (SharedCache Shared)
         -- ^ Defaults to 'Nothing'. Whether to use and store outputs in a shared directory.
     ,shakeCloud :: [String]
         -- ^ Defaults to @[]@. Cloud servers to talk to forming a shared cache.
