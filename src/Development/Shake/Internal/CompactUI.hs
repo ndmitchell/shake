@@ -66,7 +66,7 @@ compactUI opts = do
     let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
     time <- offsetTime
     opts <- return $ opts
-        {shakeTrace = \a b c -> do t <- time;  tweak (addTrace a b c t)
+        {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)
         ,shakeOutput = \a b -> tweak (addOutput a b)
         ,shakeProgress = \x -> void $ progressDisplay 1 (tweak . addProgress) x `withThreadsBoth` shakeProgress opts x
         ,shakeVerbosity = Quiet
