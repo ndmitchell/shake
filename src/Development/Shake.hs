@@ -178,11 +178,7 @@ import Development.Shake.Internal.Rules.Rerun
 --   * @-I0@: Disable idle garbage collection, to avoid frequent unnecessary garbage collection, see
 --     <https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/ a full explanation>.
 --
---   * With GHC 7.6 and before, omit @-threaded@: <https://ghc.haskell.org/trac/ghc/ticket/7646 GHC bug 7646>
---     can cause a race condition in build systems that write files then read them. Omitting @-threaded@ will
---     still allow your 'cmd' actions to run in parallel, so most build systems will still run in parallel.
---
---   * With GHC 7.8 and later you may add @-threaded@, and pass the options @-qg@ to @-with-rtsopts@
+--   * You may add @-threaded@, and pass the options @-qg@ to @-with-rtsopts@
 --     to disable parallel garbage collection. Parallel garbage collection in Shake
 --     programs typically goes slower than sequential garbage collection, while occupying many cores that
 --     could be used for running system commands.
