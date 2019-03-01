@@ -421,9 +421,8 @@ function test() {
     return "passed";
 }
 function console_table(xs) {
-    if (console.table)
-        console.table(xs);
-    else if (xs.length === 0)
+    // Could call console.table, but that doesn't print anything through 'node'
+    if (xs.length === 0)
         console.log("No data");
     else {
         var widths = [];
