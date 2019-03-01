@@ -24,8 +24,12 @@ Before doing any work you need the jQuery and Flot JavaScript dependencies. Thes
 
 To build and test `shake.js` from `html` run:
 
-    tsc -p ts   # generated shake.js
-    tslint --project ts --config ts/tslint.json  # run the linter
-    node test.js   # run the tests
+    tsc -p ts               # generated shake.js
+    tslint -p ts            # run the linter
+    node test.js            # run the tests
+
+Or, for the one liner:
+
+    tsc -p ts && tslint -p ts && node test.js
 
 To test out the `profile.html` just open it after doing the above steps.
