@@ -103,8 +103,6 @@ library
 
     if flag(portable)
         cpp-options: -DPORTABLE
-        if impl(ghc < 7.6)
-            build-depends: old-time
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
@@ -198,12 +196,8 @@ library
 executable shake
     default-language: Haskell2010
     hs-source-dirs:   src
-    ghc-options: -main-is Run.main
+    ghc-options: -main-is Run.main -rtsopts -threaded "-with-rtsopts=-I0 -qg"
     main-is: Run.hs
-    ghc-options: -rtsopts
-    -- GHC bug 7646 means -threaded causes errors
-    if impl(ghc >= 7.8)
-        ghc-options: -threaded "-with-rtsopts=-I0 -qg"
     build-depends:
         base == 4.*,
         binary,
@@ -227,8 +221,6 @@ executable shake
 
     if flag(portable)
         cpp-options: -DPORTABLE
-        if impl(ghc < 7.6)
-            build-depends: old-time
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
@@ -319,14 +311,7 @@ test-suite shake-test
     type: exitcode-stdio-1.0
     main-is: Test.hs
     hs-source-dirs: src
-
-    ghc-options: -main-is Test.main -rtsopts
-    if impl(ghc >= 7.6)
-        -- space leak introduced by -O1 in 7.4, see #445
-        ghc-options: -with-rtsopts=-K1K
-    if impl(ghc >= 7.8)
-        -- GHC bug 7646 (fixed in 7.8) means -threaded causes errors
-        ghc-options: -threaded
+    ghc-options: -main-is Test.main -rtsopts -with-rtsopts=-K1K -threaded
 
     build-depends:
         base == 4.*,
@@ -352,8 +337,6 @@ test-suite shake-test
 
     if flag(portable)
         cpp-options: -DPORTABLE
-        if impl(ghc < 7.6)
-            build-depends: old-time
     else
         if !os(windows)
             build-depends: unix >= 2.5.1
