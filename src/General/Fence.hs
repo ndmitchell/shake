@@ -8,7 +8,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.Either.Extra
-import Data.IORef.Extra
+import Data.IORef
 
 
 ---------------------------------------------------------------------

@@ -31,7 +31,7 @@ import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.TypeMap as TMap
 import Data.Maybe
-import Data.IORef.Extra
+import Data.IORef
 import Data.Semigroup (Semigroup (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary.Builder as Bin

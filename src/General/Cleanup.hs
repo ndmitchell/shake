@@ -7,7 +7,7 @@ module General.Cleanup(
 
 import Control.Exception
 import qualified Data.HashMap.Strict as Map
-import Data.IORef.Extra
+import Data.IORef
 import Data.List.Extra
 import Data.Maybe
 

@@ -10,7 +10,7 @@ import Control.Concurrent.Extra
 import General.Fence
 import Control.Exception.Extra
 import Data.Tuple.Extra
-import Data.IORef.Extra
+import Data.IORef
 import Control.Monad.Extra
 import General.Bilist
 import General.Pool

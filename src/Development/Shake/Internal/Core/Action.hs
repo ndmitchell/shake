@@ -32,7 +32,7 @@ import System.FilePattern.Directory
 import Control.Concurrent.Extra
 import Data.Maybe
 import Data.Tuple.Extra
-import Data.IORef.Extra
+import Data.IORef
 import Data.List.Extra
 import Numeric.Extra
 import General.Extra
