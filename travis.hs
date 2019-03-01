@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fwarn-unused-binds -fwarn-unused-imports #-}
+{-# OPTIONS_GHC -Wunused-binds -Wunused-imports #-}
 
 import Data.Char
 import Data.Function
@@ -7,13 +7,11 @@ import System.Environment
 import System.Time.Extra
 import System.Info.Extra
 import Data.Functor
-import Data.Version.Extra
 import Data.List
 import Data.Maybe
 import Control.Exception.Extra
 import Control.Monad
 import System.Process.Extra
-import Prelude
 
 
 requiresShake = words "ghc-make shake-language-c"
