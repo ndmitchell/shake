@@ -97,7 +97,7 @@ main = do
 
     isHead <- (== Just "1") <$> lookupEnv "GHC_HEAD"
     ghcver <- fromMaybe "" <$> lookupEnv "GHCVER"
-    when (not isHead && readVersion ghcver >= readVersion "7.10") $ do
+    unless isHead $ do
         ver <- do
             src <- readFile "shake.cabal"
             return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
