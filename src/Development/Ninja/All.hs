@@ -14,14 +14,12 @@ import System.Directory
 import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
 import Data.Tuple.Extra
-import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
 import Data.Maybe
 import Data.Char
 import Data.List.Extra
 import System.Info.Extra
-import Prelude
 
 -- Internal imports
 import General.Extra(removeFile_)
