@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wunused-binds -Wunused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
 
 import Data.Char
 import Data.Function
