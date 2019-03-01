@@ -5,9 +5,12 @@
     ],
     "rules": {
         "max-line-length": false,
+        "no-consecutive-blank-lines": [true, 2],
+        "variable-name": false,
         "curly": false,
         "trailing-comma": "never",
         "arrow-parens": [true, "ban-single-arg-parens"],
+        "object-literal-sort-keys": [true, "match-declaration-order"],
         "forin": false
     }
 }

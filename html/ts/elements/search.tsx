@@ -8,9 +8,8 @@ function createSearch(change: (s: Search) => void): HTMLElement {
     return <input type="text" value="true" />;
 }
 
-function fullSearch() : Search
-{
-    let res = {};
+function fullSearch(): Search {
+    const res = {};
     for (const i in profile)
         res[profile[i].name] = [i];
     return res;
@@ -51,13 +50,13 @@ function readQuery(query: string): () => boolean {
     try {
         f = (new Function("return " + query)) as (() => boolean);
     } catch (e) {
-        throw { user: true, name: "parse", query: query, message: e.toString() };
+        throw { user: true, name: "parse", query, message: e.toString() };
     }
     return () => {
         try {
             return f();
         } catch (e) {
-            throw { user: true, name: "execution", query: query, message: e.toString() };
+            throw { user: true, name: "execution", query, message: e.toString() };
         }
     };
 }
@@ -112,8 +111,7 @@ function rename(from: string, to: string = ""): boolean {
 const slowestRule_Cache = lazy(() => {
     let time = -1;
     let name = "";
-    for (const p of profile)
-    {
+    for (const p of profile) {
         if (p[1] <= time) continue;
         name = p[0];
         time = p[1];
