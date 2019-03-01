@@ -18,7 +18,7 @@ import Data.Version.Extra
 -- Older versions of Haddock garbage the --@ markup and have ambiguity errors
 brokenHaddock = compilerVersion < makeVersion [8]
 
-main = testBuild (unless brokenHaddock . noTest) $ do
+main = testBuild (unless brokenHaddock . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
     let config = "dist/setup-config"
     want ["Success.txt"]

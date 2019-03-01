@@ -4,7 +4,7 @@ module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     testBuildArgs, testBuild, testSimple,
     shakeRoot,
-    noTest, hasTracker,
+    defaultTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
@@ -215,8 +215,8 @@ assertExceptionAfter tweak parts act = do
 assertException :: [String] -> IO () -> IO ()
 assertException = assertExceptionAfter id
 
-noTest :: ([String] -> IO ()) -> IO ()
-noTest build = do
+defaultTest :: ([String] -> IO ()) -> IO ()
+defaultTest build = do
     build ["--abbrev=output=$OUT","-j3","--report"]
     build ["--no-build","--report=-"]
     build []

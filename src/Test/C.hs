@@ -28,4 +28,4 @@ cIncludes x = do
 
 test build = do
     copyDirectoryChanged (shakeRoot </> "src/Test/C") "src"
-    noTest build
+    defaultTest build
