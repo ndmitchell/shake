@@ -213,13 +213,13 @@ isAsyncException e
     | otherwise = False
 
 catchIO :: IO a -> (IOException -> IO a) -> IO a
-catchIO = Control.Exception.Extra.catch -- GHC 7.4 has catch in the Prelude as well
+catchIO = catch
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try
 
 handleIO :: (IOException -> IO a) -> IO a -> IO a
-handleIO = flip catchIO
+handleIO = handle
 
 
 ---------------------------------------------------------------------
