@@ -1,20 +1,19 @@
-/* tslint:disable */
 "use strict";
-function legacyTrace(x) {
+function unrawTrace(x) {
     return {
         command: x[0],
         start: x[1],
         stop: x[2]
     };
 }
-function legacyProfile(x) {
+function unrawProfile(x) {
     return {
         name: x[0],
         execution: x[1],
         built: x[2],
         changed: x[3],
         depends: x.length > 4 ? x[4] : [],
-        traces: x.length > 5 ? x[5].map(legacyTrace) : [],
+        traces: x.length > 5 ? x[5].map(unrawTrace) : [],
     };
 }
 //////////////////////////////////////////////////////////////////////
@@ -22,8 +21,6 @@ function legacyProfile(x) {
 var Summary = /** @class */ (function () {
     function Summary() {
         this.sumExecution = 0; // build time in total
-        this.maxExecution = 0; // longest build rule
-        this.maxExecutionName = ""; // longest build rule
         this.countTraceLast = 0; // traced commands run
         this.maxTraceStopLast = 0; // time the last traced command stopped
     }
@@ -36,9 +33,6 @@ function summary(dat) {
         var e = dat_1[_i];
         var isLast = e.built === 0;
         res.sumExecution += e.execution;
-        res.maxExecution = Math.max(res.maxExecution, e.execution);
-        if (res.maxExecution === e.execution)
-            res.maxExecutionName = e.name;
         var traces = e.traces;
         if (!traces)
             continue;
@@ -172,31 +166,6 @@ var Result = /** @class */ (function () {
     }
     return Result;
 }());
-function ruleFilter(dat, query) {
-    queryData = dat;
-    var f = readQuery(query);
-    var res = {};
-    for (queryKey = 0; queryKey < dat.original.length; queryKey++) {
-        queryVal = dat.original[queryKey];
-        queryName = queryVal.name;
-        queryGroup = null;
-        queryBackColor = null;
-        queryTextColor = null;
-        if (f()) {
-            if (queryGroup === null)
-                queryGroup = queryName;
-            if (!(queryGroup in res))
-                res[queryGroup] = { items: [queryKey], text: queryTextColor, back: queryBackColor };
-            else {
-                var c = res[queryGroup];
-                c.items.push(queryKey);
-                c.text = colorAnd(c.text, queryTextColor);
-                c.back = colorAnd(c.back, queryBackColor);
-            }
-        }
-    }
-    return res;
-}
 var ResultTable = /** @class */ (function () {
     function ResultTable() {
     }
@@ -358,118 +327,6 @@ function commandPlot(dat, query, buckets) {
     }
     return ans;
 }
-/////////////////////////////////////////////////////////////////////
-// ENVIRONMENT
-function readQuery(query) {
-    if (query === "")
-        return function () { return true; };
-    var f;
-    try {
-        f = (new Function("return " + query));
-    }
-    catch (e) {
-        throw { user: true, name: "parse", query: query, message: e.toString() };
-    }
-    return function () {
-        try {
-            return f();
-        }
-        catch (e) {
-            throw { user: true, name: "execution", query: query, message: e.toString() };
-        }
-    };
-}
-// These are global variables mutated/queried by query execution
-var queryData = {};
-var queryKey = 0;
-var queryVal = {};
-var queryName = "";
-var queryGroup = null;
-var queryBackColor = null;
-var queryTextColor = null;
-function childOf(r) { return queryData.dependsOnThis(queryKey, r); }
-function parentOf(r) { return queryData.thisDependsOn(queryKey, r); }
-function ancestorOf(r) { return queryData.dependsOnThisTransitive(queryKey, r); }
-function descendantOf(r) { return queryData.thisDependsOnTransitive(queryKey, r); }
-function descendentOf(r) { return descendantOf(r); }
-function group(x) {
-    if (queryGroup === null)
-        queryGroup = "";
-    queryGroup += (queryGroup === "" ? "" : " ") + x;
-    return true;
-}
-function backColor(c, b) {
-    if (b === void 0) { b = true; }
-    if (b)
-        queryBackColor = c;
-    return true;
-}
-function textColor(c, b) {
-    if (b === void 0) { b = true; }
-    if (b === undefined || b)
-        queryTextColor = c;
-    return true;
-}
-function rename(from, to) {
-    if (to === void 0) { to = ""; }
-    queryName = queryName.replace(from, to);
-    return true;
-}
-function slowestRule() {
-    return queryData.summary.maxExecutionName;
-}
-function leaf() {
-    return queryVal.depends.length === 0;
-}
-function run(i) {
-    if (i === undefined)
-        return queryVal.built;
-    else
-        return queryVal.built === i;
-}
-function unchanged() {
-    return queryVal.changed !== queryVal.built;
-}
-function named(r, groupName) {
-    if (r === undefined)
-        return queryName;
-    var res = execRegExp(r, queryName);
-    if (res === null) {
-        if (groupName === undefined)
-            return false;
-        else {
-            group(groupName);
-            return true;
-        }
-    }
-    if (res.length !== 1) {
-        for (var i = 1; i < res.length; i++)
-            group(res[i]);
-    }
-    return true;
-}
-function command(r, groupName) {
-    var n = (queryVal.traces || []).length;
-    if (r === undefined)
-        return n === 0 ? "" : queryVal.traces[0].command;
-    for (var _i = 0, _a = queryVal.traces; _i < _a.length; _i++) {
-        var t_4 = _a[_i];
-        var res = execRegExp(r, t_4.command);
-        if (res === null)
-            continue;
-        if (res.length !== 1) {
-            for (var j = 1; j < res.length; j++)
-                group(res[j]);
-        }
-        return true;
-    }
-    if (groupName === undefined)
-        return false;
-    else {
-        group(groupName);
-        return true;
-    }
-}
 function initProgress() {
     $(function () {
         $(".version").html("Generated by <a href='https://shakebuild.com'>Shake " + version + "</a>.");
@@ -508,7 +365,7 @@ var raw1 =
     ["Cpp", 10, 0, 0, [1], [["gcc", 2, 10]]],
     ["Exe", 5, 0, 0, [3, 4, 5], [["link", 17, 22]]]
 ];
-var dat1 = raw1.map(legacyProfile);
+var dat1 = raw1.map(unrawProfile);
 function test() {
     function assert(b) {
         if (!b)
@@ -529,11 +386,8 @@ function test() {
         }
     }
     var tab1 = prepare(dat1);
-    profile = raw1;
-    var mp = {};
-    for (var i = 0; i < profile.length; i++)
-        mp[i] = [i];
-    var ssum1 = reportSummary(mp).innerText;
+    profile = dat1;
+    var ssum1 = reportSummary(fullSearch()).innerText;
     console.log(ssum1);
     var want = ["4 runs", "7 rules", "5 rebuilt", "7 traced", "6 in", "build time is 41.00s", "38.80s is traced",
         "longest rule takes 15.00s", "longest traced command takes 14.90s", "parallelism of 1.40", "22.00s"];
@@ -590,7 +444,8 @@ function pad(n, s) {
         res += " ";
     return res;
 }
-var prepared = prepare(profile.map(legacyProfile));
+var profile = profileRaw.map(unrawProfile);
+var prepared = prepare(profile);
 var currentTable = null;
 /////////////////////////////////////////////////////////////////////
 // REPORT
@@ -745,10 +600,7 @@ function runReport() {
     try {
         switch (report.mode) {
             case "summary":
-                var mp = {};
-                for (var i_2 = 0; i_2 < profile.length; i_2++)
-                    mp[i_2] = [i_2];
-                $("#output").empty().append(reportSummary(mp));
+                $("#output").empty().append(reportSummary(fullSearch()));
                 break;
             case "cmd-plot":
                 {
@@ -964,6 +816,17 @@ function cache(key, op) {
         return store[s];
     };
 }
+function lazy(thunk) {
+    var store = null;
+    var done = false;
+    return function () {
+        if (!done) {
+            store = thunk();
+            done = true;
+        }
+        return store;
+    };
+}
 function mapEq(xs, ys) {
     function f(a, b) {
         for (var s in a) {
@@ -1031,7 +894,171 @@ function createElement(type, props) {
 }
 // How .tsx gets desugared
 var React = { createElement: createElement };
-function reportSummary(filter) {
+function createSearch(change) {
+    return React.createElement("input", { type: "text", value: "true" });
+}
+function fullSearch() {
+    var res = {};
+    for (var i in profile)
+        res[profile[i].name] = [i];
+    return res;
+}
+function ruleFilter(dat, query) {
+    queryData = dat;
+    var f = readQuery(query);
+    var res = {};
+    for (queryKey = 0; queryKey < dat.original.length; queryKey++) {
+        queryVal = dat.original[queryKey];
+        queryName = queryVal.name;
+        queryGroup = null;
+        queryBackColor = null;
+        queryTextColor = null;
+        if (f()) {
+            if (queryGroup === null)
+                queryGroup = queryName;
+            if (!(queryGroup in res))
+                res[queryGroup] = { items: [queryKey], text: queryTextColor, back: queryBackColor };
+            else {
+                var c = res[queryGroup];
+                c.items.push(queryKey);
+                c.text = colorAnd(c.text, queryTextColor);
+                c.back = colorAnd(c.back, queryBackColor);
+            }
+        }
+    }
+    return res;
+}
+/////////////////////////////////////////////////////////////////////
+// ENVIRONMENT
+function readQuery(query) {
+    if (query === "")
+        return function () { return true; };
+    var f;
+    try {
+        f = (new Function("return " + query));
+    }
+    catch (e) {
+        throw { user: true, name: "parse", query: query, message: e.toString() };
+    }
+    return function () {
+        try {
+            return f();
+        }
+        catch (e) {
+            throw { user: true, name: "execution", query: query, message: e.toString() };
+        }
+    };
+}
+// These are global variables mutated/queried by query execution
+var queryData = {};
+var queryKey = 0;
+var queryVal = {};
+var queryName = "";
+var queryGroup = null;
+var queryBackColor = null;
+var queryTextColor = null;
+function before(r) {
+    return true;
+}
+function after(r) {
+    return true;
+}
+function childOf(r) { return queryData.dependsOnThis(queryKey, r); }
+function parentOf(r) { return queryData.thisDependsOn(queryKey, r); }
+function ancestorOf(r) { return queryData.dependsOnThisTransitive(queryKey, r); }
+function descendantOf(r) { return queryData.thisDependsOnTransitive(queryKey, r); }
+function descendentOf(r) { return descendantOf(r); }
+function group(x) {
+    if (queryGroup === null)
+        queryGroup = "";
+    queryGroup += (queryGroup === "" ? "" : " ") + x;
+    return true;
+}
+function backColor(c, b) {
+    if (b === void 0) { b = true; }
+    if (b)
+        queryBackColor = c;
+    return true;
+}
+function textColor(c, b) {
+    if (b === void 0) { b = true; }
+    if (b === undefined || b)
+        queryTextColor = c;
+    return true;
+}
+function rename(from, to) {
+    if (to === void 0) { to = ""; }
+    queryName = queryName.replace(from, to);
+    return true;
+}
+var slowestRule_Cache = lazy(function () {
+    var time = -1;
+    var name = "";
+    for (var _i = 0, profile_1 = profile; _i < profile_1.length; _i++) {
+        var p = profile_1[_i];
+        if (p[1] <= time)
+            continue;
+        name = p[0];
+        time = p[1];
+    }
+    return name;
+});
+function slowestRule() {
+    return slowestRule_Cache();
+}
+function leaf() {
+    return queryVal.depends.length === 0;
+}
+function run(i) {
+    if (i === undefined)
+        return queryVal.built;
+    else
+        return queryVal.built === i;
+}
+function unchanged() {
+    return queryVal.changed !== queryVal.built;
+}
+function named(r, groupName) {
+    if (r === undefined)
+        return queryName;
+    var res = execRegExp(r, queryName);
+    if (res === null) {
+        if (groupName === undefined)
+            return false;
+        else {
+            group(groupName);
+            return true;
+        }
+    }
+    if (res.length !== 1) {
+        for (var i = 1; i < res.length; i++)
+            group(res[i]);
+    }
+    return true;
+}
+function command(r, groupName) {
+    var n = (queryVal.traces || []).length;
+    if (r === undefined)
+        return n === 0 ? "" : queryVal.traces[0].command;
+    for (var _i = 0, _a = queryVal.traces; _i < _a.length; _i++) {
+        var t_4 = _a[_i];
+        var res = execRegExp(r, t_4.command);
+        if (res === null)
+            continue;
+        if (res.length !== 1) {
+            for (var j = 1; j < res.length; j++)
+                group(res[j]);
+        }
+        return true;
+    }
+    if (groupName === undefined)
+        return false;
+    else {
+        group(groupName);
+        return true;
+    }
+}
+function reportSummary(search) {
     var count = 0; // number of rules run
     var countLast = 0; // number of rules run in the last run
     var highestRun = 0; // highest run you have seen (add 1 to get the count of runs)
@@ -1045,10 +1072,10 @@ function reportSummary(filter) {
     var maxTrace = 0; // longest traced command
     var maxTraceName = ""; // longest trace command
     var maxTraceStopLast = 0; // time the last traced command stopped
-    for (var k in filter) {
-        for (var _i = 0, _a = filter[k]; _i < _a.length; _i++) {
+    for (var k in search) {
+        for (var _i = 0, _a = search[k]; _i < _a.length; _i++) {
             var i = _a[_i];
-            var e = legacyProfile(profile[i]);
+            var e = profile[i];
             var isLast = e.built === 0;
             count++;
             countLast += isLast ? 1 : 0;
