@@ -24,7 +24,7 @@ function unrawProfile(x) {
         built: x[2],
         changed: x[3],
         depends: x.length > 4 ? x[4] : [],
-        traces: x.length > 5 ? x[5].map(unrawTrace) : [],
+        traces: x.length > 5 ? x[5].map(unrawTrace) : []
     };
 }
 //////////////////////////////////////////////////////////////////////
@@ -740,9 +740,9 @@ jQuery.fn.enable = function (x) {
     // Set the values to enabled/disabled
     return this.each(function () {
         if (x)
-            $(this).removeAttr('disabled');
+            $(this).removeAttr("disabled");
         else
-            $(this).attr('disabled', 'disabled');
+            $(this).attr("disabled", "disabled");
     });
 };
 /////////////////////////////////////////////////////////////////////
@@ -753,7 +753,7 @@ function uriQueryParameters(s) {
     var params = {};
     var a = /\+/g; // Regex for replacing addition symbol with a space
     var r = /([^&=]+)=?([^&]*)/g;
-    var d = function (s) { return decodeURIComponent(s.replace(a, " ")); };
+    var d = function (x) { return decodeURIComponent(x.replace(a, " ")); };
     var q = s.substring(1);
     while (true) {
         var e = r.exec(q);
@@ -763,7 +763,6 @@ function uriQueryParameters(s) {
     }
     return params;
 }
-;
 /////////////////////////////////////////////////////////////////////
 // STRING FORMATTING
 function showTime(x) {
@@ -866,14 +865,14 @@ function createElement(type, props) {
     var children = Array.isArray(_children[0]) ? _children[0] : _children;
     var element = document.createElement(type);
     for (var name_1 in props || {}) {
-        if (name_1.substr(0, 2) == "on")
+        if (name_1.substr(0, 2) === "on")
             element.addEventListener(name_1.substr(2), props[name_1]);
         else
             element.setAttribute(name_1, props[name_1]);
     }
     for (var _a = 0, children_1 = children; _a < children_1.length; _a++) {
         var child = children_1[_a];
-        var c = typeof child === 'object' ? child : document.createTextNode(child.toString());
+        var c = typeof child === "object" ? child : document.createTextNode(child.toString());
         element.appendChild(c);
     }
     return element;
