@@ -10,7 +10,7 @@ module Development.Shake.Internal.Value(
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Errors
-import Data.Typeable.Extra
+import Data.Typeable
 
 import Data.Bits
 import Unsafe.Coerce

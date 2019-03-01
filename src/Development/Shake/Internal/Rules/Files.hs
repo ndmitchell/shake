@@ -10,7 +10,7 @@ import Control.Monad.IO.Class
 import Data.Maybe
 import Data.List.Extra
 import Control.Applicative
-import Data.Typeable.Extra
+import Data.Typeable
 import General.Binary
 
 import Development.Shake.Internal.Core.Action

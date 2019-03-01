@@ -3,7 +3,7 @@ module Test.Rebuild(main) where
 
 import Development.Shake
 import Test.Type
-import Text.Read.Extra
+import Text.Read
 import Control.Monad
 import General.GetOpt
 

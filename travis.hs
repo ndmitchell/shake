@@ -3,7 +3,7 @@
 import Data.Char
 import Data.Function
 import System.Directory.Extra
-import System.Environment.Extra
+import System.Environment
 import System.Time.Extra
 import System.Info.Extra
 import Data.Functor
@@ -32,10 +32,8 @@ main = do
     unless (null args) $ error "Terminating early"
 
     -- check the TypeScript pieces
-    if isMac then
-        cmd "brew install node"
-    else
-        cmd "sudo apt-get --allow-unauthenticated install nodejs"
+    unless isMac $
+        void $ cmd "sudo apt-get --allow-unauthenticated install nodejs"
     cmd "npm install -g typescript"
     cmd "tsc --project html/ts"
     cmd "npm install -g tslint"

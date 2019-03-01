@@ -20,7 +20,7 @@ import Data.List
 import Data.Tuple.Extra
 import qualified Data.HashSet as Set
 import qualified System.Directory as IO
-import qualified System.Environment.Extra as IO
+import qualified System.Environment as IO
 
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action

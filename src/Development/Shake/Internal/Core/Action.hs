@@ -26,7 +26,7 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.DeepSeq
-import Data.Typeable.Extra
+import Data.Typeable
 import System.Directory
 import System.FilePattern
 import System.FilePattern.Directory

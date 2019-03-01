@@ -15,7 +15,7 @@ import System.Directory
 import System.FilePath
 import System.Info.Extra
 import System.IO.Unsafe
-import System.Environment.Extra
+import System.Environment
 import General.Extra
 import Data.Functor
 import qualified Data.ByteString.Lazy as LBS

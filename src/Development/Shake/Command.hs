@@ -34,7 +34,7 @@ import Data.Maybe
 import Data.Semigroup (Semigroup)
 import Data.Monoid
 import System.Directory
-import System.Environment.Extra
+import System.Environment
 import System.Exit
 import System.IO.Extra hiding (withTempFile, withTempDir)
 import System.Process

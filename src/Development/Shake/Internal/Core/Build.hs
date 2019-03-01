@@ -31,7 +31,7 @@ import Numeric.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
 import Development.Shake.Internal.Core.Rules
-import Data.Typeable.Extra
+import Data.Typeable
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List.Extra

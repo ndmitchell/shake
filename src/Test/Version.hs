@@ -5,7 +5,7 @@ module Test.Version(main) where
 import Development.Shake
 import Development.Shake.Classes
 import General.GetOpt
-import Text.Read.Extra
+import Text.Read
 import Test.Type
 
 

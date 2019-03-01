@@ -4,6 +4,7 @@ module Development.Shake.Internal.CompactUI(
     compactUI
     ) where
 
+import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Progress
 
@@ -66,9 +67,10 @@ compactUI opts = do
     let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
     time <- offsetTime
     opts <- return $ opts
-        {shakeTrace = \a b c -> do t <- time;  tweak (addTrace a b c t)
+        {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)
         ,shakeOutput = \a b -> tweak (addOutput a b)
         ,shakeProgress = \x -> void $ progressDisplay 1 (tweak . addProgress) x `withThreadsBoth` shakeProgress opts x
+        ,shakeCommandOptions = [EchoStdout False, EchoStderr False] ++ shakeCommandOptions opts
         ,shakeVerbosity = Quiet
         }
     let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)

@@ -6,7 +6,7 @@ import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.Maybe
 import System.Directory
-import System.Environment.Extra
+import System.Environment
 import General.Timing
 import Development.Shake.Internal.FileInfo
 import Development.Shake.Internal.FileName

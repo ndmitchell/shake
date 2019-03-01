@@ -30,9 +30,9 @@ import Control.Monad.Extra
 import Data.List
 import Data.Maybe
 import Data.Either
-import Data.Typeable.Extra
+import Data.Typeable
 import System.Directory.Extra as IO
-import System.Environment.Extra
+import System.Environment
 import System.Random
 import General.GetOpt
 import System.IO.Extra as IO

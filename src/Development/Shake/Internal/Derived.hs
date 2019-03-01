@@ -33,7 +33,7 @@ import qualified Data.HashMap.Strict as Map
 import General.Extra
 import Data.List.Extra
 import Data.Hashable
-import Data.Typeable.Extra
+import Data.Typeable
 import Data.Dynamic
 import Prelude
 

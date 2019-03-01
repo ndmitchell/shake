@@ -5,7 +5,7 @@ module General.TypeMap(
     ) where
 
 import qualified Data.HashMap.Strict as Map
-import Data.Typeable.Extra
+import Data.Typeable
 import Unsafe.Coerce
 import Data.Functor
 import qualified Prelude

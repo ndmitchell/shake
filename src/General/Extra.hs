@@ -26,7 +26,7 @@ module General.Extra(
 import Control.Exception.Extra
 import Data.Char
 import Data.List.Extra
-import System.Environment.Extra
+import System.Environment
 import Development.Shake.FilePath
 import Control.DeepSeq
 import Numeric
