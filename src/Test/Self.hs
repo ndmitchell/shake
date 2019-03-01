@@ -56,21 +56,21 @@ main = testBuild noTest $ do
         writeFileLines out ds
 
     "**/*.dep" %> \out -> do
-        src <- readFile' $ root </> "src" </> fixPaths (out -<.> "hs")
+        src <- readFile' $ shakeRoot </> "src" </> fixPaths (out -<.> "hs")
         let xs = hsImports src
-        xs <- filterM (doesFileExist . (\x -> root </> "src" </> x) . fixPaths . moduleToFile "hs") xs
+        xs <- filterM (doesFileExist . (\x -> shakeRoot </> "src" </> x) . fixPaths . moduleToFile "hs") xs
         writeFileLines out xs
 
     ["**/*.o","**/*.hi"] &%> \[out,_] -> do
         deps <- readFileLines $ out -<.> "deps"
-        let hs = root </> "src" </> fixPaths (out -<.> "hs")
+        let hs = shakeRoot </> "src" </> fixPaths (out -<.> "hs")
         need $ hs : map (moduleToFile "hi") deps
-        ghc ["-c",hs,"-i" ++ root </> "src","-main-is","Run.main"
+        ghc ["-c",hs,"-i" ++ shakeRoot </> "src","-main-is","Run.main"
             ,"-hide-all-packages","-outputdir=."
             ,"-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
     ".pkgs" %> \out -> do
-        src <- readFile' $ root </> "shake.cabal"
+        src <- readFile' $ shakeRoot </> "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src
 
 

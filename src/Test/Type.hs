@@ -3,7 +3,7 @@
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     testBuildArgs, testBuild, testSimple,
-    root,
+    shakeRoot,
     noTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
@@ -141,9 +141,9 @@ deps &?%> act = do
         then (\x -> if x `elem` deps then Just deps else Nothing) &?> act
         else deps &%> act
 
-
-root :: FilePath
-root = "../.."
+-- A way to get back to the source files after you get directory changed
+shakeRoot :: FilePath
+shakeRoot = "../.."
 
 tracker :: IO Lint
 tracker = do

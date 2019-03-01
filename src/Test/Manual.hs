@@ -13,10 +13,10 @@ main = testSimple $ do
     -- we use .git as our destination, despite not being a real git repo
     -- so that search tools ignore it, and I don't get dupes for every source file
     let dest = ".git"
-    copyDirectoryChanged (root </> "docs/manual") dest
-    copyDirectoryChanged (root </> "src/Development") $ dest </> "Development"
-    copyDirectoryChanged (root </> "src/General") $ dest </> "General"
-    copyFileChangedIO (root </> "src/Paths.hs") $ dest </> "Paths_shake.hs"
+    copyDirectoryChanged (shakeRoot </> "docs/manual") dest
+    copyDirectoryChanged (shakeRoot </> "src/Development") $ dest </> "Development"
+    copyDirectoryChanged (shakeRoot </> "src/General") $ dest </> "General"
+    copyFileChangedIO (shakeRoot </> "src/Paths.hs") $ dest </> "Paths_shake.hs"
     (_, gccPath) <- findGcc
     let opts = [Cwd dest, Shell, AddPath [] (maybeToList gccPath)]
     let cmdline = if isWindows then "build.bat" else "/bin/sh build.sh"

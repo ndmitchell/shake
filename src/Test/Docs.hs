@@ -23,39 +23,39 @@ main = testBuild (unless brokenHaddock . noTest) $ do
     let config = "dist/setup-config"
     want ["Success.txt"]
 
-    let needSource = need =<< getDirectoryFiles "." (map (root </>)
+    let needSource = need =<< getDirectoryFiles "." (map (shakeRoot </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
     config %> \_ -> do
-        need $ map (root </>) ["shake.cabal","Setup.hs"]
+        need $ map (shakeRoot </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
         liftIO $ createDirectoryRecursive "dist"
         dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
-        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs configure"
+        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell Setup.hs configure"
             ["--builddir=" ++ dist,"--user"]
             -- package-db is very sensitive, see #267
             -- note that the reverse ensures the behaviour is consistent between the flags and the env variable
             ["--package-db=" ++ x | x <- maybe [] (reverse . filter (`notElem` [".",""]) . splitSearchPath) path]
         -- Paths_shake is only created by "Setup build" (which we want to skip), and required by "Setup haddock", so we fake it
-        copyFile' (root </> "src/Paths.hs") "dist/build/autogen/Paths_shake.hs"
-        copyFile' (root </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
+        copyFile' (shakeRoot </> "src/Paths.hs") "dist/build/autogen/Paths_shake.hs"
+        copyFile' (shakeRoot </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
         writeFile' "dist/build/autogen/cabal_macros.h" ""
         writeFile' "dist/build/shake/autogen/cabal_macros.h" ""
         trackAllow ["dist//*"]
 
     index %> \_ -> do
-        need $ config : map (root </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
+        need $ config : map (shakeRoot </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
         needSource
         trackAllow ["dist//*"]
         dist <- liftIO $ canonicalizePath "dist"
-        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd root) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
+        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
     "Part_*.hs" %> \out -> do
-        need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
+        need [shakeRoot </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         let noR = filter (/= '\r')
         src <- if "_md" `isSuffixOf` takeBaseName out then
-            fmap (findCodeMarkdown . lines . checkBlacklist . noR) $ readFile' $ root </> "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
+            fmap (findCodeMarkdown . lines . checkBlacklist . noR) $ readFile' $ shakeRoot </> "docs/" ++ drop 5 (reverse (drop 3 $ reverse $ takeBaseName out)) ++ ".md"
          else
             fmap (findCodeHaddock . checkBlacklist . noR) $ readFile' $ "dist/doc/html/shake/" ++ replace "_" "-" (drop 5 $ takeBaseName out) ++ ".html"
 
@@ -140,12 +140,12 @@ main = testBuild (unless brokenHaddock . noTest) $ do
             rest
 
     "Files.lst" %> \out -> do
-        need [root </> "src/Test/Docs.hs"] -- so much of the generator is in this module
+        need [shakeRoot </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index]
         filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         -- filesMd on Travis will only include Manual.md, since it's the only one listed in the .cabal
         -- On AppVeyor, where we build from source, it will check the rest of the website
-        filesMd <- getDirectoryFiles (root </> "docs") ["*.md"]
+        filesMd <- getDirectoryFiles (shakeRoot </> "docs") ["*.md"]
         writeFileChanged out $ unlines $
             ["Part_" ++ replace "-" "_" (takeBaseName x) | x <- filesHs,
                 not $ any (`isSuffixOf` x) ["-Classes.html", "-FilePath.html"]] ++
@@ -164,7 +164,7 @@ main = testBuild (unless brokenHaddock . noTest) $ do
         need ["Main.hs"]
         trackAllow ["dist//*"]
         needSource
-        cmd_ "ghc -fno-code -ignore-package=hashmap" ["-idist/build/autogen","-i" ++ root </> "src","Main.hs"]
+        cmd_ "ghc -fno-code -ignore-package=hashmap" ["-idist/build/autogen","-i" ++ shakeRoot </> "src","Main.hs"]
         writeFile' out ""
 
 checkBlacklist :: String -> String

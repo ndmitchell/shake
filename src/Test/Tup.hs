@@ -13,7 +13,7 @@ import Prelude
 
 main = testBuild noTest $ do
     -- Example inspired by http://gittup.org/tup/ex_multiple_directories.html
-    usingConfigFile $ root </> "src/Test/Tup/root.cfg"
+    usingConfigFile $ shakeRoot </> "src/Test/Tup/root.cfg"
 
     action $ do
         keys <- getConfigKeys
@@ -37,7 +37,7 @@ main = testBuild noTest $ do
         cmd "ar crs" [out] os
 
     "//*.o" %> \out -> do
-        let src = root </> "src/Test/Tup" </> out -<.> "c"
+        let src = shakeRoot </> "src/Test/Tup" </> out -<.> "c"
         need [src]
-        cmd_ "gcc -c -MMD -MF" [out -<.> "d"] [src] "-o" [out] "-O2 -Wall" ["-I" ++ root </> "src/Test/Tup/newmath"]
+        cmd_ "gcc -c -MMD -MF" [out -<.> "d"] [src] "-o" [out] "-O2 -Wall" ["-I" ++ shakeRoot </> "src/Test/Tup/newmath"]
         neededMakefileDependencies $ out -<.> "d"

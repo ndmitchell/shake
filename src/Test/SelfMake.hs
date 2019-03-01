@@ -40,10 +40,10 @@ main = testBuild noTest $ do
             cmd "ghc" flags args
 
     "Main" <.> exe %> \out -> do
-        let run = root </> "src/Run.hs"
-        copyFileChanged (root </> "src" </> "Paths.hs") "Paths_shake.hs"
+        let run = shakeRoot </> "src/Run.hs"
+        copyFileChanged (shakeRoot </> "src" </> "Paths.hs") "Paths_shake.hs"
         let flags =
-                ["-i" ++ root </> "src","-dep-suffix=.","-main-is","Run.main"
+                ["-i" ++ shakeRoot </> "src","-dep-suffix=.","-main-is","Run.main"
                 ,"-hide-all-packages","-outputdir=."
                 ,"-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
@@ -53,5 +53,5 @@ main = testBuild noTest $ do
         ghc $ ["-o",out,run] ++ ["-j4" | compilerVersion >= makeVersion [7,8]] ++ flags
 
     ".pkgs" %> \out -> do
-        src <- readFile' $ root </> "shake.cabal"
+        src <- readFile' $ shakeRoot </> "shake.cabal"
         writeFileLines out $ sort $ cabalBuildDepends src

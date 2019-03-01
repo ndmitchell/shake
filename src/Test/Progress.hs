@@ -58,6 +58,6 @@ test build = do
     xs <- prog [10,9,8,7,6.5,6,5.5,5]
     assertBool (last xs > 7.1) "Some discounting (factor=0 would give 7)"
 
-    xs <- listFiles $ root </> "src/Test/Progress"
+    xs <- listFiles $ shakeRoot </> "src/Test/Progress"
     build $ ["--progress=replay=" ++ x | x <- xs, takeExtension x == ".prog"] ++
             ["--no-report","--report=-","--report=" ++ "progress.html"]

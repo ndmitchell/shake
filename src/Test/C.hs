@@ -6,7 +6,7 @@ import Development.Shake.FilePath
 import Test.Type
 
 main = testBuild noTest $ do
-    let src = root </> "src/Test/C"
+    let src = shakeRoot </> "src/Test/C"
     want ["Main.exe"]
 
     "Main.exe" %> \out -> do

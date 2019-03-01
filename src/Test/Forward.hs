@@ -7,7 +7,7 @@ import Development.Shake.FilePath
 import Test.Type
 
 main = testBuild test $ forwardRule $ do
-    let src = root </> "src/Test/C"
+    let src = shakeRoot </> "src/Test/C"
     cs <- getDirectoryFiles src ["*.c"]
     os <- forP cs $ \c -> do
         let o = c <.> "o"
