@@ -147,15 +147,13 @@ root = "../.."
 
 tracker :: IO Lint
 tracker = do
-  fsatrace <- findExecutable $ "fsatrace" <.> exe
-  return $ if isJust fsatrace
-           then LintFSATrace
-           else LintBasic
+    fsatrace <- findExecutable $ "fsatrace" <.> exe
+    return $ if isJust fsatrace then LintFSATrace else LintBasic
 
 hasTracker :: IO Bool
 hasTracker = do
-  t <- tracker
-  return $ t == LintFSATrace
+    t <- tracker
+    return $ t == LintFSATrace
 
 assertFail :: String -> IO a
 assertFail msg = error $ "ASSERTION FAILED: " ++ msg
