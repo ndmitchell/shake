@@ -57,7 +57,7 @@ function reportFromUser() : Report
 
 function setReport(set: (r : Report) => Report, replace: boolean, run: boolean)
 {
-    const report2 = set(recordCopy(report));
+    const report2 = set({...report});
     $("#mode").val(report2.mode);
     $("#query").val(report2.query);
     $("#run").enable(false).attr("title", "The current query is displayed");

@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 function unrawTrace(x) {
     return {
         command: x[0],
@@ -257,7 +268,7 @@ function commandFilter(last, dat, query) {
         queryVal = dat.original[queryKey];
         if (last && queryVal.built !== 0)
             continue;
-        var val = recordCopy(queryVal);
+        var val = __assign({}, queryVal);
         var ts = queryVal.traces || [];
         queryVal = val;
         queryName = queryVal.name;
@@ -490,7 +501,7 @@ function reportFromUser() {
     return new Report($("#mode").val(), $("#query").val());
 }
 function setReport(set, replace, run) {
-    var report2 = set(recordCopy(report));
+    var report2 = set(__assign({}, report));
     $("#mode").val(report2.mode);
     $("#query").val(report2.query);
     $("#run").enable(false).attr("title", "The current query is displayed");
@@ -826,31 +837,6 @@ function lazy(thunk) {
         }
         return store;
     };
-}
-function mapEq(xs, ys) {
-    function f(a, b) {
-        for (var s in a) {
-            if (a[s] !== b[s])
-                return false;
-        }
-        return true;
-    }
-    return f(xs, ys) && f(ys, xs);
-}
-function recordCopy(xs) {
-    return mapCopy(xs);
-}
-function mapCopy(xs) {
-    var res = {};
-    for (var s in xs)
-        res[s] = xs[s];
-    return res;
-}
-function mapUnion(xs, ys) {
-    var res = mapCopy(ys);
-    for (var s in xs)
-        res[s] = xs[s];
-    return res;
 }
 function concatNub(xss) {
     var res = [];

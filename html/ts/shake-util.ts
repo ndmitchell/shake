@@ -148,39 +148,6 @@ function lazy<V>(thunk: () => V): () => V {
     };
 }
 
-function mapEq<V>(xs: MapString<V>, ys: MapString<V>) : boolean
-{
-    function f(a: MapString<V>, b: MapString<V>)
-    {
-        for (const s in a)
-        {
-            if (a[s] !== b[s]) return false;
-        }
-        return true;
-    }
-    return f(xs,ys) && f(ys,xs);
-}
-
-function recordCopy<T extends {}>(xs: T): T {
-    return <T>mapCopy(<MapString<any>>xs);
-}
-
-function mapCopy<V>(xs: MapString<V>): MapString<V>
-{
-    const res: MapString<any> = {};
-    for (var s in xs)
-        res[s] = xs[s];
-    return res;
-}
-
-function mapUnion<V>(xs: MapString<V>, ys: MapString<V>): MapString<V>
-{
-    const res = mapCopy(ys);
-    for (const s in xs)
-        res[s] = xs[s];
-    return res;
-}
-
 function concatNub<T extends key>(xss : T[][]) : T[]
 {
     const res : T[] = [];

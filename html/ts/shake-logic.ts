@@ -282,7 +282,7 @@ function commandFilter(last: boolean, dat: Prepare, query: string): MapString<{ 
         queryVal = dat.original[queryKey];
         if (last && queryVal.built !== 0) continue;
 
-        var val = recordCopy(queryVal);
+        var val = {...queryVal};
         var ts = queryVal.traces || [];
         queryVal = val;
         queryName = queryVal.name;
