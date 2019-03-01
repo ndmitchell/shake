@@ -21,9 +21,6 @@ import Foreign
 import System.IO.Error
 import System.Directory
 import Data.Time
-#if __GLASGOW_HASKELL__ < 706
-import System.Time
-#endif
 
 #elif defined(mingw32_HOST_OS)
 import Development.Shake.Internal.Errors
@@ -103,12 +100,8 @@ getFileInfo x = handleBool isDoesNotExistError (const $ return Nothing) $ do
     size <- withFile file ReadMode hFileSize
     result (extractFileTime time) (fromIntegral size)
 
--- deal with difference in return type of getModificationTime between directory versions
-class ExtractFileTime a where extractFileTime :: a -> Word32
-#if __GLASGOW_HASKELL__ < 706
-instance ExtractFileTime ClockTime where extractFileTime (TOD t _) = fromIntegral t
-#endif
-instance ExtractFileTime UTCTime where extractFileTime = floor . fromRational . toRational . utctDayTime
+extractFileTime :: UTCTime -> Word32
+extractFileTime = floor . fromRational . toRational . utctDayTime
 
 
 #elif defined(mingw32_HOST_OS)

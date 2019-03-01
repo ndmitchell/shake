@@ -1,11 +1,5 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
-
-#if __GLASGOW_HASKELL__ < 710
--- Older versions of GHC require this pragma, newer versions complain it is deprecated
-{-# LANGUAGE OverlappingInstances #-}
-#endif
 
 
 -- | This module provides functions for calling command line programs, primarily
@@ -429,15 +423,9 @@ instance CmdString BS.ByteString where cmdString = (BS BS.empty, \(BS x) -> x)
 instance CmdString LBS.ByteString where cmdString = (LBS LBS.empty, \(LBS x) -> x)
 
 
-#if __GLASGOW_HASKELL__ >= 710
 class Unit a
 instance {-# OVERLAPPING #-} Unit b => Unit (a -> b)
 instance {-# OVERLAPPABLE #-} a ~ () => Unit (m a)
-#else
-class Unit a
-instance Unit b => Unit (a -> b)
-instance a ~ () => Unit (m a)
-#endif
 
 
 -- | A class for specifying what results you want to collect from a process.

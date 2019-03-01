@@ -1,12 +1,3 @@
-{-# LANGUAGE CPP #-}
-
-#ifndef MIN_VERSION_filepath
-#if __GLASGOW_HASKELL__ >= 709
-#define MIN_VERSION_filepath(a,b,c) 1
-#else
-#define MIN_VERSION_filepath(a,b,c) 0
-#endif
-#endif
 
 -- | A module for 'FilePath' operations exposing "System.FilePath" plus some additional operations.
 --
@@ -17,9 +8,6 @@ module Development.Shake.FilePath(
     module System.FilePath, module System.FilePath.Posix,
     dropDirectory1, takeDirectory1, replaceDirectory1,
     normaliseEx,
-#if !MIN_VERSION_filepath(1,4,0)
-    (-<.>),
-#endif
     toNative, toStandard,
     exe
     ) where
@@ -30,25 +18,11 @@ import qualified System.FilePath as Native
 import System.FilePath hiding
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
     ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
-#if MIN_VERSION_filepath(1,4,0)
-    ,(-<.>)
-#endif
     )
 import System.FilePath.Posix
     (splitExtension, takeExtension, replaceExtension, dropExtension, addExtension
     ,hasExtension, (<.>), splitExtensions, takeExtensions, dropExtensions
-#if MIN_VERSION_filepath(1,4,0)
-    ,(-<.>)
-#endif
     )
-
-#if !MIN_VERSION_filepath(1,4,0)
-infixr 7  -<.>
-
--- | Remove the current extension and add another, an alias for 'replaceExtension'.
-(-<.>) :: FilePath -> String -> FilePath
-(-<.>) = replaceExtension
-#endif
 
 
 -- | Drop the first directory from a 'FilePath'. Should only be used on
