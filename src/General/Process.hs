@@ -21,7 +21,6 @@ import System.Process
 import System.Time.Extra
 import Data.Unique
 import Data.IORef
-import qualified Data.ByteString.Internal as BS(createAndTrim)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import General.Extra
@@ -171,7 +170,7 @@ process po = do
                             DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
                             DestBytes x -> addBuffer x
                         forkWait $ whileM $ do
-                            src <- bsHGetSome h 4096
+                            src <- BS.hGetSome h 4096
                             mapM_ ($ src) dest
                             notM $ hIsEOF h
                      else if isTied then do
@@ -209,11 +208,6 @@ process po = do
 
 ---------------------------------------------------------------------
 -- COMPATIBILITY
-
--- available in bytestring-0.9.1.10, GHC 7.8 and above
--- implementation copied below
-bsHGetSome :: Handle -> Int -> IO BS.ByteString
-bsHGetSome h i = BS.createAndTrim i $ \p -> hGetBufSome h p i
 
 -- available in process-1.4.3.0, GHC ??? (Nov 2015)
 -- logic copied directly (apart from Ctrl-C handling magic using internal pieces)
