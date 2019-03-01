@@ -9,12 +9,9 @@ import Development.Shake.Util
 import Test.Self(cabalBuildDepends)
 import Test.Type
 
-import Control.Applicative
-import Control.Monad.Extra
 import Data.List.Extra
 import System.Info
 import Data.Version.Extra
-import Prelude
 
 
 newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)

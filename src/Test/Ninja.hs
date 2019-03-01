@@ -4,18 +4,16 @@ module Test.Ninja(main) where
 import Development.Shake
 import qualified Development.Shake.Config as Config
 import System.Directory(copyFile, removeFile)
-import Control.Applicative
 import Control.Monad
 import General.GetOpt
 import General.Extra
 import Test.Type
 import qualified Data.HashMap.Strict as Map
 import Data.List
-import Data.Maybe
 import System.IO.Extra
 import qualified Run
 import System.Environment
-import Prelude
+
 
 opts = Option "" ["arg"] (ReqArg Right "") ""
 

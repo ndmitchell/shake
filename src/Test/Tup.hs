@@ -6,9 +6,7 @@ import Development.Shake.Config
 import Development.Shake.FilePath
 import Development.Shake.Util
 import Test.Type
-import Control.Applicative
 import Data.Maybe
-import Prelude
 
 
 main = testBuild defaultTest $ do

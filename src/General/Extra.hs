@@ -43,17 +43,14 @@ import Numeric.Extra
 import Foreign.Storable
 import Control.Concurrent.Extra
 import Data.Maybe
-import Data.Functor
 import Data.Hashable
 import Data.Primitive.Array
-import Control.Applicative
 import Control.Monad
 import Control.Monad.ST
 import GHC.Conc(getNumProcessors)
 #if __GLASGOW_HASKELL__ >= 800
 import GHC.Stack
 #endif
-import Prelude
 
 
 ---------------------------------------------------------------------

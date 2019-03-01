@@ -27,10 +27,8 @@ import General.Template
 import General.EscCodes
 import General.Extra
 import Development.Shake.Internal.Paths
-import Data.Monoid
 import System.Time.Extra
 import qualified General.Ids as Ids
-import Prelude
 
 
 #ifdef mingw32_HOST_OS

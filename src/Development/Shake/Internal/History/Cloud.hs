@@ -16,17 +16,12 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Class
 import General.Fence
-import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Typeable
 import Data.Either.Extra
 import General.Binary
 import General.Extra
 import General.Wait
-import Data.Maybe
-import Data.Monoid
-import Control.Applicative
-import Prelude
 
 
 type Initial = Map.HashMap Key (Ver, [Key], Bloom [BS_Identity])

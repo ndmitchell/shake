@@ -14,7 +14,6 @@ module Development.Shake.Internal.Core.Run(
     ) where
 
 import Control.Exception
-import Control.Applicative
 import Data.Tuple.Extra
 import Control.Concurrent.Extra hiding (withNumCapabilities)
 import Control.Monad.IO.Class
@@ -28,19 +27,15 @@ import qualified General.TypeMap as TMap
 import General.Wait
 import Control.Monad.Extra
 import Data.Typeable
-import Data.Function
-import Data.Either.Extra
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Dynamic
 import Data.Maybe
 import Data.IORef
 import System.Directory
-import System.IO.Extra
 import System.Time.Extra
 import qualified Data.ByteString as BS
 
-import Development.Shake.Classes
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Rules
@@ -56,6 +51,7 @@ import General.Extra
 import General.Cleanup
 import Data.Monoid
 import Prelude
+
 
 ---------------------------------------------------------------------
 -- MAKE

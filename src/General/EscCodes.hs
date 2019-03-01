@@ -16,8 +16,6 @@ import Data.Char
 import System.IO
 import System.Environment
 import System.IO.Unsafe
-import Data.Functor
-import Prelude
 
 #ifdef mingw32_HOST_OS
 import Data.Word

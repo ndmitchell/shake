@@ -11,7 +11,6 @@ module Development.Shake.Internal.Rules.File(
     FileQ(..), FileA(..), fileStoredValue, fileEqualValue, EqualCost(..), fileForward
     ) where
 
-import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Typeable

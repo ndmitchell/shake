@@ -10,13 +10,11 @@ import Development.Shake.Internal.Rules.File
 import qualified Data.ByteString.Char8 as BS
 import qualified General.Makefile as BS
 import Data.Tuple.Extra
-import Control.Applicative
 import Data.List
 import General.GetOpt
 import Data.IORef
 import Data.Maybe
 import Control.Monad.Extra
-import Prelude
 import System.IO.Extra as IO
 
 

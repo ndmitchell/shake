@@ -22,7 +22,6 @@ module Development.Shake.Internal.Core.Action(
     ) where
 
 import Control.Exception
-import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Control.DeepSeq
@@ -30,14 +29,11 @@ import Data.Typeable
 import System.Directory
 import System.FilePattern
 import System.FilePattern.Directory
-import Data.Function
 import Control.Concurrent.Extra
 import Data.Maybe
 import Data.Tuple.Extra
 import Data.IORef.Extra
 import Data.List.Extra
-import Data.Either.Extra
-import System.IO.Extra
 import Numeric.Extra
 import General.Extra
 import qualified Data.HashMap.Strict as Map
@@ -58,7 +54,6 @@ import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
 import General.Cleanup
 import General.Fence
-import Prelude
 
 
 ---------------------------------------------------------------------

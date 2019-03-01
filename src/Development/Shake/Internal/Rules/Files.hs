@@ -9,7 +9,6 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Maybe
 import Data.List.Extra
-import Control.Applicative
 import Data.Typeable
 import General.Binary
 

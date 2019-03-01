@@ -37,7 +37,6 @@ import System.Random
 import General.GetOpt
 import System.IO.Extra as IO
 import System.Time.Extra
-import Prelude
 
 
 testBuildArgs

@@ -22,7 +22,6 @@ import Development.Shake.Internal.FileInfo
 import General.Wait
 import Development.Shake.Internal.FileName
 import Data.Monoid
-import Data.Functor
 import Control.Monad.IO.Class
 import Data.Maybe
 import qualified Data.ByteString as BS

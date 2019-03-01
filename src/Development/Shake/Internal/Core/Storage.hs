@@ -39,7 +39,6 @@ import qualified Data.HashMap.Strict as Map
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString as BS8
-import Data.Functor
 import Prelude
 
 

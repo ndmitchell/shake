@@ -6,11 +6,8 @@ import System.FilePath
 import Test.Type
 import System.Directory as IO
 import Data.List
-import Data.Maybe
 import Control.Monad
 import General.Extra
-import Data.Functor
-import Prelude
 
 
 main = testBuild test $ do

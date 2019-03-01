@@ -7,13 +7,11 @@ import Development.Shake.Classes
 import Development.Shake.FilePath
 import Test.Type
 
-import Control.Applicative
 import Control.Monad.Extra
 import Data.Char
 import Data.List.Extra
 import System.Info
 import Data.Version.Extra
-import Prelude
 
 
 newtype GhcPkg = GhcPkg () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)

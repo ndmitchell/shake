@@ -14,8 +14,6 @@ import Data.IORef.Extra
 import Data.List.Extra
 import Data.Primitive.Array
 import GHC.Exts(RealWorld)
-import Control.Applicative
-import Prelude
 
 #if __GLASGOW_HASKELL__ >= 800
 import Control.Monad.Fail

@@ -17,9 +17,7 @@ import System.Info.Extra
 import System.IO.Unsafe
 import System.Environment
 import General.Extra
-import Data.Functor
 import qualified Data.ByteString.Lazy as LBS
-import Prelude
 
 
 shakeVersionString :: String

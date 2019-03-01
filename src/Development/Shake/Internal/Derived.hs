@@ -13,7 +13,6 @@ module Development.Shake.Internal.Derived(
     newCache
     ) where
 
-import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
@@ -35,7 +34,6 @@ import Data.List.Extra
 import Data.Hashable
 import Data.Typeable
 import Data.Dynamic
-import Prelude
 
 
 -- | Get a checksum of a list of files, suitable for using as `shakeVersion`.

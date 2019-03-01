@@ -5,8 +5,7 @@ module General.ListBuilder(
     ) where
 
 import Data.Semigroup (Semigroup (..))
-import Data.Monoid hiding ((<>))
-import Prelude(Functor)
+
 
 data ListBuilder a
     = Zero

@@ -27,15 +27,12 @@ import General.Binary
 import General.Extra
 import Data.Typeable
 import Data.Data
-import Data.Function
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import qualified General.TypeMap as TMap
 import Data.Maybe
 import Data.IORef.Extra
-import System.IO.Extra
 import Data.Semigroup (Semigroup (..))
-import Data.Monoid hiding ((<>))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary.Builder as Bin
 import Data.Binary.Put
@@ -51,7 +48,6 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
-import Prelude
 
 
 ---------------------------------------------------------------------

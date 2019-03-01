@@ -5,7 +5,6 @@ module Test.Random(main) where
 import Development.Shake
 import Numeric.Extra
 import Test.Type
-import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
 import Data.List
@@ -17,7 +16,6 @@ import System.Random
 import General.Extra
 import qualified System.IO.Extra as IO
 import System.Time.Extra
-import Prelude
 
 
 inputRange = [1..10]

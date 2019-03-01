@@ -11,7 +11,6 @@ import Data.Hashable
 import Data.Semigroup
 import Foreign.Storable
 import Foreign.Ptr
-import Control.Applicative
 import Prelude
 
 

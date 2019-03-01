@@ -15,8 +15,6 @@ import System.Time.Extra
 import Data.Either.Extra
 import Control.Monad.IO.Class
 import General.Fence
-import Data.Functor
-import Prelude
 
 
 priority x = if isLeft x then PoolException else PoolResume

@@ -24,7 +24,6 @@ import General.Extra
 import qualified General.Intern as Intern
 import General.Intern(Id)
 
-import Control.Applicative
 import Control.Exception
 import Control.Monad.Extra
 import Numeric.Extra
@@ -35,10 +34,8 @@ import Data.Typeable
 import Data.IORef.Extra
 import Data.Maybe
 import Data.List.Extra
-import Data.Tuple.Extra
 import Data.Either.Extra
 import System.Time.Extra
-import Prelude
 
 
 ---------------------------------------------------------------------

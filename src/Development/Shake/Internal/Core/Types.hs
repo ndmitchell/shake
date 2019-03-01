@@ -15,15 +15,12 @@ module Development.Shake.Internal.Core.Types(
     ) where
 
 import Control.Monad.IO.Class
-import Control.Applicative
 import Control.DeepSeq
 import Foreign.Storable
 import Data.Word
 import Data.Typeable
 import General.Binary
 import Control.Exception
-import Data.Maybe
-import Data.List.Extra
 import General.Extra
 import Control.Concurrent.Extra
 import Development.Shake.Internal.History.Shared

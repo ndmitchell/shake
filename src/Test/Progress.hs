@@ -5,8 +5,6 @@ import Development.Shake.Internal.Options
 import Test.Type
 import System.Directory.Extra
 import System.FilePath
-import Data.Monoid
-import Prelude
 
 
 main = testBuild test $ return ()

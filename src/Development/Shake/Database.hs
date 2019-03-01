@@ -29,7 +29,6 @@ import Control.Concurrent.Extra
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.Functor
 import Data.IORef
 import General.Cleanup
 import Development.Shake.Internal.Errors
@@ -38,7 +37,7 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
-import Prelude
+
 
 data UseState
     = Closed

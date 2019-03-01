@@ -57,8 +57,6 @@ import Data.Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as Map
-import Data.Functor
-import Prelude
 
 
 {-# NOINLINE forwards #-}

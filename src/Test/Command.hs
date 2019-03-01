@@ -2,7 +2,6 @@
 
 module Test.Command(main) where
 
-import Control.Applicative
 import Development.Shake
 import Development.Shake.FilePath
 import Control.Exception.Extra
@@ -18,7 +17,6 @@ import Control.Monad.IO.Class
 import System.Info.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import Prelude
 
 
 main = testBuild test $ do

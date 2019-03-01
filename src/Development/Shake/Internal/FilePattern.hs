@@ -18,13 +18,10 @@ module Development.Shake.Internal.FilePattern(
 import Development.Shake.Internal.Errors
 import System.FilePath(isPathSeparator)
 import Data.List.Extra
-import Control.Applicative
 import Control.Monad
 import Data.Char
-import Data.Tuple.Extra
 import Data.Maybe
 import System.Info.Extra
-import Prelude
 
 
 -- | A type synonym for file patterns, containing @\/\/@ and @*@. For the syntax

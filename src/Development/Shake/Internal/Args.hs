@@ -27,14 +27,12 @@ import Data.Tuple.Extra
 import Control.Exception.Extra
 import Control.Monad
 import Data.Either
-import Data.Functor
 import Data.List
 import Data.Maybe
 import System.Directory.Extra
 import System.Environment
 import System.Exit
 import System.Time.Extra
-import Prelude
 
 
 -- | Main entry point for running Shake build systems. For an example see the top of the module "Development.Shake".

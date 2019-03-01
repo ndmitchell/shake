@@ -17,8 +17,6 @@ import Control.Monad
 import Data.Binary
 import General.Binary
 import General.Extra
-import Control.Applicative
-import Prelude
 
 
 -- Use short type names, since the names appear in the Haddock, and are too long if they are in full

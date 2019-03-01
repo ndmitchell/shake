@@ -31,10 +31,8 @@ import qualified Development.Ninja.Parse as Ninja
 import qualified Development.Ninja.Env as Ninja
 import qualified Data.HashMap.Strict as Map
 import qualified Data.ByteString.UTF8 as UTF8
-import Control.Applicative
 import Data.Tuple.Extra
 import Data.List
-import Prelude
 
 
 -- | Read a config file, returning a list of the variables and their bindings.

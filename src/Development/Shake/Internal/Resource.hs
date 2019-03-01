@@ -20,8 +20,6 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Core.Pool
 import Control.Monad.IO.Class
 import System.Time.Extra
-import Data.Monoid
-import Prelude
 
 
 {-# NOINLINE resourceId #-}

@@ -6,9 +6,7 @@ import Development.Shake
 import Test.Type
 import General.GetOpt
 import System.Directory
-import Data.List
-import Control.Monad
-import Prelude
+
 
 data Args = Die deriving (Eq,Enum,Bounded,Show)
 

@@ -5,7 +5,6 @@ module Development.Shake.Internal.Demo(demo) where
 import Development.Shake.Internal.Paths
 import Development.Shake.Command
 
-import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad
 import Data.Char
@@ -18,7 +17,6 @@ import General.Extra
 import Development.Shake.FilePath(exe)
 import System.IO
 import System.Info.Extra
-import Prelude
 
 
 demo :: Bool -> IO ()

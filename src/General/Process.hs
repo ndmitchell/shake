@@ -6,7 +6,6 @@ module General.Process(
     process, ProcessOpts(..), Source(..), Destination(..)
     ) where
 
-import Control.Applicative
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception.Extra as C
@@ -25,7 +24,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import General.Extra
 import Development.Shake.Internal.Errors
-import Prelude
 
 import GHC.IO.Exception (IOErrorType(..), IOException(..))
 

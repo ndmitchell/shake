@@ -1,7 +1,6 @@
 
 module Test(main) where
 
-import Control.Applicative
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.Maybe
@@ -13,7 +12,6 @@ import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Char8 as BS
 import Test.Type(sleepFileTimeCalibrate)
 import Control.Concurrent.Extra
-import Prelude
 
 import qualified Test.Basic
 import qualified Test.Batch

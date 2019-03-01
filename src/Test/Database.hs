@@ -11,8 +11,6 @@ import Development.Shake.FilePath
 import System.Time.Extra
 import System.Directory as IO
 import Test.Type
-import Data.Functor
-import Prelude
 
 
 rules = do
