@@ -5,27 +5,24 @@ import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
 
-main = testBuild test $ do
+main = testBuild defaultTest $ do
+    let src = shakeRoot </> "src/Test/C"
     want ["Main.exe"]
 
     "Main.exe" %> \out -> do
-        cs <- getDirectoryFiles "src" ["*.c"]
+        cs <- getDirectoryFiles src ["*.c"]
         let os = map (<.> "o") cs
         need os
         cmd "gcc -o" [out] os
 
     "*.c.o" %> \out -> do
-        let c = "src" </> takeBaseName out
+        let c = src </> takeBaseName out
         need [c]
         headers <- cIncludes c
-        need $ map ((</>) "src" . takeFileName) headers
+        need $ map ((</>) src . takeFileName) headers
         cmd "gcc -o" [out] "-c" [c]
 
 cIncludes :: FilePath -> Action [FilePath]
 cIncludes x = do
     Stdout stdout <- cmd "gcc" ["-MM",x]
     return $ drop 2 $ words stdout
-
-test build = do
-    copyDirectoryChanged (shakeRoot </> "src/Test/C") "src"
-    defaultTest build
