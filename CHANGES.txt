@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Change the profiling .json format
     #651, remove support for GHC 7.4, 7.6 and 7.8
 0.17.6, released 2019-02-17
     Make --progress on Windows work with non-ASCII characters
