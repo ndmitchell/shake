@@ -17,15 +17,11 @@ import Data.List
 
 
 ---------------------------------------------------------------------
--- Data.ByteString
--- Mostly because ByteString does not have an NFData instance in GHC 7.4
+-- FileName newtype
 
 -- | UTF8 ByteString
 newtype FileName = FileName BS.ByteString
-    deriving (Hashable, Binary, BinaryEx, Eq)
-
-instance NFData FileName where
-    rnf (FileName x) = x `seq` ()
+    deriving (Hashable, Binary, BinaryEx, Eq, NFData)
 
 instance Show FileName where
     show = fileNameToString

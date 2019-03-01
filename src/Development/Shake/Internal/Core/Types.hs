@@ -217,19 +217,15 @@ data Status
 
 instance NFData Status where
     rnf x = case x of
-        Ready x -> rnfResult (\(a,b) -> b `seq` rnf a) x
-        Error x y -> rnfException x `seq` maybe () (rnfResult id) y
-        Loaded x -> rnfResult id x
-        Running _ x -> maybe () (rnfResult id) x -- Can't RNF a waiting, but also unnecessary
+        Ready x -> rnf x
+        Error x y -> rnfException x `seq` rnf y
+        Loaded x -> rnf x
+        Running _ x -> rnf x -- Can't RNF a waiting, but also unnecessary
         Missing -> ()
         where
             -- best we can do for an arbitrary exception
             rnfException = rnf . show
 
-            -- ignore the unpacked fields
-            -- complex because ByteString lacks NFData in GHC 7.4 and below
-            rnfResult by (Result a _ _ b _ c) = by a `seq` rnf b `seq` rnf c `seq` ()
-            {-# INLINE rnfResult #-}
 
 data Result a = Result
     {result :: a -- ^ the result associated with the Key
@@ -239,6 +235,10 @@ data Result a = Result
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Functor)
+
+instance NFData a => NFData (Result a) where
+    -- ignore unpacked fields
+    rnf (Result a _ _ b _ c) = rnf a `seq` rnf b `seq` rnf c
 
 statusType Ready{} = "Ready"
 statusType Error{} = "Error"
