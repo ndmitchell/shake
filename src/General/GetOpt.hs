@@ -24,17 +24,8 @@ getOpt opts args = (flagGood, files, flagBad ++ errs)
           (flagBad, flagGood) = partitionEithers flags
 
 
-fmapArgDescr :: (a -> b) -> ArgDescr a -> ArgDescr b
-fmapArgDescr f (NoArg a) = NoArg $ f a
-fmapArgDescr f (ReqArg a b) = ReqArg (f . a) b
-fmapArgDescr f (OptArg a b) = OptArg (f . a) b
-
--- fmap is only an instance in later GHC 7.8 and above, so fake our own version
-fmapOptDescr :: (a -> b) -> OptDescr a -> OptDescr b
-fmapOptDescr f (Option a b c d) = Option a b (fmapArgDescr f c) d
-
 fmapFmapOptDescr :: (a -> b) -> OptDescr (Either String a) -> OptDescr (Either String b)
-fmapFmapOptDescr f = fmapOptDescr (fmap f)
+fmapFmapOptDescr f = fmap (fmap f)
 
 
 showOptDescr :: [OptDescr a] -> [String]
