@@ -74,7 +74,6 @@ shakenEx reenter options test rules sleeper = do
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let forward = "--forward" `elem` args
     args <- return $ delete "--forward" args
-    cwd <- getCurrentDirectory
     let out = "output/" ++ name ++ "/"
     let change = if not reenter then withCurrentDirectory out else id
     let clean = do
@@ -101,19 +100,20 @@ shakenEx reenter options test rules sleeper = do
             putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
             shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules [] args
 
-        args -> do
+        args -> change $ do
             t <- tracker
             opts <- return shakeOptions{shakeFiles = "."}
+            cwd <- getCurrentDirectory
             opts <- return $ if forward then forwardOptions opts else opts
                 {shakeLint = Just t
-                ,shakeLintInside = [cwd]
+                ,shakeLintInside = [cwd] -- important we ignore Shake source files, since that is relative
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs args $ do
                 let optionsBuiltin = optionsEnumDesc
                         [(Clean, "Clean before building.")
                         ,(Sleep, "Pause before executing.")
                         ,(UsePredicate, "Use &?> in preference to &%>")]
-                change $ shakeArgsOptionsWith opts (optionsBuiltin `mergeOptDescr` options) $ \so extra files -> do
+                shakeArgsOptionsWith opts (optionsBuiltin `mergeOptDescr` options) $ \so extra files -> do
                     let (extra1, extra2) = partitionEithers extra
                     when (Clean `elem` extra1) clean
                     when (Sleep `elem` extra1) sleeper
