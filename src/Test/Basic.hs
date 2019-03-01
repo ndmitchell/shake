@@ -59,6 +59,10 @@ main = testBuild test $ do
     phony ("slash" </> "platform") $ return ()
     phony "slash/forward" $ return ()
 
+    phony "options" $ do
+        opts <- getShakeOptions
+        putNormal $ show opts
+
     "dummer.txt" %> \out -> do
         need ["dummy","dummy"]
         need ["dummy"]
@@ -122,6 +126,7 @@ test build = do
     assertContents "twice.txt" "zzz"
 
     show shakeOptions === show shakeOptions
+    build ["options"]
 
     createDirectoryRecursive "dir"
     writeFile "dir/ae.txt" ""
