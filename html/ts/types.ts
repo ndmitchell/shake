@@ -8,7 +8,7 @@ declare const version: string;
 
 declare const profileRaw: ProfileRaw[];
 
-declare type timestamp = int
+type timestamp = int;
 
 interface Trace {
     command: string;
@@ -26,24 +26,25 @@ interface Profile {
 }
 
 type TraceRaw =
-    [string
-    ,seconds
-    ,seconds
-    ]
+    [ string
+    , seconds
+    , seconds
+    ];
 
 type ProfileRaw =
-    [string
-    ,seconds
-    ,timestamp
-    ,timestamp
-    ,int[] // Optional
-    ,TraceRaw[] // Optional
-    ]
+    [ string
+    , seconds
+    , timestamp
+    , timestamp
+    , int[] // Optional
+    , TraceRaw[] // Optional
+    ];
+
 
 /////////////////////////////////////////////////////////////////////
 // PROGRESS DATA
 
-declare const progress: { name: String, values: Progress[] }[];
+declare const progress: Array<{name: string, values: Progress[]}>;
 
 interface Progress {
     idealSecs: number;
