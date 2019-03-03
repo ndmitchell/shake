@@ -12,29 +12,25 @@ function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
     let maxTraceName: string = ""; // longest trace command
     let maxTraceStopLast: seconds = 0; // time the last traced command stopped
 
-    const s = search.get();
-    for (const k in s) {
-        for (const i of s[k]) {
-            const e = profile[i];
-            const isLast = e.built === 0;
-            count++;
-            countLast += isLast ? 1 : 0;
-            sumExecution += e.execution;
-            maxExecution = Math.max(maxExecution, e.execution);
-            if (maxExecution === e.execution) maxExecutionName = e.name;
-            highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
-            for (const t of e.traces || []) {
-                const time = t.stop - t.start;
-                countTrace += 1;
-                countTraceLast += isLast ? 1 : 0;
-                sumTrace += time;
-                sumTraceLast += isLast ? time : 0;
-                maxTrace = Math.max(maxTrace, time);
-                if (maxTrace === time) maxTraceName = t.command;
-                maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? t.stop : 0);
-            }
+    search.get().forEachProfile(e => {
+        const isLast = e.built === 0;
+        count++;
+        countLast += isLast ? 1 : 0;
+        sumExecution += e.execution;
+        maxExecution = Math.max(maxExecution, e.execution);
+        if (maxExecution === e.execution) maxExecutionName = e.name;
+        highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
+        for (const t of e.traces || []) {
+            const time = t.stop - t.start;
+            countTrace += 1;
+            countTraceLast += isLast ? 1 : 0;
+            sumTrace += time;
+            sumTraceLast += isLast ? time : 0;
+            maxTrace = Math.max(maxTrace, time);
+            if (maxTrace === time) maxTraceName = t.command;
+            maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? t.stop : 0);
         }
-    }
+    });
     const lines =
         [ "This database has tracked " + (highestRun + 1) + " run" + plural(highestRun + 1) + "."
         , "There are " + count + " rules (" + countLast + " rebuilt in the last run)."

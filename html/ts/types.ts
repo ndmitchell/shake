@@ -69,10 +69,3 @@ class Prop<A> {
         this.callback = val => { old(val); next(val); };
     }
 }
-
-/////////////////////////////////////////////////////////////////////
-// PROFILE Searching
-
-// A mapping from names (rule names or those matched from rule parts)
-// to the indicies in profiles.
-type Search = MapString<int[]>;

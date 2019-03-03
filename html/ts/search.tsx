@@ -1,4 +1,28 @@
 
+// A mapping from names (rule names or those matched from rule parts)
+// to the indicies in profiles.
+class Search {
+    public profile: Profile[];
+    public mapping: MapString<int[]>;
+    constructor(profile: Profile[], mapping?: MapString<int[]>) {
+        this.profile = profile;
+        if (mapping !== undefined)
+            this.mapping = mapping;
+        else {
+            this.mapping = {};
+            for (let i = 0; i < profile.length; i++)
+                this.mapping[profile[i].name] = [i];
+        }
+    }
+    public forEachProfiles(f: (ps: Profile[], group: string) => void): void {
+        for (const s in this.mapping)
+            f(this.mapping[s].map(i => profile[i]), s);
+    }
+    public forEachProfile(f: (p: Profile, group: string) => void): void {
+        this.forEachProfiles((ps, group) => ps.forEach(p => f(p, group)));
+    }
+}
+
 
 function createSearch(profile: Profile[]): [HTMLElement, Prop<Search>] {
     const search = {};
@@ -18,14 +42,7 @@ function createSearch(profile: Profile[]): [HTMLElement, Prop<Search>] {
                 <td>{caption}</td>
             </tr>
         </table>);
-    return [body, new Prop(search)];
-}
-
-function fullSearch(): Search {
-    const res = {};
-    for (const i in profile)
-        res[profile[i].name] = [i];
-    return res;
+    return [body, new Prop(new Search(profile))];
 }
 
 function ruleFilter(dat: Prepare, query: string): MapString<Result> {

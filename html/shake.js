@@ -50,6 +50,28 @@ function createTabs(xs) {
         React.createElement("div", { style: "background-color:white;padding-top:5px;" },
             React.createElement("div", null, body)));
 }
+// A mapping from names (rule names or those matched from rule parts)
+// to the indicies in profiles.
+var Search = /** @class */ (function () {
+    function Search(profile, mapping) {
+        this.profile = profile;
+        if (mapping !== undefined)
+            this.mapping = mapping;
+        else {
+            this.mapping = {};
+            for (var i = 0; i < profile.length; i++)
+                this.mapping[profile[i].name] = [i];
+        }
+    }
+    Search.prototype.forEachProfiles = function (f) {
+        for (var s in this.mapping)
+            f(this.mapping[s].map(function (i) { return profile[i]; }), s);
+    };
+    Search.prototype.forEachProfile = function (f) {
+        this.forEachProfiles(function (ps, group) { return ps.forEach(function (p) { return f(p, group); }); });
+    };
+    return Search;
+}());
 function createSearch(profile) {
     var search = {};
     for (var i = 0; i < profile.length; i++)
@@ -74,13 +96,7 @@ function createSearch(profile) {
                 dropdown)),
         React.createElement("tr", null,
             React.createElement("td", null, caption))));
-    return [body, new Prop(search)];
-}
-function fullSearch() {
-    var res = {};
-    for (var i in profile)
-        res[profile[i].name] = [i];
-    return res;
+    return [body, new Prop(new Search(profile))];
 }
 function ruleFilter(dat, query) {
     queryData = dat;
@@ -1125,6 +1141,67 @@ var Prop = /** @class */ (function () {
     };
     return Prop;
 }());
+/*
+function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
+    const xs = plotData(profile, search.get(), 100);
+    const ys: (dataSeries & { avg: number })[] = [];
+    for (const s in xs) {
+        var x = xs[s].items;
+        var data: [number, number][] = [];
+        for (var j = 0; j < x.length; j++)
+            data.push([j, x[j]]);
+        ys.push({ label: s, / * values:x, * / data: data, color: xs[s].back, avg: sum(x) / x.length });
+    }
+    if (ys.length === 0) {
+        $("#output").html("No data found, " +
+            (prepared.summary.countTraceLast === 0
+                ? "there were no traced commands in the last run."
+                : "perhaps your filter is too restrictive?"));
+    }
+    else {
+        ys.sort(function (a, b) { return a.avg - b.avg; });
+        showPlot(ys, {
+            legend: { show: true, position: "nw", sorted: "reverse" },
+            series: { stack: true, lines: { lineWidth: 0, fill: 1 } },
+            yaxis: { min: 0 },
+            xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
+        });
+    }
+}
+
+
+function plotData(profile: Profile, search: Search, buckets: int): MapString<{ items: number[], back: color }>
+{
+    // first find the end point
+    search.
+
+    var end = dat.summary.maxTraceStopLast;
+    var res = commandFilter(true, dat, query);
+    var ans: MapString<{ items: number[], back: color }> = {};
+    for (var s in res) {
+        var ts = res[s].items;
+        var xs : number[] = [];
+        for (var i = 0; i <= buckets; i++)
+            xs.push(0); // fill with 1 more element, but the last bucket will always be 0
+
+        for (const t of ts) {
+            var start = t.start * buckets / end;
+            var stop = t.stop * buckets / end;
+
+            if (Math.floor(start) === Math.floor(stop))
+                xs[Math.floor(start)] += stop - start;
+            else {
+                for (var j = Math.ceil(start); j < Math.floor(stop); j++)
+                    xs[j]++;
+                xs[Math.floor(start)] += Math.ceil(start) - start;
+                xs[Math.floor(stop)] += stop - Math.floor(stop);
+            }
+        }
+        ans[s] = { items: xs.slice(0, buckets), back: res[s].back || null };
+    }
+    return ans;
+}
+*/
 function reportSummary(profile, search) {
     var count = 0; // number of rules run
     var countLast = 0; // number of rules run in the last run
@@ -1139,33 +1216,28 @@ function reportSummary(profile, search) {
     var maxTrace = 0; // longest traced command
     var maxTraceName = ""; // longest trace command
     var maxTraceStopLast = 0; // time the last traced command stopped
-    var s = search.get();
-    for (var k in s) {
-        for (var _i = 0, _a = s[k]; _i < _a.length; _i++) {
-            var i = _a[_i];
-            var e = profile[i];
-            var isLast = e.built === 0;
-            count++;
-            countLast += isLast ? 1 : 0;
-            sumExecution += e.execution;
-            maxExecution = Math.max(maxExecution, e.execution);
-            if (maxExecution === e.execution)
-                maxExecutionName = e.name;
-            highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
-            for (var _b = 0, _c = e.traces || []; _b < _c.length; _b++) {
-                var t_5 = _c[_b];
-                var time = t_5.stop - t_5.start;
-                countTrace += 1;
-                countTraceLast += isLast ? 1 : 0;
-                sumTrace += time;
-                sumTraceLast += isLast ? time : 0;
-                maxTrace = Math.max(maxTrace, time);
-                if (maxTrace === time)
-                    maxTraceName = t_5.command;
-                maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? t_5.stop : 0);
-            }
+    search.get().forEachProfile(function (e) {
+        var isLast = e.built === 0;
+        count++;
+        countLast += isLast ? 1 : 0;
+        sumExecution += e.execution;
+        maxExecution = Math.max(maxExecution, e.execution);
+        if (maxExecution === e.execution)
+            maxExecutionName = e.name;
+        highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
+        for (var _i = 0, _a = e.traces || []; _i < _a.length; _i++) {
+            var t_5 = _a[_i];
+            var time = t_5.stop - t_5.start;
+            countTrace += 1;
+            countTraceLast += isLast ? 1 : 0;
+            sumTrace += time;
+            sumTraceLast += isLast ? time : 0;
+            maxTrace = Math.max(maxTrace, time);
+            if (maxTrace === time)
+                maxTraceName = t_5.command;
+            maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? t_5.stop : 0);
         }
-    }
+    });
     var lines = ["This database has tracked " + (highestRun + 1) + " run" + plural(highestRun + 1) + ".",
         "There are " + count + " rules (" + countLast + " rebuilt in the last run).",
         "Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).",
