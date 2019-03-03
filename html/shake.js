@@ -69,8 +69,8 @@ function createTabs(xs) {
                         React.createElement("td", { width: "20", class: "bottom" }, "\u00A0"),
                         React.createElement("td", { style: "padding:0px;" }, lbls),
                         React.createElement("td", { width: "100%", class: "bottom" }, "\u00A0"))))),
-        React.createElement("tr", { height: "100%", style: "background-color:white;padding-top:5px;" },
-            React.createElement("td", null,
+        React.createElement("tr", { height: "100%" },
+            React.createElement("td", { style: "background-color:white;padding-top:10px;" },
                 React.createElement("div", { style: "padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;" }, body))));
 }
 // A mapping from names (rule names or those matched from rule parts)

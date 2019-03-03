@@ -41,8 +41,8 @@ function createTabs(xs: Array<[string, () => HTMLElement]>): HTMLElement {
                 <td width="100%" class="bottom">&nbsp;</td>
             </tr></table>
         </td></tr>
-        <tr height="100%" style="background-color:white;padding-top:5px;">
-            <td>
+        <tr height="100%">
+            <td style="background-color:white;padding-top:10px;">
                 <div style="padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;">{body}</div>
             </td>
         </tr>
