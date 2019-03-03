@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8" />
+<title>Shake report</title>
+
+<!-- Profiling output -->
+<script src="data/profile-data.js"></script>
+<script src="data/metadata.js"></script>
+<!-- Libraries -->
+<script src="lib/jquery.js"></script>
+<script src="lib/jquery.flot.js"></script>
+<script src="lib/jquery.flot.stack.js"></script>
+<script src="viz.js"></script>
+<!-- Functions for creating info from Shake builds -->
+<script src="shake.js"></script>
+<script language="javascript">
+function name(a, b) { return named(a, b); }
+initProfile();
+</script>
+
+<style type="text/css">
+body {font-family: sans-serif; font-size: 10pt; background-color: #e8e8e8;}
+.data {font-size: 9pt; border-spacing: 0px; border-collapse: collapse;}
+.data td {padding-left: 7px; padding-right: 7px;}
+.header {font-weight: bold; background-color: #eee !important;}
+.header td:hover {background-color: #ccc !important;}
+.header td {border: 1px solid #ccc; cursor: pointer;}
+.data tr:hover {background-color: #ddd !important; color: black !important;}
+* {box-sizing: border-box;}
+html, body, .fill {height: 100%; width:100%;}
+table.fill {border-spacing: 0px;}
+input:focus {border-color: rgb(77, 144, 254) !important; outline-width: 0px !important;}
+
+.tabstrip a {
+    border-radius: 4px 4px 0px 0px;
+    border: 1px solid gray;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+ }
+.tabstrip .bottom {
+    padding: 4px 8px;
+    border-bottom: 1px solid gray;
+}
+.tabstrip .active {
+    border-top: 4px solid orange;
+    border-bottom: 3px solid white;
+    background-color: white;
+}
+</style>
+
+</head>
+<body style="margin:0px;padding:0px;" onload="profileLoaded()">
+    Loading...
+</body>
+</html>

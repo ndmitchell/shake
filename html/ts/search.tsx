@@ -30,13 +30,21 @@ function createSearch(profile: Profile[]): [HTMLElement, Prop<Search>] {
         search[profile[i].name] = [i];
     const caption = <div>Found {profile.length} entries, not filtered or grouped.</div>;
     const dropdown = <div style="border:1px solid gray;display:none;position:absolute;">Add stuff to the inner here<br/>And more stuff</div>;
-    const show_inner = () => $(dropdown).toggle();
+    const arrow_down = <span style="vertical-align:middle;font-size:80%;">&#9660;</span>;
+    const arrow_up   = <span style="vertical-align:middle;font-size:80%;display:none;">&#9650;</span>;
+    const show_inner = () => { $(dropdown).toggle(); $(arrow_up).toggle(); $(arrow_down).toggle(); };
     const body =
-        (<table style="width:100%;">
+        (<table width="100%" style="padding-bottom: 17px;">
             <tr>
                 <td width="100%"><input id="search" type="text" value="" placeholder="Filter and group"
-                    style="width: 100%; font-size: 16px; border-radius: 8px; padding: 5px; border-width: 2px; border-color: #999;" /></td>
-                <td><button style="white-space:nowrap;padding-top:5px;padding-bottom:5px;" onclick={show_inner}><b>+</b> Filter and Group &#9660;</button>{dropdown}</td>
+                    style="width: 100%; font-size: 16px; border-radius: 8px; padding: 5px 10px; border: 2px solid #999;" />
+                </td>
+                <td style="padding-left:6px;padding-right: 6px;">
+                    <button style="white-space:nowrap;padding-top:5px;padding-bottom:5px;" onclick={show_inner}>
+                        <b style="font-size:150%;vertical-align:middle;">+</b>&nbsp; Filter and Group &nbsp;
+                        {arrow_down}{arrow_up}
+                    </button>{dropdown}
+                </td>
             </tr>
             <tr>
                 <td>{caption}</td>

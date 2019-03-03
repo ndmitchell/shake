@@ -2,6 +2,7 @@
 
 // The version of Shake
 declare const version: string;
+declare const generated: string;
 
 /////////////////////////////////////////////////////////////////////
 // PROFILE DATA

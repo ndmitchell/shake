@@ -27,13 +27,29 @@ function unrawProfile(x) {
         traces: x.length > 5 ? x[5].map(unrawTrace) : []
     };
 }
+function profileLoaded() {
+    $(document.body).empty().append(profileRoot());
+}
 function profileRoot() {
     var _a = createSearch(profile), s = _a[0], search = _a[1];
-    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }], ["Commands over time", function () { return reportCmdPlot(profile, search); }]]);
-    return React.createElement("div", { style: "background-color:#e8e8e8;" },
-        s,
-        React.createElement("br", null),
-        t);
+    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }],
+        ["Commands over time", function () { return reportCmdPlot(profile, search); }],
+        ["Commands", function () { return reportCmdTable(profile, search); }],
+        ["Rules", function () { return reportRuleTable(profile, search); }]
+    ]);
+    return React.createElement("table", { class: "fill" },
+        React.createElement("tr", null,
+            React.createElement("td", { style: "padding-top: 8px; padding-bottom: 8px;" },
+                React.createElement("a", { href: "https://shakebuild.com/", style: "font-size: 20px; text-decoration: none; color: #3131a7; font-weight: bold;" }, "Shake profile report"),
+                React.createElement("span", { style: "color:gray;white-space:pre;" },
+                    "   - generated at ",
+                    generated,
+                    " by Shake v",
+                    version))),
+        React.createElement("tr", null,
+            React.createElement("td", null, s)),
+        React.createElement("tr", null,
+            React.createElement("td", { height: "100%" }, t)));
 }
 function createTabs(xs) {
     var bodies = xs.map(function (x) { return lazy(x[1]); });
@@ -45,10 +61,17 @@ function createTabs(xs) {
     }; };
     lbls = xs.map(function (x, i) { return React.createElement("a", { onclick: f(i) }, x[0]); });
     f(0)();
-    return React.createElement("div", null,
-        React.createElement("div", { class: "tabstrip" }, lbls),
-        React.createElement("div", { style: "background-color:white;padding-top:5px;" },
-            React.createElement("div", null, body)));
+    return React.createElement("table", { class: "fill" },
+        React.createElement("tr", null,
+            React.createElement("td", null,
+                React.createElement("table", { width: "100%", style: "border-spacing:0px;" },
+                    React.createElement("tr", { class: "tabstrip" },
+                        React.createElement("td", { width: "20", class: "bottom" }, "\u00A0"),
+                        React.createElement("td", { style: "padding:0px;" }, lbls),
+                        React.createElement("td", { width: "100%", class: "bottom" }, "\u00A0"))))),
+        React.createElement("tr", { height: "100%", style: "background-color:white;padding-top:5px;" },
+            React.createElement("td", null,
+                React.createElement("div", { style: "padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;" }, body))));
 }
 // A mapping from names (rule names or those matched from rule parts)
 // to the indicies in profiles.
@@ -84,15 +107,19 @@ function createSearch(profile) {
         "Add stuff to the inner here",
         React.createElement("br", null),
         "And more stuff");
-    var show_inner = function () { return $(dropdown).toggle(); };
-    var body = (React.createElement("table", { style: "width:100%;" },
+    var arrow_down = React.createElement("span", { style: "vertical-align:middle;font-size:80%;" }, "\u25BC");
+    var arrow_up = React.createElement("span", { style: "vertical-align:middle;font-size:80%;display:none;" }, "\u25B2");
+    var show_inner = function () { $(dropdown).toggle(); $(arrow_up).toggle(); $(arrow_down).toggle(); };
+    var body = (React.createElement("table", { width: "100%", style: "padding-bottom: 17px;" },
         React.createElement("tr", null,
             React.createElement("td", { width: "100%" },
-                React.createElement("input", { id: "search", type: "text", value: "", placeholder: "Filter and group", style: "width: 100%; font-size: 16px; border-radius: 8px; padding: 5px; border-width: 2px; border-color: #999;" })),
-            React.createElement("td", null,
+                React.createElement("input", { id: "search", type: "text", value: "", placeholder: "Filter and group", style: "width: 100%; font-size: 16px; border-radius: 8px; padding: 5px 10px; border: 2px solid #999;" })),
+            React.createElement("td", { style: "padding-left:6px;padding-right: 6px;" },
                 React.createElement("button", { style: "white-space:nowrap;padding-top:5px;padding-bottom:5px;", onclick: show_inner },
-                    React.createElement("b", null, "+"),
-                    " Filter and Group \u25BC"),
+                    React.createElement("b", { style: "font-size:150%;vertical-align:middle;" }, "+"),
+                    "\u00A0 Filter and Group \u00A0",
+                    arrow_down,
+                    arrow_up),
                 dropdown)),
         React.createElement("tr", null,
             React.createElement("td", null, caption))));
@@ -1081,13 +1108,24 @@ function lazy(thunk) {
         return store;
     };
 }
-function concatNub(xss) {
+function concat(xss) {
     var res = [];
-    var seen = {};
     for (var _i = 0, xss_1 = xss; _i < xss_1.length; _i++) {
         var xs = xss_1[_i];
         for (var _a = 0, xs_5 = xs; _a < xs_5.length; _a++) {
             var x = xs_5[_a];
+            res.push(x);
+        }
+    }
+    return res;
+}
+function concatNub(xss) {
+    var res = [];
+    var seen = {};
+    for (var _i = 0, xss_2 = xss; _i < xss_2.length; _i++) {
+        var xs = xss_2[_i];
+        for (var _a = 0, xs_6 = xs; _a < xs_6.length; _a++) {
+            var x = xs_6[_a];
             var v = x;
             if (!(v in seen)) {
                 seen[v] = null;
@@ -1106,7 +1144,11 @@ function createElement(type, props) {
         _children[_i - 2] = arguments[_i];
     }
     // if _children is an array of array take the first value, else take the full array
-    var children = Array.isArray(_children[0]) ? _children[0] : _children;
+    var children = [];
+    for (var _a = 0, _children_1 = _children; _a < _children_1.length; _a++) {
+        var child = _children_1[_a];
+        children.push(Array.isArray(child) ? child : [child]);
+    }
     var element = document.createElement(type);
     for (var name_1 in props || {}) {
         if (name_1.substr(0, 2) === "on")
@@ -1114,8 +1156,8 @@ function createElement(type, props) {
         else
             element.setAttribute(name_1, props[name_1]);
     }
-    for (var _a = 0, children_1 = children; _a < children_1.length; _a++) {
-        var child = children_1[_a];
+    for (var _b = 0, _c = concat(children); _b < _c.length; _b++) {
+        var child = _c[_b];
         var c = typeof child === "object" ? child : document.createTextNode(child.toString());
         element.appendChild(c);
     }
@@ -1202,6 +1244,52 @@ function plotData(search, buckets) {
         });
     });
     return ans;
+}
+function reportCmdTable(profile, search) {
+    return cmdTableData(search.get());
+}
+function cmdTableData(search) {
+    var res = {};
+    search.forEachProfile(function (p) {
+        return p.traces.forEach(function (t) {
+            var time = t.stop - t.start;
+            if (!(t.command in res))
+                res[t.command] = { count: 1, time: time };
+            else {
+                res[t.command].count++;
+                res[t.command].time += time;
+            }
+        });
+    });
+    var trs = [];
+    for (var i in res)
+        trs.push(React.createElement("tr", null,
+            React.createElement("td", null, i),
+            React.createElement("td", null, res[i].count),
+            React.createElement("td", null, showTime(res[i].time))));
+    return (React.createElement("table", { class: "data" },
+        React.createElement("tr", { class: "header" },
+            React.createElement("td", null, "Name"),
+            React.createElement("td", null, "Count"),
+            React.createElement("td", null, "Time")),
+        trs));
+}
+function reportRuleTable(profile, search) {
+    return cmdRuleTable(search.get());
+}
+function cmdRuleTable(search) {
+    var trs = [];
+    search.forEachProfiles(function (ps, group) {
+        return trs.push(React.createElement("tr", null,
+            React.createElement("td", null, group),
+            React.createElement("td", null, ps.length)));
+    });
+    return (React.createElement("table", { class: "data" },
+        React.createElement("tr", { class: "header" },
+            React.createElement("td", null, "Name"),
+            React.createElement("td", null, "Count"),
+            React.createElement("td", null, "Items")),
+        trs));
 }
 function reportSummary(profile, search) {
     var count = 0; // number of rules run
