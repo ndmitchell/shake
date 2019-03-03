@@ -19,6 +19,7 @@ class HTMLElement {
         this.innerText += x.innerText;
     }
     setAttribute() {}
+    addEventListener() {}
 }
 
 function createElement(typ) {

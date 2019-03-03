@@ -29,23 +29,52 @@ function unrawProfile(x) {
 }
 function profileRoot() {
     var _a = createSearch(profile), s = _a[0], search = _a[1];
-    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }]]);
-    return React.createElement("div", null,
+    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }], ["Summary", function () { return React.createElement("div", null, "Here"); }]]);
+    return React.createElement("div", { style: "background-color:#e8e8e8;" },
         s,
+        React.createElement("br", null),
         t);
 }
 function createTabs(xs) {
-    var lbls = xs.map(function (x) { return React.createElement("a", null, x[0]); });
-    var body = xs[0][1]();
+    var bodies = xs.map(function (x) { return lazy(x[1]); });
+    var body = React.createElement("div", null);
+    var lbls = [];
+    var f = function (i) { return function () {
+        $(body).empty().append(bodies[i]());
+        lbls.map(function (x, j) { return $(x).toggleClass("active", i === j); });
+    }; };
+    lbls = xs.map(function (x, i) { return React.createElement("a", { onclick: f(i) }, x[0]); });
+    f(0)();
     return React.createElement("div", null,
-        React.createElement("div", null, lbls),
-        React.createElement("div", null, body));
+        React.createElement("div", { class: "tabstrip" }, lbls),
+        React.createElement("div", { style: "background-color:white;padding-top:5px;" },
+            React.createElement("div", null, body)));
 }
 function createSearch(profile) {
     var search = {};
     for (var i = 0; i < profile.length; i++)
         search[profile[i].name] = [i];
-    return [React.createElement("input", { type: "text", value: "true" }), new Prop(search)];
+    var caption = React.createElement("div", null,
+        "Found ",
+        profile.length,
+        " entries, not filtered or grouped.");
+    var dropdown = React.createElement("div", { style: "border:1px solid gray;display:none;position:absolute;" },
+        "Add stuff to the inner here",
+        React.createElement("br", null),
+        "And more stuff");
+    var show_inner = function () { return $(dropdown).toggle(); };
+    var body = (React.createElement("table", { style: "width:100%;" },
+        React.createElement("tr", null,
+            React.createElement("td", { width: "100%" },
+                React.createElement("input", { id: "search", type: "text", value: "", placeholder: "Filter and group", style: "width: 100%; font-size: 16px; border-radius: 8px; padding: 5px; border-width: 2px; border-color: #999;" })),
+            React.createElement("td", null,
+                React.createElement("button", { style: "white-space:nowrap;padding-top:5px;padding-bottom:5px;", onclick: show_inner },
+                    React.createElement("b", null, "+"),
+                    " Filter and Group \u25BC"),
+                dropdown)),
+        React.createElement("tr", null,
+            React.createElement("td", null, caption))));
+    return [body, new Prop(search)];
 }
 function fullSearch() {
     var res = {};

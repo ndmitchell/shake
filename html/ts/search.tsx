@@ -4,7 +4,21 @@ function createSearch(profile: Profile[]): [HTMLElement, Prop<Search>] {
     const search = {};
     for (let i = 0; i < profile.length; i++)
         search[profile[i].name] = [i];
-    return [<input type="text" value="true" />, new Prop(search)];
+    const caption = <div>Found {profile.length} entries, not filtered or grouped.</div>;
+    const dropdown = <div style="border:1px solid gray;display:none;position:absolute;">Add stuff to the inner here<br/>And more stuff</div>;
+    const show_inner = () => $(dropdown).toggle();
+    const body =
+        (<table style="width:100%;">
+            <tr>
+                <td width="100%"><input id="search" type="text" value="" placeholder="Filter and group"
+                    style="width: 100%; font-size: 16px; border-radius: 8px; padding: 5px; border-width: 2px; border-color: #999;" /></td>
+                <td><button style="white-space:nowrap;padding-top:5px;padding-bottom:5px;" onclick={show_inner}><b>+</b> Filter and Group &#9660;</button>{dropdown}</td>
+            </tr>
+            <tr>
+                <td>{caption}</td>
+            </tr>
+        </table>);
+    return [body, new Prop(search)];
 }
 
 function fullSearch(): Search {
