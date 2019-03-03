@@ -1,7 +1,7 @@
 
 function profileRoot(): HTMLElement {
     const [s, search] = createSearch(profile);
-    const t = createTabs([["Summary", () => reportSummary(profile, search)], ["Summary", () => <div>Here</div>]]);
+    const t = createTabs([["Summary", () => reportSummary(profile, search)], ["Commands over time", () => reportCmdPlot(profile, search)]]);
     return <div style="background-color:#e8e8e8;">{s}<br/>{t}</div>;
 }
 

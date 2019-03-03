@@ -29,7 +29,7 @@ function unrawProfile(x) {
 }
 function profileRoot() {
     var _a = createSearch(profile), s = _a[0], search = _a[1];
-    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }], ["Summary", function () { return React.createElement("div", null, "Here"); }]]);
+    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }], ["Commands over time", function () { return reportCmdPlot(profile, search); }]]);
     return React.createElement("div", { style: "background-color:#e8e8e8;" },
         s,
         React.createElement("br", null),
@@ -1141,53 +1141,56 @@ var Prop = /** @class */ (function () {
     };
     return Prop;
 }());
-/*
-function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
-    const xs = plotData(profile, search.get(), 100);
-    const ys: (dataSeries & { avg: number })[] = [];
-    for (const s in xs) {
+function reportCmdPlot(profile, search) {
+    var xs = plotData(search.get(), 100);
+    var ys = [];
+    for (var s in xs) {
         var x = xs[s].items;
-        var data: [number, number][] = [];
+        var data = [];
         for (var j = 0; j < x.length; j++)
             data.push([j, x[j]]);
-        ys.push({ label: s, / * values:x, * / data: data, color: xs[s].back, avg: sum(x) / x.length });
+        ys.push({ label: s, /* values:x, */ data: data, color: xs[s].back, avg: sum(x) / x.length });
     }
     if (ys.length === 0) {
-        $("#output").html("No data found, " +
-            (prepared.summary.countTraceLast === 0
-                ? "there were no traced commands in the last run."
-                : "perhaps your filter is too restrictive?"));
+        return React.createElement("div", null, "No data found");
     }
     else {
         ys.sort(function (a, b) { return a.avg - b.avg; });
-        showPlot(ys, {
-            legend: { show: true, position: "nw", sorted: "reverse" },
-            series: { stack: true, lines: { lineWidth: 0, fill: 1 } },
-            yaxis: { min: 0 },
-            xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
-        });
+        var res_1 = React.createElement("div", { style: "width:400px; height: 300px;" });
+        // do it in a timeout because it must be attached first
+        window.setTimeout(function () {
+            return $.plot($(res_1), ys, {
+                legend: { show: true, position: "nw", sorted: "reverse" },
+                // tslint:disable-next-line: object-literal-sort-keys
+                series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
+                yaxis: { min: 0 },
+                xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
+            });
+        }, 100);
+        return res_1;
     }
 }
-
-
-function plotData(profile: Profile, search: Search, buckets: int): MapString<{ items: number[], back: color }>
-{
+function plotData(search, buckets) {
     // first find the end point
-    search.
-
-    var end = dat.summary.maxTraceStopLast;
-    var res = commandFilter(true, dat, query);
-    var ans: MapString<{ items: number[], back: color }> = {};
-    for (var s in res) {
-        var ts = res[s].items;
-        var xs : number[] = [];
-        for (var i = 0; i <= buckets; i++)
-            xs.push(0); // fill with 1 more element, but the last bucket will always be 0
-
-        for (const t of ts) {
+    var end = 0;
+    search.forEachProfile(function (p) {
+        if (p.traces.length > 0)
+            end = Math.max(end, p.traces[p.traces.length - 1].stop);
+    });
+    var ans = {};
+    search.forEachProfile(function (p) {
+        p.traces.forEach(function (t) {
+            var xs;
+            if (t.command in ans)
+                xs = ans[t.command].items;
+            else {
+                xs = [];
+                for (var i = 0; i < buckets; i++)
+                    xs.push(0); // fill with 1 more element, but the last bucket will always be 0
+                ans[t.command] = { items: xs, back: null };
+            }
             var start = t.start * buckets / end;
             var stop = t.stop * buckets / end;
-
             if (Math.floor(start) === Math.floor(stop))
                 xs[Math.floor(start)] += stop - start;
             else {
@@ -1196,12 +1199,10 @@ function plotData(profile: Profile, search: Search, buckets: int): MapString<{ i
                 xs[Math.floor(start)] += Math.ceil(start) - start;
                 xs[Math.floor(stop)] += stop - Math.floor(stop);
             }
-        }
-        ans[s] = { items: xs.slice(0, buckets), back: res[s].back || null };
-    }
+        });
+    });
     return ans;
 }
-*/
 function reportSummary(profile, search) {
     var count = 0; // number of rules run
     var countLast = 0; // number of rules run in the last run
