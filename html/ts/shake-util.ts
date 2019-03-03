@@ -132,6 +132,16 @@ function lazy<V>(thunk: () => V): () => V {
     };
 }
 
+function concat<T>(xss: T[][]): T[] {
+    const res: T[] = [];
+    for (const xs of xss) {
+        for (const x of xs) {
+            res.push(x);
+        }
+    }
+    return res;
+}
+
 function concatNub<T extends key>(xss: T[][]): T[] {
     const res: T[] = [];
     const seen: {} = {};
@@ -153,7 +163,9 @@ function concatNub<T extends key>(xss: T[][]): T[] {
 // our element factory
 function createElement(type: string, props?: MapString<any>, ..._children: any[]) {
     // if _children is an array of array take the first value, else take the full array
-    const children = Array.isArray(_children[0]) ? _children[0] : _children;
+    const children: any[][] = [];
+    for (const child of _children)
+        children.push(Array.isArray(child) ? child : [child]);
 
     const element = document.createElement(type);
 
@@ -163,7 +175,7 @@ function createElement(type: string, props?: MapString<any>, ..._children: any[]
         else
             element.setAttribute(name, props[name]);
     }
-    for (const child of children) {
+    for (const child of concat(children)) {
         const c = typeof child === "object" ? child : document.createTextNode(child.toString());
         element.appendChild(c);
     }
