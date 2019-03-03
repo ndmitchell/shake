@@ -25,7 +25,7 @@ function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
                 yaxis: { min: 0 },
                 xaxis: { tickFormatter: i => showTime(prepared.summary.maxTraceStopLast * i / 100) }
             })
-        , 100);
+        , 1);
         return res;
     }
 }

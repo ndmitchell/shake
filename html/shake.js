@@ -1208,7 +1208,7 @@ function reportCmdPlot(profile, search) {
                 yaxis: { min: 0 },
                 xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
             });
-        }, 100);
+        }, 1);
         return res_1;
     }
 }
