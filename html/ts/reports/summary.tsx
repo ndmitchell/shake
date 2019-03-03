@@ -1,5 +1,5 @@
 
-function reportSummary(search: Search): HTMLElement {
+function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
     let count: int = 0; // number of rules run
     let countLast: int = 0; // number of rules run in the last run
     let highestRun: timestamp = 0; // highest run you have seen (add 1 to get the count of runs)
@@ -12,8 +12,9 @@ function reportSummary(search: Search): HTMLElement {
     let maxTraceName: string = ""; // longest trace command
     let maxTraceStopLast: seconds = 0; // time the last traced command stopped
 
-    for (const k in search) {
-        for (const i of search[k]) {
+    const s = search.get();
+    for (const k in s) {
+        for (const i of s[k]) {
             const e = profile[i];
             const isLast = e.built === 0;
             count++;

@@ -40,7 +40,6 @@ type ProfileRaw =
     , TraceRaw[] // Optional
     ];
 
-
 /////////////////////////////////////////////////////////////////////
 // PROGRESS DATA
 
@@ -52,3 +51,28 @@ interface Progress {
     actualSecs: number;
     actualPerc: number;
 }
+
+/////////////////////////////////////////////////////////////////////
+// BASIC UI TOOLKIT
+
+class Prop<A> {
+    private val: A;
+    private callback: ((val: A) => void);
+    constructor(val: A) { this.val = val; }
+    public get(): A { return this.val; }
+    public set(val: A): void {
+        this.val = val;
+        this.callback(val);
+    }
+    public event(next: (val: A) => void): void {
+        const old = this.callback;
+        this.callback = val => { old(val); next(val); };
+    }
+}
+
+/////////////////////////////////////////////////////////////////////
+// PROFILE Searching
+
+// A mapping from names (rule names or those matched from rule parts)
+// to the indicies in profiles.
+type Search = MapString<int[]>;

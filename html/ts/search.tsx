@@ -1,11 +1,10 @@
 
 
-// A mapping from names (rule names or those matched from rule parts)
-// to the indicies in profiles.
-type Search = MapString<int[]>;
-
-function createSearch(change: (s: Search) => void): HTMLElement {
-    return <input type="text" value="true" />;
+function createSearch(profile: Profile[]): [HTMLElement, Prop<Search>] {
+    const search = {};
+    for (let i = 0; i < profile.length; i++)
+        search[profile[i].name] = [i];
+    return [<input type="text" value="true" />, new Prop(search)];
 }
 
 function fullSearch(): Search {
@@ -65,11 +64,30 @@ function readQuery(query: string): () => boolean {
 // These are global variables mutated/queried by query execution
 let queryData: Prepare = {} as Prepare;
 let queryKey: int = 0;
-let queryVal: ProfileEx = {} as ProfileEx;
+let queryVal: Profile = {} as Profile;
 let queryName: string = "";
 let queryGroup: string = null;
 let queryBackColor: color = null;
 let queryTextColor: color = null;
+
+function rs_key(k: string | RegExp): string {
+    return typeof k === "string" ? "s" + k : "r" + k.source;
+}
+
+// before =
+
+const before_Cache: (k: string | RegExp) => MapInt<null> = cache(rs_key, k => {
+    const res = {};
+    const match = {};
+    // go in reverse because its topo-sorted
+    for (let i = profile.length - 1; i >= 0; i--) {
+        if (testRegExp(k, profile[i].name))
+            match[i] = null;
+        if (profile[i].depends.some(j => j in match))
+            res[i] = null;
+    }
+    return res;
+});
 
 function before(r: string | RegExp): boolean {
     return true;
