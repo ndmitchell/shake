@@ -25,7 +25,7 @@ function profileRoot(): HTMLElement {
 
 function createTabs(xs: Array<[string, () => HTMLElement]>): HTMLElement {
     const bodies = xs.map(x => lazy(x[1]));
-    const body = <div></div>;
+    const body = <div style="padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;"></div>;
     let lbls = [];
     const f = (i: int) => () => {
         $(body).empty().append(bodies[i]());
@@ -43,7 +43,7 @@ function createTabs(xs: Array<[string, () => HTMLElement]>): HTMLElement {
         </td></tr>
         <tr height="100%">
             <td style="background-color:white;padding-top:10px;">
-                <div style="padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;">{body}</div>
+                {body}
             </td>
         </tr>
     </table>;

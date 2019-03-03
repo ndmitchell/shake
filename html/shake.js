@@ -53,7 +53,7 @@ function profileRoot() {
 }
 function createTabs(xs) {
     var bodies = xs.map(function (x) { return lazy(x[1]); });
-    var body = React.createElement("div", null);
+    var body = React.createElement("div", { style: "padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;" });
     var lbls = [];
     var f = function (i) { return function () {
         $(body).empty().append(bodies[i]());
@@ -70,8 +70,7 @@ function createTabs(xs) {
                         React.createElement("td", { style: "padding:0px;" }, lbls),
                         React.createElement("td", { width: "100%", class: "bottom" }, "\u00A0"))))),
         React.createElement("tr", { height: "100%" },
-            React.createElement("td", { style: "background-color:white;padding-top:10px;" },
-                React.createElement("div", { style: "padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;" }, body))));
+            React.createElement("td", { style: "background-color:white;padding-top:10px;" }, body)));
 }
 // A mapping from names (rule names or those matched from rule parts)
 // to the indicies in profiles.
@@ -1198,9 +1197,8 @@ function reportCmdPlot(profile, search) {
     }
     else {
         ys.sort(function (a, b) { return a.avg - b.avg; });
-        var res_1 = React.createElement("div", { style: "width:400px; height: 300px;" });
-        // do it in a timeout because it must be attached first
-        window.setTimeout(function () {
+        var res_1 = React.createElement("div", { style: "width:100%; height:100%;" });
+        var update = function () {
             return $.plot($(res_1), ys, {
                 legend: { show: true, position: "nw", sorted: "reverse" },
                 // tslint:disable-next-line: object-literal-sort-keys
@@ -1208,7 +1206,10 @@ function reportCmdPlot(profile, search) {
                 yaxis: { min: 0 },
                 xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
             });
-        }, 1);
+        };
+        // do it in a timeout because it must be attached first
+        window.setTimeout(update, 1);
+        window.onresize = update;
         return res_1;
     }
 }

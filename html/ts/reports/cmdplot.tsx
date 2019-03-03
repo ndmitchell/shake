@@ -15,17 +15,18 @@ function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
         return <div>No data found</div>;
     } else {
         ys.sort((a, b) => a.avg - b.avg);
-        const res = <div style="width:400px; height: 300px;"></div>;
-        // do it in a timeout because it must be attached first
-        window.setTimeout(() =>
+        const res = <div style="width:100%; height:100%;"></div>;
+        const update = () =>
             $.plot($(res), ys, {
                 legend: { show: true, position: "nw", sorted: "reverse" },
                 // tslint:disable-next-line: object-literal-sort-keys
                 series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
                 yaxis: { min: 0 },
                 xaxis: { tickFormatter: i => showTime(prepared.summary.maxTraceStopLast * i / 100) }
-            })
-        , 1);
+            });
+        // do it in a timeout because it must be attached first
+        window.setTimeout(update, 1);
+        window.onresize = update;
         return res;
     }
 }
