@@ -1,7 +1,13 @@
 
 function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
-    const xs = plotData(search.get(), 100);
+    // first find the end point
+    let end = 0;
+    search.get().forEachProfile(p => {
+        if (p.traces.length > 0)
+            end = Math.max(end, p.traces[p.traces.length - 1].stop);
+    });
 
+    const xs = plotData(end, search.get(), 100);
     const ys: Array<dataSeries & { avg: number }> = [];
     for (const s in xs) {
         const x = xs[s].items;
@@ -22,7 +28,7 @@ function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
                 // tslint:disable-next-line: object-literal-sort-keys
                 series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
                 yaxis: { min: 0 },
-                xaxis: { tickFormatter: i => showTime(prepared.summary.maxTraceStopLast * i / 100) }
+                xaxis: { tickFormatter: i => showTime(end * i / 100) }
             });
         // do it in a timeout because it must be attached first
         window.setTimeout(update, 1);
@@ -31,14 +37,7 @@ function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
     }
 }
 
-function plotData(search: Search, buckets: int): MapString<{ items: number[], back: color }> {
-    // first find the end point
-    let end = 0;
-    search.forEachProfile(p => {
-        if (p.traces.length > 0)
-            end = Math.max(end, p.traces[p.traces.length - 1].stop);
-    });
-
+function plotData(end: seconds, search: Search, buckets: int): MapString<{ items: number[], back: color }> {
     const ans: MapString<{ items: number[], back: color }> = {};
     search.forEachProfile(p => {
         p.traces.forEach(t => {

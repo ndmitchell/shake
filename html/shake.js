@@ -1183,7 +1183,13 @@ var Prop = /** @class */ (function () {
     return Prop;
 }());
 function reportCmdPlot(profile, search) {
-    var xs = plotData(search.get(), 100);
+    // first find the end point
+    var end = 0;
+    search.get().forEachProfile(function (p) {
+        if (p.traces.length > 0)
+            end = Math.max(end, p.traces[p.traces.length - 1].stop);
+    });
+    var xs = plotData(end, search.get(), 100);
     var ys = [];
     for (var s in xs) {
         var x = xs[s].items;
@@ -1204,7 +1210,7 @@ function reportCmdPlot(profile, search) {
                 // tslint:disable-next-line: object-literal-sort-keys
                 series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
                 yaxis: { min: 0 },
-                xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
+                xaxis: { tickFormatter: function (i) { return showTime(end * i / 100); } }
             });
         };
         // do it in a timeout because it must be attached first
@@ -1213,13 +1219,7 @@ function reportCmdPlot(profile, search) {
         return res_1;
     }
 }
-function plotData(search, buckets) {
-    // first find the end point
-    var end = 0;
-    search.forEachProfile(function (p) {
-        if (p.traces.length > 0)
-            end = Math.max(end, p.traces[p.traces.length - 1].stop);
-    });
+function plotData(end, search, buckets) {
     var ans = {};
     search.forEachProfile(function (p) {
         p.traces.forEach(function (t) {
