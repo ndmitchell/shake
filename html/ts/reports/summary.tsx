@@ -11,8 +11,10 @@ function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
     let maxTrace: seconds = 0; // longest traced command
     let maxTraceName: string = ""; // longest trace command
     let maxTraceStopLast: seconds = 0; // time the last traced command stopped
+    const criticalPath: seconds[] = []; // the critical path to any element
+    let maxCriticalPath: seconds = 0; // the highest value in criticalPath
 
-    search.get().forEachProfile(e => {
+    profile.forEach((e, i) => {
         const isLast = e.built === 0;
         count++;
         countLast += isLast ? 1 : 0;
@@ -20,7 +22,7 @@ function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
         maxExecution = Math.max(maxExecution, e.execution);
         if (maxExecution === e.execution) maxExecutionName = e.name;
         highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
-        for (const t of e.traces || []) {
+        for (const t of e.traces) {
             const time = t.stop - t.start;
             countTrace += 1;
             countTraceLast += isLast ? 1 : 0;
@@ -30,6 +32,9 @@ function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
             if (maxTrace === time) maxTraceName = t.command;
             maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? t.stop : 0);
         }
+        const p = maximum(e.depends.map(i => criticalPath[i]), 0) + e.execution;
+        maxCriticalPath = Math.max(p, maxCriticalPath);
+        criticalPath[i] = p;
     });
     const lines =
         [ "This database has tracked " + (highestRun + 1) + " run" + plural(highestRun + 1) + "."
@@ -38,6 +43,7 @@ function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
         , "The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands."
         , "The longest rule takes " + showTime(maxExecution) + " (" + maxExecutionName + ") and the longest traced command takes " + showTime(maxTrace) + " (" + maxTraceName + ")."
         , "Last run gave an average parallelism of " + (maxTraceStopLast === 0 ? 0 : sumTraceLast / maxTraceStopLast).toFixed(2) + " times over " + showTime(maxTraceStopLast) + "."
+        , "The critical path was " + showTime(maxCriticalPath) + "."
         ];
 
     return <div>
