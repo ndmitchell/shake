@@ -87,6 +87,18 @@ function sum(xs: number[]): number {
     return res;
 }
 
+function maximum<A>(xs: A[], start: A): A {
+    let res: A = start;
+    for (const x of xs)
+        if (x > res)
+            res = x;
+    return res;
+}
+
+function pair<A, B>(a: A, b: B): [A, B] {
+    return [a, b];
+}
+
 function testRegExp(r: string | RegExp, s: string): boolean {
     if (typeof r === "string")
         return s.indexOf(r) !== -1;
@@ -156,6 +168,22 @@ function concatNub<T extends key>(xss: T[][]): T[] {
     }
     return res;
 }
+
+function insertArraySorted<A>(xs: A[], x: A, compare: (a: A, b: A) => number): A[] {
+    let start = 0;
+    let stop = xs.length - 1;
+    let middle = 0;
+    while (start <= stop) {
+        middle = Math.floor((start + stop) / 2)
+        if (compare(xs[middle], x) > 0)
+            stop = middle - 1;
+        else
+            start = middle + 1;
+    }
+    xs.splice(start, 0, x);
+    return xs;
+}
+
 
 // Use JSX with el instead of React.createElement
 // Originally from https://gist.github.com/sergiodxa/a493c98b7884128081bb9a281952ef33
