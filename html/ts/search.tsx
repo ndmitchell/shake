@@ -16,7 +16,7 @@ class Search {
     }
     public forEachProfiles(f: (ps: Profile[], group: string) => void): void {
         for (const s in this.mapping)
-            f(this.mapping[s].map(i => profile[i]), s);
+            f(this.mapping[s].map(i => this.profile[i]), s);
     }
     public forEachProfile(f: (p: Profile, group: string) => void): void {
         this.forEachProfiles((ps, group) => ps.forEach(p => f(p, group)));
