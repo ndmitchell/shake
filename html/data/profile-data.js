@@ -1,4 +1,4 @@
-var profileRaw =
+var profile =
 [["doesFileExist General/GetOpt.hs",0.0002,5,5]
 ,["doesFileExist Data/Heap.hs",0.0002,5,5]
 ,["Development/Shake/FilePath.hs",0.0006,5,5]

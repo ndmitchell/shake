@@ -1,14 +1,15 @@
-function profileLoaded(): void {
-    $(document.body).empty().append(profileRoot());
+function profileLoaded(profileRaw: ProfileRaw[]): void {
+    $(document.body).empty().append(profileRoot(profileRaw.map(unrawProfile)));
 }
 
-function profileRoot(): HTMLElement {
+function profileRoot(profile: Profile[]): HTMLElement {
     const [s, search] = createSearch(profile);
     const t = createTabs(
         [ ["Summary", () => reportSummary(profile, search)]
         , ["Commands over time", () => reportCmdPlot(profile, search)]
         , ["Commands", () => reportCmdTable(profile, search)]
         , ["Rules", () => reportRuleTable(profile, search)]
+        , ["Performance", () => reportPerformance(profile, search)]
         ]);
     return <table class="fill">
         <tr><td style="padding-top: 8px; padding-bottom: 8px;">
