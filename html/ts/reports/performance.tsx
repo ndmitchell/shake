@@ -1,8 +1,8 @@
 
 function reportPerformance(profile: Profile[], search: Prop<Search>): HTMLElement {
     return <div>
-        {slowestRules(search.get())}
-        {slowestParallel(search.get())}
+        {slowestRules(profile)}
+        {slowestParallel(profile)}
     </div>;
 }
 
@@ -14,9 +14,9 @@ function showItems(total: seconds, items: Array<[seconds, string]>): HTMLElement
     </ul>;
 }
 
-function slowestRules(search: Search): HTMLElement {
-    const slowest = search.profile.slice().sort((a, b) => b.execution - a.execution).slice(0, 10);
-    const total = sum(search.profile.map(x => x.execution));
+function slowestRules(profile: Profile[]): HTMLElement {
+    const slowest = profile.slice().sort((a, b) => b.execution - a.execution).slice(0, 10);
+    const total = sum(profile.map(x => x.execution));
     const f = (x: Profile) => pair(x.execution, x.name + (x.traces.length === 0 ? "" : " running " + x.traces.map(y => y.command).join(", ")));
     return <div>
         <b>Slowest rules</b>
@@ -27,10 +27,10 @@ function slowestRules(search: Search): HTMLElement {
 type index = int;
 type Profile2 = Profile & {index: index, cost: seconds, rdeps: index[]};
 
-function slowestParallel(search: Search): HTMLElement {
+function slowestParallel(profile: Profile[]): HTMLElement {
     // first give each rule a priority, based no how much the downstream cost is
     // FIXME: Just approximate as the individual execution cost for now
-    const priority = search.profile.map((x, i) => ({...x, index: i, cost: x.execution, rdeps: []}));
+    const priority = profile.map((x, i) => ({...x, index: i, cost: x.execution, rdeps: []}));
     for (const p of priority) {
         for (const d of p.depends)
             priority[d].rdeps.push(p.index);
@@ -58,7 +58,7 @@ function slowestParallel(search: Search): HTMLElement {
         <b>Parallelism impact</b>
         {res}
         <b>Slowest parallel</b>
-        {slowestParallel2(search.profile, started[0], started[1])}
+        {slowestParallel2(profile, started[0], started[1])}
     </div>;
 }
 

@@ -2,8 +2,8 @@
 // A mapping from names (rule names or those matched from rule parts)
 // to the indicies in profiles.
 class Search {
-    public profile: Profile[];
-    public mapping: MapString<int[]>;
+    private profile: Profile[];
+    private mapping: MapString<int[]>;
     constructor(profile: Profile[], mapping?: MapString<int[]>) {
         this.profile = profile;
         if (mapping !== undefined)
