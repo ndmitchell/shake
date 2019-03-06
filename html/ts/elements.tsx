@@ -9,3 +9,7 @@ function bindPlot(element: HTMLElement, data: Prop<jquery.flot.dataSeries[]>, op
     window.onresize = redraw;
     data.event(redraw);
 }
+
+function varLink(name: string): HTMLElement {
+    return <a href={"https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:" + name}><tt>{name}</tt></a>;
+}

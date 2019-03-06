@@ -9,10 +9,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
             <p>
                 The Shake database contains no rules which ran traced commands.
             </p><p>
-                You can populate this information
-                {" "}by using <a href="https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:cmd"><tt>cmd</tt></a> or
-                {" "}wrapping your <tt>IO</tt> actions in
-                {" "}<a href="https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:traced"><tt>traced</tt></a>.
+                You can populate this information by using {varLink("cmd")} or wrapping your <tt>IO</tt> actions in {varLink("traced")}.
             </p>
         </div>;
     }
