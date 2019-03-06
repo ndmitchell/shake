@@ -70,5 +70,6 @@ class Prop<A> {
     public event(next: (val: A) => void): void {
         const old = this.callback;
         this.callback = val => { old(val); next(val); };
+        next(this.val);
     }
 }

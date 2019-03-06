@@ -6,15 +6,29 @@ function reportRuleTable(profile: Profile[], search: Prop<Search>): HTMLElement 
 function cmdRuleTable(search: Search): HTMLElement {
     const trs = [];
     search.forEachProfiles((ps, group) =>
-        trs.push(<tr><td>{group}</td><td>{ps.length}</td></tr>)
+        trs.push({group, count: ps.length})
     );
-    return (
-        <table class="data">
-            <tr class="header">
-                <td>Name</td>
-                <td>Count</td>
-                <td>Items</td>
-            </tr>
-            {trs}
-        </table>);
+
+    const table = new DGTable({
+            columns: [
+                {name: "group", label: "Group", width: "300px"},
+                {name: "count", label: "Count", width: "100px", cellClasses: "right"},
+            ],
+            height: 500,
+            width: DGTable.Width.SCROLL,
+            cellFormatter: (val: any, colname: string) =>
+                colname === "count" ? showInt(val) :
+                val
+        });
+
+    window.setTimeout(() => {
+        table.render().addRows(trs);
+        $(table.el).css("height", "100%");
+        table.tableHeightChanged();
+        table.render();
+    }, 1);
+    window.onresize = () => table.tableHeightChanged();
+    const ret = <div style="height:100%;width:100%;"></div>;
+    $(ret).append(table.el);
+    return ret;
 }
