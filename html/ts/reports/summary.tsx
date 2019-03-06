@@ -18,7 +18,7 @@ function reportSummary(profile: Profile[]): HTMLElement {
             countLast++;
             countTraceLast += p.traces.length;
             if (p.traces.length > 0)
-                maxTraceStopLast = Math.max(maxTraceStopLast, p.traces[p.traces.length - 1].stop);
+                maxTraceStopLast = Math.max(maxTraceStopLast, last(p.traces).stop);
         }
         const cost = maximum(p.depends.map(i => criticalPath[i]), 0) + p.execution;
         maxCriticalPath = Math.max(cost, maxCriticalPath);
@@ -40,7 +40,7 @@ function reportSummary(profile: Profile[]): HTMLElement {
         <ul>
             <li><b>Build time:</b> {showTime(sumExecution)} <span class="note">how long a complete build would take single threaded.</span></li>
             <li><b>Last build time:</b> {showTime(maxTraceStopLast)} <span class="note">how long the last build take.</span></li>
-            <li><b>Parallelism:</b> {(maxTraceStopLast === 0 ? 0 : sumExecutionLast / maxTraceStopLast).toFixed(2)} <span class="note">average number of commands executing simultaneously.</span></li>
+            <li><b>Parallelism:</b> {(maxTraceStopLast === 0 ? 0 : sumExecutionLast / maxTraceStopLast).toFixed(2)} <span class="note">average number of commands executing simultaneously in the last build.</span></li>
             <li><b>Critical path:</b> {showTime(maxCriticalPath)} <span class="note">how long it would take on infinite CPUs.</span></li>
         </ul>
     </div>;

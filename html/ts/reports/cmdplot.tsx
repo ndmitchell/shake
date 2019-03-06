@@ -28,17 +28,14 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
 
     const warning = <i></i>;
     const plot = <div style="width:100%; height:100%;"></div>;
-    let plotData = [];
-    const redrawPlot = () =>
-        $.plot($(plot), plotData, {
-            legend: { show: true, position: "nw", sorted: "reverse" },
-            // tslint:disable-next-line: object-literal-sort-keys
-            series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
-            yaxis: { min: 0 },
-            xaxis: { tickFormatter: showTime }
-        });
-    window.setTimeout(redrawPlot, 1);
-    window.onresize = redrawPlot;
+    const plotData: Prop<jquery.flot.dataSeries[]> = new Prop([]);
+    bindPlot(plot, plotData, {
+        legend: { show: true, position: "nw", sorted: "reverse" },
+        // tslint:disable-next-line: object-literal-sort-keys
+        series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
+        yaxis: { min: 0 },
+        xaxis: { tickFormatter: showTime }
+    });
 
     function setPlotData(runsIndex: int) {
         const [run, end] = runs[runsIndex];
@@ -47,13 +44,13 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
         const missing = sum(profileRun.map(p => Math.max(0, p.execution - sum(p.traces.map(t => t.stop - t.start)))));
         $(warning).text(missing < 1 ? "" : "Warning: " + showTime(missing) + " of execution was not traced.");
         const series = calcPlotData(end, profileRun, 100);
-        plotData = [];
+        const res = [];
         for (const s in series)
-            plotData.push({label: s, data: series[s].items.map((x, i) => pair(end * i / 100, x))});
-        plotData = sortOn(plotData, x => sum(x.data) / x.data.length);
+            res.push({label: s, data: series[s].items.map((x, i) => pair(end * i / 100, x))});
+        plotData.set(sortOn(res, x => sum(x.data) / x.data.length));
     }
     setPlotData(0);
-    $(combo).change(() => { setPlotData($(combo).val()); redrawPlot(); });
+    $(combo).change(() => setPlotData($(combo).val()));
 
     return <table class="fill">
         <tr>

@@ -61,7 +61,7 @@ interface Progress {
 class Prop<A> {
     private val: A;
     private callback: ((val: A) => void);
-    constructor(val: A) { this.val = val; }
+    constructor(val: A) { this.val = val; this.callback = () => { return; }; }
     public get(): A { return this.val; }
     public set(val: A): void {
         this.val = val;

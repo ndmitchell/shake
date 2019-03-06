@@ -48,6 +48,7 @@ function createTabs(xs: Array<[string, () => HTMLElement]>): HTMLElement {
     const f = (i: int) => () => {
         $(body).empty().append(bodies[i]());
         lbls.map((x, j) => $(x).toggleClass("active", i === j));
+        window.onresize(new UIEvent(""));
     };
     lbls = xs.map((x, i) => <a onclick={f(i)}>{x[0]}</a>);
     f(0)();
