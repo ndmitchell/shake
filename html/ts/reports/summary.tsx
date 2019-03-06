@@ -1,5 +1,5 @@
 
-function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
+function reportSummary(profile: Profile[]): HTMLElement {
     let countLast: int = 0; // number of rules run in the last run
     let highestRun: timestamp = 0; // highest run you have seen (add 1 to get the count of runs)
     let sumExecution: seconds = 0; // build time in total
@@ -9,21 +9,21 @@ function reportSummary(profile: Profile[], search: Prop<Search>): HTMLElement {
     const criticalPath: seconds[] = []; // the critical path to any element
     let maxCriticalPath: seconds = 0; // the highest value in criticalPath
 
-    profile.forEach((e, i) => {
-        sumExecution += e.execution;
-        highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
-        countTrace += e.traces.length;
-        if (e.built === 0) {
-            sumExecutionLast += e.execution;
+    for (const p of profile) {
+        sumExecution += p.execution;
+        highestRun = Math.max(highestRun, p.changed); // changed is always greater or equal to built
+        countTrace += p.traces.length;
+        if (p.built === 0) {
+            sumExecutionLast += p.execution;
             countLast++;
-            countTraceLast += e.traces.length;
-            for (const t of e.traces)
-                maxTraceStopLast = Math.max(maxTraceStopLast, t.stop);
+            countTraceLast += p.traces.length;
+            if (p.traces.length > 0)
+                maxTraceStopLast = Math.max(maxTraceStopLast, p.traces[p.traces.length - 1].stop);
         }
-        const p = maximum(e.depends.map(i => criticalPath[i]), 0) + e.execution;
-        maxCriticalPath = Math.max(p, maxCriticalPath);
-        criticalPath[i] = p;
-    });
+        const cost = maximum(p.depends.map(i => criticalPath[i]), 0) + p.execution;
+        maxCriticalPath = Math.max(cost, maxCriticalPath);
+        criticalPath[p.index] = cost;
+    }
 
     return <div>
         <h2>Totals</h2>

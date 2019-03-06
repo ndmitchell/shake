@@ -209,7 +209,7 @@ function runReport()
         switch(report.mode)
         {
         case "summary":
-            $("#output").empty().append(reportSummary(profile, createSearch(profile)[1]));
+            $("#output").empty().append(reportSummary(profile));
             break;
 
         case "cmd-plot": {

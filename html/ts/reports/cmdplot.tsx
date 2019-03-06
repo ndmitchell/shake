@@ -1,13 +1,13 @@
 
-function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
+function reportCmdPlot(profile: Profile[]): HTMLElement {
     // first find the end point
     let end = 0;
-    search.get().forEachProfile(p => {
+    for (const p of profile) {
         if (p.traces.length > 0)
             end = Math.max(end, p.traces[p.traces.length - 1].stop);
-    });
+    }
 
-    const xs = plotData(end, search.get(), 100);
+    const xs = plotData(end, profile, 100);
     const ys: Array<dataSeries & { avg: number }> = [];
     for (const s in xs) {
         const x = xs[s].items;
@@ -37,10 +37,10 @@ function reportCmdPlot(profile: Profile[], search: Prop<Search>): HTMLElement {
     }
 }
 
-function plotData(end: seconds, search: Search, buckets: int): MapString<{ items: number[], back: color }> {
+function plotData(end: seconds, profile: Profile[], buckets: int): MapString<{ items: number[], back: color }> {
     const ans: MapString<{ items: number[], back: color }> = {};
-    search.forEachProfile(p => {
-        p.traces.forEach(t => {
+    for (const p of profile) {
+        for (const t of p.traces) {
             let xs: number[];
             if (t.command in ans)
                 xs = ans[t.command].items;
@@ -62,7 +62,7 @@ function plotData(end: seconds, search: Search, buckets: int): MapString<{ items
                 xs[Math.floor(start)] += Math.ceil(start) - start;
                 xs[Math.floor(stop)] += stop - Math.floor(stop);
             }
-        });
-    });
+        }
+    }
     return ans;
 }

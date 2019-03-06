@@ -22,8 +22,8 @@ function unraw(xs: ProfileRaw[]): Profile[] {
 function profileRoot(profile: Profile[]): HTMLElement {
     const [s, search] = createSearch(profile);
     const t = createTabs(
-        [ ["Summary", () => reportSummary(profile, search)]
-        , ["Commands over time", () => reportCmdPlot(profile, search)]
+        [ ["Summary", () => reportSummary(profile)]
+        , ["Command plot", () => reportCmdPlot(profile)]
         , ["Commands", () => reportCmdTable(profile, search)]
         , ["Rules", () => reportRuleTable(profile, search)]
         , ["Performance", () => reportPerformance(profile, search)]
