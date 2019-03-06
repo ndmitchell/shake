@@ -43,7 +43,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
         const series = calcPlotData(end, profileRun, 100);
         const res = [];
         for (const s in series)
-            res.push({label: s, data: series[s].items.map((x, i) => pair(end * i / 100, x))});
+            res.push({label: s, data: series[s].map((x, i) => pair(end * i / 100, x))});
         plotData.set(sortOn(res, x => sum(x.data) / x.data.length));
     }
     setPlotData(0);
@@ -81,18 +81,18 @@ function findRuns(profile: Profile[]): Array<[timestamp, seconds]> {
     return runsList;
 }
 
-function calcPlotData(end: seconds, profile: Profile[], buckets: int): MapString<{ items: number[], back: color }> {
-    const ans: MapString<{ items: number[], back: color }> = {};
+function calcPlotData(end: seconds, profile: Profile[], buckets: int): MapString<number[]> {
+    const ans: MapString<number[]> = {};
     for (const p of profile) {
         for (const t of p.traces) {
             let xs: number[];
             if (t.command in ans)
-                xs = ans[t.command].items;
+                xs = ans[t.command];
             else {
                 xs = [];
                 for (let i = 0; i < buckets; i++)
                     xs.push(0); // fill with 1 more element, but the last bucket will always be 0
-                ans[t.command] = {items: xs, back: null};
+                ans[t.command] = xs;
             }
 
             const start = t.start * buckets / end;
