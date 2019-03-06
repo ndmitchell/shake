@@ -12,6 +12,7 @@
 <script src="lib/jquery.js"></script>
 <script src="lib/jquery.flot.js"></script>
 <script src="lib/jquery.flot.stack.js"></script>
+<script src="lib/jquery.dgtable.js"></script>
 <script src="viz.js"></script>
 <!-- Functions for creating info from Shake builds -->
 <script src="shake.js"></script>
@@ -49,6 +50,110 @@ a tt {color: #315273;}
     border-top: 4px solid orange;
     border-bottom: 3px solid white;
     background-color: white;
+}
+
+/* My overrides */
+/*
+.dgtable-row:hover { background-color: #ddd !important; }
+.dgtable-header-cell:hover { background-color: #ccc !important; }
+.dgtable-header-cell { background-color: #eee !important; }
+.dgtable-header-cell, .dgtable-cell { font-size: 9pt !important; }
+.dgtable-header-row { height: 20px !important; }
+.dgtable-header-cell { height: 20px !important; padding: 2px !important; }
+*/
+/*
+.dgtable-row { height: 20px !important }
+.dgtable-row:first-child { height: 21px !important; }
+.dgtable-cell { height: 20px !important; padding: 2px 2px 2px; }
+*/
+.right { text-align: right; }
+
+.dgtable-wrapper * {
+    box-sizing: border-box;
+}
+.dgtable-wrapper {
+    border: solid 1px #ccc;
+}
+.dgtable {
+    border-top: solid 1px #ccc;
+    max-width: 100%;
+    background-color: transparent;
+}
+.dgtable-header {
+    max-width: 100%;
+    overflow: hidden;
+    background: #eee;
+}
+.dgtable-header-row {
+    height: 26px;
+}
+.dgtable-header-cell {
+    float: left;
+    padding: 4px;
+    height: 26px;
+    border-left: solid 1px #ccc;
+    background: #ddd;
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: bold;
+    cursor: default;
+    text-align: left;
+}
+.dgtable-header-cell:first-child {
+    border-left: 0;
+}
+.dgtable-header-cell > div {
+    border: 1px dashed transparent;
+    white-space: nowrap;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+}
+.dgtable-header-cell.drag-over > div {
+    border-color: #666;
+    background: #bbb;
+}
+.dgtable-row {
+    border-top: solid 1px #ccc;
+    height: 28px;
+}
+.dgtable-row:first-child {
+    border-top: 0;
+    height: 29px;
+}
+.dgtable.virtual .dgtable-row {
+    border-top: 0;
+    border-bottom: solid 1px #ccc;
+}
+.dgtable-cell {
+    float: left;
+    padding: 4px 4px 4px;
+    height: 28px;
+    border-left: solid 1px #ccc;
+    font-size: 16px;
+    line-height: 19px;
+}
+.dgtable-cell > div {
+    max-height: 100%;
+    white-space: nowrap;
+    overflow: hidden
+}
+.dgtable-cell:first-child {
+    border-left: 0;
+}
+.dgtable-header-cell.sortable {
+    cursor: pointer;
+}
+.dgtable-header-cell.sorted .sort-arrow {
+    float: right;
+    display: inline-block;
+    width: 15px;
+    height: 6px;
+    margin: 5px 0 0 0;
+    background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAGCAMAAAAi7JTKAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAMAUExURQNOov///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH52dxwAAAACdFJOU/8A5bcwSgAAAAlwSFlzAAALEwAACxMBAJqcGAAAAB9JREFUCB0FwQEBAAAAgJD8Px0VoFKgRKEIpRBUEAgMBlQAL3y6umEAAAAASUVORK5CYII=") no-repeat center center;
+}
+
+.dgtable-header-cell.sorted.desc .sort-arrow {
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAGCAMAAAAi7JTKAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAMAUExURQNOov///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH52dxwAAAACdFJOU/8A5bcwSgAAAAlwSFlzAAALEwAACxMBAJqcGAAAAB9JREFUCB0FwQEBAAAAgJD8Px2BQFBBKIUoFClQKkANBywAL6PcDsUAAAAASUVORK5CYII=");
 }
 </style>
 
