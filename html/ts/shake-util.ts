@@ -174,7 +174,7 @@ function insertArraySorted<A>(xs: A[], x: A, compare: (a: A, b: A) => number): A
     let stop = xs.length - 1;
     let middle = 0;
     while (start <= stop) {
-        middle = Math.floor((start + stop) / 2)
+        middle = Math.floor((start + stop) / 2);
         if (compare(xs[middle], x) > 0)
             stop = middle - 1;
         else
