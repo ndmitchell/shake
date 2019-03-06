@@ -134,7 +134,7 @@ commandExplicit funcName oopts results exe args = do
     let tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
-            _ | useShell -> traced $ dropExe $ takeFileName $ if useShell then fst (word1 exe) else exe
+            _ -> traced $ dropExe $ takeFileName $ if useShell then fst (word1 exe) else exe
 
     let tracker act
             | useLint = fsatrace act
