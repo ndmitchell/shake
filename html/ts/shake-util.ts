@@ -93,6 +93,22 @@ function sum(xs: number[]): number {
     return res;
 }
 
+function compare(a: number, b: number): number {
+    return b - a;
+}
+
+function compareFst<A>(a: [number, A], b: [number, A]): number {
+    return b[0] - a[0];
+}
+
+function sortOn<A>(xs: A[], f: (x: A) => number): A[] {
+    return xs.map(x => pair(f(x), x)).sort(compareFst).map(snd);
+}
+
+function last<A>(xs: A[]): A {
+    return xs[xs.length - 1];
+}
+
 function maximum<A>(xs: A[], start: A): A {
     let res: A = start;
     for (const x of xs)
@@ -103,6 +119,14 @@ function maximum<A>(xs: A[], start: A): A {
 
 function pair<A, B>(a: A, b: B): [A, B] {
     return [a, b];
+}
+
+function fst<A, B>([x, _]: [A, B]): A {
+    return x;
+}
+
+function snd<A, B>([_, x]: [A, B]): B {
+    return x;
 }
 
 function testRegExp(r: string | RegExp, s: string): boolean {

@@ -32,8 +32,8 @@ function reportSummary(profile: Profile[]): HTMLElement {
             <li><b>Rules:</b> {showInt(profile.length)} ({showInt(countLast)} in last run) <span class="note">number of defined rules, e.g. individual files.</span></li>
             <li><b>Traced:</b> {showInt(countTrace)} ({showInt(countTraceLast)} in last run)
                 <span class="note">number of calls to
-                {" "}<tt><a href="https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:cmd">cmd</a></tt> or
-                {" "}<tt><a href="https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:traced">traced</a></tt>.</span>
+                {" "}<a href="https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:cmd"><tt>cmd</tt></a> or
+                {" "}<a href="https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:traced"><tt>traced</tt></a>.</span>
             </li>
         </ul>
         <h2>Performance</h2>
