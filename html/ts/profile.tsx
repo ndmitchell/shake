@@ -1,5 +1,22 @@
 function profileLoaded(profileRaw: ProfileRaw[]): void {
-    $(document.body).empty().append(profileRoot(profileRaw.map(unrawProfile)));
+    $(document.body).empty().append(profileRoot(unraw(profileRaw)));
+}
+
+function unraw(xs: ProfileRaw[]): Profile[] {
+    const ans = xs.map((x, i) => ({
+        index: i,
+        name: x[0],
+        execution: x[1],
+        built: x[2],
+        changed: x[3],
+        depends: x.length > 4 ? x[4] : [],
+        rdepends: [],
+        traces: x.length > 5 ? x[5].map(y => ({command: y[0], start: y[1], stop: y[2]})) : []
+    } as Profile));
+    for (const p of ans)
+        for (const d of p.depends)
+            ans[d].rdepends.push(p.index);
+    return ans;
 }
 
 function profileRoot(profile: Profile[]): HTMLElement {

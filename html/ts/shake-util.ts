@@ -72,6 +72,12 @@ function showPerc(x: number): string {
     return (x * 100).toFixed(2) + "%";
 }
 
+function showInt(x: int): string {
+    // From https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+    // Show, with commas
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 function plural(n: int, not1 = "s", is1 = ""): string {
     return n === 1 ? is1 : not1;
 }

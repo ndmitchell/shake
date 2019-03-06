@@ -7,8 +7,6 @@ declare const generated: string;
 /////////////////////////////////////////////////////////////////////
 // PROFILE DATA
 
-declare const profileRaw: ProfileRaw[];
-
 type timestamp = int;
 
 interface Trace {
@@ -17,12 +15,16 @@ interface Trace {
     stop: seconds;
 }
 
+type pindex = int; // an index into the list of profiles
+
 interface Profile {
+    index: pindex; // My index in the list of profiles
     name: string; // Name of the thing I built
     execution: seconds; // Seconds I took to execute
     built: timestamp; // Timestamp at which I was built
     changed: timestamp; // Timestamp at which I last changed
-    depends: int[]; // Which 0-based indexes I depended on (always lower than my index)
+    depends: pindex[]; // What I depend on (always lower than my index)
+    rdepends: pindex[]; // What depends on me
     traces: Trace[]; // List of traces
 }
 
