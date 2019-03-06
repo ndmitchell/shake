@@ -208,10 +208,6 @@ function runReport()
     {
         switch(report.mode)
         {
-        case "prototype":
-            $("#output").empty().append(profileRoot());
-            break;
-
         case "summary":
             $("#output").empty().append(reportSummary(profile, createSearch(profile)[1]));
             break;
