@@ -10,6 +10,7 @@ declare class DGTable {
     public addRows(x: any[]): void;
     public render(): any;
     public tableHeightChanged(): any;
+    public sort(x: string, ord: boolean): void;
 }
 
 function cmdTableData(search: Search): HTMLElement {
@@ -34,8 +35,6 @@ function cmdTableData(search: Search): HTMLElement {
                 {name: "average", label: "Average", width: "100px", cellClasses: "right"},
                 {name: "max", label: "Maximum", width: "100px", cellClasses: "right"}
             ],
-            height: 500,
-            sortColumn: {column: "time", descending: true},
             width: DGTable.Width.SCROLL,
             cellFormatter: (val: any, colname: string) =>
                 colname === "count" ? showInt(val) :
@@ -43,7 +42,6 @@ function cmdTableData(search: Search): HTMLElement {
                 val
         });
 
-    const trs = [];
     $(table.el).css("height", "100%");
     window.setTimeout(() => {
         table.render();
@@ -52,6 +50,8 @@ function cmdTableData(search: Search): HTMLElement {
         for (const i in res)
             res2.push({name: i, average: res[i].time / res[i].count, ...res[i]});
         table.addRows(res2);
+        table.sort("time", true);
+        table.render();
     }, 1);
     $(window).on("resize", () => {
         if ($(table.el).is(":visible"))
