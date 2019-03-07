@@ -42,12 +42,16 @@ function profileRoot(profile: Profile[]): HTMLElement {
 
 
 function createTabs(xs: Array<[string, () => HTMLElement]>): HTMLElement {
-    const bodies = xs.map(x => lazy(x[1]));
-    const body = <div style="padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;"></div>;
+    const bodies: Array< [HTMLElement, () => void] > = xs.map(x => {
+        const el = <div style="padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;display:none;"></div>;
+        const upd = lazy(() => $(el).append(x[1]()));
+        return pair(el, upd);
+    });
     let lbls = [];
     const f = (i: int) => () => {
-        $(body).empty().append(bodies[i]());
+        bodies[i][1]();
         lbls.map((x, j) => $(x).toggleClass("active", i === j));
+        bodies.map((x, j) => $(x[0]).toggle(i === j));
         window.onresize(new UIEvent(""));
     };
     lbls = xs.map((x, i) => <a onclick={f(i)}>{x[0]}</a>);
@@ -62,7 +66,7 @@ function createTabs(xs: Array<[string, () => HTMLElement]>): HTMLElement {
         </td></tr>
         <tr height="100%">
             <td style="background-color:white;">
-                {body}
+                {bodies.map(fst)}
             </td>
         </tr>
     </table>;
