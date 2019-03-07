@@ -33,7 +33,7 @@ main = do
     unless isMac $
         void $ cmd "sudo apt-get --allow-unauthenticated install nodejs"
     cmd "npm install -g typescript"
-    when False $ do -- Temporarily disable while refactoring
+    when False $ void $ do -- Temporarily disable while refactoring
         cmd "tsc --project html/ts"
         cmd "npm install -g tslint"
         cmd "tslint --project html/ts"
