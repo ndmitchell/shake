@@ -1,3 +1,4 @@
+
 function profileLoaded(profileRaw: ProfileRaw[]): void {
     $(document.body).empty().append(profileRoot(unraw(profileRaw)));
 }
