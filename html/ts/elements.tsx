@@ -14,3 +14,53 @@ function bindPlot(element: HTMLElement, data: Prop<jquery.flot.dataSeries[]>, op
 function varLink(name: string): HTMLElement {
     return <a href={"https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:" + name}><tt>{name}</tt></a>;
 }
+
+
+interface Column {
+    field: string;
+    label: string;
+    width: int;
+    alignRight?: boolean;
+    show?: (x: any) => string;
+}
+
+// A simple approximation of what DGTable provides
+declare class DGTable {
+    public static Width: {SCROLL: void};
+    public el: HTMLElement;
+    constructor(options: any);
+    public setRows(rows: object[], resort: boolean): void;
+    public render(): void;
+    public tableHeightChanged(): void;
+    public sort(x: string, descending: boolean): void;
+}
+
+function newTable(columns: Column[], data: Prop<object[]>): HTMLElement {
+    const f = (x: Column) => ({name: x.field, label: x.label, width: x.width, cellClasses: x.alignRight ? "right" : ""});
+    const formatters = {};
+    for (const c of columns)
+        formatters[c.field] = c.show || ((x: any) => x);
+
+    const table = new DGTable({
+        adjustColumnWidthForSortArrow: false,
+        cellFormatter: (val: any, colname: string) => formatters[colname](val),
+        columns: columns.map(f),
+        width: DGTable.Width.SCROLL
+    });
+    $(table.el).css("height", "100%");
+    window.setTimeout(() => {
+        table.render();
+        table.tableHeightChanged();
+        table.sort("total", true);
+        table.setRows(data.get(), true);
+    }, 1);
+
+    // data.event(xs => table.);
+    $(window).on("resize", () => {
+        if ($(table.el).is(":visible"))
+            table.tableHeightChanged();
+    });
+    const ret = <div style="height:100%;width:100%;"></div>;
+    $(ret).append(table.el);
+    return ret;
+}

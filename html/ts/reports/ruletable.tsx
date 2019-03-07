@@ -12,7 +12,7 @@ function cmdRuleTable(search: Search): HTMLElement {
     const table = new DGTable({
             columns: [
                 {name: "group", label: "Group", width: "300px"},
-                {name: "count", label: "Count", width: "100px", cellClasses: "right"},
+                {name: "count", label: "Count", width: "100px", cellClasses: "right"}
             ],
             height: 500,
             width: DGTable.Width.SCROLL,
@@ -22,7 +22,8 @@ function cmdRuleTable(search: Search): HTMLElement {
         });
 
     window.setTimeout(() => {
-        table.render().addRows(trs);
+        table.render();
+        table.setRows(trs, true);
         $(table.el).css("height", "100%");
         table.tableHeightChanged();
         table.render();
