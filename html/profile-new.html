@@ -51,22 +51,25 @@ a tt {color: #315273;}
     border-bottom: 3px solid white;
     background-color: white;
 }
+.right { text-align: right; }
 
 /* My overrides */
-/*
-.dgtable-row:hover { background-color: #ddd !important; }
-.dgtable-header-cell:hover { background-color: #ccc !important; }
+/* Make the colors and font size match better */
+.dgtable-row:hover { background-color: #e8e8e8 !important; }
+.dgtable-header-cell:hover { background-color: #ddd !important; }
 .dgtable-header-cell { background-color: #eee !important; }
-.dgtable-header-cell, .dgtable-cell { font-size: 9pt !important; }
-.dgtable-header-row { height: 20px !important; }
-.dgtable-header-cell { height: 20px !important; padding: 2px !important; }
-*/
-/*
-.dgtable-row { height: 20px !important }
-.dgtable-row:first-child { height: 21px !important; }
-.dgtable-cell { height: 20px !important; padding: 2px 2px 2px; }
-*/
-.right { text-align: right; }
+.dgtable-cell:last-child, .dgtable-header-cell:last-child { border-right: 1px solid #ccc; }
+
+/* Make the header smaller */
+.dgtable-header-row, .dgtable-header-cell { height: 22px !important; }
+.dgtable-header-cell { padding: 2px 4px !important; }
+.dgtable-header-cell, .dgtable-cell-preview.header { font-size: 9pt !important; }
+
+/* Make the rows smaller */
+.dgtable-row { height: 22px !important; }
+.dgtable-row:first-child { height: 23px !important; }
+.dgtable-cell { padding: 2px 4px !important; height: 22px !important; }
+.dgtable-cell, .dgtable-cell-preview{ font-size: 9pt !important; }
 
 .dgtable-wrapper * {
     box-sizing: border-box;
