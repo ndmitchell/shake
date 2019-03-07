@@ -27,7 +27,7 @@ function cmdRuleTable(search: Search): HTMLElement {
         table.tableHeightChanged();
         table.render();
     }, 1);
-    window.onresize = () => table.tableHeightChanged();
+    $(window).on("resize", () => table.tableHeightChanged());
     const ret = <div style="height:100%;width:100%;"></div>;
     $(ret).append(table.el);
     return ret;
