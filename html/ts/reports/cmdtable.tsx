@@ -11,9 +11,10 @@ function cmdTableData(search: Search): HTMLElement {
             if (!(t.command in res))
                 res[t.command] = {count: 1, total: time, max: time};
             else {
-                res[t.command].count++;
-                res[t.command].total += time;
-                res[t.command].max = Math.max(res[t.command].max, time);
+                const ans = res[t.command];
+                ans.count++;
+                ans.total += time;
+                ans.max = Math.max(ans.max, time);
             }
         })
     );
