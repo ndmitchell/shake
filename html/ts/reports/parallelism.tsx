@@ -4,13 +4,15 @@ function reportParallelism(profile: Profile[]): HTMLElement {
     const plotData: dataSeries[] =
         [ {label: "Realistic (based on current dependencies)", data: [], color: "#3131a7"}
         , {label: "Ideal (if no dependencies and perfect speedup)", data: [], color: "green"}
+        , {label: "Gap", data: [], color: "orange"}
         ];
     let threads1: seconds;
     for (let threads = 1; threads <= 24; threads++) {
         const taken = simulateThreads(profile, threads)[0];
         if (threads === 1) threads1 = taken;
         plotData[0].data.push([threads, taken]);
-        plotData[1].data.push([threads, taken / threads]);
+        plotData[1].data.push([threads, threads1 / threads]);
+        plotData[2].data.push([threads, Math.max(0, taken - (threads1 / threads))]);
     }
 
     const plot = <div style="width:100%; height:100%;"></div>;
