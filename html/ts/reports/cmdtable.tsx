@@ -7,7 +7,7 @@ function reportCmdTable(profile: Profile[], search: Prop<Search>): HTMLElement {
         , {field: "average", label: "Average", width: 75, alignRight: true, show: showTime}
         , {field: "max", label: "Max", width: 75, alignRight: true, show: showTime}
         ];
-    return newTable(columns, new Prop(cmdTableData(search.get())));
+    return newTable(columns, search.map(cmdTableData));
 }
 
 function cmdTableData(search: Search): object[] {

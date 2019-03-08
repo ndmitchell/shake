@@ -72,4 +72,9 @@ class Prop<A> {
         this.callback = val => { old(val); next(val); };
         next(this.val);
     }
+    public map<B>(f: (val: A) => B): Prop<B> {
+        const res = new Prop(f(this.get()));
+        this.event(a => res.set(f(a)));
+        return res;
+    }
 }
