@@ -1,7 +1,7 @@
 
 function reportParallelism(profile: Profile[]): HTMLElement {
     // now simulate for -j1 .. -j24
-    const plotData: dataSeries[] =
+    const plotData: jquery.flot.dataSeries[] =
         [ {label: "Realistic (based on current dependencies)", data: [], color: "#3131a7"}
         , {label: "Ideal (if no dependencies and perfect speedup)", data: [], color: "green"}
         , {label: "Gap", data: [], color: "orange"}
