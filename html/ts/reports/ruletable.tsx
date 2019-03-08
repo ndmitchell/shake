@@ -1,5 +1,7 @@
 
 function reportRuleTable(profile: Profile[], search: Prop<Search>): HTMLElement {
+    const [total, started] = simulateThreads(24, profile);
+    const ptimes = slowestParallel2(profile, total, started);
     const columns: Column[] =
         [ {field: "name", label: "Name", width: 400}
         , {field: "count", label: "Count", width: 75, alignRight: true, show: showInt}
@@ -9,10 +11,10 @@ function reportRuleTable(profile: Profile[], search: Prop<Search>): HTMLElement 
         , {field: "time", label: "Time", width: 75, alignRight: true, show: showTime}
         , {field: "ptime", label: "PTime", width: 85, alignRight: true, show: showTime}
         ];
-    return newTable(columns, search.map(ruleData), "time", true);
+    return newTable(columns, search.map(s => ruleData(ptimes, s)), "time", true);
 }
 
-function ruleData(search: Search): object[] {
+function ruleData(ptimes: seconds[], search: Search): object[] {
     const res = [];
     search.forEachProfiles((ps, name) =>
         res.push({
@@ -22,7 +24,7 @@ function ruleData(search: Search): object[] {
             run: minimum(ps.map(p => p.built)),
             changed: ps.some(p => p.built === p.changed),
             time: sum(ps.map(p => p.execution)),
-            ptime: 0
+            ptime: sum(ps.map(p => ptimes[p.index]))
         })
     );
     return res;

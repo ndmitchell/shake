@@ -34,12 +34,10 @@ function slowestParallel(profile: Profile[]): HTMLElement {
     return <div>
         <b>Parallelism impact</b>
         {res}
-        <b>Slowest parallel</b>
-        {slowestParallel2(profile, started[0], started[1])}
     </div>;
 }
 
-function slowestParallel2(profile: Profile[], total: seconds, started: seconds[]): HTMLElement {
+function slowestParallel2(profile: Profile[], total: seconds, started: seconds[]): seconds[] {
     const starts = started.map((s, i) => pair(i, s)).sort((a, b) => a[1] - b[1]);
     const costs = starts.map(([ind, start], i) => {
         // find out who else runs before I finish
@@ -53,8 +51,10 @@ function slowestParallel2(profile: Profile[], total: seconds, started: seconds[]
         }
         return pair(ind, execution === 0 ? 0 : execution * (execution / (execution + overlap)));
     });
-    const res = costs.sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => pair(x[1], profile[x[0]].name));
-    return showItems(total, res);
+    const res: seconds[] = [];
+    for (const [ind, cost] of costs)
+        res[ind] = cost;
+    return res;
 }
 
 function simulateThreads(threads: int, profile: Profile[]): [seconds, seconds[]] {
