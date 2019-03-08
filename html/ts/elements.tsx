@@ -56,7 +56,10 @@ function newTable(columns: Column[], data: Prop<object[]>, sortColumn?: string, 
         table.setRows(data.get(), true);
     }, 1);
 
-    // data.event(xs => table.);
+    data.event(xs => {
+        table.setRows(xs, true);
+        table.render();
+    });
     $(window).on("resize", () => {
         if ($(table.el).is(":visible"))
             table.tableHeightChanged();
