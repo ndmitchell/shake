@@ -24,23 +24,12 @@ function slowestRules(profile: Profile[]): HTMLElement {
     </div>;
 }
 
-type index = int;
-type Profile2 = Profile & {index: index, cost: seconds, rdeps: index[]};
-
 function slowestParallel(profile: Profile[]): HTMLElement {
-    // first give each rule a priority, based no how much the downstream cost is
-    // FIXME: Just approximate as the individual execution cost for now
-    const priority = profile.map((x, i) => ({...x, index: i, cost: x.execution, rdeps: []}));
-    for (const p of priority) {
-        for (const d of p.depends)
-            priority[d].rdeps.push(p.index);
-    }
-
     // now simulate for -j1 .. -j20
     const plot: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
     let started: [seconds, seconds[]];
     for (let threads = 1; threads <= 20; threads++) {
-        started = simulateThreads(threads, priority);
+        started = simulateThreads(threads, profile);
         plot[0].data.push([threads, started[0]]);
     }
 
@@ -79,22 +68,22 @@ function slowestParallel2(profile: Profile[], total: seconds, started: seconds[]
     return showItems(total, res);
 }
 
-function simulateThreads(threads: int, profile: Profile2[]): [seconds, seconds[]] {
+function simulateThreads(threads: int, profile: Profile[]): [seconds, seconds[]] {
     // How far are we through this simulation
     let timestamp: seconds = 0;
 
     // Who is currently running, with the highest seconds FIRST
-    const running: Array<[index, seconds]> = [];
+    const running: Array<[pindex, seconds]> = [];
     const started: seconds[] = [];
 
     // Things that are done
-    const ready: Profile2[] = profile.filter(x => x.depends.length === 0);
+    const ready: Profile[] = profile.filter(x => x.depends.length === 0);
     const waiting: int[] = profile.map(x => x.depends.length) ; // number I am waiting on before I am done
 
     function runningWait(): void {
         const [ind, time] = running.pop();
         timestamp = time;
-        for (const d of profile[ind].rdeps) {
+        for (const d of profile[ind].rdepends) {
             waiting[d]--;
             if (waiting[d] === 0)
                 ready.push(profile[d]);
