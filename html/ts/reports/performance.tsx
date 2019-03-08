@@ -4,7 +4,7 @@ function reportPerformance(profile: Profile[]): HTMLElement {
     const plot: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
     let started: [seconds, seconds[]];
     for (let threads = 1; threads <= 20; threads++) {
-        started = simulateThreads(threads, profile);
+        started = simulateThreads(profile, threads);
         plot[0].data.push([threads, started[0]]);
     }
 
@@ -23,7 +23,9 @@ function reportPerformance(profile: Profile[]): HTMLElement {
     </div>;
 }
 
-function simulateThreads(threads: int, profile: Profile[]): [seconds, seconds[]] {
+// Simulate running N threads over the profile, return:
+// [total time take, point at which each entry kicked off]
+function simulateThreads(profile: Profile[], threads: int): [seconds, seconds[]] {
     // How far are we through this simulation
     let timestamp: seconds = 0;
 
