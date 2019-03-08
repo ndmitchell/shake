@@ -1,19 +1,5 @@
 
-function reportPerformance(profile: Profile[], search: Prop<Search>): HTMLElement {
-    return <div>
-        {slowestParallel(profile)}
-    </div>;
-}
-
-function showItems(total: seconds, items: Array<[seconds, string]>): HTMLElement {
-    const f = ([t, s]: [seconds, string]) => showTime(t) + ", " + showPerc(t / total) + ", " + s;
-    return <ul>
-        {items.map(x => <li>{f(x)}</li>)}
-        <li style="font-weight:bold;">{f([sum(items.map(x => x[0])), "TOTAL"])}</li>
-    </ul>;
-}
-
-function slowestParallel(profile: Profile[]): HTMLElement {
+function reportPerformance(profile: Profile[]): HTMLElement {
     // now simulate for -j1 .. -j20
     const plot: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
     let started: [seconds, seconds[]];
@@ -35,26 +21,6 @@ function slowestParallel(profile: Profile[]): HTMLElement {
         <b>Parallelism impact</b>
         {res}
     </div>;
-}
-
-function slowestParallel2(profile: Profile[], total: seconds, started: seconds[]): seconds[] {
-    const starts = started.map((s, i) => pair(i, s)).sort((a, b) => a[1] - b[1]);
-    const costs = starts.map(([ind, start], i) => {
-        // find out who else runs before I finish
-        const execution = profile[ind].execution;
-        const end = start + execution;
-        let overlap = 0; // how much time I am overlapped for
-        for (let j = i + 1; j < starts.length; j++) {
-            const [jInd, jStarts] = starts[j];
-            if (jStarts > end) break;
-            overlap += Math.min(end - jStarts, profile[starts[j][0]].execution);
-        }
-        return pair(ind, execution === 0 ? 0 : execution * (execution / (execution + overlap)));
-    });
-    const res: seconds[] = [];
-    for (const [ind, cost] of costs)
-        res[ind] = cost;
-    return res;
 }
 
 function simulateThreads(threads: int, profile: Profile[]): [seconds, seconds[]] {

@@ -27,7 +27,7 @@ function profileRoot(profile: Profile[]): HTMLElement {
         , ["Command plot", () => reportCmdPlot(profile)]
         , ["Commands", () => reportCmdTable(profile, search)]
         , ["Rules", () => reportRuleTable(profile, search)]
-        , ["Performance", () => reportPerformance(profile, search)]
+        , ["Performance", () => reportPerformance(profile)]
         ]);
     return <table class="fill">
         <tr><td style="padding-top: 8px; padding-bottom: 8px;">
