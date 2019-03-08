@@ -1,26 +1,19 @@
 
 function reportPerformance(profile: Profile[]): HTMLElement {
-    // now simulate for -j1 .. -j20
-    const plot: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
+    // now simulate for -j1 .. -j24
+    const plotData: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
     let started: [seconds, seconds[]];
-    for (let threads = 1; threads <= 20; threads++) {
+    for (let threads = 1; threads <= 24; threads++) {
         started = simulateThreads(profile, threads);
-        plot[0].data.push([threads, started[0]]);
+        plotData[0].data.push([threads, started[0]]);
     }
 
-    const res = <div style="width:100%; height:100px;"></div>;
-    const update = () =>
-        $.plot($(res), plot, {
-            xaxis: { tickDecimals: 0 },
-            yaxis: { min: 0, tickFormatter: showTime }
-        });
-    // do it in a timeout because it must be attached first
-    window.setTimeout(update, 1);
-    window.onresize = update;
-    return <div>
-        <b>Parallelism impact</b>
-        {res}
-    </div>;
+    const plot = <div style="width:100%; height:100%;"></div>;
+    bindPlot(plot, new Prop(plotData), {
+        xaxis: { tickDecimals: 0 },
+        yaxis: { min: 0, tickFormatter: showTime }
+    });
+    return plot;
 }
 
 // Simulate running N threads over the profile, return:
