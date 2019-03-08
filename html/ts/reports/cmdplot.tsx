@@ -50,7 +50,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
 
     return <table class="fill">
         <tr>
-            <td width="100%" style="text-align:center;"><h2>Traced commands executing over time</h2></td>
+            <td width="100%" style="text-align:center;"><h2>Number of commands executing over time</h2></td>
             <td>{combo}</td>
         </tr>
         <tr>

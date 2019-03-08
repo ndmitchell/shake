@@ -1,11 +1,16 @@
 
-function reportPerformance(profile: Profile[]): HTMLElement {
+function reportParallelism(profile: Profile[]): HTMLElement {
     // now simulate for -j1 .. -j24
-    const plotData: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
-    let started: [seconds, seconds[]];
+    const plotData: dataSeries[] =
+        [ {label: "Realistic (based on current dependencies)", data: [], color: "#3131a7"}
+        , {label: "Ideal (if no dependencies and perfect speedup)", data: [], color: "green"}
+        ];
+    let threads1: seconds;
     for (let threads = 1; threads <= 24; threads++) {
-        started = simulateThreads(profile, threads);
-        plotData[0].data.push([threads, started[0]]);
+        const taken = simulateThreads(profile, threads)[0];
+        if (threads === 1) threads1 = taken;
+        plotData[0].data.push([threads, taken]);
+        plotData[1].data.push([threads, taken / threads]);
     }
 
     const plot = <div style="width:100%; height:100%;"></div>;
@@ -13,7 +18,17 @@ function reportPerformance(profile: Profile[]): HTMLElement {
         xaxis: { tickDecimals: 0 },
         yaxis: { min: 0, tickFormatter: showTime }
     });
-    return plot;
+    return <table class="fill">
+        <tr>
+            <td style="text-align:center;"><h2>Time to build at different number of threads</h2></td>
+        </tr>
+        <tr>
+            <td height="100%">{plot}</td>
+        </tr>
+        <tr>
+            <td style="text-align:center;">Number of threads available.</td>
+        </tr>
+    </table>;
 }
 
 // Simulate running N threads over the profile, return:
