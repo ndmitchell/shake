@@ -28,7 +28,6 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
     const plotData: Prop<jquery.flot.dataSeries[]> = new Prop([]);
     bindPlot(plot, plotData, {
         legend: { show: true, position: "nw", sorted: "reverse" },
-        // tslint:disable-next-line: object-literal-sort-keys
         series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
         yaxis: { min: 0 },
         xaxis: { tickFormatter: showTime }

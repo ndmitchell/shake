@@ -37,7 +37,6 @@ function slowestParallel(profile: Profile[]): HTMLElement {
     }
 
     // now simulate for -j1 .. -j20
-    // tslint:disable-next-line: object-literal-sort-keys
     const plot: dataSeries[] = [{label: "Time", data: [], color: "blue"}];
     let started: [seconds, seconds[]];
     for (let threads = 1; threads <= 20; threads++) {

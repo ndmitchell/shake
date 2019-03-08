@@ -7,10 +7,10 @@ function reportCmdTable(profile: Profile[], search: Prop<Search>): HTMLElement {
         , {field: "average", label: "Average", width: 75, alignRight: true, show: showTime}
         , {field: "max", label: "Max", width: 75, alignRight: true, show: showTime}
         ];
-    return newTable(columns, search.map(cmdTableData));
+    return newTable(columns, search.map(cmdData), "total", true);
 }
 
-function cmdTableData(search: Search): object[] {
+function cmdData(search: Search): object[] {
     const res: MapString< {count: int, total: seconds, max: seconds} > = {};
     search.forEachProfile(p =>
         p.traces.forEach(t => {

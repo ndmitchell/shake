@@ -117,6 +117,14 @@ function maximum<A>(xs: A[], start: A): A {
     return res;
 }
 
+function minimum<A>(xs: A[], start?: A): A {
+    let res: A = start;
+    for (const x of xs)
+        if (res === undefined || x < res)
+            res = x;
+    return res;
+}
+
 function pair<A, B>(a: A, b: B): [A, B] {
     return [a, b];
 }

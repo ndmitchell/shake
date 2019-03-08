@@ -35,7 +35,7 @@ declare class DGTable {
     public sort(x: string, descending: boolean): void;
 }
 
-function newTable(columns: Column[], data: Prop<object[]>): HTMLElement {
+function newTable(columns: Column[], data: Prop<object[]>, sortColumn?: string, sortDescend?: boolean): HTMLElement {
     const f = (x: Column) => ({name: x.field, label: x.label, width: x.width, cellClasses: x.alignRight ? "right" : ""});
     const formatters = {};
     for (const c of columns)
@@ -51,7 +51,8 @@ function newTable(columns: Column[], data: Prop<object[]>): HTMLElement {
     window.setTimeout(() => {
         table.render();
         table.tableHeightChanged();
-        table.sort("total", true);
+        if (sortColumn)
+            table.sort(sortColumn, sortDescend);
         table.setRows(data.get(), true);
     }, 1);
 
