@@ -43,7 +43,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
         const res = [];
         for (const s in series)
             res.push({label: s, data: series[s].map((x, i) => pair(end * i / 100, x))});
-        plotData.set(sortOn(res, x => sum(x.data) / x.data.length));
+        plotData.set(res);
     }
     setPlotData(0);
     $(combo).change(() => setPlotData($(combo).val()));

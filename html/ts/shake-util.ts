@@ -93,12 +93,12 @@ function sum(xs: number[]): number {
     return res;
 }
 
-function compare(a: number, b: number): number {
-    return b - a;
+function compareFst<A>(a: [number, A], b: [number, A]): number {
+    return a[0] - b[0];
 }
 
-function compareFst<A>(a: [number, A], b: [number, A]): number {
-    return b[0] - a[0];
+function compareSnd<A>(a: [A, number], b: [A, number]): number {
+    return a[1] - b[1];
 }
 
 function sortOn<A>(xs: A[], f: (x: A) => number): A[] {

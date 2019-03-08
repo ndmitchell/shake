@@ -17,7 +17,7 @@ function reportRuleTable(profile: Profile[], search: Prop<Search>): HTMLElement 
 // Calculate the exclusive time of each rule at some number of threads
 function calcETimes(profile: Profile[], threads: int): seconds[] {
     const [_, started] = simulateThreads(profile, threads);
-    const starts = started.map((s, i) => pair(i, s)).sort((a, b) => a[1] - b[1]);
+    const starts = started.map((s, i) => pair(i, s)).sort(compareSnd);
     const costs = starts.map(([ind, start], i) => {
         // find out who else runs before I finish
         const execution = profile[ind].execution;
