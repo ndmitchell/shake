@@ -8,7 +8,7 @@ function reportRuleTable(profile: Profile[], search: Prop<Search>): HTMLElement 
         , {field: "run", label: "Run", width: 50, alignRight: true}
         , {field: "changed", label: "Change", width: 60, alignRight: true}
         , {field: "time", label: "Time", width: 75, alignRight: true, show: showTime}
-        , {field: "etime", label: "ETime", width: 85, alignRight: true, show: showTime}
+        , {field: "etime", label: "ETime", width: 75, alignRight: true, show: showTime}
         , {field: "untraced", label: "Untraced", width: 100, alignRight: true, show: showTime}
         ];
     return newTable(columns, search.map(s => ruleData(ptimes, s)), "time", true);
