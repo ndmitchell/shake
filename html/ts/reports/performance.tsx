@@ -1,7 +1,6 @@
 
 function reportPerformance(profile: Profile[], search: Prop<Search>): HTMLElement {
     return <div>
-        {slowestRules(profile)}
         {slowestParallel(profile)}
     </div>;
 }
@@ -12,16 +11,6 @@ function showItems(total: seconds, items: Array<[seconds, string]>): HTMLElement
         {items.map(x => <li>{f(x)}</li>)}
         <li style="font-weight:bold;">{f([sum(items.map(x => x[0])), "TOTAL"])}</li>
     </ul>;
-}
-
-function slowestRules(profile: Profile[]): HTMLElement {
-    const slowest = profile.slice().sort((a, b) => b.execution - a.execution).slice(0, 10);
-    const total = sum(profile.map(x => x.execution));
-    const f = (x: Profile) => pair(x.execution, x.name + (x.traces.length === 0 ? "" : " running " + x.traces.map(y => y.command).join(", ")));
-    return <div>
-        <b>Slowest rules</b>
-        {showItems(total, slowest.map(f))}
-    </div>;
 }
 
 function slowestParallel(profile: Profile[]): HTMLElement {
