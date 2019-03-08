@@ -37,7 +37,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
         const [run, end] = runs[runsIndex];
         const profileRun = profile.filter(p => p.built === run);
         // Make sure we max(0,) every step in the process, in case one does parallelism of threads
-        const missing = sum(profileRun.map(p => Math.max(0, p.execution - sum(p.traces.map(t => t.stop - t.start)))));
+        const missing = sum(profileRun.map(untraced));
         $(warning).text(missing < 1 ? "" : "Warning: " + showTime(missing) + " of execution was not traced.");
         const series = calcPlotData(end, profileRun, 100);
         const res = [];

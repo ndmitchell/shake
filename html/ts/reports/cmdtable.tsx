@@ -2,7 +2,7 @@
 function reportCmdTable(profile: Profile[], search: Prop<Search>): HTMLElement {
     const columns: Column[] =
         [ {field: "name", label: "Name", width: 200}
-        , {field: "count", label: "Count", width: 75, alignRight: true, show: showInt}
+        , {field: "count", label: "Count", width: 65, alignRight: true, show: showInt}
         , {field: "total", label: "Total", width: 75, alignRight: true, show: showTime}
         , {field: "average", label: "Average", width: 75, alignRight: true, show: showTime}
         , {field: "max", label: "Max", width: 75, alignRight: true, show: showTime}
