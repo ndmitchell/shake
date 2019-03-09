@@ -130,8 +130,8 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     res <- getIdKeyStatus database i
                     w <- case res of
                         Just (_, Running (NoShow w) _) -> return w
-                        -- FIXME: We know it's possible to arrive here with Error, but we don't know how.
-                        --        It can't be easily reproduced.
+                        -- We used to be able to hit here, but we fixed it by ensuring the thread pool workers are all
+                        -- dead _before_ any exception bubbles up
                         _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
                     setIdKeyStatus global database i k $ either mkError Ready val
                     w val
