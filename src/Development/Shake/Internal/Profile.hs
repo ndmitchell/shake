@@ -65,7 +65,6 @@ resultsOnly mp = Map.map (\(k, v) -> (k, let Just r = getResult v in r{depends =
 removeStep :: Map.HashMap Id (Key, Result a) -> Map.HashMap Id (Key, Result a)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
--- | FIXME: Move into Profile itself
 toReport :: Database -> IO [ProfileEntry]
 toReport Database{..} = do
     status <- removeStep . resultsOnly <$> Ids.toMap status
@@ -89,7 +88,6 @@ toReport Database{..} = do
     return [maybe (throwImpure $ errorInternal "toReport") f $ Map.lookup i status | i <- order]
 
 
--- FIXME: These data types are now almost entirely pointless
 data ProfileEntry = ProfileEntry
     {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [Int], prfExecution :: Double, prfTraces :: [ProfileTrace]}
 data ProfileTrace = ProfileTrace
