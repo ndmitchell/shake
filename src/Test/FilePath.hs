@@ -11,6 +11,8 @@ import Data.List
 import qualified Data.ByteString.Char8 as BS
 import qualified Development.Shake.Internal.FileName as BS
 import System.Info.Extra
+import System.Directory
+import qualified System.IO.Extra as IO
 
 
 newtype File = File String deriving Show
@@ -28,6 +30,7 @@ main = testSimple $ do
             let s = toStandard $ normaliseEx x
                 b = BS.unpack (BS.filepathNormalise $ BS.pack x)
             in if s == b then s else error $ show ("Normalise functions differ",x,s,b)
+
     -- basic examples
     norm "" === "."
     norm "." === "."
@@ -97,3 +100,37 @@ main = testSimple $ do
     ("//*" <.> "foo") === "//*.foo"
     toStandard ("a" </> "b" </> "c" <//> "*" <.> "exe") === "a/b/c//*.exe"
     ("a" <//> "/b/c") === "a//b/c"
+
+    -- check makeRelativeEx
+    IO.withTempDir $ \ cwd -> do
+        setCurrentDirectory cwd
+        createDirectory (cwd </> "a")
+        createDirectory (cwd </> "b")
+        writeFile (toNative (cwd </> "b/file.out")) "foo"
+        createDirectory (cwd </> "e")
+        createDirectory (cwd </> "e/f")
+        createDirectory (cwd </> "e/f/g")
+        createFileLink  (cwd </> "e/f/g/") (cwd </> "c")
+
+        let a ==== b = a >>= (=== b)
+        -- If the second argument has the first as a prefix, then makeRelative is used.
+        makeRelativeEx "/x/y/" "/x/y/z"
+            ==== Just "z"
+        -- If the seconds argument is already relative, then use that.
+        makeRelativeEx (cwd </> "c") ("../b/file.out")
+            ==== Just "../b/file.out"
+        makeRelativeEx "a" "b/file.out"
+            ==== Just "b/file.out"
+        -- Requires a ".." indirection.
+        makeRelativeEx (cwd </> "a") (cwd </> "b/file.out")
+            ==== Just "../b/file.out"
+        -- Requires indirection through a symlink.
+        makeRelativeEx (cwd </> "c") (cwd </> "b/file.out")
+            ==== Just "../../../b/file.out"
+        -- First argument is relative and second is absolute. The first argument
+        -- should be relative to the CWD.
+        makeRelativeEx "c" (cwd </> "b/file.out")
+            ==== Just "../../../b/file.out"
+        -- First argument contains a symlink and indirections.
+        makeRelativeEx (cwd </> "c/../../../a") (cwd </> "b/file.out")
+            ==== Just "../b/file.out"

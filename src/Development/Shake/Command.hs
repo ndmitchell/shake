@@ -145,7 +145,12 @@ commandExplicit funcName oopts results exe args = do
         shelled = runShell (unwords $ exe : args)
 
         ignore = map (?==) shakeLintIgnore
-        ham cwd xs = [makeRelative cwd x | x <- map toStandard xs
+
+        -- makeRelativeEx is used instead of makeRelative. Only makeRelativeEx
+        -- is guaranteed to give a valid relative path as long as the input
+        -- paths are on the same drive.
+        ham cwd xs = liftIO $ sequence [fromMaybe x <$> makeRelativeEx cwd x
+                                         | x <- map toStandard xs
                                          , any (`isPrefixOf` x) shakeLintInside
                                          , not $ any ($ x) ignore]
 
@@ -189,8 +194,8 @@ commandExplicit funcName oopts results exe args = do
                 existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
             rs <- existing reader xs
             ws <- existing writer xs
-            let reads = ham cwd rs
-                writes = ham cwd ws
+            reads  <- ham cwd rs
+            writes <- ham cwd ws
             when useAutoDeps $
                 unsafeAllowApply $ needed reads
             trackRead reads
@@ -202,7 +207,7 @@ commandExplicit funcName oopts results exe args = do
             pxs <- liftIO $ parseFSAT <$> readFileUTF8' file
             xs <- liftIO $ filterM doesFileExist [x | FSATRead x <- pxs]
             cwd <- liftIO getCurrentDirectory
-            unsafeAllowApply $ need $ ham cwd xs
+            unsafeAllowApply $ need =<< ham cwd xs
             return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
