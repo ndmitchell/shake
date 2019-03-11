@@ -101,9 +101,21 @@ function createSearch(profile: Profile[]): [HTMLElement, Prop<Search>] {
 function searchHelp(input: HTMLElement): HTMLElement {
     const examples: Array<[string, string]> =
         [ ["Only the last run", "run(0)"]
-        , ["Group by file extension", "named(/(\.[_0-9a-z]+)/)"]
+        , ["Named 'Main'", "named(\"Main\")"]
+        , ["Group by file extension", "named(/(\\.[_0-9a-z]+)$/)"]
+        , ["No dependencies (an input)", "leaf()"]
+        , ["Didn't change when it last rebuilt", "unchanged()"]
+        , ["Ran 'gcc'", "command(\"gcc\")"]
         ];
-    const dropdown = <div style="border:1px solid gray;display:none;position:absolute;">Add stuff to the inner here<br/>And more stuff</div>;
+    const f = (code: string) => () => {
+        $(input).val((i, x) => x + (x === "" ? "" : " && ") + code);
+        $(input).trigger("change");
+    };
+    const dropdown = <div class="dropdown" style="display:none;">
+        <ul style="padding-left:30px;">
+            {examples.map(([desc, code]) => <li><a onclick={f(code)}><tt>{code}</tt></a> <span class="note">{desc}</span></li>)}
+        </ul>
+    </div>;
     const arrow_down = <span style="vertical-align:middle;font-size:80%;">&#9660;</span>;
     const arrow_up   = <span style="vertical-align:middle;font-size:80%;display:none;">&#9650;</span>;
     const show_inner = () => { $(dropdown).toggle(); $(arrow_up).toggle(); $(arrow_down).toggle(); };
