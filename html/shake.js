@@ -10,32 +10,144 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
-function unrawTrace(x) {
-    return {
-        command: x[0],
-        start: x[1],
-        stop: x[2]
+function bindPlot(element, data, options) {
+    var redraw = function () {
+        if ($(element).is(":visible"))
+            $.plot($(element), data.get(), options);
     };
+    window.setTimeout(redraw, 1);
+    $(window).on("resize", redraw);
+    data.event(redraw);
 }
-function unrawProfile(x) {
-    return {
+function varLink(name) {
+    return React.createElement("a", { href: "https://hackage.haskell.org/package/shake/docs/Development-Shake.html#v:" + name },
+        React.createElement("tt", null, name));
+}
+function newTable(columns, data, sortColumn, sortDescend) {
+    var f = function (x) { return ({ name: x.field, label: x.label, width: x.width, cellClasses: x.alignRight ? "right" : "" }); };
+    var formatters = {};
+    for (var _i = 0, columns_1 = columns; _i < columns_1.length; _i++) {
+        var c = columns_1[_i];
+        formatters[c.field] = c.show || (function (x) { return x; });
+    }
+    var table = new DGTable({
+        adjustColumnWidthForSortArrow: false,
+        cellFormatter: function (val, colname) { return formatters[colname](val); },
+        columns: columns.map(f),
+        width: DGTable.Width.SCROLL
+    });
+    $(table.el).css("height", "100%");
+    window.setTimeout(function () {
+        table.render();
+        table.tableHeightChanged();
+        if (sortColumn)
+            table.sort(sortColumn, sortDescend);
+        table.setRows(data.get(), true);
+    }, 1);
+    data.event(function (xs) {
+        table.setRows(xs, true);
+        table.render();
+    });
+    $(window).on("resize", function () {
+        if ($(table.el).is(":visible"))
+            table.tableHeightChanged();
+    });
+    return React.createElement("div", { style: "height:100%;width:100%;" }, table.el);
+}
+// These are global variables mutated/queried by query execution
+var environmentAll; // All the profiles
+var environmentThis; // The specific profile under test
+var environmentGroup; // The group produced as a result
+function group(x) {
+    environmentGroup.push(x);
+    return true;
+}
+function leaf() {
+    return environmentThis.depends.length === 0;
+}
+function run(i) {
+    if (i === undefined)
+        return environmentThis.built;
+    else
+        return environmentThis.built === i;
+}
+function changed() {
+    return environmentThis.changed === environmentThis.built;
+}
+function unchanged() {
+    return !unchanged();
+}
+function named(r, groupName) {
+    if (r === undefined)
+        return environmentThis.name;
+    var res = execRegExp(r, environmentThis.name);
+    if (res === null) {
+        if (groupName === undefined)
+            return false;
+        else {
+            group(groupName);
+            return true;
+        }
+    }
+    if (res.length !== 1) {
+        for (var i = 1; i < res.length; i++)
+            group(res[i]);
+    }
+    return true;
+}
+function command(r, groupName) {
+    var n = (environmentThis.traces || []).length;
+    if (r === undefined)
+        return n === 0 ? "" : environmentThis.traces[0].command;
+    for (var _i = 0, _a = environmentThis.traces; _i < _a.length; _i++) {
+        var t = _a[_i];
+        var res = execRegExp(r, t.command);
+        if (res === null)
+            continue;
+        if (res.length !== 1) {
+            for (var j = 1; j < res.length; j++)
+                group(res[j]);
+        }
+        return true;
+    }
+    if (groupName === undefined)
+        return false;
+    else {
+        group(groupName);
+        return true;
+    }
+}
+function profileLoaded(profileRaw) {
+    $(document.body).empty().append(profileRoot(unraw(profileRaw)));
+}
+function unraw(xs) {
+    var ans = xs.map(function (x, i) { return ({
+        index: i,
         name: x[0],
         execution: x[1],
         built: x[2],
         changed: x[3],
         depends: x.length > 4 ? x[4] : [],
-        traces: x.length > 5 ? x[5].map(unrawTrace) : []
-    };
+        rdepends: [],
+        traces: x.length > 5 ? x[5].map(function (y) { return ({ command: y[0], start: y[1], stop: y[2] }); }) : []
+    }); });
+    for (var _i = 0, ans_1 = ans; _i < ans_1.length; _i++) {
+        var p = ans_1[_i];
+        for (var _a = 0, _b = p.depends; _a < _b.length; _a++) {
+            var d = _b[_a];
+            ans[d].rdepends.push(p.index);
+        }
+    }
+    return ans;
 }
-function profileLoaded() {
-    $(document.body).empty().append(profileRoot());
-}
-function profileRoot() {
+function profileRoot(profile) {
     var _a = createSearch(profile), s = _a[0], search = _a[1];
-    var t = createTabs([["Summary", function () { return reportSummary(profile, search); }],
-        ["Commands over time", function () { return reportCmdPlot(profile, search); }],
+    var t = createTabs([["Summary", function () { return reportSummary(profile); }],
+        ["Command plot", function () { return reportCmdPlot(profile); }],
         ["Commands", function () { return reportCmdTable(profile, search); }],
-        ["Rules", function () { return reportRuleTable(profile, search); }]
+        ["Rules", function () { return reportRuleTable(profile, search); }],
+        ["Parallelizability", function () { return reportParallelism(profile); }],
+        ["Why rebuild", function () { return reportRebuild(profile, search); }]
     ]);
     return React.createElement("table", { class: "fill" },
         React.createElement("tr", null,
@@ -52,12 +164,17 @@ function profileRoot() {
             React.createElement("td", { height: "100%" }, t)));
 }
 function createTabs(xs) {
-    var bodies = xs.map(function (x) { return lazy(x[1]); });
-    var body = React.createElement("div", { style: "padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;" });
+    var bodies = xs.map(function (x) {
+        var el = React.createElement("div", { style: "padding:5px;width:100%;height:100%;min-width:150px;min-height:150px;overflow:auto;display:none;" });
+        var upd = lazy(function () { return $(el).append(x[1]()); });
+        return pair(el, upd);
+    });
     var lbls = [];
     var f = function (i) { return function () {
-        $(body).empty().append(bodies[i]());
+        bodies[i][1]();
         lbls.map(function (x, j) { return $(x).toggleClass("active", i === j); });
+        bodies.map(function (x, j) { return $(x[0]).toggle(i === j); });
+        $(window).trigger("resize");
     }; };
     lbls = xs.map(function (x, i) { return React.createElement("a", { onclick: f(i) }, x[0]); });
     f(0)();
@@ -70,7 +187,7 @@ function createTabs(xs) {
                         React.createElement("td", { style: "padding:0px;" }, lbls),
                         React.createElement("td", { width: "100%", class: "bottom" }, "\u00A0"))))),
         React.createElement("tr", { height: "100%" },
-            React.createElement("td", { style: "background-color:white;padding-top:10px;" }, body)));
+            React.createElement("td", { style: "background-color:white;" }, bodies.map(fst))));
 }
 // A mapping from names (rule names or those matched from rule parts)
 // to the indicies in profiles.
@@ -81,530 +198,138 @@ var Search = /** @class */ (function () {
             this.mapping = mapping;
         else {
             this.mapping = {};
-            for (var i = 0; i < profile.length; i++)
-                this.mapping[profile[i].name] = [i];
+            for (var _i = 0, profile_1 = profile; _i < profile_1.length; _i++) {
+                var p = profile_1[_i];
+                this.mapping[p.name] = [p.index];
+            }
         }
     }
     Search.prototype.forEachProfiles = function (f) {
+        var _this = this;
         for (var s in this.mapping)
-            f(this.mapping[s].map(function (i) { return profile[i]; }), s);
+            f(this.mapping[s].map(function (i) { return _this.profile[i]; }), s);
     };
     Search.prototype.forEachProfile = function (f) {
         this.forEachProfiles(function (ps, group) { return ps.forEach(function (p) { return f(p, group); }); });
     };
+    Search.prototype.mapProfiles = function (f) {
+        var res = [];
+        this.forEachProfiles(function (ps, group) { return res.push(f(ps, group)); });
+        return res;
+    };
+    Search.prototype.mapProfile = function (f) {
+        var res = [];
+        this.forEachProfile(function (p, group) { return res.push(f(p, group)); });
+        return res;
+    };
     return Search;
 }());
 function createSearch(profile) {
-    var search = {};
-    for (var i = 0; i < profile.length; i++)
-        search[profile[i].name] = [i];
     var caption = React.createElement("div", null,
         "Found ",
         profile.length,
         " entries, not filtered or grouped.");
-    var dropdown = React.createElement("div", { style: "border:1px solid gray;display:none;position:absolute;" },
-        "Add stuff to the inner here",
-        React.createElement("br", null),
-        "And more stuff");
+    var input = React.createElement("input", { id: "search", type: "text", value: "", placeholder: "Filter and group", style: "width: 100%; font-size: 16px; border-radius: 8px; padding: 5px 10px; border: 2px solid #999;" });
+    var res = new Prop(new Search(profile));
+    $(input).on("change keyup paste", function () {
+        var s = $(input).val();
+        if (s === "") {
+            res.set(new Search(profile));
+            $(caption).text("Found " + profile.length + " entries, not filtered or grouped.");
+        }
+        else if (s.indexOf("(") === -1) {
+            var mapping = {};
+            var found = 0;
+            for (var _i = 0, profile_2 = profile; _i < profile_2.length; _i++) {
+                var p = profile_2[_i];
+                if (p.name.indexOf(s) !== -1) {
+                    found++;
+                    mapping[p.name] = [p.index];
+                }
+            }
+            res.set(new Search(profile, mapping));
+            $(caption).text("Substring filtered to " + found + " / " + profile.length + " entries, not grouped.");
+        }
+        else {
+            var f = void 0;
+            try {
+                f = new Function("return " + s);
+            }
+            catch (e) {
+                $(caption).text("Error compiling function, " + e);
+                return;
+            }
+            var mapping = {};
+            var groups = 0;
+            var found = 0;
+            environmentAll = profile;
+            for (var _a = 0, profile_3 = profile; _a < profile_3.length; _a++) {
+                var p = profile_3[_a];
+                environmentThis = p;
+                environmentGroup = [];
+                var bool = void 0;
+                try {
+                    bool = f();
+                }
+                catch (e) {
+                    $(caption).text("Error running function, " + e);
+                    return;
+                }
+                if (bool) {
+                    found++;
+                    var name_1 = environmentGroup.length === 0 ? p.name : environmentGroup.join(" ");
+                    if (name_1 in mapping)
+                        mapping[name_1].push(p.index);
+                    else {
+                        groups++;
+                        mapping[name_1] = [p.index];
+                    }
+                }
+            }
+            res.set(new Search(profile, mapping));
+            $(caption).text("Function filtered to " + found + " / " + profile.length + " entries, " +
+                (groups === found ? "not grouped." : groups + " groups."));
+        }
+    });
+    var body = React.createElement("table", { width: "100%", style: "padding-bottom: 17px;" },
+        React.createElement("tr", null,
+            React.createElement("td", { width: "100%" }, input),
+            React.createElement("td", { style: "padding-left:6px;padding-right: 6px;" }, searchHelp(input))),
+        React.createElement("tr", null,
+            React.createElement("td", null, caption)));
+    return [body, res];
+}
+function searchHelp(input) {
+    var examples = [["Only the last run", "run(0)"],
+        ["Named 'Main'", "named(\"Main\")"],
+        ["Group by file extension", "named(/(\\.[_0-9a-z]+)$/)"],
+        ["No dependencies (an input)", "leaf()"],
+        ["Didn't change when it last rebuilt", "unchanged()"],
+        ["Ran 'gcc'", "command(\"gcc\")"]
+    ];
+    var f = function (code) { return function () {
+        $(input).val(function (i, x) { return x + (x === "" ? "" : " && ") + code; });
+        $(input).trigger("change");
+    }; };
+    var dropdown = React.createElement("div", { class: "dropdown", style: "display:none;" },
+        React.createElement("ul", { style: "padding-left:30px;" }, examples.map(function (_a) {
+            var desc = _a[0], code = _a[1];
+            return React.createElement("li", null,
+                React.createElement("a", { onclick: f(code) },
+                    React.createElement("tt", null, code)),
+                " ",
+                React.createElement("span", { class: "note" }, desc));
+        })));
     var arrow_down = React.createElement("span", { style: "vertical-align:middle;font-size:80%;" }, "\u25BC");
     var arrow_up = React.createElement("span", { style: "vertical-align:middle;font-size:80%;display:none;" }, "\u25B2");
     var show_inner = function () { $(dropdown).toggle(); $(arrow_up).toggle(); $(arrow_down).toggle(); };
-    var body = (React.createElement("table", { width: "100%", style: "padding-bottom: 17px;" },
-        React.createElement("tr", null,
-            React.createElement("td", { width: "100%" },
-                React.createElement("input", { id: "search", type: "text", value: "", placeholder: "Filter and group", style: "width: 100%; font-size: 16px; border-radius: 8px; padding: 5px 10px; border: 2px solid #999;" })),
-            React.createElement("td", { style: "padding-left:6px;padding-right: 6px;" },
-                React.createElement("button", { style: "white-space:nowrap;padding-top:5px;padding-bottom:5px;", onclick: show_inner },
-                    React.createElement("b", { style: "font-size:150%;vertical-align:middle;" }, "+"),
-                    "\u00A0 Filter and Group \u00A0",
-                    arrow_down,
-                    arrow_up),
-                dropdown)),
-        React.createElement("tr", null,
-            React.createElement("td", null, caption))));
-    return [body, new Prop(new Search(profile))];
-}
-function ruleFilter(dat, query) {
-    queryData = dat;
-    var f = readQuery(query);
-    var res = {};
-    for (queryKey = 0; queryKey < dat.original.length; queryKey++) {
-        queryVal = dat.original[queryKey];
-        queryName = queryVal.name;
-        queryGroup = null;
-        queryBackColor = null;
-        queryTextColor = null;
-        if (f()) {
-            if (queryGroup === null)
-                queryGroup = queryName;
-            if (!(queryGroup in res))
-                res[queryGroup] = { items: [queryKey], text: queryTextColor, back: queryBackColor };
-            else {
-                var c = res[queryGroup];
-                c.items.push(queryKey);
-                c.text = colorAnd(c.text, queryTextColor);
-                c.back = colorAnd(c.back, queryBackColor);
-            }
-        }
-    }
-    return res;
-}
-/////////////////////////////////////////////////////////////////////
-// ENVIRONMENT
-function readQuery(query) {
-    if (query === "")
-        return function () { return true; };
-    var f;
-    try {
-        f = (new Function("return " + query));
-    }
-    catch (e) {
-        throw { user: true, name: "parse", query: query, message: e.toString() };
-    }
-    return function () {
-        try {
-            return f();
-        }
-        catch (e) {
-            throw { user: true, name: "execution", query: query, message: e.toString() };
-        }
-    };
-}
-// These are global variables mutated/queried by query execution
-var queryData = {};
-var queryKey = 0;
-var queryVal = {};
-var queryName = "";
-var queryGroup = null;
-var queryBackColor = null;
-var queryTextColor = null;
-function rs_key(k) {
-    return typeof k === "string" ? "s" + k : "r" + k.source;
-}
-// before =
-var before_Cache = cache(rs_key, function (k) {
-    var res = {};
-    var match = {};
-    // go in reverse because its topo-sorted
-    for (var i = profile.length - 1; i >= 0; i--) {
-        if (testRegExp(k, profile[i].name))
-            match[i] = null;
-        if (profile[i].depends.some(function (j) { return j in match; }))
-            res[i] = null;
-    }
-    return res;
-});
-function before(r) {
-    return true;
-}
-function after(r) {
-    return true;
-}
-function childOf(r) { return queryData.dependsOnThis(queryKey, r); }
-function parentOf(r) { return queryData.thisDependsOn(queryKey, r); }
-function ancestorOf(r) { return queryData.dependsOnThisTransitive(queryKey, r); }
-function descendantOf(r) { return queryData.thisDependsOnTransitive(queryKey, r); }
-function descendentOf(r) { return descendantOf(r); }
-function group(x) {
-    if (queryGroup === null)
-        queryGroup = "";
-    queryGroup += (queryGroup === "" ? "" : " ") + x;
-    return true;
-}
-function backColor(c, b) {
-    if (b === void 0) { b = true; }
-    if (b)
-        queryBackColor = c;
-    return true;
-}
-function textColor(c, b) {
-    if (b === void 0) { b = true; }
-    if (b === undefined || b)
-        queryTextColor = c;
-    return true;
-}
-function rename(from, to) {
-    if (to === void 0) { to = ""; }
-    queryName = queryName.replace(from, to);
-    return true;
-}
-var slowestRule_Cache = lazy(function () {
-    var time = -1;
-    var name = "";
-    for (var _i = 0, profile_1 = profile; _i < profile_1.length; _i++) {
-        var p = profile_1[_i];
-        if (p[1] <= time)
-            continue;
-        name = p[0];
-        time = p[1];
-    }
-    return name;
-});
-function slowestRule() {
-    return slowestRule_Cache();
-}
-function leaf() {
-    return queryVal.depends.length === 0;
-}
-function run(i) {
-    if (i === undefined)
-        return queryVal.built;
-    else
-        return queryVal.built === i;
-}
-function unchanged() {
-    return queryVal.changed !== queryVal.built;
-}
-function named(r, groupName) {
-    if (r === undefined)
-        return queryName;
-    var res = execRegExp(r, queryName);
-    if (res === null) {
-        if (groupName === undefined)
-            return false;
-        else {
-            group(groupName);
-            return true;
-        }
-    }
-    if (res.length !== 1) {
-        for (var i = 1; i < res.length; i++)
-            group(res[i]);
-    }
-    return true;
-}
-function command(r, groupName) {
-    var n = (queryVal.traces || []).length;
-    if (r === undefined)
-        return n === 0 ? "" : queryVal.traces[0].command;
-    for (var _i = 0, _a = queryVal.traces; _i < _a.length; _i++) {
-        var t_1 = _a[_i];
-        var res = execRegExp(r, t_1.command);
-        if (res === null)
-            continue;
-        if (res.length !== 1) {
-            for (var j = 1; j < res.length; j++)
-                group(res[j]);
-        }
-        return true;
-    }
-    if (groupName === undefined)
-        return false;
-    else {
-        group(groupName);
-        return true;
-    }
-}
-//////////////////////////////////////////////////////////////////////
-// SUMMARY
-var Summary = /** @class */ (function () {
-    function Summary() {
-        this.sumExecution = 0; // build time in total
-        this.countTraceLast = 0; // traced commands run
-        this.maxTraceStopLast = 0; // time the last traced command stopped
-    }
-    return Summary;
-}());
-function summary(dat) {
-    var res = new Summary();
-    // Fold over dat to produce the summary
-    for (var _i = 0, dat_1 = dat; _i < dat_1.length; _i++) {
-        var e = dat_1[_i];
-        var isLast = e.built === 0;
-        res.sumExecution += e.execution;
-        var traces = e.traces;
-        if (!traces)
-            continue;
-        for (var _a = 0, traces_1 = traces; _a < traces_1.length; _a++) {
-            var t_2 = traces_1[_a];
-            var time = t_2.stop - t_2.start;
-            res.countTraceLast += isLast ? 1 : 0;
-            res.maxTraceStopLast = Math.max(res.maxTraceStopLast, isLast ? t_2.stop : 0);
-        }
-    }
-    return res;
-}
-var Prepare = /** @class */ (function () {
-    function Prepare() {
-    }
-    return Prepare;
-}());
-// Mutate the input data, adding in rdeps, being the 1-level reverse dependencies
-function addRdeps(dat) {
-    // find the reverse dependencies
-    var rdeps = [];
-    for (var i = 0; i < dat.length; i++)
-        rdeps[i] = {};
-    for (var i = 0; i < dat.length; i++) {
-        for (var _i = 0, _a = dat[i].depends; _i < _a.length; _i++) {
-            var j = _a[_i];
-            rdeps[j][i] = null;
-        }
-    }
-    var res = dat;
-    for (var i = 0; i < rdeps.length; i++) {
-        var ans = [];
-        for (var j in rdeps[i])
-            ans.push(Number(j));
-        res[i].rdeps = ans;
-    }
-    return res;
-}
-// Given an array of indices, calculate the cost to rebuild if all of them change
-// You must call addRdeps and addCost first
-function calcRebuildCosts(dat, xs) {
-    var seen = {};
-    var tot = 0;
-    function f(i) {
-        if (i in seen)
-            return;
-        seen[i] = null;
-        tot += dat[i].execution;
-        for (var _i = 0, _a = dat[i].rdeps; _i < _a.length; _i++) {
-            var j = _a[_i];
-            f(j);
-        }
-    }
-    if (xs.length === 1 && dat[xs[0]].depends.length === 1)
-        tot = dat[dat[xs[0]].depends[0]].cost + dat[xs[0]].execution;
-    else {
-        for (var _i = 0, xs_1 = xs; _i < xs_1.length; _i++) {
-            var x = xs_1[_i];
-            f(x);
-        }
-    }
-    return tot;
-}
-// Mutate the dat data, adding in cost, being the cost to rebuild if this item changes
-function addCost(dat) {
-    var res = dat;
-    for (var i = 0; i < dat.length; i++) {
-        // This call is type safe because calcRebuildCosts only ever looks at earlier items,
-        // and those earlier items all have their cost filled in
-        res[i].cost = calcRebuildCosts(res, [i]);
-    }
-    return res;
-}
-function prepare(dat_) {
-    var sum = summary(dat_);
-    var dat = addCost(addRdeps(dat_));
-    function toHash(r) {
-        return typeof r === "string" ? "$" + r : "/" + r.source;
-    }
-    function findDirect(key) {
-        var c = cache(toHash, function (r) {
-            var want = {};
-            for (var _i = 0, dat_2 = dat; _i < dat_2.length; _i++) {
-                var e = dat_2[_i];
-                if (testRegExp(r, e.name)) {
-                    var deps = (e)[key];
-                    for (var _a = 0, deps_1 = deps; _a < deps_1.length; _a++) {
-                        var j = deps_1[_a];
-                        want[j] = null;
-                    }
-                }
-            }
-            return want;
-        });
-        return function (i, r) { return i in c(r); };
-    }
-    function findTransitive(key, dirFwd) {
-        var c = cache(toHash, function (r) {
-            var want = {};
-            for (var i = 0; i < dat.length; i++) {
-                var j = dirFwd ? i : dat.length - 1 - i;
-                if ((j in want) || testRegExp(r, dat[j].name)) {
-                    want[j] = null;
-                    var deps = (dat[j])[key];
-                    for (var _i = 0, deps_2 = deps; _i < deps_2.length; _i++) {
-                        var k = deps_2[_i];
-                        want[k] = null;
-                    }
-                }
-            }
-            return want;
-        });
-        return function (i, r) { return i in c(r); };
-    }
-    return {
-        original: dat,
-        summary: sum,
-        dependsOnThis: findDirect("rdeps"),
-        thisDependsOn: findDirect("depends"),
-        dependsOnThisTransitive: findTransitive("depends", false),
-        thisDependsOnTransitive: findTransitive("rdeps", true)
-    };
-}
-/////////////////////////////////////////////////////////////////////
-// RULES
-function colorAnd(c1, c2) {
-    return c1 === null ? c2 : c1 === c2 ? c1 : undefined;
-}
-var Result = /** @class */ (function () {
-    function Result() {
-    }
-    return Result;
-}());
-var ResultTable = /** @class */ (function () {
-    function ResultTable() {
-    }
-    return ResultTable;
-}());
-function ruleTable(dat, query) {
-    function bools(x, y) {
-        return x === "" ? y : x === y ? x : "both";
-    }
-    var res = ruleFilter(dat, query);
-    var ans = [];
-    for (var s in res) {
-        var xs = res[s].items;
-        var time = 0;
-        var leaf = "";
-        var unchanged = "";
-        var run = 100000;
-        for (var i = 0; i < xs.length; i++) {
-            var x = dat.original[xs[i]];
-            time += x.execution;
-            leaf = bools(leaf, x.depends.length === 0);
-            unchanged = bools(unchanged, x.changed !== x.built);
-            run = Math.min(run, x.built);
-        }
-        ans.push({ name: s, count: xs.length, time: time, back: res[s].back, text: res[s].text, cost: calcRebuildCosts(dat.original, xs), leaf: leaf, run: run, unchanged: unchanged });
-    }
-    return ans;
-}
-var ResultGraph = /** @class */ (function () {
-    function ResultGraph() {
-    }
-    return ResultGraph;
-}());
-function ruleGraph(dat, query) {
-    var res = ruleFilter(dat, query);
-    var map = {}; // which nodes a node lives at
-    // loop through each value in res, putting it into map (these are parents)
-    // for any not present, descend through the dat.original list, if you aren't included, add, if you are included, skip
-    var direct = {};
-    var ind = -1;
-    for (var s in res) {
-        ind++;
-        var xs = res[s].items;
-        for (var i = 0; i < xs.length; i++)
-            direct[xs[i]] = ind;
-    }
-    function getDirect(key) {
-        return key in direct ? [direct[key]] : [];
-    }
-    var indirect = {};
-    function getIndirect(key) {
-        if (key in indirect)
-            return indirect[key];
-        if (key in direct)
-            return [];
-        var ds = dat.original[key].depends;
-        var res = [];
-        for (var j = 0; j < ds.length; j++) {
-            res.push(getIndirect(ds[j]));
-            res.push(getDirect(ds[j]));
-        }
-        var res2 = concatNub(res);
-        indirect[key] = res2;
-        return res2;
-    }
-    var ans = [];
-    for (var s in res) {
-        var xs = res[s].items;
-        var ds = [];
-        var is = [];
-        for (var i = 0; i < xs.length; i++) {
-            var depends = dat.original[xs[i]].depends;
-            for (var j = 0; j < depends.length; j++) {
-                ds.push(getDirect(depends[j]));
-                is.push(getIndirect(depends[j]));
-            }
-        }
-        ans.push({ name: s, text: res[s].text, back: res[s].back, parents: concatNub(ds), ancestors: concatNub(is) });
-    }
-    return ans;
-}
-/////////////////////////////////////////////////////////////////////
-// COMMANDS
-function commandFilter(last, dat, query) {
-    queryData = dat;
-    var f = readQuery(query);
-    var res = {};
-    for (queryKey = 0; queryKey < dat.original.length; queryKey++) {
-        queryVal = dat.original[queryKey];
-        if (last && queryVal.built !== 0)
-            continue;
-        var val = __assign({}, queryVal);
-        var ts = queryVal.traces || [];
-        queryVal = val;
-        queryName = queryVal.name;
-        queryBackColor = null;
-        queryTextColor = null;
-        for (var i = 0; i < ts.length; i++) {
-            queryVal.traces = [ts[i]];
-            queryGroup = null;
-            if (f()) {
-                if (queryGroup === null)
-                    queryGroup = ts[i].command;
-                if (!(queryGroup in res))
-                    res[queryGroup] = { items: [ts[i]], text: queryTextColor, back: queryBackColor };
-                else {
-                    var c = res[queryGroup];
-                    c.items.push(ts[i]);
-                    c.text = colorAnd(c.text, queryTextColor);
-                    c.back = colorAnd(c.back, queryBackColor);
-                }
-            }
-        }
-    }
-    return res;
-}
-var CommandTable = /** @class */ (function () {
-    function CommandTable() {
-    }
-    return CommandTable;
-}());
-function commandTable(dat, query) {
-    var res = commandFilter(false, dat, query);
-    var ans = [];
-    for (var s in res) {
-        var xs = res[s].items;
-        var time = 0;
-        for (var _i = 0, xs_2 = xs; _i < xs_2.length; _i++) {
-            var t_3 = xs_2[_i];
-            time += t_3.stop - t_3.start;
-        }
-        ans.push({ name: s, count: xs.length, text: res[s].text, back: res[s].back, time: time });
-    }
-    return ans;
-}
-function commandPlot(dat, query, buckets) {
-    var end = dat.summary.maxTraceStopLast;
-    var res = commandFilter(true, dat, query);
-    var ans = {};
-    for (var s in res) {
-        var ts = res[s].items;
-        var xs = [];
-        for (var i = 0; i <= buckets; i++)
-            xs.push(0); // fill with 1 more element, but the last bucket will always be 0
-        for (var _i = 0, ts_1 = ts; _i < ts_1.length; _i++) {
-            var t_4 = ts_1[_i];
-            var start = t_4.start * buckets / end;
-            var stop = t_4.stop * buckets / end;
-            if (Math.floor(start) === Math.floor(stop))
-                xs[Math.floor(start)] += stop - start;
-            else {
-                for (var j = Math.ceil(start); j < Math.floor(stop); j++)
-                    xs[j]++;
-                xs[Math.floor(start)] += Math.ceil(start) - start;
-                xs[Math.floor(stop)] += stop - Math.floor(stop);
-            }
-        }
-        ans[s] = { items: xs.slice(0, buckets), back: res[s].back || null };
-    }
-    return ans;
+    return React.createElement("div", null,
+        React.createElement("button", { style: "white-space:nowrap;padding-top:5px;padding-bottom:5px;", onclick: show_inner },
+            React.createElement("b", { style: "font-size:150%;vertical-align:middle;" }, "+"),
+            "\u00A0 Filter and Group \u00A0",
+            arrow_down,
+            arrow_up),
+        dropdown);
 }
 function initProgress() {
     $(function () {
@@ -632,380 +357,34 @@ function initProgress() {
         }
     });
 }
-function t(a, b, c) { return { start: a, stop: b, command: c }; }
-var raw1 = 
-// Haskell depends on Functional, C and Cpp depend on Imperative
-// Exe depends on Haskell/C/Cpp
-[["Functional", 1, 0, 3, [], [["gen", 0, 1]]],
-    ["Imperative", 2, 0, 0, [], [["gen", 0, 1], ["gen", 1, 2]]],
-    ["HsSource", 0, 3, 3, [], []],
-    ["Haskell", 8, 3, 3, [0, 2], [["ghc", 1, 8.9]]],
-    ["C", 15, 0, 0, [1], [["gcc", 2, 16.9]]],
-    ["Cpp", 10, 0, 0, [1], [["gcc", 2, 10]]],
-    ["Exe", 5, 0, 0, [3, 4, 5], [["link", 17, 22]]]
-];
-var dat1 = raw1.map(unrawProfile);
-function test() {
-    function assert(b) {
-        if (!b)
-            throw "Assertion failed";
-    }
-    function assertEq(got, want) {
-        if (want != got) {
-            console.log("Wanted: " + want);
-            console.log("Got: " + got);
-            assert(false);
-        }
-    }
-    function assertRegex(want, got) {
-        if (!want.test(got)) {
-            console.log("Wanted: " + want);
-            console.log("Got: " + got);
-            assert(false);
-        }
-    }
-    var tab1 = prepare(dat1);
-    profile = dat1;
-    var ssum1 = reportSummary(profile, createSearch(profile)[1]).innerText;
-    console.log(ssum1);
-    var want = ["4 runs", "7 rules", "5 rebuilt", "7 traced", "6 in", "build time is 41.00s", "38.80s is traced",
-        "longest rule takes 15.00s", "longest traced command takes 14.90s", "parallelism of 1.40", "22.00s"];
-    assertRegex(new RegExp(want.join(".*")), ssum1);
-    var par1 = commandPlot(tab1, "group('x')", 10)['x'];
-    console.log(par1);
-    var pars1 = par1.items.map(function (i) { return Math.round(i * 10) / 10; });
-    assert(listEq(pars1, [1.5, 2, 2, 2, 1.5, 1, 1, 1, 1, 1]));
-    function chk(f, query, n) {
-        var ans = f(tab1, query);
-        console_table(ans);
-        assertEq(ans.length, n);
-    }
-    chk(ruleTable, "", 7);
-    chk(ruleTable, "leaf()", 3);
-    chk(ruleTable, "named(/^(.)/)", 5);
-    chk(commandTable, "", 4);
-    chk(commandTable, "command(/g(.*)/)", 3);
-    chk(ruleTable, "childOf('Imperative')", 2);
-    return "passed";
+// Stuff that Shake generates and injects in
+function untraced(p) {
+    return Math.max(0, p.execution - sum(p.traces.map(function (t) { return t.stop - t.start; })));
 }
-function console_table(xs) {
-    // Could call console.table, but that doesn't print anything through 'node'
-    if (xs.length === 0)
-        console.log("No data");
-    else {
-        var widths = [];
-        var cells = [];
-        for (var i_1 = 0; i_1 <= xs.length; i_1++)
-            cells.push([]);
-        for (var s_1 in xs[0]) {
-            var len = s_1.length;
-            cells[0].push(s_1);
-            for (var i = 0; i < xs.length; i++) {
-                var ss = "" + xs[i][s_1];
-                len = Math.max(len, ss.length);
-                cells[i + 1].push(ss);
-            }
-            widths.push(len);
-        }
-        var s = "";
-        for (var x = 0; x < cells.length; x++) {
-            for (var y = 0; y < widths.length; y++)
-                s += "|" + pad(widths[y], cells[x][y]);
-            s += "|\n";
-        }
-        console.log(s);
-    }
-}
-function pad(n, s) {
-    var res = s;
-    for (var i = s.length; i < n; i++)
-        res += " ";
-    return res;
-}
-var profile = profileRaw.map(unrawProfile);
-var prepared = prepare(profile);
-var currentTable = null;
 /////////////////////////////////////////////////////////////////////
-// REPORT
-var Report = /** @class */ (function () {
-    function Report(mode_, query_) {
-        if (mode_ === void 0) { mode_ = "summary"; }
-        if (query_ === void 0) { query_ = ""; }
-        this.sort = "time";
-        this.sortRev = false;
-        this.mode = mode_;
-        this.query = query_;
+// BASIC UI TOOLKIT
+var Prop = /** @class */ (function () {
+    function Prop(val) {
+        this.val = val;
+        this.callback = function () { return; };
     }
-    return Report;
+    Prop.prototype.get = function () { return this.val; };
+    Prop.prototype.set = function (val) {
+        this.val = val;
+        this.callback(val);
+    };
+    Prop.prototype.event = function (next) {
+        var old = this.callback;
+        this.callback = function (val) { old(val); next(val); };
+        next(this.val);
+    };
+    Prop.prototype.map = function (f) {
+        var res = new Prop(f(this.get()));
+        this.event(function (a) { return res.set(f(a)); });
+        return res;
+    };
+    return Prop;
 }());
-var report = new Report(null, null);
-function reportEq(r1, r2) {
-    return r1.mode === r2.mode && r1.query === r2.query && r1.sort === r2.sort && r1.sortRev === r2.sortRev;
-}
-function reportToURL(r) {
-    var def = new Report();
-    return "?mode=" + r.mode +
-        (r.query === def.query ? "" : "&query=" + encodeURI(r.query).replace(/\+/g, "%2B")) +
-        ((!r.sortRev && r.sort === def.sort) ? "" :
-            "&sort=" + (r.sortRev ? "!" : "") + r.sort);
-}
-function reportFromURL(s) {
-    if (s === void 0) { s = window.location.search; }
-    var res = new Report();
-    var params = uriQueryParameters(s);
-    if ("mode" in params)
-        res.mode = params["mode"];
-    if ("query" in params)
-        res.query = params["query"];
-    if ("sort" in params) {
-        var sort = params["sort"];
-        res.sortRev = sort.substr(0, 1) == "!";
-        res.sort = sort.substr(res.sortRev ? 1 : 0);
-    }
-    return res;
-}
-function reportFromUser() {
-    return new Report($("#mode").val(), $("#query").val());
-}
-function setReport(set, replace, run) {
-    var report2 = set(__assign({}, report));
-    $("#mode").val(report2.mode);
-    $("#query").val(report2.query);
-    $("#run").enable(false).attr("title", "The current query is displayed");
-    if (reportEq(report, report2))
-        return;
-    report = report2;
-    if (window.history) {
-        var title = report.mode + (report.query === "" ? "" : ": " + report.query);
-        var url = reportToURL(report);
-        try {
-            if (replace)
-                window.history.replaceState(report, title, url);
-            else
-                window.history.pushState(report, title, url);
-        }
-        catch (e) {
-            // Chrome disallows replaceState from origin null
-        }
-    }
-    $("#link").attr("href", reportToURL(report));
-    if (run)
-        runReport();
-}
-/////////////////////////////////////////////////////////////////////
-// TABLE SHOWING
-var rightAlign = { count: null, time: null, cost: null, run: null, leaf: null, unchanged: null };
-var twoColumns = { cost: null, time: null };
-var defaultRevSort = { run: null, name: null };
-function tableSort(x) {
-    if (report.sort === x)
-        setReport(function (r) { r.sortRev = !r.sortRev; return r; }, true, false);
-    else
-        setReport(function (r) { r.sort = x; r.sortRev = x in defaultRevSort; return r; }, true, false);
-    showTable(currentTable);
-}
-function showTable(xs) {
-    currentTable = xs;
-    if (xs.length === 0) {
-        $("#output").html("No data found");
-        return;
-    }
-    if (!(report.sort in xs[0]))
-        setReport(function (r) { return new Report(r.mode, r.query); }, true, false);
-    xs.sort(function (a, b) { return (report.sortRev ? -1 : 1) * (b[report.sort] > a[report.sort] ? 1 : -1); });
-    var res = "<table class='data'><tr class='header'>";
-    for (var s in xs[0]) {
-        if (s === "back" || s === "text")
-            continue;
-        res += s in twoColumns ? "<td colspan='2' style='text-align:center;'" :
-            s in rightAlign ? "<td style='text-align:right;'" :
-                "<td";
-        res += " onclick=\"tableSort('" + s + "')\">" + s;
-        if (s === report.sort)
-            res += " <span class='sort'>" + (report.sortRev ? "&#9650;" : "&#9660;") + "</span>";
-        res += "</td>";
-    }
-    res += "</tr>";
-    for (var _i = 0, xs_3 = xs; _i < xs_3.length; _i++) {
-        var x = xs_3[_i];
-        res += "<tr";
-        if (x["back"])
-            res += " style='background-color:" + x["back"] + ";'";
-        if (x["text"])
-            res += " style='color:" + x["text"] + ";'";
-        res += ">";
-        for (var s in xs[0]) {
-            if (s === "text" || s === "back")
-                continue;
-            res += "<td" + (s in rightAlign ? " style='text-align:right;'" : "") + ">";
-            if (s === "count")
-                res += x[s] + " &times;";
-            else if (s === "time" || s === "cost")
-                res += showTime(x[s]) + "</td><td style='text-align:right;'>" + showPerc(x[s] / prepared.summary.sumExecution);
-            else
-                res += x[s];
-            res += "</td>";
-        }
-        res += "</tr>";
-    }
-    res += "</table>";
-    $("#output").html(res);
-}
-var currentPlot = null;
-function showPlot(series, options) {
-    var $output = $("#output");
-    var width = $output.width();
-    var height = $output.height();
-    if (series === null && options === null) {
-        if (width === currentPlot.width && height === currentPlot.height)
-            return;
-        series = currentPlot.series;
-        options = currentPlot.options;
-    }
-    currentPlot = { series: series, options: options, width: width, height: height };
-    // Fudge factors to get it displaying nicely, seems Flot goes outside its bounds
-    var div = $("<div>").width(width - 20).height(height - 10);
-    $("#output").html("").append(div);
-    $.plot(div, series, options);
-}
-window.onresize = function () {
-    if (currentPlot !== null)
-        showPlot(null, null);
-};
-function runReport() {
-    currentTable = null;
-    currentPlot = null;
-    try {
-        switch (report.mode) {
-            case "prototype":
-                $("#output").empty().append(profileRoot());
-                break;
-            case "summary":
-                $("#output").empty().append(reportSummary(profile, createSearch(profile)[1]));
-                break;
-            case "cmd-plot":
-                {
-                    var xs = commandPlot(prepared, report.query, 100);
-                    var ys = [];
-                    for (var s_2 in xs) {
-                        var x = xs[s_2].items;
-                        var data = [];
-                        for (var j = 0; j < x.length; j++)
-                            data.push([j, x[j]]);
-                        ys.push({ label: s_2, /* values:x, */ data: data, color: xs[s_2].back, avg: sum(x) / x.length });
-                    }
-                    if (ys.length === 0) {
-                        $("#output").html("No data found, " +
-                            (prepared.summary.countTraceLast === 0
-                                ? "there were no traced commands in the last run."
-                                : "perhaps your filter is too restrictive?"));
-                    }
-                    else {
-                        ys.sort(function (a, b) { return a.avg - b.avg; });
-                        showPlot(ys, {
-                            legend: { show: true, position: "nw", sorted: "reverse" },
-                            series: { stack: true, lines: { lineWidth: 0, fill: 1 } },
-                            yaxis: { min: 0 },
-                            xaxis: { tickFormatter: function (i) { return showTime(prepared.summary.maxTraceStopLast * i / 100); } }
-                        });
-                    }
-                }
-                break;
-            case "cmd-table":
-                showTable(commandTable(prepared, report.query));
-                break;
-            case "rule-table":
-                showTable(ruleTable(prepared, report.query));
-                break;
-            case "rule-graph":
-                {
-                    var xs = ruleGraph(prepared, report.query);
-                    if (xs.length > 250)
-                        $("#output").html("Viewing a graph with > 250 nodes is not supported, and you have " + xs.length + " nodes. Try grouping more aggressively");
-                    else if (typeof Viz === 'undefined')
-                        $("#output").html("Profile reports do not seem to have been built with GraphViz support, this feature is unavailable.");
-                    else {
-                        var res = "digraph \"\"{";
-                        res += "graph[nodesep=0.15,ranksep=0.3];";
-                        res += "node[fontname=\"sans-serif\",fontsize=9,penwidth=0.5,height=0,width=0];";
-                        res += "edge[penwidth=0.5,arrowsize=0.5];";
-                        for (var i = 0; i < xs.length; i++) {
-                            res += "a" + i + "[label=\"" + xs[i].name.split("\\").join("\\\\").split("\"").join("\\\"") + "\"";
-                            if (xs[i].back)
-                                res += ",style=filled,color=\"" + xs[i].back + "\"";
-                            if (xs[i].text)
-                                res += ",fontcolor=\"" + xs[i].text + "\"";
-                            res += "];";
-                            var parents = xs[i].parents;
-                            for (var j = 0; j < parents.length; j++)
-                                res += "a" + i + "->a" + parents[j] + ";";
-                            var ancestors = xs[i].ancestors;
-                            for (var j = 0; j < ancestors.length; j++)
-                                res += "a" + i + "->a" + ancestors[j] + "[style=dashed];";
-                        }
-                        res += "}";
-                        $("#output").html(Viz(res, "svg"));
-                    }
-                }
-                break;
-            case "help":
-                $("#output").html($("#help").html());
-                break;
-            default:
-                throw "Unknown report type: " + report.mode;
-                break;
-        }
-    }
-    catch (e) {
-        if (!(e && e.user))
-            throw e;
-        $("#output").html($("#error").html());
-        for (var s in e)
-            $("#output ." + s).text(e[s]);
-    }
-}
-/////////////////////////////////////////////////////////////////////
-// STATE NAVIGATION
-function example(mode, query) {
-    setReport(function (_) { return new Report(mode, query); }, false, true);
-    return false;
-}
-function initProfile() {
-    $(function () {
-        setReport(function (_) { return reportFromURL(); }, true, true);
-        $("#mode,#query").bind("input change", function () {
-            var mode = $("#mode").val();
-            var query = $("#query").val();
-            var enable = mode !== report.mode || query !== report.query;
-            $("#run").enable(enable).attr("title", enable ? "" : "The current query is displayed");
-            $("#link").attr("href", reportToURL(reportFromUser()));
-        });
-        $("#run").click(function () {
-            setReport(function (_) { return reportFromUser(); }, false, true);
-        });
-        $("#query").keypress(function (e) {
-            if (e.which == 13)
-                $("#run").click();
-        });
-        window.onpopstate = function (e) {
-            setReport(function (_) { return reportFromUser(); }, true, true);
-        };
-        $("a.example").each(function () {
-            var mode = $(this).attr("data-mode");
-            var query = $(this).attr("data-query");
-            if (query === undefined)
-                query = $(this).text();
-            var href = reportToURL(new Report(mode, query));
-            var onclick = "return example(decodeURI('" + encodeURI(mode) + "'),decodeURI('" + encodeURI(query) + "'));";
-            $(this).attr("href", href).attr("target", "_blank")[0].setAttribute("onclick", onclick);
-        });
-        $("a.shake").each(function () {
-            var href = "https://hackage.haskell.org/packages/archive/shake/latest/doc/html/Development-Shake.html#v:" +
-                $(this).text().replace("'", "-39-");
-            $(this).attr("href", href).attr("target", "_blank");
-        });
-    });
-}
 jQuery.fn.enable = function (x) {
     // Set the values to enabled/disabled
     return this.each(function () {
@@ -1051,6 +430,11 @@ function showTime(x) {
 function showPerc(x) {
     return (x * 100).toFixed(2) + "%";
 }
+function showInt(x) {
+    // From https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+    // Show, with commas
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 function plural(n, not1, is1) {
     if (not1 === void 0) { not1 = "s"; }
     if (is1 === void 0) { is1 = ""; }
@@ -1060,11 +444,52 @@ function plural(n, not1, is1) {
 // MISC
 function sum(xs) {
     var res = 0;
-    for (var _i = 0, xs_4 = xs; _i < xs_4.length; _i++) {
-        var x = xs_4[_i];
+    for (var _i = 0, xs_1 = xs; _i < xs_1.length; _i++) {
+        var x = xs_1[_i];
         res += x;
     }
     return res;
+}
+function compareFst(a, b) {
+    return a[0] - b[0];
+}
+function compareSnd(a, b) {
+    return a[1] - b[1];
+}
+function sortOn(xs, f) {
+    return xs.map(function (x) { return pair(f(x), x); }).sort(compareFst).map(snd);
+}
+function last(xs) {
+    return xs[xs.length - 1];
+}
+function maximum(xs, start) {
+    var res = start;
+    for (var _i = 0, xs_2 = xs; _i < xs_2.length; _i++) {
+        var x = xs_2[_i];
+        if (x > res)
+            res = x;
+    }
+    return res;
+}
+function minimum(xs, start) {
+    var res = start;
+    for (var _i = 0, xs_3 = xs; _i < xs_3.length; _i++) {
+        var x = xs_3[_i];
+        if (res === undefined || x < res)
+            res = x;
+    }
+    return res;
+}
+function pair(a, b) {
+    return [a, b];
+}
+function fst(_a) {
+    var x = _a[0], _ = _a[1];
+    return x;
+}
+function snd(_a) {
+    var _ = _a[0], x = _a[1];
+    return x;
 }
 function testRegExp(r, s) {
     if (typeof r === "string")
@@ -1111,8 +536,8 @@ function concat(xss) {
     var res = [];
     for (var _i = 0, xss_1 = xss; _i < xss_1.length; _i++) {
         var xs = xss_1[_i];
-        for (var _a = 0, xs_5 = xs; _a < xs_5.length; _a++) {
-            var x = xs_5[_a];
+        for (var _a = 0, xs_4 = xs; _a < xs_4.length; _a++) {
+            var x = xs_4[_a];
             res.push(x);
         }
     }
@@ -1123,8 +548,8 @@ function concatNub(xss) {
     var seen = {};
     for (var _i = 0, xss_2 = xss; _i < xss_2.length; _i++) {
         var xs = xss_2[_i];
-        for (var _a = 0, xs_6 = xs; _a < xs_6.length; _a++) {
-            var x = xs_6[_a];
+        for (var _a = 0, xs_5 = xs; _a < xs_5.length; _a++) {
+            var x = xs_5[_a];
             var v = x;
             if (!(v in seen)) {
                 seen[v] = null;
@@ -1133,6 +558,20 @@ function concatNub(xss) {
         }
     }
     return res;
+}
+function insertArraySorted(xs, x, compare) {
+    var start = 0;
+    var stop = xs.length - 1;
+    var middle = 0;
+    while (start <= stop) {
+        middle = Math.floor((start + stop) / 2);
+        if (compare(xs[middle], x) > 0)
+            stop = middle - 1;
+        else
+            start = middle + 1;
+    }
+    xs.splice(start, 0, x);
+    return xs;
 }
 // Use JSX with el instead of React.createElement
 // Originally from https://gist.github.com/sergiodxa/a493c98b7884128081bb9a281952ef33
@@ -1149,11 +588,11 @@ function createElement(type, props) {
         children.push(Array.isArray(child) ? child : [child]);
     }
     var element = document.createElement(type);
-    for (var name_1 in props || {}) {
-        if (name_1.substr(0, 2) === "on")
-            element.addEventListener(name_1.substr(2), props[name_1]);
+    for (var name_2 in props || {}) {
+        if (name_2.substr(0, 2) === "on")
+            element.addEventListener(name_2.substr(2), props[name_2]);
         else
-            element.setAttribute(name_1, props[name_1]);
+            element.setAttribute(name_2, props[name_2]);
     }
     for (var _b = 0, _c = concat(children); _b < _c.length; _b++) {
         var child = _c[_b];
@@ -1164,183 +603,361 @@ function createElement(type, props) {
 }
 // How .tsx gets desugared
 var React = { createElement: createElement };
-// Stuff that Shake generates and injects in
-/////////////////////////////////////////////////////////////////////
-// BASIC UI TOOLKIT
-var Prop = /** @class */ (function () {
-    function Prop(val) {
-        this.val = val;
-    }
-    Prop.prototype.get = function () { return this.val; };
-    Prop.prototype.set = function (val) {
-        this.val = val;
-        this.callback(val);
-    };
-    Prop.prototype.event = function (next) {
-        var old = this.callback;
-        this.callback = function (val) { old(val); next(val); };
-    };
-    return Prop;
-}());
-function reportCmdPlot(profile, search) {
+function reportCmdPlot(profile) {
     // first find the end point
-    var end = 0;
-    search.get().forEachProfile(function (p) {
-        if (p.traces.length > 0)
-            end = Math.max(end, p.traces[p.traces.length - 1].stop);
+    var runs = findRuns(profile);
+    if (runs.length === 0) {
+        return React.createElement("div", null,
+            React.createElement("h2", null, "No data found"),
+            React.createElement("p", null, "The Shake database contains no rules which ran traced commands."),
+            React.createElement("p", null,
+                "You can populate this information by using ",
+                varLink("cmd"),
+                " or wrapping your ",
+                React.createElement("tt", null, "IO"),
+                " actions in ",
+                varLink("traced"),
+                "."));
+    }
+    var combo = React.createElement("select", null,
+        runs.map(function (_a, i) {
+            var run = _a[0], time = _a[1];
+            return React.createElement("option", null,
+                run === 0 ? "Latest run" : run + " run" + plural(run) + " ago",
+                " (" + showTime(time) + ") ",
+                i === 0 ? "" : " - may be incomplete");
+        }),
+        ";");
+    var warning = React.createElement("i", null);
+    var plot = React.createElement("div", { style: "width:100%; height:100%;" });
+    var plotData = new Prop([]);
+    bindPlot(plot, plotData, {
+        legend: { show: true, position: "nw", sorted: "reverse" },
+        series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
+        yaxis: { min: 0 },
+        xaxis: { tickFormatter: showTime }
     });
-    var xs = plotData(end, search.get(), 100);
-    var ys = [];
-    for (var s in xs) {
-        var x = xs[s].items;
-        var data = [];
-        for (var j = 0; j < x.length; j++)
-            data.push([j, x[j]]);
-        ys.push({ label: s, /* values:x, */ data: data, color: xs[s].back, avg: sum(x) / x.length });
+    function setPlotData(runsIndex) {
+        var _a = runs[runsIndex], run = _a[0], end = _a[1];
+        var profileRun = profile.filter(function (p) { return p.built === run; });
+        // Make sure we max(0,) every step in the process, in case one does parallelism of threads
+        var missing = sum(profileRun.map(untraced));
+        $(warning).text(missing < 1 ? "" : "Warning: " + showTime(missing) + " of execution was not traced.");
+        var series = calcPlotData(end, profileRun, 100);
+        var res = [];
+        for (var s in series)
+            res.push({ label: s, data: series[s].map(function (x, i) { return pair(end * i / 100, x); }) });
+        plotData.set(res);
     }
-    if (ys.length === 0) {
-        return React.createElement("div", null, "No data found");
-    }
-    else {
-        ys.sort(function (a, b) { return a.avg - b.avg; });
-        var res_1 = React.createElement("div", { style: "width:100%; height:100%;" });
-        var update = function () {
-            return $.plot($(res_1), ys, {
-                legend: { show: true, position: "nw", sorted: "reverse" },
-                // tslint:disable-next-line: object-literal-sort-keys
-                series: { stack: true, lines: { fill: 1, lineWidth: 0 } },
-                yaxis: { min: 0 },
-                xaxis: { tickFormatter: function (i) { return showTime(end * i / 100); } }
-            });
-        };
-        // do it in a timeout because it must be attached first
-        window.setTimeout(update, 1);
-        window.onresize = update;
-        return res_1;
-    }
+    setPlotData(0);
+    $(combo).change(function () { return setPlotData($(combo).val()); });
+    return React.createElement("table", { class: "fill" },
+        React.createElement("tr", null,
+            React.createElement("td", { width: "100%", style: "text-align:center;" },
+                React.createElement("h2", null, "Number of commands executing over time")),
+            React.createElement("td", null, combo)),
+        React.createElement("tr", null,
+            React.createElement("td", { height: "100%", colspan: "2" }, plot)),
+        React.createElement("tr", null,
+            React.createElement("td", { colspan: "2", style: "text-align:center;" },
+                "Time since the start of building. ",
+                warning)));
 }
-function plotData(end, search, buckets) {
+// Find which runs had traced commands and when the last stopped, sort so most recent first
+function findRuns(profile) {
+    var runs = {};
+    for (var _i = 0, profile_4 = profile; _i < profile_4.length; _i++) {
+        var p = profile_4[_i];
+        if (p.traces.length > 0) {
+            var old = runs[p.built];
+            var end = last(p.traces).stop;
+            runs[p.built] = old === undefined ? end : Math.max(old, end);
+        }
+    }
+    var runsList = [];
+    for (var i in runs)
+        runsList.push(pair(Number(i), runs[i]));
+    runsList.sort(compareFst);
+    return runsList;
+}
+function calcPlotData(end, profile, buckets) {
     var ans = {};
-    search.forEachProfile(function (p) {
-        p.traces.forEach(function (t) {
-            var xs;
+    for (var _i = 0, profile_5 = profile; _i < profile_5.length; _i++) {
+        var p = profile_5[_i];
+        for (var _a = 0, _b = p.traces; _a < _b.length; _a++) {
+            var t = _b[_a];
+            var xs = void 0;
             if (t.command in ans)
-                xs = ans[t.command].items;
+                xs = ans[t.command];
             else {
                 xs = [];
                 for (var i = 0; i < buckets; i++)
                     xs.push(0); // fill with 1 more element, but the last bucket will always be 0
-                ans[t.command] = { items: xs, back: null };
+                ans[t.command] = xs;
             }
             var start = t.start * buckets / end;
-            var stop = t.stop * buckets / end;
-            if (Math.floor(start) === Math.floor(stop))
-                xs[Math.floor(start)] += stop - start;
+            var stop_1 = t.stop * buckets / end;
+            if (Math.floor(start) === Math.floor(stop_1))
+                xs[Math.floor(start)] += stop_1 - start;
             else {
-                for (var j = Math.ceil(start); j < Math.floor(stop); j++)
+                for (var j = Math.ceil(start); j < Math.floor(stop_1); j++)
                     xs[j]++;
                 xs[Math.floor(start)] += Math.ceil(start) - start;
-                xs[Math.floor(stop)] += stop - Math.floor(stop);
+                xs[Math.floor(stop_1)] += stop_1 - Math.floor(stop_1);
             }
-        });
-    });
+        }
+    }
     return ans;
 }
 function reportCmdTable(profile, search) {
-    return cmdTableData(search.get());
+    var columns = [{ field: "name", label: "Name", width: 200 },
+        { field: "count", label: "Count", width: 65, alignRight: true, show: showInt },
+        { field: "total", label: "Total", width: 75, alignRight: true, show: showTime },
+        { field: "average", label: "Average", width: 75, alignRight: true, show: showTime },
+        { field: "max", label: "Max", width: 75, alignRight: true, show: showTime }
+    ];
+    return newTable(columns, search.map(cmdData), "total", true);
 }
-function cmdTableData(search) {
+function cmdData(search) {
     var res = {};
     search.forEachProfile(function (p) {
         return p.traces.forEach(function (t) {
             var time = t.stop - t.start;
             if (!(t.command in res))
-                res[t.command] = { count: 1, time: time };
+                res[t.command] = { count: 1, total: time, max: time };
             else {
-                res[t.command].count++;
-                res[t.command].time += time;
+                var ans = res[t.command];
+                ans.count++;
+                ans.total += time;
+                ans.max = Math.max(ans.max, time);
             }
         });
     });
-    var trs = [];
+    var res2 = [];
     for (var i in res)
-        trs.push(React.createElement("tr", null,
-            React.createElement("td", null, i),
-            React.createElement("td", null, res[i].count),
-            React.createElement("td", null, showTime(res[i].time))));
-    return (React.createElement("table", { class: "data" },
-        React.createElement("tr", { class: "header" },
-            React.createElement("td", null, "Name"),
-            React.createElement("td", null, "Count"),
-            React.createElement("td", null, "Time")),
-        trs));
+        res2.push(__assign({ name: i, average: res[i].total / res[i].count }, res[i]));
+    return res2;
+}
+function reportParallelism(profile) {
+    // now simulate for -j1 .. -j24
+    var plotData = [{ label: "Realistic (based on current dependencies)", data: [], color: "#3131a7" },
+        { label: "Ideal (if no dependencies and perfect speedup)", data: [], color: "green" },
+        { label: "Gap", data: [], color: "orange" }
+    ];
+    var threads1;
+    for (var threads = 1; threads <= 24; threads++) {
+        var taken = simulateThreads(profile, threads)[0];
+        if (threads === 1)
+            threads1 = taken;
+        plotData[0].data.push([threads, taken]);
+        plotData[1].data.push([threads, threads1 / threads]);
+        plotData[2].data.push([threads, Math.max(0, taken - (threads1 / threads))]);
+    }
+    var plot = React.createElement("div", { style: "width:100%; height:100%;" });
+    bindPlot(plot, new Prop(plotData), {
+        xaxis: { tickDecimals: 0 },
+        yaxis: { min: 0, tickFormatter: showTime }
+    });
+    return React.createElement("table", { class: "fill" },
+        React.createElement("tr", null,
+            React.createElement("td", { style: "text-align:center;" },
+                React.createElement("h2", null, "Time to build at different number of threads"))),
+        React.createElement("tr", null,
+            React.createElement("td", { height: "100%" }, plot)),
+        React.createElement("tr", null,
+            React.createElement("td", { style: "text-align:center;" }, "Number of threads available.")));
+}
+// Simulate running N threads over the profile, return:
+// [total time take, point at which each entry kicked off]
+function simulateThreads(profile, threads) {
+    // How far are we through this simulation
+    var timestamp = 0;
+    // Who is currently running, with the highest seconds FIRST
+    var running = [];
+    var started = [];
+    // Things that are done
+    var ready = profile.filter(function (x) { return x.depends.length === 0; });
+    var waiting = profile.map(function (x) { return x.depends.length; }); // number I am waiting on before I am done
+    function runningWait() {
+        var _a = running.pop(), ind = _a[0], time = _a[1];
+        timestamp = time;
+        for (var _i = 0, _b = profile[ind].rdepends; _i < _b.length; _i++) {
+            var d = _b[_i];
+            waiting[d]--;
+            if (waiting[d] === 0)
+                ready.push(profile[d]);
+        }
+    }
+    while (true) {
+        // Queue up as many people as we can
+        while (running.length < threads && ready.length > 0) {
+            var p = ready.pop();
+            started[p.index] = timestamp;
+            insertArraySorted(running, [p.index, timestamp + p.execution], function (a, b) { return b[1] - a[1]; });
+        }
+        if (running.length === 0) {
+            if (maximum(waiting, 0) > 0)
+                throw new Error("Failed to run all tasks");
+            return [timestamp, started];
+        }
+        runningWait();
+    }
+}
+function reportRebuild(profile, search) {
+    var depth = [];
+    for (var _i = 0, profile_6 = profile; _i < profile_6.length; _i++) {
+        var p_1 = profile_6[_i];
+        depth[p_1.index] = maximum(p_1.depends.map(function (d) { return depth[d] + 1; }), 0);
+    }
+    var ind = sortOn(search.get().mapProfile(function (p, _) { return p.index; }), function (i) { return -depth[i]; })[0];
+    var p = profile[ind];
+    function f(p) {
+        var res = [];
+        while (p.depends.length !== 0) {
+            var ds = sortOn(p.depends.slice(), function (i) { return -depth[i]; });
+            res.push(React.createElement("li", null,
+                React.createElement("select", { style: "width:400px;" }, ds.slice(0, 1).map(function (x) { return React.createElement("option", null, profile[x].name); }))));
+            p = profile[ds[0]];
+        }
+        return res;
+    }
+    return React.createElement("div", null,
+        React.createElement("h2", null, "Why did it rebuild?"),
+        React.createElement("p", null,
+            "Rule ",
+            p.name + " " + (p.built === 0 ? "rebuild in the last run" : "did not rebuild")),
+        React.createElement("ul", null, f(p)));
 }
 function reportRuleTable(profile, search) {
-    return cmdRuleTable(search.get());
+    var ptimes = calcETimes(profile, 24);
+    var columns = [{ field: "name", label: "Name", width: 400 },
+        { field: "count", label: "Count", width: 65, alignRight: true, show: showInt },
+        { field: "leaf", label: "Leaf", width: 60, alignRight: true },
+        { field: "run", label: "Run", width: 50, alignRight: true },
+        { field: "changed", label: "Change", width: 60, alignRight: true },
+        { field: "time", label: "Time", width: 75, alignRight: true, show: showTime },
+        { field: "etime", label: "ETime", width: 75, alignRight: true, show: showTime },
+        { field: "untraced", label: "Untraced", width: 100, alignRight: true, show: showTime }
+    ];
+    return newTable(columns, search.map(function (s) { return ruleData(ptimes, s); }), "time", true);
 }
-function cmdRuleTable(search) {
-    var trs = [];
-    search.forEachProfiles(function (ps, group) {
-        return trs.push(React.createElement("tr", null,
-            React.createElement("td", null, group),
-            React.createElement("td", null, ps.length)));
+// Calculate the exclusive time of each rule at some number of threads
+function calcETimes(profile, threads) {
+    var _a = simulateThreads(profile, threads), _ = _a[0], started = _a[1];
+    var starts = started.map(function (s, i) { return pair(i, s); }).sort(compareSnd);
+    var costs = starts.map(function (_a, i) {
+        var ind = _a[0], start = _a[1];
+        // find out who else runs before I finish
+        var execution = profile[ind].execution;
+        var end = start + execution;
+        var overlap = 0; // how much time I am overlapped for
+        for (var j = i + 1; j < starts.length; j++) {
+            var _b = starts[j], jInd = _b[0], jStarts = _b[1];
+            if (jStarts > end)
+                break;
+            overlap += Math.min(end - jStarts, profile[starts[j][0]].execution);
+        }
+        return pair(ind, execution === 0 ? 0 : execution * (execution / (execution + overlap)));
     });
-    return (React.createElement("table", { class: "data" },
-        React.createElement("tr", { class: "header" },
-            React.createElement("td", null, "Name"),
-            React.createElement("td", null, "Count"),
-            React.createElement("td", null, "Items")),
-        trs));
+    var res = [];
+    for (var _i = 0, costs_1 = costs; _i < costs_1.length; _i++) {
+        var _b = costs_1[_i], ind = _b[0], cost = _b[1];
+        res[ind] = cost;
+    }
+    return res;
 }
-function reportSummary(profile, search) {
-    var count = 0; // number of rules run
+function ruleData(etimes, search) {
+    return search.mapProfiles(function (ps, name) { return ({
+        name: name,
+        count: ps.length,
+        leaf: ps.every(function (p) { return p.depends.length === 0; }),
+        run: minimum(ps.map(function (p) { return p.built; })),
+        changed: ps.some(function (p) { return p.built === p.changed; }),
+        time: sum(ps.map(function (p) { return p.execution; })),
+        etime: sum(ps.map(function (p) { return etimes[p.index]; })),
+        untraced: sum(ps.map(untraced))
+    }); });
+}
+function reportSummary(profile) {
     var countLast = 0; // number of rules run in the last run
     var highestRun = 0; // highest run you have seen (add 1 to get the count of runs)
     var sumExecution = 0; // build time in total
-    var maxExecution = 0; // longest build rule
-    var maxExecutionName = ""; // longest build rule
+    var sumExecutionLast = 0; // build time in total
     var countTrace = 0;
     var countTraceLast = 0; // traced commands run
-    var sumTrace = 0;
-    var sumTraceLast = 0; // time running traced commands
-    var maxTrace = 0; // longest traced command
-    var maxTraceName = ""; // longest trace command
     var maxTraceStopLast = 0; // time the last traced command stopped
-    search.get().forEachProfile(function (e) {
-        var isLast = e.built === 0;
-        count++;
-        countLast += isLast ? 1 : 0;
-        sumExecution += e.execution;
-        maxExecution = Math.max(maxExecution, e.execution);
-        if (maxExecution === e.execution)
-            maxExecutionName = e.name;
-        highestRun = Math.max(highestRun, e.changed); // changed is always greater or equal to built
-        for (var _i = 0, _a = e.traces || []; _i < _a.length; _i++) {
-            var t_5 = _a[_i];
-            var time = t_5.stop - t_5.start;
-            countTrace += 1;
-            countTraceLast += isLast ? 1 : 0;
-            sumTrace += time;
-            sumTraceLast += isLast ? time : 0;
-            maxTrace = Math.max(maxTrace, time);
-            if (maxTrace === time)
-                maxTraceName = t_5.command;
-            maxTraceStopLast = Math.max(maxTraceStopLast, isLast ? t_5.stop : 0);
+    var criticalPath = []; // the critical path to any element
+    var maxCriticalPath = 0; // the highest value in criticalPath
+    for (var _i = 0, profile_7 = profile; _i < profile_7.length; _i++) {
+        var p = profile_7[_i];
+        sumExecution += p.execution;
+        highestRun = Math.max(highestRun, p.changed); // changed is always greater or equal to built
+        countTrace += p.traces.length;
+        if (p.built === 0) {
+            sumExecutionLast += p.execution;
+            countLast++;
+            countTraceLast += p.traces.length;
+            if (p.traces.length > 0)
+                maxTraceStopLast = Math.max(maxTraceStopLast, last(p.traces).stop);
         }
-    });
-    var lines = ["This database has tracked " + (highestRun + 1) + " run" + plural(highestRun + 1) + ".",
-        "There are " + count + " rules (" + countLast + " rebuilt in the last run).",
-        "Building required " + countTrace + " traced commands (" + countTraceLast + " in the last run).",
-        "The total (unparallelised) build time is " + showTime(sumExecution) + " of which " + showTime(sumTrace) + " is traced commands.",
-        "The longest rule takes " + showTime(maxExecution) + " (" + maxExecutionName + ") and the longest traced command takes " + showTime(maxTrace) + " (" + maxTraceName + ").",
-        "Last run gave an average parallelism of " + (maxTraceStopLast === 0 ? 0 : sumTraceLast / maxTraceStopLast).toFixed(2) + " times over " + showTime(maxTraceStopLast) + "."
-    ];
+        var cost = maximum(p.depends.map(function (i) { return criticalPath[i]; }), 0) + p.execution;
+        maxCriticalPath = Math.max(cost, maxCriticalPath);
+        criticalPath[p.index] = cost;
+    }
     return React.createElement("div", null,
-        React.createElement("ul", null, lines.map(function (s) { return React.createElement("li", null, s); })),
-        React.createElement("p", { class: "version" },
-            "Generated by ",
-            React.createElement("a", { href: "https://shakebuild.com" },
-                "Shake ",
-                version),
-            "."));
+        React.createElement("h2", null, "Totals"),
+        React.createElement("ul", null,
+            React.createElement("li", null,
+                React.createElement("b", null, "Runs:"),
+                " ",
+                showInt(highestRun + 1),
+                " ",
+                React.createElement("span", { class: "note" }, "number of times Shake has been run.")),
+            React.createElement("li", null,
+                React.createElement("b", null, "Rules:"),
+                " ",
+                showInt(profile.length),
+                " (",
+                showInt(countLast),
+                " in last run) ",
+                React.createElement("span", { class: "note" }, "number of defined rules, e.g. individual files.")),
+            React.createElement("li", null,
+                React.createElement("b", null, "Traced:"),
+                " ",
+                showInt(countTrace),
+                " (",
+                showInt(countTraceLast),
+                " in last run)",
+                React.createElement("span", { class: "note" },
+                    "number of calls to ",
+                    varLink("cmd"),
+                    " or ",
+                    varLink("traced"),
+                    "."))),
+        React.createElement("h2", null, "Performance"),
+        React.createElement("ul", null,
+            React.createElement("li", null,
+                React.createElement("b", null, "Build time:"),
+                " ",
+                showTime(sumExecution),
+                " ",
+                React.createElement("span", { class: "note" }, "how long a complete build would take single threaded.")),
+            React.createElement("li", null,
+                React.createElement("b", null, "Last build time:"),
+                " ",
+                showTime(maxTraceStopLast),
+                " ",
+                React.createElement("span", { class: "note" }, "how long the last build take.")),
+            React.createElement("li", null,
+                React.createElement("b", null, "Parallelism:"),
+                " ",
+                (maxTraceStopLast === 0 ? 0 : sumExecutionLast / maxTraceStopLast).toFixed(2),
+                " ",
+                React.createElement("span", { class: "note" }, "average number of commands executing simultaneously in the last build.")),
+            React.createElement("li", null,
+                React.createElement("b", null, "Critical path:"),
+                " ",
+                showTime(maxCriticalPath),
+                " ",
+                React.createElement("span", { class: "note" }, "how long it would take on infinite CPUs."))));
 }
