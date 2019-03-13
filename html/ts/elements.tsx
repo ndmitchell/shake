@@ -64,7 +64,5 @@ function newTable(columns: Column[], data: Prop<object[]>, sortColumn?: string, 
         if ($(table.el).is(":visible"))
             table.tableHeightChanged();
     });
-    const ret = <div style="height:100%;width:100%;"></div>;
-    $(ret).append(table.el);
-    return ret;
+    return <div style="height:100%;width:100%;">{table.el}</div>;
 }

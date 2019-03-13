@@ -37,18 +37,14 @@ function calcETimes(profile: Profile[], threads: int): seconds[] {
 }
 
 function ruleData(etimes: seconds[], search: Search): object[] {
-    const res = [];
-    search.forEachProfiles((ps, name) =>
-        res.push({
-            name,
-            count: ps.length,
-            leaf: ps.every(p => p.depends.length === 0),
-            run: minimum(ps.map(p => p.built)),
-            changed: ps.some(p => p.built === p.changed),
-            time: sum(ps.map(p => p.execution)),
-            etime: sum(ps.map(p => etimes[p.index])),
-            untraced: sum(ps.map(untraced))
-        })
-    );
-    return res;
+    return search.mapProfiles((ps, name) => ({
+        name,
+        count: ps.length,
+        leaf: ps.every(p => p.depends.length === 0),
+        run: minimum(ps.map(p => p.built)),
+        changed: ps.some(p => p.built === p.changed),
+        time: sum(ps.map(p => p.execution)),
+        etime: sum(ps.map(p => etimes[p.index])),
+        untraced: sum(ps.map(untraced))
+    }));
 }

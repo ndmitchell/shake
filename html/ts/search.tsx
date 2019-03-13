@@ -22,6 +22,16 @@ class Search {
     public forEachProfile(f: (p: Profile, group: string) => void): void {
         this.forEachProfiles((ps, group) => ps.forEach(p => f(p, group)));
     }
+    public mapProfiles<A>(f: (ps: Profile[], group: string) => A): A[] {
+        const res: A[] = [];
+        this.forEachProfiles((ps, group) => res.push(f(ps, group)));
+        return res;
+    }
+    public mapProfile<A>(f: (p: Profile, group: string) => A): A[] {
+        const res: A[] = [];
+        this.forEachProfile((p, group) => res.push(f(p, group)));
+        return res;
+    }
 }
 
 
