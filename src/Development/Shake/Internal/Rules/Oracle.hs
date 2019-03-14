@@ -25,6 +25,9 @@ newtype OracleQ question = OracleQ question
 newtype OracleA answer = OracleA answer
     deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 
+fromOracleA :: OracleA a -> a
+fromOracleA (OracleA x) = x
+
 type instance RuleResult (OracleQ a) = OracleA (RuleResult a)
 
 data Flavor = Norm | Cache | Hash deriving Eq
@@ -152,4 +155,4 @@ addOracleCache = withFrozenCallStack $ addOracleFlavor Cache
 -- | Get information previously added with 'addOracle' or 'addOracleCache'.
 --   The question/answer types must match those provided previously.
 askOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> Action a
-askOracle question = do OracleA answer <- apply1 $ OracleQ question; return answer
+askOracle = fmap fromOracleA . apply1 . OracleQ
