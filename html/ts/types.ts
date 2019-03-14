@@ -23,7 +23,7 @@ interface Profile {
     execution: seconds; // Seconds I took to execute
     built: timestamp; // Timestamp at which I was built
     changed: timestamp; // Timestamp at which I last changed
-    depends: pindex[]; // What I depend on (always lower than my index)
+    depends: pindex[][]; // What I depend on (always lower than my index)
     rdepends: pindex[]; // What depends on me
     traces: Trace[]; // List of traces
 }
@@ -43,7 +43,7 @@ type ProfileRaw =
     , seconds
     , timestamp
     , timestamp
-    , int[] // Optional
+    , pindex[][] // Optional
     , TraceRaw[] // Optional
     ];
 

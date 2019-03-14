@@ -20,7 +20,7 @@ function reportSummary(profile: Profile[]): HTMLElement {
             if (p.traces.length > 0)
                 maxTraceStopLast = Math.max(maxTraceStopLast, last(p.traces).stop);
         }
-        const cost = maximum(p.depends.map(i => criticalPath[i]), 0) + p.execution;
+        const cost = maximum(p.depends.flat().map(i => criticalPath[i]), 0) + p.execution;
         maxCriticalPath = Math.max(cost, maxCriticalPath);
         criticalPath[p.index] = cost;
     }

@@ -15,7 +15,7 @@ function unraw(xs: ProfileRaw[]): Profile[] {
         traces: x.length > 5 ? x[5].map(y => ({command: y[0], start: y[1], stop: y[2]})) : []
     } as Profile));
     for (const p of ans)
-        for (const d of p.depends)
+        for (const d of p.depends.flat())
             ans[d].rdepends.push(p.index);
     return ans;
 }
