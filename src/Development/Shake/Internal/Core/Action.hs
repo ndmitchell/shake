@@ -217,8 +217,8 @@ applyBlockedBy reason = actionBracket $ \s0 ->
 -- TRACING
 
 -- | Write an action to the trace list, along with the start/end time of running the IO action.
---   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'.
---   The trace list is used for profile reports (see 'shakeReport').
+--   The 'Development.Shake.cmd' and 'Development.Shake.command' functions automatically call 'traced'
+--   with the name of the executable. The trace list is used for profile reports (see 'shakeReport').
 --
 --   By default 'traced' prints some useful extra context about what
 --   Shake is building, e.g.:
@@ -227,6 +227,10 @@ applyBlockedBy reason = actionBracket $ \s0 ->
 --
 --   To suppress the output of 'traced' (for example you want more control
 --   over the message using 'putNormal'), use the 'quietly' combinator.
+--
+--   It is recommended that the string passed to 'traced' is short and that only a small number of unique strings
+--   are used (makes profiling work better).
+--   The string does not need to make sense on its own, only in conjunction with the target it is building.
 traced :: String -> IO a -> Action a
 traced msg act = do
     Global{..} <- Action getRO
