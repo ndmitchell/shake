@@ -62,7 +62,7 @@ function simulateThreads(profile: Profile[], threads: int): [seconds, seconds[]]
         while (running.length < threads && ready.length > 0) {
             const p = ready.pop();
             started[p.index] = timestamp;
-            running.insertSorted([p.index, timestamp + p.execution], (a, b) => b[1] - a[1]);
+            running.insertSorted([p.index, timestamp + p.execution], compareSndRev);
         }
         if (running.length === 0) {
             if (maximum(waiting, 0) > 0)

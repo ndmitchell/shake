@@ -94,6 +94,10 @@ function compareSnd<A>(a: [A, number], b: [A, number]): number {
     return a[1] - b[1];
 }
 
+function compareSndRev<A>(a: [A, number], b: [A, number]): number {
+    return b[1] - a[1];
+}
+
 function sortOn<A>(xs: A[], f: (x: A) => number): A[] {
     return xs.map(x => pair(f(x), x)).sort(compareFst).map(snd);
 }
