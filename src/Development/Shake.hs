@@ -94,7 +94,7 @@ module Development.Shake(
     -- * Environment rules
     getEnv, getEnvWithDefault,
     -- * Oracle rules
-    ShakeValue, RuleResult, addOracle, addOracleCache, addOracleHash, askOracle,
+    ShakeValue, RuleResult, addOracle, addOracleCache, addOracleHash, askOracle, askOracles,
     -- * Special rules
     alwaysRerun,
     -- * Resources

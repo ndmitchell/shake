@@ -2,7 +2,8 @@
 {-# LANGUAGE TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.Oracle(
-    addOracle, addOracleCache, addOracleHash, askOracle
+    addOracle, addOracleCache, addOracleHash,
+    askOracle, askOracles
     ) where
 
 import Development.Shake.Internal.Core.Types
@@ -156,3 +157,7 @@ addOracleCache = withFrozenCallStack $ addOracleFlavor Cache
 --   The question/answer types must match those provided previously.
 askOracle :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> Action a
 askOracle = fmap fromOracleA . apply1 . OracleQ
+
+-- | A parallel version of 'askOracle'.
+askOracles :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => [q] -> Action [a]
+askOracles = fmap (map fromOracleA) . apply . map OracleQ
