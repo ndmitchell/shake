@@ -182,16 +182,6 @@ function lazy<V>(thunk: () => V): () => V {
     };
 }
 
-function concat<T>(xss: T[][]): T[] {
-    const res: T[] = [];
-    for (const xs of xss) {
-        for (const x of xs) {
-            res.push(x);
-        }
-    }
-    return res;
-}
-
 function concatNub<T extends key>(xss: T[][]): T[] {
     const res: T[] = [];
     const seen: {} = {};
@@ -227,12 +217,7 @@ function insertArraySorted<A>(xs: A[], x: A, compare: (a: A, b: A) => number): A
 // Originally from https://gist.github.com/sergiodxa/a493c98b7884128081bb9a281952ef33
 
 // our element factory
-function createElement(type: string, props?: MapString<any>, ..._children: any[]) {
-    // if _children is an array of array take the first value, else take the full array
-    const children: any[][] = [];
-    for (const child of _children)
-        children.push(Array.isArray(child) ? child : [child]);
-
+function createElement(type: string, props?: MapString<any>, ...children: any[]) {
     const element = document.createElement(type);
 
     for (const name in props || {}) {
@@ -241,7 +226,7 @@ function createElement(type: string, props?: MapString<any>, ..._children: any[]
         else
             element.setAttribute(name, props[name]);
     }
-    for (const child of concat(children)) {
+    for (const child of children.flat(10)) {
         const c = typeof child === "object" ? child : document.createTextNode(child.toString());
         element.appendChild(c);
     }
