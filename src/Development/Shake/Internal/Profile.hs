@@ -79,7 +79,7 @@ toReport Database{..} = do
             {prfName = show k
             ,prfBuilt = fromStep built
             ,prfChanged = fromStep changed
-            ,prfDepends = mapMaybe (`Map.lookup` ids) (concatMap fromDepends depends)
+            ,prfDepends = filter (not . null) $ map (mapMaybe (`Map.lookup` ids) . fromDepends) depends
             ,prfExecution = floatToDouble execution
             ,prfTraces = map fromTrace traces
             }
@@ -89,7 +89,7 @@ toReport Database{..} = do
 
 
 data ProfileEntry = ProfileEntry
-    {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [Int], prfExecution :: Double, prfTraces :: [ProfileTrace]}
+    {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [[Int]], prfExecution :: Double, prfTraces :: [ProfileTrace]}
 data ProfileTrace = ProfileTrace
     {prfCommand :: String, prfStart :: Double, prfStop :: Double}
 prfTime ProfileTrace{..} = prfStop - prfStart
