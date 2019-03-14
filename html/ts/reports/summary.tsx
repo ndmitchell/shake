@@ -43,7 +43,11 @@ function speculativeCriticalPath(profile: Profile[]): seconds {
     const criticalPath: seconds[] = []; // the critical path to any element
     let maxCriticalPath: seconds = 0;
     for (const p of profile) {
-        const cost = maximum(p.depends.flat().map(i => criticalPath[i]), 0) + p.execution;
+        let cost = 0;
+        for (const ds of p.depends)
+            for (const d of ds)
+                cost = Math.max(cost, criticalPath[d]);
+        cost += p.execution;
         maxCriticalPath = Math.max(cost, maxCriticalPath);
         criticalPath[p.index] = cost;
     }
