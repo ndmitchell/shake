@@ -41,10 +41,11 @@ function ruleData(etimes: seconds[], search: Search): object[] {
         name,
         count: ps.length,
         leaf: ps.every(p => p.depends.length === 0),
-        run: minimum(ps.map(p => p.built)),
+        run: ps.map(p => p.built).minimum(),
         changed: ps.some(p => p.built === p.changed),
         time: ps.map(p => p.execution).sum(),
         etime: ps.map(p => etimes[p.index]).sum(),
+        wtime: ps.map(p => wtimes[p.index]).sum(),
         untraced: ps.map(untraced).sum()
     }));
 }

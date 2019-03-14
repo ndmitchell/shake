@@ -16,7 +16,7 @@ function reportSummary(profile: Profile[]): HTMLElement {
             countLast++;
             countTraceLast += p.traces.length;
             if (p.traces.length > 0)
-                maxTraceStopLast = Math.max(maxTraceStopLast, last(p.traces).stop);
+                maxTraceStopLast = Math.max(maxTraceStopLast, p.traces.last().stop);
         }
     }
 

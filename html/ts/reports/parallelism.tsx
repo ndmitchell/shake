@@ -65,7 +65,7 @@ function simulateThreads(profile: Profile[], threads: int): [seconds, seconds[]]
             running.insertSorted([p.index, timestamp + p.execution], compareSndRev);
         }
         if (running.length === 0) {
-            if (maximum(waiting, 0) > 0)
+            if (waiting.maximum(0) > 0)
                 throw new Error("Failed to run all tasks");
             return [timestamp, started];
         }

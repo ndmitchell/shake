@@ -98,32 +98,12 @@ function compareSndRev<A>(a: [A, number], b: [A, number]): number {
     return b[1] - a[1];
 }
 
-function sortOn<A>(xs: A[], f: (x: A) => number): A[] {
-    return xs.map(x => pair(f(x), x)).sort(compareFst).map(snd);
-}
-
-function last<A>(xs: A[]): A {
-    return xs[xs.length - 1];
-}
-
-function maximum<A>(xs: A[], start: A): A {
-    let res: A = start;
-    for (const x of xs)
-        if (x > res)
-            res = x;
-    return res;
-}
-
-function minimum<A>(xs: A[], start?: A): A {
-    let res: A = start;
-    for (const x of xs)
-        if (res === undefined || x < res)
-            res = x;
-    return res;
-}
-
 function pair<A, B>(a: A, b: B): [A, B] {
     return [a, b];
+}
+
+function triple<A, B, C>(a: A, b: B, c: C): [A, B, C] {
+    return [a, b, c];
 }
 
 function fst<A, B>([x, _]: [A, B]): A {
@@ -166,37 +146,63 @@ function lazy<V>(thunk: () => V): () => V {
 interface Array<T> {
     insertSorted(x: T, compare: (a: T, b: T) => number): T[];
     concatLength<A, T extends A[]>(): int;
+    sortOn(f: (x: T) => number): T[];
+    last(): T;
     sum<T extends number>(): number;
+    maximum<T extends number>(def?: number): number;
+    minimum<T extends number>(def?: number): number;
 }
 
-Array.prototype.sum = function<T>(): number {
+Array.prototype.sum = function<T>(this: number[]): number {
     let res = 0;
-    for (const x of this as number[])
+    for (const x of this)
         res += x;
     return res;
 };
 
-
-Array.prototype.insertSorted = function<T>(x: T, compare: (a: T, b: T) => number): T[] {
-    const xs = this as T[];
+Array.prototype.insertSorted = function<T>(this: T[], x: T, compare: (a: T, b: T) => number): T[] {
     let start = 0;
-    let stop = xs.length - 1;
+    let stop = this.length - 1;
     let middle = 0;
     while (start <= stop) {
         middle = Math.floor((start + stop) / 2);
-        if (compare(xs[middle], x) > 0)
+        if (compare(this[middle], x) > 0)
             stop = middle - 1;
         else
             start = middle + 1;
     }
-    xs.splice(start, 0, x);
-    return xs;
+    this.splice(start, 0, x);
+    return this;
 };
 
-Array.prototype.concatLength = function<A>(): int {
+Array.prototype.concatLength = function<A>(this: A[][]): int {
     let res = 0;
-    for (const x of this as A[][])
+    for (const x of this)
         res += x.length;
+    return res;
+};
+
+Array.prototype.sortOn = function<T>(this: T[], f: (x: T) => number): T[] {
+    return this.map(x => pair(f(x), x)).sort(compareFst).map(snd);
+};
+
+Array.prototype.last = function<T>(this: T[]): T {
+    return this[this.length - 1];
+};
+
+Array.prototype.maximum = function<T>(this: number[], def?: number): number {
+    if (this.length === 0) return def;
+    let res: number = this[0];
+    for (let i = 1; i < this.length; i++)
+        res = Math.max(res, this[i]);
+    return res;
+};
+
+Array.prototype.minimum = function<T>(this: number[], def?: number): number {
+    if (this.length === 0) return def;
+    let res: number = this[0];
+    for (let i = 1; i < this.length; i++)
+        res = Math.min(res, this[i]);
     return res;
 };
 

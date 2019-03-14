@@ -68,7 +68,7 @@ function findRuns(profile: Profile[]): Array<[timestamp, seconds]> {
     for (const p of profile) {
         if (p.traces.length > 0) {
             const old = runs[p.built];
-            const end = last(p.traces).stop;
+            const end = p.traces.last().stop;
             runs[p.built] = old === undefined ? end : Math.max(old, end);
         }
     }

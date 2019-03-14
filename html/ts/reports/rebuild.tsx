@@ -2,16 +2,16 @@
 function reportRebuild(profile: Profile[], search: Prop<Search>): HTMLElement {
     const depth: int[] = [];
     for (const p of profile) {
-        depth[p.index] = maximum(p.depends.flat().map(d => depth[d] + 1), 0);
+        depth[p.index] = p.depends.flat().map(d => depth[d] + 1).maximum(0);
     }
 
-    const ind: pindex = sortOn(search.get().mapProfile((p, _) => p.index), i => -depth[i])[0];
+    const ind: pindex = search.get().mapProfile((p, _) => p.index).sortOn(i => -depth[i])[0];
     const p = profile[ind];
 
     function f(p: Profile): HTMLElement[] {
         const res = [];
         while (p.depends.length !== 0) {
-            const ds = sortOn(p.depends.flat(), i => -depth[i]);
+            const ds = p.depends.flat().sortOn(i => -depth[i]);
             res.push(<li><select style="width:400px;">{ds.slice(0, 1).map(x => <option>{profile[x].name}</option>)}</select></li>);
             p = profile[ds[0]];
         }
