@@ -6,8 +6,6 @@ function reportSummary(profile: Profile[]): HTMLElement {
     let sumExecutionLast: seconds = 0; // build time in total
     let countTrace: int = 0; let countTraceLast: int = 0; // traced commands run
     let maxTraceStopLast: seconds = 0; // time the last traced command stopped
-    const criticalPath: seconds[] = []; // the critical path to any element
-    let maxCriticalPath: seconds = 0; // the highest value in criticalPath
 
     for (const p of profile) {
         sumExecution += p.execution;
@@ -20,9 +18,6 @@ function reportSummary(profile: Profile[]): HTMLElement {
             if (p.traces.length > 0)
                 maxTraceStopLast = Math.max(maxTraceStopLast, last(p.traces).stop);
         }
-        const cost = maximum(p.depends.flat().map(i => criticalPath[i]), 0) + p.execution;
-        maxCriticalPath = Math.max(cost, maxCriticalPath);
-        criticalPath[p.index] = cost;
     }
 
     return <div>
@@ -39,7 +34,18 @@ function reportSummary(profile: Profile[]): HTMLElement {
             <li><b>Build time:</b> {showTime(sumExecution)} <span class="note">how long a complete build would take single threaded.</span></li>
             <li><b>Last build time:</b> {showTime(maxTraceStopLast)} <span class="note">how long the last build take.</span></li>
             <li><b>Parallelism:</b> {(maxTraceStopLast === 0 ? 0 : sumExecutionLast / maxTraceStopLast).toFixed(2)} <span class="note">average number of commands executing simultaneously in the last build.</span></li>
-            <li><b>Critical path:</b> {showTime(maxCriticalPath)} <span class="note">how long it would take on infinite CPUs.</span></li>
+            <li><b>Critical path:</b> {showTime(speculativeCriticalPath(profile))} <span class="note">how long it would take on infinite CPUs.</span></li>
         </ul>
     </div>;
+}
+
+function speculativeCriticalPath(profile: Profile[]): seconds {
+    const criticalPath: seconds[] = []; // the critical path to any element
+    let maxCriticalPath: seconds = 0;
+    for (const p of profile) {
+        const cost = maximum(p.depends.flat().map(i => criticalPath[i]), 0) + p.execution;
+        maxCriticalPath = Math.max(cost, maxCriticalPath);
+        criticalPath[p.index] = cost;
+    }
+    return maxCriticalPath;
 }

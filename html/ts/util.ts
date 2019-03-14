@@ -86,13 +86,6 @@ function plural(n: int, not1 = "s", is1 = ""): string {
 /////////////////////////////////////////////////////////////////////
 // MISC
 
-function sum(xs: number[]): number {
-    let res = 0;
-    for (const x of xs)
-        res += x;
-    return res;
-}
-
 function compareFst<A>(a: [number, A], b: [number, A]): number {
     return a[0] - b[0];
 }
@@ -137,27 +130,11 @@ function snd<A, B>([_, x]: [A, B]): B {
     return x;
 }
 
-function testRegExp(r: string | RegExp, s: string): boolean {
-    if (typeof r === "string")
-        return s.indexOf(r) !== -1;
-    else
-        return r.test(s);
-}
-
 function execRegExp(r: string | RegExp, s: string): string[] {
     if (typeof r === "string")
         return s.indexOf(r) === -1 ? null : [];
     else
         return r.exec(s);
-}
-
-function listEq<T>(xs: T[], ys: T[]): boolean {
-    if (xs.length !== ys.length) return false;
-    for (let i = 0; i < xs.length; i++) {
-        if (xs[i] !== ys[i])
-            return false;
-    }
-    return true;
 }
 
 function cache<K, V>(key: (k: K) => string, op: (k: K) => V): (k: K) => V {
@@ -182,22 +159,22 @@ function lazy<V>(thunk: () => V): () => V {
     };
 }
 
-function concatNub<T extends key>(xss: T[][]): T[] {
-    const res: T[] = [];
-    const seen: {} = {};
-    for (const xs of xss) {
-        for (const x of xs) {
-            const v: key = x;
-            if (!(v in seen)) {
-                (seen as any)[v] = null;
-                res.push(x);
-            }
-        }
-    }
-    return res;
+interface Array<T> {
+    insertSorted(x: T, compare: (a: T, b: T) => number): T[];
+    concatLength<A, T extends A[]>(): int;
+    sum<T extends number>(): number;
 }
 
-function insertArraySorted<A>(xs: A[], x: A, compare: (a: A, b: A) => number): A[] {
+Array.prototype.sum = function<T>(): number {
+    let res = 0;
+    for (const x of this as number[])
+        res += x;
+    return res;
+};
+
+
+Array.prototype.insertSorted = function<T>(x: T, compare: (a: T, b: T) => number): T[] {
+    const xs = this as T[];
     let start = 0;
     let stop = xs.length - 1;
     let middle = 0;
@@ -210,7 +187,14 @@ function insertArraySorted<A>(xs: A[], x: A, compare: (a: A, b: A) => number): A
     }
     xs.splice(start, 0, x);
     return xs;
-}
+};
+
+Array.prototype.concatLength = function<A>(): int {
+    let res = 0;
+    for (const x of this as A[][])
+        res += x.length;
+    return res;
+};
 
 
 // Use JSX with el instead of React.createElement

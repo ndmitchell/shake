@@ -29,7 +29,7 @@ interface Profile {
 }
 
 function untraced(p: Profile): seconds {
-    return Math.max(0, p.execution - sum(p.traces.map(t => t.stop - t.start)));
+    return Math.max(0, p.execution - p.traces.map(t => t.stop - t.start).sum());
 }
 
 type TraceRaw =

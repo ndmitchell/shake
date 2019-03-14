@@ -45,7 +45,7 @@ function simulateThreads(profile: Profile[], threads: int): [seconds, seconds[]]
 
     // Things that are done
     const ready: Profile[] = profile.filter(x => x.depends.length === 0);
-    const waiting: int[] = profile.map(x => x.depends.length) ; // number I am waiting on before I am done
+    const waiting: int[] = profile.map(x => x.depends.concatLength()) ; // number I am waiting on before I am done
 
     function runningWait(): void {
         const [ind, time] = running.pop();
@@ -62,7 +62,7 @@ function simulateThreads(profile: Profile[], threads: int): [seconds, seconds[]]
         while (running.length < threads && ready.length > 0) {
             const p = ready.pop();
             started[p.index] = timestamp;
-            insertArraySorted(running, [p.index, timestamp + p.execution], (a, b) => b[1] - a[1]);
+            running.insertSorted([p.index, timestamp + p.execution], (a, b) => b[1] - a[1]);
         }
         if (running.length === 0) {
             if (maximum(waiting, 0) > 0)
