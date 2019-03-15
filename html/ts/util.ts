@@ -78,6 +78,10 @@ function showInt(x: int): string {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function showRun(run: timestamp): string {
+    return run === 0 ? "Latest run" : run + " run" + plural(run) + " ago";
+}
+
 function plural(n: int, not1 = "s", is1 = ""): string {
     return n === 1 ? is1 : not1;
 }

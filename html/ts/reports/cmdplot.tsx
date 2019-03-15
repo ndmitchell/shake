@@ -17,8 +17,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
     const combo = <select>
         {runs.map(([run, time], i) =>
             <option>
-                {run === 0 ? "Latest run" : run + " run" + plural(run) + " ago"}
-                {" (" + showTime(time) + ") "}
+                {showRun(run) + " (" + showTime(time) + ") "}
                 {i === 0 ? "" : " - may be incomplete"}
             </option>)};
     </select>;
