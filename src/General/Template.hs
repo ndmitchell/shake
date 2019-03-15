@@ -5,7 +5,9 @@ module General.Template(runTemplate) where
 import System.FilePath.Posix
 import Control.Exception.Extra
 import Data.Char
+import Data.Time
 import System.IO.Unsafe
+import Development.Shake.Internal.Paths
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Language.Javascript.Flot as Flot
 import qualified Language.Javascript.JQuery as JQuery
