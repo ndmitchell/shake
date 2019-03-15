@@ -81,7 +81,7 @@ toReport Database{..} = do
             ,prfChanged = fromStep changed
             ,prfDepends = filter (not . null) $ map (mapMaybe (`Map.lookup` ids) . fromDepends) depends
             ,prfExecution = floatToDouble execution
-            ,prfTraces = map fromTrace traces
+            ,prfTraces = map fromTrace $ sortOn traceStart traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
                   fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
