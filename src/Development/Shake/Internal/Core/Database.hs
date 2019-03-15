@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked, unsafeRunLocked,
-    DatabasePoly(..),
+    DatabasePoly(..), createDatabase,
     getId, getKey, getKeyValue,
     getAllKeyValues, getIdMap,
     setMem, setDisk
@@ -12,7 +12,7 @@ module Development.Shake.Internal.Core.Database(
 
 import Data.IORef.Extra
 import General.Intern(Id, Intern)
-import Data.Hashable
+import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map
 import qualified General.Intern as Intern
 import Control.Concurrent.Extra
@@ -48,6 +48,18 @@ data DatabasePoly k v = Database
     ,journal :: Id -> k -> v -> IO () -- ^ Record all changes to status
     ,vDefault :: v
     }
+
+
+createDatabase
+    :: (Eq k, Hashable k)
+    => Ids.Ids (k, v)
+    -> (Id -> k -> v -> IO ())
+    -> v
+    -> IO (DatabasePoly k v)
+createDatabase status journal vDefault = do
+    xs <- Ids.toList status
+    intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+    return Database{..}
 
 
 getKey :: DatabasePoly k v -> Id -> IO k

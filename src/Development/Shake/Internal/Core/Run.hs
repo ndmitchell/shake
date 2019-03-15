@@ -24,7 +24,6 @@ import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import qualified General.Ids as Ids
-import qualified General.Intern as Intern
 import qualified General.TypeMap as TMap
 import Control.Monad.Extra
 import Data.Typeable
@@ -329,11 +328,7 @@ usingDatabase cleanup opts diagnostic owitness = do
         | (t,(version, BinaryOp{..})) <- step : root : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
     journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, v)
-
-    xs <- Ids.toList status
-    intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
-    let vDefault = Missing
-    return Database{..}
+    createDatabase status journal Missing
 
 
 incrementStep :: Var Database -> IO Step
