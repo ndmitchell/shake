@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ConstraintKinds, TupleSections #-}
+{-# LANGUAGE ConstraintKinds, TupleSections, GeneralizedNewtypeDeriving, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(
@@ -18,6 +18,7 @@ import Data.Tuple.Extra
 import Control.Concurrent.Extra hiding (withNumCapabilities)
 import Control.Monad.IO.Class
 import General.Binary
+import Development.Shake.Classes
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
@@ -27,6 +28,7 @@ import qualified General.TypeMap as TMap
 import General.Wait
 import Control.Monad.Extra
 import Data.Typeable
+import Numeric.Extra
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Dynamic
@@ -138,16 +140,22 @@ run RunState{..} oneshot actions2 =
                     | otherwise = liftIO . watch . show
 
             addTiming "Running rules"
+            locals <- newIORef []
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                 let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
-                    addPool PoolStart pool $ runAction global local act $ \x -> case x of
+                    addPool PoolStart pool $ runAction global local (act >> getLocal) $ \x -> case x of
                         Left e -> raiseError =<< shakeException global stack e
-                        Right x -> return x
+                        Right local -> atomicModifyIORef locals $ \rest -> (local:rest, ())
+
             maybe (return ()) (throwIO . snd) =<< readIORef except
             assertFinishedDatabase database
+
+            locals <- readIORef locals
+            end <- start
+            recordRoot step locals end database
 
             let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
@@ -314,9 +322,10 @@ checkValid diagnostic Database{..} check missing = do
 usingDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap TypeRep BuiltinRule -> IO Database
 usingDatabase cleanup opts diagnostic owitness = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
+    let root = (typeRep (Proxy :: Proxy Root), (Ver 0, BinaryOp (const mempty) (const rootKey)))
     witness <- return $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
-        | (t,(version, BinaryOp{..})) <- step : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
+        | (t,(version, BinaryOp{..})) <- step : root : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
     journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
 
@@ -349,6 +358,27 @@ toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
 
 fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
+
+
+recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
+recordRoot step locals (doubleToFloat -> end) Database{..} = do
+    is <- readIORef intern
+    rootId <- case Intern.lookup rootKey is of
+        Just rootId -> return rootId
+        Nothing -> do
+            (is, rootId) <- return $ Intern.add rootKey is
+            writeIORef intern is
+            return rootId
+    let local = localMergeMutable (newLocal emptyStack Normal) locals
+    let rootRes = Result
+            {result = (newValue (), BS.empty)
+            ,changed = step
+            ,built = step
+            ,depends = nubDepends $ reverse $ localDepends local
+            ,execution = 0
+            ,traces = reverse $ Trace BS.empty end end : localTraces local}
+    Ids.insert status rootId (rootKey, Ready rootRes)
+    journal rootId rootKey $ fmap snd rootRes
 
 
 loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)

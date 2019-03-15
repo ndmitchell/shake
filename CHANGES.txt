@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #588, #521 add end times and traced top-levels to the profile
     Add askOracles
     Generate nested dependency information in profiles
     Don't add .exe add the end of traced cmd calls

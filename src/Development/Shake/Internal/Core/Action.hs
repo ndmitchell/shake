@@ -17,7 +17,7 @@ module Development.Shake.Internal.Core.Action(
     -- Internal only
     producesUnchecked, producesCheck, lintCurrentDirectory, lintWatch,
     blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
-    getCurrentKey,
+    getCurrentKey, getLocal,
     actionShareList, actionShareRemove
     ) where
 
@@ -568,6 +568,8 @@ deprioritize x = do
 getCurrentKey :: Action (Maybe Key)
 getCurrentKey = Action $ topStack . localStack <$> getRW
 
+getLocal :: Action Local
+getLocal = Action getRW
 
 -- | Hooked up to --share-remove
 actionShareRemove :: [String] -> Action ()

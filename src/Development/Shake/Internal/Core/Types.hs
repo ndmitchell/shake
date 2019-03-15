@@ -11,7 +11,9 @@ module Development.Shake.Internal.Core.Types(
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..), BS_Store,
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
-    stepKey, StepKey(..), NoShow(..)
+    stepKey, StepKey(..),
+    rootKey, Root(..),
+    NoShow(..)
     ) where
 
 import Control.Monad.IO.Class
@@ -121,6 +123,17 @@ newtype StepKey = StepKey ()
 
 stepKey :: Key
 stepKey = newKey $ StepKey ()
+
+
+-- To make sure profiling has a complete view of what was demanded and all top-level 'action'
+-- things we fake up a Root node representing everything that was demanded
+newtype Root = Root () deriving (Eq,Typeable,Hashable,Binary,BinaryEx,NFData)
+
+instance Show Root where
+    show (Root ()) = "Root"
+
+rootKey :: Key
+rootKey = newKey $ Root ()
 
 
 ---------------------------------------------------------------------
