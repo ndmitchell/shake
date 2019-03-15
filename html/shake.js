@@ -570,7 +570,7 @@ function reportCmdPlot(profile) {
         plotData.set(res);
     }
     setPlotData(0);
-    $(combo).change(() => setPlotData($(combo).val()));
+    $(combo).change(() => setPlotData(combo.selectedIndex));
     return React.createElement("table", { class: "fill" },
         React.createElement("tr", null,
             React.createElement("td", { width: "100%", style: "text-align:center;" },
