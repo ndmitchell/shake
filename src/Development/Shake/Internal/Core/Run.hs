@@ -90,8 +90,8 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
 
 -- Prepare for a fresh run by changing Result to Loaded
 reset :: RunState -> IO ()
-reset RunState{..} = withVar databaseVar $ \database ->
-    Ids.forMutate (status database) $ \(k, s) -> (k, f s)
+reset RunState{..} = runLocked databaseVar $ \database ->
+    liftIO $ Ids.forMutate (status database) $ \(k, s) -> (k, f s)
     where
         f (Ready r) = Loaded (snd <$> r)
         f (Error _ x) = maybe Missing Loaded x

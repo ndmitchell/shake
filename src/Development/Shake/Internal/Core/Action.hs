@@ -42,6 +42,7 @@ import qualified General.Intern as Intern
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Monad
+import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.History.Shared
 import General.Pool
 import Development.Shake.Internal.Core.Types
@@ -360,13 +361,13 @@ lintWatch pats = do
 
 
 listDepends :: Var Database -> Depends -> IO [Key]
-listDepends db (Depends xs) = withVar db $ \Database{..} ->
+listDepends db (Depends xs) = runLocked db $ \Database{..} -> liftIO $
     -- FIXME: Don't actually need the database lock to do this as the results are stable
     forM xs $ \x ->
         fst . fromJust <$> Ids.lookup status x
 
 lookupDependencies :: Var Database -> Key -> IO [Depends]
-lookupDependencies db k = withVar db $ \Database{..} -> do
+lookupDependencies db k = runLocked db $ \Database{..} -> liftIO $ do
     -- FIXME: Don't actually need the database lock to do this as the results are stable
     intern <- readIORef intern
     let Just i = Intern.lookup k intern
