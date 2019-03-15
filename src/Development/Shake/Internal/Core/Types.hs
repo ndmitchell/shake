@@ -26,6 +26,7 @@ import Data.List
 import Control.Exception
 import General.Extra
 import Control.Concurrent.Extra
+import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import Development.Shake.Internal.History.Types
@@ -36,10 +37,9 @@ import Data.IORef
 import qualified Data.ByteString.Char8 as BS
 import Numeric.Extra
 import System.Time.Extra
-import General.Intern(Id, Intern)
+import General.Intern(Id)
 import qualified Data.HashSet as Set
 import qualified Data.HashMap.Strict as Map
-import qualified General.Ids as Ids
 import Data.Tuple.Extra
 
 import General.Pool
@@ -383,15 +383,6 @@ userRuleSize (Priority _ x) = userRuleSize x
 userRuleSize (Alternative x) = userRuleSize x
 userRuleSize (Versioned _ x) = userRuleSize x
 
-
--- | Invariant: The database does not have any cycles where a Key depends on itself.
---   Everything is mutable. intern and status must form a bijecttion.
---   There may be dangling Id's as a result of version changes.
-data DatabasePoly key vMem vDisk = Database
-    {intern :: IORef (Intern key) -- ^ Key |-> Id mapping
-    ,status :: Ids.Ids (key, vMem) -- ^ Id |-> (Key, Status) mapping
-    ,journal :: Id -> key -> vDisk -> IO () -- ^ Record all changes to status
-    }
 
 type Database = DatabasePoly Key Status (Result BS_Store)
 
