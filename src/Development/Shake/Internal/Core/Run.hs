@@ -23,7 +23,6 @@ import Development.Shake.Classes
 import Development.Shake.Internal.Core.Storage
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
-import qualified General.Ids as Ids
 import qualified General.TypeMap as TMap
 import Control.Monad.Extra
 import Data.Typeable
@@ -90,7 +89,7 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
 -- Prepare for a fresh run by changing Result to Loaded
 reset :: RunState -> IO ()
 reset RunState{..} = runLocked databaseVar $ \database ->
-    liftIO $ Ids.forMutate (status database) $ \(k, s) -> (k, f s)
+    modifyAllMem database f
     where
         f (Ready r) = Loaded (snd <$> r)
         f (Error _ x) = maybe Missing Loaded x
@@ -272,14 +271,14 @@ profileState RunState{..} file = do
 
 liveFiles :: Database -> IO [FilePath]
 liveFiles database = do
-    status <- Ids.elems $ status database
+    status <- getAllKeyValues database
     let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
     return [show k | (k, Ready{}) <- status, specialIsFileKey $ typeKey k]
 
 errorsState :: RunState -> IO [(String, SomeException)]
 errorsState RunState{..} = do
     database <- readVar databaseVar
-    status <- Ids.elems $ status database
+    status <- getAllKeyValues database
     return [(show k, e) | (k, Error e _) <- status]
 
 

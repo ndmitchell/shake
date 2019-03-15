@@ -7,7 +7,7 @@ module Development.Shake.Internal.Core.Database(
     DatabasePoly(..), createDatabase,
     getId, getKey, getKeyValue,
     getAllKeyValues, getIdMap,
-    setMem, setDisk
+    setMem, setDisk, modifyAllMem
     ) where
 
 import Data.IORef.Extra
@@ -90,6 +90,9 @@ getIdMap Database{..} = Ids.toMap status
 
 setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
+
+modifyAllMem :: DatabasePoly k v -> (v -> v) -> Locked ()
+modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k, s) -> (k, f s)
 
 setDisk :: DatabasePoly k v -> Id -> k -> v -> IO ()
 setDisk = journal
