@@ -13,8 +13,8 @@ import Numeric.Extra
 import General.Extra
 import Development.Shake.Internal.Errors
 import Development.Shake.Internal.Core.Types
+import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.Value
-import qualified General.Ids as Ids
 import qualified Data.HashSet as Set
 import Development.Shake.Internal.Paths
 import Development.Shake.Classes
@@ -66,8 +66,8 @@ removeStep :: Map.HashMap Id (Key, Result a) -> Map.HashMap Id (Key, Result a)
 removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
-toReport Database{..} = do
-    status <- removeStep . resultsOnly <$> Ids.toMap status
+toReport db = do
+    status <- removeStep . resultsOnly <$> getIdMap db
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concatMap fromDepends . depends . snd) status
         ids = Map.fromList $ zip order [0..]

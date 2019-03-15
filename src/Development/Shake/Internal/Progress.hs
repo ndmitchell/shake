@@ -20,6 +20,7 @@ import Data.List
 import Data.Maybe
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Core.Types
+import Development.Shake.Internal.Core.Database
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Numeric.Extra
@@ -28,7 +29,6 @@ import General.EscCodes
 import General.Extra
 import Development.Shake.Internal.Paths
 import System.Time.Extra
-import qualified General.Ids as Ids
 
 
 #ifdef mingw32_HOST_OS
@@ -51,8 +51,8 @@ foreign import CALLCONV "Windows.h SetConsoleTitleW" c_setConsoleTitleW :: CWStr
 -- PROGRESS
 
 progress :: Database -> Step -> IO Progress
-progress Database{..} step = do
-    xs <- Ids.elems status
+progress db step = do
+    xs <- getAllKeyValues db
     return $! foldl' f mempty $ map snd xs
     where
         g = floatToDouble

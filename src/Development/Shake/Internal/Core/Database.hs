@@ -6,13 +6,14 @@ module Development.Shake.Internal.Core.Database(
     Locked, runLocked, unsafeRunLocked,
     DatabasePoly(..),
     getId, getKey, getKeyValue,
-    getAllKeyValues,
+    getAllKeyValues, getIdMap,
     setMem, setDisk
     ) where
 
 import Data.IORef.Extra
 import General.Intern(Id, Intern)
 import Data.Hashable
+import qualified Data.HashMap.Strict as Map
 import qualified General.Intern as Intern
 import Control.Concurrent.Extra
 import Control.Monad.IO.Class
@@ -71,6 +72,9 @@ getKeyValue Database{..} i = liftIO $ Ids.lookup status i
 
 getAllKeyValues :: DatabasePoly key vMem vDisk -> IO [(key, vMem)]
 getAllKeyValues Database{..} = Ids.elems status
+
+getIdMap :: DatabasePoly key vMem vDisk -> IO (Map.HashMap Id (key, vMem))
+getIdMap Database{..} = Ids.toMap status
 
 setMem :: DatabasePoly key vMem vDisk -> Id -> key -> vMem -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
