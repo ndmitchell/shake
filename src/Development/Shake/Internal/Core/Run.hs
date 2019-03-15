@@ -285,9 +285,8 @@ errorsState RunState{..} = do
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
-checkValid diagnostic Database{..} check missing = do
-    status <- Ids.elems status
-    intern <- readIORef intern
+checkValid diagnostic db check missing = do
+    status <- getAllKeyValues db
     diagnostic $ return "Starting validity/lint checking"
 
     -- Do not use a forM here as you use too much stack space
@@ -305,7 +304,9 @@ checkValid diagnostic Database{..} check missing = do
                                         | (key, result, now) <- bad])
             ""
 
-    bad <- return [(parent,key) | (parent, key) <- missing, isJust $ Intern.lookup key intern]
+    bad <- return [(parent,key) | (parent, key) <- missing]
+        -- FIXME: I used to have this test, did it actually help? Does it have a test? Doesn't this violate an invariant?
+        -- , isJust $ Intern.lookup key intern]
     unless (null bad) $ do
         let n = length bad
         throwM $ errorStructured
