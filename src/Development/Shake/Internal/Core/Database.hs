@@ -73,8 +73,7 @@ getAllKeyValues :: DatabasePoly key vMem vDisk -> IO [(key, vMem)]
 getAllKeyValues Database{..} = Ids.elems status
 
 setMem :: DatabasePoly key vMem vDisk -> Id -> key -> vMem -> Locked ()
-setMem Database{..} i k v =
-    liftIO $ Ids.insert status i (k,v)
+setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
 
 setDisk :: DatabasePoly key vMem vDisk -> Id -> key -> vDisk -> IO ()
 setDisk = journal
