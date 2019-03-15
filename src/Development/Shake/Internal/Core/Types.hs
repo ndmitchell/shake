@@ -22,6 +22,8 @@ import Foreign.Storable
 import Data.Word
 import Data.Typeable
 import General.Binary
+import Data.Maybe
+import Data.List
 import Control.Exception
 import General.Extra
 import Control.Concurrent.Extra
@@ -261,7 +263,7 @@ getResult _ = Nothing
 -- OPERATIONS
 
 newtype Depends = Depends {fromDepends :: [Id]}
-    deriving NFData
+    deriving (NFData, Semigroup, Monoid)
 
 instance Show Depends where
     -- Appears in diagnostic output and the Depends ctor is just verbose
@@ -445,7 +447,8 @@ newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 [] [] [] [] True
 localClearMutable :: Local -> Local
 localClearMutable Local{..} = (newLocal localStack localVerbosity){localBlockApply=localBlockApply, localBuiltinVersion=localBuiltinVersion}
 
--- Merge, works well assuming you clear the variables first
+-- Merge, works well assuming you clear the variables first with localClearMutable.
+-- Assume the first was run sequentially, and the list in parallel.
 localMergeMutable :: Local -> [Local] -> Local
 -- don't construct with RecordWildCards so any new fields raise an error
 localMergeMutable root xs = Local
@@ -455,12 +458,25 @@ localMergeMutable root xs = Local
     ,localVerbosity = localVerbosity root
     ,localBlockApply = localBlockApply root
     -- mutable locals that need integrating
-        -- note that a lot of the lists are stored in reverse, assume root happened first
-    ,localDepends =  concatMap localDepends xs ++ localDepends root
+    -- note that a lot of the lists are stored in reverse, assume root happened first
+    ,localDepends = mergeDependsRev (map localDepends xs) ++ localDepends root
     ,localDiscount = sum $ map localDiscount $ root : xs
-    ,localTraces = concatMap localTraces xs ++ localTraces root
+    ,localTraces = mergeTracesRev (map localTraces xs) ++ localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
     ,localProduces = concatMap localProduces xs ++ localProduces root
     ,localHistory = all localHistory $ root:xs
     }
+
+-- ignoring reversing, want to merge the first set of dependencies and so on
+-- so we increase parallelism when rechecking builds
+mergeDependsRev :: [[Depends]] -> [Depends]
+mergeDependsRev = reverse . f . map reverse
+    where
+        f [] = []
+        f xs = mconcat now : f next
+            where (now, next) = unzip $ mapMaybe uncons xs
+
+mergeTracesRev :: [[Trace]] -> [Trace]
+-- might want to resort them?
+mergeTracesRev = concat
