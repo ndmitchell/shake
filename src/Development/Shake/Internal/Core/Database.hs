@@ -4,11 +4,14 @@
 
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked,
-    DatabasePoly(..), getKey
+    DatabasePoly(..),
+    getId, getKey, getKeyValue
     ) where
 
-import Data.IORef
+import Data.IORef.Extra
 import General.Intern(Id, Intern)
+import Data.Hashable
+import qualified General.Intern as Intern
 import Control.Concurrent.Extra
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
@@ -37,8 +40,26 @@ data DatabasePoly key vMem vDisk = Database
     {intern :: IORef (Intern key) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (key, vMem) -- ^ Id |-> (Key, Status) mapping
     ,journal :: Id -> key -> vDisk -> IO () -- ^ Record all changes to status
+    ,vMemDefault :: vMem
     }
 
 
 getKey :: DatabasePoly key vMem vDisk -> Id -> IO key
 getKey Database{..} x = fst . fromJust <$> Ids.lookup status x
+
+
+getId :: (Eq key, Hashable key) => DatabasePoly key vMem vDisk -> key -> Locked Id
+getId Database{..} k = liftIO $ do
+    is <- readIORef intern
+    case Intern.lookup k is of
+        Just i -> return i
+        Nothing -> do
+            (is, i) <- return $ Intern.add k is
+            -- make sure to write it into Status first to maintain Database invariants
+            Ids.insert status i (k, vMemDefault)
+            writeIORef' intern is
+            return i
+
+-- Returns Nothing only if the Id was serialised previously but then the Id disappeared
+getKeyValue :: DatabasePoly key vMem vDisk -> Id -> Locked (Maybe (key, vMem))
+getKeyValue Database{..} i = liftIO $ Ids.lookup status i

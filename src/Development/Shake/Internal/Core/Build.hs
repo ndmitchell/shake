@@ -22,7 +22,6 @@ import General.Wait
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
 import General.Extra
-import qualified General.Intern as Intern
 import General.Intern(Id)
 
 import Control.Exception
@@ -32,7 +31,6 @@ import qualified Data.HashMap.Strict as Map
 import qualified General.Ids as Ids
 import Development.Shake.Internal.Core.Rules
 import Data.Typeable
-import Data.IORef.Extra
 import Data.Maybe
 import Data.List.Extra
 import Data.Either.Extra
@@ -41,23 +39,6 @@ import System.Time.Extra
 
 ---------------------------------------------------------------------
 -- LOW-LEVEL OPERATIONS ON THE DATABASE
-
-getKeyId :: Database -> Key -> Locked Id
-getKeyId Database{..} k = liftIO $ do
-    is <- readIORef intern
-    case Intern.lookup k is of
-        Just i -> return i
-        Nothing -> do
-            (is, i) <- return $ Intern.add k is
-            -- make sure to write it into Status first to maintain Database invariants
-            Ids.insert status i (k,Missing)
-            writeIORef' intern is
-            return i
-
--- Returns Nothing only if the Id was serialised previously but then the Id disappeared
-getIdKeyStatus :: Database -> Id -> Locked (Maybe (Key, Status))
-getIdKeyStatus Database{..} i = liftIO $ Ids.lookup status i
-
 
 setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> Locked ()
 setIdKeyStatus Global{..} database@Database{..} i k v = do
@@ -86,7 +67,7 @@ getDatabaseValueGeneric :: Key -> Action (Maybe (Result (Either BS.ByteString Va
 getDatabaseValueGeneric k = do
     Global{..} <- Action getRO
     Just (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
-        getIdKeyStatus database =<< getKeyId database k
+        getKeyValue database =<< getId database k
     return $ getResult status
 
 
@@ -96,7 +77,7 @@ getDatabaseValueGeneric k = do
 -- | Lookup the value for a single Id, may need to spawn it
 lookupOne :: Global -> Stack -> Database -> Id -> Wait Locked (Either SomeException (Result (Value, BS_Store)))
 lookupOne global stack database i = do
-    res <- quickly $ getIdKeyStatus database i
+    res <- quickly $ getKeyValue database i
     case res of
         Nothing -> Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
         Just (k, s) -> case s of
@@ -104,7 +85,7 @@ lookupOne global stack database i = do
             Error e _ -> Now $ Left e
             Running{} | Left e <- addStack i k stack -> Now $ Left e
             _ -> Later $ \continue -> do
-                Just (_, s) <- getIdKeyStatus database i
+                Just (_, s) <- getKeyValue database i
                 case s of
                     Ready r -> continue $ Right r
                     Error e _ -> continue $ Left e
@@ -128,7 +109,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
             runKey global stack k r mode $ \res -> do
                 runLocked globalDatabase $ \_ -> do
                     let val = fmap runValue res
-                    res <- getIdKeyStatus database i
+                    res <- getKeyValue database i
                     w <- case res of
                         Just (_, Running (NoShow w) _) -> return w
                         -- We used to be able to hit here, but we fixed it by ensuring the thread pool workers are all
@@ -172,12 +153,12 @@ applyKeyValue callStack ks = do
     let stack = addCallStack callStack localStack
 
     (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
-        is <- mapM (getKeyId database) ks
+        is <- mapM (getId database) ks
         wait <- runWait $ do
             x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
             case x of
                 Just e -> return $ Left e
-                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . getIdKeyStatus database) is
+                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . getKeyValue database) is
         return (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
@@ -281,7 +262,7 @@ historyLoad (Ver -> ver) = do
         key <- liftIO $ evaluate $ fromMaybe (error "Can't call historyLoad outside a rule") $ topStack localStack
         res <- liftIO $ runLocked globalDatabase $ \database -> runWait $ do
             let ask k = do
-                    i <- quickly $ getKeyId database k
+                    i <- quickly $ getId database k
                     let identify = runIdentify globalRules k . fst . result
                     either (const Nothing) identify <$> lookupOne global localStack database i
             x <- case globalShared of
@@ -294,7 +275,7 @@ historyLoad (Ver -> ver) = do
                     Just cloud -> lookupCloud cloud ask key localBuiltinVersion ver
             case x of
                 Nothing -> return Nothing
-                Just (a,b,c) -> quickly $ Just . (a,,c) <$> mapM (mapM $ getKeyId database) b
+                Just (a,b,c) -> quickly $ Just . (a,,c) <$> mapM (mapM $ getId database) b
         -- FIXME: If running with cloud and shared, and you got a hit in cloud, should also add it to shared
         res <- case res of
             Now x -> return x
@@ -345,7 +326,7 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
         deps <- runLocked globalDatabase $ \database ->
             -- technically this could be run without the DB lock, since it reads things that are stable
             forNothingM (reverse localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
-                Just (k, Ready r) <- getIdKeyStatus database i
+                Just (k, Ready r) <- getKeyValue database i
                 return $ (k,) <$> runIdentify globalRules k (fst $ result r)
         let k = topStack localStack
         case deps of

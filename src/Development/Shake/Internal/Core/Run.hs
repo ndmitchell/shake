@@ -331,6 +331,7 @@ usingDatabase cleanup opts diagnostic owitness = do
 
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+    let vMemDefault = Missing
     return Database{..}
 
 
