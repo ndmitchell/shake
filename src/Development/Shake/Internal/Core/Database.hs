@@ -5,7 +5,8 @@
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked,
     DatabasePoly(..),
-    getId, getKey, getKeyValue
+    getId, getKey, getKeyValue,
+    setMem, setDisk
     ) where
 
 import Data.IORef.Extra
@@ -63,3 +64,11 @@ getId Database{..} k = liftIO $ do
 -- Returns Nothing only if the Id was serialised previously but then the Id disappeared
 getKeyValue :: DatabasePoly key vMem vDisk -> Id -> Locked (Maybe (key, vMem))
 getKeyValue Database{..} i = liftIO $ Ids.lookup status i
+
+
+setMem :: DatabasePoly key vMem vDisk -> Id -> key -> vMem -> Locked ()
+setMem Database{..} i k v =
+    liftIO $ Ids.insert status i (k,v)
+
+setDisk :: DatabasePoly key vMem vDisk -> Id -> key -> vDisk -> IO ()
+setDisk = journal

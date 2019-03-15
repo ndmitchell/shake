@@ -49,11 +49,7 @@ setIdKeyStatus Global{..} database@Database{..} i k v = do
                 Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                 _ -> Nothing
         return $ changeStatus ++ maybe "" ("\n" ++) changeValue
-    setIdKeyStatusQuiet database i k v
-
-setIdKeyStatusQuiet :: Database -> Id -> Key -> Status -> Locked ()
-setIdKeyStatusQuiet Database{..} i k v =
-    liftIO $ Ids.insert status i (k,v)
+    setMem database i k v
 
 
 ---------------------------------------------------------------------
@@ -91,7 +87,7 @@ lookupOne global stack database i = do
                     Error e _ -> continue $ Left e
                     Running (NoShow w) r -> do
                         let w2 v = w v >> continue v
-                        setIdKeyStatusQuiet database i k $ Running (NoShow w2) r
+                        setMem database i k $ Running (NoShow w2) r
                     Loaded r -> buildOne global stack database i k (Just r) `fromLater` continue
                     Missing -> buildOne global stack database i k Nothing `fromLater` continue
 
@@ -118,7 +114,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     setIdKeyStatus global database i k $ either mkError Ready val
                     w val
                 case res of
-                    Right RunResult{..} | runChanged /= ChangedNothing -> journal database i k runValue{result=runStore}
+                    Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k runValue{result=runStore}
                     _ -> return ()
     where
         mkError e = if globalOneShot then Error e Nothing else Error e r
