@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #437, #414, #298 rewrite the profile view
     #588, #521 add end times and traced top-levels to the profile
     Add askOracles
     Generate nested dependency information in profiles
