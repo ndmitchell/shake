@@ -61,7 +61,6 @@ data-files:
     html/profile.html
     html/progress.html
     html/shake.js
-    html/viz.js
 
 source-repository head
     type:     git
