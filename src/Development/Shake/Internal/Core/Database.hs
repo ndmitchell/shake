@@ -26,7 +26,7 @@ newtype Locked a = Locked (IO a)
 #endif
         )
 
-runLocked :: Var a -> (a -> Locked b) -> IO b
+runLocked :: Var (DatabasePoly key vMem vDisk) -> (DatabasePoly key vMem vDisk -> Locked b) -> IO b
 runLocked var act = withVar var $ \v -> case act v of Locked x -> x
 
 

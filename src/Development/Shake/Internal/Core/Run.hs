@@ -381,7 +381,7 @@ recordRoot step locals (doubleToFloat -> end) Database{..} = do
     journal rootId rootKey $ fmap snd rootRes
 
 
-loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
+loadSharedCloud :: Var (DatabasePoly key vMem vDisk) -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
 loadSharedCloud var opts owitness = do
     let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
     let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp
