@@ -20,7 +20,8 @@ module General.Extra(
     catchIO, tryIO, handleIO,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack, callStackFromException,
     Ver(..), makeVer,
-    QTypeRep(..)
+    QTypeRep(..),
+    NoShow(..)
     ) where
 
 import Control.Exception.Extra
@@ -62,6 +63,9 @@ maximumBy' cmp = foldl1' $ \x y -> if cmp x y == GT then x else y
 
 maximum' :: Ord a => [a] -> a
 maximum' = maximumBy' compare
+
+newtype NoShow a = NoShow a
+instance Show (NoShow a) where show _ = "NoShow"
 
 
 ---------------------------------------------------------------------

@@ -12,8 +12,7 @@ module Development.Shake.Internal.Core.Types(
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..),
-    rootKey, Root(..),
-    NoShow(..)
+    rootKey, Root(..)
     ) where
 
 import Control.Monad.IO.Class
@@ -203,9 +202,6 @@ newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFlo
 
 ---------------------------------------------------------------------
 -- CENTRAL TYPES
-
-newtype NoShow a = NoShow a
-instance Show (NoShow a) where show _ = "NoShow"
 
 -- Things stored under OneShot are not required if we only do one compilation,
 -- but are if we do multiple, as we have to reset the database each time.
