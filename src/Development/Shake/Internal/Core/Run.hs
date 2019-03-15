@@ -332,7 +332,7 @@ usingDatabase cleanup opts diagnostic owitness = do
 
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
-    let vMemDefault = Missing
+    let vDefault = Missing
     return Database{..}
 
 
@@ -370,7 +370,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ \db -> do
     liftIO $ setDisk db rootId rootKey $ Loaded $ fmap snd rootRes
 
 
-loadSharedCloud :: Var (DatabasePoly key vMem vDisk) -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
+loadSharedCloud :: Var (DatabasePoly k v) -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
 loadSharedCloud var opts owitness = do
     let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
     let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp
