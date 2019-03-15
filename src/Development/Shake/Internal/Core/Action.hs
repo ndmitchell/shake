@@ -37,8 +37,6 @@ import Data.List.Extra
 import Numeric.Extra
 import General.Extra
 import qualified Data.HashMap.Strict as Map
-import qualified General.Ids as Ids
-import qualified General.Intern as Intern
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Monad
@@ -361,17 +359,16 @@ lintWatch pats = do
 
 
 listDepends :: Var Database -> Depends -> IO [Key]
-listDepends db (Depends xs) = runLocked db $ \Database{..} -> liftIO $
+listDepends db (Depends xs) = runLocked db $ \db -> liftIO $
     -- FIXME: Don't actually need the database lock to do this as the results are stable
-    forM xs $ \x ->
-        fst . fromJust <$> Ids.lookup status x
+    mapM (getKey db) xs
+
 
 lookupDependencies :: Var Database -> Key -> IO [Depends]
-lookupDependencies db k = runLocked db $ \Database{..} -> liftIO $ do
+lookupDependencies db k = runLocked db $ \db -> do
     -- FIXME: Don't actually need the database lock to do this as the results are stable
-    intern <- readIORef intern
-    let Just i = Intern.lookup k intern
-    Just (_, Ready r) <- Ids.lookup status i
+    i <- getId db k
+    Just (_, Ready r) <- getKeyValue db i
     return $ depends r
 
 

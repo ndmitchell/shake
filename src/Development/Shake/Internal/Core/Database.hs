@@ -3,9 +3,10 @@
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards, FlexibleInstances #-}
 
 module Development.Shake.Internal.Core.Database(
-    Locked, runLocked,
+    Locked, runLocked, unsafeRunLocked,
     DatabasePoly(..),
     getId, getKey, getKeyValue,
+    getAllKeyValues,
     setMem, setDisk
     ) where
 
@@ -32,6 +33,9 @@ newtype Locked a = Locked (IO a)
 
 runLocked :: Var (DatabasePoly key vMem vDisk) -> (DatabasePoly key vMem vDisk -> Locked b) -> IO b
 runLocked var act = withVar var $ \v -> case act v of Locked x -> x
+
+unsafeRunLocked :: Locked a -> IO a
+unsafeRunLocked (Locked act) = act
 
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
@@ -65,6 +69,8 @@ getId Database{..} k = liftIO $ do
 getKeyValue :: DatabasePoly key vMem vDisk -> Id -> Locked (Maybe (key, vMem))
 getKeyValue Database{..} i = liftIO $ Ids.lookup status i
 
+getAllKeyValues :: DatabasePoly key vMem vDisk -> IO [(key, vMem)]
+getAllKeyValues Database{..} = Ids.elems status
 
 setMem :: DatabasePoly key vMem vDisk -> Id -> key -> vMem -> Locked ()
 setMem Database{..} i k v =

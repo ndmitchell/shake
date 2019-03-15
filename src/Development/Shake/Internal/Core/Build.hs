@@ -28,7 +28,6 @@ import Control.Exception
 import Control.Monad.Extra
 import Numeric.Extra
 import qualified Data.HashMap.Strict as Map
-import qualified General.Ids as Ids
 import Development.Shake.Internal.Core.Rules
 import Data.Typeable
 import Data.Maybe
@@ -41,15 +40,15 @@ import System.Time.Extra
 -- LOW-LEVEL OPERATIONS ON THE DATABASE
 
 setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> Locked ()
-setIdKeyStatus Global{..} database@Database{..} i k v = do
+setIdKeyStatus Global{..} db i k v = do
     liftIO $ globalDiagnostic $ do
-        old <- Ids.lookup status i
+        old <- unsafeRunLocked $ getKeyValue db i
         let changeStatus = maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
         let changeValue = case v of
                 Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                 _ -> Nothing
         return $ changeStatus ++ maybe "" ("\n" ++) changeValue
-    setMem database i k v
+    setMem db i k v
 
 
 ---------------------------------------------------------------------

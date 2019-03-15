@@ -253,9 +253,9 @@ runLint mp k v = case Map.lookup (typeKey k) mp of
 
 
 assertFinishedDatabase :: Database -> IO ()
-assertFinishedDatabase Database{..} = do
+assertFinishedDatabase database = do
     -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
-    status <- Ids.elems status
+    status <- getAllKeyValues database
     let bad = [key | (key, Running{}) <- status]
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
