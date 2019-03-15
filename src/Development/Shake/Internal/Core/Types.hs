@@ -8,7 +8,7 @@ module Development.Shake.Internal.Core.Types(
     UserRule(..), UserRuleVersioned(..), userRuleSize,
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
-    Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..), BS_Store,
+    Stack, Step(..), Result(..), Database, DatabasePoly(..), Depends(..), Status(..), Trace(..), BS_Store,
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..),
@@ -387,12 +387,13 @@ userRuleSize (Versioned _ x) = userRuleSize x
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
 --   Everything is mutable. intern and status must form a bijecttion.
 --   There may be dangling Id's as a result of version changes.
-data Database = Database
-    {intern :: IORef (Intern Key) -- ^ Key |-> Id mapping
-    ,status :: Ids.Ids (Key, Status) -- ^ Id |-> (Key, Status) mapping
-    ,journal :: Id -> Key -> Result BS_Store -> IO () -- ^ Record all changes to status
+data DatabasePoly key vMem vDisk = Database
+    {intern :: IORef (Intern key) -- ^ Key |-> Id mapping
+    ,status :: Ids.Ids (key, vMem) -- ^ Id |-> (Key, Status) mapping
+    ,journal :: Id -> key -> vDisk -> IO () -- ^ Record all changes to status
     }
 
+type Database = DatabasePoly Key Status (Result BS_Store)
 
 -- global constants of Action
 data Global = Global
