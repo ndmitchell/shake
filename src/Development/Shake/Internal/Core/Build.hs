@@ -113,7 +113,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     setIdKeyStatus global database i k $ either mkError Ready val
                     w val
                 case res of
-                    Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k runValue{result=runStore}
+                    Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k $ Loaded runValue{result=runStore}
                     _ -> return ()
     where
         mkError e = if globalOneShot then Error e Nothing else Error e r

@@ -383,7 +383,7 @@ userRuleSize (Alternative x) = userRuleSize x
 userRuleSize (Versioned _ x) = userRuleSize x
 
 
-type Database = DatabasePoly Key Status (Result BS_Store)
+type Database = DatabasePoly Key Status Status
 
 -- global constants of Action
 data Global = Global

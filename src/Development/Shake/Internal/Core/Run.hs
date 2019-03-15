@@ -328,7 +328,7 @@ usingDatabase cleanup opts diagnostic owitness = do
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : root : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
-    journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, Loaded v)
+    journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, v)
 
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
@@ -345,7 +345,7 @@ incrementStep db = runLocked db $ \db -> do
         _ -> Step 1
     let stepRes = toStepResult step
     setMem db stepId stepKey $ Ready stepRes
-    liftIO $ setDisk db stepId stepKey $ fmap snd stepRes
+    liftIO $ setDisk db stepId stepKey $ Loaded $ fmap snd stepRes
     return step
 
 toStepResult :: Step -> Result (Value, BS_Store)
@@ -367,7 +367,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ \db -> do
             ,execution = 0
             ,traces = reverse $ Trace BS.empty end end : localTraces local}
     setMem db rootId rootKey $ Ready rootRes
-    liftIO $ setDisk db rootId rootKey $ fmap snd rootRes
+    liftIO $ setDisk db rootId rootKey $ Loaded $ fmap snd rootRes
 
 
 loadSharedCloud :: Var (DatabasePoly key vMem vDisk) -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
