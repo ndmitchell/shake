@@ -45,7 +45,7 @@ function reportCmdPlot(profile: Profile[]): HTMLElement {
         plotData.set(res);
     }
     setPlotData(0);
-    $(combo).change(() => setPlotData($(combo).val()));
+    $(combo).change(() => setPlotData(combo.selectedIndex));
 
     return <table class="fill">
         <tr>
