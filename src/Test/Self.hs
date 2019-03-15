@@ -86,6 +86,6 @@ cabalBuildDepends _ = packages ++ ["unix" | os /= "mingw32"]
 
 packages = words
     ("base transformers binary unordered-containers hashable heaps time bytestring primitive " ++
-     "filepath directory process deepseq random utf8-string extra js-jquery js-flot filepattern") ++
+     "filepath directory process deepseq random utf8-string extra js-dgtable js-jquery js-flot filepattern") ++
     ["old-time" | compilerVersion < makeVersion [7,6]] ++
     ["semigroups" | compilerVersion < makeVersion [8,0]]

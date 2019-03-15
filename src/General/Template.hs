@@ -9,15 +9,18 @@ import Data.Time
 import System.IO.Unsafe
 import Development.Shake.Internal.Paths
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Language.Javascript.DGTable as DGTable
 import qualified Language.Javascript.Flot as Flot
 import qualified Language.Javascript.JQuery as JQuery
 
 
 libraries =
     [("jquery.js", JQuery.file)
+    ,("jquery.dgtable.js", DGTable.file)
     ,("jquery.flot.js", Flot.file Flot.Flot)
     ,("jquery.flot.stack.js", Flot.file Flot.FlotStack)
     ]
+
 
 -- | Template Engine. Perform the following replacements on a line basis:
 --
