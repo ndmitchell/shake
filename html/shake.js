@@ -130,7 +130,8 @@ function profileRoot(profile) {
         ["Commands", () => reportCmdTable(profile, search)],
         ["Rules", () => reportRuleTable(profile, search)],
         ["Parallelizability", () => reportParallelism(profile)],
-        ["Why rebuild", () => reportRebuild(profile, search)]
+        ["Details", () => reportDetails(profile, search)]
+        // , ["Why rebuild", () => reportRebuild(profile, search)]
     ]);
     return React.createElement("table", { class: "fill" },
         React.createElement("tr", null,
@@ -404,6 +405,9 @@ function showInt(x) {
     // Show, with commas
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+function showRun(run) {
+    return run === 0 ? "Latest run" : run + " run" + plural(run) + " ago";
+}
 function plural(n, not1 = "s", is1 = "") {
     return n === 1 ? is1 : not1;
 }
@@ -541,8 +545,7 @@ function reportCmdPlot(profile) {
     }
     const combo = React.createElement("select", null,
         runs.map(([run, time], i) => React.createElement("option", null,
-            run === 0 ? "Latest run" : run + " run" + plural(run) + " ago",
-            " (" + showTime(time) + ") ",
+            showRun(run) + " (" + showTime(time) + ") ",
             i === 0 ? "" : " - may be incomplete")),
         ";");
     const warning = React.createElement("i", null);
@@ -585,6 +588,8 @@ function findRuns(profile) {
     const runs = {};
     for (const p of profile) {
         if (p.traces.length > 0) {
+            if (p.traces.length === 1 && p.traces[0].command === "")
+                continue; // the fake end command
             const old = runs[p.built];
             const end = p.traces.last().stop;
             runs[p.built] = old === undefined ? end : Math.max(old, end);
@@ -634,21 +639,65 @@ function reportCmdTable(profile, search) {
 }
 function cmdData(search) {
     const res = {};
-    search.forEachProfile(p => p.traces.forEach(t => {
-        const time = t.stop - t.start;
-        if (!(t.command in res))
-            res[t.command] = { count: 1, total: time, max: time };
-        else {
-            const ans = res[t.command];
-            ans.count++;
-            ans.total += time;
-            ans.max = Math.max(ans.max, time);
+    search.forEachProfile(p => {
+        for (const t of p.traces) {
+            const time = t.stop - t.start;
+            if (t.command === "")
+                continue; // do nothing
+            else if (!(t.command in res))
+                res[t.command] = { count: 1, total: time, max: time };
+            else {
+                const ans = res[t.command];
+                ans.count++;
+                ans.total += time;
+                ans.max = Math.max(ans.max, time);
+            }
         }
-    }));
+    });
     const res2 = [];
     for (const i in res)
         res2.push({ name: i, average: res[i].total / res[i].count, ...res[i] });
     return res2;
+}
+function reportDetails(profile, search) {
+    const result = React.createElement("div", { class: "details" });
+    const self = new Prop(0);
+    search.event(xs => self.set(xs.mapProfile((p, _) => p.index).maximum()));
+    const f = (i) => React.createElement("a", { onclick: () => self.set(i) }, profile[i].name);
+    self.event(i => {
+        const p = profile[i];
+        const content = React.createElement("ul", null,
+            React.createElement("li", null,
+                React.createElement("b", null, "Name:"),
+                " ",
+                p.name),
+            React.createElement("li", null,
+                React.createElement("b", null, "Built:"),
+                " ",
+                showRun(p.built)),
+            React.createElement("li", null,
+                React.createElement("b", null, "Changed:"),
+                " ",
+                showRun(p.changed)),
+            React.createElement("li", null,
+                React.createElement("b", null, "Execution time:"),
+                showTime(p.execution)),
+            React.createElement("li", null,
+                React.createElement("b", null, "Traced commands:"),
+                React.createElement("ol", null, p.traces.map(t => React.createElement("li", null,
+                    t.command,
+                    " took ",
+                    showTime(t.stop - t.start))))),
+            React.createElement("li", null,
+                React.createElement("b", null, "Dependencies:"),
+                React.createElement("ol", null, p.depends.map(ds => React.createElement("li", null,
+                    React.createElement("ul", null, ds.map(d => React.createElement("li", null, f(d)))))))),
+            React.createElement("li", null,
+                React.createElement("b", null, "Things that depend on me:"),
+                React.createElement("ul", null, p.rdepends.map(d => React.createElement("li", null, f(d))))));
+        $(result).empty().append(content);
+    });
+    return result;
 }
 function reportParallelism(profile) {
     // now simulate for -j1 .. -j24
@@ -800,8 +849,9 @@ function reportSummary(profile) {
     let highestRun = 0; // highest run you have seen (add 1 to get the count of runs)
     let sumExecution = 0; // build time in total
     let sumExecutionLast = 0; // build time in total
-    let countTrace = 0;
-    let countTraceLast = 0; // traced commands run
+    let countTrace = -1;
+    let countTraceLast = -1; // traced commands run
+    // start both are -1 because the end command will have run in the previous step
     let maxTraceStopLast = 0; // time the last traced command stopped
     for (const p of profile) {
         sumExecution += p.execution;
