@@ -127,7 +127,7 @@ run RunState{..} oneshot actions2 =
 
             after <- newIORef []
             absent <- newIORef []
-            step <- incrementStep database
+            step <- incrementStep databaseVar
             getProgress <- usingProgress cleanup opts database step getFailure
             lintCurrentDirectory curdir "When running"
 
@@ -155,7 +155,7 @@ run RunState{..} oneshot actions2 =
 
             locals <- readIORef locals
             end <- start
-            recordRoot step locals end database
+            recordRoot step locals end databaseVar
 
             let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
@@ -335,23 +335,16 @@ usingDatabase cleanup opts diagnostic owitness = do
     return Database{..}
 
 
-incrementStep :: Database -> IO Step
-incrementStep Database{..} = do
-    is <- readIORef intern
-    stepId <- case Intern.lookup stepKey is of
-        Just stepId -> return stepId
-        Nothing -> do
-            (is, stepId) <- return $ Intern.add stepKey is
-            writeIORef intern is
-            return stepId
-    step <- do
-        v <- Ids.lookup status stepId
-        return $ case v of
-            Just (_, Loaded r) -> incStep $ fromStepResult r
-            _ -> Step 1
+incrementStep :: Var Database -> IO Step
+incrementStep db = runLocked db $ \db -> do
+    stepId <- getId db stepKey
+    v <- getKeyValue db stepId
+    step <- return $ case v of
+        Just (_, Loaded r) -> incStep $ fromStepResult r
+        _ -> Step 1
     let stepRes = toStepResult step
-    Ids.insert status stepId (stepKey, Ready stepRes)
-    journal stepId stepKey $ fmap snd stepRes
+    setMem db stepId stepKey $ Ready stepRes
+    liftIO $ setDisk db stepId stepKey $ fmap snd stepRes
     return step
 
 toStepResult :: Step -> Result (Value, BS_Store)
@@ -361,15 +354,9 @@ fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
 
 
-recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
-recordRoot step locals (doubleToFloat -> end) Database{..} = do
-    is <- readIORef intern
-    rootId <- case Intern.lookup rootKey is of
-        Just rootId -> return rootId
-        Nothing -> do
-            (is, rootId) <- return $ Intern.add rootKey is
-            writeIORef intern is
-            return rootId
+recordRoot :: Step -> [Local] -> Seconds -> Var Database -> IO ()
+recordRoot step locals (doubleToFloat -> end) db = runLocked db $ \db -> do
+    rootId <- getId db rootKey
     let local = localMergeMutable (newLocal emptyStack Normal) locals
     let rootRes = Result
             {result = (newValue (), BS.empty)
@@ -378,8 +365,8 @@ recordRoot step locals (doubleToFloat -> end) Database{..} = do
             ,depends = nubDepends $ reverse $ localDepends local
             ,execution = 0
             ,traces = reverse $ Trace BS.empty end end : localTraces local}
-    Ids.insert status rootId (rootKey, Ready rootRes)
-    journal rootId rootKey $ fmap snd rootRes
+    setMem db rootId rootKey $ Ready rootRes
+    liftIO $ setDisk db rootId rootKey $ fmap snd rootRes
 
 
 loadSharedCloud :: Var (DatabasePoly key vMem vDisk) -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
