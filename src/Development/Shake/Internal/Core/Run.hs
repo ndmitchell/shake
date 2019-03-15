@@ -344,6 +344,12 @@ incrementStep Database{..} = do
     journal stepId stepKey $ fmap snd stepRes
     return step
 
+toStepResult :: Step -> Result (Value, BS_Store)
+toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
+
+fromStepResult :: Result BS_Store -> Step
+fromStepResult = getEx . result
+
 
 loadSharedCloud :: Var a -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
 loadSharedCloud var opts owitness = do

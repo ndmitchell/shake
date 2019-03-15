@@ -11,7 +11,7 @@ module Development.Shake.Internal.Core.Types(
     Stack, Step(..), Result(..), Database(..), Depends(..), Status(..), Trace(..), BS_Store,
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
-    stepKey, StepKey(..), toStepResult, fromStepResult, NoShow(..)
+    stepKey, StepKey(..), NoShow(..)
     ) where
 
 import Control.Monad.IO.Class
@@ -121,13 +121,6 @@ newtype StepKey = StepKey ()
 
 stepKey :: Key
 stepKey = newKey $ StepKey ()
-
-toStepResult :: Step -> Result (Value, BS_Store)
-toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
-
-fromStepResult :: Result BS_Store -> Step
-fromStepResult = getEx . result
-
 
 
 ---------------------------------------------------------------------
