@@ -38,6 +38,12 @@ runTemplate ask = lbsMapLinesIO f
         asker o@(splitFileName -> ("lib/",x)) = case lookup x libraries of
             Just act -> LBS.readFile =<< act
             Nothing -> errorIO $ "Template library, unknown library: " ++ o
+        asker "shake.js" = readDataFileHTML "shake.js"
+        asker "data/metadata.js" = do
+            time <- getCurrentTime
+            return $ LBS.pack $
+                "var version = " ++ show shakeVersionString ++
+                "\nvar generated = " ++ show (formatTime defaultTimeLocale (iso8601DateFormat (Just "%H:%M:%S")) time)
         asker x = ask x
 
 
