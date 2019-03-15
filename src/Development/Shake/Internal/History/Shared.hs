@@ -9,6 +9,7 @@ module Development.Shake.Internal.History.Shared(
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Symlink
+import Development.Shake.Internal.Core.Database
 import Development.Shake.Classes
 import General.Binary
 import General.Extra

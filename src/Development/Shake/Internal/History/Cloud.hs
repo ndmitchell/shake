@@ -5,6 +5,7 @@ module Development.Shake.Internal.History.Cloud(
     ) where
 
 import Development.Shake.Internal.Value
+import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Network
 import Development.Shake.Internal.History.Server

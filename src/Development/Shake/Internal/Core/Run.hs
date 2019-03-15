@@ -16,6 +16,7 @@ module Development.Shake.Internal.Core.Run(
 import Control.Exception
 import Data.Tuple.Extra
 import Control.Concurrent.Extra hiding (withNumCapabilities)
+import Development.Shake.Internal.Core.Database
 import Control.Monad.IO.Class
 import General.Binary
 import Development.Shake.Classes
@@ -25,7 +26,6 @@ import Development.Shake.Internal.History.Cloud
 import qualified General.Ids as Ids
 import qualified General.Intern as Intern
 import qualified General.TypeMap as TMap
-import General.Wait
 import Control.Monad.Extra
 import Data.Typeable
 import Numeric.Extra

@@ -2,14 +2,12 @@
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
-    Locked, runLocked,
     Wait(Now,Later), runWait, quickly, fromLater,
     firstJustWaitUnordered, firstLeftWaitUnordered
     ) where
 
 import Control.Monad.Extra
 import Control.Monad.IO.Class
-import Control.Concurrent.Extra
 import Data.IORef.Extra
 import Data.List.Extra
 import Data.Primitive.Array
@@ -28,16 +26,6 @@ fromLater :: Monad m => Wait m a -> (a -> m ()) -> m ()
 fromLater (Lift x) f = do x <- x; fromLater x f
 fromLater (Now x) f = f x
 fromLater (Later x) f = x f
-
-newtype Locked a = Locked (IO a)
-    deriving (Functor, Applicative, Monad, MonadIO
-#if __GLASGOW_HASKELL__ >= 800
-             ,MonadFail
-#endif
-        )
-
-runLocked :: Var a -> (a -> Locked b) -> IO b
-runLocked var act = withVar var $ \v -> case act v of Locked x -> x
 
 quickly :: Functor m => m a -> Wait m a
 quickly = Lift . fmap Now

@@ -30,7 +30,6 @@ import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import Development.Shake.Internal.History.Types
-import General.Wait
 import Development.Shake.Internal.Errors
 import qualified General.TypeMap as TMap
 import Data.IORef
