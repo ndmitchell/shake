@@ -29,7 +29,8 @@ function profileRoot(profile: Profile[]): HTMLElement {
         , ["Commands", () => reportCmdTable(profile, search)]
         , ["Rules", () => reportRuleTable(profile, search)]
         , ["Parallelizability", () => reportParallelism(profile)]
-        , ["Why rebuild", () => reportRebuild(profile, search)]
+        , ["Details", () => reportDetails(profile, search)]
+        // , ["Why rebuild", () => reportRebuild(profile, search)]
         ]);
     return <table class="fill">
         <tr><td style="padding-top: 8px; padding-bottom: 8px;">
