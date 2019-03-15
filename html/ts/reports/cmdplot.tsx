@@ -66,6 +66,8 @@ function findRuns(profile: Profile[]): Array<[timestamp, seconds]> {
     const runs: MapInt<seconds> = {};
     for (const p of profile) {
         if (p.traces.length > 0) {
+            if (p.traces.length === 1 && p.traces[0].command === "")
+                continue; // the fake end command
             const old = runs[p.built];
             const end = p.traces.last().stop;
             runs[p.built] = old === undefined ? end : Math.max(old, end);

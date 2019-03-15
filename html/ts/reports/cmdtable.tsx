@@ -12,10 +12,12 @@ function reportCmdTable(profile: Profile[], search: Prop<Search>): HTMLElement {
 
 function cmdData(search: Search): object[] {
     const res: MapString< {count: int, total: seconds, max: seconds} > = {};
-    search.forEachProfile(p =>
-        p.traces.forEach(t => {
+    search.forEachProfile(p => {
+        for (const t of p.traces) {
             const time = t.stop - t.start;
-            if (!(t.command in res))
+            if (t.command === "")
+                continue; // do nothing
+            else if (!(t.command in res))
                 res[t.command] = {count: 1, total: time, max: time};
             else {
                 const ans = res[t.command];
@@ -23,8 +25,8 @@ function cmdData(search: Search): object[] {
                 ans.total += time;
                 ans.max = Math.max(ans.max, time);
             }
-        })
-    );
+        }
+    });
     const res2 = [];
     for (const i in res)
         res2.push({name: i, average: res[i].total / res[i].count, ...res[i]});

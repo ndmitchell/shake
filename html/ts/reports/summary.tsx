@@ -4,7 +4,8 @@ function reportSummary(profile: Profile[]): HTMLElement {
     let highestRun: timestamp = 0; // highest run you have seen (add 1 to get the count of runs)
     let sumExecution: seconds = 0; // build time in total
     let sumExecutionLast: seconds = 0; // build time in total
-    let countTrace: int = 0; let countTraceLast: int = 0; // traced commands run
+    let countTrace: int = -1; let countTraceLast: int = -1; // traced commands run
+        // start both are -1 because the end command will have run in the previous step
     let maxTraceStopLast: seconds = 0; // time the last traced command stopped
 
     for (const p of profile) {
