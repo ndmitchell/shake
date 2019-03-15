@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, PatternGuards #-}
-{-# LANGUAGE ConstraintKinds, TupleSections, GeneralizedNewtypeDeriving, ViewPatterns #-}
+{-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Core.Run(
