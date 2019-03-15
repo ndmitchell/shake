@@ -4,7 +4,7 @@
 
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked, unsafeRunLocked,
-    DatabasePoly(..), createDatabase,
+    DatabasePoly, createDatabase,
     getId, getKey, getKeyValue,
     getAllKeyValues, getIdMap,
     setMem, setDisk, modifyAllMem
