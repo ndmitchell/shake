@@ -87,7 +87,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ,"import Development.Shake.Util"
             ,"import Development.Shake.FilePath"
             ,"import System.Console.GetOpt"
-            ,"import System.Directory(setCurrentDirectory)"
+            ,"import System.Directory(setCurrentDirectory, withCurrentDirectory)"
             ,"import qualified System.Directory"
             ,"import System.Environment(withArgs, lookupEnv, getEnvironment)"
             ,"import System.Process"
