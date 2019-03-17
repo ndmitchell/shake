@@ -60,7 +60,7 @@ data RunState = RunState
     {opts :: ShakeOptions
     ,ruleinfo :: Map.HashMap TypeRep BuiltinRule
     ,userRules :: TMap.Map UserRuleVersioned
-    ,databaseVar :: Var Database
+    ,database :: Database
     ,curdir :: FilePath
     ,shared :: Maybe Shared
     ,cloud :: Maybe Cloud
@@ -81,14 +81,14 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
     checkShakeExtra shakeExtra
     curdir <- getCurrentDirectory
 
-    databaseVar <- newVar =<< usingDatabase cleanup opts diagnostic ruleinfo
-    (shared, cloud) <- loadSharedCloud databaseVar opts ruleinfo
+    database <- usingDatabase cleanup opts diagnostic ruleinfo
+    (shared, cloud) <- loadSharedCloud database opts ruleinfo
     return RunState{..}
 
 
 -- Prepare for a fresh run by changing Result to Loaded
 reset :: RunState -> IO ()
-reset RunState{..} = runLocked databaseVar $ \database ->
+reset RunState{..} = runLocked database $ \database ->
     modifyAllMem database f
     where
         f (Ready r) = Loaded (snd <$> r)
@@ -113,7 +113,6 @@ run RunState{..} oneshot actions2 =
                 resetTimings
 
             start <- offsetTime
-            database <- readVar databaseVar
             except <- newIORef (Nothing :: Maybe (String, ShakeException))
             let getFailure = fmap fst <$> readIORef except
             let raiseError err
@@ -125,7 +124,7 @@ run RunState{..} oneshot actions2 =
 
             after <- newIORef []
             absent <- newIORef []
-            step <- incrementStep databaseVar
+            step <- incrementStep database
             getProgress <- usingProgress cleanup opts database step getFailure
             lintCurrentDirectory curdir "When running"
 
@@ -140,7 +139,7 @@ run RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global databaseVar pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
+                let global = Global database pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -153,7 +152,7 @@ run RunState{..} oneshot actions2 =
 
             locals <- readIORef locals
             end <- start
-            recordRoot step locals end databaseVar
+            recordRoot step locals end database
 
             let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
@@ -260,14 +259,10 @@ assertFinishedDatabase database = do
 
 
 liveFilesState :: RunState -> IO [FilePath]
-liveFilesState RunState{..} = do
-    database <- readVar databaseVar
-    liveFiles database
+liveFilesState RunState{..} = liveFiles database
 
 profileState :: RunState -> FilePath -> IO ()
-profileState RunState{..} file = do
-    database <- readVar databaseVar
-    writeProfile file database
+profileState RunState{..} file = writeProfile file database
 
 liveFiles :: Database -> IO [FilePath]
 liveFiles database = do
@@ -277,7 +272,6 @@ liveFiles database = do
 
 errorsState :: RunState -> IO [(String, SomeException)]
 errorsState RunState{..} = do
-    database <- readVar databaseVar
     status <- getAllKeyValues database
     return [(show k, e) | (k, Error e _) <- status]
 
@@ -331,7 +325,7 @@ usingDatabase cleanup opts diagnostic owitness = do
     createDatabase status journal Missing
 
 
-incrementStep :: Var Database -> IO Step
+incrementStep :: Database -> IO Step
 incrementStep db = runLocked db $ \db -> do
     stepId <- getId db stepKey
     v <- getKeyValue db stepId
@@ -350,7 +344,7 @@ fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
 
 
-recordRoot :: Step -> [Local] -> Seconds -> Var Database -> IO ()
+recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
 recordRoot step locals (doubleToFloat -> end) db = runLocked db $ \db -> do
     rootId <- getId db rootKey
     let local = localMergeMutable (newLocal emptyStack Normal) locals
@@ -365,7 +359,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ \db -> do
     liftIO $ setDisk db rootId rootKey $ Loaded $ fmap snd rootRes
 
 
-loadSharedCloud :: Var (DatabasePoly k v) -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
+loadSharedCloud :: DatabasePoly k v -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
 loadSharedCloud var opts owitness = do
     let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
     let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp

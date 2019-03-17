@@ -31,8 +31,8 @@ newtype Locked a = Locked (IO a)
 #endif
         )
 
-runLocked :: Var (DatabasePoly k v) -> (DatabasePoly k v -> Locked b) -> IO b
-runLocked var act = withVar var $ \v -> case act v of Locked x -> x
+runLocked :: DatabasePoly k v -> (DatabasePoly k v -> Locked b) -> IO b
+runLocked db act = withLock (lock db) $ unsafeRunLocked $ act db
 
 unsafeRunLocked :: Locked a -> IO a
 unsafeRunLocked (Locked act) = act
@@ -42,7 +42,8 @@ unsafeRunLocked (Locked act) = act
 --   Everything is mutable. intern and status must form a bijecttion.
 --   There may be dangling Id's as a result of version changes.
 data DatabasePoly k v = Database
-    {intern :: IORef (Intern k) -- ^ Key |-> Id mapping
+    {lock :: Lock
+    ,intern :: IORef (Intern k) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (k, v) -- ^ Id |-> (Key, Status) mapping
     ,journal :: Id -> k -> v -> IO () -- ^ Record all changes to status
     ,vDefault :: v
@@ -58,6 +59,7 @@ createDatabase
 createDatabase status journal vDefault = do
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
+    lock <- newLock
     return Database{..}
 
 

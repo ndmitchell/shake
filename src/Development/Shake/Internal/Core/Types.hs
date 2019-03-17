@@ -25,7 +25,6 @@ import Data.Maybe
 import Data.List
 import Control.Exception
 import General.Extra
-import Control.Concurrent.Extra
 import Development.Shake.Internal.Core.Database
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
@@ -387,7 +386,7 @@ type Database = DatabasePoly Key Status
 
 -- global constants of Action
 data Global = Global
-    {globalDatabase :: Var Database -- ^ Database, contains knowledge of the state of each key
+    {globalDatabase :: Database -- ^ Database, contains knowledge of the state of each key
     ,globalPool :: Pool -- ^ Pool, for queuing new elements
     ,globalCleanup :: Cleanup -- ^ Cleanup operations
     ,globalTimestamp :: IO Seconds -- ^ Clock saying how many seconds through the build

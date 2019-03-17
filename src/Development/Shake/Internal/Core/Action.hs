@@ -358,13 +358,13 @@ lintWatch pats = do
             [("Changed", Just x) | x <- Map.keys $ Map.filter id $ Map.intersectionWith (/=) old now]
 
 
-listDepends :: Var Database -> Depends -> IO [Key]
+listDepends :: Database -> Depends -> IO [Key]
 listDepends db (Depends xs) = runLocked db $ \db -> liftIO $
     -- FIXME: Don't actually need the database lock to do this as the results are stable
     mapM (getKey db) xs
 
 
-lookupDependencies :: Var Database -> Key -> IO [Depends]
+lookupDependencies :: Database -> Key -> IO [Depends]
 lookupDependencies db k = runLocked db $ \db -> do
     -- FIXME: Don't actually need the database lock to do this as the results are stable
     i <- getId db k
