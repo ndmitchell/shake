@@ -110,27 +110,17 @@ main = testSimple $ do
         createDirectory (cwd </> "e")
         createDirectory (cwd </> "e/f")
         createDirectory (cwd </> "e/f/g")
-        createFileLink  (cwd </> "e/f/g/") (cwd </> "c")
+        -- on Windows creating symlinks requires additional privileges
+        -- so skip the test there
+        unless isWindows $
+            createFileLink  (cwd </> "e/f/g/") (cwd </> "c")
 
-        let a ==== b = a >>= (=== b)
-        -- If the second argument has the first as a prefix, then makeRelative is used.
-        makeRelativeEx "/x/y/" "/x/y/z"
-            ==== Just "z"
-        -- If the seconds argument is already relative, then use that.
-        makeRelativeEx (cwd </> "c") "../b/file.out"
-            ==== Just "../b/file.out"
-        makeRelativeEx "a" "b/file.out"
-            ==== Just "b/file.out"
-        -- Requires a ".." indirection.
-        makeRelativeEx (cwd </> "a") (cwd </> "b/file.out")
-            ==== Just "../b/file.out"
-        -- Requires indirection through a symlink.
-        makeRelativeEx (cwd </> "c") (cwd </> "b/file.out")
-            ==== Just "../../../b/file.out"
-        -- First argument is relative and second is absolute. The first argument
-        -- should be relative to the CWD.
-        makeRelativeEx "c" (cwd </> "b/file.out")
-            ==== Just "../../../b/file.out"
-        -- First argument contains a symlink and indirections.
-        makeRelativeEx (cwd </> "c/../../../a") (cwd </> "b/file.out")
-            ==== Just "../b/file.out"
+        let f a b c = makeRelativeEx a (normalise b) >>= (=== fmap normalise c)
+        f "/x/y/" "/x/y/z" $ Just "z"
+        f (cwd </> "c") "../b/file.out" $ Just "../b/file.out"
+        f "a" "b/file.out" $ Just "b/file.out"
+        f (cwd </> "a") (cwd </> "b/file.out") $ Just "../b/file.out"
+        unless isWindows $ do
+            f (cwd </> "c") (cwd </> "b/file.out") $ Just "../../../b/file.out"
+            f "c" (cwd </> "b/file.out") $ Just "../../../b/file.out"
+            f (cwd </> "c/../../../a") (cwd </> "b/file.out") $ Just "../b/file.out"
