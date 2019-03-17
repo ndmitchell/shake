@@ -252,7 +252,7 @@ runLint mp k v = case Map.lookup (typeKey k) mp of
 assertFinishedDatabase :: Database -> IO ()
 assertFinishedDatabase database = do
     -- if you have anyone Waiting, and are not exiting with an error, then must have a complex recursion (see #400)
-    status <- getAllKeyValues database
+    status <- getKeyValues database
     let bad = [key | (key, Running{}) <- status]
     when (bad /= []) $
         throwM $ errorComplexRecursion (map show bad)
@@ -266,19 +266,19 @@ profileState RunState{..} file = writeProfile file database
 
 liveFiles :: Database -> IO [FilePath]
 liveFiles database = do
-    status <- getAllKeyValues database
+    status <- getKeyValues database
     let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
     return [show k | (k, Ready{}) <- status, specialIsFileKey $ typeKey k]
 
 errorsState :: RunState -> IO [(String, SomeException)]
 errorsState RunState{..} = do
-    status <- getAllKeyValues database
+    status <- getKeyValues database
     return [(show k, e) | (k, Error e _) <- status]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
 checkValid diagnostic db check absent = do
-    status <- getAllKeyValues db
+    status <- getKeyValues db
     diagnostic $ return "Starting validity/lint checking"
 
     -- TEST 1: Have values changed since being depended on
@@ -298,7 +298,7 @@ checkValid diagnostic db check absent = do
             ""
 
     -- TEST 2: Is anything from lintTrackWrite which promised not to exist actually been created
-    exists <- getIdMaybe db
+    exists <- getIdFromKey db
     bad <- return [(parent,key) | (parent, key) <- absent, isJust $ exists key]
     unless (null bad) $ do
         let n = length bad
@@ -328,7 +328,7 @@ usingDatabase cleanup opts diagnostic owitness = do
 incrementStep :: Database -> IO Step
 incrementStep db = runLocked db $ do
     stepId <- mkId db stepKey
-    v <- liftIO $ getKeyValue db stepId
+    v <- liftIO $ getKeyValueFromId db stepId
     step <- return $ case v of
         Just (_, Loaded r) -> incStep $ fromStepResult r
         _ -> Step 1

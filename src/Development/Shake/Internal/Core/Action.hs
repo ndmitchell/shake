@@ -359,7 +359,7 @@ lintWatch pats = do
 
 
 listDepends :: Database -> Depends -> IO [Key]
-listDepends db (Depends xs) = mapM (fmap (fst . fromJust) . getKeyValue db) xs
+listDepends db (Depends xs) = mapM (fmap (fst . fromJust) . getKeyValueFromId db) xs
 
 
 lookupDependencies :: Database -> Key -> IO [Depends]

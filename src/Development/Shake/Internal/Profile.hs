@@ -67,7 +67,7 @@ removeStep = Map.filter (\(k,_) -> k /= stepKey)
 
 toReport :: Database -> IO [ProfileEntry]
 toReport db = do
-    status <- removeStep . resultsOnly <$> getIdMap db
+    status <- removeStep . resultsOnly <$> getKeyValuesFromId db
     let order = let shw i = maybe "<unknown>" (show . fst) $ Map.lookup i status
                 in dependencyOrder shw $ Map.map (concatMap fromDepends . depends . snd) status
         ids = Map.fromList $ zip order [0..]

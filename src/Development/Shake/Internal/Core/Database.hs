@@ -5,9 +5,7 @@ module Development.Shake.Internal.Core.Database(
     Locked, runLocked,
     DatabasePoly, createDatabase,
     mkId,
-    getValueFromKey,
-    getKeyValue, getIdMaybe,
-    getAllKeyValues, getIdMap,
+    getValueFromKey, getIdFromKey, getKeyValues, getKeyValueFromId, getKeyValuesFromId,
     setMem, setDisk, modifyAllMem
     ) where
 
@@ -73,17 +71,17 @@ getValueFromKey Database{..} k = do
         Just i -> fmap snd <$> Ids.lookup status i
 
 -- Returns Nothing only if the Id was serialised previously but then the Id disappeared
-getKeyValue :: DatabasePoly k v -> Id -> IO (Maybe (k, v))
-getKeyValue Database{..} i = Ids.lookup status i
+getKeyValueFromId :: DatabasePoly k v -> Id -> IO (Maybe (k, v))
+getKeyValueFromId Database{..} i = Ids.lookup status i
 
-getAllKeyValues :: DatabasePoly k v -> IO [(k, v)]
-getAllKeyValues Database{..} = Ids.elems status
+getKeyValues :: DatabasePoly k v -> IO [(k, v)]
+getKeyValues Database{..} = Ids.elems status
 
-getIdMap :: DatabasePoly k v -> IO (Map.HashMap Id (k, v))
-getIdMap Database{..} = Ids.toMap status
+getKeyValuesFromId :: DatabasePoly k v -> IO (Map.HashMap Id (k, v))
+getKeyValuesFromId Database{..} = Ids.toMap status
 
-getIdMaybe :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
-getIdMaybe Database{..} = do
+getIdFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
+getIdFromKey Database{..} = do
     is <- readIORef intern
     return $ flip Intern.lookup is
 

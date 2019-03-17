@@ -52,7 +52,7 @@ foreign import CALLCONV "Windows.h SetConsoleTitleW" c_setConsoleTitleW :: CWStr
 
 progress :: Database -> Step -> IO Progress
 progress db step = do
-    xs <- getAllKeyValues db
+    xs <- getKeyValues db
     return $! foldl' f mempty $ map snd xs
     where
         g = floatToDouble
