@@ -44,7 +44,7 @@ main = testBuild defaultTest $ do
                 ,"-hide-all-packages","-outputdir=."
                 ,"-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
 
-        trackAllow ["**/*.o"]
+        trackAllow ["**/*.o","**/*.hi","Makefile"]
         ghc $ ["-M",run] ++ flags
         need . filter (\x -> takeExtension x == ".hs") . concatMap snd . parseMakefile =<< liftIO (readFile "Makefile")
         ghc $ ["-o",out,run] ++ ["-j4" | compilerVersion >= makeVersion [7,8]] ++ flags
