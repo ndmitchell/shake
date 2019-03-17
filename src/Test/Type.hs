@@ -105,7 +105,7 @@ shakenEx reenter options test rules sleeper = do
             cwd <- getCurrentDirectory
             opts <- return $ if forward then forwardOptions opts else opts
                 {shakeLint = Just t
-                ,shakeLintInside = [cwd] -- important we ignore Shake source files, since that is relative
+                ,shakeLintInside = [cwd </> ".." </> ".."]
                 ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox//",".stack-work//"]}
             withArgs args $ do
                 let optionsBuiltin = optionsEnumDesc
