@@ -117,7 +117,7 @@ main = testSimple $ do
         makeRelativeEx "/x/y/" "/x/y/z"
             ==== Just "z"
         -- If the seconds argument is already relative, then use that.
-        makeRelativeEx (cwd </> "c") ("../b/file.out")
+        makeRelativeEx (cwd </> "c") "../b/file.out"
             ==== Just "../b/file.out"
         makeRelativeEx "a" "b/file.out"
             ==== Just "b/file.out"
