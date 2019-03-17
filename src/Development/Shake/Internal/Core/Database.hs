@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Database(
-    Locked, runLocked, unsafeRunLocked,
+    Locked, runLocked,
     DatabasePoly, createDatabase,
     mkId,
     getValueFromKey,
@@ -34,9 +34,6 @@ newtype Locked a = Locked (IO a)
 
 runLocked :: DatabasePoly k v -> Locked b -> IO b
 runLocked db (Locked act) = withLock (lock db) act
-
-unsafeRunLocked :: Locked a -> IO a
-unsafeRunLocked (Locked act) = act
 
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
