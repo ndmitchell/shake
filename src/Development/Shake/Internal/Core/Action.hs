@@ -359,13 +359,13 @@ lintWatch pats = do
 
 
 listDepends :: Database -> Depends -> IO [Key]
-listDepends db (Depends xs) = runLocked db $ \db -> liftIO $
+listDepends db (Depends xs) = runLocked db $ liftIO $
     -- FIXME: Don't actually need the database lock to do this as the results are stable
     mapM (getKey db) xs
 
 
 lookupDependencies :: Database -> Key -> IO [Depends]
-lookupDependencies db k = runLocked db $ \db -> do
+lookupDependencies db k = runLocked db $ do
     -- FIXME: Don't actually need the database lock to do this as the results are stable
     i <- getId db k
     Just (_, Ready r) <- getKeyValue db i

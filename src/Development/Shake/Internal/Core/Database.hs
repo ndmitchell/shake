@@ -31,8 +31,8 @@ newtype Locked a = Locked (IO a)
 #endif
         )
 
-runLocked :: DatabasePoly k v -> (DatabasePoly k v -> Locked b) -> IO b
-runLocked db act = withLock (lock db) $ unsafeRunLocked $ act db
+runLocked :: DatabasePoly k v -> Locked b -> IO b
+runLocked db (Locked act) = withLock (lock db) act
 
 unsafeRunLocked :: Locked a -> IO a
 unsafeRunLocked (Locked act) = act

@@ -88,7 +88,7 @@ open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
 
 -- Prepare for a fresh run by changing Result to Loaded
 reset :: RunState -> IO ()
-reset RunState{..} = runLocked database $ \database ->
+reset RunState{..} = runLocked database $
     modifyAllMem database f
     where
         f (Ready r) = Loaded (snd <$> r)
@@ -326,7 +326,7 @@ usingDatabase cleanup opts diagnostic owitness = do
 
 
 incrementStep :: Database -> IO Step
-incrementStep db = runLocked db $ \db -> do
+incrementStep db = runLocked db $ do
     stepId <- getId db stepKey
     v <- getKeyValue db stepId
     step <- return $ case v of
@@ -345,7 +345,7 @@ fromStepResult = getEx . result
 
 
 recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
-recordRoot step locals (doubleToFloat -> end) db = runLocked db $ \db -> do
+recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
     rootId <- getId db rootKey
     let local = localMergeMutable (newLocal emptyStack Normal) locals
     let rootRes = Result
@@ -370,7 +370,7 @@ loadSharedCloud var opts owitness = do
     shared <- case shakeShare opts of
         Nothing -> return Nothing
         Just x -> Just <$> newShared wit2 ver x
-    cloud <- case newCloud (runLocked var . const) (Map.map builtinKey owitness) ver keyVers $ shakeCloud opts of
+    cloud <- case newCloud (runLocked var) (Map.map builtinKey owitness) ver keyVers $ shakeCloud opts of
         _ | null $ shakeCloud opts -> return Nothing
         Nothing -> fail "shakeCloud set but Shake not compiled for cloud operation"
         Just res -> Just <$> res

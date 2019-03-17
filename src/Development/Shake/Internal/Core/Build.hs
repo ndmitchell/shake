@@ -62,8 +62,8 @@ getDatabaseValue k =
 getDatabaseValueGeneric :: Key -> Action (Maybe (Result (Either BS.ByteString Value)))
 getDatabaseValueGeneric k = do
     Global{..} <- Action getRO
-    Just (_, status) <- liftIO $ runLocked globalDatabase $ \database ->
-        getKeyValue database =<< getId database k
+    Just (_, status) <- liftIO $ runLocked globalDatabase $
+        getKeyValue globalDatabase =<< getId globalDatabase k
     return $ getResult status
 
 
@@ -103,7 +103,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         let go = buildRunMode global stack database r
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
             runKey global stack k r mode $ \res -> do
-                runLocked globalDatabase $ \_ -> do
+                runLocked database $ do
                     let val = fmap runValue res
                     res <- getKeyValue database i
                     w <- case res of
@@ -148,7 +148,8 @@ applyKeyValue callStack ks = do
     Local{localStack} <- Action getRW
     let stack = addCallStack callStack localStack
 
-    (is, wait) <- liftIO $ runLocked globalDatabase $ \database -> do
+    let database = globalDatabase
+    (is, wait) <- liftIO $ runLocked database $ do
         is <- mapM (getId database) ks
         wait <- runWait $ do
             x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
@@ -163,7 +164,7 @@ applyKeyValue callStack ks = do
         _ -> do
             offset <- liftIO offsetTime
             vs <- Action $ captureRAW $ \continue ->
-                runLocked globalDatabase $ \_ -> fromLater wait $ \x ->
+                runLocked globalDatabase $ fromLater wait $ \x ->
                     liftIO $ addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
             offset <- liftIO offset
             Action $ modifyRW $ addDiscount offset
@@ -256,7 +257,8 @@ historyLoad (Ver -> ver) = do
     Local{localStack, localBuiltinVersion} <- Action getRW
     if isNothing globalShared && isNothing globalCloud then return Nothing else do
         key <- liftIO $ evaluate $ fromMaybe (error "Can't call historyLoad outside a rule") $ topStack localStack
-        res <- liftIO $ runLocked globalDatabase $ \database -> runWait $ do
+        let database = globalDatabase
+        res <- liftIO $ runLocked database $ runWait $ do
             let ask k = do
                     i <- quickly $ getId database k
                     let identify = runIdentify globalRules k . fst . result
@@ -278,7 +280,7 @@ historyLoad (Ver -> ver) = do
             _ -> do
                 offset <- liftIO offsetTime
                 res <- Action $ captureRAW $ \continue ->
-                    runLocked globalDatabase $ \_ -> fromLater res $ \x ->
+                    runLocked globalDatabase $ fromLater res $ \x ->
                         liftIO $ addPool PoolResume globalPool $ continue $ Right x
                 offset <- liftIO offset
                 Action $ modifyRW $ addDiscount offset
@@ -319,10 +321,10 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
         key <- evaluate $ fromMaybe (error "Can't call historySave outside a rule") $ topStack localStack
 
         let produced = reverse $ map snd localProduces
-        deps <- runLocked globalDatabase $ \database ->
+        deps <- runLocked globalDatabase $
             -- technically this could be run without the DB lock, since it reads things that are stable
             forNothingM (reverse localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
-                Just (k, Ready r) <- getKeyValue database i
+                Just (k, Ready r) <- getKeyValue globalDatabase i
                 return $ (k,) <$> runIdentify globalRules k (fst $ result r)
         let k = topStack localStack
         case deps of
