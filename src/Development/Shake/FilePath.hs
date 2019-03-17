@@ -7,11 +7,12 @@
 module Development.Shake.FilePath(
     module System.FilePath, module System.FilePath.Posix,
     dropDirectory1, takeDirectory1, replaceDirectory1,
-    normaliseEx,
+    makeRelativeEx, normaliseEx,
     toNative, toStandard,
     exe
     ) where
 
+import System.Directory (canonicalizePath)
 import System.Info.Extra
 import qualified System.FilePath as Native
 
@@ -55,6 +56,51 @@ takeDirectory1 = takeWhile (not . isPathSeparator)
 replaceDirectory1 :: FilePath -> String -> FilePath
 replaceDirectory1 x dir = dir </> dropDirectory1 x
 
+-- | Make a path relative. Returns Nothing only when the given paths are on
+-- different drives. This will try the pure function makeRelative first. If that
+-- fails, the paths are canonicalised (removing any indirection and symlinks)
+-- and a relative path is derived from there.
+--
+-- > > -- Given that "/root/a/" is not a symlink
+-- > > makeRelativeEx "/root/a/" "/root/b/file.out"
+-- > Just "../b/file.out"
+-- >
+-- > > -- Given that "/root/c/" is a symlink to "/root/e/f/g/"
+-- > > makeRelativeEx "/root/c/" "/root/b/file.out"
+-- > Just "../../../b/file.out"
+-- >
+-- > > -- On Windows
+-- > > makeRelativeEx "C:\\foo" "D:\\foo\\bar"
+-- > Nothing
+--
+makeRelativeEx :: FilePath -> FilePath -> IO (Maybe FilePath)
+makeRelativeEx pathA pathB
+    | isRelative makeRelativePathAPathB =
+        return (Just makeRelativePathAPathB)
+    | otherwise = do
+        a' <- canonicalizePath pathA
+        b' <- canonicalizePath pathB
+        if takeDrive a' /= takeDrive b'
+            then return Nothing
+            else Just <$> makeRelativeEx' a' b'
+    where
+        makeRelativePathAPathB = makeRelative pathA pathB
+
+        makeRelativeEx' :: FilePath -> FilePath -> IO FilePath
+        makeRelativeEx' a b = do
+            let rel = makeRelative a b
+                parent = takeDirectory a
+            if isRelative rel
+                then return rel
+                else if a /= parent
+                    then do
+                        parentToB <- makeRelativeEx' parent b
+                        return (".." </> parentToB)
+
+                    -- Impossible: makeRelative should have succeeded in finding
+                    -- a relative path once `a == "/"`.
+                    else error $ "Error calculating relative path from \""
+                                ++ pathA ++ "\" to \"" ++ show pathB ++ "\""
 
 -- | Normalise a 'FilePath', applying the rules:
 --
