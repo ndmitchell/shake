@@ -15,6 +15,7 @@ import Data.Maybe
 import Data.Dynamic
 import Control.Monad
 import General.Extra
+import System.Time.Extra
 import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.FilePattern
 import qualified Data.ByteString.Char8 as BS
@@ -169,7 +170,7 @@ data ShakeOptions = ShakeOptions
         -- ^ File patterns whose modification causes an error. Raises an error even if 'shakeLint' is 'Nothing'.
     ,shakeCommandOptions :: [CmdOption]
         -- ^ Defaults to @[]@. Additional options to be passed to all command invocations.
-    ,shakeFlush :: Maybe Double
+    ,shakeFlush :: Maybe Seconds
         -- ^ Defaults to @'Just' 10@. How often to flush Shake metadata files in seconds, or 'Nothing' to never flush explicitly.
         --   It is possible that on abnormal termination (not Haskell exceptions) any rules that completed in the last
         --   'shakeFlush' seconds will be lost.
