@@ -4,7 +4,9 @@
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked, unsafeRunLocked,
     DatabasePoly, createDatabase,
-    getId, getKey, getKeyValue, getIdMaybe,
+    mkId,
+    getValueFromKey,
+    getKey, getKeyValue, getIdMaybe,
     getAllKeyValues, getIdMap,
     setMem, setDisk, modifyAllMem
     ) where
@@ -41,6 +43,7 @@ unsafeRunLocked (Locked act) = act
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
 --   Everything is mutable. intern and status must form a bijecttion.
 --   There may be dangling Id's as a result of version changes.
+--   Lock is used to prevent any torn updates
 data DatabasePoly k v = Database
     {lock :: Lock
     ,intern :: IORef (Intern k) -- ^ Key |-> Id mapping
@@ -62,6 +65,12 @@ createDatabase status journal vDefault = do
     lock <- newLock
     return Database{..}
 
+getValueFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> k -> IO (Maybe v)
+getValueFromKey Database{..} k = do
+    is <- readIORef intern
+    case Intern.lookup k is of
+        Nothing -> return Nothing
+        Just i -> fmap snd <$> Ids.lookup status i
 
 getKey :: DatabasePoly k v -> Id -> IO k
 getKey Database{..} x = fst . fromJust <$> Ids.lookup status x
@@ -71,8 +80,9 @@ getIdMaybe Database{..} = do
     is <- readIORef intern
     return $ flip Intern.lookup is
 
-getId :: (Eq k, Hashable k) => DatabasePoly k v -> k -> Locked Id
-getId Database{..} k = liftIO $ do
+-- | Ensure that a Key has a given Id, creating an Id if there is not one already
+mkId :: (Eq k, Hashable k) => DatabasePoly k v -> k -> Locked Id
+mkId Database{..} k = liftIO $ do
     is <- readIORef intern
     case Intern.lookup k is of
         Just i -> return i

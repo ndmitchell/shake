@@ -62,8 +62,7 @@ getDatabaseValue k =
 getDatabaseValueGeneric :: Key -> Action (Maybe (Result (Either BS.ByteString Value)))
 getDatabaseValueGeneric k = do
     Global{..} <- Action getRO
-    Just (_, status) <- liftIO $ runLocked globalDatabase $
-        getKeyValue globalDatabase =<< getId globalDatabase k
+    Just status <- liftIO $ getValueFromKey globalDatabase k
     return $ getResult status
 
 
@@ -150,7 +149,7 @@ applyKeyValue callStack ks = do
 
     let database = globalDatabase
     (is, wait) <- liftIO $ runLocked database $ do
-        is <- mapM (getId database) ks
+        is <- mapM (mkId database) ks
         wait <- runWait $ do
             x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
             case x of
@@ -260,7 +259,7 @@ historyLoad (Ver -> ver) = do
         let database = globalDatabase
         res <- liftIO $ runLocked database $ runWait $ do
             let ask k = do
-                    i <- quickly $ getId database k
+                    i <- quickly $ mkId database k
                     let identify = runIdentify globalRules k . fst . result
                     either (const Nothing) identify <$> lookupOne global localStack database i
             x <- case globalShared of
@@ -273,7 +272,7 @@ historyLoad (Ver -> ver) = do
                     Just cloud -> lookupCloud cloud ask key localBuiltinVersion ver
             case x of
                 Nothing -> return Nothing
-                Just (a,b,c) -> quickly $ Just . (a,,c) <$> mapM (mapM $ getId database) b
+                Just (a,b,c) -> quickly $ Just . (a,,c) <$> mapM (mapM $ mkId database) b
         -- FIXME: If running with cloud and shared, and you got a hit in cloud, should also add it to shared
         res <- case res of
             Now x -> return x

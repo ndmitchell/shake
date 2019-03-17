@@ -327,7 +327,7 @@ usingDatabase cleanup opts diagnostic owitness = do
 
 incrementStep :: Database -> IO Step
 incrementStep db = runLocked db $ do
-    stepId <- getId db stepKey
+    stepId <- mkId db stepKey
     v <- getKeyValue db stepId
     step <- return $ case v of
         Just (_, Loaded r) -> incStep $ fromStepResult r
@@ -346,7 +346,7 @@ fromStepResult = getEx . result
 
 recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
 recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
-    rootId <- getId db rootKey
+    rootId <- mkId db rootKey
     let local = localMergeMutable (newLocal emptyStack Normal) locals
     let rootRes = Result
             {result = (newValue (), BS.empty)

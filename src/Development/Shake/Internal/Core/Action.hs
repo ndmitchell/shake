@@ -365,10 +365,9 @@ listDepends db (Depends xs) = runLocked db $ liftIO $
 
 
 lookupDependencies :: Database -> Key -> IO [Depends]
-lookupDependencies db k = runLocked db $ do
+lookupDependencies db k = do
     -- FIXME: Don't actually need the database lock to do this as the results are stable
-    i <- getId db k
-    Just (_, Ready r) <- getKeyValue db i
+    Just (Ready r) <- getValueFromKey db k
     return $ depends r
 
 
