@@ -43,7 +43,7 @@ setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> Locked ()
 setIdKeyStatus Global{..} db i k v = do
     liftIO $ globalDiagnostic $ do
         -- actually safe because we only lose the Locked to enter the diagnostic context
-        old <- unsafeRunLocked $ getKeyValue db i
+        old <- getKeyValue db i
         let changeStatus = maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
         let changeValue = case v of
                 Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
@@ -72,7 +72,7 @@ getDatabaseValueGeneric k = do
 -- | Lookup the value for a single Id, may need to spawn it
 lookupOne :: Global -> Stack -> Database -> Id -> Wait Locked (Either SomeException (Result (Value, BS_Store)))
 lookupOne global stack database i = do
-    res <- quickly $ getKeyValue database i
+    res <- quickly $ liftIO $ getKeyValue database i
     case res of
         Nothing -> Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
         Just (k, s) -> case s of
@@ -80,7 +80,7 @@ lookupOne global stack database i = do
             Error e _ -> Now $ Left e
             Running{} | Left e <- addStack i k stack -> Now $ Left e
             _ -> Later $ \continue -> do
-                Just (_, s) <- getKeyValue database i
+                Just (_, s) <- liftIO $ getKeyValue database i
                 case s of
                     Ready r -> continue $ Right r
                     Error e _ -> continue $ Left e
@@ -104,7 +104,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
             runKey global stack k r mode $ \res -> do
                 runLocked database $ do
                     let val = fmap runValue res
-                    res <- getKeyValue database i
+                    res <- liftIO $ getKeyValue database i
                     w <- case res of
                         Just (_, Running (NoShow w) _) -> return w
                         -- We used to be able to hit here, but we fixed it by ensuring the thread pool workers are all
@@ -154,7 +154,7 @@ applyKeyValue callStack ks = do
             x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
             case x of
                 Just e -> return $ Left e
-                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . getKeyValue database) is
+                Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . liftIO . getKeyValue database) is
         return (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
@@ -320,8 +320,8 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
         key <- evaluate $ fromMaybe (error "Can't call historySave outside a rule") $ topStack localStack
 
         let produced = reverse $ map snd localProduces
-        deps <- runLocked globalDatabase $
-            -- technically this could be run without the DB lock, since it reads things that are stable
+        deps <-
+            -- can do this without the DB lock, since it reads things that are stable
             forNothingM (reverse localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
                 Just (k, Ready r) <- getKeyValue globalDatabase i
                 return $ (k,) <$> runIdentify globalRules k (fst $ result r)

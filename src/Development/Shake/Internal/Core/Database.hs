@@ -65,6 +65,10 @@ createDatabase status journal vDefault = do
     lock <- newLock
     return Database{..}
 
+
+---------------------------------------------------------------------
+-- SAFE READ-ONLY
+
 getValueFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> k -> IO (Maybe v)
 getValueFromKey Database{..} k = do
     is <- readIORef intern
@@ -72,13 +76,31 @@ getValueFromKey Database{..} k = do
         Nothing -> return Nothing
         Just i -> fmap snd <$> Ids.lookup status i
 
-getKey :: DatabasePoly k v -> Id -> IO k
-getKey Database{..} x = fst . fromJust <$> Ids.lookup status x
+-- Returns Nothing only if the Id was serialised previously but then the Id disappeared
+getKeyValue :: DatabasePoly k v -> Id -> IO (Maybe (k, v))
+getKeyValue Database{..} i = Ids.lookup status i
+
+getAllKeyValues :: DatabasePoly k v -> IO [(k, v)]
+getAllKeyValues Database{..} = Ids.elems status
+
+getIdMap :: DatabasePoly k v -> IO (Map.HashMap Id (k, v))
+getIdMap Database{..} = Ids.toMap status
 
 getIdMaybe :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
 getIdMaybe Database{..} = do
     is <- readIORef intern
     return $ flip Intern.lookup is
+
+
+---------------------------------------------------------------------
+-- MIGHT ERROR READ-ONLY
+
+getKey :: DatabasePoly k v -> Id -> IO k
+getKey Database{..} x = fst . fromJust <$> Ids.lookup status x
+
+
+---------------------------------------------------------------------
+-- MUTATING
 
 -- | Ensure that a Key has a given Id, creating an Id if there is not one already
 mkId :: (Eq k, Hashable k) => DatabasePoly k v -> k -> Locked Id
@@ -93,15 +115,6 @@ mkId Database{..} k = liftIO $ do
             writeIORef' intern is
             return i
 
--- Returns Nothing only if the Id was serialised previously but then the Id disappeared
-getKeyValue :: DatabasePoly k v -> Id -> Locked (Maybe (k, v))
-getKeyValue Database{..} i = liftIO $ Ids.lookup status i
-
-getAllKeyValues :: DatabasePoly k v -> IO [(k, v)]
-getAllKeyValues Database{..} = Ids.elems status
-
-getIdMap :: DatabasePoly k v -> IO (Map.HashMap Id (k, v))
-getIdMap Database{..} = Ids.toMap status
 
 setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)

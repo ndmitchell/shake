@@ -328,7 +328,7 @@ usingDatabase cleanup opts diagnostic owitness = do
 incrementStep :: Database -> IO Step
 incrementStep db = runLocked db $ do
     stepId <- mkId db stepKey
-    v <- getKeyValue db stepId
+    v <- liftIO $ getKeyValue db stepId
     step <- return $ case v of
         Just (_, Loaded r) -> incStep $ fromStepResult r
         _ -> Step 1
