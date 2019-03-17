@@ -102,6 +102,16 @@ main = testBuild test $ do
         need ["tracker-source.c"]
         cmd AutoDeps "gcc" ["-c", "tracker-source.c", "-o", out]
 
+    "../lint2/tracker-relative" %> \out -> do
+        writeFile' out "tracker-relative"
+    "tracker-relative1" %> \out -> do
+        need ["../lint2/tracker-relative1"]
+        access "../lint2/tracker-relative1"
+        writeFile' out "tracker-relative1"
+    "tracker-relative2" %> \out -> do
+        access "../lint2/tracker-relative"
+        writeFile' out "tracker-relative"
+
     where gen t f = cmd Shell "echo" t ">" (toNative f) :: Action ()
           access f = if isWindows
                      then cmd_ Shell "type" (toNative f) "> nul"
@@ -136,3 +146,5 @@ test build = do
         crash ["tracker-read3"] ["depended upon after being used","tracker-source2"]
         build ["tracker-compile.o"]
         build ["tracker-compile-auto.o"]
+        build ["tracker-relative1"]
+        crash ["tracker-relative2"] ["lint2/tracker-relative"]
