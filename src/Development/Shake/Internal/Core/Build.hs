@@ -42,6 +42,7 @@ import System.Time.Extra
 setIdKeyStatus :: Global -> Database -> Id -> Key -> Status -> Locked ()
 setIdKeyStatus Global{..} db i k v = do
     liftIO $ globalDiagnostic $ do
+        -- actually safe because we only lose the Locked to enter the diagnostic context
         old <- unsafeRunLocked $ getKeyValue db i
         let changeStatus = maybe "Missing" (statusType . snd) old ++ " -> " ++ statusType v ++ ", " ++ maybe "<unknown>" (show . fst) old
         let changeValue = case v of
