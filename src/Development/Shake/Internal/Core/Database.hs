@@ -72,7 +72,7 @@ getValueFromKey Database{..} k = do
 
 -- Returns Nothing only if the Id was serialised previously but then the Id disappeared
 getKeyValueFromId :: DatabasePoly k v -> Id -> IO (Maybe (k, v))
-getKeyValueFromId Database{..} i = Ids.lookup status i
+getKeyValueFromId Database{..} = Ids.lookup status
 
 getKeyValues :: DatabasePoly k v -> IO [(k, v)]
 getKeyValues Database{..} = Ids.elems status
