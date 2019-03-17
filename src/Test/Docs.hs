@@ -45,7 +45,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         trackAllow ["dist//*"]
 
     index %> \_ -> do
-        need $ config : map (shakeRoot </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt"]
+        need $ config : map (shakeRoot </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt","docs/Manual.md","docs/shake-progress.png"]
         needSource
         trackAllow ["dist//*"]
         dist <- liftIO $ canonicalizePath "dist"
