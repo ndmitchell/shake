@@ -147,10 +147,9 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         printDirectory = last $ False : [x | PrintDirectory x <- flagsExtra]
         shareRemoves = [x | ShareRemove x <- flagsExtra]
         oshakeOpts = foldl' (flip ($)) baseOpts flagsShake
-        shakeOpts = oshakeOpts {shakeLintInside = map (toStandard . normalise . addTrailingPathSeparator) $
-                                                  shakeLintInside oshakeOpts
-                               ,shakeLintIgnore = map toStandard $
-                                                  shakeLintIgnore oshakeOpts
+    lintInside <- mapM canonicalizePath $ shakeLintInside oshakeOpts
+    let shakeOpts = oshakeOpts {shakeLintInside = map (toStandard . addTrailingPathSeparator) lintInside
+                               ,shakeLintIgnore = map toStandard $ shakeLintIgnore oshakeOpts
                                ,shakeOutput     = if shakeColor oshakeOpts
                                                   then outputColor (shakeOutput oshakeOpts)
                                                   else shakeOutput oshakeOpts

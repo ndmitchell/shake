@@ -146,13 +146,13 @@ commandExplicit funcName oopts results exe args = do
 
         ignore = map (?==) shakeLintIgnore
 
-        -- makeRelativeEx is used instead of makeRelative. Only makeRelativeEx
-        -- is guaranteed to give a valid relative path as long as the input
-        -- paths are on the same drive.
-        ham cwd xs = liftIO $ sequence [fromMaybe x <$> makeRelativeEx cwd x
-                                         | x <- map toStandard xs
-                                         , any (`isPrefixOf` x) shakeLintInside
-                                         , not $ any ($ x) ignore]
+        -- Want to turn this path (which is absolute) into a relative path (if at all possible)
+        -- and check it is covered by shakeLintInside, but isn't covered by shakeLintIngore
+        fixPaths cwd xs = do
+            xs <- return $ map toStandard xs
+            xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
+            xs <- mapMaybeM (makeRelativeEx cwd) xs
+            return $ filter (\x -> not (any ($ x) ignore)) xs
 
         fsaCmd act opts file
             | isMac = fsaCmdMac act opts file
@@ -194,8 +194,8 @@ commandExplicit funcName oopts results exe args = do
                 existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
             rs <- existing reader xs
             ws <- existing writer xs
-            reads  <- ham cwd rs
-            writes <- ham cwd ws
+            reads  <- liftIO $ fixPaths cwd rs
+            writes <- liftIO $ fixPaths cwd ws
             when useAutoDeps $
                 unsafeAllowApply $ needed reads
             trackRead reads
@@ -207,7 +207,7 @@ commandExplicit funcName oopts results exe args = do
             pxs <- liftIO $ parseFSAT <$> readFileUTF8' file
             xs <- liftIO $ filterM doesFileExist [x | FSATRead x <- pxs]
             cwd <- liftIO getCurrentDirectory
-            unsafeAllowApply $ need =<< ham cwd xs
+            unsafeAllowApply $ need =<< liftIO (fixPaths cwd xs)
             return res
 
     skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args

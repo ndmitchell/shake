@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #656, make --lint-fsatrace work with relative directories
     Make sure --no-build does not destroy previous profile output
     #437, #414, #298 rewrite the profile view
     #588, #521 add end times and traced top-levels to the profile
