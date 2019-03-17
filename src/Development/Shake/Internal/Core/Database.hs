@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Core.Database(
     Locked, runLocked, unsafeRunLocked,
     DatabasePoly, createDatabase,
-    getId, getKey, getKeyValue,
+    getId, getKey, getKeyValue, getIdMaybe,
     getAllKeyValues, getIdMap,
     setMem, setDisk, modifyAllMem
     ) where
@@ -64,6 +64,10 @@ createDatabase status journal vDefault = do
 getKey :: DatabasePoly k v -> Id -> IO k
 getKey Database{..} x = fst . fromJust <$> Ids.lookup status x
 
+getIdMaybe :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
+getIdMaybe Database{..} = do
+    is <- readIORef intern
+    return $ flip Intern.lookup is
 
 getId :: (Eq k, Hashable k) => DatabasePoly k v -> k -> Locked Id
 getId Database{..} k = liftIO $ do

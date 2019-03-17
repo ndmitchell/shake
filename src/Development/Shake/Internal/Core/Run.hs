@@ -283,10 +283,11 @@ errorsState RunState{..} = do
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
-checkValid diagnostic db check missing = do
+checkValid diagnostic db check absent = do
     status <- getAllKeyValues db
     diagnostic $ return "Starting validity/lint checking"
 
+    -- TEST 1: Have values changed since being depended on
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] status) $ \seen v -> case v of
         (key, Ready Result{..}) -> do
@@ -302,9 +303,9 @@ checkValid diagnostic db check missing = do
                                         | (key, result, now) <- bad])
             ""
 
-    bad <- return [(parent,key) | (parent, key) <- missing]
-        -- FIXME: I used to have this test, did it actually help? Does it have a test? Doesn't this violate an invariant?
-        -- , isJust $ Intern.lookup key intern]
+    -- TEST 2: Is anything from lintTrackWrite which promised not to exist actually been created
+    exists <- getIdMaybe db
+    bad <- return [(parent,key) | (parent, key) <- absent, isJust $ exists key]
     unless (null bad) $ do
         let n = length bad
         throwM $ errorStructured
