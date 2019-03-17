@@ -149,15 +149,14 @@ run RunState{..} oneshot actions2 =
 
             maybe (return ()) (throwIO . snd) =<< readIORef except
             assertFinishedDatabase database
+            let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 
             locals <- readIORef locals
             end <- start
-            recordRoot step locals end database
-
-            let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
-
-            when (null actions && null actions2) $
+            if null actions && null actions2 then
                 putWhen Normal "Warning: No want/action statements, nothing to do"
+             else
+                recordRoot step locals end database
 
             when (isJust shakeLint) $ do
                 addTiming "Lint checking"
