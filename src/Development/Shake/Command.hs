@@ -228,6 +228,7 @@ data FSAT
     | FSATRead FilePath
     | FSATDelete FilePath
     | FSATMove FilePath FilePath
+      deriving Show
 
 -- | Parse the 'FSAT' entries, ignoring anything you don't understand.
 parseFSAT :: String -> [FSAT]
