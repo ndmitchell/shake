@@ -102,7 +102,7 @@ main = testBuild test $ do
         need ["tracker-source.c"]
         cmd AutoDeps "gcc" ["-c", "tracker-source.c", "-o", out]
 
-    "../lint2/tracker-relative" %> \out -> do
+    "../lint2/tracker-relative" %> \out ->
         writeFile' out "tracker-relative"
     "tracker-relative1" %> \out -> do
         need ["../lint2/tracker-relative1"]
