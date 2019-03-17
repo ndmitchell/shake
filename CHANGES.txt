@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Make --lint-fsatrace also add to shakeLintInside
     #656, make --lint-fsatrace work with relative directories
     Make sure --no-build does not destroy previous profile output
     #437, #414, #298 rewrite the profile view
