@@ -112,15 +112,17 @@ main = testSimple $ do
         createDirectory (cwd </> "e/f/g")
         -- on Windows creating symlinks requires additional privileges
         -- so skip the test there
-        unless isWindows $
-            createFileLink  (cwd </> "e/f/g/") (cwd </> "c")
+
+        -- portable symlinks only available on GHC 8.4
+        -- unless isWindows $
+        --    createFileLink  (cwd </> "e/f/g/") (cwd </> "c")
 
         let f a b c = makeRelativeEx a (normalise b) >>= (=== fmap normalise c)
         f "/x/y/" "/x/y/z" $ Just "z"
         f (cwd </> "c") "../b/file.out" $ Just "../b/file.out"
         f "a" "b/file.out" $ Just "b/file.out"
         f (cwd </> "a") (cwd </> "b/file.out") $ Just "../b/file.out"
-        unless isWindows $ do
-            f (cwd </> "c") (cwd </> "b/file.out") $ Just "../../../b/file.out"
-            f "c" (cwd </> "b/file.out") $ Just "../../../b/file.out"
-            f (cwd </> "c/../../../a") (cwd </> "b/file.out") $ Just "../b/file.out"
+        -- unless isWindows $ do
+        --    f (cwd </> "c") (cwd </> "b/file.out") $ Just "../../../b/file.out"
+        --    f "c" (cwd </> "b/file.out") $ Just "../../../b/file.out"
+        --    f (cwd </> "c/../../../a") (cwd </> "b/file.out") $ Just "../b/file.out"
