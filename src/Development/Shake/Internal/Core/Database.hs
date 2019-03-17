@@ -6,7 +6,7 @@ module Development.Shake.Internal.Core.Database(
     DatabasePoly, createDatabase,
     mkId,
     getValueFromKey,
-    getKey, getKeyValue, getIdMaybe,
+    getKeyValue, getIdMaybe,
     getAllKeyValues, getIdMap,
     setMem, setDisk, modifyAllMem
     ) where
@@ -19,7 +19,6 @@ import qualified General.Intern as Intern
 import Control.Concurrent.Extra
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
-import Data.Maybe
 
 #if __GLASGOW_HASKELL__ >= 800
 import Control.Monad.Fail
@@ -90,13 +89,6 @@ getIdMaybe :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
 getIdMaybe Database{..} = do
     is <- readIORef intern
     return $ flip Intern.lookup is
-
-
----------------------------------------------------------------------
--- MIGHT ERROR READ-ONLY
-
-getKey :: DatabasePoly k v -> Id -> IO k
-getKey Database{..} x = fst . fromJust <$> Ids.lookup status x
 
 
 ---------------------------------------------------------------------
