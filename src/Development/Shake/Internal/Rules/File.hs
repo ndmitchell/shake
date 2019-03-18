@@ -447,17 +447,22 @@ neededCheck xs = withFrozenCallStack $ do
             ""
 
 
+track :: ([FileQ] -> Action ()) -> [FilePath] -> Action ()
+track tracker = tracker . map (FileQ . fileNameFromString)
+
+
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
 --   automatically inserted in 'LintFSATrace' mode.
 trackRead :: [FilePath] -> Action ()
-trackRead = lintTrackRead . map (FileQ . fileNameFromString)
+trackRead = track lintTrackRead
+
 
 -- | Track that a file was written by the action preceeding it. If 'shakeLint' is activated
 --   then these files must either be the target of this rule, or never referred to by the build system.
 --   Calls to 'trackWrite' are automatically inserted in 'LintFSATrace' mode.
 trackWrite :: [FilePath] -> Action ()
-trackWrite = lintTrackWrite . map (FileQ . fileNameFromString)
+trackWrite = track lintTrackWrite
 
 -- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
 --   the pattern.
