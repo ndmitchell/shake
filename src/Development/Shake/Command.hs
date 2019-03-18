@@ -109,7 +109,7 @@ instance Eq PID where _ == _ = True
 
 -- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
 commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName oopts results exe args = do
+commandExplicit funcName oopts results prog args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
@@ -125,24 +125,24 @@ commandExplicit funcName oopts results exe args = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
             putLoud $
                 maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
-                if useShell then unwords $ exe : args else showCommandForUser2 exe args
+                if useShell then unwords $ prog : args else showCommandForUser2 prog args
             verb <- getVerbosity
             -- run quietly to supress the tracer (don't want to print twice)
             (if verb >= Loud then quietly else id) act
 
-    let dropExe x = if takeExtension x == exe then dropExtension x else x
+    let dropExe x = if isExtensionOf exe x then dropExtension x else x
     let tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
-            _ -> traced $ dropExe $ takeFileName $ if useShell then fst (word1 exe) else exe
+            _ -> traced $ dropExe $ takeFileName $ if useShell then fst (word1 prog) else prog
 
     let tracker act
             | useLint = fsatrace act
             | useAutoDeps = autodeps act
             | useShell = shelled act
-            | otherwise = act exe args
+            | otherwise = act prog args
 
-        shelled = runShell (unwords $ exe : args)
+        shelled = runShell (unwords $ prog : args)
 
         -- Want to turn this path (which is absolute) into a relative path (if at all possible)
         -- and check it is covered by shakeLintInside, but isn't covered by shakeLintIngore
@@ -153,8 +153,8 @@ commandExplicit funcName oopts results exe args = do
 
         fsaCmd act opts file
             | isMac = fsaCmdMac act opts file
-            | useShell = runShell (unwords $ exe : args) $ \exe args -> act "fsatrace" $ opts : file : "--" : exe : args
-            | otherwise = act "fsatrace" $ opts : file : "--" : exe : args
+            | useShell = runShell (unwords $ prog : args) $ \prog args -> act "fsatrace" $ opts : file : "--" : prog : args
+            | otherwise = act "fsatrace" $ opts : file : "--" : prog : args
 
         fsaCmdMac act opts file = do
             let fakeExe e = liftIO $ do
@@ -175,7 +175,7 @@ commandExplicit funcName oopts results exe args = do
                                     return fake
                                 else return re
                         Nothing -> return e
-            fexe <- fakeExe exe
+            fexe <- fakeExe prog
             if useShell
                 then do
                     fsh <- fakeExe "/bin/sh"
@@ -208,7 +208,7 @@ commandExplicit funcName oopts results exe args = do
             unsafeAllowApply $ need =<< liftIO (fixPaths cwd xs)
             return res
 
-    skipper $ tracker $ \exe args -> verboser $ tracer $ commandExplicitIO funcName opts results exe args
+    skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO funcName opts results prog args
 
 
 -- | Given a shell command, call the continuation with the sanitised exec-style arguments
@@ -242,7 +242,7 @@ parseFSAT = mapMaybe f . lines
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
 commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
-commandExplicitIO funcName opts results exe args = do
+commandExplicitIO funcName opts results prog args = do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
@@ -267,7 +267,7 @@ commandExplicitIO funcName opts results exe args = do
     let optEchoStdout = last $ (not grabStdout && null optFileStdout) : [x | EchoStdout x <- opts]
     let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
 
-    let cmdline = showCommandForUser2 exe args
+    let cmdline = showCommandForUser2 prog args
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
         buf Str{} = do x <- newBuffer; return ([DestString x | not optAsync], Str . concat <$> readBuffer x)
@@ -286,7 +286,7 @@ commandExplicitIO funcName opts results exe args = do
 
     exceptionBuffer <- newBuffer
     po <- resolvePath ProcessOpts
-        {poCommand = if optShell then ShellCommand $ unwords $ exe:args else RawCommand exe args
+        {poCommand = if optShell then ShellCommand $ unwords $ prog:args else RawCommand prog args
         ,poCwd = optCwd, poEnv = optEnv, poTimeout = optTimeout
         ,poStdin = [SrcBytes LBS.empty | optBinary && not (null optStdin)] ++ optStdin
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout && not optAsync] ++ concat dStdout
@@ -335,7 +335,7 @@ resolveEnv opts
         unique = reverse . nubOrdOn (if isWindows then upper . fst else fst) . reverse
 
 
--- | If the user specifies a custom $PATH, and not Shell, then try and resolve their exe ourselves.
+-- | If the user specifies a custom $PATH, and not Shell, then try and resolve their prog ourselves.
 --   Tricky, because on Windows it doesn't look in the $PATH first.
 resolvePath :: ProcessOpts -> IO ProcessOpts
 resolvePath po
