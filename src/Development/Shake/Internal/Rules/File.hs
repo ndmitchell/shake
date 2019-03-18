@@ -473,7 +473,9 @@ trackWrite = track lintTrackWrite
 -- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
-trackAllow ps = lintTrackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
+trackAllow ps = do
+    let ignores = map (?==) ps
+    lintTrackAllow $ \(FileQ x) -> any ($ fileNameToString x) ignores
 
 
 -- | This rule builds the following files, in addition to any defined by its target.
