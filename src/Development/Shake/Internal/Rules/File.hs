@@ -475,7 +475,7 @@ trackWrite = track lintTrackWrite
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
     let ignore = (?==*) ps
-    lintTrackAllow $ \(FileQ x) -> not $ ignore $ fileNameToString x
+    lintTrackAllow $ \(FileQ x) -> ignore $ fileNameToString x
 
 
 -- | This rule builds the following files, in addition to any defined by its target.
