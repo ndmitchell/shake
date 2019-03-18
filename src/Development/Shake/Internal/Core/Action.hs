@@ -5,7 +5,6 @@ module Development.Shake.Internal.Core.Action(
     getShakeOptions, getProgress, runAfter,
     lintTrackRead, lintTrackWrite, lintTrackAllow,
     getVerbosity, putWhen, putLoud, putNormal, putQuiet, withVerbosity, quietly,
-    produces,
     orderOnlyAction,
     newCacheIO,
     unsafeExtraThread,
@@ -15,7 +14,7 @@ module Development.Shake.Internal.Core.Action(
     historyDisable,
     traced,
     -- Internal only
-    producesUnchecked, producesCheck, lintCurrentDirectory, lintWatch,
+    producesChecked, producesUnchecked, producesCheck, lintCurrentDirectory, lintWatch,
     blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
     getCurrentKey, getLocal,
     actionShareList, actionShareRemove
@@ -374,10 +373,9 @@ historyDisable :: Action ()
 historyDisable = Action $ modifyRW $ \s -> s{localHistory = False}
 
 
--- | This rule builds the following files, in addition to any defined by its target.
---   At the end of the rule these files must have been written.
-produces :: [FilePath] -> Action ()
-produces xs = Action $ modifyRW $ \s -> s{localProduces = map (True,) (reverse xs) ++ localProduces s}
+-- | A version of 'produces' that checks the files actually exist
+producesChecked :: [FilePath] -> Action ()
+producesChecked xs = Action $ modifyRW $ \s -> s{localProduces = map (True,) (reverse xs) ++ localProduces s}
 
 -- | A version of 'produces' that does not check.
 producesUnchecked :: [FilePath] -> Action ()

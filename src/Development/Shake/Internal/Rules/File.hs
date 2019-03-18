@@ -3,7 +3,7 @@
 
 module Development.Shake.Internal.Rules.File(
     need, needHasChanged, needBS, needed, neededBS, want,
-    trackRead, trackWrite, trackAllow,
+    trackRead, trackWrite, trackAllow, produces,
     defaultRuleFile,
     (%>), (|%>), (?>), phony, (~>), phonys,
     resultHasChanged,
@@ -463,6 +463,12 @@ trackWrite = lintTrackWrite . map (FileQ . fileNameFromString)
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = lintTrackAllow $ \(FileQ x) -> any (?== fileNameToString x) ps
+
+
+-- | This rule builds the following files, in addition to any defined by its target.
+--   At the end of the rule these files must have been written.
+produces :: [FilePath] -> Action ()
+produces = producesChecked
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.
