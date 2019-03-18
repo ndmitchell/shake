@@ -319,7 +319,7 @@ shakeOptsEx =
     ,opts $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
     ,extr $ Option ""  ["numeric-version"] (noArg [NumericVersion]) "Print just the version number and exit."
     ,opts $ Option ""  ["skip-commands"] (noArg $ \s -> s{shakeRunCommands=False}) "Try and avoid running external programs."
-    ,opts $ Option ""  ["rebuild"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]}) "Rebuild matching files."
+    ,opts $ Option "B" ["rebuild"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNow, fromMaybe "**" x)]}) "Rebuild matching files."
     ,opts $ Option ""  ["no-rebuild"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNormal, fromMaybe "**" x)]}) "Rebuild matching files if necessary (default)."
     ,opts $ Option ""  ["skip"] (optArg "PATTERN" $ \x s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildLater, fromMaybe "**" x)]}) "Don't rebuild matching files this run."
 --    ,yes $ Option ""  ["skip-forever"] (OptArg (\x -> Right ([], \s -> s{shakeRebuild=shakeRebuild s ++ [(RebuildNever, fromMaybe "**" x)]})) "PATTERN") "Don't rebuild matching files until they change."

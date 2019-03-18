@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add back -B as an alias for --rebuild
     Make --help say which other options have changed
     Add --lint-ignore flag to set shakeLintIgnore
     Improve the documentation for produces, call trackWrite
