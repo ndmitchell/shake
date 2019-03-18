@@ -5,7 +5,7 @@ module Development.Shake.Internal.Options(
     Progress(..), Verbosity(..), Rebuild(..), Lint(..), Change(..),
     ShakeOptions(..), shakeOptions,
     -- Internal stuff
-    shakeRebuildApply, shakeAbbreviationsApply
+    shakeRebuildApply, shakeAbbreviationsApply, shakeOptionsFields
     ) where
 
 import Data.Data
@@ -257,28 +257,29 @@ instance Data ShakeOptions where
     toConstr ShakeOptions{} = conShakeOptions
     dataTypeOf _ = tyShakeOptions
 
-instance Show ShakeOptions where
-    show x = "ShakeOptions {" ++ intercalate ", " inner ++ "}"
-        where
-            inner = zipWithExact (\x y -> x ++ " = " ++ y) fieldsShakeOptions $ gmapQ f x
+shakeOptionsFields :: ShakeOptions -> [(String, String)]
+shakeOptionsFields = zipExact fieldsShakeOptions . gmapQ f
+    where
+        f x | Just x <- cast x = show (x :: Int)
+            | Just x <- cast x = show (x :: FilePath)
+            | Just x <- cast x = show (x :: Verbosity)
+            | Just x <- cast x = show (x :: Change)
+            | Just x <- cast x = show (x :: Bool)
+            | Just x <- cast x = show (x :: [FilePath])
+            | Just x <- cast x = show (x :: [(Rebuild, FilePattern)])
+            | Just x <- cast x = show (x :: Maybe Lint)
+            | Just x <- cast x = show (x :: Maybe Double)
+            | Just x <- cast x = show (x :: Maybe String)
+            | Just x <- cast x = show (x :: [(String,String)])
+            | Just x <- cast x = show (x :: Hidden (IO Progress -> IO ()))
+            | Just x <- cast x = show (x :: Hidden (Verbosity -> String -> IO ()))
+            | Just x <- cast x = show (x :: Hidden (Map.HashMap TypeRep Dynamic))
+            | Just x <- cast x = show (x :: Hidden (String -> String -> Bool -> IO ()))
+            | Just x <- cast x = show (x :: [CmdOption])
+            | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
-            f x | Just x <- cast x = show (x :: Int)
-                | Just x <- cast x = show (x :: FilePath)
-                | Just x <- cast x = show (x :: Verbosity)
-                | Just x <- cast x = show (x :: Change)
-                | Just x <- cast x = show (x :: Bool)
-                | Just x <- cast x = show (x :: [FilePath])
-                | Just x <- cast x = show (x :: [(Rebuild, FilePattern)])
-                | Just x <- cast x = show (x :: Maybe Lint)
-                | Just x <- cast x = show (x :: Maybe Double)
-                | Just x <- cast x = show (x :: Maybe String)
-                | Just x <- cast x = show (x :: [(String,String)])
-                | Just x <- cast x = show (x :: Hidden (IO Progress -> IO ()))
-                | Just x <- cast x = show (x :: Hidden (Verbosity -> String -> IO ()))
-                | Just x <- cast x = show (x :: Hidden (Map.HashMap TypeRep Dynamic))
-                | Just x <- cast x = show (x :: Hidden (String -> String -> Bool -> IO ()))
-                | Just x <- cast x = show (x :: [CmdOption])
-                | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
+instance Show ShakeOptions where
+    show x = "ShakeOptions {" ++ intercalate ", " (map (\(a,b) -> a ++ " = " ++ b) $ shakeOptionsFields x) ++ "}"
 
 
 -- | Internal type, copied from Hide in Uniplate

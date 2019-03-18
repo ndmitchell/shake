@@ -166,11 +166,16 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                         xs <- getTargets shakeOpts rs
                         return ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
                     _ -> return []
+            changes <- return $
+                let as = shakeOptionsFields baseOpts
+                    bs = shakeOptionsFields oshakeOpts
+                in ["  - " ++ lbl ++ ": " ++ v1 ++ " => " ++ v2 | long, ((lbl, v1), (_, v2)) <- zip as bs, v1 /= v2]
 
             putWhen Quiet $ unlines $
                 ("Usage: " ++ progName ++ " [options] [target] ...") :
                 (if null baseOpts2 then [] else "" : (if null userOptions then "Options:" else "Standard options:") : showOptDescr baseOpts2) ++
                 (if null userOptions then [] else "" : "Extra options:" : showOptDescr userOptions) ++
+                (if null changes then [] else "" : "Changed ShakeOptions:" : changes) ++
                 (if null targets then [] else "" : "Targets:" : targets)
 
     when (errs /= []) $ do
