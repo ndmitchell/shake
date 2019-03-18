@@ -51,7 +51,7 @@ No. If two patterns overlap for a file being built it will result in a runtime e
 
 #### Q: Why do multiple calls to `need` run sequentially? Are `Applicative` actions run in parallel?
 
-In Shake, `need xs >> need ys` will build `xs` in parallel, then afterwards build `ys` in parallel. The same is true of `need xs *> need ys`, where `*>` is the applicative equivalent of `>>`. In contrast, [Haxl](https://hackage.haskell.org/package/haxl) will execute both arguments to `*>` in parallel. For Shake, you are encouraged to merge adjacent `need` operations (e.g. `need (xs++ys)`), and where that is not possible (e.g. when using `askOracle`) use `parallel` explicitly.
+In Shake, `need xs >> need ys` will build `xs` in parallel, then afterwards build `ys` in parallel. The same is true of `need xs *> need ys`, where `*>` is the applicative equivalent of `>>`. In contrast, [Haxl](https://hackage.haskell.org/package/haxl) will execute both arguments to `*>` in parallel. For Shake, you are encouraged to merge adjacent `need` operations (e.g. `need (xs++ys)`), and where that is not possible use `parallel` explicitly.
 
 Shake _could_ follow the Haxl approach, but does not, mainly because they are targeting different problems. In Haxl, the operations are typically read-only, and any single step is likely to involve lots of operations. In contrast, with Shake the operations definitely change the file system, and there are typically only one or two per rule. Consequently, Shake opts for an explicit approach, rather than allow users to use `*>` (and then inevitably add a comment because its an unusual thing to do).
 
