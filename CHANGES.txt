@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add --lint-ignore flag to set shakeLintIgnore
     Improve the documentation for produces, call trackWrite
     Make trackWrite/trackRead respect shakeLintIgnore
     Make --lint-fsatrace also add to shakeLintInside

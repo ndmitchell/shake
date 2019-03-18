@@ -308,6 +308,7 @@ shakeOptsEx =
     ,opts $ Option "l" ["lint"] (noArg $ \s -> s{shakeLint=Just LintBasic}) "Perform limited validation after the run."
     ,opts $ Option ""  ["lint-watch"] (reqArg "PATTERN" $ \x s -> s{shakeLintWatch=shakeLintWatch s ++ [x]}) "Error if any of the patterns are created (expensive)."
     ,opts $ Option ""  ["lint-fsatrace"] (optArg "DIR" $ \x s -> s{shakeLint=Just LintFSATrace, shakeLintInside=shakeLintInside s ++ [fromMaybe "." x]}) "Use fsatrace to do validation [in current dir]."
+    ,opts $ Option ""  ["lint-ignore"] (reqArg "PATTERN" $ \x s -> s{shakeLintIgnore=shakeLintIgnore s ++ [x]}) "Ignore any lint errors in these patterns."
     ,opts $ Option ""  ["no-lint"] (noArg $ \s -> s{shakeLint=Nothing}) "Turn off --lint."
     ,opts $ Option ""  ["live"] (optArg "FILE" $ \x s -> s{shakeLiveFiles=shakeLiveFiles s ++ [fromMaybe "live.txt" x]}) "List the files that are live [to live.txt]."
     ,opts $ Option "m" ["metadata"] (reqArg "PREFIX" $ \x s -> s{shakeFiles=x}) "Prefix for storing metadata files."
