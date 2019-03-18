@@ -144,15 +144,12 @@ commandExplicit funcName oopts results exe args = do
 
         shelled = runShell (unwords $ exe : args)
 
-        ignore = map (?==) shakeLintIgnore
-
         -- Want to turn this path (which is absolute) into a relative path (if at all possible)
         -- and check it is covered by shakeLintInside, but isn't covered by shakeLintIngore
         fixPaths cwd xs = do
             xs <- return $ map toStandard xs
             xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
-            xs <- mapMaybeM (makeRelativeEx cwd) xs
-            return $ filter (\x -> not (any ($ x) ignore)) xs
+            mapMaybeM (makeRelativeEx cwd) xs
 
         fsaCmd act opts file
             | isMac = fsaCmdMac act opts file
@@ -196,8 +193,9 @@ commandExplicit funcName oopts results exe args = do
             ws <- existing writer xs
             reads  <- liftIO $ fixPaths cwd rs
             writes <- liftIO $ fixPaths cwd ws
-            when useAutoDeps $
-                unsafeAllowApply $ needed reads
+            when useAutoDeps $ do
+                let ignore = map (?==) shakeLintIgnore
+                unsafeAllowApply $ needed $ filter (\x -> not (any ($ x) ignore)) reads
             trackRead reads
             trackWrite writes
             return res
