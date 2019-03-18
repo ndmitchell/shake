@@ -31,13 +31,22 @@ function newTable(columns, data, sortColumn, sortDescend) {
             table.sort(sortColumn, sortDescend);
         table.setRows(data.get(), true);
     }, 1);
+    let toRender = false;
     data.event(xs => {
         table.setRows(xs, true);
-        table.render();
+        if ($(table.el).is(":visible"))
+            table.render();
+        else
+            toRender = true;
     });
     $(window).on("resize", () => {
-        if ($(table.el).is(":visible"))
+        if ($(table.el).is(":visible")) {
             table.tableHeightChanged();
+            if (toRender) {
+                table.render();
+                toRender = false;
+            }
+        }
     });
     return React.createElement("div", { style: "height:100%;width:100%;" }, table.el);
 }
