@@ -42,12 +42,12 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         copyFile' (shakeRoot </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
         writeFile' "dist/build/autogen/cabal_macros.h" ""
         writeFile' "dist/build/shake/autogen/cabal_macros.h" ""
-        trackAllow ["dist//*"]
+        trackAllow ["dist/**"]
 
     index %> \_ -> do
         need $ config : map (shakeRoot </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt","docs/Manual.md","docs/shake-progress.png"]
         needSource
-        trackAllow ["dist//*"]
+        trackAllow ["dist/**"]
         dist <- liftIO $ canonicalizePath "dist"
         cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
@@ -162,7 +162,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         putNormal . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
         needModules
         need ["Main.hs"]
-        trackAllow ["dist//*"]
+        trackAllow ["dist/**"]
         needSource
         cmd_ "ghc -fno-code -ignore-package=hashmap" ["-idist/build/autogen","-i" ++ shakeRoot </> "src","Main.hs"]
         writeFile' out ""
