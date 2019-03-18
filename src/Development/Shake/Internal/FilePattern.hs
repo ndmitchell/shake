@@ -6,7 +6,7 @@ module Development.Shake.Internal.FilePattern(
     -- * General API, used by other people.
     filePattern,
     -- * Optimisation opportunities
-    simple,
+    simple, (?==*),
     -- * Multipattern file rules
     compatible, extract, substitute,
     -- * Accelerated searching
@@ -226,6 +226,9 @@ matchStars p _ = throwImpure $ errorInternal $ "unreachablePattern, matchStars "
          in if rp then (\x -> isRelativePath x && f x) else f
     where rp = isRelativePattern p
 
+(?==*) :: [FilePattern] -> FilePath -> Bool
+(?==*) ps = \x -> any ($ x) vs
+    where vs = map (?==) ps
 
 -- | Like '?==', but returns 'Nothing' on if there is no match, otherwise 'Just' with the list
 --   of fragments matching each wildcard. For example:

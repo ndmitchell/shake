@@ -194,8 +194,8 @@ commandExplicit funcName oopts results exe args = do
             reads  <- liftIO $ fixPaths cwd rs
             writes <- liftIO $ fixPaths cwd ws
             when useAutoDeps $ do
-                let ignore = map (?==) shakeLintIgnore
-                unsafeAllowApply $ needed $ filter (\x -> not (any ($ x) ignore)) reads
+                let ignore = (?==*) shakeLintIgnore
+                unsafeAllowApply $ needed $ filter (not . ignore) reads
             trackRead reads
             trackWrite writes
             return res

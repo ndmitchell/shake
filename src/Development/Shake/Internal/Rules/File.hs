@@ -451,8 +451,8 @@ neededCheck xs = withFrozenCallStack $ do
 track :: ([FileQ] -> Action ()) -> [FilePath] -> Action ()
 track tracker xs = do
     ShakeOptions{shakeLintIgnore} <- getShakeOptions
-    let ignore = map (?==) shakeLintIgnore
-    let ys = filter (\x -> not (any ($ x) ignore)) xs
+    let ignore = (?==*) shakeLintIgnore
+    let ys = filter (not . ignore) xs
     when (ys /= []) $
         tracker $ map (FileQ . fileNameFromString) ys
 
@@ -474,8 +474,8 @@ trackWrite = track lintTrackWrite
 --   the pattern.
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
-    let ignores = map (?==) ps
-    lintTrackAllow $ \(FileQ x) -> any ($ fileNameToString x) ignores
+    let ignore = (?==*) ps
+    lintTrackAllow $ \(FileQ x) -> not $ ignore $ fileNameToString x
 
 
 -- | This rule builds the following files, in addition to any defined by its target.
