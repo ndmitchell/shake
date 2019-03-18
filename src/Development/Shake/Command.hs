@@ -130,7 +130,7 @@ commandExplicit funcName oopts results prog args = do
             -- run quietly to supress the tracer (don't want to print twice)
             (if verb >= Loud then quietly else id) act
 
-    let dropExe x = if isExtensionOf exe x then dropExtension x else x
+    let dropExe x = if x -<.> exe == x then dropExtension x else x
     let tracer = case reverse [x | Traced x <- opts] of
             "":_ -> liftIO
             msg:_ -> traced msg
