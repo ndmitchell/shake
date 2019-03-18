@@ -49,6 +49,13 @@ main = testBuild test $ do
         writeFile' "createonce" "Y"
         writeFile' out ""
 
+    "recordtwice" %> \out -> do
+        alwaysRerun
+        trackWrite ["recordtwice_"]
+        trackWrite ["recordtwice_"]
+        writeFile' "recordtwice_" ""
+        writeFile' out ""
+
     "listing" %> \out -> do
         writeFile' (out <.> "ls1") ""
         getDirectoryFiles "" ["//*.ls*"]
@@ -130,6 +137,7 @@ test build = do
     crash ["--clean","cdir.1","pause.2","-j2"] ["output","lint","current directory has changed"]
     crash ["existance"] ["changed since being depended upon"]
     crash ["createtwice"] ["changed since being depended upon"]
+    build ["recordtwice"]
     crash ["listing"] ["changed since being depended upon","listing.ls2"]
     crash ["--clean","listing","existance"] ["changed since being depended upon"]
     crash ["needed1"] ["'needed' file required rebuilding"]
