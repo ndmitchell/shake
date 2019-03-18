@@ -81,19 +81,57 @@ toReport db = do
             ,prfChanged = fromStep changed
             ,prfDepends = filter (not . null) $ map (mapMaybe (`Map.lookup` ids) . fromDepends) depends
             ,prfExecution = floatToDouble execution
-            ,prfTraces = map fromTrace $ sortOn traceStart traces
+            ,prfTraces = fromTForest traces
             }
             where fromStep i = fromJust $ Map.lookup i steps
-                  fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
     return [maybe (throwImpure $ errorInternal "toReport") f $ Map.lookup i status | i <- order]
 
+fromTForest :: TForest -> PtForest
+fromTForest TForest{..} =
+  let fromTTree TLeaf{..} = PtLeaf $ fromTrace tData
+      fromTTree TTree{..} = PtTree (fromTrace tData) (map fromTTree tChildren)
+      fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c) in
+    PtForest (map fromTTree tRoots) $ reverse (map fromTrace tracesList)
+
+data PtForest = PtForest {ptRoots :: [PtTree]
+                         , prfTracesList :: [ProfileTrace]}
+
+data PtTree =
+  PtTree {ptData :: ProfileTrace, ptChildren :: [PtTree]}
+  | PtLeaf {ptData :: ProfileTrace}
 
 data ProfileEntry = ProfileEntry
-    {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [[Int]], prfExecution :: Double, prfTraces :: [ProfileTrace]}
+    {prfName :: String, prfBuilt :: Int, prfChanged :: Int, prfDepends :: [[Int]], prfExecution :: Double, prfTraces :: PtForest}
 data ProfileTrace = ProfileTrace
     {prfCommand :: String, prfStart :: Double, prfStop :: Double}
 prfTime ProfileTrace{..} = prfStop - prfStart
 
+work :: [ProfileEntry] -> Double
+work xs = sum $ map prfExecution xs
+
+spanOfPtForest :: PtForest -> Double
+spanOfPtForest f =
+  let spanOfPtTree (PtLeaf d) = prfTime d
+      spanOfPtTree (PtTree d ls) = prfTime d + (foldl (\m x -> max m $ spanOfPtTree x) 0 ls) in
+    foldl (\m x -> max m $ spanOfPtTree x) 0 $ ptRoots f
+
+-- spanOf a profileentry is span of deps + span of traces
+spanOfPE :: ProfileEntry -> [ProfileEntry] -> Double
+spanOfPE x xs = let f deps = foldl (\s ls -> s + foldl (\m i -> max m $ spanOfPE (xs!!i) xs) 0 ls)
+                             0 deps in
+                  (f $ prfDepends x) + (spanOfPtForest $ prfTraces x)
+
+spanInternal :: [ProfileEntry] -> Double
+spanInternal xs = let roots ys =
+                        let deps = concatMap (concat . prfDepends) ys in
+                          foldl (\ls i -> if elem i deps then
+                                            ls else
+                                            (ys!!i):ls)
+                          [] [0..((length ys) - 1)] in
+                    foldl (\m x -> max m $ spanOfPE x xs) 0 $ roots xs
+
+workSpan :: [ProfileEntry] -> (Double, Double)
+workSpan xs = (work xs, spanInternal xs)
 
 -- | Generates an report given some build system profiling data.
 writeProfile :: FilePath -> Database -> IO ()
@@ -110,24 +148,25 @@ writeProfileInternal out xs
     --       Verified with similar "type foo > bar" commands taking similar time.
     | otherwise = LBS.writeFile out =<< generateHTML xs
 
-
 generateSummary :: [ProfileEntry] -> [String]
 generateSummary xs =
     ["* This database has tracked " ++ show (maximum (0 : map prfChanged xs) + 1) ++ " runs."
     ,let f = show . length in "* There are " ++ f xs ++ " rules (" ++ f ls ++ " rebuilt in the last run)."
-    ,let f = show . sum . map (length . prfTraces) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
+    ,let f = show . sum . map (\pe -> (length . prfTracesList) $ prfTraces pe) in "* Building required " ++ f xs ++ " traced commands (" ++ f ls ++ " in the last run)."
     ,"* The total (unparallelised) time is " ++ showDuration (sum $ map prfExecution xs) ++
-        " of which " ++ showDuration (sum $ map prfTime $ concatMap prfTraces xs) ++ " is traced commands."
+        " of which " ++ showDuration (sum $ map prfTime $ concatMap (prfTracesList . prfTraces) xs) ++ " is traced commands."
     ,let f xs = if null xs then "0s" else (\(a,b) -> showDuration a ++ " (" ++ b ++ ")") $ maximumBy' (compare `on` fst) xs in
         "* The longest rule takes " ++ f (map (prfExecution &&& prfName) xs) ++
-        ", and the longest traced command takes " ++ f (map (prfTime &&& prfCommand) $ concatMap prfTraces xs) ++ "."
-    ,let sumLast = sum $ map prfTime $ concatMap prfTraces ls
-         maxStop = maximum $ 0 : map prfStop (concatMap prfTraces ls) in
+        ", and the longest traced command takes " ++ f (map (prfTime &&& prfCommand) $ concatMap (prfTracesList . prfTraces) xs) ++ "."
+    ,let sumLast = sum $ map prfTime $ concatMap (prfTracesList . prfTraces) ls
+         maxStop = maximum $ 0 : map prfStop (concatMap (prfTracesList . prfTraces) ls) in
         "* Last run gave an average parallelism of " ++ showDP 2 (if maxStop == 0 then 0 else sumLast / maxStop) ++
         " times over " ++ showDuration maxStop ++ "."
+    ,"* Span is " ++ show span
+    ,"* Work is " ++ show work
     ]
     where ls = filter ((==) 0 . prfBuilt) xs
-
+          (work, span) = workSpan xs
 
 generateHTML :: [ProfileEntry] -> IO LBS.ByteString
 generateHTML xs = do
@@ -135,11 +174,10 @@ generateHTML xs = do
     let f "data/profile-data.js" = return $ LBS.pack $ "var profile =\n" ++ generateJSON xs
     runTemplate f report
 
-
 generateTrace :: [ProfileEntry] -> String
 generateTrace xs = jsonListLines $
-    showEntries 0 [y{prfCommand=prfName x} | x <- xs, y <- prfTraces x] ++
-    showEntries 1 (concatMap prfTraces xs)
+    showEntries 0 [y{prfCommand=prfName x} | x <- xs, y <- prfTracesList $ prfTraces x] ++
+    showEntries 1 (concatMap (prfTracesList . prfTraces) xs)
     where
         showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortOn prfStart xs
 
@@ -162,8 +200,8 @@ generateJSON = jsonListLines . map showEntry
             ,showTime prfExecution
             ,show prfBuilt
             ,show prfChanged] ++
-            [show prfDepends | not (null prfDepends) || not (null prfTraces)] ++
-            [jsonList $ map showTrace prfTraces | not (null prfTraces)]
+            [show prfDepends | not (null prfDepends) || not (null $ prfTracesList prfTraces)] ++
+            [jsonList $ map showTrace $ prfTracesList prfTraces | not (null $ prfTracesList prfTraces)]
         showTrace ProfileTrace{..} = jsonList
             [show prfCommand, showTime prfStart, showTime prfStop]
         showTime x = if '.' `elem` y then dropWhileEnd (== '.') $ dropWhileEnd (== '0') y else y
