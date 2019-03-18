@@ -12,6 +12,7 @@ This page includes the more commonly asked questions. For less frequently asked 
 * [Command line flags](CommandLine.md) -- the flags and settings supported by Shake, a better version of `--help`.
 * [Developing Shake](Developing.md) -- notes for people who want to contribute to Shake itself.
 * [Ninja](Ninja.md) -- features of Shake for those people who use Ninja.
+* [Lint](Lint.md) -- how to use the linting features.
 
 <!--
 Shake is suitable for all sizes of build systems, from a simple C project to a huge cross-platform multi-language project. However, at different scales, different techniques tend to be applicable.

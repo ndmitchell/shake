@@ -326,7 +326,7 @@ Shake features a built in "lint" features to check the build system is well form
 * Changing the current directory, typically with `setCurrentDirectory`. You should never change the current directory within the build system as multiple rules running at the same time share the current directory. You can still run `cmd_` calls in different directories using the `Cwd` argument.
 * Outputs that change after Shake has built them. The usual cause of this error is if the rule for `foo` also writes to the file `bar`, despite `bar` having a different rule producing it.
 
-There is a performance penalty for building with `--lint`, but it is typically small.
+There is a performance penalty for building with `--lint`, but it is typically small. For more details see [this page on all the Lint options](Lint.md).
 
 <span class="target" id="profiling"></span>
 
