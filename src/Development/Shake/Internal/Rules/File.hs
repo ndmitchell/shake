@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, ScopedTypeVariables, NamedFieldPuns #-}
 {-# LANGUAGE ViewPatterns, RecordWildCards, FlexibleInstances, TypeFamilies, ConstraintKinds #-}
 
 module Development.Shake.Internal.Rules.File(
@@ -447,8 +447,14 @@ neededCheck xs = withFrozenCallStack $ do
             ""
 
 
+-- Either trackRead or trackWrite
 track :: ([FileQ] -> Action ()) -> [FilePath] -> Action ()
-track tracker = tracker . map (FileQ . fileNameFromString)
+track tracker xs = do
+    ShakeOptions{shakeLintIgnore} <- getShakeOptions
+    let ignore = map (?==) shakeLintIgnore
+    let ys = filter (\x -> not (any ($ x) ignore)) xs
+    when (ys /= []) $
+        tracker $ map (FileQ . fileNameFromString) ys
 
 
 -- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
