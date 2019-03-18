@@ -344,7 +344,8 @@ whitelist x | elem x $ words $
     "docs/manual foo.* _build _build/run depfile 0.000s " ++
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult " ++
-    "oldStore mode node_modules llbuild Makefile"
+    "oldStore mode node_modules llbuild Makefile " ++
+    "RebuildNever"
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
