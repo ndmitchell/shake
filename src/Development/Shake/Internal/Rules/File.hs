@@ -480,8 +480,12 @@ trackAllow ps = do
 
 -- | This rule builds the following files, in addition to any defined by its target.
 --   At the end of the rule these files must have been written.
+--   These files must /not/ be tracked as part of the build system - two rules cannot produce
+--   the same file and you cannot 'need' the files it produces.
 produces :: [FilePath] -> Action ()
-produces = producesChecked
+produces xs = do
+    producesChecked xs
+    trackWrite xs
 
 
 -- | Require that the argument files are built by the rules, used to specify the target.
