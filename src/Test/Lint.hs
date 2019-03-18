@@ -105,9 +105,9 @@ main = testBuild test $ do
     "../lint2/tracker-relative" %> \out ->
         writeFile' out "tracker-relative"
     "tracker-relative1" %> \out -> do
-        need ["../lint2/tracker-relative1"]
-        access "../lint2/tracker-relative1"
-        writeFile' out "tracker-relative1"
+        need ["../lint2/tracker-relative"]
+        access "../lint2/tracker-relative"
+        writeFile' out "tracker-relative"
     "tracker-relative2" %> \out -> do
         access "../lint2/tracker-relative"
         writeFile' out "tracker-relative"
