@@ -29,6 +29,7 @@ import Data.Typeable
 import Numeric.Extra
 import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
+import qualified Data.HashSet as Set
 import Data.Dynamic
 import Data.Maybe
 import Data.IORef
@@ -298,7 +299,7 @@ checkValid diagnostic db check absent = do
 
     -- TEST 2: Is anything from lintTrackWrite which promised not to exist actually been created
     exists <- getIdFromKey db
-    bad <- return [(parent,key) | (parent, key) <- absent, isJust $ exists key]
+    bad <- return [(parent,key) | (parent, key) <- Set.toList $ Set.fromList absent, isJust $ exists key]
     unless (null bad) $ do
         let n = length bad
         throwM $ errorStructured
