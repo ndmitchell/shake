@@ -226,7 +226,7 @@ showStmt :: Int -> [String] -> [String]
 showStmt _ [] = []
 showStmt i xs | isDecl $ unlines xs = map f xs
     where f x = if fst (word1 x) `elem` dupes then "_" ++ show i ++ "_" ++ x else x
-showStmt i [x] | fst (word1 x) `elem` types = ["type Code_" ++ show i ++ " = " ++ x]
+showStmt i [x] | filter isAlpha (fst $ word1 x) `elem` types = ["type Code_" ++ show i ++ " = " ++ x]
 showStmt i [x] | length (words x) <= 2 = ["code_" ++ show i ++ " = (" ++ x ++ ")"] -- deal with operators and sections
 showStmt i xs | all isPredicate xs, length xs > 1 =
     zipWith (\j x -> "code_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] xs
