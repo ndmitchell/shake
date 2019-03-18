@@ -158,20 +158,20 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp long = do
             progName <- getProgName
-            extra <- if not long then return [] else do
+            targets <- if not long then return [] else do
                 -- run the rules as simply as we can
                 rs <- rules shakeOpts [] []
                 case rs of
                     Just (_, rs) -> do
                         xs <- getTargets shakeOpts rs
-                        return $ "" : "Targets:" : ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
+                        return ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
                     _ -> return []
 
             putWhen Quiet $ unlines $
                 ("Usage: " ++ progName ++ " [options] [target] ...") :
                 (if null baseOpts2 then [] else "" : (if null userOptions then "Options:" else "Standard options:") : showOptDescr baseOpts2) ++
                 (if null userOptions then [] else "" : "Extra options:" : showOptDescr userOptions) ++
-                extra
+                (if null targets then [] else "" : "Targets:" : targets)
 
     when (errs /= []) $ do
         putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
