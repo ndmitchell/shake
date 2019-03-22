@@ -13,7 +13,7 @@
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd, cmd_, unit, CmdArgument(..), CmdArguments(..), IsCmdArgument(..), (:->),
-    Stdout(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
+    Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
     ) where
@@ -34,7 +34,7 @@ import System.Process
 import System.Info.Extra
 import System.Time.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Extra
 import General.Process
@@ -89,6 +89,17 @@ addEnv extra = do
 
 
 data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
+
+strTrim :: Str -> Str
+strTrim (Str x) = Str $ trim x
+strTrim (BS x) = BS $ fst $ BS.spanEnd isSpace $ BS.dropWhile isSpace x
+strTrim (LBS x) = LBS $ trimEnd $ LBS.dropWhile isSpace x
+    where
+        trimEnd x = case LBS.uncons x of
+            Just (c, x2) | isSpace c -> trimEnd x2
+            _ -> x
+strTrim Unit = Unit
+
 
 data Result
     = ResultStdout Str
@@ -376,7 +387,14 @@ findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
 -- | Collect the @stdout@ of the process.
 --   If used, the @stdout@ will not be echoed to the terminal, unless you include 'EchoStdout'.
 --   The value type may be either 'String', or either lazy or strict 'ByteString'.
+--
+--   Note that most programs end their output with a trailing newline, so calling
+--   @ghc --numeric-version@ will result in 'Stdout' of @\"6.8.3\\n\"@. If you want to automatically
+--   trim the resulting string, see 'StdoutTrim'.
 newtype Stdout a = Stdout {fromStdout :: a}
+
+-- | Like 'Stdout' but remove all leading and trailing whitespaces.
+newtype StdoutTrim a = StdoutTrim {fromStdoutTrim :: a}
 
 -- | Collect the @stderr@ of the process.
 --   If used, the @stderr@ will not be echoed to the terminal, unless you include 'EchoStderr'.
@@ -456,6 +474,9 @@ instance CmdResult CmdTime where
 
 instance CmdString a => CmdResult (Stdout a) where
     cmdResult = let (a,b) = cmdString in ([ResultStdout a], \[ResultStdout x] -> Stdout $ b x)
+
+instance CmdString a => CmdResult (StdoutTrim a) where
+    cmdResult = let (a,b) = cmdString in ([ResultStdout a], \[ResultStdout x] -> StdoutTrim $ b $ strTrim x)
 
 instance CmdString a => CmdResult (Stderr a) where
     cmdResult = let (a,b) = cmdString in ([ResultStderr a], \[ResultStderr x] -> Stderr $ b x)

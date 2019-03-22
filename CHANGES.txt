@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #278, add StdoutTrim - like Stdout, but with trim applied
     #659, require base >= 4.8
 0.17.7, released 2019-03-18
     Add back -B as an alias for --rebuild

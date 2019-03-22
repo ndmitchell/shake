@@ -96,8 +96,8 @@ main = testBuild test $ do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
         Stdout out <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell helper "vFOO"
         liftIO $ out === "HELLO SHAKE\n"
-        Stdout out <- cmd (AddEnv "FOO" "GOODBYE SHAKE") Shell helper "vFOO"
-        liftIO $ out === "GOODBYE SHAKE\n"
+        StdoutTrim out <- cmd (AddEnv "FOO" "GOODBYE SHAKE") Shell helper "vFOO"
+        liftIO $ out === "GOODBYE SHAKE"
 
     "space" !> do
         Stdout out <- cmd helper ["oSPACE 1"]
