@@ -237,6 +237,8 @@ data FSAT
     | FSATRead FilePath
     | FSATDelete FilePath
     | FSATMove FilePath FilePath
+    | FSAQuery FilePath
+    | FSATouch FilePath
       deriving Show
 
 -- | Parse the 'FSAT' entries, ignoring anything you don't understand.
@@ -246,6 +248,8 @@ parseFSAT = mapMaybe f . lines
           f ('r':'|':xs) = Just $ FSATRead xs
           f ('d':'|':xs) = Just $ FSATDelete xs
           f ('m':'|':xs) | (xs,'|':ys) <- break (== '|') xs = Just $ FSATMove xs ys
+          f ('q':'|':xs) = Just $ FSAQuery xs
+          f ('t':'|':xs) = Just $ FSATouch xs
           f _ = Nothing
 
 ---------------------------------------------------------------------
