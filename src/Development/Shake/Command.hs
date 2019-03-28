@@ -232,7 +232,7 @@ runShell x act = withTempDir $ \dir -> do
 
 
 -- | Parse the FSATrace structure
-data FSAT
+data FSATrace
     = FSATWrite FilePath
     | FSATRead FilePath
     | FSATDelete FilePath
@@ -242,7 +242,7 @@ data FSAT
       deriving Show
 
 -- | Parse the 'FSAT' entries, ignoring anything you don't understand.
-parseFSAT :: String -> [FSAT]
+parseFSAT :: String -> [FSATrace]
 parseFSAT = mapMaybe f . lines
     where f ('w':'|':xs) = Just $ FSATWrite xs
           f ('r':'|':xs) = Just $ FSATRead xs
