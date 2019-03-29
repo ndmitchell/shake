@@ -172,7 +172,7 @@ removeOptionFSATrace params@Params{..} call
         params <- liftIO $ fsaParams file params
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
         cwd <- liftIO getCurrentDirectory
-        fsaRes <- liftIO $ parseFSAT <$> readFileUTF8' file
+        fsaRes <- liftIO $ parseFSA <$> readFileUTF8' file
         replace [ResultFSATrace []] [ResultFSATrace fsaRes] <$> call params
     where
         fsaFlags = fromMaybe "rwmdqt" fsaOptions
@@ -214,13 +214,13 @@ addFSAOptions x opts = FSAOptions x : opts
 --   @['FSATrace']@.
 data FSATrace
     = -- | Writing to a file
-      FSATWrite FilePath
+      FSAWrite FilePath
     | -- | Reading from a file
-      FSATRead FilePath
+      FSARead FilePath
     | -- | Deleting a file
-      FSATDelete FilePath
-      FSATMove FilePath FilePath
+      FSADelete FilePath
     | -- | Moving, arguments destination, then source
+      FSAMove FilePath FilePath
     | -- | Querying\/stat on a file
       FSAQuery FilePath
     | -- | Touching a file
@@ -229,12 +229,12 @@ data FSATrace
 
 
 -- | Parse the 'FSATrace' entries, ignoring anything you don't understand.
-parseFSAT :: String -> [FSATrace]
-parseFSAT = mapMaybe f . lines
-    where f ('w':'|':xs) = Just $ FSATWrite xs
-          f ('r':'|':xs) = Just $ FSATRead xs
-          f ('d':'|':xs) = Just $ FSATDelete xs
-          f ('m':'|':xs) | (xs,'|':ys) <- break (== '|') xs = Just $ FSATMove xs ys
+parseFSA :: String -> [FSATrace]
+parseFSA = mapMaybe f . lines
+    where f ('w':'|':xs) = Just $ FSAWrite xs
+          f ('r':'|':xs) = Just $ FSARead xs
+          f ('d':'|':xs) = Just $ FSADelete xs
+          f ('m':'|':xs) | (xs,'|':ys) <- break (== '|') xs = Just $ FSAMove xs ys
           f ('q':'|':xs) = Just $ FSAQuery xs
           f ('t':'|':xs) = Just $ FSATouch xs
           f _ = Nothing
@@ -272,7 +272,7 @@ commandExplicitAction oparams = do
 
             autodeps act = do
                 ResultFSATrace pxs : res <- act params{opts = addFSAOptions "r" opts, results = ResultFSATrace [] : results}
-                xs <- liftIO $ filterM doesFileExist [x | FSATRead x <- pxs]
+                xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs]
                 cwd <- liftIO getCurrentDirectory
                 unsafeAllowApply . need =<< fixPaths cwd xs
                 return res
@@ -284,8 +284,8 @@ commandExplicitAction oparams = do
 
             fsalint act = do
                 ResultFSATrace xs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
-                let reader (FSATRead x) = Just x; reader _ = Nothing
-                    writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
+                let reader (FSARead x) = Just x; reader _ = Nothing
+                    writer (FSAWrite x) = Just x; writer (FSAMove x _) = Just x; writer _ = Nothing
                     existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
                 cwd <- liftIO getCurrentDirectory
                 trackRead  =<< fixPaths cwd =<< existing reader xs
