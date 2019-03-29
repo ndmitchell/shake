@@ -223,7 +223,8 @@ commandExplicitAction funcName oopts results prog args = do
     skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO funcName opts results prog args
 
 
--- | Given a shell command, call the continuation with the sanitised exec-style arguments
+-- | Given a shell command, call the continuation with the sanitised exec-style arguments.
+--   On Windows the Haskell behaviour isn't that clean and is very fragile, so we try and do better.
 runShell :: String -> (String -> [String] -> Action a) -> Action a
 runShell x act | not isWindows = act "/bin/sh" ["-c",x] -- do exactly what Haskell does
 runShell x act = withTempDir $ \dir -> do
