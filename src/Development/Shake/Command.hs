@@ -312,7 +312,7 @@ commandExplicitIO CommandParams{..} = do
         fmap unzip3 $ forM results $ \r -> case r of
             ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
             ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
-            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine optRealCommand)
+            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine optUserCommand)
             ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ PID pid)
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
