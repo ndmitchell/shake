@@ -642,5 +642,5 @@ instance IsCmdArgument a => IsCmdArgument (Maybe a) where toCmdArgument = maybe 
 showCommandForUser2 :: FilePath -> [String] -> String
 showCommandForUser2 cmd args = unwords $ map (\x -> if safe x then x else showCommandForUser x []) $ cmd : args
     where
-        safe xs = not (null xs) && not (any bad xs)
+        safe xs = xs /= "" && not (any bad xs)
         bad x = isSpace x || (x == '\\' && not isWindows) || x `elem` "\"\'"
