@@ -288,7 +288,7 @@ italics = words "command-name file-name N"
 -- | Identifiers that indicate the fragment is a type
 types :: [String]
 types = words $
-    "MVar IO String FilePath Maybe [String] Char ExitCode Change " ++
+    "MVar IO String FilePath Maybe [String] FSATrace Char ExitCode Change " ++
     "Action Resource Rebuild FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
@@ -332,7 +332,7 @@ whitelist :: String -> Bool
 whitelist x | null x || isFilePath x || isCmdFlags x || isEnvVar x || isProgram x = True
 whitelist x | elem x $ words $
     "newtype do a q m c x value key os contents clean _make " ++
-    ".. /. // \\ //* dir/*/* dir " ++
+    ".. /. // \\ //* dir/*/* dir [ " ++
     "ConstraintKinds TemplateHaskell OverloadedLists OverloadedStrings GeneralizedNewtypeDeriving DeriveDataTypeable TypeFamilies SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath run " ++
     "NoProgress Error src about://tracing " ++
