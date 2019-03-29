@@ -118,9 +118,9 @@ instance Eq PID where _ == _ = True
 ---------------------------------------------------------------------
 -- ACTION EXPLICIT OPERATION
 
--- | Given explicit operations, apply the advance ones, like skip/trace/track/autodep
-commandExplicit :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicit funcName oopts results prog args = do
+-- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
+commandExplicitAction :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
+commandExplicitAction funcName oopts results prog args = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
@@ -536,13 +536,13 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
-command opts x xs = b <$> commandExplicit "command" opts a x xs
+command opts x xs = b <$> commandExplicitAction "command" opts a x xs
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
-command_ opts x xs = void $ commandExplicit "command_" opts [] x xs
+command_ opts x xs = void $ commandExplicitAction "command_" opts [] x xs
 
 
 ---------------------------------------------------------------------
@@ -615,7 +615,7 @@ instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments (CmdArgument x) = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicit "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitAction "cmd" opts a x xs
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdResult r => CmdArguments (IO r) where
     cmdArguments (CmdArgument x) = case partitionEithers x of
