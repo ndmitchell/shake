@@ -70,7 +70,7 @@ main = testBuild test $ do
         liftIO $ assertException ["BAD"] $ cmd helper "oo eBAD x" (EchoStdout False) (EchoStderr False)
         liftIO $ assertException ["MORE"] $ cmd helper "oMORE eBAD x" (WithStdout True) (WithStderr False) (EchoStdout False) (EchoStderr False)
 
-    "throws" ~> do
+    "throws" ~>
         cmd Shell "not_a_process foo"
 
     "cwd" !> do
