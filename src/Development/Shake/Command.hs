@@ -299,8 +299,9 @@ commandExplicitIO CommandParams{..} = do
     let optFileStderr = [x | FileStderr x <- opts]
     let optEchoStdout = last $ (not grabStdout && null optFileStdout) : [x | EchoStdout x <- opts]
     let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
+    let optRealCommand = showCommandForUser2 prog args
+    let optUserCommand = last $ optRealCommand : [x | UserCommand x <- opts]
 
-    let cmdline = showCommandForUser2 prog args
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
         buf Str{} = do x <- newBuffer; return ([DestString x | not optAsync], Str . concat <$> readBuffer x)
@@ -311,7 +312,7 @@ commandExplicitIO CommandParams{..} = do
         fmap unzip3 $ forM results $ \r -> case r of
             ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
             ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
-            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine cmdline)
+            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine optRealCommand)
             ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ PID pid)
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
@@ -339,7 +340,8 @@ commandExplicitIO CommandParams{..} = do
                 return $ "Current directory: " ++ v ++ "\n"
         fail $
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
-            "Command: " ++ cmdline ++ "\n" ++
+            "Command line: " ++ optRealCommand ++ "\n" ++
+            (if optRealCommand /= optUserCommand then "Original command line: " ++ optUserCommand ++ "\n" else "") ++
             cwd ++
             "Exit code: " ++ show (case exit of ExitFailure i -> i; _ -> 0) ++ "\n" ++
             if null captured then "Stderr not captured because WithStderr False was used\n"

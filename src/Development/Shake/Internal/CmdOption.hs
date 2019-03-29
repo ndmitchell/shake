@@ -25,4 +25,5 @@ data CmdOption
     | FileStdout FilePath -- ^ Should I put the @stdout@ to a file.
     | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
     | AutoDeps -- ^ Compute dependencies automatically.
+    | UserCommand String -- ^ The command the user thinks about, before any munging. Defaults to the actual command.
       deriving (Eq,Ord,Show,Data,Typeable)
