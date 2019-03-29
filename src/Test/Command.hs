@@ -70,6 +70,9 @@ main = testBuild test $ do
         liftIO $ assertException ["BAD"] $ cmd helper "oo eBAD x" (EchoStdout False) (EchoStderr False)
         liftIO $ assertException ["MORE"] $ cmd helper "oMORE eBAD x" (WithStdout True) (WithStderr False) (EchoStdout False) (EchoStderr False)
 
+    "throws" ~> do
+        cmd Shell "not_a_process foo"
+
     "cwd" !> do
         -- FIXME: Linux searches the Cwd argument for the file, Windows searches getCurrentDirectory
         helper <- liftIO $ canonicalizePath $ "helper/shake_helper" <.> exe
@@ -164,6 +167,8 @@ test build = do
     whenM hasTracker $
         build ["-j4","--no-lint"]
     build ["-j4"]
+
+    assertException ["not_a_process foo"] (build ["throws","--quiet"])
 
 
 timer :: (CmdResult r, MonadIO m) => (forall r . CmdResult r => m r) -> m r
