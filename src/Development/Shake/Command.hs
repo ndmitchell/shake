@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
-{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, DeriveDataTypeable, RecordWildCards #-}
 
 
 -- | This module provides functions for calling command line programs, primarily
@@ -115,17 +115,26 @@ data Result
 data PID = PID0 | PID ProcessHandle
 instance Eq PID where _ == _ = True
 
+data CommandParams = CommandParams
+    {funcName :: String
+    ,opts :: [CmdOption]
+    ,results :: [Result]
+    ,prog :: String
+    ,args :: [String]
+    }
+
+
 
 ---------------------------------------------------------------------
 -- ACTION EXPLICIT OPERATION
 
 -- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
-commandExplicitAction :: String -> [CmdOption] -> [Result] -> String -> [String] -> Action [Result]
-commandExplicitAction funcName oopts results prog args = do
+commandExplicitAction :: CommandParams -> Action [Result]
+commandExplicitAction CommandParams{..} = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    let fopts = shakeCommandOptions ++ oopts
+    let fopts = shakeCommandOptions ++ opts
     let useShell = Shell `elem` fopts
     let useLint = shakeLint == Just LintFSATrace
     let useAutoDeps = AutoDeps `elem` fopts
@@ -220,7 +229,7 @@ commandExplicitAction funcName oopts results prog args = do
             unsafeAllowApply $ need =<< liftIO (fixPaths cwd xs)
             return res
 
-    skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO funcName opts results prog args
+    skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO $ CommandParams funcName opts results prog args
 
 
 -- | Given a shell command, call the continuation with the sanitised exec-style arguments.
@@ -265,8 +274,8 @@ parseFSAT = mapMaybe f . lines
 -- IO EXPLICIT OPERATION
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
-commandExplicitIO :: String -> [CmdOption] -> [Result] -> String -> [String] -> IO [Result]
-commandExplicitIO funcName opts results prog args = do
+commandExplicitIO :: CommandParams -> IO [Result]
+commandExplicitIO CommandParams{..} = do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
@@ -545,13 +554,13 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
-command opts x xs = b <$> commandExplicitAction "command" opts a x xs
+command opts x xs = b <$> commandExplicitAction (CommandParams "command" opts a x xs)
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
-command_ opts x xs = void $ commandExplicitAction "command_" opts [] x xs
+command_ opts x xs = void $ commandExplicitAction (CommandParams "command_" opts [] x xs)
 
 
 ---------------------------------------------------------------------
@@ -624,11 +633,11 @@ instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments (CmdArgument x) = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitAction "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitAction (CommandParams "cmd" opts a x xs)
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdResult r => CmdArguments (IO r) where
     cmdArguments (CmdArgument x) = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO "cmd" opts a x xs
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO (CommandParams "cmd" opts a x xs)
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdArguments CmdArgument where
     cmdArguments = id
