@@ -124,17 +124,19 @@ data CommandParams = CommandParams
     ,args :: [String]
     }
 
+class MonadIO m => MonadTempDir m where runWithTempDir :: (FilePath -> m a) -> m a
+instance MonadTempDir IO where runWithTempDir = IO.withTempDir
+instance MonadTempDir Action where runWithTempDir = withTempDir
 
 ---------------------------------------------------------------------
 -- DEAL WITH Shell
 
 removeOptionShell
-    :: MonadIO m
+    :: MonadTempDir m
     => CommandParams -- ^ Given the parameter
-    -> ((FilePath -> m a) -> m a) -- ^ And withTempDir
     -> (CommandParams -> m a) -- ^ Call with the revised params, program name and command line
     -> m a
-removeOptionShell params@CommandParams{..} withTempDir call
+removeOptionShell params@CommandParams{..} call
     | Shell `elem` opts = do
         -- put our UserCommand first, as the last one wins, and ours is lowest priority
         let cmdline = unwords $ prog : args
@@ -143,7 +145,7 @@ removeOptionShell params@CommandParams{..} withTempDir call
             call params{prog = "/bin/sh", args = ["-c",cmdline]}
         else
             -- On Windows the Haskell behaviour isn't that clean and is very fragile, so we try and do better.
-            withTempDir $ \dir -> do
+            runWithTempDir $ \dir -> do
                 let file = dir </> "s.bat"
                 writeFile' file cmdline
                 call params{prog = "cmd.exe", args = ["/d/q/c",file]}
@@ -159,7 +161,7 @@ commandExplicitAction oparams = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} withTempDir $ \CommandParams{..} -> do
+    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} $ \CommandParams{..} -> do
         let useLint = shakeLint == Just LintFSATrace
         let useAutoDeps = AutoDeps `elem` opts
 
@@ -284,7 +286,7 @@ parseFSAT = mapMaybe f . lines
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
 commandExplicitIO :: CommandParams -> IO [Result]
-commandExplicitIO params = removeOptionShell params IO.withTempDir $ \CommandParams{..} -> do
+commandExplicitIO params = removeOptionShell params $ \CommandParams{..} -> do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
