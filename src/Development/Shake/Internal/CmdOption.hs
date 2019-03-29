@@ -26,5 +26,5 @@ data CmdOption
     | FileStderr FilePath -- ^ Should I put the @stderr@ to a file.
     | AutoDeps -- ^ Compute dependencies automatically.
     | UserCommand String -- ^ The command the user thinks about, before any munging. Defaults to the actual command.
-    | FSAOptions String -- ^ Options to @fsatrace@, a list of strings with characters such as @r@ (reads) @w@ (writes). Defaults to @rwmdqt@ if the output of @fsatrace@ is required.
+    | FSAOptions String -- ^ Options to @fsatrace@, a list of strings with characters such as @\"r\"@ (reads) @\"w\"@ (writes). Defaults to @\"rwmdqt\"@ if the output of @fsatrace@ is required.
       deriving (Eq,Ord,Show,Data,Typeable)
