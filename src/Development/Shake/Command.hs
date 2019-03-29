@@ -173,7 +173,7 @@ removeOptionFSATrace params@Params{..} call
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
         cwd <- liftIO getCurrentDirectory
         fsaRes <- liftIO $ parseFSA <$> readFileUTF8' file
-        replace [ResultFSATrace []] [ResultFSATrace fsaRes] <$> call params
+        return $ replace [ResultFSATrace []] [ResultFSATrace fsaRes] res
     where
         fsaFlags = fromMaybe "rwmdqt" fsaOptions
         fsaOptions = last $ Nothing : [Just x | FSAOptions x <- opts]
