@@ -90,7 +90,7 @@ addEnv extra = do
     return $ Env $ extra ++ filter (\(a,_) -> a `notElem` map fst extra) args
 
 
-data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving Eq
+data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving (Eq,Show)
 
 strTrim :: Str -> Str
 strTrim (Str x) = Str $ trim x
@@ -111,10 +111,12 @@ data Result
     | ResultTime Double
     | ResultLine String
     | ResultProcess PID
-      deriving Eq
+    | ResultFSATrace [FSATrace FilePath]
+      deriving (Eq,Show)
 
 data PID = PID0 | PID ProcessHandle
 instance Eq PID where _ == _ = True
+instance Show PID where show PID0 = "PID0"; show _ = "PID"
 
 data Params = Params
     {funcName :: String
@@ -122,7 +124,7 @@ data Params = Params
     ,results :: [Result]
     ,prog :: String
     ,args :: [String]
-    }
+    } deriving Show
 
 class MonadIO m => MonadTempDir m where runWithTempDir :: (FilePath -> m a) -> m a
 instance MonadTempDir IO where runWithTempDir = IO.withTempDir
