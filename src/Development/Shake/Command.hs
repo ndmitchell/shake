@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
-{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 
 -- | This module provides functions for calling command line programs, primarily
@@ -25,6 +25,7 @@ import Data.Char
 import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
+import Data.Data
 import Data.Semigroup (Semigroup)
 import System.Directory
 import System.Environment
@@ -231,17 +232,24 @@ runShell x act = withTempDir $ \dir -> do
     act "cmd.exe" ["/d/q/c",file]
 
 
--- | Parse the FSATrace structure
+-- | The results produced by @fsatrace@.
 data FSATrace
-    = FSATWrite FilePath
-    | FSATRead FilePath
-    | FSATDelete FilePath
-    | FSATMove FilePath FilePath
-    | FSAQuery FilePath
-    | FSATouch FilePath
-      deriving Show
+    = -- | Writing to a file
+      FSATWrite FilePath
+    | -- | Reading from a file
+      FSATRead FilePath
+    | -- | Deleting a file
+      FSATDelete FilePath
+    | -- | Moving from\/to
+      FSATMove FilePath FilePath
+    | -- | Querying\/stat on a file
+      FSAQuery FilePath
+    | -- | Touching a file
+      FSATouch FilePath
+      deriving (Show,Eq,Ord,Data,Typeable)
 
--- | Parse the 'FSAT' entries, ignoring anything you don't understand.
+
+-- | Parse the 'FSATrace' entries, ignoring anything you don't understand.
 parseFSAT :: String -> [FSATrace]
 parseFSAT = mapMaybe f . lines
     where f ('w':'|':xs) = Just $ FSATWrite xs
