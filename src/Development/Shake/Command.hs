@@ -116,7 +116,7 @@ data Result
 data PID = PID0 | PID ProcessHandle
 instance Eq PID where _ == _ = True
 
-data CommandParams = CommandParams
+data Params = Params
     {funcName :: String
     ,opts :: [CmdOption]
     ,results :: [Result]
@@ -133,10 +133,10 @@ instance MonadTempDir Action where runWithTempDir = withTempDir
 
 removeOptionShell
     :: MonadTempDir m
-    => CommandParams -- ^ Given the parameter
-    -> (CommandParams -> m a) -- ^ Call with the revised params, program name and command line
+    => Params -- ^ Given the parameter
+    -> (Params -> m a) -- ^ Call with the revised params, program name and command line
     -> m a
-removeOptionShell params@CommandParams{..} call
+removeOptionShell params@Params{..} call
     | Shell `elem` opts = do
         -- put our UserCommand first, as the last one wins, and ours is lowest priority
         let cmdline = unwords $ prog : args
@@ -156,12 +156,12 @@ removeOptionShell params@CommandParams{..} call
 -- ACTION EXPLICIT OPERATION
 
 -- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
-commandExplicitAction :: CommandParams -> Action [Result]
+commandExplicitAction :: Params -> Action [Result]
 commandExplicitAction oparams = do
     ShakeOptions
         {shakeCommandOptions,shakeRunCommands
         ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} $ \CommandParams{..} -> do
+    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} $ \Params{..} -> do
         let useLint = shakeLint == Just LintFSATrace
         let useAutoDeps = AutoDeps `elem` opts
 
@@ -245,11 +245,11 @@ commandExplicitAction oparams = do
                 unsafeAllowApply $ need =<< liftIO (fixPaths cwd xs)
                 return res
 
-        skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO $ CommandParams funcName opts results prog args
+        skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO $ Params funcName opts results prog args
 
 
-defaultTraced :: CommandParams -> String
-defaultTraced CommandParams{..} = takeBaseName $ if Shell `elem` opts then fst (word1 prog) else prog
+defaultTraced :: Params -> String
+defaultTraced Params{..} = takeBaseName $ if Shell `elem` opts then fst (word1 prog) else prog
 
 
 
@@ -285,8 +285,8 @@ parseFSAT = mapMaybe f . lines
 -- IO EXPLICIT OPERATION
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
-commandExplicitIO :: CommandParams -> IO [Result]
-commandExplicitIO params = removeOptionShell params $ \CommandParams{..} -> do
+commandExplicitIO :: Params -> IO [Result]
+commandExplicitIO params = removeOptionShell params $ \Params{..} -> do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
@@ -566,13 +566,13 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
 command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
-command opts x xs = b <$> commandExplicitAction (CommandParams "command" opts a x xs)
+command opts x xs = b <$> commandExplicitAction (Params "command" opts a x xs)
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
 command_ :: [CmdOption] -> String -> [String] -> Action ()
-command_ opts x xs = void $ commandExplicitAction (CommandParams "command_" opts [] x xs)
+command_ opts x xs = void $ commandExplicitAction (Params "command_" opts [] x xs)
 
 
 ---------------------------------------------------------------------
@@ -645,11 +645,11 @@ instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
     cmdArguments (CmdArgument x) = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitAction (CommandParams "cmd" opts a x xs)
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitAction (Params "cmd" opts a x xs)
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdResult r => CmdArguments (IO r) where
     cmdArguments (CmdArgument x) = case partitionEithers x of
-        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO (CommandParams "cmd" opts a x xs)
+        (opts, x:xs) -> let (a,b) = cmdResult in b <$> commandExplicitIO (Params "cmd" opts a x xs)
         _ -> error "Error, no executable or arguments given to Development.Shake.cmd"
 instance CmdArguments CmdArgument where
     cmdArguments = id
