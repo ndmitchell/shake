@@ -1,5 +1,7 @@
 Changelog for Shake (* = breaking change)
 
+    Make FSATrace available as a result type
+    Commands which have AutoDeps aren't also linted
     #278, add StdoutTrim - like Stdout, but with trim applied
     #659, require base >= 4.8
 0.17.7, released 2019-03-18

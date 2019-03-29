@@ -13,7 +13,7 @@
 --   You should only need to import this module if you are using the 'cmd' function in the 'IO' monad.
 module Development.Shake.Command(
     command, command_, cmd, cmd_, unit, CmdArgument(..), CmdArguments(..), IsCmdArgument(..), (:->),
-    Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
+    Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..), FSATrace(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
     ) where
@@ -45,7 +45,6 @@ import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Core.Action
 import Development.Shake.Internal.Core.Types hiding (Result)
 import Development.Shake.FilePath
-import Development.Shake.Internal.FilePattern
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Derived
@@ -111,7 +110,7 @@ data Result
     | ResultTime Double
     | ResultLine String
     | ResultProcess PID
-    | ResultFSATrace [FSATrace FilePath]
+    | ResultFSATrace [FSATrace]
       deriving (Eq,Show)
 
 data PID = PID0 | PID ProcessHandle
@@ -155,107 +154,64 @@ removeOptionShell params@Params{..} call
 
 
 ---------------------------------------------------------------------
--- ACTION EXPLICIT OPERATION
+-- DEAL WITH FSATrace
 
--- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
-commandExplicitAction :: Params -> Action [Result]
-commandExplicitAction oparams = do
-    ShakeOptions
-        {shakeCommandOptions,shakeRunCommands
-        ,shakeLint,shakeLintInside,shakeLintIgnore} <- getShakeOptions
-    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} $ \Params{..} -> do
-        let useLint = shakeLint == Just LintFSATrace
-        let useAutoDeps = AutoDeps `elem` opts
+removeOptionFSATrace
+    :: MonadTempDir m
+    => Params -- ^ Given the parameter
+    -> (Params -> m [Result]) -- ^ Call with the revised params, program name and command line
+    -> m [Result]
+removeOptionFSATrace params@Params{..} call
+    | ResultFSATrace [] `notElem` results && isNothing fsaOptions = call params
+    | ResultProcess PID0 `elem` results =
+        -- This is a bad state to get into, you could technically just ignore the tracing, but that's a bit dangerous
+        fail $ "Asyncronous process execution combined with FSATrace is not support"
+    | otherwise = runWithTempDir $ \dir -> do
+        let file = dir </> "fsatrace.txt"
+        liftIO $ writeFile file "" -- ensures even if we fail before fsatrace opens the file, we can still read it
+        params <- liftIO $ fsaParams file params
+        res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
+        cwd <- liftIO getCurrentDirectory
+        fsaRes <- liftIO $ parseFSAT <$> readFileUTF8' file
+        replace [ResultFSATrace []] [ResultFSATrace fsaRes] <$> call params
+    where
+        fsaFlags = fromMaybe "rwmdqt" fsaOptions
+        fsaOptions = last $ Nothing : [Just x | FSAOptions x <- opts]
 
-        let skipper act = if null results && not shakeRunCommands then return [] else act
+        fsaParams file Params{..} = do
+            prog <- copyProgMac prog
+            return params{prog = "fsatrace", args = fsaFlags : file : "--" : prog : args }
 
-        let verboser act = do
-                let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
-                putLoud $
-                    maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
-                    last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
-                verb <- getVerbosity
-                -- run quietly to supress the tracer (don't want to print twice)
-                (if verb >= Loud then quietly else id) act
+        -- Mac disables tracing on system binaries, so we copy them over, yurk
+        copyProgMac prog
+            | not isMac = return prog
+            | otherwise = do
+                progFull <- findExecutable prog
+                case progFull of
+                    Just x | any (`isPrefixOf` x) ["/bin/","/usr/","/sbin/"] -> do
+                        -- The file is one of the ones we can't trace, so we make a copy of it in $TMP and run that
+                        -- We deliberately don't clean up this directory, since otherwise we spend all our time copying binaries over
+                        tmpdir <- getTemporaryDirectory
+                        let fake = tmpdir </> "fsatrace-fakes" </> x
+                        unlessM (doesFileExist fake) $ do
+                            createDirectoryRecursive $ takeDirectory fake
+                            copyFile x fake
+                        return fake
+                    _ -> return prog
 
-        let tracer act = do
-                -- note: use the oparams - find a good tracing before munging it for shell stuff
-                let msg = last $ defaultTraced oparams : [x | Traced x <- opts]
-                if msg == "" then liftIO act else traced msg act
+isFSAOptions FSAOptions{} = True
+isFSAOptions _ = False
 
-        let tracker act
-                | useLint = fsatrace act
-                | useAutoDeps = autodeps act
-                | otherwise = act prog args
-
-            -- Want to turn this path (which is absolute) into a relative path (if at all possible)
-            -- and check it is covered by shakeLintInside, but isn't covered by shakeLintIngore
-            fixPaths cwd xs = do
-                xs <- return $ map toStandard xs
-                xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
-                mapMaybeM (makeRelativeEx cwd) xs
-
-            fsaCmd act opts file
-                | isMac = fsaCmdMac act opts file
-                | otherwise = act "fsatrace" $ opts : file : "--" : prog : args
-
-            fsaCmdMac act opts file = do
-                let fakeExe e = liftIO $ do
-                        me <- findExecutable e
-                        case me of
-                            Just re -> do
-                                let isSystem = any (`isPrefixOf` re) [ "/bin"
-                                                                    , "/usr"
-                                                                    , "/sbin"
-                                                                    ]
-                                if isSystem
-                                    then do
-                                        tmpdir <- getTemporaryDirectory
-                                        let fake = tmpdir ++ "fsatrace-fakes" ++ re
-                                        unlessM (doesFileExist fake) $ do
-                                            createDirectoryRecursive $ takeDirectory fake
-                                            copyFile re fake
-                                        return fake
-                                    else return re
-                            Nothing -> return e
-                fexe <- fakeExe prog
-                act "fsatrace" $ opts : file : "--" : fexe : args
-
-            fsatrace act = withTempFile $ \file -> do
-                res <- fsaCmd act "rwm" file
-                xs <- liftIO $ parseFSAT <$> readFileUTF8' file
-                cwd <- liftIO getCurrentDirectory
-                let reader (FSATRead x) = Just x; reader _ = Nothing
-                    writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
-                    existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
-                rs <- existing reader xs
-                ws <- existing writer xs
-                reads  <- liftIO $ fixPaths cwd rs
-                writes <- liftIO $ fixPaths cwd ws
-                when useAutoDeps $ do
-                    let ignore = (?==*) shakeLintIgnore
-                    unsafeAllowApply $ needed $ filter (not . ignore) reads
-                trackRead reads
-                trackWrite writes
-                return res
-
-            autodeps act = withTempFile $ \file -> do
-                res <-  fsaCmd act "r" file
-                pxs <- liftIO $ parseFSAT <$> readFileUTF8' file
-                xs <- liftIO $ filterM doesFileExist [x | FSATRead x <- pxs]
-                cwd <- liftIO getCurrentDirectory
-                unsafeAllowApply $ need =<< liftIO (fixPaths cwd xs)
-                return res
-
-        skipper $ tracker $ \prog args -> verboser $ tracer $ commandExplicitIO $ Params funcName opts results prog args
+addFSAOptions :: String -> [CmdOption] -> [CmdOption]
+addFSAOptions x opts | any isFSAOptions opts = map f opts
+    where f (FSAOptions y) = FSAOptions $ nubOrd $ y ++ x
+          f x = x
+addFSAOptions x opts = FSAOptions x : opts
 
 
-defaultTraced :: Params -> String
-defaultTraced Params{..} = takeBaseName $ if Shell `elem` opts then fst (word1 prog) else prog
-
-
-
--- | The results produced by @fsatrace@.
+-- | The results produced by @fsatrace@. All files will be absolute paths.
+--   You can get the results for a 'cmd' by requesting a value of type
+--   @['FSATrace']@.
 data FSATrace
     = -- | Writing to a file
       FSATWrite FilePath
@@ -283,12 +239,72 @@ parseFSAT = mapMaybe f . lines
           f ('t':'|':xs) = Just $ FSATouch xs
           f _ = Nothing
 
+
+---------------------------------------------------------------------
+-- ACTION EXPLICIT OPERATION
+
+-- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
+commandExplicitAction :: Params -> Action [Result]
+commandExplicitAction oparams = do
+    ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside} <- getShakeOptions
+    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} $ \params@Params{..} -> do
+        let skipper act = if null results && not shakeRunCommands then return [] else act
+
+        let verboser act = do
+                let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
+                putLoud $
+                    maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
+                    last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
+                verb <- getVerbosity
+                -- run quietly to supress the tracer (don't want to print twice)
+                (if verb >= Loud then quietly else id) act
+
+        let tracer act = do
+                -- note: use the oparams - find a good tracing before munging it for shell stuff
+                let msg = last $ defaultTraced oparams : [x | Traced x <- opts]
+                if msg == "" then liftIO act else traced msg act
+
+        let async = ResultProcess PID0 `elem` results
+        let tracker act
+                | AutoDeps `elem` opts = if async then fail "Can't use AutoDeps and asyncronous execution" else autodeps act
+                | shakeLint == Just LintFSATrace && not async = fsalint act
+                | otherwise = act params
+
+            autodeps act = do
+                ResultFSATrace pxs : res <- act params{opts = addFSAOptions "r" opts, results = ResultFSATrace [] : results}
+                xs <- liftIO $ filterM doesFileExist [x | FSATRead x <- pxs]
+                cwd <- liftIO getCurrentDirectory
+                unsafeAllowApply . need =<< fixPaths cwd xs
+                return res
+
+            fixPaths cwd xs = liftIO $ do
+                xs <- return $ map toStandard xs
+                xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
+                mapM (\x -> fromMaybe x <$> makeRelativeEx cwd x) xs
+
+            fsalint act = do
+                ResultFSATrace xs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
+                let reader (FSATRead x) = Just x; reader _ = Nothing
+                    writer (FSATWrite x) = Just x; writer (FSATMove x _) = Just x; writer _ = Nothing
+                    existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
+                cwd <- liftIO getCurrentDirectory
+                trackRead  =<< fixPaths cwd =<< existing reader xs
+                trackWrite =<< fixPaths cwd =<< existing writer xs
+                return res
+
+        skipper $ tracker $ \params -> verboser $ tracer $ commandExplicitIO params
+
+
+defaultTraced :: Params -> String
+defaultTraced Params{..} = takeBaseName $ if Shell `elem` opts then fst (word1 prog) else prog
+
+
 ---------------------------------------------------------------------
 -- IO EXPLICIT OPERATION
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
 commandExplicitIO :: Params -> IO [Result]
-commandExplicitIO params = removeOptionShell params $ \Params{..} -> do
+commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSATrace params $ \Params{..} -> do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
@@ -329,6 +345,7 @@ commandExplicitIO params = removeOptionShell params $ \Params{..} -> do
             ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
+            ResultFSATrace _ -> return ([], [], \_ _ _ -> return $ ResultFSATrace []) -- filled in elsewhere
 
     exceptionBuffer <- newBuffer
     po <- resolvePath ProcessOpts
@@ -507,6 +524,9 @@ instance CmdResult CmdLine where
 
 instance CmdResult CmdTime where
     cmdResult = ([ResultTime 0], \[ResultTime x] -> CmdTime x)
+
+instance CmdResult [FSATrace] where
+    cmdResult = ([ResultFSATrace []], \[ResultFSATrace x] -> x)
 
 instance CmdString a => CmdResult (Stdout a) where
     cmdResult = let (a,b) = cmdString in ([ResultStdout a], \[ResultStdout x] -> Stdout $ b x)
