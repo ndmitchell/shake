@@ -219,8 +219,8 @@ data FSATrace
       FSATRead FilePath
     | -- | Deleting a file
       FSATDelete FilePath
-    | -- | Moving from\/to
       FSATMove FilePath FilePath
+    | -- | Moving, arguments destination, then source
     | -- | Querying\/stat on a file
       FSAQuery FilePath
     | -- | Touching a file
