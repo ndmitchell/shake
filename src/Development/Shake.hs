@@ -70,7 +70,7 @@ module Development.Shake(
     Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
     -- * Running commands
     command, command_, cmd, cmd_, unit,
-    Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..),
+    Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..), FSATrace(..),
     CmdResult, CmdString, CmdOption(..),
     addPath, addEnv,
     -- * Explicit parallelism
