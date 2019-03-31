@@ -12,4 +12,4 @@ main = testSimple $ rattle $ do
     let toO x = takeBaseName x <.> "o"
     forM_ cs $ \c -> cmd ["gcc","-o",toO c,"-c",c]
     cmd $ ["gcc","-o","Main" <.> exe] ++ map toO cs
-    cmd ["Main" <.> exe]
+    cmd ["./Main" <.> exe]
