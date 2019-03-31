@@ -11,5 +11,5 @@ main = testSimple $ rattle $ do
     cs <- liftIO $ getDirectoryFiles "." [shakeRoot </> "src/Test/C/*.c"]
     let toO x = takeBaseName x <.> "o"
     forM_ cs $ \c -> cmd ["gcc","-o",toO c,"-c",c]
-    cmd $ ["gcc","-o","Main.exe"] ++ map toO cs
-    cmd ["Main.exe"]
+    cmd $ ["gcc","-o","Main" <.> exe] ++ map toO cs
+    cmd ["Main" <.> exe]
