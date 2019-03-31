@@ -60,7 +60,7 @@ Shake is implemented as a Haskell library, and Shake build systems are structure
 Shake build systems can scale to tens of thousands of lines without becoming unwieldy.
 
 * Shake uses Haskell to provide facilities for properly structuring large projects. In particular, Shake build systems can use functions to reuse common functionality, modules to group functions into separate files and packages to allow reusing and sharing modules.
-* The types and utility functions provided by Shake eliminate certain classes of common error, making it harder express invalid build systems.
+* The types and utility functions provided by Shake eliminate certain classes of common error, making it harder to express invalid build systems.
 * The lint mode performs sanity checks of the build system, allowing errors to be caught sooner.
 
 #### Provides profiling information
@@ -71,7 +71,7 @@ Shake can generate profiling information allowing developers to both understand 
 * The report can be used to speed up by the build by identifying which commands are most expensive, which files cause most rebuilding and any bottlenecks in parallelism.
 * The report can examine details of the last run, providing information about what built and why.
 * Profiles are always recorded, allowing profile reports to be generated after a run completes, without requesting any "profiling mode" in advance. Shake ensures profiling information is recorded with no measurable performance impact.
-* Graphs can be generating showing dependencies, usually grouped by either file type or location, making it easy to see the overall structure of the build.
+* Graphs can be generated showing dependencies, usually grouped by either file type or location, making it easy to see the overall structure of the build.
 * Reports can be mined using a powerful querying language to determine custom information about your build.
 
 #### Why not?
