@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Development.Rattle(
     rattle,
@@ -13,7 +12,6 @@ import Control.Monad.IO.Class
 import Control.Monad.Extra
 import System.IO.Error
 import System.IO.Extra
-import Data.Hashable
 import Control.Exception.Extra
 import qualified Development.Shake.Command as C
 import qualified Data.HashMap.Strict as Map
@@ -95,9 +93,6 @@ fsaRW (C.FSAMove x y) = ([], [x,y])
 fsaRW (C.FSAQuery x) = ([x], [])
 fsaRW (C.FSATouch x) = ([], [x])
 
-instance Hashable UTCTime where
-    hashWithSalt salt = hashWithSalt salt . show
-
 data Cmd = Cmd
     {cmdArgs :: Args
     ,cmdRead :: [(FilePath, Maybe UTCTime)]
@@ -120,11 +115,11 @@ rattle act = do
 --   You get a read/write hazard if there was a read of a file before a write.
 checkHazards :: [(T, T, Cmd)] -> IO ()
 checkHazards xs = do
-    let writeWrite = Map.filter (\args -> length args > 1) $ Map.fromListWith (++) [(x, [cmdArgs]) | (_,_,Cmd{..}) <- xs, x <- cmdWrite]
+    let writeWrite = Map.filter (\args -> length args > 1) $ Map.fromListWith (++) [(fst x, [cmdArgs]) | (_,_,Cmd{..}) <- xs, x <- cmdWrite]
     unless (Map.null writeWrite) $
         fail $ "Write/write: " ++ show writeWrite
 
-    let lastWrite = Map.fromList [(x, (end, cmdArgs)) | (_,end,Cmd{..}) <- xs, x <- cmdWrite]
-    let readWrite = [x | (start,_,Cmd{..}) <- xs, x <- cmdRead, Just (t, args) <- [Map.lookup x lastWrite], t >= start, args /= cmdArgs]
+    let lastWrite = Map.fromList [(fst x, (end, cmdArgs)) | (_,end,Cmd{..}) <- xs, x <- cmdWrite]
+    let readWrite = [x | (start,_,Cmd{..}) <- xs, x <- cmdRead, Just (t, args) <- [Map.lookup (fst x) lastWrite], t >= start, args /= cmdArgs]
     unless (null readWrite) $
         fail $ "Read/write: " ++ show readWrite
