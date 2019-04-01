@@ -258,52 +258,53 @@ parseFSA = mapMaybe f . lines
 commandExplicitAction :: Params -> Action [Result]
 commandExplicitAction oparams = do
     ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside} <- getShakeOptions
-    removeOptionShell oparams{opts = shakeCommandOptions ++ opts oparams} $ \params@Params{..} -> do
-        let skipper act = if null results && not shakeRunCommands then return [] else act
+    params@Params{..} <- return $ oparams{opts = shakeCommandOptions ++ opts oparams}
 
-        let verboser act = do
-                let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
-                putLoud $
-                    maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
-                    last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
-                verb <- getVerbosity
-                -- run quietly to supress the tracer (don't want to print twice)
-                (if verb >= Loud then quietly else id) act
+    let skipper act = if null results && not shakeRunCommands then return [] else act
 
-        let tracer act = do
-                -- note: use the oparams - find a good tracing before munging it for shell stuff
-                let msg = last $ defaultTraced oparams : [x | Traced x <- opts]
-                if msg == "" then liftIO act else traced msg act
+    let verboser act = do
+            let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
+            putLoud $
+                maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
+                last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
+            verb <- getVerbosity
+            -- run quietly to supress the tracer (don't want to print twice)
+            (if verb >= Loud then quietly else id) act
 
-        let async = ResultProcess PID0 `elem` results
-        let tracker act
-                | AutoDeps `elem` opts = if async then fail "Can't use AutoDeps and asyncronous execution" else autodeps act
-                | shakeLint == Just LintFSATrace && not async = fsalint act
-                | otherwise = act params
+    let tracer act = do
+            -- note: use the oparams - find a good tracing before munging it for shell stuff
+            let msg = last $ defaultTraced oparams : [x | Traced x <- opts]
+            if msg == "" then liftIO act else traced msg act
 
-            autodeps act = do
-                ResultFSATrace pxs : res <- act params{opts = addFSAOptions "r" opts, results = ResultFSATrace [] : results}
-                xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs]
-                cwd <- liftIO getCurrentDirectory
-                unsafeAllowApply . need =<< fixPaths cwd xs
-                return res
+    let async = ResultProcess PID0 `elem` results
+    let tracker act
+            | AutoDeps `elem` opts = if async then fail "Can't use AutoDeps and asyncronous execution" else autodeps act
+            | shakeLint == Just LintFSATrace && not async = fsalint act
+            | otherwise = act params
 
-            fixPaths cwd xs = liftIO $ do
-                xs <- return $ map toStandard xs
-                xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
-                mapM (\x -> fromMaybe x <$> makeRelativeEx cwd x) xs
+        autodeps act = do
+            ResultFSATrace pxs : res <- act params{opts = addFSAOptions "r" opts, results = ResultFSATrace [] : results}
+            xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs]
+            cwd <- liftIO getCurrentDirectory
+            unsafeAllowApply . need =<< fixPaths cwd xs
+            return res
 
-            fsalint act = do
-                ResultFSATrace xs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
-                let reader (FSARead x) = Just x; reader _ = Nothing
-                    writer (FSAWrite x) = Just x; writer (FSAMove x _) = Just x; writer _ = Nothing
-                    existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
-                cwd <- liftIO getCurrentDirectory
-                trackRead  =<< fixPaths cwd =<< existing reader xs
-                trackWrite =<< fixPaths cwd =<< existing writer xs
-                return res
+        fixPaths cwd xs = liftIO $ do
+            xs <- return $ map toStandard xs
+            xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
+            mapM (\x -> fromMaybe x <$> makeRelativeEx cwd x) xs
 
-        skipper $ tracker $ \params -> verboser $ tracer $ commandExplicitIO params
+        fsalint act = do
+            ResultFSATrace xs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
+            let reader (FSARead x) = Just x; reader _ = Nothing
+                writer (FSAWrite x) = Just x; writer (FSAMove x _) = Just x; writer _ = Nothing
+                existing f = liftIO . filterM doesFileExist . nubOrd . mapMaybe f
+            cwd <- liftIO getCurrentDirectory
+            trackRead  =<< fixPaths cwd =<< existing reader xs
+            trackWrite =<< fixPaths cwd =<< existing writer xs
+            return res
+
+    skipper $ tracker $ \params -> verboser $ tracer $ commandExplicitIO params
 
 
 defaultTraced :: Params -> String
