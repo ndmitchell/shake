@@ -194,7 +194,7 @@ removeOptionFSATrace params@Params{..} call
                         -- The file is one of the ones we can't trace, so we make a copy of it in $TMP and run that
                         -- We deliberately don't clean up this directory, since otherwise we spend all our time copying binaries over
                         tmpdir <- getTemporaryDirectory
-                        let fake = tmpdir </> "fsatrace-fakes" </> x
+                        let fake = tmpdir </> "fsatrace-fakes" ++ x -- x is absolute, so must use ++
                         unlessM (doesFileExist fake) $ do
                             createDirectoryRecursive $ takeDirectory fake
                             copyFile x fake
