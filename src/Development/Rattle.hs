@@ -33,7 +33,7 @@ newtype T = T Int -- timestamps
 
 data S = S
     {timestamp :: T -- the timestamp I am on
-    ,executed :: [(T, T, Cmd)]
+    ,finished :: [(T, T, Cmd)]
     ,history :: [Cmd]
     } deriving Show
 
@@ -50,7 +50,7 @@ getHistory = do
 addExecuted :: (T, T, Cmd) -> Run ()
 addExecuted x = do
     ref <- Run ask
-    liftIO $ atomicModifyIORef' ref $ \s -> (s{executed = x : executed s}, ())
+    liftIO $ atomicModifyIORef' ref $ \s -> (s{finished = x : finished s}, ())
 
 parallel :: [Run a] -> Run [a]
 parallel = sequence
@@ -110,7 +110,7 @@ rattle act = do
     history <- ifM (doesFileExist ".rattle") (map read . lines <$> readFile' ".rattle") (return [])
     ref <- newIORef $ S (T 0) [] history
     res <- flip runReaderT ref $ unRun act
-    cmds <- executed <$> readIORef ref
+    cmds <- finished <$> readIORef ref
     checkHazards cmds
     writeFile ".rattle" $ unlines $ reverse $ map (show . thd3) cmds
     return res
