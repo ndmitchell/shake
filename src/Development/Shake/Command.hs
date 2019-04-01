@@ -156,6 +156,9 @@ removeOptionShell params@Params{..} call
 ---------------------------------------------------------------------
 -- DEAL WITH FSATrace
 
+isFSATrace :: Params -> Bool
+isFSATrace Params{..} = ResultFSATrace [] `elem` results || any isFSAOptions opts
+
 -- Mac disables tracing on system binaries, so we copy them over, yurk
 copyFSABinary :: FilePath -> IO FilePath
 copyFSABinary prog
@@ -183,7 +186,7 @@ removeOptionFSATrace
     -> (Params -> m [Result]) -- ^ Call with the revised params, program name and command line
     -> m [Result]
 removeOptionFSATrace params@Params{..} call
-    | ResultFSATrace [] `notElem` results && isNothing fsaOptions = call params
+    | not $ isFSATrace params = call params
     | ResultProcess PID0 `elem` results =
         -- This is a bad state to get into, you could technically just ignore the tracing, but that's a bit dangerous
         fail "Asyncronous process execution combined with FSATrace is not support"
