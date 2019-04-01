@@ -140,15 +140,18 @@ removeOptionShell
 removeOptionShell params@Params{..} call
     | Shell `elem` opts = do
         -- put our UserCommand first, as the last one wins, and ours is lowest priority
-        let cmdline = unwords $ prog : args
-        params <- return params{opts = UserCommand cmdline : filter (/= Shell) opts}
+        let userCmdline = unwords $ prog : args
+        params <- return params{opts = UserCommand userCmdline : filter (/= Shell) opts}
+
+        prog <- liftIO $ if isFSATrace params then copyFSABinary prog else return prog
+        let realCmdline = unwords $ prog : args
         if not isWindows then
-            call params{prog = "/bin/sh", args = ["-c",cmdline]}
+            call params{prog = "/bin/sh", args = ["-c",realCmdline]}
         else
             -- On Windows the Haskell behaviour isn't that clean and is very fragile, so we try and do better.
             runWithTempDir $ \dir -> do
                 let file = dir </> "s.bat"
-                writeFile' file cmdline
+                writeFile' file realCmdline
                 call params{prog = "cmd.exe", args = ["/d/q/c",file]}
     | otherwise = call params
 
