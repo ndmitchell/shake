@@ -167,9 +167,7 @@ copyFSABinary :: FilePath -> IO FilePath
 copyFSABinary prog
     | not isMac = return prog
     | otherwise = do
-        putStrLn "Taking the Mac path"
         progFull <- findExecutable prog
-        putStrLn $ "Full path: " ++ show progFull
         case progFull of
             Just x | any (`isPrefixOf` x) ["/bin/","/usr/","/sbin/"] -> do
                 -- The file is one of the ones we can't trace, so we make a copy of it in $TMP and run that
@@ -179,7 +177,6 @@ copyFSABinary prog
                 unlessM (doesFileExist fake) $ do
                     createDirectoryRecursive $ takeDirectory fake
                     copyFile x fake
-                putStrLn $ "Using: " ++ fake
                 return fake
             _ -> return prog
 
