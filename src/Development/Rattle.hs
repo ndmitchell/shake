@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Development.Rattle(
     rattle,
@@ -33,8 +33,9 @@ newtype T = T Int -- timestamps
 
 data S = S
     {timestamp :: T -- the timestamp I am on
-    ,finished :: [(T, T, Cmd)]
-    ,history :: [Cmd]
+    ,running :: [Args] -- things that are running now
+    ,finished :: [(T, T, Cmd)] -- people who have finished
+    ,history :: [Cmd] -- what I ran last time around
     } deriving Show
 
 getTimestamp :: Run T
@@ -108,7 +109,7 @@ data Cmd = Cmd
 rattle :: Run a -> IO a
 rattle act = do
     history <- ifM (doesFileExist ".rattle") (map read . lines <$> readFile' ".rattle") (return [])
-    ref <- newIORef $ S (T 0) [] history
+    ref <- newIORef $ S (T 0) [] [] history
     res <- flip runReaderT ref $ unRun act
     cmds <- finished <$> readIORef ref
     checkHazards cmds
