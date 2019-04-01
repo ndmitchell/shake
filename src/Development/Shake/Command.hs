@@ -156,6 +156,27 @@ removeOptionShell params@Params{..} call
 ---------------------------------------------------------------------
 -- DEAL WITH FSATrace
 
+-- Mac disables tracing on system binaries, so we copy them over, yurk
+copyFSABinary :: FilePath -> IO FilePath
+copyFSABinary prog
+    | not isMac = return prog
+    | otherwise = do
+        putStrLn "Taking the Mac path"
+        progFull <- findExecutable prog
+        putStrLn $ "Full path: " ++ show progFull
+        case progFull of
+            Just x | any (`isPrefixOf` x) ["/bin/","/usr/","/sbin/"] -> do
+                -- The file is one of the ones we can't trace, so we make a copy of it in $TMP and run that
+                -- We deliberately don't clean up this directory, since otherwise we spend all our time copying binaries over
+                tmpdir <- getTemporaryDirectory
+                let fake = tmpdir </> "fsatrace-fakes" ++ x -- x is absolute, so must use ++
+                unlessM (doesFileExist fake) $ do
+                    createDirectoryRecursive $ takeDirectory fake
+                    copyFile x fake
+                putStrLn $ "Using: " ++ fake
+                return fake
+            _ -> return prog
+
 removeOptionFSATrace
     :: MonadTempDir m
     => Params -- ^ Given the parameter
@@ -179,28 +200,9 @@ removeOptionFSATrace params@Params{..} call
         fsaOptions = last $ Nothing : [Just x | FSAOptions x <- opts]
 
         fsaParams file Params{..} = do
-            prog <- copyProgMac prog
+            prog <- copyFSABinary prog
             return params{prog = "fsatrace", args = fsaFlags : file : "--" : prog : args }
 
-        -- Mac disables tracing on system binaries, so we copy them over, yurk
-        copyProgMac prog
-            | not isMac = return prog
-            | otherwise = do
-                putStrLn "Taking the Mac path"
-                progFull <- findExecutable prog
-                putStrLn $ "Full path: " ++ show progFull
-                case progFull of
-                    Just x | any (`isPrefixOf` x) ["/bin/","/usr/","/sbin/"] -> do
-                        -- The file is one of the ones we can't trace, so we make a copy of it in $TMP and run that
-                        -- We deliberately don't clean up this directory, since otherwise we spend all our time copying binaries over
-                        tmpdir <- getTemporaryDirectory
-                        let fake = tmpdir </> "fsatrace-fakes" ++ x -- x is absolute, so must use ++
-                        unlessM (doesFileExist fake) $ do
-                            createDirectoryRecursive $ takeDirectory fake
-                            copyFile x fake
-                        putStrLn $ "Using: " ++ fake
-                        return fake
-                    _ -> return prog
 
 isFSAOptions FSAOptions{} = True
 isFSAOptions _ = False
