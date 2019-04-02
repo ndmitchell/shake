@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Eliminate a corner case of losing exception messages
     Make FSATrace available as a result type
     Commands which have AutoDeps aren't also linted
     #278, add StdoutTrim - like Stdout, but with trim applied

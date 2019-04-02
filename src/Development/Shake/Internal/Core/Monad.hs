@@ -69,12 +69,14 @@ type Capture a = (a -> IO ()) -> IO ()
 runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
 runRAW ro rw m k = do
     rw <- newIORef rw
-    handler <- newIORef undefined
+    handler <- newIORef throwIO
     writeIORef handler $ \e -> do
         -- make sure we never call the error continuation twice
         writeIORef handler throwIO
         k $ Left e
-    goRAW handler ro rw m (k . Right)
+    -- If the continuation itself throws an error we need to make sure we
+    -- don't end up running it twice (once with its result, once with its own exception)
+    goRAW handler ro rw m (\v -> do writeIORef handler throwIO; k $ Right v)
         `catch_` \e -> ($ e) =<< readIORef handler
 
 goRAW :: forall ro rw a . IORef (SomeException -> IO ()) -> ro -> IORef rw -> RAW ro rw a -> Capture a

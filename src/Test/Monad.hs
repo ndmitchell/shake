@@ -89,3 +89,11 @@ main = testSimple $ do
                 k $ Left $ toException Overflow
             flip catchRAW (const $ liftIO $ modifyIORef ref ('y':)) $ throwRAW $ toException Overflow
     (===) "xyxyy" =<< readIORef ref
+
+    -- what if we throw an exception inside the continuation of run
+    ref <- newIORef 0
+    res <- try $ runRAW 1 "test" (return 1) $ \_ -> do
+        modifyIORef ref (+1)
+        throwIO Overflow
+    res === Left Overflow
+    (=== 1) =<< readIORef ref
