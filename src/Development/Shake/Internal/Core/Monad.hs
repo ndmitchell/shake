@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE GADTs, ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables, TupleSections #-}
 
 module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
@@ -11,6 +11,8 @@ module Development.Shake.Internal.Core.Monad(
 import Control.Exception.Extra
 import Control.Monad.IO.Class
 import Data.IORef
+import Control.Monad
+import System.IO
 import Data.Semigroup
 import Prelude
 
@@ -65,9 +67,26 @@ instance (Semigroup a, Monoid a) => Monoid (RAW ro rw a) where
 type Capture a = (a -> IO ()) -> IO ()
 
 
+-- Useful for checking that all continuations are run only once
+-- Cannot be enabled for performance reasons and because some of
+-- "monad test" deliberately breaks the invariant to check it doesn't go wrong
+assertOnceCheck = False
+
+assertOnce :: MonadIO m => String -> (a -> m b) -> IO (a -> m b)
+assertOnce msg k
+    | not assertOnceCheck = return k
+    | otherwise = do
+        ref <- liftIO $ newIORef False
+        return $ \v -> do
+            liftIO $ join $ atomicModifyIORef ref $ \old -> (True,) $ when old $ do
+                hPutStrLn stderr "FATAL ERROR: assertOnce failed"
+                Prelude.fail $ "assertOnce failed: " ++ msg
+            k v
+
 -- | Run and then call a continuation.
 runRAW :: ro -> rw -> RAW ro rw a -> Capture (Either SomeException a)
 runRAW ro rw m k = do
+    k <- assertOnce "runRAW" k
     rw <- newIORef rw
     handler <- newIORef throwIO
     writeIORef handler $ \e -> do
@@ -78,6 +97,7 @@ runRAW ro rw m k = do
     -- don't end up running it twice (once with its result, once with its own exception)
     goRAW handler ro rw m (\v -> do writeIORef handler throwIO; k $ Right v)
         `catch_` \e -> ($ e) =<< readIORef handler
+
 
 goRAW :: forall ro rw a . IORef (SomeException -> IO ()) -> ro -> IORef rw -> RAW ro rw a -> Capture a
 goRAW handler ro rw = go
@@ -97,6 +117,7 @@ goRAW handler ro rw = go
             ModifyRW f -> modifyIORef' rw f >> k ()
 
             CatchRAW m hdl -> do
+                hdl <- assertOnce "CatchRAW" hdl
                 old <- readIORef handler
                 writeIORef handler $ \e -> do
                     writeIORef handler old
@@ -105,6 +126,7 @@ goRAW handler ro rw = go
                 go m $ \x -> writeIORef handler old >> k x
 
             CaptureRAW f -> do
+                f <- assertOnce "CaptureRAW" f
                 old <- readIORef handler
                 writeIORef handler throwIO
                 f $ \x -> case x of
