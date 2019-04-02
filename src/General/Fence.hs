@@ -6,6 +6,8 @@ module General.Fence(
 
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Exception.Extra
+import Development.Shake.Internal.Errors
 import Data.Maybe
 import Data.Either.Extra
 import Data.IORef
@@ -21,10 +23,10 @@ instance Show (Fence m a) where show _ = "Fence"
 newFence :: MonadIO m => IO (Fence m a)
 newFence = Fence <$> newIORef (Left $ const $ return ())
 
-signalFence :: MonadIO m => Fence m a -> a -> m ()
+signalFence :: (Partial, MonadIO m) => Fence m a -> a -> m ()
 signalFence (Fence ref) v = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of
     Left queue -> (Right v, queue v)
-    Right _ -> error "Shake internal error, signalFence called twice on one Fence"
+    Right _ -> throwImpure $ errorInternal "signalFence called twice on one Fence"
 
 waitFence :: MonadIO m => Fence m a -> (a -> m ()) -> m ()
 waitFence (Fence ref) call = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of
