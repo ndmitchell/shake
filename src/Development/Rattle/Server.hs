@@ -86,7 +86,6 @@ cmdRattle (Rattle opts ref) args = do
             xs :: [C.FSATrace] <- liftIO $ C.cmd args
             let (reads, writes) = both (nubOrd . concat) $ unzip $ map fsaRW xs
             let f xs = liftIO $ forM xs $ \x -> (x,) <$> getModTime x
-            -- explicitly add back in the program beacuse of https://github.com/jacereda/fsatrace/issues/19
             reads <- f reads
             writes <- f writes
             return $ Cmd args reads writes
