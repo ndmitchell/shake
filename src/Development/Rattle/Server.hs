@@ -81,7 +81,7 @@ withRattle options@RattleOptions{..} act = do
 
 
 runSpeculate :: Rattle -> IO ()
-runSpeculate Rattle{..} = do
+runSpeculate Rattle{..} =
     -- speculate on a process iff it is the first process in speculate that:
     -- 1) we have some parallelism free
     -- 2) it is the first eligible in the list
@@ -92,7 +92,6 @@ runSpeculate Rattle{..} = do
         Just x {- | length (running s) < rattleThreads options -} ->
             (s, return ())
         _ -> (s, return ())
-    void $ evaluate Speculative
 
 
 nextSpeculate :: S -> Maybe Args

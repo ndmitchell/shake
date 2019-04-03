@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Development.Rattle(
     rattle,
