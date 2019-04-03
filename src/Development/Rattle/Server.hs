@@ -141,7 +141,7 @@ cmdRattle rattle@Rattle{..} args = do
                     putStrLn $ unwords $ "#" : args
                     xs :: [C.FSATrace] <- C.cmd args
                     let (reads, writes) = both (nubOrd . concat) $ unzip $ map fsaRW xs
-                    let f xs = forM xs $ \x -> (x,) <$> getModTime x
+                    let f xs = forM (filter (not . isPrefixOf "/dev/") xs) $ \x -> (x,) <$> getModTime x
                     reads <- f reads
                     writes <- f writes
                     let cmd = Trace reads writes
