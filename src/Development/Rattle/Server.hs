@@ -102,6 +102,8 @@ cmdRattle rattle@Rattle{..} args = do
             return cmd
     stop <- getTimestamp state
     atomicModifyIORef' state $ \s -> (s{finished = (start, stop, cmd) : finished s, running = filter ((/=) start . fst) $ running s}, ())
+    runSpeculate rattle
+
 
 getModTime :: FilePath -> IO (Maybe UTCTime)
 getModTime x = handleBool isDoesNotExistError (const $ return Nothing) (Just <$> getModificationTime x)
