@@ -51,7 +51,7 @@ data Reason = Speculative | Required
 
 data S = S
     {timestamp :: !T -- ^ The current timestamp we are on
-    ,history :: [Cmd] -- ^ Commands that got run previously, in all speculation worlds
+    ,history :: Map.HashMap Args [Cmd] -- ^ Commands that got run previously, in all speculation worlds
     ,speculate :: [Args] -- ^ Things that were used in the last speculation with this name
     ,running :: [(Reason, T, Args)] -- ^ Commands that are running at the moment and when they started
     ,finished :: [(Reason, T, T, Cmd)] -- ^ Commands that have finished
@@ -66,7 +66,7 @@ data Rattle = Rattle
 
 withRattle :: RattleOptions -> (Rattle -> IO a) -> IO a
 withRattle options@RattleOptions{..} act = do
-    history <- loadHistory options
+    history <- (\xs -> Map.fromListWith (++) [(cmdArgs x, [x]) | x <- xs]) <$> loadHistory options
     speculate <- loadSpeculate options
     state <- newIORef $ S (T 0) history speculate [] [] []
     lock <- newLock
@@ -79,7 +79,7 @@ withRattle options@RattleOptions{..} act = do
 
 
 runSpeculate :: Rattle -> IO ()
-runSpeculate Rattle{..} =
+runSpeculate Rattle{..} = do
     -- speculate on a process iff it is the first process in speculate that:
     -- 1) we have some parallelism free
     -- 2) it is the first eligible in the list
@@ -90,15 +90,14 @@ runSpeculate Rattle{..} =
         Just x | length (running s) < rattleThreads options ->
             (s, return ())
         _ -> (s, return ())
+    void $ evaluate Speculative
 
 
 nextSpeculate :: S -> Maybe Args
 nextSpeculate S{..} = do w <- runningWrites; f w speculate
     where
-        getReads x  = if null prev then Nothing else Just $ map fst $ concatMap cmdRead prev
-            where prev = filter ((==) x . cmdArgs) history
-        getWrites x  = if null prev then Nothing else Just $ map fst $ concatMap cmdWrite prev
-            where prev = filter ((==) x . cmdArgs) history
+        getReads x = map fst . concatMap cmdRead <$> Map.lookup x history
+        getWrites x = map fst . concatMap cmdWrite <$> Map.lookup x history
 
         runningOrFinished = Set.fromList $ [x | (_,_,x) <- running] ++ [cmdArgs x | (_,_,_,x) <- finished]
         runningWrites = Set.fromList <$> concatMapM (getWrites . thd3) running
@@ -128,9 +127,8 @@ cmdRattle rattle@Rattle{..} args = do
             else (s{running = (Required, start, args) : running s, required = args : required s}, True)
     when run $ do
         history <- history <$> readIORef state
-        skip <- flip firstJustM history $ \cmd@Cmd{..} -> do
-            let conds = (return $ args == cmdArgs) :
-                        [(== time) <$> getModTime file | (file,time) <- cmdRead ++ cmdWrite]
+        skip <- flip firstJustM (Map.lookupDefault [] args history) $ \cmd@Cmd{..} -> do
+            let conds = [(== time) <$> getModTime file | (file,time) <- cmdRead ++ cmdWrite]
             ifM (andM conds) (return $ Just cmd) (return Nothing)
         cmd <- case skip of
             Just cmd ->
