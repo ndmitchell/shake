@@ -361,6 +361,7 @@ test-suite shake-test
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Rattle
+        Development.Rattle.Server
         Development.Shake
         Development.Shake.Classes
         Development.Shake.Command
