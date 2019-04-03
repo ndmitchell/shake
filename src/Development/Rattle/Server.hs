@@ -6,10 +6,13 @@ module Development.Rattle.Server(
     cmdRattle
     ) where
 
-import Control.Monad.IO.Class
 import Control.Monad.Extra
 import System.IO.Error
 import Control.Exception.Extra
+import Control.Concurrent.Extra
+import General.Extra
+import System.FilePath
+import System.IO.Extra
 import qualified Development.Shake.Command as C
 import qualified Data.HashMap.Strict as Map
 import Data.IORef
@@ -49,15 +52,21 @@ data S = S
     ,required :: [Args] -- ^ Things what were required, not due to speculation
     }
 
-data Rattle = Rattle RattleOptions (IORef S)
+data Rattle = Rattle
+    {options :: RattleOptions
+    ,state :: IORef S
+    ,lock :: Lock
+    }
 
 withRattle :: RattleOptions -> (Rattle -> IO a) -> IO a
-withRattle opts@RattleOptions{..} act = do
-    ref <- newIORef $ S (T 0) [] [] [] [] []
-    let r = Rattle opts ref
+withRattle options@RattleOptions{..} act = do
+    history <- loadHistory options
+    state <- newIORef $ S (T 0) history [] [] [] []
+    lock <- newLock
+    let r = Rattle{..}
     runSpeculate r
     res <- act r
-    checkHazards . finished =<< readIORef ref
+    checkHazards . finished =<< readIORef state
     return res
 
 
@@ -67,30 +76,32 @@ runSpeculate _ = do
     return ()
 
 getTimestamp :: IORef S -> IO T
-getTimestamp ref = do
-    atomicModifyIORef' ref $ \s -> (s{timestamp = succ $ timestamp s}, timestamp s)
+getTimestamp state =
+    atomicModifyIORef' state $ \s -> (s{timestamp = succ $ timestamp s}, timestamp s)
 
 cmdRattle :: Rattle -> Args -> IO ()
-cmdRattle (Rattle opts ref) args = do
-    start <- getTimestamp ref
-    history <- history <$> readIORef ref
-    skip <- liftIO $ flip firstJustM history $ \cmd@Cmd{..} -> do
+cmdRattle rattle@Rattle{..} args = do
+    start <- getTimestamp state
+    history <- history <$> readIORef state
+    skip <- flip firstJustM history $ \cmd@Cmd{..} -> do
         let conds = (return $ args == cmdArgs) :
                     [(== time) <$> getModTime file | (file,time) <- cmdRead ++ cmdWrite]
         ifM (andM conds) (return $ Just cmd) (return Nothing)
-    atomicModifyIORef' ref $ \s -> (s{running = (start, args) : running s, required = args : required s}, ())
+    atomicModifyIORef' state $ \s -> (s{running = (start, args) : running s, required = args : required s}, ())
     cmd <- case skip of
         Just cmd -> return cmd
         Nothing -> do
-            liftIO $ putStrLn $ unwords $ "#" : args
-            xs :: [C.FSATrace] <- liftIO $ C.cmd args
+            putStrLn $ unwords $ "#" : args
+            xs :: [C.FSATrace] <- C.cmd args
             let (reads, writes) = both (nubOrd . concat) $ unzip $ map fsaRW xs
-            let f xs = liftIO $ forM xs $ \x -> (x,) <$> getModTime x
+            let f xs = forM xs $ \x -> (x,) <$> getModTime x
             reads <- f reads
             writes <- f writes
-            return $ Cmd args reads writes
-    stop <- getTimestamp ref
-    atomicModifyIORef' ref $ \s -> (s{finished = (start, stop, cmd) : finished s, running = filter ((/=) start . fst) $ running s}, ())
+            let cmd = Cmd args reads writes
+            addHistory rattle cmd
+            return cmd
+    stop <- getTimestamp state
+    atomicModifyIORef' state $ \s -> (s{finished = (start, stop, cmd) : finished s, running = filter ((/=) start . fst) $ running s}, ())
 
 getModTime :: FilePath -> IO (Maybe UTCTime)
 getModTime x = handleBool isDoesNotExistError (const $ return Nothing) (Just <$> getModificationTime x)
@@ -116,3 +127,14 @@ checkHazards xs = do
     let readWrite = [x | (start,_,Cmd{..}) <- xs, x <- cmdRead, Just (t, args) <- [Map.lookup (fst x) lastWrite], t >= start, args /= cmdArgs]
     unless (null readWrite) $
         fail $ "Read/write: " ++ show readWrite
+
+
+loadHistory :: RattleOptions -> IO [Cmd]
+loadHistory RattleOptions{..} = do
+    createDirectoryRecursive rattleFiles
+    let file = rattleFiles </> "history"
+    ifM (doesFileExist file) (map read . lines <$> readFile' file) (return [])
+
+addHistory :: Rattle -> Cmd -> IO ()
+addHistory Rattle{..} cmd = withLock lock $
+    appendFile (rattleFiles options </> "history") $ show cmd ++ "\n"
