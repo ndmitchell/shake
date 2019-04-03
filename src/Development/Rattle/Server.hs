@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections #-}
-{-# OPTIONS -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -w #-}
 
 module Development.Rattle.Server(
     RattleOptions(..), rattleOptions,
