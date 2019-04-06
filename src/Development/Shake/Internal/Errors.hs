@@ -144,7 +144,7 @@ instance Show ShakeException where
         [displayException shakeExceptionInner]
 
 -- | Data errors that arise during the manipulation of the history cache
-data SharedException = MissingMap String
+newtype SharedException = MissingMap String
   deriving (Eq, Typeable)
 
 -- Should it be a subclass of ShakeException
