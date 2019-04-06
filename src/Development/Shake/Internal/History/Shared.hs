@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TupleSections #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, TupleSections #-}
 
 module Development.Shake.Internal.History.Shared(
     Shared, newShared,
@@ -6,6 +6,7 @@ module Development.Shake.Internal.History.Shared(
     removeShared, listShared
     ) where
 
+import Control.Exception
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Symlink
@@ -19,6 +20,7 @@ import System.Directory.Extra
 import System.FilePath
 import System.IO
 import Numeric
+import Development.Shake.Internal.Errors
 import Development.Shake.Internal.FileInfo
 import General.Wait
 import Development.Shake.Internal.FileName
@@ -129,7 +131,6 @@ addShared shared entryKey entryBuiltinVersion entryUserVersion entryDepends entr
     files <- mapM (\x -> (x,) <$> getFileHash (fileNameFromString x)) files
     saveSharedEntry shared Entry{entryFiles = files, entryGlobalVersion = globalVersion shared, ..}
 
-
 removeShared :: Shared -> (Key -> Bool) -> IO ()
 removeShared Shared{..} test = do
     dirs <- listDirectories $ sharedRoot </> ".shake.cache"
@@ -137,7 +138,12 @@ removeShared Shared{..} test = do
         (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
             readChunksDirect h maxBound
         -- if any key matches, clean them all out
-        let b = any (test . entryKey . getEntry keyOp) items
+        b <- anyM ( handle (\(e::SharedException) -> do
+                               putStrLn $ "Warning: " ++ show e
+                               return False
+                           )
+                  . evaluate . test . entryKey . getEntry keyOp
+                  ) items
         when b $ removeDirectoryRecursive dir
         return b
     liftIO $ putStrLn $ "Deleted " ++ show (length (filter id deleted)) ++ " entries"
@@ -149,7 +155,8 @@ listShared Shared{..} = do
         putStrLn $ "Directory: " ++ dir
         (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
             readChunksDirect h maxBound
-        forM_ items $ \item -> do
+        forM_ items $ \item ->
+          handle (\(e::SharedException) -> putStrLn $ "Warning: " ++ show e) $ do
             let Entry{..} = getEntry keyOp item
             putStrLn $ "  Key: " ++ show entryKey
             forM_ entryFiles $ \(file,_) ->
