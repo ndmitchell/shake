@@ -55,13 +55,16 @@ hashFile file = do
             case Map.lookup file mp of
                 Just (time, hash) | time == start -> return $ Just hash
                 _ -> do
-                    res <- withFile file ReadMode $ \h -> do
-                        chunks <- LBS.hGetContents h
-                        evaluate $ force $ mkHash $ SHA.finalize $ SHA.updates SHA.init $ LBS.toChunks chunks
-                    end <- getModTime file
-                    when (Just start == end) $
-                        atomicModifyIORef' hashCache $ \mp -> (Map.insert file (start, res) mp, ())
-                    return $ Just res
+                    -- we can get a ModTime on a directory, but can't withFile it
+                    b <- doesFileExist file
+                    if not b then return Nothing else do
+                        res <- withFile file ReadMode $ \h -> do
+                            chunks <- LBS.hGetContents h
+                            evaluate $ force $ mkHash $ SHA.finalize $ SHA.updates SHA.init $ LBS.toChunks chunks
+                        end <- getModTime file
+                        when (Just start == end) $
+                            atomicModifyIORef' hashCache $ \mp -> (Map.insert file (start, res) mp, ())
+                        return $ Just res
 
 
 hashString :: String -> Hash
