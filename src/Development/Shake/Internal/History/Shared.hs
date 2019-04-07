@@ -138,10 +138,7 @@ removeShared Shared{..} test = do
         (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
             readChunksDirect h maxBound
         -- if any key matches, clean them all out
-        b <- anyM ( handle (\(e::SharedException) -> do
-                               putStrLn $ "Warning: " ++ show e
-                               return False
-                           )
+        b <- anyM ( handleSynchronous (\e -> False <$ putStrLn ("Warning: " ++ show e))
                   . evaluate . test . entryKey . getEntry keyOp
                   ) items
         when b $ removeDirectoryRecursive dir
@@ -156,7 +153,7 @@ listShared Shared{..} = do
         (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
             readChunksDirect h maxBound
         forM_ items $ \item ->
-          handle (\(e::SharedException) -> putStrLn $ "Warning: " ++ show e) $ do
+          handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
             let Entry{..} = getEntry keyOp item
             putStrLn $ "  Key: " ++ show entryKey
             forM_ entryFiles $ \(file,_) ->
