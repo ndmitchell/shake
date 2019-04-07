@@ -1,209 +1,268 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections #-}
-{-# OPTIONS_GHC -w #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections, ViewPatterns #-}
 
 module Development.Rattle.Server(
     RattleOptions(..), rattleOptions,
     Rattle, withRattle,
+    Hazard,
     cmdRattle
     ) where
 
 import Control.Monad.Extra
-import System.IO.Error
+import Development.Rattle.Limit
+import Development.Rattle.Types
+import Development.Rattle.Shared
+import Development.Rattle.Hash
 import Control.Exception.Extra
 import Control.Concurrent.Extra
 import General.Extra
 import System.FilePath
-import System.IO.Extra
-import Data.Char
+import qualified Data.ByteString.Char8 as BS
+import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Development.Shake.Command as C
 import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
 import Data.IORef
-import System.Directory
 import Data.Hashable
-import Numeric
 import Data.List.Extra
-import Data.Time
 import Data.Tuple.Extra
 
 
-type Args = [String]
-
-data Trace = Trace
-    {tRead :: [(FilePath, Maybe UTCTime)]
-    ,tWrite :: [(FilePath, Maybe UTCTime)]
-    } deriving (Show, Read)
-
-
 data RattleOptions = RattleOptions
-    {rattleFiles :: FilePath
-    ,rattleSpeculate :: Maybe String
-    ,rattleThreads :: Int
+    {rattleFiles :: FilePath -- ^ Where all my shared files go
+    ,rattleSpeculate :: Maybe String -- ^ Should I speculate? Under which key?
+    ,rattleShare :: Bool -- ^ Should I share files from the cache
+    ,rattleProcesses :: Int -- ^ Number of simulateous processes
     } deriving Show
 
 rattleOptions :: RattleOptions
-rattleOptions = RattleOptions ".rattle" (Just "") 8
+rattleOptions = RattleOptions ".rattle" (Just "") True 8
 
-newtype T = T Int -- timestamps
-    deriving (Enum,Eq,Ord,Show)
-
-data Reason = Speculative | Required
-
-data Status = Running  {sReason :: Reason, sStart :: T, sWait :: Barrier ()}
-            | Finished {sReason :: Reason, sStart :: T, sFinish :: T, sTrace :: Trace}
+data ReadOrWrite = Read | Write deriving (Show,Eq)
 
 data S = S
-    {timestamp :: !T -- ^ The current timestamp we are on
-    ,history :: Map.HashMap Args [Trace] -- ^ Commands that got run previously, in all speculation worlds
-    ,speculate :: [Args] -- ^ Things that were used in the last speculation with this name
-    ,status :: Map.HashMap Args Status -- ^ Things that are running or have finished
-    ,required :: [Args] -- ^ Things what were required, not due to speculation
-    }
+    {timestamp :: !T
+        -- ^ The current timestamp we are on
+    ,started :: Map.HashMap Cmd (NoShow (IO ()))
+        -- ^ Things that have got to running - if you find a duplicate just run the IO
+        --   to wait for it.
+    ,running :: [(T, Cmd, [Trace ()])]
+        -- ^ Things currently running, with the time they started,
+        --    and an amalgamation of their previous Trace (if we have any)
+    ,hazard :: Map.HashMap FilePath (ReadOrWrite, T, Cmd)
+        -- ^ Things that have been read or written, at what time, and by which command
+        --   Used to detect hazards.
+        --   Read is recorded as soon as it can, Write as late as it can, as that increases hazards.
+    ,pending :: [(T, Cmd, Trace Hash)]
+        -- ^ Things that have completed, and would like to get recorded, but have to wait
+        --   to confirm they didn't cause hazards
+    ,required :: [Cmd]
+        -- ^ Things what were required, not due to speculation
+    } deriving Show
+
+
+data Problem
+    = Finished
+    | Hazard Hazard
+
+throwProblem :: Problem -> IO a
+throwProblem Finished = fail "Finished, but still trying to do stuff"
+throwProblem (Hazard h) = throwIO h
+
+data Hazard
+    = ReadWriteHazard FilePath Cmd Cmd
+    | WriteWriteHazard FilePath Cmd Cmd
+      deriving Show
+instance Exception Hazard
+
 
 data Rattle = Rattle
     {options :: RattleOptions
-    ,state :: IORef S
-    ,lock :: Lock
+    ,speculate :: [(Cmd, [Trace Hash])] -- ^ Things that were used in the last speculation with this name
+    ,state :: Var (Either Problem S)
+    ,speculated :: IORef Bool
+    ,limit :: Limit
+    ,shared :: Shared
     }
 
+
 withRattle :: RattleOptions -> (Rattle -> IO a) -> IO a
-withRattle options@RattleOptions{..} act = do
-    history <- Map.fromListWith (++) . map (second pure) <$> loadHistory options
-    speculate <- loadSpeculate options
-    state <- newIORef $ S (T 0) history speculate Map.empty []
-    lock <- newLock
+withRattle options@RattleOptions{..} act = withShared rattleFiles $ \shared -> do
+    speculate <- maybe (return []) (getSpeculate shared) rattleSpeculate
+    speculate <- fmap (takeWhile (not . null . snd)) $ forM speculate $ \x -> (x,) <$> unsafeInterleaveIO (getCmdTraces shared x)
+    speculated <- newIORef False
+    let s0 = Right $ S t0 Map.empty [] Map.empty [] []
+    state <- newVar s0
+    limit <- newLimit rattleProcesses
     let r = Rattle{..}
     runSpeculate r
-    res <- act r
-    checkHazards . status =<< readIORef state
-    saveSpeculate r
-    return res
+
+    let saveSpeculate state =
+            whenJust rattleSpeculate $ \name ->
+                whenRightM (readVar state) $ \v ->
+                    setSpeculate shared name $ reverse $ required v
+
+    -- first try and run it
+    ((act r <* saveSpeculate state) `finally` writeVar state (Left Finished)) `catch`
+        \(h :: Hazard) -> do
+            b <- readIORef speculated
+            if not b then throwIO h else do
+                -- if we speculated, and we failed with a hazard, try again
+                putStrLn "Warning: Speculation lead to a hazard, retrying without speculation"
+                print h
+                state <- newVar s0
+                limit <- newLimit rattleProcesses
+                let r = Rattle{speculate=[], ..}
+                (act r <* saveSpeculate state) `finally` writeVar state (Left Finished)
 
 
 runSpeculate :: Rattle -> IO ()
-runSpeculate Rattle{..} =
+runSpeculate rattle@Rattle{..} = void $ withLimitMaybe limit $ forkIO $ do
     -- speculate on a process iff it is the first process in speculate that:
     -- 1) we have some parallelism free
     -- 2) it is the first eligible in the list
-    -- 3) not running or finished
-    -- 4) no write conflicts with anything currently running
+    -- 3) not already been started
+    -- 4) no read/write conflicts with anything completed
     -- 5) no read conflicts with anything running or any earlier speculation
-    join $ atomicModifyIORef' state $ \s -> case nextSpeculate s of
-        Just x {- | length (running s) < rattleThreads options -} ->
-            (s, return ())
-        _ -> (s, return ())
+    join $ modifyVar state $ \s -> case s of
+        Right s | Just cmd <- nextSpeculate rattle s -> do
+            writeIORef speculated True
+            cmdRattleStarted rattle cmd s ["speculating"]
+        _ -> return (s,  return ())
 
 
-nextSpeculate :: S -> Maybe Args
-nextSpeculate S{..} = do w <- runningWrites; f w speculate
+nextSpeculate :: Rattle -> S -> Maybe Cmd
+nextSpeculate Rattle{..} S{..}
+    | any (null . thd3) running = Nothing
+    | otherwise = step (addTrace (Set.empty, Set.empty) $ mconcat $ concatMap thd3 running) speculate
     where
-        getReads x = map fst . concatMap tRead <$> Map.lookup x history
-        getWrites x = map fst . concatMap tWrite <$> Map.lookup x history
+        addTrace (r,w) Trace{..} = (f r tRead, f w tWrite)
+            where f set xs = Set.union set $ Set.fromList $ map fst xs
 
-        runningWrites = Nothing -- Set.fromList <$> concatMapM (getWrites . thd3) running
-
-        f possWrite [] = Nothing
-        f possWrite (x:xs)
-            | not $ x `Map.member` status
-            , Just wRun <- runningWrites, Just wMe <- getWrites x, not $ any (`Set.member` wRun) wMe
-            , Just rMe <- getReads x, not $ any (`Set.member` possWrite) rMe
+        step _ [] = Nothing
+        step rw ((x,_):xs)
+            | x `Map.member` started = step rw xs -- do not update the rw, since its already covered
+        step rw@(r, w) ((x,(mconcat -> t@Trace{..})):xs)
+            | not $ any (\v -> v `Set.member` r || v `Set.member` w || v `Map.member` hazard) $ map fst tWrite
+                -- if anyone I write has ever been read or written, or might be by an ongoing thing, that would be bad
+            , not $ any (\v -> v `Set.member` w) $ map fst tRead
+                -- if anyone I read might be being written right now, that would be bad
                 = Just x
-            | Just wMe <- getWrites x
-                = f (Set.fromList wMe `Set.union` possWrite) xs
-            | otherwise = Nothing
+            | otherwise
+                = step (addTrace rw t) xs
 
 
+cmdRattle :: Rattle -> [String] -> IO ()
+cmdRattle rattle args = cmdRattleRequired rattle $ Cmd args
 
-getTimestamp :: IORef S -> IO T
-getTimestamp state =
-    atomicModifyIORef' state $ \s -> (s{timestamp = succ $ timestamp s}, timestamp s)
+cmdRattleRequired :: Rattle -> Cmd -> IO ()
+cmdRattleRequired rattle@Rattle{..} cmd = withLimit limit $ do
+    modifyVar_ state $ return . fmap (\s -> s{required = cmd : required s})
+    cmdRattleStart rattle cmd
 
-cmdRattle :: Rattle -> Args -> IO ()
-cmdRattle rattle@Rattle{..} args = do
-    start <- getTimestamp state
-    bar <- newBarrier
-    join $ atomicModifyIORef' state $ \s -> first (\s -> s{required = args : required s}) $ case Map.lookup args (status s) of
-        Just Running{..} -> (s, waitBarrier sWait)
-        Just Finished{} -> (s, return ())
-        Nothing -> (,) s{status = Map.insert args (Running Required start bar) (status s)} $ do
-            skip <- flip firstJustM (Map.lookupDefault [] args $ history s) $ \cmd@Trace{..} -> do
-                let conds = [(== time) <$> getModTime file | (file,time) <- tRead ++ tWrite]
-                ifM (andM conds) (return $ Just cmd) (return Nothing)
-            trace <- case skip of
-                Just trace ->
-                    -- if we are hitting the cache and its the same then:
-                    -- 1) don't store it to the history (it's already in there)
-                    -- 2) we aren't really writing to it, we're using the value of the writes, so don't conflict
-                    return trace{tWrite=[], tRead=tWrite trace ++ tRead trace}
+cmdRattleStart :: Rattle -> Cmd -> IO ()
+cmdRattleStart rattle@Rattle{..} cmd = join $ modifyVar state $ \s -> case s of
+    Left e -> throwProblem e
+    Right s -> cmdRattleStarted rattle cmd s []
+
+cmdRattleStarted :: Rattle -> Cmd -> S -> [String] -> IO (Either Problem S, IO ())
+cmdRattleStarted rattle@Rattle{..} cmd s msgs = do
+    let start = timestamp s
+    s <- return s{timestamp = succ $ timestamp s}
+    case Map.lookup cmd (started s) of
+        Just (NoShow wait) -> return (Right s, wait)
+        Nothing -> do
+            hist <- unsafeInterleaveIO $ getCmdTraces shared cmd
+            go <- once $ cmdRattleRun rattle cmd start hist msgs
+            s <- return s{running = (start, cmd, map void hist) : running s}
+            s <- return s{started = Map.insert cmd (NoShow go) $ started s}
+            return (Right s, runSpeculate rattle >> go >> runSpeculate rattle)
+
+
+-- either fetch it from the cache or run it)
+cmdRattleRun :: Rattle -> Cmd -> T -> [Trace Hash] -> [String] -> IO ()
+cmdRattleRun rattle@Rattle{..} cmd@(Cmd args) start hist msgs = do
+    hasher <- memoIO hashFile
+    let match (fp, h) = (== Just h) <$> hasher fp
+    histRead <- filterM (allM match . tRead) hist
+    histBoth <- filterM (allM match . tWrite) histRead
+    case histBoth of
+        t:_ -> do
+            -- we have something consistent at this point, no work to do
+            cmdRattleFinished rattle start cmd (Trace (tRead t ++ tWrite t) []) False
+        [] -> do
+            -- lets see if any histRead's are also available in the cache
+            fetcher <- memoIO $ getFile shared
+            let fetch (fp, h) = do v <- fetcher h; case v of Nothing -> return Nothing; Just op -> return $ Just $ op fp
+            download <- if not (rattleShare options)
+                then return Nothing
+                else firstJustM (\t -> fmap (t,) <$> allMaybeM fetch (tWrite t)) histRead
+            case download of
+                Just (t, download) -> do
+                    display ["copying"]
+                    sequence_ download
+                    cmdRattleFinished rattle start cmd t False
                 Nothing -> do
-                    runSpeculate rattle
-                    putStrLn $ unwords $ "#" : args
-                    xs :: [C.FSATrace] <- C.cmd args
-                    let (reads, writes) = both (nubOrd . concat) $ unzip $ map fsaRW xs
-                    let f xs = forM (filter (not . isPrefixOf "/dev/") xs) $ \x -> (x,) <$> getModTime x
-                    reads <- f reads
-                    writes <- f writes
-                    let cmd = Trace reads writes
-                    addHistory rattle args cmd
-                    return cmd
-            stop <- getTimestamp state
-            atomicModifyIORef' state $ \s -> (s{status = Map.insert args (Finished Required start stop trace) (status s)}, ())
-            signalBarrier bar ()
-            runSpeculate rattle
+                    display []
+                    t <- fsaTrace <$> C.cmd args
+                    let skip x = "/dev/" `isPrefixOf` x || hasTrailingPathSeparator x
+                    let f xs = mapMaybeM (\x -> fmap (x,) <$> hashFile x) $ filter (not . skip) $ map fst xs
+                    t <- Trace <$> f (tRead t) <*> f (tWrite t)
+                    when (rattleShare options) $
+                        forM_ (tWrite t) $ \(fp, h) ->
+                            setFile shared fp h ((== Just h) <$> hashFile fp)
+                    cmdRattleFinished rattle start cmd t True
+    where
+        display msgs2 = BS.putStrLn $ BS.pack $ unwords $ "#" : args ++ ["(" ++ unwords (msgs ++ msgs2) ++ ")" | not $ null $ msgs ++ msgs2]
+
+-- | I finished running a command
+cmdRattleFinished :: Rattle -> T -> Cmd -> Trace Hash -> Bool -> IO ()
+cmdRattleFinished rattle@Rattle{..} start cmd trace@Trace{..} save = join $ modifyVar state $ \s -> case s of
+    Left e -> throwProblem e
+    Right s -> do
+        -- update all the invariants
+        let stop = timestamp s
+        s <- return s{timestamp = succ $ timestamp s}
+        s <- return s{running = filter ((/= start) . fst3) $ running s}
+        s <- return s{pending = [(stop, cmd, trace) | save] ++ pending s}
+
+        -- look for hazards
+        let newHazards = Map.fromList $ map ((,(Write,start,cmd)) . fst) tWrite ++
+                                        map ((,(Read ,stop ,cmd)) . fst) tRead
+        case unionWithKeyEithers mergeFileOps (hazard s) newHazards of
+            (ps@(p:_), _) -> return (Left $ Hazard p, print ps >> throwIO p)
+            ([], hazard2) -> do
+                s <- return s{hazard = hazard2}
+
+                -- move people out of pending if they have survived long enough
+                let earliest = minimum $ succ stop : map fst3 (running s)
+                (safe, pending) <- return $ partition (\x -> fst3 x < earliest) $ pending s
+                s <- return s{pending = pending}
+                return (Right s, forM_ safe $ \(_,c,t) -> addCmdTrace shared c t)
 
 
-getModTime :: FilePath -> IO (Maybe UTCTime)
-getModTime x = handleBool isDoesNotExistError (const $ return Nothing) (Just <$> getModificationTime x)
-
-fsaRW :: C.FSATrace -> ([FilePath], [FilePath])
-fsaRW (C.FSAWrite x) = ([], [x])
-fsaRW (C.FSARead x) = ([x], [])
-fsaRW (C.FSADelete x) = ([], [x])
-fsaRW (C.FSAMove x y) = ([], [x,y])
-fsaRW (C.FSAQuery x) = ([x], [])
-fsaRW (C.FSATouch x) = ([], [x])
+mergeFileOps :: FilePath -> (ReadOrWrite, T, Cmd) -> (ReadOrWrite, T, Cmd) -> Either Hazard (ReadOrWrite, T, Cmd)
+mergeFileOps x (Read, t1, cmd1) (Read, t2, cmd2) = Right (Read, min t1 t2, if t1 < t2 then cmd1 else cmd2)
+mergeFileOps x (Write, t1, cmd1) (Write, t2, cmd2) = Left $ WriteWriteHazard x cmd1 cmd2
+mergeFileOps x (Read, t1, cmd1) (Write, t2, cmd2)
+    | t1 <= t2 = Left $ ReadWriteHazard x cmd2 cmd1
+    | otherwise = Right (Write, t2, cmd2)
+mergeFileOps x v1 v2 = mergeFileOps x v2 v1 -- must be Write/Read, so match the other way around
 
 
--- | You get a write/write hazard if two separate commands write to the same file.
---   You get a read/write hazard if there was a read of a file before a write.
-checkHazards :: Map.HashMap Args Status -> IO ()
-checkHazards xs = return ()
-    {-
-    let writeWrite = Map.filter (\args -> length args > 1) $ Map.fromListWith (++) [(fst x, [cmdArgs]) | (_,_,_,Trace{..}) <- xs, x <- cmdWrite]
-    unless (Map.null writeWrite) $
-        fail $ "Write/write: " ++ show writeWrite
-
-    let lastWrite = Map.fromList [(fst x, (end, cmdArgs)) | (args, Finished{..}) <- Map.toList xs, x <- tWrite sTrace]
-    let readWrite = [x | (_,start,_,Cmd{..}) <- xs, x <- cmdRead, Just (t, args) <- [Map.lookup (fst x) lastWrite], t >= start, args /= cmdArgs]
-    unless (null readWrite) $
-        fail $ "Read/write: " ++ show readWrite
-    -}
+allMaybeM :: Monad m => (a -> m (Maybe b)) -> [a] -> m (Maybe [b])
+allMaybeM f [] = return $ Just []
+allMaybeM f (x:xs) = do
+    y <- f x
+    case y of
+        Nothing -> return Nothing
+        Just y -> fmap (y:) <$> allMaybeM f xs
 
 
-loadFile :: RattleOptions -> String -> IO String
-loadFile RattleOptions{..} name = do
-    createDirectoryRecursive rattleFiles
-    let file = rattleFiles </> name
-    ifM (doesFileExist file) (readFile' file) (return "")
-
-loadHistory :: RattleOptions -> IO [(Args, Trace)]
-loadHistory options = map read . lines <$> loadFile options "history"
-
-addHistory :: Rattle -> Args -> Trace -> IO ()
-addHistory Rattle{..} args trace = withLock lock $
-    appendFile (rattleFiles options </> "history") $ show (args, trace) ++ "\n"
-
-
-speculateName :: RattleOptions -> Maybe String
-speculateName RattleOptions{..} = f <$> rattleSpeculate
-    where f x = "speculate-" ++ take 25 (filter isAlphaNum x) ++ "-" ++ showHex (hash x) ""
-
-loadSpeculate :: RattleOptions -> IO [Args]
-loadSpeculate options
-    | Just name <- speculateName options = map read . lines <$> loadFile options name
-    | otherwise = return []
-
-saveSpeculate :: Rattle -> IO ()
-saveSpeculate Rattle{..} = whenJust (speculateName options) $ \name -> do
-    ref <- readIORef state
-    writeFile (rattleFiles options </> name) $ unlines $ map show $ nubOrd $ reverse $ required ref
+unionWithKeyEithers :: (Eq k, Hashable k) => (k -> v -> v -> Either e v) -> Map.HashMap k v -> Map.HashMap k v -> ([e], Map.HashMap k v)
+unionWithKeyEithers op lhs rhs = foldl' f ([], lhs) $ Map.toList rhs
+    where
+        f (es, mp) (k, v2) = case Map.lookup k mp of
+            Nothing -> (es, Map.insert k v2 mp)
+            Just v1 -> case op k v1 v2 of
+                Left e -> (e:es, mp)
+                Right v -> (es, Map.insert k v mp)

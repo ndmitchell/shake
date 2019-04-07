@@ -320,6 +320,7 @@ test-suite shake-test
         base == 4.*,
         binary,
         bytestring,
+        cryptohash-sha256,
         deepseq >= 1.1,
         directory,
         extra >= 1.6.14,
