@@ -3,6 +3,7 @@
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Thread(
     withThreadsBoth,
+    withThreadsList,
     withThreadSlave,
     allocateThread,
     Thread, newThreadFinally, stopThreads
@@ -70,6 +71,12 @@ withThreadsBoth act1 act2 = do
         waitBarrier bar1
         waitBarrier bar2
         either throwIO return res
+
+
+withThreadsList :: [IO a] -> IO [a]
+withThreadsList [] = return []
+withThreadsList [x] = (:[]) <$> x
+withThreadsList (x:xs) = uncurry (:) <$> withThreadsBoth x (withThreadsList xs)
 
 
 -- | Run an action in a separate thread.
