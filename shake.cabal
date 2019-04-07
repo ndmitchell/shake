@@ -362,7 +362,11 @@ test-suite shake-test
         Development.Ninja.Parse
         Development.Ninja.Type
         Development.Rattle
+        Development.Rattle.Hash
+        Development.Rattle.Limit
         Development.Rattle.Server
+        Development.Rattle.Shared
+        Development.Rattle.Types
         Development.Shake
         Development.Shake.Classes
         Development.Shake.Command
