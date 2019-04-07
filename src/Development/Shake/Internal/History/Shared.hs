@@ -20,7 +20,6 @@ import System.Directory.Extra
 import System.FilePath
 import System.IO
 import Numeric
-import Development.Shake.Internal.Errors
 import Development.Shake.Internal.FileInfo
 import General.Wait
 import Development.Shake.Internal.FileName
