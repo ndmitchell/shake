@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecordWildCards, TupleSections, ViewPatterns #-}
+{-# LANGUAGE ScopedTypeVariables, RecordWildCards, TupleSections, ViewPatterns #-}
 
 module Development.Rattle.Server(
     RattleOptions(..), rattleOptions,
@@ -116,7 +116,7 @@ withRattle options@RattleOptions{..} act = withShared rattleFiles $ \shared -> d
 
 
 runSpeculate :: Rattle -> IO ()
-runSpeculate rattle@Rattle{..} = void $ withLimitMaybe limit $ forkIO $ do
+runSpeculate rattle@Rattle{..} = void $ withLimitMaybe limit $ forkIO $
     -- speculate on a process iff it is the first process in speculate that:
     -- 1) we have some parallelism free
     -- 2) it is the first eligible in the list
@@ -141,10 +141,10 @@ nextSpeculate Rattle{..} S{..}
         step _ [] = Nothing
         step rw ((x,_):xs)
             | x `Map.member` started = step rw xs -- do not update the rw, since its already covered
-        step rw@(r, w) ((x,(mconcat -> t@Trace{..})):xs)
+        step rw@(r, w) ((x, mconcat -> t@Trace{..}):xs)
             | not $ any (\v -> v `Set.member` r || v `Set.member` w || v `Map.member` hazard) $ map fst tWrite
                 -- if anyone I write has ever been read or written, or might be by an ongoing thing, that would be bad
-            , not $ any (\v -> v `Set.member` w) $ map fst tRead
+            , not $ any (`Set.member` w) $ map fst tRead
                 -- if anyone I read might be being written right now, that would be bad
                 = Just x
             | otherwise
@@ -186,7 +186,7 @@ cmdRattleRun rattle@Rattle{..} cmd@(Cmd args) start hist msgs = do
     histRead <- filterM (allM match . tRead) hist
     histBoth <- filterM (allM match . tWrite) histRead
     case histBoth of
-        t:_ -> do
+        t:_ ->
             -- we have something consistent at this point, no work to do
             cmdRattleFinished rattle start cmd (Trace (tRead t ++ tWrite t) []) False
         [] -> do

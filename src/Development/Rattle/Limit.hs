@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ViewPatterns, ScopedTypeVariables, RecordWildCards, TupleSections #-}
+{-# LANGUAGE TupleSections #-}
 
 module Development.Rattle.Limit(
     Limit, newLimit, withLimit, withLimitMaybe,
@@ -10,7 +10,7 @@ import Control.Monad
 import Control.Concurrent.Extra
 
 
-data Limit = Limit (Var S)
+newtype Limit = Limit (Var S)
 
 data S = Free !Int
        | Queued (B.Bilist (IO ()))
@@ -63,7 +63,7 @@ withLimitMaybe (Limit var) act = mask $ \unmask ->
 
 
 finished :: Var S -> IO ()
-finished var = mask_ $ do
+finished var = mask_ $
     join $ modifyVar var $ \x -> case x of
         Free i -> return (Free (i+1), return ())
         Queued q -> case B.uncons q of
