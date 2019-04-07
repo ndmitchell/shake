@@ -43,6 +43,7 @@ Shake is used by lots of companies, but only a few have declared so publicly:
 * [codebender](https://codebender.cc/) use Shake to manage JavaScript packages that implement Arduino protocols and handle communication between the browser and Arduino devices.
 * [Swift Navigation](https://www.swiftnav.com/) use Shake for their release process, as described by [their presentation](https://github.com/swift-nav/shake-before-make/blob/master/Shake.pdf).
 * [NoRedInk](https://www.noredink.com/) use Shake [to build stuff](https://twitter.com/rtfeldman/status/1113968101060689920).
+* [Digital Asset](https://www.digitalasset.com/) use Shake as part of their [DAML SDK IDE](https://daml.com/), as can be seen [in the central module](https://github.com/digital-asset/daml/blob/eed24b01ae4b0ca1bf024612354e88c15c9d30c0/compiler/haskell-ide-core/src/Development/IDE/State/Shake.hs).
 
 There are several libraries providing pre-made rules for Shake:
 
