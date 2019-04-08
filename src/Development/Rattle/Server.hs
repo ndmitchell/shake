@@ -56,7 +56,8 @@ data S = S
         -- ^ Things that have completed, and would like to get recorded, but have to wait
         --   to confirm they didn't cause hazards
     ,required :: [Cmd]
-        -- ^ Things what were required, not due to speculation
+        -- ^ Things what were required by the user calling cmdRattle, not added due to speculation.
+        --   Will be the 'speculate' list next time around.
     } deriving Show
 
 
