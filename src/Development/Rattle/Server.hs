@@ -189,7 +189,9 @@ cmdRattleRun rattle@Rattle{..} cmd@(Cmd args) start hist msgs = do
     case histBoth of
         t:_ ->
             -- we have something consistent at this point, no work to do
-            cmdRattleFinished rattle start cmd (Trace (tRead t ++ tWrite t) []) False
+            -- technically we aren't writing to the tWrite part of the trace, but if we don't include that
+            -- skipping can turn write/write hazards into read/write hazards
+            cmdRattleFinished rattle start cmd t False
         [] -> do
             -- lets see if any histRead's are also available in the cache
             fetcher <- memoIO $ getFile shared
