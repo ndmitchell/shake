@@ -7,10 +7,10 @@ import General.Extra
 import System.FilePattern.Directory
 import Development.Shake.FilePath
 import Control.Exception
-import Control.Monad
+import Control.Monad.Extra
 import Test.Type
 
-main = testSimpleClean $ do
+main = testSimpleClean $ whenM hasTracker $ do
     let wipe = mapM removeFile_ =<< getDirectoryFiles "." ["*"]
     cs <- liftIO $ getDirectoryFiles "." [shakeRoot </> "src/Test/C/*.c"]
     let toO x = takeBaseName x <.> "o"
