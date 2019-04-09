@@ -1,5 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+-- | General rules for writing consistent rattle build systems:
+--
+-- * Never write to the same file twice. Never read then write.
+--
+-- * Don't delete files that have been produced. Each command should make
+--   new files, not delete old files.
 module Development.Rattle(
     rattle, Hazard,
     RattleOptions(..), rattleOptions,
