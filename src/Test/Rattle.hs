@@ -27,11 +27,12 @@ main = testSimpleClean $ do
     putStrLn "Build 3: Expect cached (some speculation)"
     rattle rattleOptions build
 
+
     putStrLn "Build 4: Read/write hazard"
     handle (\(h :: Hazard) -> print h) $ do
         rattle rattleOptions $ do
             cmd ["./Main" <.> exe]
-            cmd $ ["gcc"] ++ map toO cs ++ ["-o","Main" <.> exe]
+            cmd $ ["gcc","-o","Main" <.> exe] ++ reverse (map toO cs)
         fail "Expected a hazard"
 
     putStrLn "Build 5: Rebuild after"
