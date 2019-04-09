@@ -9,7 +9,8 @@ module Development.Rattle.Types(
 import Data.Hashable
 import Data.List.Extra
 import Development.Shake.Command
-
+import Data.Semigroup
+import Prelude
 
 newtype Cmd = Cmd [String]
     deriving (Show, Read, Eq, Hashable)

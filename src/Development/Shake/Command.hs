@@ -26,7 +26,7 @@ import Data.Either.Extra
 import Data.List.Extra
 import Data.Maybe
 import Data.Data
-import Data.Semigroup (Semigroup)
+import Data.Semigroup
 import System.Directory
 import qualified System.IO.Extra as IO
 import System.Environment
@@ -40,6 +40,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import General.Extra
 import General.Process
+import Prelude
 
 import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Core.Action
