@@ -362,7 +362,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
 loadSharedCloud :: DatabasePoly k v -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)
 loadSharedCloud var opts owitness = do
     let mp = Map.fromList $ map (first $ show . QTypeRep) $ Map.toList owitness
-    let wit = binaryOpMap $ \a -> maybe (throw $ MissingMap a) builtinKey $ Map.lookup a mp
+    let wit = binaryOpMap $ \a -> maybe (error $ "loadSharedCloud, couldn't find map for " ++ show a) builtinKey $ Map.lookup a mp
     let wit2 = BinaryOp (\k -> putOp wit (show $ QTypeRep $ typeKey k, k)) (snd . getOp wit)
     let keyVers = [(k, builtinVersion v) | (k,v) <- Map.toList owitness]
     let ver = makeVer $ shakeVersion opts

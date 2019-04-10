@@ -3,7 +3,6 @@
 -- | Errors seen by the user
 module Development.Shake.Internal.Errors(
     ShakeException(..),
-    SharedException(..),
     throwM, throwImpure,
     errorInternal,
     errorStructured,
@@ -142,13 +141,3 @@ instance Show ShakeException where
         "Error when running Shake build system:" :
         shakeExceptionStack ++
         [displayException shakeExceptionInner]
-
--- | Data errors that arise during the manipulation of the history cache
-newtype SharedException = MissingMap String
-  deriving (Eq, Typeable)
-
--- Should it be a subclass of ShakeException
-instance Exception SharedException
-
-instance Show SharedException where
-  show (MissingMap x) = "loadSharedCloud, couldn't find map for " ++ show x
