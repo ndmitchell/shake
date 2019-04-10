@@ -25,6 +25,7 @@ instance Semigroup (Trace a) where
 
 instance Monoid (Trace a) where
     mempty = Trace [] []
+    mappend = (<>)
 
 
 fsaTrace :: [FSATrace] -> Trace ()
