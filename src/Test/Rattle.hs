@@ -30,7 +30,7 @@ main = testSimpleClean $ whenM hasTracker $ do
 
     putStrLn "Build 4: Read/write hazard"
     handle (\(h :: Hazard) -> print h) $ do
-        rattle rattleOptions $ do
+        rattle rattleOptions{rattleSpeculate=Nothing} $ do
             cmd ["./Main" <.> exe]
             cmd $ ["gcc","-o","Main" <.> exe] ++ reverse (map toO cs)
         fail "Expected a hazard"
