@@ -7,10 +7,12 @@ import General.Extra
 import System.FilePattern.Directory
 import Development.Shake.FilePath
 import Control.Exception
+import System.Info.Extra
 import Control.Monad.Extra
 import Test.Type
 
-main = testSimpleClean $ whenM hasTracker $ do
+-- Don't run on Mac because of https://github.com/jacereda/fsatrace/issues/25
+main = testSimpleClean $ whenM hasTracker $ unless isMac $ do
     let wipe = mapM removeFile_ =<< getDirectoryFiles "." ["*"]
     cs <- liftIO $ getDirectoryFiles "." [shakeRoot </> "src/Test/C/*.c"]
     let toO x = takeBaseName x <.> "o"
