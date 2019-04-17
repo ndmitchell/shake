@@ -18,7 +18,7 @@ module General.Extra(
     usingNumCapabilities,
     whenRightM,
     removeFile_, createDirectoryRecursive,
-    catchIO, tryIO, handleIO,
+    catchIO, tryIO, handleIO, handleSynchronous,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack, callStackFromException,
     Ver(..), makeVer,
     QTypeRep(..),
@@ -230,6 +230,8 @@ tryIO = try
 handleIO :: (IOException -> IO a) -> IO a -> IO a
 handleIO = handle
 
+handleSynchronous :: (SomeException -> IO a) -> IO a -> IO a
+handleSynchronous = handleJust (\e -> guard (not $ isAsyncException e) >> pure e)
 
 ---------------------------------------------------------------------
 -- System.Directory

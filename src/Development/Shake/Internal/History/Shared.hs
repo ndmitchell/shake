@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TupleSections #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, TupleSections #-}
 
 module Development.Shake.Internal.History.Shared(
     Shared, newShared,
@@ -6,6 +6,7 @@ module Development.Shake.Internal.History.Shared(
     removeShared, listShared
     ) where
 
+import Control.Exception
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.History.Types
 import Development.Shake.Internal.History.Symlink
@@ -129,17 +130,20 @@ addShared shared entryKey entryBuiltinVersion entryUserVersion entryDepends entr
     files <- mapM (\x -> (x,) <$> getFileHash (fileNameFromString x)) files
     saveSharedEntry shared Entry{entryFiles = files, entryGlobalVersion = globalVersion shared, ..}
 
-
 removeShared :: Shared -> (Key -> Bool) -> IO ()
 removeShared Shared{..} test = do
     dirs <- listDirectories $ sharedRoot </> ".shake.cache"
     deleted <- forM dirs $ \dir -> do
-        (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
-            readChunksDirect h maxBound
-        -- if any key matches, clean them all out
-        let b = any (test . entryKey . getEntry keyOp) items
-        when b $ removeDirectoryRecursive dir
-        return b
+        haveKey <- doesFileExist (dir </> "_key")
+        if not haveKey then return False else do
+            (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
+                readChunksDirect h maxBound
+            -- if any key matches, clean them all out
+            b <- anyM ( handleSynchronous (\e -> False <$ putStrLn ("Warning: " ++ show e))
+                      . evaluate . test . entryKey . getEntry keyOp
+                      ) items
+            when b $ removeDirectoryRecursive dir
+            return b
     liftIO $ putStrLn $ "Deleted " ++ show (length (filter id deleted)) ++ " entries"
 
 listShared :: Shared -> IO ()
@@ -147,10 +151,13 @@ listShared Shared{..} = do
     dirs <- listDirectories $ sharedRoot </> ".shake.cache"
     forM_ dirs $ \dir -> do
         putStrLn $ "Directory: " ++ dir
-        (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
-            readChunksDirect h maxBound
-        forM_ items $ \item -> do
-            let Entry{..} = getEntry keyOp item
-            putStrLn $ "  Key: " ++ show entryKey
-            forM_ entryFiles $ \(file,_) ->
-                putStrLn $ "    File: " ++ file
+        haveKey <- doesFileExist (dir </> "_key")
+        when haveKey $ do
+            (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
+                readChunksDirect h maxBound
+            forM_ items $ \item ->
+              handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
+                let Entry{..} = getEntry keyOp item
+                putStrLn $ "  Key: " ++ show entryKey
+                forM_ entryFiles $ \(file,_) ->
+                    putStrLn $ "    File: " ++ file
