@@ -47,7 +47,6 @@ import qualified Test.Parallel
 import qualified Test.Pool
 import qualified Test.Progress
 import qualified Test.Random
-import qualified Test.Rattle
 import qualified Test.Rebuild
 import qualified Test.Deprioritize
 import qualified Test.Resources
@@ -104,7 +103,6 @@ mains =
     ,"pool" * Test.Pool.main
     ,"progress" * Test.Progress.main
     ,"random" * Test.Random.main
-    ,"rattle" * Test.Rattle.main
     ,"rebuild" * Test.Rebuild.main
     ,"resources" * Test.Resources.main
     ,"self" * Test.Self.main
