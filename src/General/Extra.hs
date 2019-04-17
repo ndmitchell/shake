@@ -231,7 +231,7 @@ handleIO :: (IOException -> IO a) -> IO a -> IO a
 handleIO = handle
 
 handleSynchronous :: (SomeException -> IO a) -> IO a -> IO a
-handleSynchronous = handleJust (\e -> guard (not $ isAsyncException e) >> pure e)
+handleSynchronous = handleBool (not . isAsyncException)
 
 ---------------------------------------------------------------------
 -- System.Directory
