@@ -338,7 +338,7 @@ incrementStep db = runLocked db $ do
     return step
 
 toStepResult :: Step -> Result (Value, BS_Store)
-toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
+toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 $ TForest [] []
 
 fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
@@ -354,9 +354,22 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
             ,built = step
             ,depends = nubDepends $ reverse $ localDepends local
             ,execution = 0
-            ,traces = reverse $ Trace BS.empty end end : localTraces local}
+            ,traces = mergeTraceTForest (Trace BS.empty end end) (localTraces local)}
     setMem db rootId rootKey $ Ready rootRes
     liftIO $ setDisk db rootId rootKey $ Loaded $ fmap snd rootRes
+
+mergeTraceTForest :: Trace -> TForest -> TForest
+mergeTraceTForest t tf =
+  let f (TTree d cs) t2 = TTree d $ if null cs then
+                                      [t2] else
+                                      map (\t3 -> f t3 t2) cs
+      f (TLeaf d) t2 = TTree d [t2]
+      n = TLeaf t
+      roots = tRoots tf in
+    TForest { tRoots = if null roots
+                       then [n]
+                       else map (\t2 -> f t2 n) roots
+            , tracesList = t:(tracesList tf) }
 
 
 loadSharedCloud :: DatabasePoly k v -> ShakeOptions -> Map.HashMap TypeRep BuiltinRule -> IO (Maybe Shared, Maybe Cloud)

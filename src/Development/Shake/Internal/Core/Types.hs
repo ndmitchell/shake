@@ -12,7 +12,8 @@ module Development.Shake.Internal.Core.Types(
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..),
-    rootKey, Root(..)
+    rootKey, Root(..),
+    TForest(..), TTree(..)
     ) where
 
 import Control.Monad.IO.Class
@@ -123,7 +124,6 @@ newtype StepKey = StepKey ()
 stepKey :: Key
 stepKey = newKey $ StepKey ()
 
-
 -- To make sure profiling has a complete view of what was demanded and all top-level 'action'
 -- things we fake up a Root node representing everything that was demanded
 newtype Root = Root () deriving (Eq,Typeable,Hashable,Binary,BinaryEx,NFData)
@@ -183,8 +183,27 @@ data Trace = Trace
     }
     deriving Show
 
+data TTree = TTree
+  {tData :: Trace
+  ,tChildren :: [TTree]}
+  | TLeaf
+    {tData :: Trace}
+  deriving Show
+
+data TForest = TForest
+  {tRoots :: [TTree]
+  , tracesList :: [Trace] -- tracesList is stored in reverse. 
+  } deriving Show
+
 instance NFData Trace where
     rnf x = x `seq` () -- all strict atomic fields
+
+instance NFData TForest where
+  rnf (TForest rs ts) = rnf rs `seq` rnf ts
+
+instance NFData TTree where
+  rnf (TLeaf t) = rnf t
+  rnf (TTree t ts) = rnf t `seq` rnf ts
 
 instance BinaryEx Trace where
     putEx (Trace a b c) = putEx b <> putEx c <> putEx a
@@ -193,6 +212,19 @@ instance BinaryEx Trace where
 instance BinaryEx [Trace] where
     putEx = putExList . map putEx
     getEx = map getEx . getExList
+
+instance BinaryEx TForest where
+  putEx (TForest ls ls2) = putExList $ (putExList (map putEx ls2)):(map putEx ls)
+  getEx x = let y = getExList x in
+              let ls2 = map getEx $ getExList $ head y in
+                TForest (map getEx $ tail y) ls2
+
+instance BinaryEx TTree where
+  putEx (TTree t ls) = putExList $ (putEx t):(map putEx ls)
+  putEx (TLeaf t) = putExList [putEx t]
+  getEx x = case getExList x of
+              [t] -> TLeaf $ getEx t
+              t:ls -> TTree (getEx t) (map getEx ls)
 
 newTrace :: String -> Seconds -> Seconds -> Trace
 newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFloat stop)
@@ -232,7 +264,7 @@ data Result a = Result
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
     ,depends :: [Depends] -- ^ dependencies (don't run them early)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
-    ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
+    ,traces :: TForest -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Functor)
 
 instance NFData a => NFData (Result a) where
@@ -416,7 +448,7 @@ data Local = Local
     -- mutable local variables
     ,localDepends :: [Depends] -- ^ Dependencies, built up in reverse
     ,localDiscount :: !Seconds -- ^ Time spend building dependencies (may be negative for parallel)
-    ,localTraces :: [Trace] -- ^ Traces, built in reverse
+    ,localTraces :: TForest -- ^ Traces, built in reverse
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackUsed :: [Key] -- ^ Things that have been used
     ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
@@ -427,7 +459,7 @@ addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 [] [] [] [] True
+newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 (TForest [] []) [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -447,7 +479,7 @@ localMergeMutable root xs = Local
     -- note that a lot of the lists are stored in reverse, assume root happened first
     ,localDepends = mergeDependsRev (map localDepends xs) ++ localDepends root
     ,localDiscount = sum $ map localDiscount $ root : xs
-    ,localTraces = mergeTracesRev (map localTraces xs) ++ localTraces root
+    ,localTraces = mergeTForests (localTraces root) (map localTraces xs)
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
     ,localProduces = concatMap localProduces xs ++ localProduces root
@@ -463,6 +495,12 @@ mergeDependsRev = reverse . f . map reverse
         f xs = mconcat now : f next
             where (now, next) = unzip $ mapMaybe uncons xs
 
-mergeTracesRev :: [[Trace]] -> [Trace]
--- might want to resort them?
-mergeTracesRev = concat
+mergeTForests :: TForest -> [TForest] -> TForest
+mergeTForests (TForest rs ls) fs =
+  let f (TLeaf d) xs = TTree d xs
+      f (TTree d cs) xs = TTree d $ map (\x -> f x xs) cs
+      ts = concatMap tRoots fs in
+    TForest { tRoots = if null rs then
+                         ts else
+                         map (\t -> f t ts) rs
+            , tracesList = (concatMap tracesList fs) ++ ls }

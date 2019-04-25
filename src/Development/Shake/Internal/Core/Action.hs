@@ -242,9 +242,21 @@ traced msg act = do
     stop <- liftIO globalTimestamp
     let trace = newTrace msg start stop
     liftIO $ evaluate $ rnf trace
-    Action $ modifyRW $ \s -> s{localTraces = trace : localTraces s}
+    Action $ modifyRW $ \s -> s{localTraces = mergeTraceTForest trace $ localTraces s}
     return res
 
+mergeTraceTForest :: Trace -> TForest -> TForest
+mergeTraceTForest t tf =
+  let f (TTree d cs) t2 = TTree d $ if null cs then
+                                      [t2] else
+                                      map (\t3 -> f t3 t2) cs
+      f (TLeaf d) t2 = TTree d [t2]
+      n = TLeaf t
+      roots = tRoots tf in
+    TForest { tRoots = if null roots
+                       then [n]
+                       else map (\t2 -> f t2 n) roots
+            , tracesList = t:(tracesList tf) }
 
 ---------------------------------------------------------------------
 -- TRACKING
