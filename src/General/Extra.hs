@@ -315,7 +315,7 @@ instance Show QTypeRep where
         where
             f x = ['(' | xs /= []] ++ (unwords $ g c : map f xs) ++ [')' | xs /= []]
                 where (c, xs) = splitTyConApp x
-            g x = tyConPackage x ++ "." ++ tyConModule x ++ "." ++ tyConName x
+            g x = tyConModule x ++ "." ++ tyConName x
 
 
 ---------------------------------------------------------------------
