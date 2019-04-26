@@ -3,8 +3,11 @@ cache: "c:\\sr -> appveyor.yml"
 
 test_script:
 - ps: Invoke-WebRequest 'https://github.com/ndmitchell/shake/releases/download/fsatrace-1/fsatrace.zip' -OutFile 'fsatrace.zip'
+# Important that fsatrace.exe is not in the Shake root since otherwise fsatrace*.dll is reported as
+# an untracked read - so we do 'fsatrace' and 'shake' directories separately.
 - 7z x fsatrace.zip -ofsatrace
 - set PATH=%PATH%;%CD%\fsatrace
-- fsatrace\fsatrace v - -- echo fsatrace works
+- mkdir shake
+- cd shake
 - fsatrace v - -- echo fsatrace works
 - ps: Invoke-Expression (Invoke-WebRequest 'https://raw.githubusercontent.com/ndmitchell/neil/master/appveyor.ps1')
