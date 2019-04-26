@@ -36,6 +36,7 @@ import Data.List.Extra
 import Numeric.Extra
 import General.Extra
 import qualified Data.HashMap.Strict as Map
+import qualified Data.HashSet as Set
 
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Monad
@@ -278,9 +279,10 @@ lintTrackFinished = do
     Local{..} <- Action getRW
     liftIO $ do
         deps <- concatMapM (listDepends globalDatabase) localDepends
+        let used = Set.fromList localTrackUsed
 
         -- check 4a
-        bad <- return $ localTrackUsed \\ deps
+        bad <- return $ Set.toList $ used `Set.difference` Set.fromList deps
         unless (null bad) $ do
             let n = length bad
             throwM $ errorStructured
@@ -289,7 +291,7 @@ lintTrackFinished = do
                 ""
 
         -- check 4b
-        bad <- flip filterM localTrackUsed $ \k -> not . null <$> lookupDependencies globalDatabase k
+        bad <- flip filterM (Set.toList used) $ \k -> not . null <$> lookupDependencies globalDatabase k
         unless (null bad) $ do
             let n = length bad
             throwM $ errorStructured
