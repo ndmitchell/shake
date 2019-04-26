@@ -27,6 +27,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
     config %> \_ -> do
+        trackAllow ["**/.stack-work/**"]
         need $ map (shakeRoot </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
@@ -42,7 +43,6 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         copyFile' (shakeRoot </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
         writeFile' "dist/build/autogen/cabal_macros.h" ""
         writeFile' "dist/build/shake/autogen/cabal_macros.h" ""
-        trackAllow ["dist/**","**/.stack-work/**"]
 
     index %> \_ -> do
         need $ config : map (shakeRoot </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt","docs/Manual.md","docs/shake-progress.png"]
