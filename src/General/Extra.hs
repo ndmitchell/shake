@@ -32,7 +32,6 @@ import Data.List.Extra
 import System.Environment
 import Development.Shake.FilePath
 import Control.DeepSeq
-import Numeric
 import General.Cleanup
 import Data.Typeable
 import System.IO.Extra
@@ -310,7 +309,13 @@ newtype QTypeRep = QTypeRep {fromQTypeRep :: TypeRep}
     deriving (Eq,Hashable,NFData)
 
 instance Show QTypeRep where
-    show (QTypeRep x) = show x ++ " {" ++ showHex (abs $ hashWithSalt 0 x) "" ++ "}"
+    -- Need to show enough so that different types with the same names don't clash
+    -- But can't show too much or the history is not portable https://github.com/ndmitchell/shake/issues/670
+    show (QTypeRep x) = f x
+        where
+            f x = ['(' | xs /= []] ++ (unwords $ g c : map f xs) ++ [')' | xs /= []]
+                where (c, xs) = splitTyConApp x
+            g x = tyConPackage x ++ "." ++ tyConModule x ++ "." ++ tyConName x
 
 
 ---------------------------------------------------------------------

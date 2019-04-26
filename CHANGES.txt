@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #670, make cloud values more portable between machines
     #666, exceptions in --share-list, --share-remove are warnings
 0.17.8, released 2019-04-02
     Eliminate a corner case of losing exception messages
