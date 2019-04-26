@@ -5,5 +5,6 @@ test_script:
 - ps: Invoke-WebRequest 'https://github.com/ndmitchell/shake/releases/download/fsatrace-1/fsatrace.zip' -OutFile 'fsatrace.zip'
 - 7z x fsatrace.zip -ofsatrace
 - set PATH=%PATH%;%CD%\fsatrace
+- fsatrace\fsatrace v - -- echo fsatrace works
 - fsatrace v - -- echo fsatrace works
 - ps: Invoke-Expression (Invoke-WebRequest 'https://raw.githubusercontent.com/ndmitchell/neil/master/appveyor.ps1')
