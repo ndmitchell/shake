@@ -319,7 +319,8 @@ lintTrackWrite ks = do
             liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- condition3] ++ old, ())
 
 
--- | Allow any matching key to violate the tracking rules.
+-- | Allow any matching key recorded with 'lintTrackRead' or 'lintTrackWrite' in this action,
+--   after this call, to violate the tracking rules.
 lintTrackAllow :: ShakeValue key => (key -> Bool) -> Action ()
 lintTrackAllow (test :: key -> Bool) = do
     Global{..} <- Action getRO

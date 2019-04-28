@@ -470,8 +470,9 @@ trackRead = track lintTrackRead
 trackWrite :: [FilePath] -> Action ()
 trackWrite = track lintTrackWrite
 
--- | Allow accessing a file in this rule, ignoring any 'trackRead' \/ 'trackWrite' calls matching
---   the pattern.
+-- | Allow accessing a file in this rule, ignoring any subsequent 'trackRead' \/ 'trackWrite' calls matching
+--   the pattern. Note that 'trackAllow' only applies to @track@ calls that happen afterwards, so typically
+--   you should call 'trackAllow' at the start of the 'Action'.'
 trackAllow :: [FilePattern] -> Action ()
 trackAllow ps = do
     let ignore = (?==*) ps
