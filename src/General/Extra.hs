@@ -14,7 +14,7 @@ module General.Extra(
     isAsyncException,
     showDurationSecs,
     usingLineBuffering,
-    doesFileExist_,
+    doesFileExist_, doesDirectoryExist_,
     usingNumCapabilities,
     whenRightM,
     removeFile_, createDirectoryRecursive,
@@ -237,6 +237,9 @@ handleSynchronous = handleBool (not . isAsyncException)
 
 doesFileExist_ :: FilePath -> IO Bool
 doesFileExist_ x = doesFileExist x `catchIO` \_ -> return False
+
+doesDirectoryExist_ :: FilePath -> IO Bool
+doesDirectoryExist_ x = doesDirectoryExist x `catchIO` \_ -> return False
 
 -- | Remove a file, but don't worry if it fails
 removeFile_ :: FilePath -> IO ()

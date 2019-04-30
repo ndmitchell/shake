@@ -14,7 +14,7 @@ import Development.Shake.Internal.Core.Database
 import Development.Shake.Classes
 import General.Binary
 import General.Extra
-import General.Chunks
+import Data.List
 import Control.Monad.Extra
 import System.Directory.Extra
 import System.FilePath
@@ -82,44 +82,56 @@ getEntry binop x
         getDepend x | (a, b) <- getExN x = (getOp binop a, getEx b)
         getFile x | (b, a) <- binarySplit x = (getEx a, b)
 
-sharedFileDir :: Shared -> Key -> FilePath
-sharedFileDir shared key = sharedRoot shared </> ".shake.cache" </> showHex (abs $ hash key) ""
+hexed x = showHex (abs $ hash x) ""
 
-loadSharedEntry :: Shared -> Key -> Ver -> Ver -> IO [Entry]
-loadSharedEntry shared@Shared{..} key builtinVersion userVersion = do
-    let file = sharedFileDir shared key </> "_key"
-    b <- doesFileExist_ file
-    if not b then return [] else do
-        (items, slop) <- withFile file ReadMode $ \h ->
-            readChunksDirect h maxBound
-        unless (BS.null slop) $
-            error $ "Corrupted key file, " ++ show file
-        let eq Entry{..} = entryKey == key && entryGlobalVersion == globalVersion && entryBuiltinVersion == builtinVersion && entryUserVersion == userVersion
-        return $ filter eq $ map (getEntry keyOp) items
+-- | The path under which everything relating to a Key lives
+sharedFileDir :: Shared -> Key -> FilePath
+sharedFileDir shared key = sharedRoot shared </> ".shake.cache" </> hexed key
+
+-- | The list of files containing Entry values, given a result of 'sharedFileDir'
+sharedFileKeys :: FilePath -> IO [FilePath]
+sharedFileKeys dir = do
+    b <- doesDirectoryExist_ $ dir </> "_key"
+    if not b then return [] else listFiles $ dir </> "_key"
+
+loadSharedEntry :: Shared -> Key -> Ver -> Ver -> IO [IO (Maybe Entry)]
+loadSharedEntry shared@Shared{..} key builtinVersion userVersion =
+    map f <$> sharedFileKeys (sharedFileDir shared key)
+    where
+        f file = do
+            e@Entry{..} <- getEntry keyOp <$> BS.readFile file
+            let valid = entryKey == key && entryGlobalVersion == globalVersion && entryBuiltinVersion == builtinVersion && entryUserVersion == userVersion
+            return $ if valid then Just e else Nothing
 
 
 -- | Given a way to get the identity, see if you can a stored cloud version
 lookupShared :: Shared -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupShared shared ask key builtinVersion userVersion = do
     ents <- liftIO $ loadSharedEntry shared key builtinVersion userVersion
-    flip firstJustWaitUnordered ents $ \Entry{..} -> do
-        -- use Nothing to indicate success, Just () to bail out early on mismatch
-        let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
-                let dir = sharedFileDir shared entryKey
-                forM_ entryFiles $ \(file, hash) ->
-                    copyFileLink (dir </> show hash) file
-        result <$> firstJustM id
-            [ firstJustWaitUnordered id
-                [ test <$> ask k | (k, i1) <- kis
-                , let test = maybe (Just ()) (\i2 -> if i1 == i2 then Nothing else Just ())]
-            | kis <- entryDepends]
+    flip firstJustWaitUnordered ents $ \act -> do
+        me <- liftIO act
+        case me of
+            Nothing -> return Nothing
+            Just Entry{..} -> do
+                -- use Nothing to indicate success, Just () to bail out early on mismatch
+                let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
+                        let dir = sharedFileDir shared entryKey
+                        forM_ entryFiles $ \(file, hash) ->
+                            copyFileLink (dir </> show hash) file
+                result <$> firstJustM id
+                    [ firstJustWaitUnordered id
+                        [ test <$> ask k | (k, i1) <- kis
+                        , let test = maybe (Just ()) (\i2 -> if i1 == i2 then Nothing else Just ())]
+                    | kis <- entryDepends]
 
 
 saveSharedEntry :: Shared -> Entry -> IO ()
 saveSharedEntry shared entry = do
     let dir = sharedFileDir shared (entryKey entry)
     createDirectoryRecursive dir
-    withFile (dir </> "_key") AppendMode $ \h -> writeChunkDirect h $ putEntry (keyOp shared) entry
+    let v = runBuilder $ putEntry (keyOp shared) entry
+    createDirectoryRecursive $ dir </> "_key"
+    BS.writeFile (dir </> "_key" </> hexed v) v
     forM_ (entryFiles entry) $ \(file, hash) ->
         unlessM (doesFileExist_ $ dir </> show hash) $
             copyFileLink file (dir </> show hash)
@@ -134,16 +146,12 @@ removeShared :: Shared -> (Key -> Bool) -> IO ()
 removeShared Shared{..} test = do
     dirs <- listDirectories $ sharedRoot </> ".shake.cache"
     deleted <- forM dirs $ \dir -> do
-        haveKey <- doesFileExist (dir </> "_key")
-        if not haveKey then return False else do
-            (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
-                readChunksDirect h maxBound
-            -- if any key matches, clean them all out
-            b <- anyM ( handleSynchronous (\e -> False <$ putStrLn ("Warning: " ++ show e))
-                      . evaluate . test . entryKey . getEntry keyOp
-                      ) items
-            when b $ removeDirectoryRecursive dir
-            return b
+        files <- sharedFileKeys dir
+        -- if any key matches, clean them all out
+        b <- flip anyM files $ \file -> handleSynchronous (\e -> putStrLn ("Warning: " ++ show e) >> return False) $
+            evaluate . test . entryKey . getEntry keyOp =<< BS.readFile file
+        when b $ removeDirectoryRecursive dir
+        return b
     liftIO $ putStrLn $ "Deleted " ++ show (length (filter id deleted)) ++ " entries"
 
 listShared :: Shared -> IO ()
@@ -151,13 +159,10 @@ listShared Shared{..} = do
     dirs <- listDirectories $ sharedRoot </> ".shake.cache"
     forM_ dirs $ \dir -> do
         putStrLn $ "Directory: " ++ dir
-        haveKey <- doesFileExist (dir </> "_key")
-        when haveKey $ do
-            (items, _slop) <- withFile (dir </> "_key") ReadMode $ \h ->
-                readChunksDirect h maxBound
-            forM_ items $ \item ->
-              handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
-                let Entry{..} = getEntry keyOp item
+        keys <- sharedFileKeys dir
+        forM_ keys $ \key -> do
+            handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
+                Entry{..} <- getEntry keyOp <$> BS.readFile key
                 putStrLn $ "  Key: " ++ show entryKey
                 forM_ entryFiles $ \(file,_) ->
                     putStrLn $ "    File: " ++ file
