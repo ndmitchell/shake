@@ -7,6 +7,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 -- | Options passed to 'command' or 'cmd' to control how processes are executed.
 data CmdOption
     = Cwd FilePath -- ^ Change the current directory in the spawned process. By default uses this processes current directory.
+                   --   Successive 'Cwd' options are joined together, to change into nested directories.
     | Env [(String,String)] -- ^ Change the environment variables in the spawned process. By default uses this processes environment.
     | AddEnv String String -- ^ Add an environment variable in the child process.
     | RemEnv String -- ^ Remove an environment variable from the child process.

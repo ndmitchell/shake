@@ -389,7 +389,8 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
 
 
 mergeCwd :: [FilePath] -> Maybe FilePath
-mergeCwd xs = let x = last $ "" : xs in if x == "" then Nothing else Just x
+mergeCwd [] = Nothing
+mergeCwd xs = Just $ foldl1 (</>) xs
 
 -- | Apply all environment operations, to produce a new environment to use.
 resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])

@@ -6,6 +6,7 @@ import Development.Shake
 import Development.Shake.FilePath
 import Control.Exception.Extra
 import System.Time.Extra
+import General.Extra
 import Control.Monad.Extra
 import System.Directory
 import Test.Type
@@ -76,7 +77,8 @@ main = testBuild test $ do
     "cwd" !> do
         -- FIXME: Linux searches the Cwd argument for the file, Windows searches getCurrentDirectory
         helper <- liftIO $ canonicalizePath $ "helper/shake_helper" <.> exe
-        Stdout out <- cmd (Cwd "helper") helper "c"
+        liftIO $ createDirectoryRecursive "helper/tests"
+        Stdout out <- cmd (Cwd "helper/tests") (Cwd "..") helper "c"
         let norm = fmap dropTrailingPathSeparator . canonicalizePath . trim
         liftIO $ join $ liftM2 (===) (norm out) (norm "helper")
 

@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+*   Merge successive Cwd declarations to cmd
     #671, change the file format to permit rsync of caches
     Speed up lint tracking
     #670, make cloud values more portable between machines
