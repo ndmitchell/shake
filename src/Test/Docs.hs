@@ -22,7 +22,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
     let config = "dist/setup-config"
     want ["Success.txt"]
-    let trackIgnore = trackAllow ["**/.stack-work/**"]
+    let trackIgnore = trackAllow ["dist/**","**/.stack-work/**"]
 
     let needSource = need =<< getDirectoryFiles "." (map (shakeRoot </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
