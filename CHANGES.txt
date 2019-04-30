@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Make lintTrackAllow work after the lintTrackRead/Write
 *   Merge successive Cwd declarations to cmd
     #671, change the file format to permit rsync of caches
     Speed up lint tracking

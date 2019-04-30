@@ -298,10 +298,13 @@ lintTrackFinished = do
     Local{..} <- Action getRW
     liftIO $ do
         let top = topStack localStack
+        -- must apply the ignore at the end, because we might have merged in more ignores that
+        -- apply to other branches
+        let ignore k = any ($ k) localTrackAllows
 
         -- Read stuff
         deps <- concatMapM (listDepends globalDatabase) localDepends
-        let used = Set.fromList localTrackRead
+        let used = Set.filter (not . ignore) $ Set.fromList localTrackRead
 
         -- check Read 4a
         bad <- return $ Set.toList $ used `Set.difference` Set.fromList deps
@@ -322,7 +325,7 @@ lintTrackFinished = do
                 ""
 
         -- check Write 3
-        bad <- return $ Set.toList $ Set.fromList localTrackWrite
+        bad <- return $ filter (not . ignore) $ Set.toList $ Set.fromList localTrackWrite
         unless (null bad) $
             liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- bad] ++ old, ())
 
