@@ -22,12 +22,13 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
     let config = "dist/setup-config"
     want ["Success.txt"]
+    let trackIgnore = trackAllow ["**/.stack-work/**"]
 
     let needSource = need =<< getDirectoryFiles "." (map (shakeRoot </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
     config %> \_ -> do
-        trackAllow ["**/.stack-work/**"]
+        trackIgnore
         need $ map (shakeRoot </>) ["shake.cabal","Setup.hs"]
         -- Make Cabal and Stack play nicely
         path <- getEnv "GHC_PACKAGE_PATH"
@@ -47,7 +48,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
     index %> \_ -> do
         need $ config : map (shakeRoot </>) ["shake.cabal","Setup.hs","README.md","CHANGES.txt","docs/Manual.md","docs/shake-progress.png"]
         needSource
-        trackAllow ["dist/**"]
+        trackIgnore
         dist <- liftIO $ canonicalizePath "dist"
         cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
 
@@ -162,7 +163,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         putNormal . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
         needModules
         need ["Main.hs"]
-        trackAllow ["dist/**"]
+        trackIgnore
         needSource
         cmd_ "ghc -fno-code -ignore-package=hashmap" ["-idist/build/autogen","-i" ++ shakeRoot </> "src","Main.hs"]
         writeFile' out ""
