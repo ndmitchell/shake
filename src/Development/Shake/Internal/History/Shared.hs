@@ -160,7 +160,7 @@ listShared Shared{..} = do
     forM_ dirs $ \dir -> do
         putStrLn $ "Directory: " ++ dir
         keys <- sharedFileKeys dir
-        forM_ keys $ \key -> do
+        forM_ keys $ \key ->
             handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
                 Entry{..} <- getEntry keyOp <$> BS.readFile key
                 putStrLn $ "  Key: " ++ show entryKey
