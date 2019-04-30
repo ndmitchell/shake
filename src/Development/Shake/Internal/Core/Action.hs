@@ -269,7 +269,7 @@ lintTrackRead ks = do
         let condition3 k = any ($ k) localTrackAllows
         let condition4 = filter (\k -> not $ condition1 k || condition2 k || condition3 k) $ map newKey ks
         unless (null condition4) $
-            Action $ putRW l{localTrackUsed = condition4 ++ localTrackUsed}
+            Action $ putRW l{localTrackRead = condition4 ++ localTrackRead}
 
 
 lintTrackFinished :: Action ()
@@ -279,7 +279,7 @@ lintTrackFinished = do
     Local{..} <- Action getRW
     liftIO $ do
         deps <- concatMapM (listDepends globalDatabase) localDepends
-        let used = Set.fromList localTrackUsed
+        let used = Set.fromList localTrackRead
 
         -- check 4a
         bad <- return $ Set.toList $ used `Set.difference` Set.fromList deps

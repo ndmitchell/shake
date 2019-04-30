@@ -418,7 +418,7 @@ data Local = Local
     ,localDiscount :: !Seconds -- ^ Time spend building dependencies (may be negative for parallel)
     ,localTraces :: [Trace] -- ^ Traces, built in reverse
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
-    ,localTrackUsed :: [Key] -- ^ Things that have been used
+    ,localTrackRead :: [Key] -- ^ Things that have been used
     ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
     ,localHistory :: !Bool -- ^ Is it valid to cache the result
     }
@@ -449,7 +449,7 @@ localMergeMutable root xs = Local
     ,localDiscount = sum $ map localDiscount $ root : xs
     ,localTraces = mergeTracesRev (map localTraces xs) ++ localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
-    ,localTrackUsed = localTrackUsed root ++ concatMap localTrackUsed xs
+    ,localTrackRead = localTrackRead root ++ concatMap localTrackRead xs
     ,localProduces = concatMap localProduces xs ++ localProduces root
     ,localHistory = all localHistory $ root:xs
     }
