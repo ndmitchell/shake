@@ -322,7 +322,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             _ -> (False, False)
 
     optEnv <- resolveEnv opts
-    let optCwd = let x = last $ "" : [x | Cwd x <- opts] in if x == "" then Nothing else Just x
+    let optCwd = mergeCwd [x | Cwd x <- opts]
     let optStdin = flip mapMaybe opts $ \x -> case x of
             Stdin x -> Just $ SrcString x
             StdinBS x -> Just $ SrcBytes x
@@ -387,6 +387,9 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             else if null exceptionBuffer then intercalate " and " captured ++ " " ++ (if length captured == 1 then "was" else "were") ++ " empty"
             else intercalate " and " captured ++ ":\n" ++ unlines (dropWhile null $ lines $ concat exceptionBuffer)
 
+
+mergeCwd :: [FilePath] -> Maybe FilePath
+mergeCwd xs = let x = last $ "" : xs in if x == "" then Nothing else Just x
 
 -- | Apply all environment operations, to produce a new environment to use.
 resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])
