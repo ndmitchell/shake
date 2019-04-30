@@ -272,34 +272,6 @@ lintTrackRead ks = do
             Action $ putRW l{localTrackRead = condition4 ++ localTrackRead}
 
 
-lintTrackFinished :: Action ()
-lintTrackFinished = do
-    -- only called when isJust shakeLint
-    Global{..} <- Action getRO
-    Local{..} <- Action getRW
-    liftIO $ do
-        deps <- concatMapM (listDepends globalDatabase) localDepends
-        let used = Set.fromList localTrackRead
-
-        -- check 4a
-        bad <- return $ Set.toList $ used `Set.difference` Set.fromList deps
-        unless (null bad) $ do
-            let n = length bad
-            throwM $ errorStructured
-                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
-                [("Used", Just $ show x) | x <- bad]
-                ""
-
-        -- check 4b
-        bad <- flip filterM (Set.toList used) $ \k -> not . null <$> lookupDependencies globalDatabase k
-        unless (null bad) $ do
-            let n = length bad
-            throwM $ errorStructured
-                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
-                [("Used", Just $ show x) | x <- bad]
-                ""
-
-
 -- | Track that a key has been changed/written by the action preceding it when 'shakeLint' is active.
 lintTrackWrite :: ShakeValue key => [key] -> Action ()
 -- One of the following must be true:
@@ -309,14 +281,50 @@ lintTrackWrite :: ShakeValue key => [key] -> Action ()
 lintTrackWrite ks = do
     Global{..} <- Action getRO
     when (isJust $ shakeLint globalOptions) $ do
-        Local{..} <- Action getRW
+        l@Local{..} <- Action getRW
         let top = topStack localStack
 
         let condition1 k = Just k == top
         let condition2 k = any ($ k) localTrackAllows
         let condition3 = filter (\k -> not $ condition1 k || condition2 k) $ map newKey ks
         unless (null condition3) $
-            liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- condition3] ++ old, ())
+            Action $ putRW l{localTrackWrite = condition3 ++ localTrackWrite}
+
+
+lintTrackFinished :: Action ()
+lintTrackFinished = do
+    -- only called when isJust shakeLint
+    Global{..} <- Action getRO
+    Local{..} <- Action getRW
+    liftIO $ do
+        let top = topStack localStack
+
+        -- Read stuff
+        deps <- concatMapM (listDepends globalDatabase) localDepends
+        let used = Set.fromList localTrackRead
+
+        -- check Read 4a
+        bad <- return $ Set.toList $ used `Set.difference` Set.fromList deps
+        unless (null bad) $ do
+            let n = length bad
+            throwM $ errorStructured
+                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " used but not depended upon")
+                [("Used", Just $ show x) | x <- bad]
+                ""
+
+        -- check Read 4b
+        bad <- flip filterM (Set.toList used) $ \k -> not . null <$> lookupDependencies globalDatabase k
+        unless (null bad) $ do
+            let n = length bad
+            throwM $ errorStructured
+                ("Lint checking error - " ++ (if n == 1 then "value was" else show n ++ " values were") ++ " depended upon after being used")
+                [("Used", Just $ show x) | x <- bad]
+                ""
+
+        -- check Write 3
+        bad <- return $ Set.toList $ Set.fromList localTrackWrite
+        unless (null bad) $
+            liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- bad] ++ old, ())
 
 
 -- | Allow any matching key recorded with 'lintTrackRead' or 'lintTrackWrite' in this action,

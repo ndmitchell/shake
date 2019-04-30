@@ -418,7 +418,8 @@ data Local = Local
     ,localDiscount :: !Seconds -- ^ Time spend building dependencies (may be negative for parallel)
     ,localTraces :: [Trace] -- ^ Traces, built in reverse
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
-    ,localTrackRead :: [Key] -- ^ Things that have been used
+    ,localTrackRead :: [Key] -- ^ Calls to 'lintTrackRead'
+    ,localTrackWrite :: [Key] -- ^ Calls to 'lintTrackWrite'
     ,localProduces :: [(Bool, FilePath)] -- ^ Things this rule produces, True to check them
     ,localHistory :: !Bool -- ^ Is it valid to cache the result
     }
@@ -427,7 +428,7 @@ addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 [] [] [] [] True
+newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 [] [] [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -450,6 +451,7 @@ localMergeMutable root xs = Local
     ,localTraces = mergeTracesRev (map localTraces xs) ++ localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackRead = localTrackRead root ++ concatMap localTrackRead xs
+    ,localTrackWrite = localTrackWrite root ++ concatMap localTrackWrite xs
     ,localProduces = concatMap localProduces xs ++ localProduces root
     ,localHistory = all localHistory $ root:xs
     }
