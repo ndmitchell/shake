@@ -190,7 +190,7 @@ removeOptionFSATrace params@Params{..} call
     | not $ isFSATrace params = call params
     | ResultProcess PID0 `elem` results =
         -- This is a bad state to get into, you could technically just ignore the tracing, but that's a bit dangerous
-        fail "Asyncronous process execution combined with FSATrace is not support"
+        liftIO $ throwIO "Asyncronous process execution combined with FSATrace is not support"
     | otherwise = runWithTempDir $ \dir -> do
         let file = dir </> "fsatrace.txt"
         liftIO $ writeFile file "" -- ensures even if we fail before fsatrace opens the file, we can still read it
