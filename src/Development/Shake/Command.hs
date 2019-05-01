@@ -21,6 +21,7 @@ module Development.Shake.Command(
 import Data.Tuple.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
+import Control.Exception.Extra
 import Data.Char
 import Data.Either.Extra
 import Data.List.Extra
@@ -190,7 +191,7 @@ removeOptionFSATrace params@Params{..} call
     | not $ isFSATrace params = call params
     | ResultProcess PID0 `elem` results =
         -- This is a bad state to get into, you could technically just ignore the tracing, but that's a bit dangerous
-        liftIO $ throwIO "Asyncronous process execution combined with FSATrace is not support"
+        liftIO $ errorIO "Asyncronous process execution combined with FSATrace is not support"
     | otherwise = runWithTempDir $ \dir -> do
         let file = dir </> "fsatrace.txt"
         liftIO $ writeFile file "" -- ensures even if we fail before fsatrace opens the file, we can still read it
