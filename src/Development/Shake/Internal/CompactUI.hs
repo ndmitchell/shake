@@ -59,21 +59,19 @@ display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++
 
 
 -- | Run a compact UI, with the ShakeOptions modifier, combined with
-compactUI :: Bool -> ShakeOptions -> IO (ShakeOptions, Maybe (IO ()))
-compactUI auto opts = do
-    canDo <- checkEscCodes
-    if not canDo && auto then return (opts, Nothing) else do
-        unless canDo $
-            putStrLn "Your terminal does not appear to support escape codes, --compact mode may not work"
-        ref <- newIORef emptyS
-        let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
-        time <- offsetTime
-        opts <- return $ opts
-            {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)
-            ,shakeOutput = \a b -> tweak (addOutput a b)
-            ,shakeProgress = \x -> void $ progressDisplay 1 (tweak . addProgress) x `withThreadsBoth` shakeProgress opts x
-            ,shakeCommandOptions = [EchoStdout False, EchoStderr False] ++ shakeCommandOptions opts
-            ,shakeVerbosity = Quiet
-            }
-        let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)
-        return (opts, Just $ forever (tick >> sleep 0.4) `finally` tick)
+compactUI :: ShakeOptions -> IO (ShakeOptions, IO ())
+compactUI opts = do
+    unlessM checkEscCodes $
+        putStrLn "Your terminal does not appear to support escape codes, --compact mode may not work"
+    ref <- newIORef emptyS
+    let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
+    time <- offsetTime
+    opts <- return $ opts
+        {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)
+        ,shakeOutput = \a b -> tweak (addOutput a b)
+        ,shakeProgress = \x -> void $ progressDisplay 1 (tweak . addProgress) x `withThreadsBoth` shakeProgress opts x
+        ,shakeCommandOptions = [EchoStdout False, EchoStderr False] ++ shakeCommandOptions opts
+        ,shakeVerbosity = Quiet
+        }
+    let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)
+    return (opts, forever (tick >> sleep 0.4) `finally` tick)

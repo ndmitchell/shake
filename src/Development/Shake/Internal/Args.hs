@@ -220,7 +220,12 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
             (shakeOpts, ui) <-
                 case find isCompact flagsExtra of
-                    Just (Compact auto) -> second (maybe id withThreadSlave) <$> compactUI auto shakeOpts
+                    Just (Compact auto) -> do
+                        yes <- if auto then checkEscCodes else return True
+                        if yes then
+                            second withThreadSlave <$> compactUI shakeOpts
+                        else
+                            return (shakeOpts, id)
                     _ -> return (shakeOpts, id)
             rules <- rules shakeOpts user files
             ui $ case rules of
