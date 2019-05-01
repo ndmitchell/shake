@@ -218,15 +218,12 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
             when printDirectory $ do
                 curdir <- getCurrentDirectory
                 putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
-            (shakeOpts, ui) <-
-                case find isCompact flagsExtra of
-                    Just (Compact auto) -> do
-                        yes <- if auto then checkEscCodes else return True
-                        if yes then
-                            second withThreadSlave <$> compactUI shakeOpts
-                        else
-                            return (shakeOpts, id)
-                    _ -> return (shakeOpts, id)
+            (shakeOpts, ui) <- do
+                let compact = last $ No : [x | Compact x <- flagsExtra]
+                use <- if compact == Auto then checkEscCodes else return $ compact == Yes
+                if use
+                    then second withThreadSlave <$> compactUI shakeOpts
+                    else return (shakeOpts, id)
             rules <- rules shakeOpts user files
             ui $ case rules of
                 Nothing -> return (False, shakeOpts, Right ())
@@ -282,12 +279,11 @@ data Extra = ChangeDirectory FilePath
            | Demo
            | ShareList
            | ShareRemove String
-           | Compact {auto :: Bool}
+           | Compact Auto
              deriving Eq
 
-isCompact :: Extra -> Bool
-isCompact Compact{} = True
-isCompact _ = False
+data Auto = Yes | No | Auto
+    deriving Eq
 
 escape :: Color -> String -> String
 escape color x = escForeground color ++ x ++ escNormal
@@ -304,9 +300,9 @@ shakeOptsEx =
 --    ,yes $ Option ""  ["cloud"] (reqArg "URL" $ \x s -> s{shakeCloud=shakeCloud s ++ [x]}) "HTTP server providing a cloud cache."
     ,opts $ Option ""  ["color","colour"] (noArg $ \s -> s{shakeColor=True}) "Colorize the output."
     ,opts $ Option ""  ["no-color","no-colour"] (noArg $ \s -> s{shakeColor=False}) "Don't colorize the output."
-    ,extr $ Option ""  ["compact"] (optArg "auto" $ \x -> [Compact{auto = x == Just "auto"}]) "Use a compact Bazel/Buck style output."
+    ,extr $ Option ""  ["compact"] (optArgAuto "auto" "yes|no|auto" $ \x -> [Compact x]) "Use a compact Bazel/Buck style output."
     ,opts $ Option "d" ["debug"] (optArg "FILE" $ \x s -> s{shakeVerbosity=Diagnostic, shakeOutput=outputDebug (shakeOutput s) x}) "Print lots of debugging information."
-    ,extr  $ Option ""  ["demo"] (noArg [Demo]) "Run in demo mode."
+    ,extr $ Option ""  ["demo"] (noArg [Demo]) "Run in demo mode."
     ,opts $ Option ""  ["digest"] (noArg $ \s -> s{shakeChange=ChangeDigest}) "Files change when digest changes."
     ,opts $ Option ""  ["digest-and"] (noArg $ \s -> s{shakeChange=ChangeModtimeAndDigest}) "Files change when modtime and digest change."
     ,opts $ Option ""  ["digest-and-input"] (noArg $ \s -> s{shakeChange=ChangeModtimeAndDigestInput}) "Files change on modtime (and digest for inputs)."
@@ -373,6 +369,12 @@ shakeOptsEx =
         optArgInt mn flag a f = flip OptArg a $ maybe (Right (f Nothing)) $ \x -> case reads x of
             [(i,"")] | i >= mn -> Right (f $ Just i)
             _ -> Left $ "the `--" ++ flag ++ "' option requires a number, " ++ show mn ++ " or above"
+
+        optArgAuto flag a f = flip OptArg a $ maybe (Right (f Yes)) $ \x -> case x of
+            "yes" -> Right $ f Yes
+            "no" -> Right $ f No
+            "auto" -> Right $ f Auto
+            _ -> Left $ "the `--" ++ flag ++ "' option requires yes|no|auto, but got " ++ show x
 
         reqArgPair flag a f = flip ReqArg a $ \x -> case break (== '=') x of
             (a,'=':b) -> Right $ f (a,b)
