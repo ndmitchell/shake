@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.17.9, released 2019-05-01
     #675, allow --compact=yes|no|auto
     Make lintTrackAllow work after the lintTrackRead/Write
 *   Merge successive Cwd declarations to cmd
