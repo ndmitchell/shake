@@ -109,7 +109,7 @@ shakenEx reenter options test rules sleeper = do
             opts <- return $ if forward then forwardOptions opts else opts
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd </> ".." </> ".."]
-                ,shakeLintIgnore = map (cwd </>) [".cabal-sandbox/**",".stack-work/**","../../.stack-work/**"]}
+                ,shakeLintIgnore = [".cabal-sandbox/**",".stack-work/**","../../.stack-work/**"]}
             withArgs args $ do
                 let optionsBuiltin = optionsEnumDesc
                         [(Clean, "Clean before building.")
