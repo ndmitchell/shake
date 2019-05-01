@@ -2,7 +2,7 @@
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
-    testBuildArgs, testBuild, testSimple, testSimpleClean,
+    testBuildArgs, testBuild, testSimple,
     shakeRoot,
     defaultTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
@@ -57,9 +57,6 @@ testBuild f g = testBuildArgs f [] (const g)
 
 testSimple :: IO () -> IO () -> IO ()
 testSimple act = testBuild (const act) (return ())
-
-testSimpleClean :: IO () -> IO () -> IO ()
-testSimpleClean act = testBuild (\op -> op ["clean"] >> act) (return ())
 
 
 shakenEx

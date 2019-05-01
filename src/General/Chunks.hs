@@ -3,8 +3,7 @@
 module General.Chunks(
     Chunks,
     readChunk, readChunkMax, usingWriteChunks, writeChunk,
-    restoreChunksBackup, usingChunks, resetChunksCompact, resetChunksCorrupt,
-    readChunksDirect, writeChunkDirect
+    restoreChunksBackup, usingChunks, resetChunksCompact, resetChunksCorrupt
     ) where
 
 import System.Time.Extra
@@ -51,15 +50,6 @@ readChunkDirect h mx = do
         let count = fromIntegral $ min mx $ fst $ unsafeBinarySplit n
         v <- BS.hGet h count
         if BS.length v < count then slop (n `BS.append` v) else return $ Right v
-
-readChunksDirect :: Handle -> Word32 -> IO ([BS.ByteString], BS.ByteString)
-readChunksDirect h mx = do
-    res <- readChunkDirect h mx
-    case res of
-        Left done -> return ([], done)
-        Right x -> do
-            (xs, done) <- readChunksDirect h mx
-            return (x : xs, done)
 
 writeChunkDirect :: Handle -> Builder -> IO ()
 writeChunkDirect h x = bs `seq` BS.hPut h bs

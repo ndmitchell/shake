@@ -16,14 +16,12 @@ module General.Extra(
     usingLineBuffering,
     doesFileExist_, doesDirectoryExist_,
     usingNumCapabilities,
-    whenRightM,
     removeFile_, createDirectoryRecursive,
     catchIO, tryIO, handleIO, handleSynchronous,
     Located, Partial, callStackTop, callStackFull, withFrozenCallStack, callStackFromException,
     Ver(..), makeVer,
     QTypeRep(..),
-    NoShow(..),
-    memoIO
+    NoShow(..)
     ) where
 
 import Control.Exception.Extra
@@ -44,8 +42,6 @@ import System.Exit
 import Numeric.Extra
 import Foreign.Storable
 import Control.Concurrent.Extra
-import Data.IORef
-import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 import Data.Hashable
 import Data.Primitive.Array
@@ -195,10 +191,6 @@ forNothingM (x:xs) f = do
         Just v -> liftM (v:) `liftM` forNothingM xs f
 
 
-whenRightM :: Monad m => m (Either l r) -> (r -> m ()) -> m ()
-whenRightM x act =  either (const $ return ()) act =<< x
-
-
 ---------------------------------------------------------------------
 -- Control.Concurrent
 
@@ -319,18 +311,3 @@ instance Show QTypeRep where
             f x = ['(' | xs /= []] ++ (unwords $ g c : map f xs) ++ [')' | xs /= []]
                 where (c, xs) = splitTyConApp x
             g x = tyConModule x ++ "." ++ tyConName x
-
-
----------------------------------------------------------------------
--- Data.Memo
-
-memoIO :: (Hashable k, Eq k) => (k -> IO v) -> IO (k -> IO v)
-memoIO f = do
-    ref <- newIORef Map.empty
-    return $ \k -> do
-        mp <- readIORef ref
-        case Map.lookup k mp of
-            Just v -> return v
-            Nothing -> do
-                v <- f k
-                atomicModifyIORef ref $ \mp -> (Map.insert k v mp, v)
