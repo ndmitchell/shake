@@ -142,11 +142,17 @@ buildRunDependenciesChanged global stack database me = isJust <$> firstJustM id
 -- ACTUAL WORKERS
 
 applyKeyValue :: [String] -> [Key] -> Action [Value]
-applyKeyValue _ [] = return []
 applyKeyValue callStack ks = do
+    -- this is the only place a user can inject a key into our world, so check they aren't throwing
+    -- in unevaluated bottoms
+    liftIO $ mapM_ (evaluate . rnf) ks
+
     global@Global{..} <- Action getRO
-    Local{localStack} <- Action getRW
+    Local{localStack, localBlockApply} <- Action getRW
     let stack = addCallStack callStack localStack
+
+    let tk = typeKey $ head $ ks ++ [newKey ()] -- always called at non-empty so never see () key
+    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
 
     let database = globalDatabase
     (is, wait) <- liftIO $ runLocked database $ do
@@ -224,15 +230,10 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 --   This function requires that appropriate rules have been added with 'addBuiltinRule'.
 --   All @key@ values passed to 'apply' become dependencies of the 'Action'.
 apply :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
--- Don't short-circuit [] as we still want error messages
+apply [] =
+    -- if they do [] then we don't test localBlockApply, but unclear if that should be an error or not
+    return []
 apply ks = do
-    -- this is the only place a user can inject a key into our world, so check they aren't throwing
-    -- in unevaluated bottoms
-    liftIO $ mapM_ (evaluate . rnf) ks
-
-    let tk = typeRep ks
-    Local{localBlockApply} <- Action getRW
-    whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
     fmap (map fromValue) $ Action $ stepRAW (callStackFull, map newKey ks)
 
 
