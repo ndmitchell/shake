@@ -39,7 +39,7 @@ main = testBuild test $ do
             signalQSemN sem 8
         writeFile' out ""
 
-    phony "ptraverse" $ do
+    phony "ptraverse" $
         traverse_ (need . (:[])) ["ptraverse_" ++ show i | i <- [1..8]]
 
     phony "cancel" $ do
