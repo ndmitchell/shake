@@ -233,7 +233,7 @@ apply :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => [k
 apply [] =
     -- if they do [] then we don't test localBlockApply, but unclear if that should be an error or not
     return []
-apply ks = do
+apply ks =
     fmap (map fromValue) $ Action $ stepRAW (callStackFull, map newKey ks)
 
 
