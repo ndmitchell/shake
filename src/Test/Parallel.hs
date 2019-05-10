@@ -15,6 +15,20 @@ main = testBuild test $ do
         (text1,text2) <- readFile' "A.txt" `par` readFile' "B.txt"
         writeFile' out $ text1 ++ text2
 
+
+    sem <- liftIO $ newQSemN 0
+    "papplicative_*" %> \out -> do
+        -- wait for both to do the initial start before continuing
+        liftIO $ assertWithin 1 $ do
+            signalQSemN sem 1
+            waitQSemN sem 2
+            signalQSemN sem 2
+        writeFile' out ""
+
+    phony "papplicative" $ do
+        need ["papplicative_1"]
+        need ["papplicative_2"]
+
     phony "cancel" $ do
         writeFile' "cancel" ""
         done <- liftIO $ newIORef 0
@@ -59,3 +73,5 @@ test build = do
 
     build ["parallels"]
     assertContents "parallels" $ show $ replicate 5 [1..5]
+
+    build ["papplicative","-j2"]
