@@ -110,8 +110,8 @@ goRAW step handler ro rw = go
             Fmap f a -> go a $ \v -> k $ f v
             Pure a -> k a
             Ap f x -> go f $ \f -> go x $ \v -> k $ f v
-            Bind a b -> go a $ \a -> go (b a) k
             Next a b -> go a $ \_ -> go b k
+            Bind a b -> go a $ \a -> go (b a) k
             LiftIO x -> k =<< x
 
             GetRO -> k ro
