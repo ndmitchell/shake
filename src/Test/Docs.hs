@@ -334,7 +334,7 @@ whitelist x | null x || isFilePath x || isCmdFlags x || isEnvVar x || isProgram 
 whitelist x | elem x $ words $
     "newtype do a q m c x value key os contents clean _make " ++
     ".. /. // \\ //* dir/*/* dir [ " ++
-    "ConstraintKinds TemplateHaskell OverloadedLists OverloadedStrings GeneralizedNewtypeDeriving DeriveDataTypeable TypeFamilies SetConsoleTitle " ++
+    "ConstraintKinds TemplateHaskell ApplicativeDo OverloadedLists OverloadedStrings GeneralizedNewtypeDeriving DeriveDataTypeable TypeFamilies SetConsoleTitle " ++
     "Data.List System.Directory Development.Shake.FilePath run " ++
     "NoProgress Error src about://tracing " ++
     ".make/i586-linux-gcc/output build " ++
