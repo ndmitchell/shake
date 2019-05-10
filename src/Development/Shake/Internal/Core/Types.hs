@@ -60,7 +60,7 @@ import Control.Monad.Fail
 -- | The 'Action' monad, use 'liftIO' to raise 'IO' actions into it, and 'Development.Shake.need' to execute files.
 --   Action values are used by 'addUserRule' and 'action'. The 'Action' monad tracks the dependencies of a rule.
 --   To raise an exception call 'error', 'fail' or @'liftIO' . 'throwIO'@.
-newtype Action a = Action {fromAction :: RAW () () Global Local a}
+newtype Action a = Action {fromAction :: RAW ([String],[Key]) [Value] Global Local a}
     deriving (Functor, Applicative, Monad, MonadIO, Typeable, Semigroup, Monoid
 #if __GLASGOW_HASKELL__ >= 800
              ,MonadFail
@@ -68,7 +68,15 @@ newtype Action a = Action {fromAction :: RAW () () Global Local a}
         )
 
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
-runAction g l (Action x) = runRAW return g l x
+runAction g l (Action x) = runRAW (fromAction . build) g l x
+    where
+        -- first argument is a list of call stacks, since build only takes one we use the first
+        -- they are very probably all identical...
+        build :: [([String], [Key])] -> Action [[Value]]
+        build [] = return []
+        build ks@((callstack,_):_) = do
+            let kss = map snd ks
+            unconcat kss <$> globalBuild g callstack (concat kss)
 
 
 ---------------------------------------------------------------------
@@ -386,7 +394,8 @@ type Database = DatabasePoly Key Status
 
 -- global constants of Action
 data Global = Global
-    {globalDatabase :: Database -- ^ Database, contains knowledge of the state of each key
+    {globalBuild :: [String] -> [Key] -> Action [Value]
+    ,globalDatabase :: Database -- ^ Database, contains knowledge of the state of each key
     ,globalPool :: Pool -- ^ Pool, for queuing new elements
     ,globalCleanup :: Cleanup -- ^ Cleanup operations
     ,globalTimestamp :: IO Seconds -- ^ Clock saying how many seconds through the build

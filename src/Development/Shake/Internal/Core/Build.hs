@@ -4,6 +4,7 @@
 module Development.Shake.Internal.Core.Build(
     getDatabaseValue, getDatabaseValueGeneric,
     historyIsEnabled, historySave, historyLoad,
+    applyKeyValue,
     apply, apply1,
     ) where
 
@@ -232,7 +233,7 @@ apply ks = do
     let tk = typeRep ks
     Local{localBlockApply} <- Action getRW
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
-    fmap (map fromValue) $ applyKeyValue callStackFull $ map newKey ks
+    fmap (map fromValue) $ Action $ stepRAW (callStackFull, map newKey ks)
 
 
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,

@@ -21,6 +21,7 @@ import Control.Monad.IO.Class
 import General.Binary
 import Development.Shake.Classes
 import Development.Shake.Internal.Core.Storage
+import Development.Shake.Internal.Core.Build
 import Development.Shake.Internal.History.Shared
 import Development.Shake.Internal.History.Cloud
 import qualified General.TypeMap as TMap
@@ -140,7 +141,7 @@ run RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global database pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
+                let global = Global applyKeyValue database pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity

@@ -9,6 +9,7 @@ module General.Extra(
     wrapQuote, showBracket,
     withs, forNothingM,
     maximum', maximumBy',
+    unconcat,
     fastAt,
     zipExact, zipWithExact,
     isAsyncException,
@@ -65,6 +66,11 @@ maximum' = maximumBy' compare
 
 newtype NoShow a = NoShow a
 instance Show (NoShow a) where show _ = "NoShow"
+
+unconcat :: [[a]] -> [b] -> [[b]]
+unconcat [] _ = []
+unconcat (a:as) bs = b1 : unconcat as b2
+    where (b1,b2) = splitAt (length a) bs
 
 
 ---------------------------------------------------------------------
