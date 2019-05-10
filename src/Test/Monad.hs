@@ -14,7 +14,7 @@ import Control.Monad.IO.Class
 
 
 
-run :: ro -> rw -> RAW ro rw a -> IO a
+run :: ro -> rw -> RAW () () ro rw a -> IO a
 run ro rw m = do
     res <- newEmptyMVar
     runRAW ro rw m $ void . tryPutMVar res
@@ -74,7 +74,7 @@ main = testSimple $ do
         return "x"
     res === Left Overflow
     -- test for GHC bug 11555
-    runRAW 1 "test" (throw Overflow :: RAW Int String ()) $ \res ->
+    runRAW 1 "test" (throw Overflow :: RAW () () Int String ()) $ \res ->
         mapLeft fromException res === Left (Just Overflow)
 
     -- catch works properly if continuation called multiple times
