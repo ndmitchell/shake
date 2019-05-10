@@ -39,12 +39,17 @@ data RAW k v ro rw a where
     CatchRAW :: RAW k v ro rw a -> (SomeException -> RAW k v ro rw a) -> RAW k v ro rw a
 
 instance Functor (RAW k v ro rw) where
-    fmap = Fmap
+    fmap f (StepRAW g x) = StepRAW (f . g) x
+    fmap f x = Fmap f x
 
 instance Applicative (RAW k v ro rw) where
     pure = Pure
-    (*>) = Next
-    (<*>) = Ap
+
+    StepRAW f x *> StepRAW g y = StepRAW (\(Branch _ v) -> g v) (Branch x y)
+    x *> y = Next x y
+
+    StepRAW f x <*> StepRAW g y = StepRAW (\(Branch v1 v2) -> f v1 $ g v2) (Branch x y)
+    x <*> y = Ap x y
 
 instance Monad (RAW k v ro rw) where
     return = pure
