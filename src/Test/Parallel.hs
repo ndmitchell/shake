@@ -3,6 +3,7 @@ module Test.Parallel(main) where
 
 import Development.Shake
 import Test.Type
+import Data.Foldable
 import Data.Tuple.Extra
 import Control.Monad
 import Control.Concurrent.Extra
@@ -28,6 +29,18 @@ main = testBuild test $ do
     phony "papplicative" $ do
         need ["papplicative_1"]
         need ["papplicative_2"]
+
+    sem <- liftIO $ newQSemN 8
+    "ptraverse_*" %> \out -> do
+        -- wait for both to do the initial start before continuing
+        liftIO $ assertWithin 1 $ do
+            signalQSemN sem 1
+            waitQSemN sem 8
+            signalQSemN sem 8
+        writeFile' out ""
+
+    phony "ptraverse" $ do
+        traverse_ (need . (:[])) ["ptraverse_" ++ show i | i <- [1..8]]
 
     phony "cancel" $ do
         writeFile' "cancel" ""
@@ -75,3 +88,4 @@ test build = do
     assertContents "parallels" $ show $ replicate 5 [1..5]
 
     build ["papplicative","-j2"]
+    build ["ptraverse","-j8"]
