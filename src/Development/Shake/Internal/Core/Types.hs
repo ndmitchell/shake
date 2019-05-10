@@ -68,7 +68,7 @@ newtype Action a = Action {fromAction :: RAW () () Global Local a}
         )
 
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
-runAction g l (Action x) = runRAW g l x
+runAction g l (Action x) = runRAW return g l x
 
 
 ---------------------------------------------------------------------

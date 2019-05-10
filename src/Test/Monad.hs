@@ -17,7 +17,7 @@ import Control.Monad.IO.Class
 run :: ro -> rw -> RAW () () ro rw a -> IO a
 run ro rw m = do
     res <- newEmptyMVar
-    runRAW ro rw m $ void . tryPutMVar res
+    runRAW return ro rw m $ void . tryPutMVar res
     either throwIO return =<< readMVar res
 
 
@@ -74,7 +74,7 @@ main = testSimple $ do
         return "x"
     res === Left Overflow
     -- test for GHC bug 11555
-    runRAW 1 "test" (throw Overflow :: RAW () () Int String ()) $ \res ->
+    runRAW return 1 "test" (throw Overflow :: RAW () () Int String ()) $ \res ->
         mapLeft fromException res === Left (Just Overflow)
 
     -- catch works properly if continuation called multiple times
@@ -92,7 +92,7 @@ main = testSimple $ do
 
     -- what if we throw an exception inside the continuation of run
     ref <- newIORef 0
-    res <- try $ runRAW 1 "test" (return 1) $ \_ -> do
+    res <- try $ runRAW return 1 "test" (return 1) $ \_ -> do
         modifyIORef ref (+1)
         throwIO Overflow
     res === Left Overflow

@@ -22,6 +22,7 @@ import Control.Monad.Fail
 
 
 data RAW k v ro rw a where
+    Step :: k -> RAW k v ro rw v
     Fmap :: (a -> b) -> RAW k v ro rw a -> RAW k v ro rw b
     Pure :: a -> RAW k v ro rw a
     Ap :: RAW k v ro rw (a -> b) -> RAW k v ro rw a -> RAW k v ro rw b
@@ -84,8 +85,8 @@ assertOnce msg k
             k v
 
 -- | Run and then call a continuation.
-runRAW :: ro -> rw -> RAW k v ro rw a -> Capture (Either SomeException a)
-runRAW ro rw m k = do
+runRAW :: ([k] -> RAW k v ro rw [v]) -> ro -> rw -> RAW k v ro rw a -> Capture (Either SomeException a)
+runRAW step ro rw m k = do
     k <- assertOnce "runRAW" k
     rw <- newIORef rw
     handler <- newIORef throwIO
@@ -95,15 +96,16 @@ runRAW ro rw m k = do
         k $ Left e
     -- If the continuation itself throws an error we need to make sure we
     -- don't end up running it twice (once with its result, once with its own exception)
-    goRAW handler ro rw m (\v -> do writeIORef handler throwIO; k $ Right v)
+    goRAW step handler ro rw m (\v -> do writeIORef handler throwIO; k $ Right v)
         `catch_` \e -> ($ e) =<< readIORef handler
 
 
-goRAW :: forall k v ro rw a . IORef (SomeException -> IO ()) -> ro -> IORef rw -> RAW k v ro rw a -> Capture a
-goRAW handler ro rw = go
+goRAW :: forall k v ro rw a . ([k] -> RAW k v ro rw [v]) -> IORef (SomeException -> IO ()) -> ro -> IORef rw -> RAW k v ro rw a -> Capture a
+goRAW step handler ro rw = go
     where
         go :: RAW k v ro rw b -> Capture b
         go x k = case x of
+            Step q -> go (step [q]) $ \[v] -> k v
             Fmap f a -> go a $ \v -> k $ f v
             Pure a -> k a
             Ap f x -> go f $ \f -> go x $ \v -> k $ f v
