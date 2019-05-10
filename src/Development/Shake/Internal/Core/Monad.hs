@@ -11,6 +11,7 @@ module Development.Shake.Internal.Core.Monad(
 
 import Control.Exception.Extra
 import Control.Monad.IO.Class
+import General.ListBuilder
 import Data.IORef
 import Control.Monad
 import System.IO
@@ -33,7 +34,7 @@ data RAW k v ro rw a where
     GetRW :: RAW k v ro rw rw
     PutRW :: !rw -> RAW k v ro rw ()
     ModifyRW :: (rw -> rw) -> RAW k v ro rw ()
-    StepRAW :: k -> RAW k v ro rw v
+    StepRAW :: (Tree v -> a) -> Tree k -> RAW k v ro rw a
     CaptureRAW :: Capture (Either SomeException a) -> RAW k v ro rw a
     CatchRAW :: RAW k v ro rw a -> (SomeException -> RAW k v ro rw a) -> RAW k v ro rw a
 
@@ -106,7 +107,6 @@ goRAW step handler ro rw = go
     where
         go :: RAW k v ro rw b -> Capture b
         go x k = case x of
-            StepRAW q -> go (step [q]) $ \[v] -> k v
             Fmap f a -> go a $ \v -> k $ f v
             Pure a -> k a
             Ap f x -> go f $ \f -> go x $ \v -> k $ f v
@@ -118,6 +118,8 @@ goRAW step handler ro rw = go
             GetRW -> k =<< readIORef rw
             PutRW x -> writeIORef rw x >> k ()
             ModifyRW f -> modifyIORef' rw f >> k ()
+
+            StepRAW f qs -> go (step $ flattenTree qs) $ k . f . unflattenTree qs
 
             CatchRAW m hdl -> do
                 hdl <- assertOnce "CatchRAW" hdl
@@ -190,4 +192,4 @@ captureRAW = CaptureRAW
 -- STEPS
 
 stepRAW :: k -> RAW k v ro rw v
-stepRAW = StepRAW
+stepRAW k = StepRAW (\(Leaf v) -> v) (Leaf k)
