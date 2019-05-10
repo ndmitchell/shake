@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving #-}
 
 module General.ListBuilder(
-    ListBuilder, runListBuilder, newListBuilder
+    ListBuilder, runListBuilder, newListBuilder,
+    Tree(..), flattenTree, unflattenTree
     ) where
 
 import Data.Semigroup (Semigroup (..))
