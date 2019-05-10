@@ -4,6 +4,7 @@
 module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
     getRO, getRW, putRW, modifyRW,
+    stepRAW,
     catchRAW, tryRAW, throwRAW, finallyRAW,
     captureRAW,
     ) where
@@ -22,7 +23,6 @@ import Control.Monad.Fail
 
 
 data RAW k v ro rw a where
-    Step :: k -> RAW k v ro rw v
     Fmap :: (a -> b) -> RAW k v ro rw a -> RAW k v ro rw b
     Pure :: a -> RAW k v ro rw a
     Ap :: RAW k v ro rw (a -> b) -> RAW k v ro rw a -> RAW k v ro rw b
@@ -33,6 +33,7 @@ data RAW k v ro rw a where
     GetRW :: RAW k v ro rw rw
     PutRW :: !rw -> RAW k v ro rw ()
     ModifyRW :: (rw -> rw) -> RAW k v ro rw ()
+    StepRAW :: k -> RAW k v ro rw v
     CaptureRAW :: Capture (Either SomeException a) -> RAW k v ro rw a
     CatchRAW :: RAW k v ro rw a -> (SomeException -> RAW k v ro rw a) -> RAW k v ro rw a
 
@@ -105,7 +106,7 @@ goRAW step handler ro rw = go
     where
         go :: RAW k v ro rw b -> Capture b
         go x k = case x of
-            Step q -> go (step [q]) $ \[v] -> k v
+            StepRAW q -> go (step [q]) $ \[v] -> k v
             Fmap f a -> go a $ \v -> k $ f v
             Pure a -> k a
             Ap f x -> go f $ \f -> go x $ \v -> k $ f v
@@ -183,3 +184,10 @@ finallyRAW a undo = do
 --   Calling the same continuation, multiple times, in parallel, results in incorrect behaviour.
 captureRAW :: Capture (Either SomeException a) -> RAW k v ro rw a
 captureRAW = CaptureRAW
+
+
+---------------------------------------------------------------------
+-- STEPS
+
+stepRAW :: k -> RAW k v ro rw v
+stepRAW = StepRAW
