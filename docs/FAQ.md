@@ -50,11 +50,9 @@ Most users will write their own Haskell file and compile it to produce an execut
 
 No. If two patterns overlap for a file being built it will result in a runtime error -- you cannot have a pattern for `*.txt`, and another for `foo.*`, and then build a file named `foo.txt`. For objects that typically share the same extension (e.g. C and Haskell both produce `.o` objects), either disambiguate with a different extension (e.g. `.c.o` and `.hs.o`), or different directory (e.g. `obj/c/**/.o` and `obj/hs/**/.o`). For more information, including ways to enable overlap and set priorities, see `%>`.
 
-#### Q: Why do multiple calls to `need` run sequentially? Are `Applicative` actions run in parallel?
+#### Q: Do multiple calls to `need` run sequentially? Are `Applicative` actions run in parallel?
 
-In Shake, `need xs >> need ys` will build `xs` in parallel, then afterwards build `ys` in parallel. The same is true of `need xs *> need ys`, where `*>` is the applicative equivalent of `>>`. In contrast, [Haxl](https://hackage.haskell.org/package/haxl) will execute both arguments to `*>` in parallel. For Shake, you are encouraged to merge adjacent `need` operations (e.g. `need (xs++ys)`), and where that is not possible use `parallel` explicitly.
-
-Shake _could_ follow the Haxl approach, but does not, mainly because they are targeting different problems. In Haxl, the operations are typically read-only, and any single step is likely to involve lots of operations. In contrast, with Shake the operations definitely change the file system, and there are typically only one or two per rule. Consequently, Shake opts for an explicit approach, rather than allow users to use `*>` (and then inevitably add a comment because its an unusual thing to do).
+In Shake, `need xs >> need ys` will build `xs` and `ys` in parallel, since version 0.17.10, in a similar manner to [Haxl](https://hackage.haskell.org/package/haxl). As a consequence, enabling the [`ApplicativeDo` extension](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-ApplicativeDo) may cause more of the build run in parallel. However, this implicit parallelisation of adjacent dependencies is easy to loose, for example by defining `need` in terms of `>>=`. Users are encouraged to merge adjacent `need` operations (e.g. `need (xs++ys)`), and where that is not possible use `parallel` explicitly.
 
 #### Q: Should file names be relative or absolute?
 
