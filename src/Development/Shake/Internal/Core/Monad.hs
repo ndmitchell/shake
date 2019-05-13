@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE GADTs, ScopedTypeVariables, TupleSections #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables, TupleSections, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Monad(
     RAW, Capture, runRAW,
@@ -10,8 +10,8 @@ module Development.Shake.Internal.Core.Monad(
     ) where
 
 import Control.Exception.Extra
+import Development.Shake.Internal.Errors
 import Control.Monad.IO.Class
-import General.ListBuilder
 import Data.IORef
 import Control.Monad
 import System.IO
@@ -34,22 +34,17 @@ data RAW k v ro rw a where
     GetRW :: RAW k v ro rw rw
     PutRW :: !rw -> RAW k v ro rw ()
     ModifyRW :: (rw -> rw) -> RAW k v ro rw ()
-    StepRAW :: (Tree v -> a) -> Tree k -> RAW k v ro rw a
+    StepRAW :: k -> RAW k v ro rw v
     CaptureRAW :: Capture (Either SomeException a) -> RAW k v ro rw a
     CatchRAW :: RAW k v ro rw a -> (SomeException -> RAW k v ro rw a) -> RAW k v ro rw a
 
 instance Functor (RAW k v ro rw) where
-    fmap f (StepRAW g x) = StepRAW (f . g) x
-    fmap f x = Fmap f x
+    fmap = Fmap
 
 instance Applicative (RAW k v ro rw) where
     pure = Pure
-
-    StepRAW f x *> StepRAW g y = StepRAW (\(Branch _ v) -> g v) (Branch x y)
-    x *> y = Next x y
-
-    StepRAW f x <*> StepRAW g y = StepRAW (\(Branch v1 v2) -> f v1 $ g v2) (Branch x y)
-    x <*> y = Ap x y
+    (*>) = Next
+    (<*>) = Ap
 
 instance Monad (RAW k v ro rw) where
     return = pure
@@ -97,45 +92,61 @@ runRAW step ro rw m k = do
     k <- assertOnce "runRAW" k
     rw <- newIORef rw
     handler <- newIORef throwIO
+    steps <- newSteps
     writeIORef handler $ \e -> do
         -- make sure we never call the error continuation twice
         writeIORef handler throwIO
         k $ Left e
     -- If the continuation itself throws an error we need to make sure we
     -- don't end up running it twice (once with its result, once with its own exception)
-    goRAW step handler ro rw m (\v -> do writeIORef handler throwIO; k $ Right v)
+    goRAW step steps handler ro rw m (\v -> do writeIORef handler throwIO; k $ Right v)
         `catch_` \e -> ($ e) =<< readIORef handler
 
 
-goRAW :: forall k v ro rw a . ([k] -> RAW k v ro rw [v]) -> IORef (SomeException -> IO ()) -> ro -> IORef rw -> RAW k v ro rw a -> Capture a
-goRAW step handler ro rw = go
+goRAW :: forall k v ro rw a . ([k] -> RAW k v ro rw [v]) -> Steps k v -> IORef (SomeException -> IO ()) -> ro -> IORef rw -> RAW k v ro rw a -> Capture a
+goRAW step steps handler ro rw = \x k -> go x $ \v -> sio v k
     where
-        go :: RAW k v ro rw b -> Capture b
+        sio :: SIO b -> Capture b
+        sio (SIO v) k = flush $ do v <- v; k v
+
+        flush :: IO () -> IO ()
+        flush k = do
+            v <- flushSteps steps
+            case v of
+                Nothing -> k
+                Just f -> go (f step) $ const k
+
+        unflush :: IO ()
+        unflush = unflushSteps steps
+
+        go :: RAW k v ro rw b -> Capture (SIO b)
         go x k = case x of
-            Fmap f a -> go a $ \v -> k $ f v
-            Pure a -> k a
-            Ap f x -> go f $ \f -> go x $ \v -> k $ f v
-            Next a b -> go a $ \_ -> go b k
-            Bind a b -> go a $ \a -> go (b a) k
-            LiftIO x -> k =<< x
+            Fmap f a -> go a $ \v -> k $ fmap f v
+            Pure a -> k $ pure a
+            Ap f x -> go f $ \f -> go x $ \v -> k $ f <*> v
+            Next a b -> go a $ \a -> go b $ \b -> k $ a *> b
+            StepRAW q -> do
+                v <- addStep steps q
+                k v
 
-            GetRO -> k ro
-            GetRW -> k =<< readIORef rw
-            PutRW x -> writeIORef rw x >> k ()
-            ModifyRW f -> modifyIORef' rw f >> k ()
+            Bind a b -> go a $ \a -> sio a $ \a -> go (b a) k
+            LiftIO act -> flush $ do v <- act; k $ pure v
 
-            StepRAW f qs -> go (step $ flattenTree qs) $ k . f . unflattenTree qs
+            GetRO -> k $ return ro
+            GetRW -> flush $ k . return =<< readIORef rw
+            PutRW x -> flush $ writeIORef rw x >> k (return ())
+            ModifyRW f -> flush $ modifyIORef' rw f >> k (return ())
 
-            CatchRAW m hdl -> do
+            CatchRAW m hdl -> flush $ do
                 hdl <- assertOnce "CatchRAW" hdl
                 old <- readIORef handler
                 writeIORef handler $ \e -> do
                     writeIORef handler old
                     go (hdl e) k `catch_`
-                        \e -> ($ e) =<< readIORef handler
+                        \e -> do unflush; ($ e) =<< readIORef handler
                 go m $ \x -> writeIORef handler old >> k x
 
-            CaptureRAW f -> do
+            CaptureRAW f -> flush $ do
                 f <- assertOnce "CaptureRAW" f
                 old <- readIORef handler
                 writeIORef handler throwIO
@@ -143,7 +154,37 @@ goRAW step handler ro rw = go
                     Left e -> old e
                     Right v -> do
                         writeIORef handler old
-                        k v `catch_` \e -> ($ e) =<< readIORef handler
+                        k (return v) `catch_` \e -> do unflush; ($ e) =<< readIORef handler
+
+
+newtype SIO a = SIO (IO a)
+    deriving (Functor, Monad, Applicative)
+
+
+newtype Steps k v = Steps (IORef [(k, IORef v)])
+
+newSteps :: IO (Steps k v)
+newSteps = Steps <$> newIORef []
+
+addStep :: Steps k v -> k -> IO (SIO v)
+addStep (Steps ref) k = do
+    out <- newIORef $ throwImpure $ errorInternal "Monad, addStep not flushed"
+    modifyIORef ref ((k,out):)
+    return $ SIO $ readIORef out
+
+unflushSteps :: Steps k v -> IO ()
+unflushSteps (Steps ref) = writeIORef ref []
+
+flushSteps :: MonadIO m => Steps k v -> IO (Maybe (([k] -> m [v]) -> m ()))
+flushSteps (Steps ref) = do
+    v <- reverse <$> readIORef ref
+    case v of
+        [] -> return Nothing
+        xs -> do
+            writeIORef ref []
+            return $ Just $ \step -> do
+                vs <- step $ map fst xs
+                liftIO $ zipWithM_ writeIORef (map snd xs) vs
 
 
 ---------------------------------------------------------------------
@@ -197,4 +238,4 @@ captureRAW = CaptureRAW
 -- STEPS
 
 stepRAW :: k -> RAW k v ro rw v
-stepRAW k = StepRAW (\(Leaf v) -> v) (Leaf k)
+stepRAW = StepRAW

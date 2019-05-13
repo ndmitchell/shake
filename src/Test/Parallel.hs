@@ -22,17 +22,30 @@ main = testBuild test $ do
         -- wait for both to do the initial start before continuing
         liftIO $ assertWithin 1 $ do
             signalQSemN sem 1
-            waitQSemN sem 2
-            signalQSemN sem 2
+            waitQSemN sem 3
+            signalQSemN sem 3
         writeFile' out ""
 
     phony "papplicative" $ do
         need ["papplicative_1"]
         need ["papplicative_2"]
+        return () -- should work even though we have a return
+        need ["papplicative_3"]
 
-    sem <- liftIO $ newQSemN 8
+    "pseparate_*" %> \out -> do
+        liftIO $ appendFile "pseparate.log" "["
+        liftIO $ sleep 0.1
+        liftIO $ appendFile "pseparate.log" "]"
+        writeFile' out ""
+
+    phony "pseparate" $ do
+        need ["pseparate_1"]
+        liftIO $ return ()
+        need ["pseparate_2"]
+
+    sem <- liftIO $ newQSemN 0
     "ptraverse_*" %> \out -> do
-        -- wait for both to do the initial start before continuing
+        -- wait for all to do the initial start before continuing
         liftIO $ assertWithin 1 $ do
             signalQSemN sem 1
             waitQSemN sem 8
@@ -40,7 +53,7 @@ main = testBuild test $ do
         writeFile' out ""
 
     phony "ptraverse" $
-        traverse_ (need . (:[])) ["ptraverse_" ++ show i | i <- [1..8]]
+        traverse_ (need . pure) ["ptraverse_" ++ show i | i <- [1..8]]
 
     phony "cancel" $ do
         writeFile' "cancel" ""
@@ -87,5 +100,8 @@ test build = do
     build ["parallels"]
     assertContents "parallels" $ show $ replicate 5 [1..5]
 
-    build ["papplicative","-j2"]
+    writeFile "pseparate.log" ""
+    build ["pseparate","-j2"]
+    assertContents "pseparate.log" "[][]"
+    build ["papplicative","-j3"]
     build ["ptraverse","-j8"]
