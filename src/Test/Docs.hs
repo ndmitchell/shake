@@ -4,6 +4,7 @@ module Test.Docs(main) where
 
 import Development.Shake
 import Development.Shake.FilePath
+import qualified System.FilePattern.Directory as IO
 import System.Directory
 import Test.Type
 import Control.Monad
@@ -143,7 +144,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
     "Files.lst" %> \out -> do
         need [shakeRoot </> "src/Test/Docs.hs"] -- so much of the generator is in this module
         need [index]
-        filesHs <- getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
+        filesHs <- liftIO $ IO.getDirectoryFiles "dist/doc/html/shake" ["Development-*.html"]
         -- filesMd on Travis will only include Manual.md, since it's the only one listed in the .cabal
         -- On AppVeyor, where we build from source, it will check the rest of the website
         filesMd <- getDirectoryFiles (shakeRoot </> "docs") ["*.md"]
