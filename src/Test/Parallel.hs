@@ -29,7 +29,8 @@ main = testBuild test $ do
     phony "papplicative" $ do
         need ["papplicative_1"]
         need ["papplicative_2"]
-        return () -- should work even though we have a return
+        let ensureReturn = return ()
+        ensureReturn -- should work even though we have a return
         need ["papplicative_3"]
 
     "pseparate_*" %> \out -> do
