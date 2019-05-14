@@ -33,6 +33,7 @@ import Development.Shake.FilePath
 import Control.DeepSeq
 import General.Cleanup
 import Data.Typeable
+import System.IO.Error
 import System.IO.Extra
 import System.Time.Extra
 import System.IO.Unsafe
@@ -241,7 +242,13 @@ doesDirectoryExist_ x = doesDirectoryExist x `catchIO` \_ -> return False
 
 -- | Remove a file, but don't worry if it fails
 removeFile_ :: FilePath -> IO ()
-removeFile_ x = removeFile x `catchIO` \_ -> return ()
+removeFile_ x =
+    removeFile x `catchIO` \e ->
+        when (isPermissionError e) $ handleIO (\_ -> return ()) $ do
+            perms <- getPermissions x
+            setPermissions x perms{readable = True, searchable = True, writable = True}
+            removeFile x
+
 
 -- | Like @createDirectoryIfMissing True@ but faster, as it avoids
 --   any work in the common case the directory already exists.
