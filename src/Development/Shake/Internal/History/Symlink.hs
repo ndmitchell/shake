@@ -47,8 +47,7 @@ copyFileLink from to = do
     b <- createLinkBool from to
     whenJust b $ \_ ->
         copyFile from to
-    -- making files read only stops them from easily deleting
-    when False $
-        forM_ [from, to] $ \x -> do
-            perm <- getPermissions x
-            setPermissions x perm{writable=False}
+    -- making files read only stops them from inadvertantly mutating the cache
+    forM_ [from, to] $ \x -> do
+        perm <- getPermissions x
+        setPermissions x perm{writable=False}
