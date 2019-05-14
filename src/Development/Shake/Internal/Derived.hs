@@ -87,7 +87,7 @@ addShakeExtra x = Map.insert (typeOf x) (toDyn x)
 -- | @copyFile' old new@ copies the existing file from @old@ to @new@.
 --   The @old@ file will be tracked as a dependency.
 --   Also creates the new directory if necessary.
-copyFile' :: FilePath -> FilePath -> Action ()
+copyFile' :: Partial => FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
     putLoud $ "Copying from " ++ old ++ " to " ++ new
@@ -98,7 +98,7 @@ copyFile' old new = do
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
 --   The @old@ file will be tracked as a dependency.
 --   Also creates the new directory if necessary.
-copyFileChanged :: FilePath -> FilePath -> Action ()
+copyFileChanged :: Partial => FilePath -> FilePath -> Action ()
 copyFileChanged old new = do
     need [old]
     -- in newer versions of the directory package we can use copyFileWithMetadata which (we think) updates
@@ -112,11 +112,11 @@ copyFileChanged old new = do
 
 
 -- | Read a file, after calling 'need'. The argument file will be tracked as a dependency.
-readFile' :: FilePath -> Action String
+readFile' :: Partial => FilePath -> Action String
 readFile' x = need [x] >> liftIO (readFile x)
 
 -- | Write a file, lifted to the 'Action' monad.
-writeFile' :: MonadIO m => FilePath -> String -> m ()
+writeFile' :: (MonadIO m, Partial) => FilePath -> String -> m ()
 writeFile' name x = liftIO $ do
     createDirectoryRecursive $ takeDirectory name
     writeFile name x
@@ -124,16 +124,16 @@ writeFile' name x = liftIO $ do
 
 -- | A version of 'readFile'' which also splits the result into lines.
 --   The argument file will be tracked as a dependency.
-readFileLines :: FilePath -> Action [String]
+readFileLines :: Partial => FilePath -> Action [String]
 readFileLines = fmap lines . readFile'
 
 -- | A version of 'writeFile'' which writes out a list of lines.
-writeFileLines :: MonadIO m => FilePath -> [String] -> m ()
+writeFileLines :: (MonadIO m, Partial) => FilePath -> [String] -> m ()
 writeFileLines name = writeFile' name . unlines
 
 
 -- | Write a file, but only if the contents would change.
-writeFileChanged :: MonadIO m => FilePath -> String -> m ()
+writeFileChanged :: (MonadIO m, Partial) => FilePath -> String -> m ()
 writeFileChanged name x = liftIO $ do
     createDirectoryRecursive $ takeDirectory name
     b <- doesFileExist name
