@@ -4,6 +4,7 @@ module Test.History(main) where
 
 import Development.Shake
 import Test.Type
+import General.Extra
 import General.GetOpt
 import System.Directory
 
@@ -51,7 +52,7 @@ test build = do
     checkOut "1"
 
     setIn "2"
-    mapM_ removeFile outs
+    mapM_ removeFile_ outs
     build $ ["--die","--share"] ++ outs
     checkOut "2"
 

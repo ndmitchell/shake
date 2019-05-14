@@ -80,7 +80,7 @@ shakenEx reenter options test rules sleeper = do
             when (takeBaseName now /= name) $
                 fail $ "Clean went horribly wrong! Dangerous deleting: " ++ show now
             withCurrentDirectory (now </> "..") $ do
-                removeDirectoryRecursive now
+                removePathForcibly now
                 createDirectoryRecursive now
     unless reenter $ createDirectoryRecursive out
     case args of

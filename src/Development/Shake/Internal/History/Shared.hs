@@ -150,7 +150,7 @@ removeShared Shared{..} test = do
         -- if any key matches, clean them all out
         b <- flip anyM files $ \file -> handleSynchronous (\e -> putStrLn ("Warning: " ++ show e) >> return False) $
             evaluate . test . entryKey . getEntry keyOp =<< BS.readFile file
-        when b $ removeDirectoryRecursive dir
+        when b $ removePathForcibly dir
         return b
     liftIO $ putStrLn $ "Deleted " ++ show (length (filter id deleted)) ++ " entries"
 

@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Delete files before writing, giving symlink/readonly safety
     #677, make --help work even if the build system throws errors
 *   Use parallelism for Applicative adjacent needs
     Support GHC 8.8

@@ -93,6 +93,7 @@ copyFile' old new = do
     putLoud $ "Copying from " ++ old ++ " to " ++ new
     liftIO $ do
         createDirectoryRecursive $ takeDirectory new
+        removeFile_ new -- symlink safety
         copyFile old new
 
 -- | @copyFileChanged old new@ copies the existing file from @old@ to @new@, if the contents have changed.
@@ -108,6 +109,7 @@ copyFileChanged old new = do
         liftIO $ do
             createDirectoryRecursive $ takeDirectory new
             -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it
+            removeFile_ new -- symlink safety
             liftIO $ copyFile old new
 
 
@@ -119,6 +121,7 @@ readFile' x = need [x] >> liftIO (readFile x)
 writeFile' :: (MonadIO m, Partial) => FilePath -> String -> m ()
 writeFile' name x = liftIO $ do
     createDirectoryRecursive $ takeDirectory name
+    removeFile_ x -- symlink safety
     writeFile name x
 
 
@@ -143,7 +146,9 @@ writeFileChanged name x = liftIO $ do
         b <- withFile name ReadMode $ \h -> do
             src <- hGetContents h
             return $! src /= x
-        when b $ writeFile name x
+        when b $ do
+            removeFile_ x -- symlink safety
+            writeFile name x
 
 
 -- | Create a temporary file in the temporary directory. The file will be deleted
