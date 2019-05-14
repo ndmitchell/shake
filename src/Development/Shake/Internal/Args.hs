@@ -19,11 +19,13 @@ import Development.Shake.Internal.Rules.File
 import Development.Shake.Internal.Progress
 import Development.Shake.Database
 import General.Timing
+import General.Extra
 import General.Thread
 import General.GetOpt
 import General.EscCodes
 
 import Data.Tuple.Extra
+import Control.DeepSeq
 import Control.Exception.Extra
 import Control.Monad
 import Data.Either
@@ -158,14 +160,15 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp long = do
             progName <- getProgName
-            targets <- if not long then return [] else do
-                -- run the rules as simply as we can
-                rs <- rules shakeOpts [] []
-                case rs of
-                    Just (_, rs) -> do
-                        xs <- getTargets shakeOpts rs
-                        return ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
-                    _ -> return []
+            targets <- if not long then return [] else
+                handleSynchronous (\e -> do putWhenLn Normal $ "Failure to collect targets: " ++ show e; return []) $ do
+                    -- run the rules as simply as we can
+                    rs <- rules shakeOpts [] []
+                    case rs of
+                        Just (_, rs) -> do
+                            xs <- getTargets shakeOpts rs
+                            evaluate $ force ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
+                        _ -> return []
             changes <- return $
                 let as = shakeOptionsFields baseOpts
                     bs = shakeOptionsFields oshakeOpts
