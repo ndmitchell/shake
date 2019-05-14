@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.18, released 2019-05-14
 *   Make files copied to the shared cache read-only
     Delete files before writing, giving symlink/readonly safety
     #677, make --help work even if the build system throws errors
