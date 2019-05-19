@@ -147,7 +147,7 @@ writeFileChanged name x = liftIO $ do
             src <- hGetContents h
             return $! src /= x
         when b $ do
-            removeFile_ x -- symlink safety
+            removeFile_ name -- symlink safety
             writeFile name x
 
 
