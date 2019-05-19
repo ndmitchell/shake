@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.18.1, released 2019-05-19
     #678, fix serious bug in writeFile' - it could delete an unrelated file
 0.18, released 2019-05-14
 *   Make files copied to the shared cache read-only
