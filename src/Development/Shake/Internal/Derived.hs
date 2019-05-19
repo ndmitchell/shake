@@ -121,7 +121,7 @@ readFile' x = need [x] >> liftIO (readFile x)
 writeFile' :: (MonadIO m, Partial) => FilePath -> String -> m ()
 writeFile' name x = liftIO $ do
     createDirectoryRecursive $ takeDirectory name
-    removeFile_ x -- symlink safety
+    removeFile_ name -- symlink safety
     writeFile name x
 
 
