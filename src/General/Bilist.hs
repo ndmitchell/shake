@@ -5,6 +5,7 @@ module General.Bilist(
     ) where
 
 import Data.Semigroup (Semigroup(..))
+import Prelude
 
 
 data Bilist a = Bilist [a] [a]
