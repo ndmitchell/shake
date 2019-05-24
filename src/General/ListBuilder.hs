@@ -6,6 +6,8 @@ module General.ListBuilder(
     ) where
 
 import Data.Semigroup (Semigroup (..))
+import Prelude
+
 
 -- ListBuilder is opaque outside this module
 newtype ListBuilder a = ListBuilder (Tree a)
