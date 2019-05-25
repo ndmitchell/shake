@@ -4,8 +4,8 @@ module General.Bilist(
     Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
 
-import Data.Semigroup (Semigroup(..))
 import Prelude
+import Data.Semigroup (Semigroup(..))
 
 
 data Bilist a = Bilist [a] [a]
