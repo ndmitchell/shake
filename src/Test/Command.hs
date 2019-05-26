@@ -28,6 +28,7 @@ main = testBuild test $ do
 
     let helper_source = unlines
             ["import System.Time.Extra"
+            ,"import System.Process"
             ,"import Control.Monad"
             ,"import System.Directory"
             ,"import System.Environment"
@@ -36,6 +37,7 @@ main = testBuild test $ do
             ,"import qualified Data.ByteString.Lazy.Char8 as LBS"
             ,"main = do"
             ,"    args <- getArgs"
+            ,"    exe <- getExecutablePath"
             ,"    forM_ args $ \\(a:rg) -> do"
             ,"        case a of"
             ,"            'o' -> putStrLn rg"
@@ -46,6 +48,7 @@ main = testBuild test $ do
             ,"            'w' -> sleep (read rg :: Double)"
             ,"            'r' -> LBS.putStr $ LBS.replicate (read rg) 'x'"
             ,"            'i' -> putStr =<< getContents"
+            ,"            's' -> void $ readProcess exe [rg] \"\""
             ,"        hFlush stdout"
             ,"        hFlush stderr"
             ]
@@ -95,7 +98,11 @@ main = testBuild test $ do
 
     "timeout2" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "w20"
 
+    -- commented out beause on Windows when you abort a Shell process you get a
+    -- Do you want to terminate the batch file (Y/N)
     when False $ "timeout3" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ Shell helper "w20"
+
+    "timeout4" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "sw20"
 
     "env" !> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
