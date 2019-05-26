@@ -65,7 +65,7 @@ main = testBuild defaultTest $ do
         need $ hs : map (moduleToFile "hi") deps
         ghc ["-c",hs,"-i" ++ shakeRoot </> "src","-main-is","Run.main"
             ,"-hide-all-packages","-outputdir=."
-            ,"-DPORTABLE","-fwarn-unused-imports","-Werror"] -- to test one CPP branch
+            ,"-DPORTABLE"] -- to test one CPP branch
 
     ".pkgs" %> \out -> do
         src <- readFile' $ shakeRoot </> "shake.cabal"
