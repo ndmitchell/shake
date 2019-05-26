@@ -125,7 +125,7 @@ forkWait a = do
 abort :: ProcessHandle -> IO ()
 abort pid = do
     interruptProcessGroupOf pid
-    sleep 5 -- give the process a few seconds grace period to die nicely
+    sleep 3 -- give the process a few seconds grace period to die nicely
     -- seems to happen with some GHC 7.2 compiled binaries with FFI etc
     terminateProcess pid
 
