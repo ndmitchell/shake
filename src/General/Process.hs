@@ -6,7 +6,7 @@ module General.Process(
     process, ProcessOpts(..), Source(..), Destination(..)
     ) where
 
-import Control.Concurrent
+import Control.Concurrent.Extra
 import Control.DeepSeq
 import Control.Exception.Extra as C
 import Control.Monad.Extra
@@ -104,6 +104,17 @@ ignoreSigPipe = handleIO $ \e -> case e of
     _ -> throwIO e
 
 
+withExceptions :: IO () -> IO a -> IO a
+withExceptions stop go = do
+    bar <- newBarrier
+    v <- mask $ \unmask -> do
+        forkFinally (unmask go) $ signalBarrier bar
+        unmask (waitBarrier bar) `onException` do
+            forkIO stop
+            waitBarrier bar
+    either throwIO return v
+
+
 withTimeout :: Maybe Double -> IO () -> IO a -> IO a
 withTimeout Nothing _ go = go
 withTimeout (Just s) stop go = bracket (forkIO $ sleep s >> stop) killThread $ const go
@@ -141,11 +152,11 @@ process po = do
     let outFiles = nubOrd [x | DestFile x <- poStdout ++ poStderr]
     let inFiles = nubOrd [x | SrcFile x <- poStdin]
     withFiles WriteMode outFiles $ \outHandle -> withFiles ReadMode inFiles $ \inHandle -> do
-        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = True
+        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = True, close_fds = True
                  ,std_in = fst $ stdIn inHandle poStdin
                  ,std_out = stdStream outHandle poStdout poStderr, std_err = stdStream outHandle poStderr poStdout}
         withCreateProcessCompat cp $ \inh outh errh pid ->
-            withTimeout poTimeout (abort pid) $ do
+            withExceptions (abort pid) $ withTimeout poTimeout (abort pid) $ do
 
                 let streams = [(outh, stdout, poStdout) | Just outh <- [outh], CreatePipe <- [std_out cp]] ++
                               [(errh, stderr, poStderr) | Just errh <- [errh], CreatePipe <- [std_err cp]]
