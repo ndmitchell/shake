@@ -5,8 +5,8 @@ module General.ListBuilder(
     Tree(..), flattenTree, unflattenTree
     ) where
 
-import Prelude
 import Data.Semigroup (Semigroup (..))
+import Prelude
 
 
 -- ListBuilder is opaque outside this module
