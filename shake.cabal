@@ -96,7 +96,7 @@ library
         primitive,
         process >= 1.1,
         random,
-        time,
+        time >= 1.9,
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
         utf8-string >= 0.3
