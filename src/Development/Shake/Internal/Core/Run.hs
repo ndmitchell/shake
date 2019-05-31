@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies #-}
 
