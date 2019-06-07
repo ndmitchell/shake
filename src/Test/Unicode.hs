@@ -5,7 +5,6 @@ import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
 import General.GetOpt
-import Control.Exception.Extra
 import Control.Monad
 import GHC.IO.Encoding
 
