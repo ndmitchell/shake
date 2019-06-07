@@ -50,7 +50,7 @@ test build = do
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
         enc <- liftIO getFileSystemEncoding
         if textEncodingName enc /= "UTF-8"
-        then putStrLn $ "WARNING: filesystem encoding is not UTF-8, skipping unicode test (LANG=C ?)"
+        then putStrLn "WARNING: filesystem encoding is not UTF-8, skipping unicode test (LANG=C ?)"
         else do
                 let ext x = decode pre <.> x
                 writeFile (ext "source") "x"
