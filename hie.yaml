@@ -1,0 +1,11 @@
+cradle:
+  direct:
+    arguments:
+      - -ignore-package=hashmap
+      - -fwarn-unused-binds
+      - -fwarn-unused-imports
+      - -fwarn-orphans
+      - -isrc
+      - src/Test.hs
+      - src/Paths.hs
+      - -idist/build/autogen
