@@ -22,7 +22,8 @@ import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Unsafe as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.UTF8 as UTF8
-import Data.Semigroup (Semigroup (..))
+import Data.Semigroup
+import Prelude
 
 
 ---------------------------------------------------------------------

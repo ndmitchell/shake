@@ -4,7 +4,7 @@ module General.Bilist(
     Bilist, cons, snoc, uncons, toList, isEmpty
     ) where
 
-import Data.Semigroup (Semigroup(..))
+import Data.Semigroup
 import Prelude
 
 

@@ -5,7 +5,7 @@ module General.ListBuilder(
     Tree(..), flattenTree, unflattenTree
     ) where
 
-import Data.Semigroup (Semigroup (..))
+import Data.Semigroup
 import Prelude
 
 

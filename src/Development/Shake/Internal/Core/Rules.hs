@@ -38,6 +38,7 @@ import qualified Data.Binary.Builder as Bin
 import Data.Binary.Put
 import Data.Binary.Get
 import General.ListBuilder
+import Prelude
 
 #if __GLASGOW_HASKELL__ >= 800
 import Control.Monad.Fail
