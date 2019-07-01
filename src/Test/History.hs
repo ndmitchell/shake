@@ -2,6 +2,7 @@
 
 module Test.History(main) where
 
+import Control.Monad
 import Development.Shake
 import Test.Type
 import General.Extra
@@ -33,30 +34,31 @@ main = testBuildArgs test optionsEnum $ \args -> do
         copyFile' "In.txt" out1
         copyFile' "In.txt" out2
 
-test build = do
-    let setIn = writeFile "In.txt"
-    let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt","Phony.txt"]
-    let checkOut x = mapM_ (`assertContents` x) outs
+test build =
+    forM_ [[],["--share-copy"]] $ \args -> do
+        let setIn = writeFile "In.txt"
+        let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt","Phony.txt"]
+        let checkOut x = mapM_ (`assertContents` x) outs
 
-    build ["clean"]
-    setIn "1"
-    build $ ["--share","--sleep"] ++ outs
-    checkOut "1"
-    setIn "2"
-    build $ ["--share","--sleep"] ++ outs
-    checkOut "2"
+        build ["clean"]
+        setIn "1"
+        build $ args ++ ["--share","--sleep"] ++ outs
+        checkOut "1"
+        setIn "2"
+        build $ args ++ ["--share","--sleep"] ++ outs
+        checkOut "2"
 
-    setIn "1"
-    assertException [] $ build ["OutFile.txt","--die","--quiet","--sleep"]
-    build $ ["--die","--share"] ++ outs
-    checkOut "1"
+        setIn "1"
+        assertException [] $ build ["OutFile.txt","--die","--quiet","--sleep"]
+        build $ args ++ ["--die","--share"] ++ outs
+        checkOut "1"
 
-    setIn "2"
-    mapM_ removeFile_ outs
-    build $ ["--die","--share"] ++ outs
-    checkOut "2"
+        setIn "2"
+        mapM_ removeFile_ outs
+        build $ args ++ ["--die","--share"] ++ outs
+        checkOut "2"
 
-    setIn "2"
-    removeFile ".shake.database"
-    build $ ["--die","--share"] ++ outs
-    checkOut "2"
+        setIn "2"
+        removeFile ".shake.database"
+        build $ args ++ ["--die","--share"] ++ outs
+        checkOut "2"
