@@ -17,7 +17,7 @@ import Foreign.C.String
 import System.Posix.Files(createLink)
 #endif
 
-createLinkBool :: FilePath -> FilePath -> IO (Maybe String)
+createLinkMaybe :: FilePath -> FilePath -> IO (Maybe String)
 
 #ifdef mingw32_HOST_OS
 
@@ -29,13 +29,13 @@ createLinkBool :: FilePath -> FilePath -> IO (Maybe String)
 
 foreign import CALLCONV unsafe "Windows.h CreateHardLinkW " c_CreateHardLinkW :: CWString -> CWString -> Ptr () -> IO Bool
 
-createLinkBool from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
+createLinkMaybe from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
     res <- c_CreateHardLinkW cto cfrom nullPtr
     return $ if res then Nothing else Just "CreateHardLink failed."
 
 #else
 
-createLinkBool from to = handleIO (return . Just . show) $ createLink from to >> return Nothing
+createLinkMaybe from to = handleIO (return . Just . show) $ createLink from to >> return Nothing
 
 #endif
 
@@ -45,7 +45,7 @@ copyFileLink useSymlink from to = do
     createDirectoryRecursive $ takeDirectory to
     removeFile_ to
     if not useSymlink then copyFile from to else do
-        b <- createLinkBool from to
+        b <- createLinkMaybe from to
         whenJust b $ \_ ->
             copyFile from to
         -- making files read only stops them from inadvertantly mutating the cache
