@@ -17,7 +17,7 @@ data F f = forall a . F !(f a)
 unF :: F f -> f a
 unF x = case x of F x -> unsafeCoerce x
 
-newtype Map (f :: * -> *) = Map (Map.HashMap TypeRep (F f))
+newtype Map f {- * -> * -} = Map (Map.HashMap TypeRep (F f))
 
 empty :: Map f
 empty = Map Map.empty
