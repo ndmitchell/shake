@@ -34,10 +34,11 @@ data Shared = Shared
     {globalVersion :: !Ver
     ,keyOp :: BinaryOp Key
     ,sharedRoot :: FilePath
+    ,useSymlink :: Bool
     }
 
-newShared :: BinaryOp Key -> Ver -> FilePath -> IO Shared
-newShared keyOp globalVersion sharedRoot = return Shared{..}
+newShared :: Bool -> BinaryOp Key -> Ver -> FilePath -> IO Shared
+newShared useSymlink keyOp globalVersion sharedRoot = return Shared{..}
 
 
 data Entry = Entry
@@ -117,7 +118,7 @@ lookupShared shared ask key builtinVersion userVersion = do
                 let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
                         let dir = sharedFileDir shared entryKey
                         forM_ entryFiles $ \(file, hash) ->
-                            copyFileLink (dir </> show hash) file
+                            copyFileLink (useSymlink shared) (dir </> show hash) file
                 result <$> firstJustM id
                     [ firstJustWaitUnordered id
                         [ test <$> ask k | (k, i1) <- kis
@@ -134,7 +135,7 @@ saveSharedEntry shared entry = do
     BS.writeFile (dir </> "_key" </> hexed v) v
     forM_ (entryFiles entry) $ \(file, hash) ->
         unlessM (doesFileExist_ $ dir </> show hash) $
-            copyFileLink file (dir </> show hash)
+            copyFileLink (useSymlink shared) file (dir </> show hash)
 
 
 addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()

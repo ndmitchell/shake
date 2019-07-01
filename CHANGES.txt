@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Add shakeSymlink to enable/disable symlinks in the shared cache
     Improve cmd on async exceptions with nested processes on Windows
 0.18.2, released 2019-05-19
     #678, fix serious bug in writeFileChanged

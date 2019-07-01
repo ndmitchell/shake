@@ -337,6 +337,8 @@ shakeOptsEx =
     ,opts $ Option ""  ["share"] (optArg "DIRECTORY" $ \x s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s}) "Shared cache location."
     ,hide $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
     ,hide $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
+    ,opts $ Option ""  ["share-copy"] (noArg $ \s -> s{shakeSymlink=False}) "Copy files into the cache."
+    ,opts $ Option ""  ["share-symlink"] (noArg $ \s -> s{shakeSymlink=True}) "Symlink files into the cache."
     ,opts $ Option "s" ["silent"] (noArg $ \s -> s{shakeVerbosity=Silent}) "Don't print anything."
     ,extr $ Option ""  ["sleep"] (noArg [Sleep]) "Sleep for a second before building."
     ,opts $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."

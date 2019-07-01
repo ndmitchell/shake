@@ -370,7 +370,7 @@ loadSharedCloud var opts owitness = do
 
     shared <- case shakeShare opts of
         Nothing -> return Nothing
-        Just x -> Just <$> newShared wit2 ver x
+        Just x -> Just <$> newShared (shakeSymlink opts) wit2 ver x
     cloud <- case newCloud (runLocked var) (Map.map builtinKey owitness) ver keyVers $ shakeCloud opts of
         _ | null $ shakeCloud opts -> return Nothing
         Nothing -> fail "shakeCloud set but Shake not compiled for cloud operation"

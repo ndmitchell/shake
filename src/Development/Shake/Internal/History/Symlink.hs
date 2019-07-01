@@ -40,14 +40,15 @@ createLinkBool from to = handleIO (return . Just . show) $ createLink from to >>
 #endif
 
 
-copyFileLink :: FilePath -> FilePath -> IO ()
-copyFileLink from to = do
+copyFileLink :: Bool -> FilePath -> FilePath -> IO ()
+copyFileLink useSymlink from to = do
     createDirectoryRecursive $ takeDirectory to
     removeFile_ to
-    b <- createLinkBool from to
-    whenJust b $ \_ ->
-        copyFile from to
-    -- making files read only stops them from inadvertantly mutating the cache
-    forM_ [from, to] $ \x -> do
-        perm <- getPermissions x
-        setPermissions x perm{writable=False}
+    if not useSymlink then copyFile from to else do
+        b <- createLinkBool from to
+        whenJust b $ \_ ->
+            copyFile from to
+        -- making files read only stops them from inadvertantly mutating the cache
+        forM_ [from, to] $ \x -> do
+            perm <- getPermissions x
+            setPermissions x perm{writable=False}
