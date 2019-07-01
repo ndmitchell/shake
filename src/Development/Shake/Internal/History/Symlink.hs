@@ -1,7 +1,8 @@
 {-# LANGUAGE CPP #-}
 
 module Development.Shake.Internal.History.Symlink(
-    copyFileLink
+    copyFileLink,
+    createLinkMaybe
     ) where
 
 import Control.Monad.Extra
