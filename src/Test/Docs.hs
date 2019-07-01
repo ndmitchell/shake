@@ -35,7 +35,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         path <- getEnv "GHC_PACKAGE_PATH"
         liftIO $ createDirectoryRecursive "dist"
         dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
-        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell Setup.hs configure"
+        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell -package=Cabal Setup.hs configure"
             ["--builddir=" ++ dist,"--user"]
             -- package-db is very sensitive, see #267
             -- note that the reverse ensures the behaviour is consistent between the flags and the env variable
@@ -51,7 +51,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         needSource
         trackIgnore
         dist <- liftIO $ canonicalizePath "dist"
-        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell Setup.hs haddock" ["--builddir=" ++ dist]
+        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell -package=Cabal Setup.hs haddock" ["--builddir=" ++ dist]
 
     "Part_*.hs" %> \out -> do
         need [shakeRoot </> "src/Test/Docs.hs"] -- so much of the generator is in this module
