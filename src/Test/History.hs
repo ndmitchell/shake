@@ -2,12 +2,13 @@
 
 module Test.History(main) where
 
-import Control.Monad
+import Control.Monad.Extra
 import Development.Shake
 import Test.Type
 import General.Extra
 import General.GetOpt
 import System.Directory
+import Development.Shake.Internal.History.Symlink
 
 
 data Args = Die deriving (Eq,Enum,Bounded,Show)
@@ -25,6 +26,12 @@ main = testBuildArgs test optionsEnum $ \args -> do
 
     "OutFile.txt" %> \out -> die $ copyFile' "In.txt" out
 
+    "OutFile.link.txt" %> \out -> die $ do
+        need ["In.txt"]
+        whenJustM (liftIO $ createLinkMaybe "In.txt" out) $ \_ ->
+            -- just is equivalent to an error happening, so just copy the file
+            writeFile' out =<< readFile' "In.txt"
+
     reader <- addOracleCache $ \x -> die (readFile' x)
     "OutOracle.txt" %> \out -> do
         historyDisable
@@ -37,7 +44,7 @@ main = testBuildArgs test optionsEnum $ \args -> do
 test build =
     forM_ [[],["--share-copy"]] $ \args -> do
         let setIn = writeFile "In.txt"
-        let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt","Phony.txt"]
+        let outs = ["OutFile.txt","OutOracle.txt","OutFiles1.txt","OutFiles2.txt","Phony.txt"] -- ,"OutFile.link.txt"]
         let checkOut x = mapM_ (`assertContents` x) outs
 
         build ["clean"]
