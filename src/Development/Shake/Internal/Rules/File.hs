@@ -564,7 +564,7 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 --   If the 'Action' completes successfully the file is considered up-to-date, even if the file
 --   has not changed.
 (?>) :: Located => (FilePath -> Bool) -> (FilePath -> Action ()) -> Rules ()
-(?>) test act = priority 0.5 $ root ("?> at " ++ callStackTop) test act
+(?>) test act = preference 0.5 $ root ("?> at " ++ callStackTop) test act
 
 
 -- | Define a set of patterns, and if any of them match, run the associated rule. Defined in terms of '%>'.
@@ -578,13 +578,13 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
         [p] -> root help (\x -> toStandard x == p) act
         ps -> let set = Set.fromList ps in root help (flip Set.member set . toStandard) act
     unless (null other) $
-        let ps = map (?==) other in priority 0.5 $ root help (\x -> any ($ x) ps) act
+        let ps = map (?==) other in preference 0.5 $ root help (\x -> any ($ x) ps) act
     where help = show pats ++ " |%> at " ++ callStackTop
 
 -- | Define a rule that matches a 'FilePattern', see '?==' for the pattern rules.
---   Patterns with no wildcards have higher priority than those with wildcards, and no file
---   required by the system may be matched by more than one pattern at the same priority
---   (see 'priority' and 'alternatives' to modify this behaviour).
+--   Patterns with no wildcards have higher preference than those with wildcards, and no file
+--   required by the system may be matched by more than one pattern at the same preference
+--   (see 'preference' and 'alternatives' to modify this behaviour).
 --   This function will create the directory for the result file, if necessary.
 --
 -- @
@@ -604,6 +604,6 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
 --   has not changed.
 (%>) :: Located => FilePattern -> (FilePath -> Action ()) -> Rules ()
 (%>) test act = withFrozenCallStack $
-    (if simple test then id else priority 0.5) $ do
+    (if simple test then id else preference 0.5) $ do
         addTarget test
         root (show test ++ " %> at " ++ callStackTop) (test ?==) act
