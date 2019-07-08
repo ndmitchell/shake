@@ -53,7 +53,7 @@ extra-source-files:
     src/Test/Tup/root.cfg
 data-files:
     docs/manual/build.bat
-    docs/manual/Build.hs
+    docs/manual/Shakefile.hs
     docs/manual/build.sh
     docs/manual/constants.c
     docs/manual/constants.h

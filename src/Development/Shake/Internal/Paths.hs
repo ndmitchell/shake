@@ -57,7 +57,7 @@ readDataFileHTML file = LBS.readFile =<< getDataFile ("html" </> file)
 
 
 manualFiles :: [FilePath]
-manualFiles = map ("docs/manual" </>) ["Build.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"]
+manualFiles = map ("docs/manual" </>) ["Shakefile.hs","main.c","constants.c","constants.h","build" <.> if isWindows then "bat" else "sh"]
 
 hasManualData :: IO Bool
 hasManualData = allM hasDataFile manualFiles
