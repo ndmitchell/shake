@@ -111,7 +111,7 @@ library
 
     if flag(cloud)
         cpp-options: -DNETWORK
-        build-depends: network, network-uri
+        build-depends: network, network-uri, HTTP
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
@@ -231,7 +231,7 @@ executable shake
 
     if flag(cloud)
         cpp-options: -DNETWORK
-        build-depends: network, network-uri
+        build-depends: network, network-uri, HTTP
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
@@ -349,7 +349,7 @@ test-suite shake-test
 
     if flag(cloud)
         cpp-options: -DNETWORK
-        build-depends: network, network-uri
+        build-depends: network, network-uri, HTTP
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
