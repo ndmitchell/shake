@@ -170,6 +170,7 @@ library
         Development.Shake.Internal.Rules.Oracle
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.TermSize
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
@@ -285,6 +286,7 @@ executable shake
         Development.Shake.Internal.Rules.Oracle
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.TermSize
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
@@ -405,6 +407,7 @@ test-suite shake-test
         Development.Shake.Internal.Rules.Oracle
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.TermSize
         Development.Shake.Internal.Value
         Development.Shake.Rule
         Development.Shake.Util

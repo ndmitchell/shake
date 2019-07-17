@@ -7,6 +7,7 @@ module Development.Shake.Internal.CompactUI(
 import Development.Shake.Internal.CmdOption
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Progress
+import Development.Shake.Internal.TermSize
 
 import System.Time.Extra
 import General.Extra
@@ -42,15 +43,25 @@ addTrace key msg start time s
         remove f [] = []
 
 
-display :: Seconds -> S -> (S, String)
-display time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
+display :: Int -> Seconds -> S -> (S, String)
+display cols time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
     where
         pre = sOutput s
         post = "" : (escForeground Green ++ "Status: " ++ sProgress s ++ escNormal) : map f (sTraces s)
 
         pad x = x ++ escClearLine
         f Nothing = " *"
-        f (Just (k,m,t)) = " * " ++ k ++ " (" ++ g (time - t) m ++ ")"
+        f (Just (k,m,t)) = result
+          where
+            full = " * " ++ k ++ " (" ++ g (time - t) m ++ ")"
+            full_size = length full
+
+            elide_size = (cols - 3) `div` 2 -- space for '...'
+            start = take elide_size full
+            end = drop (full_size - elide_size) full
+
+            result | full_size > cols = start ++ "..." ++ end
+                   | otherwise        = full
 
         g i m | showDurationSecs i == "0s" = m
               | i < 10 = s
@@ -66,6 +77,7 @@ compactUI opts = do
     ref <- newIORef emptyS
     let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
     time <- offsetTime
+    (_rows, columns) <- getTermSize
     opts <- return $ opts
         {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)
         ,shakeOutput = \a b -> tweak (addOutput a b)
@@ -73,5 +85,5 @@ compactUI opts = do
         ,shakeCommandOptions = [EchoStdout False, EchoStderr False] ++ shakeCommandOptions opts
         ,shakeVerbosity = Quiet
         }
-    let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)
+    let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display columns t)
     return (opts, forever (tick >> sleep 0.4) `finally` tick)
