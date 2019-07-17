@@ -30,7 +30,7 @@ main = do
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
         Nothing -> do
-            let go = shakeArgsWith shakeOptions{shakeCreationCheck=False} flags $ \opts targets -> do
+            let go = shakeArgsWith shakeOptions{shakeThreads=0,shakeCreationCheck=False} flags $ \opts targets -> do
                         let tool = listToMaybe [x | Tool x <- opts]
                         makefile <- case reverse [x | UseMakefile x <- opts] of
                             x:_ -> return x
