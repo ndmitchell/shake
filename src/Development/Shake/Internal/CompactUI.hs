@@ -43,11 +43,13 @@ addTrace key msg start time s
         remove f [] = []
 
 
-display :: Int -> Seconds -> S -> (S, String)
-display cols time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
+display :: Bool -> Int -> Seconds -> S -> (S, String)
+display True _ _ s =
+  (s, concat (replicate (sUnwind s) (escClearLine ++ escCursorUp 1)) ++ escClearLine)
+display False cols time s = (s{sOutput=[], sUnwind=length post}, escCursorUp (sUnwind s) ++ unlines (map pad $ pre ++ post))
     where
         pre = sOutput s
-        post = "" : (escForeground Green ++ "Status: " ++ sProgress s ++ escNormal) : map f (sTraces s)
+        post = (escForeground Green ++ "Status: " ++ sProgress s ++ escNormal) : map f (sTraces s)
 
         pad x = x ++ escClearLine
         f Nothing = " *"
@@ -85,5 +87,7 @@ compactUI opts = do
         ,shakeCommandOptions = [EchoStdout False, EchoStderr False] ++ shakeCommandOptions opts
         ,shakeVerbosity = Quiet
         }
-    let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display columns t)
-    return (opts, forever (tick >> sleep 0.4) `finally` tick)
+
+    putStr "\n" -- single newline so we don't gobble the PS1 line
+    let tick final = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display final columns t)
+    return (opts, forever (tick False >> sleep 0.4) `finally` tick True)
