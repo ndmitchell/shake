@@ -76,6 +76,11 @@ flag cloud
     manual: True
     description: Enable cloud build features
 
+flag embed-files
+    default: False
+    manual: True
+    description: Embed data files into the shake library
+
 library
     default-language: Haskell2010
     hs-source-dirs:   src
@@ -100,6 +105,12 @@ library
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
         utf8-string >= 0.3
+
+    if flag(embed-files)
+        cpp-options: -DFILE_EMBED
+        build-depends:
+            file-embed >= 0.0.11,
+            template-haskell
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -208,6 +219,7 @@ executable shake
         extra >= 1.6.14,
         filepath,
         filepattern,
+        file-embed >= 0.0.11,
         hashable >= 1.1.2.3,
         heaps >= 0.3.6.1,
         js-dgtable,
@@ -216,10 +228,13 @@ executable shake
         primitive,
         process >= 1.1,
         random,
+        template-haskell,
         time,
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
         utf8-string >= 0.3
+
+    cpp-options: -DFILE_EMBED
 
     if flag(portable)
         cpp-options: -DPORTABLE
@@ -338,6 +353,12 @@ test-suite shake-test
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
         utf8-string >= 0.3
+
+    if flag(embed-files)
+        cpp-options: -DFILE_EMBED
+        build-depends:
+            file-embed >= 0.0.11,
+            template-haskell
 
     if flag(portable)
         cpp-options: -DPORTABLE
