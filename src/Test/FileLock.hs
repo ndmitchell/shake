@@ -19,7 +19,7 @@ main = testBuild test $
 
 
 -- Disabled under Mac because it fails, see #560
-test build = unless isMac $ do
+test build = replicateM_ 100 $ do -- unless isMac $ do
     -- check it fails exactly once
     time <- offsetTime
     lock <- newLock
