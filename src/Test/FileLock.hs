@@ -7,7 +7,6 @@ import Control.Exception.Extra
 import Control.Monad
 import Data.Either.Extra
 import System.Time.Extra
-import System.Info.Extra
 import Test.Type
 
 
