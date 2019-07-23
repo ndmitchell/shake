@@ -2,9 +2,9 @@
 
 By default, Shake rebuilds everything that has changed. However, sometimes you want to rebuild things that haven't changed, or not rebuild things that have changed. To support this workflow Shake provides three modes:
 
-* `RebuildNormal` is the default setting, rebuild a rule if it's dependencies have changed.
-* `RebuildNow` forces a rule to rebuild even if it's dependencies haven't changed. If the rule changes, then that will in turn cause anything depending on that rule to rebuild too.
-* `RebuildLater` causes a rule not to rebuild this run even if it's dependencies have changed. Note that in future runs, if the `RebuildLater` is not set, the rule may rebuild.
+* `RebuildNormal` is the default setting, rebuild a rule if its dependencies have changed.
+* `RebuildNow` forces a rule to rebuild even if its dependencies haven't changed. If the rule changes, then that will in turn cause anything depending on that rule to rebuild too.
+* `RebuildLater` causes a rule not to rebuild this run even if its dependencies have changed. Note that in future runs, if the `RebuildLater` is not set, the rule may rebuild.
 
 To set these flags in the `ShakeOptions` structure there is a field `shakeRebuild` of type `[(Rebuild, FilePattern)]`.
 
