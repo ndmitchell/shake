@@ -27,7 +27,7 @@ Shake is a Haskell library for writing build systems -- designed as a replacemen
             let c = dropDirectory1 $ out -<.> "c"
             let m = out -<.> "m"
             cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
-            needMakefileDependencies m
+            neededMakefileDependencies m
 
 This build system builds the executable `_build/run` from all C source files in the current directory. It will rebuild if you add/remove any C files to the directory, if the C files themselves change, or if any headers used by the C files change. All generated files are placed in `_build`, and a `clean` command is provided that will wipe all the generated files. In the rest of this manual we'll explain how the above code works and how to extend it.
 
@@ -224,7 +224,7 @@ One common problem when building `.c` files is tracking down which headers they 
 
 That will compile `main.c` to `main.o`, and also produce a file `main.m` containing the dependencies. To add these dependencies as dependencies of this rule we can call:
 
-    needMakefileDependencies "main.m"
+    neededMakefileDependencies "main.m"
 
 Now, if either `main.c` or any headers transitively imported by `main.c` change, the file will be rebuilt. In the initial example the complete rule is:
 
@@ -232,9 +232,9 @@ Now, if either `main.c` or any headers transitively imported by `main.c` change,
         let c = dropDirectory1 $ out -<.> "c"
         let m = out -<.> "m"
         cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
-        needMakefileDependencies m
+        neededMakefileDependencies m
 
-We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `needMakefileDependencies`.
+We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `neededMakefileDependencies`.
 
 #### Top-level variables
 
