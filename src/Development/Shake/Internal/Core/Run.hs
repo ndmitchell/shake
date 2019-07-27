@@ -73,7 +73,7 @@ data RunState = RunState
 open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
 open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
     diagnostic $ return "Starting run"
-    (actions, ruleinfo, userRules, _targets) <- runRules opts rs
+    RulesInfo{riActions = actions, riBuiltinRules = ruleinfo, riUserRules = userRules} <- runRules opts rs
 
     diagnostic $ return $ "Number of actions = " ++ show (length actions)
     diagnostic $ return $ "Number of builtin rules = " ++ show (Map.size ruleinfo) ++ " " ++ show (Map.keys ruleinfo)

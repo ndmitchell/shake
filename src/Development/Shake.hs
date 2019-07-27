@@ -61,7 +61,7 @@ module Development.Shake(
     getShakeOptions, getShakeOptionsRules, getHashedShakeVersion,
     getShakeExtra, getShakeExtraRules, addShakeExtra,
     -- ** Command line
-    shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs,
+    shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs, addHelpSuffix,
     -- ** Targets
     getTargets, addTarget, withTargetDocs, withoutTargets,
     -- ** Progress reporting

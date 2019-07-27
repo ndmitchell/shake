@@ -1,12 +1,15 @@
 module Test.Targets(main) where
 
 import Development.Shake
+import Development.Shake.Internal.Core.Rules (getHelpSuffix)
 import Test.Type
 
 main :: IO () -> IO ()
 main _sleeper = do
     targets <- getTargets shakeOptions rules
     targets === expected
+    helpSuffix <- getHelpSuffix shakeOptions rules
+    helpSuffix === ["Don't Panic", "Know where your towel is"]
 
 rules :: Rules ()
 rules = do
@@ -26,6 +29,9 @@ rules = do
         withTargetDocs "awesome files" $ ["file12", "file13"] &%> \_ -> return ()
         phony "Foo" $ return ()
         withoutTargets $ phony "Bar" $ return ()
+
+    addHelpSuffix "Don't Panic"
+    addHelpSuffix "Know where your towel is"
 
 
 expected :: [(String, Maybe String)]
