@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #686, rename Build.hs to Shakefile.hs
     #690, make Ninja mode use -j0 by default (more like Ninja)
 0.18.3, released 2019-07-01
     Add shakeSymlink to enable/disable symlinks in the shared cache
