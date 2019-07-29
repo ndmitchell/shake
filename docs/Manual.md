@@ -37,7 +37,7 @@ To run the example above:
 
 1. Install the [Haskell Stack](https://haskellstack.org/), which provides a Haskell compiler and package manager.
 2. Type `stack install shake`, to build and install Shake and all its dependencies.
-3. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
+3. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Shakefile.hs`), and execute it (which can be done by `runhaskell Shakefile.hs`). For more details see a [trace of `shake --demo`](Demo.md).
 
 ## Basic syntax
 
@@ -261,7 +261,7 @@ A standard clean command is defined as:
         putNormal "Cleaning files in _build"
         removeFilesAfter "_build" ["//*"]
 
-Running the build system with the `clean` argument, e.g. `runhaskell Build.hs clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
+Running the build system with the `clean` argument, e.g. `runhaskell Shakefile.hs clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
 
 <pre>
 phony "<i>name</i>" $ do
@@ -270,7 +270,7 @@ phony "<i>name</i>" $ do
 
 Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are run afresh each time they are requested.
 
-The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell Build.hs clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
+The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell Shakefile.hs clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
 
 ## Running
 
@@ -278,13 +278,13 @@ This section covers how to run the build system you have written.
 
 #### Compiling the build system
 
-As shown before, we can use `runhaskell Build.hs` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
+As shown before, we can use `runhaskell Shakefile.hs` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
 
     #!/bin/sh
     mkdir -p _shake
-    ghc --make Build.hs -rtsopts -threaded -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
+    ghc --make Shakefile.hs -rtsopts -threaded -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
 
-This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
+This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Shakefile.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
 
 Now you can run a build by typing `stack exec ./build.sh` on Linux, or `stack exec build.bat` on Windows. On Linux you may want to alias `build` to `stack exec ./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
