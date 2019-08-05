@@ -15,10 +15,10 @@ main = shakeArgs shakeOptions{shakeFiles="_build"} $ do
         cs <- getDirectoryFiles "" ["//*.c"]
         let os = ["_build" </> c -<.> "o" | c <- cs]
         need os
-        cmd "gcc -o" [out] os
+        cmd_ "gcc -o" [out] os
 
     "_build//*.o" %> \out -> do
         let c = dropDirectory1 $ out -<.> "c"
         let m = out -<.> "m"
-        () <- cmd "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
+        cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
         neededMakefileDependencies m
