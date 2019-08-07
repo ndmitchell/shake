@@ -5,13 +5,14 @@
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rules, runRules,
+    Rules, RulesInfo(..), runRules,
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
     addUserRule, alternatives, priority, versioned,
     getTargets, addTarget, withTargetDocs, withoutTargets,
+    addHelpSuffix, getHelpSuffix,
     action, withoutActions
     ) where
 
@@ -133,12 +134,12 @@ modifyRulesScoped f (Rules r) = Rules $ do
         modifyIORef' refOld (<> f rules)
         return res
 
-runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned, [Target])
+runRules :: ShakeOptions -> Rules () -> IO RulesInfo
 runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    return (runListBuilder actions, builtinRules, userRules, runListBuilder targets)
+    return $ RulesInfo (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -147,8 +148,13 @@ runRules opts (Rules r) = do
 --   Returns the command, paired with the documentation (if any).
 getTargets :: ShakeOptions -> Rules () -> IO [(String, Maybe String)]
 getTargets opts rs = do
-    (_actions, _ruleinfo, _userRules, targets) <- runRules opts rs
+    RulesInfo{riTargets = targets} <- runRules opts rs
     return [(target, documentation) | Target{..} <- targets]
+
+getHelpSuffix :: ShakeOptions -> Rules () -> IO [String]
+getHelpSuffix opts rs = do
+    RulesInfo{riHelpSuffix = helpSuffix} <- runRules opts rs
+    return helpSuffix
 
 data Target = Target
     {target :: !String
@@ -160,14 +166,24 @@ data SRules = SRules
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
     ,userRules :: !(TMap.Map UserRuleVersioned)
     ,targets :: !(ListBuilder Target)
+    ,helpSuffix :: !(ListBuilder String)
+    }
+
+-- | The result of having run a set of 'Rules' with 'runRules'.
+data RulesInfo = RulesInfo
+    {riActions :: [(Stack, Action ())]
+    ,riBuiltinRules :: Map.HashMap TypeRep BuiltinRule
+    ,riUserRules :: TMap.Map UserRuleVersioned
+    ,riTargets :: [Target]
+    ,riHelpSuffix :: [String]
     }
 
 instance Semigroup SRules where
-    (SRules x1 x2 x3 x4) <> (SRules y1 y2 y3 y4) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4)
+    (SRules x1 x2 x3 x4 x5) <> (SRules y1 y2 y3 y4 y5) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5)
         where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
 instance Monoid SRules where
-    mempty = SRules mempty Map.empty TMap.empty mempty
+    mempty = SRules mempty Map.empty TMap.empty mempty mempty
     mappend = (<>)
 
 instance Semigroup a => Semigroup (Rules a) where
@@ -190,7 +206,7 @@ addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned F
 addTarget :: String -> Rules ()
 addTarget t = newRules mempty{targets = newListBuilder $ Target t Nothing}
 
--- | For all 'addTarget' targets within the 'Rules' prodivde the specified documentation, if they
+-- | For all 'addTarget' targets within the 'Rules' provide the specified documentation, if they
 --   don't already have documentation.
 withTargetDocs :: String -> Rules () -> Rules ()
 withTargetDocs d = modifyRulesScoped $ \x -> x{targets = f <$> targets x}
@@ -201,6 +217,9 @@ withTargetDocs d = modifyRulesScoped $ \x -> x{targets = f <$> targets x}
 withoutTargets :: Rules a -> Rules a
 withoutTargets = modifyRulesScoped $ \x -> x{targets=mempty}
 
+-- | Adds some extra information at the end of @--help@.
+addHelpSuffix :: String -> Rules ()
+addHelpSuffix s = newRules mempty{helpSuffix = newListBuilder s}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
