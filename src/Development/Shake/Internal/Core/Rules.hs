@@ -11,7 +11,7 @@ module Development.Shake.Internal.Core.Rules(
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
-    addUserRule, alternatives, priority, versioned,
+    addUserRule, alternatives, preference, versioned,
     getTargets, addTarget, withTargetDocs, withoutTargets,
     addHelpSuffix, getHelpSuffix,
     action, withoutActions
@@ -76,14 +76,14 @@ getUserRuleInternal key disp test = do
         f :: Ver -> Maybe Double -> UserRule a -> [(Double,(Ver,Maybe String,b))]
         f v p (UserRule x) = [(fromMaybe 1 p, (v,disp x,x2)) | Just x2 <- [test x]]
         f v p (Unordered xs) = concatMap (f v p) xs
-        f v p (Priority p2 x) = f v (Just $ fromMaybe p2 p) x
+        f v p (Preference p2 x) = f v (Just $ fromMaybe p2 p) x
         f _ p (Versioned v x) = f v p x
         f v p (Alternative x) = take 1 $ f v p x
 
 
 -- | Get the user rules that were added at a particular type which return 'Just' on a given function.
 --   Return all equally applicable rules, paired with the version of the rule
---   (set by 'versioned'). Where rules are specified with 'alternatives' or 'priority'
+--   (set by 'versioned'). Where rules are specified with 'alternatives' or 'preference'
 --   the less-applicable rules will not be returned.
 --
 --   If you can only deal with zero/one results, call 'getUserRuleMaybe' or 'getUserRuleOne',
@@ -260,26 +260,26 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
 
 
--- | Change the priority of a given set of rules, where higher priorities take precedence.
---   All matching rules at a given priority must be disjoint, or an error is raised.
---   All builtin Shake rules have priority between 0 and 1.
---   Excessive use of 'priority' is discouraged. As an example:
+-- | Change the preference of a given set of rules, where higher priorities take precedence.
+--   All matching rules at a given preference must be disjoint, or an error is raised.
+--   All builtin Shake rules have preference between 0 and 1.
+--   Excessive use of 'preference' is discouraged. As an example:
 --
 -- @
--- 'priority' 4 $ \"hello.*\" %> \\out -> 'writeFile'' out \"hello.*\"
--- 'priority' 8 $ \"*.txt\" %> \\out -> 'writeFile'' out \"*.txt\"
+-- 'preference' 4 $ \"hello.*\" %> \\out -> 'writeFile'' out \"hello.*\"
+-- 'preference' 8 $ \"*.txt\" %> \\out -> 'writeFile'' out \"*.txt\"
 -- @
 --
 --   In this example @hello.txt@ will match the second rule, instead of raising an error about ambiguity.
 --
---   The 'priority' function obeys the invariants:
+--   The 'preference' function obeys the invariants:
 --
 -- @
--- 'priority' p1 ('priority' p2 r1) === 'priority' p1 r1
--- 'priority' p1 (r1 >> r2) === 'priority' p1 r1 >> 'priority' p1 r2
+-- 'preference' p1 ('preference' p2 r1) === 'preference' p1 r1
+-- 'preference' p1 (r1 >> r2) === 'preference' p1 r1 >> 'preference' p1 r2
 -- @
-priority :: Double -> Rules a -> Rules a
-priority d = modifyRulesScoped $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Priority d x) $ userRules s}
+preference :: Double -> Rules a -> Rules a
+preference d = modifyRulesScoped $ \s -> s{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Preference d x) $ userRules s}
 
 
 -- | Indicate that the nested rules have a given version. If you change the semantics of the rule then updating (or adding)
@@ -309,8 +309,8 @@ versioned v = modifyRulesScoped $ \s -> s
 -- @
 --
 --   In this example @hello.txt@ will match the first rule, instead of raising an error about ambiguity.
---   Inside 'alternatives' the 'priority' of each rule is not used to determine which rule matches,
---   but the resulting match uses that priority compared to the rules outside the 'alternatives' block.
+--   Inside 'alternatives' the 'preference' of each rule is not used to determine which rule matches,
+--   but the resulting match uses that preference compared to the rules outside the 'alternatives' block.
 alternatives :: Rules a -> Rules a
 alternatives = modifyRulesScoped $ \r -> r{userRules = TMap.map (\(UserRuleVersioned b x) -> UserRuleVersioned b $ Alternative x) $ userRules r}
 

@@ -52,7 +52,7 @@ module Development.Shake(
     -- * Core
     shake,
     shakeOptions,
-    Rules, action, withoutActions, alternatives, priority, versioned,
+    Rules, action, withoutActions, alternatives, preference, versioned,
     Action, traced,
     liftIO, actionOnException, actionFinally, actionCatch, actionRetry, runAfter,
     ShakeException(..),
@@ -112,10 +112,11 @@ module Development.Shake(
     -- * Deprecated
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),
-    askOracleWith
+    askOracleWith,
+    priority
     ) where
 
-import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
+import Prelude(Maybe, FilePath, Double) -- Since GHC 7.10 duplicates *>
 
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
@@ -267,3 +268,11 @@ infix 1 *>, |*>, &*>
 --   since the 'RuleResult' type family now fixes the result type.
 askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
 askOracleWith question _ = askOracle question
+
+---------------------------------------------------------------------
+-- DEPRECATED SINCE 0.18.4, JUL 2019
+
+{-# DEPRECATED priority "Use preference instead" #-}
+-- | /Deprecated:/ Alias for 'preference'.
+priority :: Double -> Rules a -> Rules a
+priority = preference
