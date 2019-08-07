@@ -272,7 +272,6 @@ askOracleWith question _ = askOracle question
 ---------------------------------------------------------------------
 -- DEPRECATED SINCE 0.18.4, JUL 2019
 
-{-# DEPRECATED priority "Use preference instead" #-}
 -- | /Deprecated:/ Alias for 'preference'.
 priority :: Double -> Rules a -> Rules a
 priority = preference

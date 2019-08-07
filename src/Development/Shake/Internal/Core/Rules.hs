@@ -260,7 +260,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
 
 
--- | Change the preference of a given set of rules, where higher priorities take precedence.
+-- | Change the preference of a given set of rules, where higher values take precedence.
 --   All matching rules at a given preference must be disjoint, or an error is raised.
 --   All builtin Shake rules have preference between 0 and 1.
 --   Excessive use of 'preference' is discouraged. As an example:
