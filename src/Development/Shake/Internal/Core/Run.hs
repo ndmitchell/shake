@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, NamedFieldPuns #-}
 
 module Development.Shake.Internal.Core.Run(
     RunState,
@@ -60,7 +60,7 @@ import Prelude
 
 data RunState = RunState
     {opts :: ShakeOptions
-    ,ruleinfo :: Map.HashMap TypeRep BuiltinRule
+    ,builtinRules :: Map.HashMap TypeRep BuiltinRule
     ,userRules :: TMap.Map UserRuleVersioned
     ,database :: Database
     ,curdir :: FilePath
@@ -73,18 +73,18 @@ data RunState = RunState
 open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
 open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
     diagnostic $ return "Starting run"
-    RulesInfo{riActions = actions, riBuiltinRules = ruleinfo, riUserRules = userRules} <- runRules opts rs
+    SRules{actions, builtinRules, userRules} <- runRules opts rs
 
     diagnostic $ return $ "Number of actions = " ++ show (length actions)
-    diagnostic $ return $ "Number of builtin rules = " ++ show (Map.size ruleinfo) ++ " " ++ show (Map.keys ruleinfo)
+    diagnostic $ return $ "Number of builtin rules = " ++ show (Map.size builtinRules) ++ " " ++ show (Map.keys builtinRules)
     diagnostic $ return $ "Number of user rule types = " ++ show (TMap.size userRules)
     diagnostic $ return $ "Number of user rules = " ++ show (sum (TMap.toList (userRuleSize . userRuleContents) userRules))
 
     checkShakeExtra shakeExtra
     curdir <- getCurrentDirectory
 
-    database <- usingDatabase cleanup opts diagnostic ruleinfo
-    (shared, cloud) <- loadSharedCloud database opts ruleinfo
+    database <- usingDatabase cleanup opts diagnostic builtinRules
+    (shared, cloud) <- loadSharedCloud database opts builtinRules
     return RunState{..}
 
 
@@ -141,7 +141,7 @@ run RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -163,7 +163,7 @@ run RunState{..} oneshot actions2 =
             when (isJust shakeLint) $ do
                 addTiming "Lint checking"
                 lintCurrentDirectory curdir "After completion"
-                checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
+                checkValid diagnostic database (runLint builtinRules) =<< readIORef absent
                 putWhen Loud "Lint checking succeeded"
             when (shakeReport /= []) $ do
                 addTiming "Profile report"

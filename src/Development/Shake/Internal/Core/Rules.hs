@@ -1,11 +1,12 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, ConstraintKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ConstraintKinds, NamedFieldPuns #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes #-}
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rules, RulesInfo(..), runRules,
+    Rules, SRules(..), runRules,
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
@@ -114,17 +115,17 @@ getUserRuleOne key disp test = do
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (ReaderT (ShakeOptions, IORef SRules) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (ReaderT (ShakeOptions, IORef (SRules ListBuilder)) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix
 #if __GLASGOW_HASKELL__ >= 800
              ,MonadFail
 #endif
         )
 
-newRules :: SRules -> Rules ()
+newRules :: SRules ListBuilder -> Rules ()
 newRules x = Rules $ liftIO . flip modifyIORef' (<> x) =<< asks snd
 
-modifyRulesScoped :: (SRules -> SRules) -> Rules a -> Rules a
+modifyRulesScoped :: (SRules ListBuilder -> SRules ListBuilder) -> Rules a -> Rules a
 modifyRulesScoped f (Rules r) = Rules $ do
     (opts, refOld) <- ask
     liftIO $ do
@@ -134,12 +135,12 @@ modifyRulesScoped f (Rules r) = Rules $ do
         modifyIORef' refOld (<> f rules)
         return res
 
-runRules :: ShakeOptions -> Rules () -> IO RulesInfo
+runRules :: ShakeOptions -> Rules () -> IO (SRules [])
 runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    return $ RulesInfo (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
+    return $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -148,12 +149,12 @@ runRules opts (Rules r) = do
 --   Returns the command, paired with the documentation (if any).
 getTargets :: ShakeOptions -> Rules () -> IO [(String, Maybe String)]
 getTargets opts rs = do
-    RulesInfo{riTargets = targets} <- runRules opts rs
+    SRules{targets} <- runRules opts rs
     return [(target, documentation) | Target{..} <- targets]
 
 getHelpSuffix :: ShakeOptions -> Rules () -> IO [String]
 getHelpSuffix opts rs = do
-    RulesInfo{riHelpSuffix = helpSuffix} <- runRules opts rs
+    SRules{helpSuffix} <- runRules opts rs
     return helpSuffix
 
 data Target = Target
@@ -161,28 +162,19 @@ data Target = Target
     ,documentation :: !(Maybe String)
     } deriving (Eq,Ord,Show,Read,Data,Typeable)
 
-data SRules = SRules
-    {actions :: !(ListBuilder (Stack, Action ()))
+data SRules list = SRules
+    {actions :: !(list (Stack, Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
     ,userRules :: !(TMap.Map UserRuleVersioned)
-    ,targets :: !(ListBuilder Target)
-    ,helpSuffix :: !(ListBuilder String)
+    ,targets :: !(list Target)
+    ,helpSuffix :: !(list String)
     }
 
--- | The result of having run a set of 'Rules' with 'runRules'.
-data RulesInfo = RulesInfo
-    {riActions :: [(Stack, Action ())]
-    ,riBuiltinRules :: Map.HashMap TypeRep BuiltinRule
-    ,riUserRules :: TMap.Map UserRuleVersioned
-    ,riTargets :: [Target]
-    ,riHelpSuffix :: [String]
-    }
-
-instance Semigroup SRules where
+instance Semigroup (SRules ListBuilder) where
     (SRules x1 x2 x3 x4 x5) <> (SRules y1 y2 y3 y4 y5) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5)
         where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
-instance Monoid SRules where
+instance Monoid (SRules ListBuilder) where
     mempty = SRules mempty Map.empty TMap.empty mempty mempty
     mappend = (<>)
 
