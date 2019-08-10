@@ -82,7 +82,7 @@ addOracleFlavor flavor act = do
 -- newtype GhcVersion = GhcVersion () deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
 -- type instance RuleResult GhcVersion = String
 -- rules = do
---     'addOracle' $ \\(GhcVersion _) -> fmap 'Development.Shake.fromStdout' $ 'Development.Shake.cmd' \"ghc --numeric-version\" :: Action String
+--     'addOracle' $ \\(GhcVersion _) -> 'Development.Shake.fromStdout' \<$\> 'Development.Shake.cmd' \"ghc --numeric-version\" :: Action String
 --     ... rules ...
 -- @
 --
