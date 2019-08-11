@@ -97,7 +97,7 @@ shakenEx reenter options test rules sleeper = do
             del <- removeFilesRandom out
             threads <- randomRIO (1,4)
             putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
-            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules [] args
+            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Error} $ rules [] args
 
         args -> change $ do
             t <- tracker

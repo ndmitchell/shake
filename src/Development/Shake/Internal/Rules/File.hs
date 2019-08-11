@@ -215,7 +215,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
     (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal o (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f xStr
     let verEq v = Just v == ruleVer || case ruleAct of [] -> v == Ver 0; [(v2,_)] -> v == Ver v2; _ -> False
     let rebuild = do
-            putWhen Chatty $ "# " ++ show o
+            putWhen Verbose $ "# " ++ show o
             case ruleAct of
                 [] -> rebuildWith Nothing
                 [x] -> rebuildWith $ Just x

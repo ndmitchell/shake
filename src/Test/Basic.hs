@@ -58,7 +58,7 @@ main = testBuild test $ do
 
     phony "options" $ do
         opts <- getShakeOptions
-        putNormal $ show opts
+        putInfo $ show opts
 
     "dummer.txt" %> \out -> do
         need ["dummy","dummy"]

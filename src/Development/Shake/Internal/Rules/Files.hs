@@ -96,7 +96,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
     (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal k (\(FilesRule s _) -> Just s) $ \(FilesRule _ f) -> f k
     let verEq v = Just v == ruleVer || map (Ver . fst) ruleAct == [v]
     let rebuild = do
-            putWhen Chatty $ "# " ++ show k
+            putWhen Verbose $ "# " ++ show k
             case ruleAct of
                 [x] -> rebuildWith x
                 _ -> throwM ruleErr
