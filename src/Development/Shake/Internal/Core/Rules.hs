@@ -225,11 +225,11 @@ noIdentity _ _ = Nothing
 
 
 -- | The type mapping between the @key@ or a rule and the resulting @value@.
---   See 'addBuiltinRule' and 'apply'.
+--   See 'addBuiltinRule' and 'Development.Shake.Rule.apply'.
 type family RuleResult key -- = value
 
 -- | Define a builtin rule, passing the functions to run in the right circumstances.
---   The @key@ and @value@ types will be what is used by 'Development.Shake.apply'.
+--   The @key@ and @value@ types will be what is used by 'Development.Shake.Rule.apply'.
 --   As a start, you can use 'noLint' and 'noIdentity' as the first two functions,
 --   but are required to supply a suitable 'BuiltinRun'.
 --
