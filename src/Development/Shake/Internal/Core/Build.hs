@@ -78,13 +78,13 @@ lookupOne global stack database i = do
         Nothing -> Now $ Left $ errorStructured "Shake Id no longer exists" [("Id", Just $ show i)] ""
         Just (k, s) -> case s of
             Ready r -> Now $ Right r
-            Error e _ -> Now $ Left e
+            Failed e _ -> Now $ Left e
             Running{} | Left e <- addStack i k stack -> Now $ Left e
             _ -> Later $ \continue -> do
                 Just (_, s) <- liftIO $ getKeyValueFromId database i
                 case s of
                     Ready r -> continue $ Right r
-                    Error e _ -> continue $ Left e
+                    Failed e _ -> continue $ Left e
                     Running (NoShow w) r -> do
                         let w2 v = w v >> continue v
                         setMem database i k $ Running (NoShow w2) r
@@ -117,7 +117,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k $ Loaded runValue{result=runStore}
                     _ -> return ()
     where
-        mkError e = if globalOneShot then Error e Nothing else Error e r
+        mkError e = Failed e $ if globalOneShot then Nothing else r
 
 
 -- | Compute the value for a given RunMode and a restore function to run

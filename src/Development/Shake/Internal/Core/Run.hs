@@ -94,7 +94,7 @@ reset RunState{..} = runLocked database $
     modifyAllMem database f
     where
         f (Ready r) = Loaded (snd <$> r)
-        f (Error _ x) = maybe Missing Loaded x
+        f (Failed _ x) = maybe Missing Loaded x
         f (Running _ x) = maybe Missing Loaded x -- shouldn't ever happen, but Loaded is least worst
         f x = x
 
@@ -274,7 +274,7 @@ liveFiles database = do
 errorsState :: RunState -> IO [(String, SomeException)]
 errorsState RunState{..} = do
     status <- getKeyValues database
-    return [(show k, e) | (k, Error e _) <- status]
+    return [(show k, e) | (k, Failed e _) <- status]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()

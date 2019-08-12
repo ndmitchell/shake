@@ -216,7 +216,7 @@ type OneShot a = a
 
 data Status
     = Ready (Result (Value, OneShot BS_Store)) -- ^ I have a value
-    | Error SomeException (OneShot (Maybe (Result BS_Store))) -- ^ I have been run and raised an error
+    | Failed SomeException (OneShot (Maybe (Result BS_Store))) -- ^ I have been run and raised an error
     | Loaded (Result BS_Store) -- ^ Loaded from the database
     | Running (NoShow (Either SomeException (Result (Value, BS_Store)) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
@@ -225,7 +225,7 @@ data Status
 instance NFData Status where
     rnf x = case x of
         Ready x -> rnf x
-        Error x y -> rnfException x `seq` rnf y
+        Failed x y -> rnfException x `seq` rnf y
         Loaded x -> rnf x
         Running _ x -> rnf x -- Can't RNF a waiting, but also unnecessary
         Missing -> ()
@@ -248,7 +248,7 @@ instance NFData a => NFData (Result a) where
     rnf (Result a _ _ b _ c) = rnf a `seq` rnf b `seq` rnf c
 
 statusType Ready{} = "Ready"
-statusType Error{} = "Error"
+statusType Failed{} = "Failed"
 statusType Loaded{} = "Loaded"
 statusType Running{} = "Running"
 statusType Missing{} = "Missing"
