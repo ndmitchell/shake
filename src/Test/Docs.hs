@@ -51,7 +51,8 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         needSource
         trackIgnore
         dist <- liftIO $ canonicalizePath "dist"
-        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell -package=Cabal Setup.hs haddock" ["--builddir=" ++ dist]
+        -- use liftIO since cmd blows away PATH which makes lint-tracker stop working; the error was:
+        liftIO $ cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell -package=Cabal Setup.hs haddock" ["--builddir=" ++ dist]
 
     "Part_*.hs" %> \out -> do
         need [shakeRoot </> "src/Test/Docs.hs"] -- so much of the generator is in this module

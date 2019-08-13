@@ -127,8 +127,9 @@ main = testBuild test $ do
         let path = AddPath [dropTrailingPathSeparator "helper"] []
         cmd_ "helper/shake_helper"
         cmd_ $ "helper/shake_helper" <.> exe
-        cmd_ path Shell "shake_helper"
-        cmd_ path "shake_helper"
+        -- use liftIO since cmd blows away PATH which makes lint-tracker stop working
+        liftIO $ cmd_ path Shell "shake_helper"
+        liftIO $ cmd_ path "shake_helper"
 
     "file" !> do
         let file = "file.txt"
