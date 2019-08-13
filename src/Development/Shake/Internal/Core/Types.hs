@@ -350,15 +350,15 @@ data BuiltinRule = BuiltinRule
 -- | A 'UserRule' data type, representing user-defined rules associated with a particular type.
 --   As an example 'Development.Shake.?>' and 'Development.Shake.%>' will add entries to the 'UserRule' data type.
 data UserRule a
--- > preference p1 (preference p2 x) == preference p1 x
--- > preference p (x `ordered` y) = preference p x `ordered` preference p y
--- > preference p (x `unordered` y) = preference p x `unordered` preference p y
+-- > priority p1 (priority p2 x) == priority p1 x
+-- > priority p (x `ordered` y) = priority p x `ordered` priority p y
+-- > priority p (x `unordered` y) = priority p x `unordered` priority p y
 -- > ordered is associative
 -- > unordered is associative and commutative
 -- > alternative does not obey priorities, until picking the best one
     = UserRule a -- ^ Added to the state with @'addUserRule' :: Typeable a => a -> 'Rules' ()@.
     | Unordered [UserRule a] -- ^ Rules combined with the 'Monad' \/ 'Monoid'.
-    | Preference Double (UserRule a) -- ^ Rules defined under 'preference'.
+    | Priority Double (UserRule a) -- ^ Rules defined under 'priority'.
     | Alternative (UserRule a) -- ^ Rule defined under 'alternatives', matched in order.
     | Versioned Ver (UserRule a) -- ^ Rule defined under 'versioned', attaches a version.
       deriving (Eq,Show,Functor,Typeable)
@@ -385,7 +385,7 @@ instance Monoid (UserRule a) where
 userRuleSize :: UserRule a -> Int
 userRuleSize UserRule{} = 1
 userRuleSize (Unordered xs) = sum $ map userRuleSize xs
-userRuleSize (Preference _ x) = userRuleSize x
+userRuleSize (Priority _ x) = userRuleSize x
 userRuleSize (Alternative x) = userRuleSize x
 userRuleSize (Versioned _ x) = userRuleSize x
 

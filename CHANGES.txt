@@ -1,6 +1,6 @@
 Changelog for Shake (* = breaking change)
 
-    #629, rename priority to preference
+    #708, rename deprioritize to reschedule
     #689, allow adding help messages at the end using addHelpSuffix
     #686, rename Build.hs to Shakefile.hs
     #690, make Ninja mode use -j0 by default (more like Ninja)
