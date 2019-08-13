@@ -166,11 +166,11 @@ ps &%> act
         ["* " ++ p ++ (if compatible [p, head ps] then "" else " (incompatible)") | p <- ps]
     | otherwise = withFrozenCallStack $ do
         forM_ (zipFrom 0 ps) $ \(i,p) ->
-            (if simple p then id else preference 0.5) $
+            (if simple p then id else priority 0.5) $
                 fileForward (show ps ++ " &%> at " ++ callStackTop) $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
                     FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
                     return $ if null res then Nothing else Just $ res !! i
-        (if all simple ps then id else preference 0.5) $ do
+        (if all simple ps then id else priority 0.5) $ do
             mapM_ addTarget ps
             addUserRule $ FilesRule (show ps ++ " &%> " ++ callStackTop) $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
                 if not $ length xs == length ps && and (zipWithExact (?==) ps xs) then Nothing else Just $ do
@@ -200,7 +200,7 @@ ps &%> act
 --
 --   Regardless of whether @Foo.hi@ or @Foo.o@ is passed, the function always returns @[Foo.hi, Foo.o]@.
 (&?>) :: Located => (FilePath -> Maybe [FilePath]) -> ([FilePath] -> Action ()) -> Rules ()
-(&?>) test act = preference 0.5 $ do
+(&?>) test act = priority 0.5 $ do
     let inputOutput suf inp out =
             ["Input" ++ suf ++ ":", "  " ++ inp] ++
             ["Output" ++ suf ++ ":"] ++ map ("  "++) out

@@ -10,7 +10,7 @@ module Development.Shake.Internal.Core.Action(
     unsafeExtraThread,
     parallel,
     batch,
-    deprioritize,
+    reschedule,
     historyDisable,
     traced,
     -- Internal only
@@ -561,12 +561,12 @@ batch mx pred one many
                 liftIO $ mapM_ (flip signalFence res . thd3) now
 
 
--- | Given a running task, deprioritize so it only continues after all other pending tasks,
---   and all deprioritized tasks with a higher priority. Note that due to parallelism there is no guarantee
---   that all actions of a higher priority will have /completed/ before the action resumes.
+-- | Given a running task, reschedule so it only continues after all other pending tasks,
+--   and all rescheduled tasks with a higher pool priority. Note that due to parallelism there is no guarantee
+--   that all actions of a higher pool priority will have /completed/ before the action resumes.
 --   Only useful if the results are being interactively reported or consumed.
-deprioritize :: Double -> Action ()
-deprioritize x = do
+reschedule :: Double -> Action ()
+reschedule x = do
     (wait, _) <- actionAlwaysRequeuePriority (PoolDeprioritize $ negate x) $ return ()
     Action $ modifyRW $ addDiscount wait
 
