@@ -9,6 +9,7 @@ module Development.Shake.Internal.Core.Database(
     setMem, setDisk, modifyAllMem
     ) where
 
+import Data.Bifunctor
 import Data.IORef.Extra
 import General.Intern(Id, Intern)
 import Development.Shake.Classes
@@ -107,7 +108,7 @@ setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
 
 modifyAllMem :: DatabasePoly k v -> (v -> v) -> Locked ()
-modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k, s) -> (k, f s)
+modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ second f
 
 setDisk :: DatabasePoly k v -> Id -> k -> v -> IO ()
 setDisk = journal
