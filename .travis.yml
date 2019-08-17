@@ -1,4 +1,4 @@
-sudo: required
+language: generic
 matrix:
   include:
   - env: GHCVER=7.10
