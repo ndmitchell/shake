@@ -9,7 +9,7 @@ module Development.Shake.Internal.Core.Database(
     setMem, setDisk, modifyAllMem
     ) where
 
-import Data.Bifunctor
+import Data.Tuple.Extra
 import Data.IORef.Extra
 import General.Intern(Id, Intern)
 import Development.Shake.Classes
