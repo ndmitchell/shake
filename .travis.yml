@@ -13,7 +13,8 @@ script:
 - git clone https://github.com/jacereda/fsatrace.git .fsatrace
 # Works - (cd .fsatrace && git checkout 678e29da6f1947dba762b291de5cd794a9bba51e)
 # Works - (cd .fsatrace && git checkout f8b3e7642f5a9376bdc97c6e2d9b52d77e6d9bcd)
-- (cd .fsatrace && git checkout 4f9f599f6f200ff88d92a752f68817d166bc4b8c)
+# Fails - (cd .fsatrace && git checkout 4f9f599f6f200ff88d92a752f68817d166bc4b8c)
+- (cd .fsatrace && git checkout e8d46cf3755117dc4e9affa1b9ebd3f108af8921)
 - (cd .fsatrace && make)
 - export PATH=$PATH:`pwd`/.fsatrace
 - fsatrace v - -- echo fsatrace works
