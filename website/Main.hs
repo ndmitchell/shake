@@ -85,7 +85,7 @@ readPage mode code file = do
     return Page{..}
     where
         links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "234" =
-                first ([Link{..} | i /= '4'] ++) $ second (prefix++) $ links rest
+                bimap ([Link{..} | i /= '4'] ++) (prefix++) $ links rest
             where linkTitle = innerText $ takeWhile (/= TagClose linkLevel) xs
                   linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words $
                             takeWhile (`notElem` "?.!") $ fromMaybe linkTitle $ stripPrefix "Q: " linkTitle
