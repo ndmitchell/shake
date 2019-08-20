@@ -11,7 +11,8 @@ matrix:
 
 script:
 - git clone https://github.com/jacereda/fsatrace.git .fsatrace
-- (cd .fsatrace && git checkout 678e29da6f1947dba762b291de5cd794a9bba51e)
+# Works - (cd .fsatrace && git checkout 678e29da6f1947dba762b291de5cd794a9bba51e)
+- (cd .fsatrace && git checkout f8b3e7642f5a9376bdc97c6e2d9b52d77e6d9bcd)
 - (cd .fsatrace && make)
 - export PATH=$PATH:`pwd`/.fsatrace
 - fsatrace v - -- echo fsatrace works
