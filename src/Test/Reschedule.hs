@@ -1,5 +1,5 @@
 
-module Test.Deprioritize(main) where
+module Test.Reschedule(main) where
 
 import Development.Shake
 import Test.Type
@@ -12,11 +12,11 @@ main = testBuild test $ do
         log "0"
         writeFile' out ""
     "*.p1" %> \out -> do
-        deprioritize 1
+        reschedule 1
         log "1"
         writeFile' out ""
     "*.p2" %> \out -> do
-        deprioritize 2
+        reschedule 2
         log "2"
         writeFile' out ""
 

@@ -52,7 +52,7 @@ module Development.Shake(
     -- * Core
     shake,
     shakeOptions,
-    Rules, action, withoutActions, alternatives, preference, versioned,
+    Rules, action, withoutActions, alternatives, priority, versioned,
     Action, traced,
     liftIO, actionOnException, actionFinally, actionCatch, actionRetry, runAfter,
     ShakeException(..),
@@ -108,12 +108,12 @@ module Development.Shake(
     needHasChanged,
     resultHasChanged,
     batch,
-    deprioritize,
+    reschedule,
     -- * Deprecated
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),
     askOracleWith,
-    priority
+    deprioritize
     ) where
 
 import Prelude(Maybe, FilePath, Double) -- Since GHC 7.10 duplicates *>
@@ -272,6 +272,6 @@ askOracleWith question _ = askOracle question
 ---------------------------------------------------------------------
 -- DEPRECATED SINCE 0.18.4, JUL 2019
 
--- | /Deprecated:/ Alias for 'preference'.
-priority :: Double -> Rules a -> Rules a
-priority = preference
+-- | /Deprecated:/ Alias for 'reschedule'.
+deprioritize :: Double -> Action ()
+deprioritize = reschedule
