@@ -277,7 +277,7 @@ commandExplicitAction oparams = do
 
     let async = ResultProcess PID0 `elem` results
     let tracker act
-            | AutoDeps `elem` opts = if async then fail "Can't use AutoDeps and asyncronous execution" else autodeps act
+            | AutoDeps `elem` opts = if async then liftIO $ errorIO "Can't use AutoDeps and asyncronous execution" else autodeps act
             | shakeLint == Just LintFSATrace && not async = fsalint act
             | otherwise = act params
 
@@ -378,7 +378,8 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             Just v -> do
                 v <- canonicalizePath v `catchIO` const (return v)
                 return $ "Current directory: " ++ v ++ "\n"
-        fail $
+        -- FIXME: switch to errorIO once extra-1.6.18 is available everywhere
+        liftIO $ error $
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
             "Command line: " ++ optRealCommand ++ "\n" ++
             (if optRealCommand /= optUserCommand then "Original command line: " ++ optUserCommand ++ "\n" else "") ++
