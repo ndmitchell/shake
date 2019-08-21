@@ -21,11 +21,11 @@ data Result v = Result
 data Status v
     = Loaded (Result v)
     | Running (Either SomeException (Result v) -> IO ())
-    | Error SomeException
+    | Failed SomeException
     | Ready (Result v)
 ```
 
-Data is loaded in the `Loaded` state. When someone demands a key it moves to `Running` - anyone who subsequently demands it will be added to the callback. After the run completes it becomes either `Error` or `Ready`.
+Data is loaded in the `Loaded` state. When someone demands a key it moves to `Running` - anyone who subsequently demands it will be added to the callback. After the run completes it becomes either `Failed` or `Ready`.
 
 **Execution Model**
 
@@ -53,4 +53,4 @@ type instance RuleResult FilePath = String
 
 And then declare the rule. The rule says how to take the key (the filename), whether its dependencies have changed, the old value (the old contents), and produce a new value (the current contents). In addition, the rule must say if the contents have changed in a meaningful way, which causes anyone who depended on them to rebuild.
 
-Shake programs typically call `apply` which builds a list of keys in parallel, moving all the keys to `Loaded` (or at least one to `Error`) before continuing.
+Shake programs typically call `apply` which builds a list of keys in parallel, moving all the keys to `Loaded` (or at least one to `Failed`) before continuing.
