@@ -35,7 +35,8 @@ main = do
     cmd "sudo npm install -g typescript tslint"
     cmd "sudo ln -s /usr/bin/nodejs /usr/bin/node"
     cmd "tsc --project html/ts"
-    cmd "tslint --project html/ts"
+    -- started failing with [SyntaxError: Unexpected token {]
+    -- cmd "tslint --project html/ts"
 
     -- grab ninja
     cmd "git clone https://github.com/martine/ninja"
