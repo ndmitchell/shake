@@ -220,7 +220,7 @@ noLint _ _ = return Nothing
 -- | A suitable 'BuiltinIdentity' that always fails with a runtime error, incompatible with 'shakeShare'.
 --   Use this function if you don't care about 'shakeShare', or if your rule provides a dependency that can
 --   never be cached (in which case you should also call 'Development.Shake.historyDisable').
-noIdentity :: Typeable key => BuiltinIdentity key value
+noIdentity :: BuiltinIdentity key value
 noIdentity _ _ = Nothing
 
 
