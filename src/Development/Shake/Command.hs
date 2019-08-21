@@ -254,7 +254,7 @@ parseFSA = mapMaybe f . lines
 -- ACTION EXPLICIT OPERATION
 
 -- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
-commandExplicitAction :: Params -> Action [Result]
+commandExplicitAction :: Partial => Params -> Action [Result]
 commandExplicitAction oparams = do
     ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside} <- getShakeOptions
     params@Params{..} <- return $ oparams{opts = shakeCommandOptions ++ opts oparams}
@@ -314,7 +314,7 @@ defaultTraced Params{..} = takeBaseName $ if Shell `elem` opts then fst (word1 p
 -- IO EXPLICIT OPERATION
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
-commandExplicitIO :: Params -> IO [Result]
+commandExplicitIO :: Partial => Params -> IO [Result]
 commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSATrace params $ \Params{..} -> do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
@@ -678,7 +678,7 @@ newtype CmdArgument = CmdArgument [Either CmdOption String]
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where
     -- | Arguments to cmd
-    cmdArguments :: CmdArgument -> t
+    cmdArguments :: Partial => CmdArgument -> t
 instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where
