@@ -33,6 +33,7 @@ main = do
     unless isMac $
         void $ cmd "sudo apt-get --allow-unauthenticated install nodejs npm"
     cmd "sudo npm install -g typescript tslint"
+    cmd "sudo ln -s /usr/bin/nodejs /usr/bin/node"
     cmd "tsc --project html/ts"
     cmd "tslint --project html/ts"
 
