@@ -602,13 +602,13 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   By default the @stderr@ stream will be captured for use in error messages, and also echoed. To only echo
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
-command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
+command :: (Partial, CmdResult r) => [CmdOption] -> String -> [String] -> Action r
 command opts x xs = b <$> commandExplicitAction (Params "command" opts a x xs)
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
-command_ :: [CmdOption] -> String -> [String] -> Action ()
+command_ :: Partial => [CmdOption] -> String -> [String] -> Action ()
 command_ opts x xs = void $ commandExplicitAction (Params "command_" opts [] x xs)
 
 
@@ -662,12 +662,12 @@ type a :-> t = a
 -- @
 -- 'cmd' ('Cwd' \"generated\") 'Shell' \"gcc -c myfile.c\" :: IO ()
 -- @
-cmd :: CmdArguments args => args :-> Action r
+cmd :: (Partial, CmdArguments args) => args :-> Action r
 cmd = cmdArguments mempty
 
 -- | See 'cmd'. Same as 'cmd' except with a unit result.
 -- 'cmd' is to 'cmd_' as 'command' is to 'command_'.
-cmd_ :: (CmdArguments args, Unit args) => args :-> Action ()
+cmd_ :: (Partial, CmdArguments args, Unit args) => args :-> Action ()
 cmd_ = cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
