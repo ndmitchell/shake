@@ -32,9 +32,8 @@ main = do
     -- check the TypeScript pieces
     unless isMac $
         void $ cmd "sudo apt-get --allow-unauthenticated install nodejs npm"
-    cmd "sudo npm install -g typescript"
+    cmd "sudo npm install -g typescript tslint"
     cmd "tsc --project html/ts"
-    cmd "sudo npm install -g tslint"
     cmd "tslint --project html/ts"
 
     -- grab ninja
