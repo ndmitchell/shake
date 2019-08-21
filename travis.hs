@@ -30,12 +30,13 @@ main = do
     unless (null args) $ error "Terminating early"
 
     -- check the TypeScript pieces
-    unless isMac $
+    unless isMac $ do
         void $ cmd "sudo apt-get --allow-unauthenticated install nodejs npm"
+        void $ cmd "sudo ln -s /usr/bin/nodejs /usr/bin/node"
     cmd "sudo npm install -g typescript tslint"
-    cmd "sudo ln -s /usr/bin/nodejs /usr/bin/node"
     cmd "tsc --project html/ts"
     -- started failing with [SyntaxError: Unexpected token {]
+    -- see https://github.com/ndmitchell/shake/issues/717 to reenable
     -- cmd "tslint --project html/ts"
 
     -- grab ninja
