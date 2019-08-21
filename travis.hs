@@ -30,12 +30,8 @@ main = do
     unless (null args) $ error "Terminating early"
 
     -- check the TypeScript pieces
-    cmd "node --version || true"
-    cmd "npm --version || true"
     unless isMac $
         void $ cmd "sudo apt-get --allow-unauthenticated install nodejs npm"
-    cmd "nodejs --version"
-    cmd "npm --version"
     cmd "npm install -g typescript"
     cmd "tsc --project html/ts"
     cmd "npm install -g tslint"
