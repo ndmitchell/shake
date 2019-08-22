@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #443, add getEnvError
     #662, add Partial to command/cmd
     #708, rename deprioritize to reschedule
     #689, allow adding help messages at the end using addHelpSuffix

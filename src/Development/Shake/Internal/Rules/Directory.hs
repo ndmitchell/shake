@@ -184,7 +184,7 @@ getEnvWithDefault def var = fromMaybe def <$> getEnv var
 
 -- | A partial variant of 'getEnv' that returns the environment variable variable or fails.
 getEnvError :: Partial => String -> Action String
-getEnvError name = getEnvWithDefault (error $ "Environment variable " ++ name ++ " is undefined") name
+getEnvError name = getEnvWithDefault (error $ "getEnvError: Environment variable " ++ name ++ " is undefined") name
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version).
