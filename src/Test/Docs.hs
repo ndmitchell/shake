@@ -161,7 +161,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m ++ "()" | m <- mods] ++ ["main = return ()"]
 
     "Success.txt" %> \out -> do
-        putNormal . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
+        putInfo . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
         needModules
         need ["Main.hs"]
         trackIgnore

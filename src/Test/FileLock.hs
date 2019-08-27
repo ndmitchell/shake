@@ -13,9 +13,9 @@ import Test.Type
 
 main = testBuild test $
     action $ do
-        putNormal "Starting sleep"
+        putInfo "Starting sleep"
         liftIO $ sleep 5
-        putNormal "Finished sleep"
+        putInfo "Finished sleep"
 
 
 -- Disabled under Mac because it fails, see #560

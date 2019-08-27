@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds, PatternSynonyms #-}
 
 -- | This module is used for defining Shake build systems. As a simple example of a Shake build system,
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
@@ -67,7 +67,8 @@ module Development.Shake(
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress,
     -- ** Verbosity
-    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
+    Verbosity(..), getVerbosity, putDebug, putInfo, putError, withVerbosity, quietly,
+    pattern Quiet, pattern Normal, pattern Loud, pattern Chatty,
     -- * Running commands
     command, command_, cmd, cmd_, unit,
     Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..), FSATrace(..),
@@ -113,10 +114,11 @@ module Development.Shake(
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),
     askOracleWith,
-    deprioritize
+    deprioritize,
+    putLoud, putNormal, putQuiet
     ) where
 
-import Prelude(Maybe, FilePath, Double) -- Since GHC 7.10 duplicates *>
+import Prelude(Maybe, FilePath, Double, String) -- Since GHC 7.10 duplicates *>
 
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
@@ -275,3 +277,20 @@ askOracleWith question _ = askOracle question
 -- | /Deprecated:/ Alias for 'reschedule'.
 deprioritize :: Double -> Action ()
 deprioritize = reschedule
+
+-- | A bidirectional pattern synonym for 'Error'.
+pattern Quiet  = Error
+-- | A bidirectional pattern synonym for 'Info'.
+pattern Normal = Info
+-- | A bidirectional pattern synonym for 'Debug'.
+pattern Loud   = Debug
+-- | A bidirectional pattern synonym for 'Verbose'.
+pattern Chatty = Verbose
+
+putLoud, putNormal, putQuiet :: String -> Action ()
+-- | /Deprecated:/ Alias for 'putDebug'.
+putLoud = putDebug
+-- | /Deprecated:/ Alias for 'putInfo'.
+putNormal = putInfo
+-- | /Deprecated:/ Alias for 'putError'.
+putQuiet = putError

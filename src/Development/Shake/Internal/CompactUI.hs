@@ -71,7 +71,7 @@ compactUI opts = do
         ,shakeOutput = \a b -> tweak (addOutput a b)
         ,shakeProgress = \x -> void $ progressDisplay 1 (tweak . addProgress) x `withThreadsBoth` shakeProgress opts x
         ,shakeCommandOptions = [EchoStdout False, EchoStderr False] ++ shakeCommandOptions opts
-        ,shakeVerbosity = Quiet
+        ,shakeVerbosity = Error
         }
     let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)
     return (opts, forever (tick >> sleep 0.4) `finally` tick)

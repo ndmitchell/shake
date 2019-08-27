@@ -161,7 +161,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     let showHelp long = do
             progName <- getProgName
             (targets, helpSuffix) <- if not long then return ([], []) else
-                handleSynchronous (\e -> do putWhenLn Normal $ "Failure to collect targets: " ++ show e; return ([], [])) $ do
+                handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; return ([], [])) $ do
                     -- run the rules as simply as we can
                     rs <- rules shakeOpts [] []
                     case rs of
@@ -175,7 +175,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     bs = shakeOptionsFields oshakeOpts
                 in ["  - " ++ lbl ++ ": " ++ v1 ++ " => " ++ v2 | long, ((lbl, v1), (_, v2)) <- zip as bs, v1 /= v2]
 
-            putWhen Quiet $ unlines $
+            putWhen Error $ unlines $
                 ("Usage: " ++ progName ++ " [options] [target] ...") :
                 (if null baseOpts2 then [] else "" : (if null userOptions then "Options:" else "Standard options:") : showOptDescr baseOpts2) ++
                 (if null userOptions then [] else "" : "Extra options:" : showOptDescr userOptions) ++
@@ -184,16 +184,16 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 (if null helpSuffix then [] else "" : helpSuffix)
 
     when (errs /= []) $ do
-        putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
+        putWhen Error $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
         showHelp False
         exitFailure
 
     if Help `elem` flagsExtra then
         showHelp True
      else if Version `elem` flagsExtra then
-        putWhenLn Normal $ "Shake build system, version " ++ shakeVersionString
+        putWhenLn Info $ "Shake build system, version " ++ shakeVersionString
      else if NumericVersion `elem` flagsExtra then
-        putWhenLn Normal shakeVersionString
+        putWhenLn Info shakeVersionString
      else if Demo `elem` flagsExtra then
         demo $ shakeStaunch shakeOpts
      else if not $ null progressReplays then do
@@ -201,7 +201,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
             src <- readFile file
             return (file, map read $ lines src)
         forM_ (if null $ shakeReport shakeOpts then ["-"] else shakeReport shakeOpts) $ \file -> do
-            putWhenLn Normal $ "Writing report to " ++ file
+            putWhenLn Info $ "Writing report to " ++ file
             writeProgressReport file dat
      else do
         when (Sleep `elem` flagsExtra) $ sleep 1
@@ -222,7 +222,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         (ran,shakeOpts,res) <- redir $ do
             when printDirectory $ do
                 curdir <- getCurrentDirectory
-                putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
+                putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
             (shakeOpts, ui) <- do
                 let compact = last $ No : [x | Compact x <- flagsExtra]
                 use <- if compact == Auto then checkEscCodes else return $ compact == Yes
@@ -247,7 +247,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                             rules
                     return (True, shakeOpts, res)
 
-        if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
+        if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
             either throwIO return res
          else
             let esc = if shakeColor shakeOpts then escape else flip const
@@ -256,11 +256,11 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     if Exception `elem` flagsExtra then
                         throwIO err
                     else do
-                        putWhenLn Quiet $ esc Red $ show err
+                        putWhenLn Error $ esc Red $ show err
                         exitFailure
                 Right () -> do
                     tot <- start
-                    putWhenLn Normal $ esc Green $ "Build completed in " ++ showDuration tot
+                    putWhenLn Info $ esc Green $ "Build completed in " ++ showDuration tot
 
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns

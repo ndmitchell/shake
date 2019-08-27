@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #706, rename Verbosity's constructors and add Warn
     #443, add getEnvError
     #662, add Partial to command/cmd
     #708, rename deprioritize to reschedule
