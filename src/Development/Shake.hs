@@ -93,7 +93,7 @@ module Development.Shake(
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getDirectoryFilesIO,
     -- * Environment rules
-    getEnv, getEnvWithDefault,
+    getEnv, getEnvWithDefault, getEnvError,
     -- * Oracle rules
     ShakeValue, RuleResult, addOracle, addOracleCache, addOracleHash, askOracle, askOracles,
     -- * Special rules

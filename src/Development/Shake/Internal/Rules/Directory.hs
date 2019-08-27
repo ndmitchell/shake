@@ -5,12 +5,13 @@
 module Development.Shake.Internal.Rules.Directory(
     doesFileExist, doesDirectoryExist,
     getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
-    getEnv, getEnvWithDefault,
+    getEnv, getEnvWithDefault, getEnvError,
     removeFiles, removeFilesAfter,
     getDirectoryFilesIO,
     defaultRuleDirectory
     ) where
 
+import Control.Exception.Extra
 import Control.Monad.Extra
 import Control.Monad.IO.Class
 import Data.Maybe
@@ -180,6 +181,10 @@ getEnv = fmap fromGetEnvA . apply1 . GetEnvQ
 -- @
 getEnvWithDefault :: String -> String -> Action String
 getEnvWithDefault def var = fromMaybe def <$> getEnv var
+
+-- | A partial variant of 'getEnv' that returns the environment variable variable or fails.
+getEnvError :: Partial => String -> Action String
+getEnvError name = getEnvWithDefault (error $ "getEnvError: Environment variable " ++ name ++ " is undefined") name
 
 -- | Get the contents of a directory. The result will be sorted, and will not contain
 --   the entries @.@ or @..@ (unlike the standard Haskell version).

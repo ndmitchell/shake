@@ -91,7 +91,7 @@ firstJustWaitUnordered f = go [] . map f
                         when (old == 1) $ callback Nothing
 
 
-firstLeftWaitUnordered :: (Applicative m, MonadIO m) => (a -> Wait m (Either e b)) -> [a] -> Wait m (Either e [b])
+firstLeftWaitUnordered :: MonadIO m => (a -> Wait m (Either e b)) -> [a] -> Wait m (Either e [b])
 firstLeftWaitUnordered f xs = do
         let n = length xs
         mut <- liftIO $ newArray n undefined
@@ -101,7 +101,7 @@ firstLeftWaitUnordered f xs = do
             Nothing -> liftIO $ Right <$> mapM (readArray mut) [0..n-1]
     where
         -- keep a list of those things we might visit later, and ask for each we see in turn
-        go :: (Applicative m, MonadIO m) => MutableArray RealWorld b -> [(Int, (Either e b -> m ()) -> m ())] -> [(Int, Wait m (Either e b))] -> Wait m (Maybe e)
+        go :: MonadIO m => MutableArray RealWorld b -> [(Int, (Either e b -> m ()) -> m ())] -> [(Int, Wait m (Either e b))] -> Wait m (Maybe e)
         go mut later ((i,x):xs) = case x of
             Now (Left e) -> Now $ Just e
             Now (Right b) -> do
