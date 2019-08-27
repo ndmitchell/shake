@@ -278,13 +278,13 @@ askOracleWith question _ = askOracle question
 deprioritize :: Double -> Action ()
 deprioritize = reschedule
 
--- | A bidirectional pattern synonym for 'Error'.
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Error'.
 pattern Quiet  = Error
--- | A bidirectional pattern synonym for 'Info'.
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Info'.
 pattern Normal = Info
--- | A bidirectional pattern synonym for 'Debug'.
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Debug'.
 pattern Loud   = Debug
--- | A bidirectional pattern synonym for 'Verbose'.
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
 pattern Chatty = Verbose
 
 putLoud, putNormal, putQuiet :: String -> Action ()
