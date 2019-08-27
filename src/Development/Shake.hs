@@ -278,6 +278,7 @@ askOracleWith question _ = askOracle question
 deprioritize :: Double -> Action ()
 deprioritize = reschedule
 
+pattern Quiet, Normal, Loud, Chatty :: Verbosity
 -- | /Deprecated:/ A bidirectional pattern synonym for 'Error'.
 pattern Quiet  = Error
 -- | /Deprecated:/ A bidirectional pattern synonym for 'Info'.
