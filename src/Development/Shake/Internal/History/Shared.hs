@@ -3,7 +3,8 @@
 module Development.Shake.Internal.History.Shared(
     Shared, newShared,
     addShared, lookupShared,
-    removeShared, listShared
+    removeShared, listShared,
+    sanityShared
     ) where
 
 import Control.Exception
@@ -167,3 +168,27 @@ listShared Shared{..} = do
                 putStrLn $ "  Key: " ++ show entryKey
                 forM_ entryFiles $ \(file,_) ->
                     putStrLn $ "    File: " ++ file
+
+sanityShared :: Shared -> IO ()
+sanityShared Shared{..} = do
+    dirs <- listDirectories $ sharedRoot </> ".shake.cache"
+    forM_ dirs $ \dir -> do
+        putStrLn $ "Directory: " ++ dir
+        keys <- sharedFileKeys dir
+        forM_ keys $ \key ->
+            handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
+                Entry{..} <- getEntry keyOp <$> BS.readFile key
+                putStrLn $ "  Key: " ++ show entryKey
+                putStrLn $ "  Key file: " ++ key
+                forM_ entryFiles $ \(file,hash) ->
+                    checkFile file dir hash
+    where
+      checkFile filename dir keyHash = do
+          let cachefile = dir </> show keyHash
+          putStrLn $ "    File: " ++ filename
+          putStrLn $ "    Cache file: " ++ cachefile
+          ifM (not <$> doesFileExist_ cachefile)
+              (putStrLn "      Error: cache file does not exist") $
+              ifM ((/= keyHash) <$> getFileHash (fileNameFromString cachefile))
+                  (putStrLn "      Error: cache file hash does not match stored hash")
+                  (putStrLn "      OK")

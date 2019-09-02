@@ -236,12 +236,16 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     res <- try_ $ shake shakeOpts $
                         if NoBuild `elem` flagsExtra then
                             withoutActions rules
-                        else if ShareList `elem` flagsExtra || not (null shareRemoves) then do
+                        else if ShareList `elem` flagsExtra ||
+                                not (null shareRemoves) ||
+                                ShareSanity `elem` flagsExtra then do
                             action $ do
                                 unless (null shareRemoves) $
                                     actionShareRemove shareRemoves
                                 when (ShareList `elem` flagsExtra)
                                     actionShareList
+                                when (ShareSanity `elem` flagsExtra)
+                                    actionShareSanity
                             withoutActions rules
                         else
                             rules
@@ -283,6 +287,7 @@ data Extra = ChangeDirectory FilePath
            | ProgressReplay FilePath
            | Demo
            | ShareList
+           | ShareSanity
            | ShareRemove String
            | Compact Auto
              deriving Eq
@@ -338,6 +343,7 @@ shakeOptsEx =
     ,opts $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
     ,opts $ Option ""  ["share"] (optArg "DIRECTORY" $ \x s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s}) "Shared cache location."
     ,hide $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
+    ,hide $ Option ""  ["share-sanity"] (noArg ([ShareSanity], ensureShare)) "Sanity check the shared cache files."
     ,hide $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
     ,opts $ Option ""  ["share-copy"] (noArg $ \s -> s{shakeSymlink=False}) "Copy files into the cache."
     ,opts $ Option ""  ["share-symlink"] (noArg $ \s -> s{shakeSymlink=True}) "Symlink files into the cache."
