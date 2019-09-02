@@ -105,7 +105,7 @@ loadSharedEntry shared@Shared{..} key builtinVersion userVersion =
             return $ if valid then Just e else Nothing
 
 
--- | Given a way to get the identity, see if you can a stored cloud version
+-- | Given a way to get the identity, see if you can find a stored cloud version
 lookupShared :: Shared -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupShared shared ask key builtinVersion userVersion = do
     ents <- liftIO $ loadSharedEntry shared key builtinVersion userVersion
