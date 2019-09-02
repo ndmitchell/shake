@@ -130,12 +130,13 @@ saveSharedEntry :: Shared -> Entry -> IO ()
 saveSharedEntry shared entry = do
     let dir = sharedFileDir shared (entryKey entry)
     createDirectoryRecursive dir
-    let v = runBuilder $ putEntry (keyOp shared) entry
-    createDirectoryRecursive $ dir </> "_key"
-    BS.writeFile (dir </> "_key" </> hexed v) v
     forM_ (entryFiles entry) $ \(file, hash) ->
         unlessM (doesFileExist_ $ dir </> show hash) $
             copyFileLink (useSymlink shared) file (dir </> show hash)
+    -- Write key after files to make sure cache is always useable
+    let v = runBuilder $ putEntry (keyOp shared) entry
+    createDirectoryRecursive $ dir </> "_key"
+    BS.writeFile (dir </> "_key" </> hexed v) v
 
 
 addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
