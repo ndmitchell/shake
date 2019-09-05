@@ -18,7 +18,7 @@ import System.IO
 import Data.Semigroup
 import Prelude
 
-#if __GLASGOW_HASKELL__ >= 800
+#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
@@ -54,9 +54,13 @@ instance Monad (RAW k v ro rw) where
 instance MonadIO (RAW k v ro rw) where
     liftIO = LiftIO
 
-#if __GLASGOW_HASKELL__ >= 800
+#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
 instance MonadFail (RAW k v ro rw) where
     fail = liftIO . Control.Monad.Fail.fail
+#endif
+#if __GLASGOW_HASKELL__ >= 808
+instance MonadFail (RAW k v ro rw) where
+    fail = liftIO . Prelude.fail
 #endif
 
 instance Semigroup a => Semigroup (RAW k v ro rw a) where
