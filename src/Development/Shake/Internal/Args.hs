@@ -294,7 +294,12 @@ escape :: Color -> String -> String
 escape color x = escForeground color ++ x ++ escNormal
 
 outputColor :: (Verbosity -> String -> IO ()) -> Verbosity -> String -> IO ()
-outputColor output v msg = output v $ escape Blue msg
+outputColor output v msg = output v $ color msg
+  where color = case v of
+            Silent -> id
+            Error  -> escape Red
+            Warn   -> escape Yellow
+            _      -> escape Blue
 
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
