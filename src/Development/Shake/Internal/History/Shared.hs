@@ -3,7 +3,8 @@
 module Development.Shake.Internal.History.Shared(
     Shared, newShared,
     addShared, lookupShared,
-    removeShared, listShared
+    removeShared, listShared,
+    sanityShared
     ) where
 
 import Control.Exception
@@ -105,7 +106,7 @@ loadSharedEntry shared@Shared{..} key builtinVersion userVersion =
             return $ if valid then Just e else Nothing
 
 
--- | Given a way to get the identity, see if you can a stored cloud version
+-- | Given a way to get the identity, see if you can find a stored cloud version
 lookupShared :: Shared -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupShared shared ask key builtinVersion userVersion = do
     ents <- liftIO $ loadSharedEntry shared key builtinVersion userVersion
@@ -168,3 +169,27 @@ listShared Shared{..} = do
                 putStrLn $ "  Key: " ++ show entryKey
                 forM_ entryFiles $ \(file,_) ->
                     putStrLn $ "    File: " ++ file
+
+sanityShared :: Shared -> IO ()
+sanityShared Shared{..} = do
+    dirs <- listDirectories $ sharedRoot </> ".shake.cache"
+    forM_ dirs $ \dir -> do
+        putStrLn $ "Directory: " ++ dir
+        keys <- sharedFileKeys dir
+        forM_ keys $ \key ->
+            handleSynchronous (\e -> putStrLn $ "Warning: " ++ show e) $ do
+                Entry{..} <- getEntry keyOp <$> BS.readFile key
+                putStrLn $ "  Key: " ++ show entryKey
+                putStrLn $ "  Key file: " ++ key
+                forM_ entryFiles $ \(file,hash) ->
+                    checkFile file dir hash
+    where
+      checkFile filename dir keyHash = do
+          let cachefile = dir </> show keyHash
+          putStrLn $ "    File: " ++ filename
+          putStrLn $ "    Cache file: " ++ cachefile
+          ifM (not <$> doesFileExist_ cachefile)
+              (putStrLn "      Error: cache file does not exist") $
+              ifM ((/= keyHash) <$> getFileHash (fileNameFromString cachefile))
+                  (putStrLn "      Error: cache file hash does not match stored hash")
+                  (putStrLn "      OK")

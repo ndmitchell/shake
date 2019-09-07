@@ -17,7 +17,7 @@ module Development.Shake.Internal.Core.Action(
     producesChecked, producesUnchecked, producesCheck, lintCurrentDirectory, lintWatch,
     blockApply, unsafeAllowApply, shakeException, lintTrackFinished,
     getCurrentKey, getLocal,
-    actionShareList, actionShareRemove
+    actionShareList, actionShareRemove, actionShareSanity
     ) where
 
 import Control.Exception
@@ -592,3 +592,11 @@ actionShareList = do
     case globalShared of
         Nothing -> throwM $ errorInternal "actionShareList with no shared"
         Just x -> liftIO $ listShared x
+
+-- | Hooked up to --share-sanity
+actionShareSanity :: Action ()
+actionShareSanity = do
+    Global{..} <- Action getRO
+    case globalShared of
+        Nothing -> throwM $ errorInternal "actionShareSanity with no shared"
+        Just x -> liftIO $ sanityShared x
