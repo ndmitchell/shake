@@ -176,7 +176,7 @@ putError = putWhen Error
 
 -- | Get the current verbosity level, originally set by 'shakeVerbosity'. If you
 --   want to output information to the console, you are recommended to use
---   'putDebug' \/ 'putInfo' \/ 'putError', which ensures multiple messages are
+--   'putVerbose' \/ 'putInfo' \/ 'putError', which ensures multiple messages are
 --   not interleaved. The verbosity can be modified locally by 'withVerbosity'.
 getVerbosity :: Action Verbosity
 getVerbosity = Action $ localVerbosity <$> getRW
