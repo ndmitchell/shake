@@ -114,8 +114,8 @@ module Development.Shake(
     (**>), (*>>), (?>>),
     askOracleWith,
     deprioritize,
-    pattern Quiet, pattern Normal, pattern Loud, pattern Chatty, pattern Debug,
-    putLoud, putNormal, putQuiet, putDebug
+    pattern Quiet, pattern Normal, pattern Loud, pattern Chatty,
+    putLoud, putNormal, putQuiet
     ) where
 
 import Prelude(Maybe, FilePath, Double, String) -- Since GHC 7.10 duplicates *>
@@ -288,18 +288,13 @@ pattern Normal = Info
 pattern Loud :: Verbosity
 pattern Loud   = Verbose
 -- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
-pattern Debug :: Verbosity
-pattern Debug  = Verbose
--- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
 pattern Chatty :: Verbosity
 pattern Chatty = Verbose
 
-putLoud, putNormal, putQuiet, putDebug :: String -> Action ()
--- | /Deprecated:/ Alias for 'putDebug'.
+putLoud, putNormal, putQuiet :: String -> Action ()
+-- | /Deprecated:/ Alias for 'putVerbose'.
 putLoud = putVerbose
 -- | /Deprecated:/ Alias for 'putInfo'.
 putNormal = putInfo
 -- | /Deprecated:/ Alias for 'putError'.
 putQuiet = putError
--- | /Deprecated:/ Alias for 'putVerbose'.
-putDebug = putVerbose
