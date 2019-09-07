@@ -67,8 +67,7 @@ module Development.Shake(
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress,
     -- ** Verbosity
-    Verbosity(..), getVerbosity, putDebug, putInfo, putError, withVerbosity, quietly,
-    pattern Quiet, pattern Normal, pattern Loud, pattern Chatty,
+    Verbosity(..), getVerbosity, putVerbose, putInfo, putError, withVerbosity, quietly,
     -- * Running commands
     command, command_, cmd, cmd_, unit,
     Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..), FSATrace(..),
@@ -115,7 +114,8 @@ module Development.Shake(
     (**>), (*>>), (?>>),
     askOracleWith,
     deprioritize,
-    putLoud, putNormal, putQuiet
+    pattern Quiet, pattern Normal, pattern Loud, pattern Chatty, pattern Debug,
+    putLoud, putNormal, putQuiet, putDebug
     ) where
 
 import Prelude(Maybe, FilePath, Double, String) -- Since GHC 7.10 duplicates *>
@@ -284,17 +284,22 @@ pattern Quiet  = Error
 -- | /Deprecated:/ A bidirectional pattern synonym for 'Info'.
 pattern Normal :: Verbosity
 pattern Normal = Info
--- | /Deprecated:/ A bidirectional pattern synonym for 'Debug'.
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
 pattern Loud :: Verbosity
-pattern Loud   = Debug
+pattern Loud   = Verbose
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
+pattern Debug :: Verbosity
+pattern Debug  = Verbose
 -- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
 pattern Chatty :: Verbosity
 pattern Chatty = Verbose
 
-putLoud, putNormal, putQuiet :: String -> Action ()
+putLoud, putNormal, putQuiet, putDebug :: String -> Action ()
 -- | /Deprecated:/ Alias for 'putDebug'.
-putLoud = putDebug
+putLoud = putVerbose
 -- | /Deprecated:/ Alias for 'putInfo'.
 putNormal = putInfo
 -- | /Deprecated:/ Alias for 'putError'.
 putQuiet = putError
+-- | /Deprecated:/ Alias for 'putVerbose'.
+putDebug = putVerbose

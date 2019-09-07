@@ -327,5 +327,5 @@ removeFiles dir pat =
 --   Where possible, delete the files as a normal part of the build, e.g. using @'liftIO' $ 'removeFiles' dir pats@.
 removeFilesAfter :: FilePath -> [FilePattern] -> Action ()
 removeFilesAfter a b = do
-    putDebug $ "Will remove " ++ unwords b ++ " from " ++ a
+    putVerbose $ "Will remove " ++ unwords b ++ " from " ++ a
     runAfter $ removeFiles a b

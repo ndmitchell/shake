@@ -305,8 +305,8 @@ data Verbosity
     | Error     -- ^ Only print error messages.
     | Warn    -- ^ Print errors and warnings.
     | Info    -- ^ Print errors, warnings and @# /command-name/ (for /file-name/)@ when running a 'Development.Shake.traced' command.
-    | Debug   -- ^ Print errors, warnings and full command lines when running a 'Development.Shake.command' or 'Development.Shake.cmd' command.
-    | Verbose -- ^ Print errors, warnings, full command line and status messages when starting a rule.
+    | Verbose -- ^ Print errors, warnings, full command lines when running a 'Development.Shake.command' or
+              --   'Development.Shake.cmd' command and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
 

@@ -13,7 +13,7 @@ main = testBuild test $ do
 
     "out.txt" %> \out -> do
         x <- getVerbosity
-        ys <- withVerbosity Debug $ do
+        ys <- withVerbosity Verbose $ do
             a <- getVerbosity
             need ["in.txt"] -- make sure the inherited verbosity does not get passed along
             b <- getVerbosity
@@ -26,12 +26,12 @@ main = testBuild test $ do
 test build = do
     build ["out.txt","--clean"]
     assertContents "in.txt" "Info Info"
-    assertContents "out.txt" "Info Debug Debug Error Info Info"
+    assertContents "out.txt" "Info Verbose Verbose Error Info Info"
 
     build ["out.txt","--clean","--verbose"]
-    assertContents "in.txt" "Debug Info"
-    assertContents "out.txt" "Debug Debug Debug Error Debug Debug"
+    assertContents "in.txt" "Verbose Info"
+    assertContents "out.txt" "Verbose Verbose Verbose Error Verbose Verbose"
 
     build ["out.txt","--clean","--quiet"]
     assertContents "in.txt" "Warn Info"
-    assertContents "out.txt" "Warn Debug Debug Error Warn Warn"
+    assertContents "out.txt" "Warn Verbose Verbose Error Warn Warn"

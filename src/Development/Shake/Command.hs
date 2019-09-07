@@ -263,12 +263,12 @@ commandExplicitAction oparams = do
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
-            putDebug $
+            putVerbose $
                 maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
                 last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
             verb <- getVerbosity
             -- run quietly to supress the tracer (don't want to print twice)
-            (if verb >= Debug then quietly else id) act
+            (if verb >= Verbose then quietly else id) act
 
     let tracer act = do
             -- note: use the oparams - find a good tracing before munging it for shell stuff

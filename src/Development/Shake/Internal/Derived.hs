@@ -90,7 +90,7 @@ addShakeExtra x = Map.insert (typeOf x) (toDyn x)
 copyFile' :: Partial => FilePath -> FilePath -> Action ()
 copyFile' old new = do
     need [old]
-    putDebug $ "Copying from " ++ old ++ " to " ++ new
+    putVerbose $ "Copying from " ++ old ++ " to " ++ new
     liftIO $ do
         createDirectoryRecursive $ takeDirectory new
         removeFile_ new -- symlink safety
@@ -105,7 +105,7 @@ copyFileChanged old new = do
     -- in newer versions of the directory package we can use copyFileWithMetadata which (we think) updates
     -- the timestamp as well and thus no need to read the source file twice.
     unlessM (liftIO $ doesFileExist new &&^ IO.fileEq old new) $ do
-        putDebug $ "Copying from " ++ old ++ " to " ++ new
+        putVerbose $ "Copying from " ++ old ++ " to " ++ new
         liftIO $ do
             createDirectoryRecursive $ takeDirectory new
             -- copyFile does a lot of clever stuff with permissions etc, so make sure we just reuse it

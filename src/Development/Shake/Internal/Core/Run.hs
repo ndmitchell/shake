@@ -164,7 +164,7 @@ run RunState{..} oneshot actions2 =
                 addTiming "Lint checking"
                 lintCurrentDirectory curdir "After completion"
                 checkValid diagnostic database (runLint builtinRules) =<< readIORef absent
-                putWhen Debug "Lint checking succeeded"
+                putWhen Verbose "Lint checking succeeded"
             when (shakeReport /= []) $ do
                 addTiming "Profile report"
                 forM_ shakeReport $ \file -> do
