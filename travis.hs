@@ -89,7 +89,7 @@ main = do
             when (ninjaFull + hack716 < shakeFull) $
                 error "ERROR: Ninja build was faster than Shake"
 
-            when (ninjaZero + 0.1 + hack716 < shakeZero * 2) $
+            when (ninjaZero + 0.1 + hack716 < shakeZero) $
                 error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
     createDirectoryIfMissing True "temp"
