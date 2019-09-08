@@ -103,7 +103,7 @@ main = do
             src <- readFile "shake.cabal"
             return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
         forM_ requiresShake $ \x ->
-            retry 3 $ cmd $ "cabal install " ++ x ++ " --constraint=shake==" ++ ver
+            retry 3 $ cmd $ "cabal v1-install " ++ x ++ " --constraint=shake==" ++ ver
 
 ninjaProfile :: FilePath -> IO ()
 ninjaProfile src = do
