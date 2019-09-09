@@ -8,7 +8,7 @@ module Test.Type(
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
-    assertContents, assertContentsUnordered, assertContentsWords,
+    assertContents, assertContentsUnordered, assertContentsWords, assertContentsInfix,
     assertExists, assertMissing,
     (===),
     (&?%>),
@@ -190,6 +190,11 @@ assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- IO.readFile' file
     assertBool (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
+
+assertContentsInfix :: FilePath -> String -> IO ()
+assertContentsInfix file want = do
+    got <- IO.readFile' file
+    assertBool (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (infix): " ++ want ++ "\nGOT: " ++ got
 
 assertContentsOn :: (String -> String) -> FilePath -> String -> IO ()
 assertContentsOn f file want = do

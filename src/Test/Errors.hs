@@ -295,6 +295,6 @@ test build = do
     assertContents "finalfinal" "XY"
 
     build ["catch1"]
-    assertContents "catch1" "magic1"
+    assertContentsInfix "catch1" "magic1"
     crash ["catch2"] [show ThreadKilled]
     crash ["catch3.2"] ["magic3"]
