@@ -14,7 +14,9 @@ import Control.Monad
 import System.Process.Extra
 
 
-requiresShake = words "ghc-make shake-language-c"
+requiresShake = words "ghc-make"
+    -- fclabels doesn't support GHC 8.8 yet
+    -- "shake-language-c"
 
 ms x = show $ ceiling $ x * 1000
 
