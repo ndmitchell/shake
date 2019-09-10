@@ -14,9 +14,11 @@ import Control.Monad
 import System.Process.Extra
 
 
-requiresShake = words "ghc-make"
-    -- fclabels doesn't support GHC 8.8 yet
-    -- "shake-language-c"
+-- fclabels doesn't support GHC 8.8 yet
+requiresShake ghcver =
+  if "8.8." `isPrefixOf` ghcver
+  then words "ghc-make"
+  else words "ghc-make shake-language-c"
 
 ms x = show $ ceiling $ x * 1000
 
@@ -104,7 +106,7 @@ main = do
         ver <- do
             src <- readFile "shake.cabal"
             return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
-        forM_ requiresShake $ \x ->
+        forM_ (requiresShake ghcver) $ \x ->
             retry 3 $ cmd $ "cabal v1-install " ++ x ++ " --constraint=shake==" ++ ver
 
 ninjaProfile :: FilePath -> IO ()
