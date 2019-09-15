@@ -71,6 +71,7 @@ data ProcessOpts = ProcessOpts
     ,poStdout :: [Destination]
     ,poStderr :: [Destination]
     ,poAsync :: Bool
+    ,poCloseFds :: Bool
     }
 
 
@@ -152,7 +153,7 @@ process po = do
     let outFiles = nubOrd [x | DestFile x <- poStdout ++ poStderr]
     let inFiles = nubOrd [x | SrcFile x <- poStdin]
     withFiles WriteMode outFiles $ \outHandle -> withFiles ReadMode inFiles $ \inHandle -> do
-        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = True, close_fds = True
+        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = True, close_fds = poCloseFds
                  ,std_in = fst $ stdIn inHandle poStdin
                  ,std_out = stdStream outHandle poStdout poStderr, std_err = stdStream outHandle poStderr poStdout}
         withCreateProcessCompat cp $ \inh outh errh pid ->

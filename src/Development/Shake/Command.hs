@@ -340,6 +340,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
     let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
     let optRealCommand = showCommandForUser2 prog args
     let optUserCommand = last $ optRealCommand : [x | UserCommand x <- opts]
+    let optCloseFds = CloseFileHandles `elem` opts
 
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
@@ -366,6 +367,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout && not optAsync] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
         ,poAsync = optAsync
+        ,poCloseFds = optCloseFds
         }
     (dur,(pid,exit)) <- duration $ process po
     if exit == ExitSuccess || ResultCode ExitSuccess `elem` results then
