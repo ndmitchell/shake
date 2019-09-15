@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections, ViewPatterns #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections #-}
 
 module Development.Shake.Internal.Core.Action(
     actionOnException, actionFinally, actionBracket, actionCatch, actionRetry,
