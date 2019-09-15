@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables, ConstraintKinds, TupleSections, ViewPatterns #-}
 
 module Development.Shake.Internal.Core.Action(
-    actionOnException, actionFinally, actionCatch, actionRetry,
+    actionOnException, actionFinally, actionBracket, actionCatch, actionRetry,
     getShakeOptions, getProgress, runAfter,
     lintTrackRead, lintTrackWrite, lintTrackAllow,
     getVerbosity, putWhen, putVerbose, putInfo, putWarn, putError, withVerbosity, quietly,
@@ -86,22 +86,28 @@ shakeException Global{globalOptions=ShakeOptions{..},..} stk e = case fromExcept
         return e
 
 
-actionBoom :: Bool -> Action a -> IO b -> Action a
-actionBoom runOnSuccess act (void -> clean) = do
+actionBracketEx :: Bool -> IO a -> (a -> IO b) -> (a -> Action c) -> Action c
+actionBracketEx runOnSuccess alloc free act = do
     Global{..} <- Action getRO
-    key <- liftIO $ register globalCleanup clean
-    -- important to mask_ the undo/clean combo so either both happen or neither
-    res <- Action $ catchRAW (fromAction act) $ \e -> liftIO (release key) >> throwRAW e
+    (v, key) <- liftIO $ mask_ $ do
+        v <- alloc
+        key <- liftIO $ register globalCleanup $ void $ free v
+        return (v, key)
+    res <- Action $ catchRAW (fromAction $ act v) $ \e -> liftIO (release key) >> throwRAW e
     liftIO $ if runOnSuccess then release key else unprotect key
     return res
 
 -- | If an exception is raised by the 'Action', perform some 'IO' then reraise the exception.
 actionOnException :: Action a -> IO b -> Action a
-actionOnException = actionBoom False
+actionOnException act free = actionBracketEx False (return ()) (const free) (const act)
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
 actionFinally :: Action a -> IO b -> Action a
-actionFinally = actionBoom True
+actionFinally act free = actionBracket (return ()) (const free) (const act)
+
+actionBracket :: IO a -> (a -> IO b) -> (a -> Action c) -> Action c
+actionBracket = actionBracketEx True
+
 
 -- | If a syncronous exception is raised by the 'Action', perform some handler.
 --   Note that there is no guarantee that the handler will run on shutdown (use 'actionFinally' for that),
