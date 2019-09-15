@@ -60,8 +60,8 @@ import General.Fence
 
 -- | Apply a modification, run an action, then run an undo action after.
 --   Doesn't actually require exception handling because we don't have the ability to catch exceptions to the user.
-actionBracket :: (Local -> (Local, Local -> Local)) -> Action a -> Action a
-actionBracket f m = Action $ do
+actionThenUndoLocal :: (Local -> (Local, Local -> Local)) -> Action a -> Action a
+actionThenUndoLocal f m = Action $ do
     s <- getRW
     let (s2,undo) = f s
     putRW s2
@@ -191,7 +191,7 @@ getVerbosity = Action $ localVerbosity <$> getRW
 --   Will not update the 'shakeVerbosity' returned by 'getShakeOptions' and will
 --   not have any impact on 'Diagnostic' tracing.
 withVerbosity :: Verbosity -> Action a -> Action a
-withVerbosity new = actionBracket $ \s0 ->
+withVerbosity new = actionThenUndoLocal $ \s0 ->
     (s0{localVerbosity=new}, \s -> s{localVerbosity=localVerbosity s0})
 
 
@@ -213,7 +213,7 @@ blockApply :: String -> Action a -> Action a
 blockApply = applyBlockedBy . Just
 
 applyBlockedBy :: Maybe String -> Action a -> Action a
-applyBlockedBy reason = actionBracket $ \s0 ->
+applyBlockedBy reason = actionThenUndoLocal $ \s0 ->
     (s0{localBlockApply=reason}, \s -> s{localBlockApply=localBlockApply s0})
 
 
