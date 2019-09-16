@@ -105,6 +105,8 @@ actionOnException act free = actionBracketEx False (return ()) (const free) (con
 actionFinally :: Action a -> IO b -> Action a
 actionFinally act free = actionBracket (return ()) (const free) (const act)
 
+-- | Like `bracket`, but where the inner operation is of type 'Action'. Usually used as
+--   @'actionBracket' alloc free use@.
 actionBracket :: IO a -> (a -> IO b) -> (a -> Action c) -> Action c
 actionBracket = actionBracketEx True
 
