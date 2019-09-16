@@ -437,6 +437,7 @@ test-suite shake-test
         Test.C
         Test.Cache
         Test.Cleanup
+        Test.CloseFileHandles
         Test.Command
         Test.Config
         Test.Database
