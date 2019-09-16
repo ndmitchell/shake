@@ -1,12 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Test.CloseFileHandles(main) where
 
-import Development.Shake
-import Development.Shake.FilePath
 import Test.Type
-import Control.Monad.Extra
-import System.Exit
-import System.IO
 
 #ifdef mingw32_HOST_OS
 
@@ -14,7 +9,12 @@ main = testNone -- don't know how to do this on windows
 
 #else
 
+import Development.Shake
+import Development.Shake.FilePath
 import System.Posix.IO
+import Control.Monad.Extra
+import System.Exit
+import System.IO
 
 main = testBuild test $ do
     let helper = toNative $ "helper/close_file_handles_helper" <.> exe
