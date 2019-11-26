@@ -123,7 +123,7 @@ shakenEx reenter options test rules sleeper = do
                     if "clean" `elem` files then
                         clean >> return Nothing
                     else return $ Just $ (,) so $ do
-                        -- if you have passed sleep, supress the "no actions" warning
+                        -- if you have passed sleep, suppress the "no actions" warning
                         when (Sleep `elem` extra1) $ action $ return ()
                         rules extra2 files
 

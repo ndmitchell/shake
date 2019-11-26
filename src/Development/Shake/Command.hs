@@ -267,7 +267,7 @@ commandExplicitAction oparams = do
                 maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
                 last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
             verb <- getVerbosity
-            -- run quietly to supress the tracer (don't want to print twice)
+            -- run quietly to suppress the tracer (don't want to print twice)
             (if verb >= Verbose then quietly else id) act
 
     let tracer act = do
