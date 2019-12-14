@@ -47,6 +47,8 @@ test build = do
     -- IO.hSetEncoding IO.stdout IO.char8
     -- IO.hSetEncoding IO.stderr IO.char8
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
+        -- If you aren't on UTF-8 file encoding it goes wrong, see
+        -- https://github.com/ndmitchell/shake/pull/681
         enc <- liftIO getFileSystemEncoding
         if textEncodingName enc /= "UTF-8"
         then putStrLn "WARNING: filesystem encoding is not UTF-8, skipping unicode test (LANG=C ?)"
