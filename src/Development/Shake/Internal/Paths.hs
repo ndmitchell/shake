@@ -12,14 +12,9 @@ module Development.Shake.Internal.Paths(
     readDataFileHTML
     ) where
 
-import Control.Exception
 import Control.Monad.Extra
 import Data.Version
-import System.Directory
 import System.FilePath
-import System.Info.Extra
-import System.IO.Unsafe
-import System.Environment
 import General.Extra
 import qualified Data.ByteString.Lazy as LBS
 import Paths_shake
@@ -27,6 +22,12 @@ import Paths_shake
 #ifdef FILE_EMBED
 import qualified Data.ByteString as BS
 import Data.FileEmbed
+#else
+import Control.Exception
+import System.Directory
+import System.Info.Extra
+import System.IO.Unsafe
+import System.Environment
 #endif
 
 shakeVersionString :: String
