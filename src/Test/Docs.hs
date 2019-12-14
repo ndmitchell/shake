@@ -29,11 +29,11 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
     let runSetup args = do
-        trackIgnore
-        need [setup]
-        -- Make Cabal and Stack play nicely with GHC_PACKAGE_PATH
-        setup <- liftIO $ canonicalizePath setup
-        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) setup args
+            trackIgnore
+            need [setup]
+            -- Make Cabal and Stack play nicely with GHC_PACKAGE_PATH
+            setup <- liftIO $ canonicalizePath setup
+            cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) setup args
 
     setup %> \_ -> do
         -- Important to compile the setup binary, or we run foul of
