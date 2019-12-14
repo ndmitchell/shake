@@ -46,7 +46,7 @@
 module Development.Shake.Forward(
     shakeForward, shakeArgsForward,
     forwardOptions, forwardRule,
-    cache, cacheAction
+    cache, cacheAction, cacheActionWith,
     ) where
 
 import Control.Monad
@@ -127,13 +127,30 @@ forwardOptions :: ShakeOptions -> ShakeOptions
 forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
 
 
--- | Cache an action. The name of the action must be unique for all different actions.
+-- | Cache an action, given a key and an 'Action'. Each call in your program should specify a different
+--   key, but the key should remain consistent between runs. Ideally, the 'Action' will gather all its dependencies
+--   with tracked operations, e.g. 'readFile\''. However, if information is accessed from the environment
+--   (e.g. the action is a closure), you should call 'cacheActionWith' being explicit about what is captured.
 cacheAction :: (Typeable a, Binary a, Show a, Typeable b, Binary b, Show b) => a -> Action b -> Action b
 cacheAction (mkForward -> key) (action :: Action b) = do
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key (mkForward <$> action) mp, ())
     res <- apply1 key
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
     return $ unForward res
+
+newtype With a = With a
+    deriving (Typeable, Binary, Show)
+
+-- | Like 'cacheAction', but also specify which information is captured by the closure of the 'Action'. If that
+--   information changes, the 'Action' will be rerun.
+cacheActionWith :: (Typeable a, Binary a, Show a, Typeable b, Binary b, Show b, Typeable c, Binary c, Show c) => a -> b ->  Action c -> Action c
+cacheActionWith key argument action = do
+    cacheAction (With argument) $ do
+        alwaysRerun
+        return argument
+    cacheAction key $ do
+        apply1 $ mkForward $ With argument
+        action
 
 -- | Apply caching to an external command using the same arguments as 'cmd'.
 --
