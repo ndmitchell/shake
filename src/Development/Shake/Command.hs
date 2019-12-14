@@ -285,7 +285,9 @@ commandExplicitAction oparams = do
             ResultFSATrace pxs : res <- act params{opts = addFSAOptions "r" opts, results = ResultFSATrace [] : results}
             xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs]
             cwd <- liftIO getCurrentDirectory
-            unsafeAllowApply . need =<< fixPaths cwd xs
+            temp <- fixPaths cwd xs
+            liftIO $ print ("AutoDeps", cwd, xs, temp) -- DEBUGGING
+            unsafeAllowApply $ need temp
             return res
 
         fixPaths cwd xs = liftIO $ do
