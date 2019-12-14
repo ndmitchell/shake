@@ -36,7 +36,7 @@ After fixing the recording of items in the cache, you can clean and try again. I
 
 If a rule shouldn't be stored in the cache (e.g. because it modifies files that already exist) use `historyDisable`.
 
-The [GHC](https://www.haskell.org/ghc/) build system [Hadrian](https://ghc.haskell.org/trac/ghc/wiki/Building/Hadrian/QuickStart) is now able to build with `--share` following [this patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/317) (which also does unrelated refactorings).
+The [GHC](https://www.haskell.org/ghc/) build system [Hadrian](https://ghc.haskell.org/trac/ghc/wiki/Building/Hadrian/QuickStart) is now able to build with `--share` following [this patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/317) (which also does unrelated refactorings). However, the benefits weren't as big as they were hoped because of the dependency graph of GHC - see [this blog post](https://www.well-typed.com/blog/2019/08/exploring-cloud-builds-in-hadrian/) for details.
 
 ## Symlinks and Read only output files
 
