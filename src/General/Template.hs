@@ -23,6 +23,8 @@ import Data.FileEmbed
 import Language.Haskell.TH.Syntax ( runIO )
 #endif
 
+{- HLINT ignore "Redundant bracket" -} -- a result of CPP expansion
+
 -- Very hard to abstract over TH, so we do it with CPP
 #ifdef FILE_EMBED
 #define FILE(x) (return (LBS.fromStrict $(embedFile =<< runIO (x))))
