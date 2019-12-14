@@ -1,4 +1,9 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ViewPatterns #-}
+
+#ifdef FILE_EMBED
+{-# LANGUAGE TemplateHaskell #-}
+#endif
 
 module General.Template(runTemplate) where
 
@@ -13,13 +18,26 @@ import qualified Language.Javascript.DGTable as DGTable
 import qualified Language.Javascript.Flot as Flot
 import qualified Language.Javascript.JQuery as JQuery
 
+#ifdef FILE_EMBED
+import Data.FileEmbed
+import Language.Haskell.TH.Syntax ( runIO )
+#endif
 
+#ifdef FILE_EMBED
+libraries =
+    [("jquery.js",            $(embedFile =<< runIO JQuery.file))
+    ,("jquery.dgtable.js",    $(embedFile =<< runIO DGTable.file))
+    ,("jquery.flot.js",       $(embedFile =<< runIO (Flot.file Flot.Flot)))
+    ,("jquery.flot.stack.js", $(embedFile =<< runIO (Flot.file Flot.FlotStack)))
+    ]
+#else
 libraries =
     [("jquery.js", JQuery.file)
     ,("jquery.dgtable.js", DGTable.file)
     ,("jquery.flot.js", Flot.file Flot.Flot)
     ,("jquery.flot.stack.js", Flot.file Flot.FlotStack)
     ]
+#endif
 
 
 -- | Template Engine. Perform the following replacements on a line basis:
@@ -40,9 +58,15 @@ runTemplate ask = lbsMapLinesIO f
                 y = LBS.dropWhile isSpace x
                 grab = asker . takeWhile (/= '\"') . LBS.unpack
 
-        asker o@(splitFileName -> ("lib/",x)) = case lookup x libraries of
-            Just act -> LBS.readFile =<< act
-            Nothing -> errorIO $ "Template library, unknown library: " ++ o
+        asker o@(splitFileName -> ("lib/",x)) =
+            case lookup x libraries of
+                Nothing -> errorIO $ "Template library, unknown library: " ++ o
+#ifdef FILE_EMBED
+                Just bs -> return (LBS.fromStrict bs)
+#else
+                Just act -> LBS.readFile =<< act
+#endif
+
         asker "shake.js" = readDataFileHTML "shake.js"
         asker "data/metadata.js" = do
             time <- getCurrentTime
@@ -50,7 +74,6 @@ runTemplate ask = lbsMapLinesIO f
                 "var version = " ++ show shakeVersionString ++
                 "\nvar generated = " ++ show (formatTime defaultTimeLocale (iso8601DateFormat (Just "%H:%M:%S")) time)
         asker x = ask x
-
 
 -- Perform a mapM on each line and put the result back together again
 lbsMapLinesIO :: (LBS.ByteString -> IO LBS.ByteString) -> LBS.ByteString -> IO LBS.ByteString
