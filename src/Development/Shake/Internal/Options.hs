@@ -206,7 +206,7 @@ data ShakeOptions = ShakeOptions
     ,shakeCloud :: [String]
         -- ^ Defaults to @[]@. Cloud servers to talk to forming a shared cache.
     ,shakeSymlink :: Bool
-        -- ^ Defaults to @True@. Use symlinks if they are available.
+        -- ^ Defaults to @False@. Use symlinks if they are available.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
@@ -231,7 +231,7 @@ data ShakeOptions = ShakeOptions
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
     ".shake" 1 "1" Info False [] Nothing [] [] [] [] (Just 10) [] [] False True False
-    True ChangeModtime True [] False False Nothing [] True
+    True ChangeModtime True [] False False Nothing [] False
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     (\_ _ _ -> return ())
