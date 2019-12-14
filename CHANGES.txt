@@ -1,6 +1,6 @@
 Changelog for Shake (* = breaking change)
 
-    #694, embed the data files into the Shake executable
+    #694, embed data files in the binary (use embed-files Cabal flag)
     #722, don't close file handles in cmd unless CloseFileHandles
     #727, add actionBracket for bracket-like operations
     #720, add --share-sanity to sanity check shared cache contents
