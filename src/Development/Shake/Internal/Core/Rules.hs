@@ -1,17 +1,19 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, ConstraintKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ConstraintKinds, NamedFieldPuns #-}
 {-# LANGUAGE ExistentialQuantification, RankNTypes #-}
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Development.Shake.Internal.Core.Rules(
-    Rules, runRules,
+    Rules, SRules(..), runRules,
     RuleResult, addBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
     addUserRule, alternatives, priority, versioned,
     getTargets, addTarget, withTargetDocs, withoutTargets,
+    addHelpSuffix, getHelpSuffix,
     action, withoutActions
     ) where
 
@@ -40,7 +42,7 @@ import Data.Binary.Get
 import General.ListBuilder
 import Prelude
 
-#if __GLASGOW_HASKELL__ >= 800
+#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
@@ -113,17 +115,17 @@ getUserRuleOne key disp test = do
 -- | Define a set of rules. Rules can be created with calls to functions such as 'Development.Shake.%>' or 'action'.
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
-newtype Rules a = Rules (ReaderT (ShakeOptions, IORef SRules) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
+newtype Rules a = Rules (ReaderT (ShakeOptions, IORef (SRules ListBuilder)) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFix
 #if __GLASGOW_HASKELL__ >= 800
              ,MonadFail
 #endif
         )
 
-newRules :: SRules -> Rules ()
+newRules :: SRules ListBuilder -> Rules ()
 newRules x = Rules $ liftIO . flip modifyIORef' (<> x) =<< asks snd
 
-modifyRulesScoped :: (SRules -> SRules) -> Rules a -> Rules a
+modifyRulesScoped :: (SRules ListBuilder -> SRules ListBuilder) -> Rules a -> Rules a
 modifyRulesScoped f (Rules r) = Rules $ do
     (opts, refOld) <- ask
     liftIO $ do
@@ -133,12 +135,12 @@ modifyRulesScoped f (Rules r) = Rules $ do
         modifyIORef' refOld (<> f rules)
         return res
 
-runRules :: ShakeOptions -> Rules () -> IO ([(Stack, Action ())], Map.HashMap TypeRep BuiltinRule, TMap.Map UserRuleVersioned, [Target])
+runRules :: ShakeOptions -> Rules () -> IO (SRules [])
 runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    return (runListBuilder actions, builtinRules, userRules, runListBuilder targets)
+    return $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -147,27 +149,33 @@ runRules opts (Rules r) = do
 --   Returns the command, paired with the documentation (if any).
 getTargets :: ShakeOptions -> Rules () -> IO [(String, Maybe String)]
 getTargets opts rs = do
-    (_actions, _ruleinfo, _userRules, targets) <- runRules opts rs
+    SRules{targets} <- runRules opts rs
     return [(target, documentation) | Target{..} <- targets]
+
+getHelpSuffix :: ShakeOptions -> Rules () -> IO [String]
+getHelpSuffix opts rs = do
+    SRules{helpSuffix} <- runRules opts rs
+    return helpSuffix
 
 data Target = Target
     {target :: !String
     ,documentation :: !(Maybe String)
     } deriving (Eq,Ord,Show,Read,Data,Typeable)
 
-data SRules = SRules
-    {actions :: !(ListBuilder (Stack, Action ()))
+data SRules list = SRules
+    {actions :: !(list (Stack, Action ()))
     ,builtinRules :: !(Map.HashMap TypeRep{-k-} BuiltinRule)
     ,userRules :: !(TMap.Map UserRuleVersioned)
-    ,targets :: !(ListBuilder Target)
+    ,targets :: !(list Target)
+    ,helpSuffix :: !(list String)
     }
 
-instance Semigroup SRules where
-    (SRules x1 x2 x3 x4) <> (SRules y1 y2 y3 y4) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4)
+instance Semigroup (SRules ListBuilder) where
+    (SRules x1 x2 x3 x4 x5) <> (SRules y1 y2 y3 y4 y5) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5)
         where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
-instance Monoid SRules where
-    mempty = SRules mempty Map.empty TMap.empty mempty
+instance Monoid (SRules ListBuilder) where
+    mempty = SRules mempty Map.empty TMap.empty mempty mempty
     mappend = (<>)
 
 instance Semigroup a => Semigroup (Rules a) where
@@ -190,7 +198,7 @@ addUserRule r = newRules mempty{userRules = TMap.singleton $ UserRuleVersioned F
 addTarget :: String -> Rules ()
 addTarget t = newRules mempty{targets = newListBuilder $ Target t Nothing}
 
--- | For all 'addTarget' targets within the 'Rules' prodivde the specified documentation, if they
+-- | For all 'addTarget' targets within the 'Rules' provide the specified documentation, if they
 --   don't already have documentation.
 withTargetDocs :: String -> Rules () -> Rules ()
 withTargetDocs d = modifyRulesScoped $ \x -> x{targets = f <$> targets x}
@@ -201,6 +209,9 @@ withTargetDocs d = modifyRulesScoped $ \x -> x{targets = f <$> targets x}
 withoutTargets :: Rules a -> Rules a
 withoutTargets = modifyRulesScoped $ \x -> x{targets=mempty}
 
+-- | Adds some extra information at the end of @--help@.
+addHelpSuffix :: String -> Rules ()
+addHelpSuffix s = newRules mempty{helpSuffix = newListBuilder s}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
@@ -209,16 +220,16 @@ noLint _ _ = return Nothing
 -- | A suitable 'BuiltinIdentity' that always fails with a runtime error, incompatible with 'shakeShare'.
 --   Use this function if you don't care about 'shakeShare', or if your rule provides a dependency that can
 --   never be cached (in which case you should also call 'Development.Shake.historyDisable').
-noIdentity :: Typeable key => BuiltinIdentity key value
+noIdentity :: BuiltinIdentity key value
 noIdentity _ _ = Nothing
 
 
 -- | The type mapping between the @key@ or a rule and the resulting @value@.
---   See 'addBuiltinRule' and 'apply'.
+--   See 'addBuiltinRule' and 'Development.Shake.Rule.apply'.
 type family RuleResult key -- = value
 
 -- | Define a builtin rule, passing the functions to run in the right circumstances.
---   The @key@ and @value@ types will be what is used by 'Development.Shake.apply'.
+--   The @key@ and @value@ types will be what is used by 'Development.Shake.Rule.apply'.
 --   As a start, you can use 'noLint' and 'noIdentity' as the first two functions,
 --   but are required to supply a suitable 'BuiltinRun'.
 --
@@ -249,7 +260,7 @@ addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
     newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
 
 
--- | Change the priority of a given set of rules, where higher priorities take precedence.
+-- | Change the priority of a given set of rules, where higher values take precedence.
 --   All matching rules at a given priority must be disjoint, or an error is raised.
 --   All builtin Shake rules have priority between 0 and 1.
 --   Excessive use of 'priority' is discouraged. As an example:

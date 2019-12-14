@@ -9,6 +9,7 @@ module Development.Shake.Internal.Core.Database(
     setMem, setDisk, modifyAllMem
     ) where
 
+import Data.Tuple.Extra
 import Data.IORef.Extra
 import General.Intern(Id, Intern)
 import Development.Shake.Classes
@@ -18,7 +19,7 @@ import Control.Concurrent.Extra
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
 
-#if __GLASGOW_HASKELL__ >= 800
+#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
@@ -107,7 +108,7 @@ setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()
 setMem Database{..} i k v = liftIO $ Ids.insert status i (k,v)
 
 modifyAllMem :: DatabasePoly k v -> (v -> v) -> Locked ()
-modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ \(k, s) -> (k, f s)
+modifyAllMem Database{..} f = liftIO $ Ids.forMutate status $ second f
 
 setDisk :: DatabasePoly k v -> Id -> k -> v -> IO ()
 setDisk = journal

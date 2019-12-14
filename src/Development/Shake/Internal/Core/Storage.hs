@@ -196,7 +196,7 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
             t <- getCurrentTime
             appendFile (shakeFiles </> ".shake.storage.log") $ "\n[" ++ show t ++ "]: " ++ trimEnd x ++ "\n"
         outputErr x = do
-            when (shakeVerbosity >= Quiet) $ shakeOutput Quiet $ unlines x
+            when (shakeVerbosity >= Warn) $ shakeOutput Warn $ unlines x
             unexpected $ unlines x
 
 

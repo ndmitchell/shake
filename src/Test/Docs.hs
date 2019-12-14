@@ -161,7 +161,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m ++ "()" | m <- mods] ++ ["main = return ()"]
 
     "Success.txt" %> \out -> do
-        putNormal . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
+        putInfo . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
         needModules
         need ["Main.hs"]
         trackIgnore
@@ -347,7 +347,7 @@ whitelist x | elem x $ words $
     "@ndm_haskell file-name .PHONY filepath trim base stack extra #include " ++
     "*> BuiltinRun BuiltinLint BuiltinIdentity RuleResult " ++
     "oldStore mode node_modules llbuild Makefile " ++
-    "RebuildNever"
+    "RebuildNever RLIMIT_NOFILE "
     = True
 whitelist x = x `elem`
     ["[Foo.hi, Foo.o]"
@@ -371,6 +371,7 @@ whitelist x = x `elem`
     ,"$(LitE . StringL . loc_filename <$> location)"
     ,"-d[ FILE], --debug[=FILE]"
     ,"-r[ FILE], --report[=FILE], --profile[=FILE]"
+    ,"man 2 getrlimit"
     ]
 
 blacklist :: [String]

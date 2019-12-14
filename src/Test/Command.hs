@@ -89,7 +89,7 @@ main = testBuild test $ do
             offset <- liftIO offsetTime
             act
             t <- liftIO offset
-            putNormal $ "Timed out in " ++ showDuration t
+            putInfo $ "Timed out in " ++ showDuration t
             when (t < 2 || t > 8) $ error $ "failed to timeout, took " ++ show t
 
     "timeout1" !> checkTimeout (do

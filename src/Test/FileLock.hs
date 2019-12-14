@@ -13,12 +13,13 @@ import Test.Type
 
 main = testBuild test $
     action $ do
-        putNormal "Starting sleep"
+        putInfo "Starting sleep"
         liftIO $ sleep 5
-        putNormal "Finished sleep"
+        putInfo "Finished sleep"
 
 
 -- Disabled under Mac because it fails, see #560
+-- Reported as working locally under APFS, so may just be the older HFS+ as used by Travis CI
 test build = unless isMac $ do
     -- check it fails exactly once
     time <- offsetTime

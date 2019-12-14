@@ -20,7 +20,7 @@ To get started with Shake, you need to:
 % Press ENTER to continue:
 % RUNNING: cd C:\Users\Neil\shake-demo
 % RUNNING: build</b>
-[1 of 1] Compiling Main             ( Build.hs, _shake\Main.o )
+[1 of 1] Compiling Main             ( Shakefile.hs, _shake\Main.o )
 Linking _shake/build.exe ...
 # gcc (for _build/main.o)
 # gcc (for _build/constants.o)

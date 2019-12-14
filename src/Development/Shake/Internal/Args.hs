@@ -160,38 +160,40 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp long = do
             progName <- getProgName
-            targets <- if not long then return [] else
-                handleSynchronous (\e -> do putWhenLn Normal $ "Failure to collect targets: " ++ show e; return []) $ do
+            (targets, helpSuffix) <- if not long then return ([], []) else
+                handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; return ([], [])) $ do
                     -- run the rules as simply as we can
                     rs <- rules shakeOpts [] []
                     case rs of
                         Just (_, rs) -> do
                             xs <- getTargets shakeOpts rs
-                            evaluate $ force ["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs]
-                        _ -> return []
+                            helpSuffix <- getHelpSuffix shakeOpts rs
+                            evaluate $ force (["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs], helpSuffix)
+                        _ -> return ([], [])
             changes <- return $
                 let as = shakeOptionsFields baseOpts
                     bs = shakeOptionsFields oshakeOpts
                 in ["  - " ++ lbl ++ ": " ++ v1 ++ " => " ++ v2 | long, ((lbl, v1), (_, v2)) <- zip as bs, v1 /= v2]
 
-            putWhen Quiet $ unlines $
+            putWhen Error $ unlines $
                 ("Usage: " ++ progName ++ " [options] [target] ...") :
                 (if null baseOpts2 then [] else "" : (if null userOptions then "Options:" else "Standard options:") : showOptDescr baseOpts2) ++
                 (if null userOptions then [] else "" : "Extra options:" : showOptDescr userOptions) ++
                 (if null changes then [] else "" : "Changed ShakeOptions:" : changes) ++
-                (if null targets then [] else "" : "Targets:" : targets)
+                (if null targets then [] else "" : "Targets:" : targets) ++
+                (if null helpSuffix then [] else "" : helpSuffix)
 
     when (errs /= []) $ do
-        putWhen Quiet $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
+        putWhen Error $ unlines $ map ("shake: " ++) $ filter (not . null) $ lines $ unlines errs
         showHelp False
         exitFailure
 
     if Help `elem` flagsExtra then
         showHelp True
      else if Version `elem` flagsExtra then
-        putWhenLn Normal $ "Shake build system, version " ++ shakeVersionString
+        putWhenLn Info $ "Shake build system, version " ++ shakeVersionString
      else if NumericVersion `elem` flagsExtra then
-        putWhenLn Normal shakeVersionString
+        putWhenLn Info shakeVersionString
      else if Demo `elem` flagsExtra then
         demo $ shakeStaunch shakeOpts
      else if not $ null progressReplays then do
@@ -199,7 +201,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
             src <- readFile file
             return (file, map read $ lines src)
         forM_ (if null $ shakeReport shakeOpts then ["-"] else shakeReport shakeOpts) $ \file -> do
-            putWhenLn Normal $ "Writing report to " ++ file
+            putWhenLn Info $ "Writing report to " ++ file
             writeProgressReport file dat
      else do
         when (Sleep `elem` flagsExtra) $ sleep 1
@@ -220,7 +222,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         (ran,shakeOpts,res) <- redir $ do
             when printDirectory $ do
                 curdir <- getCurrentDirectory
-                putWhenLn Normal $ "shake: In directory `" ++ curdir ++ "'"
+                putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
             (shakeOpts, ui) <- do
                 let compact = last $ No : [x | Compact x <- flagsExtra]
                 use <- if compact == Auto then checkEscCodes else return $ compact == Yes
@@ -234,18 +236,22 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     res <- try_ $ shake shakeOpts $
                         if NoBuild `elem` flagsExtra then
                             withoutActions rules
-                        else if ShareList `elem` flagsExtra || not (null shareRemoves) then do
+                        else if ShareList `elem` flagsExtra ||
+                                not (null shareRemoves) ||
+                                ShareSanity `elem` flagsExtra then do
                             action $ do
                                 unless (null shareRemoves) $
                                     actionShareRemove shareRemoves
                                 when (ShareList `elem` flagsExtra)
                                     actionShareList
+                                when (ShareSanity `elem` flagsExtra)
+                                    actionShareSanity
                             withoutActions rules
                         else
                             rules
                     return (True, shakeOpts, res)
 
-        if not ran || shakeVerbosity shakeOpts < Normal || NoTime `elem` flagsExtra then
+        if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
             either throwIO return res
          else
             let esc = if shakeColor shakeOpts then escape else flip const
@@ -254,11 +260,11 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                     if Exception `elem` flagsExtra then
                         throwIO err
                     else do
-                        putWhenLn Quiet $ esc Red $ show err
+                        putWhenLn Error $ esc Red $ show err
                         exitFailure
                 Right () -> do
                     tot <- start
-                    putWhenLn Normal $ esc Green $ "Build completed in " ++ showDuration tot
+                    putWhenLn Info $ esc Green $ "Build completed in " ++ showDuration tot
 
 
 -- | A list of command line options that can be used to modify 'ShakeOptions'. Each option returns
@@ -281,6 +287,7 @@ data Extra = ChangeDirectory FilePath
            | ProgressReplay FilePath
            | Demo
            | ShareList
+           | ShareSanity
            | ShareRemove String
            | Compact Auto
              deriving Eq
@@ -292,7 +299,12 @@ escape :: Color -> String -> String
 escape color x = escForeground color ++ x ++ escNormal
 
 outputColor :: (Verbosity -> String -> IO ()) -> Verbosity -> String -> IO ()
-outputColor output v msg = output v $ escape Blue msg
+outputColor output v msg = output v $ color msg
+  where color = case v of
+            Silent -> id
+            Error  -> escape Red
+            Warn   -> escape Yellow
+            _      -> escape Blue
 
 -- | True if it has a potential effect on ShakeOptions
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
@@ -336,6 +348,7 @@ shakeOptsEx =
     ,opts $ Option ""  ["no-rule-version"] (noArg $ \s -> s{shakeVersionIgnore=True}) "Ignore the build rules version."
     ,opts $ Option ""  ["share"] (optArg "DIRECTORY" $ \x s -> s{shakeShare=Just $ fromMaybe "" x, shakeChange=ensureHash $ shakeChange s}) "Shared cache location."
     ,hide $ Option ""  ["share-list"] (noArg ([ShareList], ensureShare)) "List the shared cache files."
+    ,hide $ Option ""  ["share-sanity"] (noArg ([ShareSanity], ensureShare)) "Sanity check the shared cache files."
     ,hide $ Option ""  ["share-remove"] (OptArg (\x -> Right ([ShareRemove $ fromMaybe "**" x], ensureShare)) "SUBSTRING") "Remove the shared cache keys."
     ,opts $ Option ""  ["share-copy"] (noArg $ \s -> s{shakeSymlink=False}) "Copy files into the cache."
     ,opts $ Option ""  ["share-symlink"] (noArg $ \s -> s{shakeSymlink=True}) "Symlink files into the cache."

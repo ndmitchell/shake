@@ -2,13 +2,13 @@
 
 module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
-    testBuildArgs, testBuild, testSimple,
+    testBuildArgs, testBuild, testSimple, testNone,
     shakeRoot,
     defaultTest, hasTracker,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
-    assertContents, assertContentsUnordered, assertContentsWords,
+    assertContents, assertContentsUnordered, assertContentsWords, assertContentsInfix,
     assertExists, assertMissing,
     (===),
     (&?%>),
@@ -58,6 +58,8 @@ testBuild f g = testBuildArgs f [] (const g)
 testSimple :: IO () -> IO () -> IO ()
 testSimple act = testBuild (const act) (return ())
 
+testNone :: IO () -> IO ()
+testNone _ = return ()
 
 shakenEx
     :: Bool
@@ -97,7 +99,7 @@ shakenEx reenter options test rules sleeper = do
             del <- removeFilesRandom out
             threads <- randomRIO (1,4)
             putStrLn $ "## TESTING PERTURBATION (" ++ show del ++ " files, " ++ show threads ++ " threads)"
-            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Quiet} $ rules [] args
+            shake shakeOptions{shakeFiles=out, shakeThreads=threads, shakeVerbosity=Error} $ rules [] args
 
         args -> change $ do
             t <- tracker
@@ -121,7 +123,7 @@ shakenEx reenter options test rules sleeper = do
                     if "clean" `elem` files then
                         clean >> return Nothing
                     else return $ Just $ (,) so $ do
-                        -- if you have passed sleep, supress the "no actions" warning
+                        -- if you have passed sleep, suppress the "no actions" warning
                         when (Sleep `elem` extra1) $ action $ return ()
                         rules extra2 files
 
@@ -190,6 +192,11 @@ assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
     got <- IO.readFile' file
     assertBool (want == got) $ "File contents are wrong: " ++ file ++ "\nWANT: " ++ want ++ "\nGOT: " ++ got
+
+assertContentsInfix :: FilePath -> String -> IO ()
+assertContentsInfix file want = do
+    got <- IO.readFile' file
+    assertBool (want `isInfixOf` got) $ "File contents are wrong: " ++ file ++ "\nWANT (infix): " ++ want ++ "\nGOT: " ++ got
 
 assertContentsOn :: (String -> String) -> FilePath -> String -> IO ()
 assertContentsOn f file want = do

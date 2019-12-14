@@ -132,7 +132,7 @@ build needDeps phonys rules pools out build@Build{..} = do
                         Nothing -> liftIO $ errorIO $ "Ninja pool named " ++ BS.unpack pool ++ " not found, required to build " ++ BS.unpack (BS.unwords out)
                         Just r -> withResource r 1 act
 
-                when (description /= "") $ putNormal description
+                when (description /= "") $ putInfo description
                 let (cmdOpts, cmdProg, cmdArgs) = toCommand commandline
                 if deps == "msvc" then do
                     Stdout stdout <- withPool $ command cmdOpts cmdProg cmdArgs

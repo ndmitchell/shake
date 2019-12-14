@@ -20,6 +20,7 @@ import qualified Test.Builtin
 import qualified Test.C
 import qualified Test.Cache
 import qualified Test.Cleanup
+import qualified Test.CloseFileHandles
 import qualified Test.Command
 import qualified Test.Config
 import qualified Test.Database
@@ -48,7 +49,7 @@ import qualified Test.Pool
 import qualified Test.Progress
 import qualified Test.Random
 import qualified Test.Rebuild
-import qualified Test.Deprioritize
+import qualified Test.Reschedule
 import qualified Test.Resources
 import qualified Test.Self
 import qualified Test.SelfMake
@@ -75,10 +76,10 @@ mains =
     ,"c" * Test.C.main
     ,"cache" * Test.Cache.main
     ,"cleanup" * Test.Cleanup.main
+    ,"closefilehandles" * Test.CloseFileHandles.main
     ,"command" * Test.Command.main
     ,"config" * Test.Config.main
     ,"database" * Test.Database.main
-    ,"deprioritize" * Test.Deprioritize.main
     ,"digest" * Test.Digest.main
     ,"directory" * Test.Directory.main
     ,"docs" * Test.Docs.main
@@ -104,6 +105,7 @@ mains =
     ,"progress" * Test.Progress.main
     ,"random" * Test.Random.main
     ,"rebuild" * Test.Rebuild.main
+    ,"reschedule" * Test.Reschedule.main
     ,"resources" * Test.Resources.main
     ,"self" * Test.Self.main
     ,"selfmake" * Test.SelfMake.main

@@ -254,7 +254,7 @@ parseFSA = mapMaybe f . lines
 -- ACTION EXPLICIT OPERATION
 
 -- | Given explicit operations, apply the Action ones, like skip/trace/track/autodep
-commandExplicitAction :: Params -> Action [Result]
+commandExplicitAction :: Partial => Params -> Action [Result]
 commandExplicitAction oparams = do
     ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside} <- getShakeOptions
     params@Params{..} <- return $ oparams{opts = shakeCommandOptions ++ opts oparams}
@@ -263,12 +263,12 @@ commandExplicitAction oparams = do
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
-            putLoud $
+            putVerbose $
                 maybe "" (\x -> "cd " ++ x ++ "; ") cwd ++
                 last (showCommandForUser2 prog args : [x | UserCommand x <- opts])
             verb <- getVerbosity
-            -- run quietly to supress the tracer (don't want to print twice)
-            (if verb >= Loud then quietly else id) act
+            -- run quietly to suppress the tracer (don't want to print twice)
+            (if verb >= Verbose then quietly else id) act
 
     let tracer act = do
             -- note: use the oparams - find a good tracing before munging it for shell stuff
@@ -277,7 +277,7 @@ commandExplicitAction oparams = do
 
     let async = ResultProcess PID0 `elem` results
     let tracker act
-            | AutoDeps `elem` opts = if async then fail "Can't use AutoDeps and asyncronous execution" else autodeps act
+            | AutoDeps `elem` opts = if async then liftIO $ errorIO "Can't use AutoDeps and asyncronous execution" else autodeps act
             | shakeLint == Just LintFSATrace && not async = fsalint act
             | otherwise = act params
 
@@ -314,7 +314,7 @@ defaultTraced Params{..} = takeBaseName $ if Shell `elem` opts then fst (word1 p
 -- IO EXPLICIT OPERATION
 
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
-commandExplicitIO :: Params -> IO [Result]
+commandExplicitIO :: Partial => Params -> IO [Result]
 commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSATrace params $ \Params{..} -> do
     let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
             ResultStdout{} -> (True, False)
@@ -340,6 +340,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
     let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
     let optRealCommand = showCommandForUser2 prog args
     let optUserCommand = last $ optRealCommand : [x | UserCommand x <- opts]
+    let optCloseFds = CloseFileHandles `elem` opts
 
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
@@ -366,6 +367,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
         ,poStdout = [DestEcho | optEchoStdout] ++ map DestFile optFileStdout ++ [DestString exceptionBuffer | optWithStdout && not optAsync] ++ concat dStdout
         ,poStderr = [DestEcho | optEchoStderr] ++ map DestFile optFileStderr ++ [DestString exceptionBuffer | optWithStderr && not optAsync] ++ concat dStderr
         ,poAsync = optAsync
+        ,poCloseFds = optCloseFds
         }
     (dur,(pid,exit)) <- duration $ process po
     if exit == ExitSuccess || ResultCode ExitSuccess `elem` results then
@@ -378,7 +380,8 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             Just v -> do
                 v <- canonicalizePath v `catchIO` const (return v)
                 return $ "Current directory: " ++ v ++ "\n"
-        fail $
+        -- FIXME: switch to errorIO once extra-1.6.18 is available everywhere
+        liftIO $ error $
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
             "Command line: " ++ optRealCommand ++ "\n" ++
             (if optRealCommand /= optUserCommand then "Original command line: " ++ optUserCommand ++ "\n" else "") ++
@@ -602,14 +605,14 @@ instance (CmdResult x1, CmdResult x2, CmdResult x3, CmdResult x4, CmdResult x5) 
 --   By default the @stderr@ stream will be captured for use in error messages, and also echoed. To only echo
 --   pass @'WithStderr' 'False'@, which causes no streams to be captured by Shake, and certain programs (e.g. @gcc@)
 --   to detect they are running in a terminal.
-command :: CmdResult r => [CmdOption] -> String -> [String] -> Action r
-command opts x xs = b <$> commandExplicitAction (Params "command" opts a x xs)
+command :: (Partial, CmdResult r) => [CmdOption] -> String -> [String] -> Action r
+command opts x xs = withFrozenCallStack $ b <$> commandExplicitAction (Params "command" opts a x xs)
     where (a,b) = cmdResult
 
 -- | A version of 'command' where you do not require any results, used to avoid errors about being unable
 --   to deduce 'CmdResult'.
-command_ :: [CmdOption] -> String -> [String] -> Action ()
-command_ opts x xs = void $ commandExplicitAction (Params "command_" opts [] x xs)
+command_ :: Partial => [CmdOption] -> String -> [String] -> Action ()
+command_ opts x xs = withFrozenCallStack $ void $ commandExplicitAction (Params "command_" opts [] x xs)
 
 
 ---------------------------------------------------------------------
@@ -662,13 +665,13 @@ type a :-> t = a
 -- @
 -- 'cmd' ('Cwd' \"generated\") 'Shell' \"gcc -c myfile.c\" :: IO ()
 -- @
-cmd :: CmdArguments args => args :-> Action r
-cmd = cmdArguments mempty
+cmd :: (Partial, CmdArguments args) => args :-> Action r
+cmd = withFrozenCallStack $ cmdArguments mempty
 
 -- | See 'cmd'. Same as 'cmd' except with a unit result.
 -- 'cmd' is to 'cmd_' as 'command' is to 'command_'.
-cmd_ :: (CmdArguments args, Unit args) => args :-> Action ()
-cmd_ = cmd
+cmd_ :: (Partial, CmdArguments args, Unit args) => args :-> Action ()
+cmd_ = withFrozenCallStack cmd
 
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 newtype CmdArgument = CmdArgument [Either CmdOption String]
@@ -677,7 +680,7 @@ newtype CmdArgument = CmdArgument [Either CmdOption String]
 -- | The arguments to 'cmd' - see 'cmd' for examples and semantics.
 class CmdArguments t where
     -- | Arguments to cmd
-    cmdArguments :: CmdArgument -> t
+    cmdArguments :: Partial => CmdArgument -> t
 instance (IsCmdArgument a, CmdArguments r) => CmdArguments (a -> r) where
     cmdArguments xs x = cmdArguments $ xs `mappend` toCmdArgument x
 instance CmdResult r => CmdArguments (Action r) where

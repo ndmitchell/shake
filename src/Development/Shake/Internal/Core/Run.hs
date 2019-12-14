@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, NamedFieldPuns #-}
 
 module Development.Shake.Internal.Core.Run(
     RunState,
@@ -60,7 +60,7 @@ import Prelude
 
 data RunState = RunState
     {opts :: ShakeOptions
-    ,ruleinfo :: Map.HashMap TypeRep BuiltinRule
+    ,builtinRules :: Map.HashMap TypeRep BuiltinRule
     ,userRules :: TMap.Map UserRuleVersioned
     ,database :: Database
     ,curdir :: FilePath
@@ -73,18 +73,18 @@ data RunState = RunState
 open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
 open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
     diagnostic $ return "Starting run"
-    (actions, ruleinfo, userRules, _targets) <- runRules opts rs
+    SRules{actions, builtinRules, userRules} <- runRules opts rs
 
     diagnostic $ return $ "Number of actions = " ++ show (length actions)
-    diagnostic $ return $ "Number of builtin rules = " ++ show (Map.size ruleinfo) ++ " " ++ show (Map.keys ruleinfo)
+    diagnostic $ return $ "Number of builtin rules = " ++ show (Map.size builtinRules) ++ " " ++ show (Map.keys builtinRules)
     diagnostic $ return $ "Number of user rule types = " ++ show (TMap.size userRules)
     diagnostic $ return $ "Number of user rules = " ++ show (sum (TMap.toList (userRuleSize . userRuleContents) userRules))
 
     checkShakeExtra shakeExtra
     curdir <- getCurrentDirectory
 
-    database <- usingDatabase cleanup opts diagnostic ruleinfo
-    (shared, cloud) <- loadSharedCloud database opts ruleinfo
+    database <- usingDatabase cleanup opts diagnostic builtinRules
+    (shared, cloud) <- loadSharedCloud database opts builtinRules
     return RunState{..}
 
 
@@ -94,7 +94,7 @@ reset RunState{..} = runLocked database $
     modifyAllMem database f
     where
         f (Ready r) = Loaded (snd <$> r)
-        f (Error _ x) = maybe Missing Loaded x
+        f (Failed _ x) = maybe Missing Loaded x
         f (Running _ x) = maybe Missing Loaded x -- shouldn't ever happen, but Loaded is least worst
         f x = x
 
@@ -110,7 +110,7 @@ run RunState{..} oneshot actions2 =
 
         res <- withCleanup $ \cleanup -> do
             register cleanup $ do
-                when (shakeTimings && shakeVerbosity >= Normal) $
+                when (shakeTimings && shakeVerbosity >= Info) $
                     writeIORef timingsToShow . Just =<< getTimings
                 resetTimings
 
@@ -141,7 +141,7 @@ run RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start ruleinfo output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -156,26 +156,26 @@ run RunState{..} oneshot actions2 =
             locals <- readIORef locals
             end <- start
             if null actions && null actions2 then
-                putWhen Normal "Warning: No want/action statements, nothing to do"
+                putWhen Info "Warning: No want/action statements, nothing to do"
              else
                 recordRoot step locals end database
 
             when (isJust shakeLint) $ do
                 addTiming "Lint checking"
                 lintCurrentDirectory curdir "After completion"
-                checkValid diagnostic database (runLint ruleinfo) =<< readIORef absent
-                putWhen Loud "Lint checking succeeded"
+                checkValid diagnostic database (runLint builtinRules) =<< readIORef absent
+                putWhen Verbose "Lint checking succeeded"
             when (shakeReport /= []) $ do
                 addTiming "Profile report"
                 forM_ shakeReport $ \file -> do
-                    putWhen Normal $ "Writing report to " ++ file
+                    putWhen Info $ "Writing report to " ++ file
                     writeProfile file database
             when (shakeLiveFiles /= []) $ do
                 addTiming "Listing live"
                 diagnostic $ return "Listing live keys"
                 xs <- liveFiles database
                 forM_ shakeLiveFiles $ \file -> do
-                    putWhen Normal $ "Writing live list to " ++ file
+                    putWhen Info $ "Writing live list to " ++ file
                     (if file == "-" then putStr else writeFile file) $ unlines xs
 
             res <- readIORef after
@@ -196,7 +196,7 @@ shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic _ -> do
     let n = show $ length after
     diagnostic $ return $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after
-    when (shakeTimings && shakeVerbosity >= Normal) $
+    when (shakeTimings && shakeVerbosity >= Info) $
         putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
 
 
@@ -274,7 +274,7 @@ liveFiles database = do
 errorsState :: RunState -> IO [(String, SomeException)]
 errorsState RunState{..} = do
     status <- getKeyValues database
-    return [(show k, e) | (k, Error e _) <- status]
+    return [(show k, e) | (k, Failed e _) <- status]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
@@ -348,7 +348,7 @@ fromStepResult = getEx . result
 recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
 recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
     rootId <- mkId db rootKey
-    let local = localMergeMutable (newLocal emptyStack Normal) locals
+    let local = localMergeMutable (newLocal emptyStack Info) locals
     let rootRes = Result
             {result = (newValue (), BS.empty)
             ,changed = step

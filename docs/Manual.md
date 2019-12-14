@@ -14,7 +14,7 @@ Shake is a Haskell library for writing build systems -- designed as a replacemen
         want ["_build/run" <.> exe]
 
         phony "clean" $ do
-            putNormal "Cleaning files in _build"
+            putInfo "Cleaning files in _build"
             removeFilesAfter "_build" ["//*"]
 
         "_build/run" <.> exe %> \out -> do
@@ -27,7 +27,7 @@ Shake is a Haskell library for writing build systems -- designed as a replacemen
             let c = dropDirectory1 $ out -<.> "c"
             let m = out -<.> "m"
             cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
-            needMakefileDependencies m
+            neededMakefileDependencies m
 
 This build system builds the executable `_build/run` from all C source files in the current directory. It will rebuild if you add/remove any C files to the directory, if the C files themselves change, or if any headers used by the C files change. All generated files are placed in `_build`, and a `clean` command is provided that will wipe all the generated files. In the rest of this manual we'll explain how the above code works and how to extend it.
 
@@ -37,7 +37,7 @@ To run the example above:
 
 1. Install the [Haskell Stack](https://haskellstack.org/), which provides a Haskell compiler and package manager.
 2. Type `stack install shake`, to build and install Shake and all its dependencies.
-3. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Build.hs`), and execute it (which can be done by `runhaskell Build.hs`). For more details see a [trace of `shake --demo`](Demo.md).
+3. Type `stack exec -- shake --demo`, which will create a directory containing a sample project, the above Shake script (named `Shakefile.hs`), and execute it (which can be done by `runhaskell Shakefile.hs`). For more details see a [trace of `shake --demo`](Demo.md).
 
 ## Basic syntax
 
@@ -224,7 +224,7 @@ One common problem when building `.c` files is tracking down which headers they 
 
 That will compile `main.c` to `main.o`, and also produce a file `main.m` containing the dependencies. To add these dependencies as dependencies of this rule we can call:
 
-    needMakefileDependencies "main.m"
+    neededMakefileDependencies "main.m"
 
 Now, if either `main.c` or any headers transitively imported by `main.c` change, the file will be rebuilt. In the initial example the complete rule is:
 
@@ -232,9 +232,9 @@ Now, if either `main.c` or any headers transitively imported by `main.c` change,
         let c = dropDirectory1 $ out -<.> "c"
         let m = out -<.> "m"
         cmd_ "gcc -c" [c] "-o" [out] "-MMD -MF" [m]
-        needMakefileDependencies m
+        neededMakefileDependencies m
 
-We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `needMakefileDependencies`.
+We first compute the source file `c` (e.g. `"main.c"`) that is associated with the `out` file (e.g. `"_build/main.o"`). We then compute a temporary file `m` to write the dependencies to (e.g. `"_build/main.m"`). We then call `gcc` using the `-MMD -MF` flags and then finally call `neededMakefileDependencies`.
 
 #### Top-level variables
 
@@ -258,10 +258,10 @@ All top-level variables and functions can be thought of as being expanded wherev
 A standard clean command is defined as:
 
     phony "clean" $ do
-        putNormal "Cleaning files in _build"
+        putInfo "Cleaning files in _build"
         removeFilesAfter "_build" ["//*"]
 
-Running the build system with the `clean` argument, e.g. `runhaskell Build.hs clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
+Running the build system with the `clean` argument, e.g. `runhaskell Shakefile.hs clean` will remove all files under the `_build` directory. This clean command is formed from two separate pieces. Firstly, we can define `phony` commands as:
 
 <pre>
 phony "<i>name</i>" $ do
@@ -270,7 +270,7 @@ phony "<i>name</i>" $ do
 
 Where <tt><i>name</i></tt> is the name used on the command line to invoke the actions, and <tt><i>actions</i></tt> are the list of things to do in response. These names are not dependency tracked and are run afresh each time they are requested.
 
-The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell Build.hs clean`) then deletes all files matching `//*` in the `_build` directory. The `putNormal` function writes out a message to the console, as long as `--quiet` was not passed.
+The <tt><i>actions</i></tt> can be any standard build actions, although for a `clean` rule, `removeFilesAfter` is typical. This function waits until after any files have finished building (which will be none, if you do `runhaskell Shakefile.hs clean`) then deletes all files matching `//*` in the `_build` directory. The `putInfo` function writes out a message to the console, as long as `--quiet` was not passed.
 
 ## Running
 
@@ -278,13 +278,13 @@ This section covers how to run the build system you have written.
 
 #### Compiling the build system
 
-As shown before, we can use `runhaskell Build.hs` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
+As shown before, we can use `runhaskell Shakefile.hs` to execute our build system, but doing so causes the build script to be compiled afresh each time. A more common approach is to add a shell script that compiles the build system and runs it. In the example directory you will find `build.sh` (Linux) and `build.bat` (Windows), both of which execute the same interesting commands. Looking at `build.sh`:
 
     #!/bin/sh
     mkdir -p _shake
-    ghc --make Build.hs -rtsopts -threaded -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
+    ghc --make Shakefile.hs -rtsopts -threaded -with-rtsopts=-I0 -outputdir=_shake -o _shake/build && _shake/build "$@"
 
-This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Build.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
+This script creates a folder named `_shake` for the build system objects to live in, then runs `ghc --make Shakefile.hs` to produce `_shake/build`, then executes `_shake/build` with all arguments it was given. The `-with-rtsopts` flag instructs the Haskell compiler to disable "idle garbage collection", making more CPU available for the commands you are running, as [explained here](https://stackoverflow.com/questions/34588057/why-does-shake-recommend-disabling-idle-garbage-collection/).
 
 Now you can run a build by typing `stack exec ./build.sh` on Linux, or `stack exec build.bat` on Windows. On Linux you may want to alias `build` to `stack exec ./build.sh`. For the rest of this document we will assume `build` runs the build system.
 
@@ -342,8 +342,8 @@ To debug a build system there are a variety of techniques that can be used:
 * Run in single-threaded mode (`-j1`) to make any output clearer by not interleaving commands.
 * By default a Shake build system prints out a message every time it runs a command. Use verbose mode (`--verbose`) to print more information to the screen, such as which rule is being run. Additional `--verbose` flags increase the verbosity. Three verbosity flags produce output intended for someone debugging the Shake library itself, rather than a build system based on it.
 * To raise a build error call `error "error message"`. Shake will abort, showing the error message.
-* To output additional information use `putNormal "output message"`. This message will be printed to the console when it is reached.
-* To show additional information with either `error` or `putNormal`, use `error $ show ("message", myVariable)`. This allows you to show any local variables.
+* To output additional information use `putInfo "output message"`. This message will be printed to the console when it is reached.
+* To show additional information with either `error` or `putInfo`, use `error $ show ("message", myVariable)`. This allows you to show any local variables.
 
 ## Extensions
 

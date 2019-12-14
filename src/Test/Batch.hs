@@ -15,7 +15,7 @@ main = testBuild test $ do
     batch 3 ("*.out" %>) (\out -> do need [inp out]; return out) $ \outs -> do
         liftIO $ assertBool (length outs <= 3) "length outs <= 3"
         withResource file 1 $ liftIO $ appendFile "log.txt" $ show (length outs) ++ "\n"
-        putNormal $ "Building batch: " ++ unwords outs
+        putInfo $ "Building batch: " ++ unwords outs
         forM_ outs $ \out -> liftIO $ copyFile (inp out) out
     want [show i <.> "out" | i <- [1..6]]
 

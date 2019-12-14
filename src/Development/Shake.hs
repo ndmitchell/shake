@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds, PatternSynonyms #-}
 
 -- | This module is used for defining Shake build systems. As a simple example of a Shake build system,
 --   let us build the file @result.tar@ from the files listed by @result.txt@:
@@ -54,20 +54,20 @@ module Development.Shake(
     shakeOptions,
     Rules, action, withoutActions, alternatives, priority, versioned,
     Action, traced,
-    liftIO, actionOnException, actionFinally, actionCatch, actionRetry, runAfter,
+    liftIO, actionOnException, actionFinally, actionBracket, actionCatch, actionRetry, runAfter,
     ShakeException(..),
     -- * Configuration
     ShakeOptions(..), Rebuild(..), Lint(..), Change(..),
     getShakeOptions, getShakeOptionsRules, getHashedShakeVersion,
     getShakeExtra, getShakeExtraRules, addShakeExtra,
     -- ** Command line
-    shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs,
+    shakeArgs, shakeArgsWith, shakeArgsOptionsWith, shakeOptDescrs, addHelpSuffix,
     -- ** Targets
     getTargets, addTarget, withTargetDocs, withoutTargets,
     -- ** Progress reporting
     Progress(..), progressSimple, progressDisplay, progressTitlebar, progressProgram, getProgress,
     -- ** Verbosity
-    Verbosity(..), getVerbosity, putLoud, putNormal, putQuiet, withVerbosity, quietly,
+    Verbosity(..), getVerbosity, putVerbose, putInfo, putWarn, putError, withVerbosity, quietly,
     -- * Running commands
     command, command_, cmd, cmd_, unit,
     Stdout(..), StdoutTrim(..), Stderr(..), Stdouterr(..), Exit(..), Process(..), CmdTime(..), CmdLine(..), FSATrace(..),
@@ -92,7 +92,7 @@ module Development.Shake(
     doesFileExist, doesDirectoryExist, getDirectoryContents, getDirectoryFiles, getDirectoryDirs,
     getDirectoryFilesIO,
     -- * Environment rules
-    getEnv, getEnvWithDefault,
+    getEnv, getEnvWithDefault, getEnvError,
     -- * Oracle rules
     ShakeValue, RuleResult, addOracle, addOracleCache, addOracleHash, askOracle, askOracles,
     -- * Special rules
@@ -108,14 +108,17 @@ module Development.Shake(
     needHasChanged,
     resultHasChanged,
     batch,
-    deprioritize,
+    reschedule,
     -- * Deprecated
     (*>), (|*>), (&*>),
     (**>), (*>>), (?>>),
-    askOracleWith
+    askOracleWith,
+    deprioritize,
+    pattern Quiet, pattern Normal, pattern Loud, pattern Chatty,
+    putLoud, putNormal, putQuiet
     ) where
 
-import Prelude(Maybe, FilePath) -- Since GHC 7.10 duplicates *>
+import Prelude(Maybe, FilePath, Double, String) -- Since GHC 7.10 duplicates *>
 
 -- I would love to use module export in the above export list, but alas Haddock
 -- then shows all the things that are hidden in the docs, which is terrible.
@@ -267,3 +270,31 @@ infix 1 *>, |*>, &*>
 --   since the 'RuleResult' type family now fixes the result type.
 askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
 askOracleWith question _ = askOracle question
+
+---------------------------------------------------------------------
+-- DEPRECATED SINCE 0.18.4, JUL 2019
+
+-- | /Deprecated:/ Alias for 'reschedule'.
+deprioritize :: Double -> Action ()
+deprioritize = reschedule
+
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Error'.
+pattern Quiet :: Verbosity
+pattern Quiet  = Error
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Info'.
+pattern Normal :: Verbosity
+pattern Normal = Info
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
+pattern Loud :: Verbosity
+pattern Loud   = Verbose
+-- | /Deprecated:/ A bidirectional pattern synonym for 'Verbose'.
+pattern Chatty :: Verbosity
+pattern Chatty = Verbose
+
+putLoud, putNormal, putQuiet :: String -> Action ()
+-- | /Deprecated:/ Alias for 'putVerbose'.
+putLoud = putVerbose
+-- | /Deprecated:/ Alias for 'putInfo'.
+putNormal = putInfo
+-- | /Deprecated:/ Alias for 'putError'.
+putQuiet = putError

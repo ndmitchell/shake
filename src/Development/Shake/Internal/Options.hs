@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
+{-# LANGUAGE CPP, DeriveDataTypeable, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Internal.Options(
@@ -150,7 +150,7 @@ data ShakeOptions = ShakeOptions
         --   significant changes to the rules that require a wipe. The version number should be
         --   set in the source code, and not passed on the command line.
     ,shakeVerbosity :: Verbosity
-        -- ^ Defaults to 'Normal'. What level of messages should be printed out.
+        -- ^ Defaults to 'Info'. What level of messages should be printed out.
     ,shakeStaunch :: Bool
         -- ^ Defaults to 'False'. Operate in staunch mode, where building continues even after errors,
         --   similar to @make --keep-going@.
@@ -230,7 +230,7 @@ data ShakeOptions = ShakeOptions
 -- | The default set of 'ShakeOptions'.
 shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
-    ".shake" 1 "1" Normal False [] Nothing [] [] [] [] (Just 10) [] [] False True False
+    ".shake" 1 "1" Info False [] Nothing [] [] [] [] (Just 10) [] [] False True False
     True ChangeModtime True [] False False Nothing [] True
     (const $ return ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
@@ -301,11 +301,12 @@ tyHidden = mkDataType "Development.Shake.Types.Hidden" []
 
 -- | The verbosity data type, used by 'shakeVerbosity'.
 data Verbosity
-    = Silent -- ^ Don't print any messages.
-    | Quiet  -- ^ Only print essential messages, typically errors.
-    | Normal -- ^ Print errors and @# /command-name/ (for /file-name/)@ when running a 'Development.Shake.traced' command.
-    | Loud   -- ^ Print errors and full command lines when running a 'Development.Shake.command' or 'Development.Shake.cmd' command.
-    | Chatty -- ^ Print errors, full command line and status messages when starting a rule.
+    = Silent  -- ^ Don't print any messages.
+    | Error     -- ^ Only print error messages.
+    | Warn    -- ^ Print errors and warnings.
+    | Info    -- ^ Print errors, warnings and @# /command-name/ (for /file-name/)@ when running a 'Development.Shake.traced' command.
+    | Verbose -- ^ Print errors, warnings, full command lines when running a 'Development.Shake.command' or
+              --   'Development.Shake.cmd' command and status messages when starting a rule.
     | Diagnostic -- ^ Print messages for virtually everything (mostly for debugging).
       deriving (Eq,Ord,Show,Read,Typeable,Data,Enum,Bounded)
 

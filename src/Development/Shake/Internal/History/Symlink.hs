@@ -49,7 +49,7 @@ copyFileLink useSymlink from to = do
         b <- createLinkMaybe from to
         whenJust b $ \_ ->
             copyFile from to
-        -- making files read only stops them from inadvertantly mutating the cache
+        -- making files read only stops them from inadvertently mutating the cache
         forM_ [from, to] $ \x -> do
             perm <- getPermissions x
             setPermissions x perm{writable=False}

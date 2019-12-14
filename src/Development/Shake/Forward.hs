@@ -70,7 +70,7 @@ newtype Forward = Forward (String, String, BS.ByteString) -- the type, the Show,
 mkForward :: (Typeable a, Show a, Binary a) => a -> Forward
 mkForward x = Forward (show $ typeOf x, show x, encode' x)
 
-unForward :: forall a . (Typeable a, Show a, Binary a) => Forward -> a
+unForward :: forall a . (Typeable a, Binary a) => Forward -> a
 unForward (Forward (got,_,x))
     | got /= want = error $ "Failed to match forward type, wanted " ++ show want ++ ", got " ++ show got
     | otherwise = decode' x
