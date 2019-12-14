@@ -33,8 +33,14 @@
 --   All forward-defined systems use 'AutoDeps', which requires @fsatrace@ to be on the @$PATH@.
 --   You can obtain @fsatrace@ from <https://github.com/jacereda/fsatrace>.
 --
---   This module is considered experimental - it has not been battle tested.
---   A possible alternative is available at <http://hackage.haskell.org/package/pier/docs/Pier-Core-Artifact.html>.
+--   This module is considered experimental - it has not been battle tested. There are now a few possible
+--   alternatives in this space:
+--
+-- * Pier <http://hackage.haskell.org/package/pier/docs/Pier-Core-Artifact.html> (built on Shake).
+--
+-- * Rattle <https://github.com/ndmitchell/rattle> (by the same author as Shake).
+--
+-- * Stroll <https://github.com/snowleopard/stroll>.
 module Development.Shake.Forward(
     shakeForward, shakeArgsForward,
     forwardOptions, forwardRule,
