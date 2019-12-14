@@ -23,21 +23,20 @@ import Data.FileEmbed
 import Language.Haskell.TH.Syntax ( runIO )
 #endif
 
+-- Very hard to abstract over TH, so we do it with CPP
 #ifdef FILE_EMBED
-libraries =
-    [("jquery.js",            $(embedFile =<< runIO JQuery.file))
-    ,("jquery.dgtable.js",    $(embedFile =<< runIO DGTable.file))
-    ,("jquery.flot.js",       $(embedFile =<< runIO (Flot.file Flot.Flot)))
-    ,("jquery.flot.stack.js", $(embedFile =<< runIO (Flot.file Flot.FlotStack)))
-    ]
+#define FILE(x) (return (LBS.fromStrict $(embedFile =<< runIO (x))))
 #else
-libraries =
-    [("jquery.js", JQuery.file)
-    ,("jquery.dgtable.js", DGTable.file)
-    ,("jquery.flot.js", Flot.file Flot.Flot)
-    ,("jquery.flot.stack.js", Flot.file Flot.FlotStack)
-    ]
+#define FILE(x) (LBS.readFile =<< (x))
 #endif
+
+libraries :: [(String, IO LBS.ByteString)]
+libraries =
+    [("jquery.js",            FILE(JQuery.file))
+    ,("jquery.dgtable.js",    FILE(DGTable.file))
+    ,("jquery.flot.js",       FILE(Flot.file Flot.Flot))
+    ,("jquery.flot.stack.js", FILE(Flot.file Flot.FlotStack))
+    ]
 
 
 -- | Template Engine. Perform the following replacements on a line basis:
@@ -61,11 +60,7 @@ runTemplate ask = lbsMapLinesIO f
         asker o@(splitFileName -> ("lib/",x)) =
             case lookup x libraries of
                 Nothing -> errorIO $ "Template library, unknown library: " ++ o
-#ifdef FILE_EMBED
-                Just bs -> return (LBS.fromStrict bs)
-#else
-                Just act -> LBS.readFile =<< act
-#endif
+                Just act -> act
 
         asker "shake.js" = readDataFileHTML "shake.js"
         asker "data/metadata.js" = do
