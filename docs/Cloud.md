@@ -37,3 +37,9 @@ After fixing the recording of items in the cache, you can clean and try again. I
 If a rule shouldn't be stored in the cache (e.g. because it modifies files that already exist) use `historyDisable`.
 
 The [GHC](https://www.haskell.org/ghc/) build system [Hadrian](https://ghc.haskell.org/trac/ghc/wiki/Building/Hadrian/QuickStart) is now able to build with `--share` following [this patch](https://gitlab.haskell.org/ghc/ghc/merge_requests/317) (which also does unrelated refactorings).
+
+## Symlinks and Read only output files
+
+When run in `--share` mode, by default Shake copies the files to and from the shared location. However, that causes a lot of expensive IO - you may instead wish to use `--share-symlink` which uses hard links to link the files together. Unfortunately, when the files are linked together, changing one file changes both - which can corrupt the cache. To avoid that severe problem, when using `--share-symlink` Shake marks both files as read-only. As a consequence, if a rule tries to modify the output file it may fail - it may need to _delete_ the output file and recreate it.
+
+One day hopefully file systems will expose real copy-on-write files, until then, every option involves some kind of trade off.
