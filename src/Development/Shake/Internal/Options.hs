@@ -206,7 +206,9 @@ data ShakeOptions = ShakeOptions
     ,shakeCloud :: [String]
         -- ^ Defaults to @[]@. Cloud servers to talk to forming a shared cache.
     ,shakeSymlink :: Bool
-        -- ^ Defaults to @False@. Use symlinks if they are available.
+        -- ^ Defaults to @False@. Use symlinks for 'shakeShare' if they are available.
+        --   If this setting is @True@ (even if symlinks are not available) then files will be
+        --   made read-only to avoid inadvertantly poisoning the shared cache.
     ,shakeProgress :: IO Progress -> IO ()
         -- ^ Defaults to no action. A function called when the build starts, allowing progress to be reported.
         --   The function is called on a separate thread, and that thread is killed when the build completes.
