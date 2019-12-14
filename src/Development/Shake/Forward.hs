@@ -31,7 +31,9 @@
 -- * Where Haskell performs real computation, if zero-build performance is insufficient, use 'cacheAction'.
 --
 --   All forward-defined systems use 'AutoDeps', which requires @fsatrace@ to be on the @$PATH@.
---   You can obtain @fsatrace@ from <https://github.com/jacereda/fsatrace>.
+--   You can obtain @fsatrace@ from <https://github.com/jacereda/fsatrace>. You must set
+--   'shakeLintInside' to specify where 'AutoDeps' will look for dependencies - if you want all dependencies
+--   everywhere use @[\"\"]@.
 --
 --   This module is considered experimental - it has not been battle tested. There are now a few possible
 --   alternatives in this space:
@@ -47,6 +49,7 @@ module Development.Shake.Forward(
     cache, cacheAction
     ) where
 
+import Control.Monad
 import Development.Shake
 import Development.Shake.Rule
 import Development.Shake.Command
@@ -104,6 +107,9 @@ shakeArgsForward opts act = shakeArgs (forwardOptions opts) (forwardRule act)
 -- | Given an 'Action', turn it into a 'Rules' structure which runs in forward mode.
 forwardRule :: Action () -> Rules ()
 forwardRule act = do
+    opts <- getShakeOptionsRules
+    when (null $ shakeLintInside opts) $
+        fail "When running in forward mode you must set shakeLintInside to specify where to detect dependencies"
     addBuiltinRule noLint noIdentity $ \k old mode ->
         case old of
             Just old | mode == RunDependenciesSame -> return $ RunResult ChangedNothing old (decode' old)
@@ -118,7 +124,7 @@ forwardRule act = do
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
 forwardOptions :: ShakeOptions -> ShakeOptions
-forwardOptions opts = opts{shakeCommandOptions=[AutoDeps], shakeLintInside=[""]}
+forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
 
 
 -- | Cache an action. The name of the action must be unique for all different actions.

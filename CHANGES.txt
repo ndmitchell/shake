@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #734, make forward fail if shakeLintInside is empty
 *   #701, make shakeSymlink=False the default
     #694, embed data files in the binary (use embed-files Cabal flag)
     #722, don't close file handles in cmd unless CloseFileHandles

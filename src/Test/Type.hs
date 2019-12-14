@@ -105,7 +105,7 @@ shakenEx reenter options test rules sleeper = do
             t <- tracker
             opts <- return shakeOptions{shakeFiles = "."}
             cwd <- getCurrentDirectory
-            opts <- return $ if forward then forwardOptions opts else opts
+            opts <- return $ if forward then forwardOptions opts{shakeLintInside=[""]} else opts
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd </> ".." </> ".."]
                 ,shakeLintIgnore = [".cabal-sandbox/**",".stack-work/**","../../.stack-work/**"]}
