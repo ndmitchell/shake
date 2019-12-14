@@ -135,7 +135,13 @@ cacheAction (mkForward -> key) (action :: Action b) = do
     liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
     return $ unForward res
 
--- | Apply caching to an external command.
+-- | Apply caching to an external command using the same arguments as 'cmd'.
+--
+-- > cache $ cmd "gcc -c" ["foo.c"] "-o" ["foo.o"]
+--
+--   This command will be cached, with the inputs/outputs traced. If any of the
+--   files used by this command (e.g. @foo.c@ or header files it imports) then
+--   the command will rerun.
 cache :: (forall r . CmdArguments r => r) -> Action ()
 cache cmd = do
     let CmdArgument args = cmd
