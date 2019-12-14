@@ -18,7 +18,7 @@ main = testBuild test $ forwardRule $ do
         cache $ cmd "gcc -c" [c] "-o" [o]
         return o
     cache $ cmd "gcc -o" ["Main" <.> exe] os
-    cache $ cmd ["Main" <.> "exe"] (FileStdout "output.txt")
+    cache $ cmd ["Main" <.> exe] (FileStdout "output.txt")
 
     -- Doing this way to test cacheAction with arguments
     -- any real code should use a tracked readFile and avoid passing arguments to the closure
