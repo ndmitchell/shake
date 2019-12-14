@@ -19,7 +19,7 @@ import Control.Concurrent.Extra
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
 
-#if __GLASGOW_HASKELL__ >= 800
+#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 

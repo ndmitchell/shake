@@ -5,8 +5,8 @@ import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
 import General.GetOpt
-import Control.Exception.Extra
 import Control.Monad
+import GHC.IO.Encoding
 
 
 -- | Decode a dull ASCII string to certain unicode points, necessary because
@@ -47,12 +47,14 @@ test build = do
     -- IO.hSetEncoding IO.stdout IO.char8
     -- IO.hSetEncoding IO.stderr IO.char8
     forM_ ["normal","e^",":)","e^-:)"] $ \pre -> do
-        let ext x = decode pre <.> x
-        res <- try_ $ writeFile (ext "source") "x"
-        case res of
-            Left _ ->
-                putStrLn $ "WARNING: Failed to write file " ++ pre ++ ", skipping unicode test (LANG=C ?)"
-            Right _ -> do
+        -- If you aren't on UTF-8 file encoding it goes wrong, see
+        -- https://github.com/ndmitchell/shake/pull/681
+        enc <- liftIO getFileSystemEncoding
+        if textEncodingName enc /= "UTF-8"
+        then putStrLn "WARNING: filesystem encoding is not UTF-8, skipping unicode test (LANG=C ?)"
+        else do
+                let ext x = decode pre <.> x
+                writeFile (ext "source") "x"
                 build ["--prefix=" ++ pre, "--want=" ++ pre <.> "out", "--sleep"]
                 assertContents (ext "out") $ "x" ++ "False"
                 writeFile (ext "source") "y"

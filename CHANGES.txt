@@ -1,5 +1,12 @@
 Changelog for Shake (* = breaking change)
 
+    #694, embed data files in the binary (use embed-files Cabal flag)
+    #722, don't close file handles in cmd unless CloseFileHandles
+    #727, add actionBracket for bracket-like operations
+    #720, add --share-sanity to sanity check shared cache contents
+    #719, write history key after cached files to ensure it is coherent
+    #703, print rebuild warnings in yellow and errors in red
+    #706, rename Verbosity's constructors and add Warn
     #443, add getEnvError
     #662, add Partial to command/cmd
     #708, rename deprioritize to reschedule

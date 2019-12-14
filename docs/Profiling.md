@@ -58,12 +58,12 @@ The `==` bars are a histogram, allowing quick visual identification of where mos
 
 ## Console output
 
-By default Shake build systems run at `Normal` `Verbosity`, which prints errors and command names. By passing `--verbose` (or `-V`) you can increase the verbosity to `Loud`, which prints full command lines. By passing further `--verbose` flags (or `-VV`) you can increase the verbosity to `Chatty` which also includes when build rules starting being executed, and finally to `Diagnostic`, which is almost a complete list of every decision Shake makes. As a quick visual form of debugging, `Chatty` is sometimes helpful.
+By default Shake build systems run at `Info` `Verbosity`, which prints errors and command names. By passing `--verbose` (or `-V`) you can increase the verbosity to `Verbose`, which prints full command lines. By passing further `--verbose` flags (or `-VV`) you can increase the verbosity to to `Diagnostic`, which is almost a complete list of every decision Shake makes. As a quick visual form of debugging, `Verbose` is sometimes helpful.
 
-Sometimes adding your own output can help understand what is happening, using functions such as `putLoud` to write to the console. To compute timing information to print in such messages either use [`duration`](https://hackage.haskell.org/package/extra/docs/System-Time-Extra.html#v:duration) from [the `extra` library](https://hackage.haskell.org/package/extra), or `CmdTime`. As an example:
+Sometimes adding your own output can help understand what is happening, using functions such as `putVerbose` to write to the console. To compute timing information to print in such messages either use [`duration`](https://hackage.haskell.org/package/extra/docs/System-Time-Extra.html#v:duration) from [the `extra` library](https://hackage.haskell.org/package/extra), or `CmdTime`. As an example:
 
     CmdTime t <- cmd "leftpad -n4" [input] "-o" [output]
-    putLoud $ "Padding took " ++ show t ++ " seconds"
+    putVerbose $ "Padding took " ++ show t ++ " seconds"
 
 A useful step to understand performance of the zero build is to add a `putStrLn` as the very first action of `main`, before calling any Shake functions. Such a print statement can be useful to help diagnose any slowdown caused by shell scripts invoking your binary or compiling it.
 

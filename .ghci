@@ -1,8 +1,8 @@
 :set -ignore-package=hashmap
 :set -fwarn-unused-binds -fwarn-unused-imports -fwarn-orphans
-:set -DNETWORK
 :set -isrc
 :load src/Test.hs src/Paths.hs
+:set -DFILE_EMBED
 
 :def test \x -> return $ ":main test " ++ x
 :def test_random \x -> return $ ":main random test " ++ x

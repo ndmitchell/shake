@@ -215,7 +215,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
     (ruleVer, ruleAct, ruleErr) <- getUserRuleInternal o (\(FileRule s _) -> Just s) $ \(FileRule _ f) -> f xStr
     let verEq v = Just v == ruleVer || case ruleAct of [] -> v == Ver 0; [(v2,_)] -> v == Ver v2; _ -> False
     let rebuild = do
-            putWhen Chatty $ "# " ++ show o
+            putWhen Verbose $ "# " ++ show o
             case ruleAct of
                 [] -> rebuildWith Nothing
                 [x] -> rebuildWith $ Just x
@@ -457,14 +457,14 @@ track tracker xs = do
         tracker $ map (FileQ . fileNameFromString) ys
 
 
--- | Track that a file was read by the action preceeding it. If 'shakeLint' is activated
+-- | Track that a file was read by the action preceding it. If 'shakeLint' is activated
 --   then these files must be dependencies of this rule. Calls to 'trackRead' are
 --   automatically inserted in 'LintFSATrace' mode.
 trackRead :: [FilePath] -> Action ()
 trackRead = track lintTrackRead
 
 
--- | Track that a file was written by the action preceeding it. If 'shakeLint' is activated
+-- | Track that a file was written by the action preceding it. If 'shakeLint' is activated
 --   then these files must either be the target of this rule, or never referred to by the build system.
 --   Calls to 'trackWrite' are automatically inserted in 'LintFSATrace' mode.
 trackWrite :: [FilePath] -> Action ()

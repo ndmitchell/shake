@@ -110,7 +110,7 @@ run RunState{..} oneshot actions2 =
 
         res <- withCleanup $ \cleanup -> do
             register cleanup $ do
-                when (shakeTimings && shakeVerbosity >= Normal) $
+                when (shakeTimings && shakeVerbosity >= Info) $
                     writeIORef timingsToShow . Just =<< getTimings
                 resetTimings
 
@@ -156,7 +156,7 @@ run RunState{..} oneshot actions2 =
             locals <- readIORef locals
             end <- start
             if null actions && null actions2 then
-                putWhen Normal "Warning: No want/action statements, nothing to do"
+                putWhen Info "Warning: No want/action statements, nothing to do"
              else
                 recordRoot step locals end database
 
@@ -164,18 +164,18 @@ run RunState{..} oneshot actions2 =
                 addTiming "Lint checking"
                 lintCurrentDirectory curdir "After completion"
                 checkValid diagnostic database (runLint builtinRules) =<< readIORef absent
-                putWhen Loud "Lint checking succeeded"
+                putWhen Verbose "Lint checking succeeded"
             when (shakeReport /= []) $ do
                 addTiming "Profile report"
                 forM_ shakeReport $ \file -> do
-                    putWhen Normal $ "Writing report to " ++ file
+                    putWhen Info $ "Writing report to " ++ file
                     writeProfile file database
             when (shakeLiveFiles /= []) $ do
                 addTiming "Listing live"
                 diagnostic $ return "Listing live keys"
                 xs <- liveFiles database
                 forM_ shakeLiveFiles $ \file -> do
-                    putWhen Normal $ "Writing live list to " ++ file
+                    putWhen Info $ "Writing live list to " ++ file
                     (if file == "-" then putStr else writeFile file) $ unlines xs
 
             res <- readIORef after
@@ -196,7 +196,7 @@ shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic _ -> do
     let n = show $ length after
     diagnostic $ return $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after
-    when (shakeTimings && shakeVerbosity >= Normal) $
+    when (shakeTimings && shakeVerbosity >= Info) $
         putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
 
 
@@ -348,7 +348,7 @@ fromStepResult = getEx . result
 recordRoot :: Step -> [Local] -> Seconds -> Database -> IO ()
 recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
     rootId <- mkId db rootKey
-    let local = localMergeMutable (newLocal emptyStack Normal) locals
+    let local = localMergeMutable (newLocal emptyStack Info) locals
     let rootRes = Result
             {result = (newValue (), BS.empty)
             ,changed = step
