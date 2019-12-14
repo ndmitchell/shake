@@ -112,7 +112,7 @@ forwardRule act = do
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
 forwardOptions :: ShakeOptions -> ShakeOptions
-forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
+forwardOptions opts = opts{shakeCommandOptions=[AutoDeps], shakeLintInside=[""]}
 
 
 -- | Cache an action. The name of the action must be unique for all different actions.
