@@ -15,8 +15,9 @@ import System.Info
 import Data.Version.Extra
 
 
--- Older versions of Haddock garbage the --@ markup and have ambiguity errors
-brokenHaddock = compilerVersion < makeVersion [8]
+-- Older versions of Haddock (GHC 7.10 and below) garbage the --@ markup and have ambiguity errors
+-- GHC 8.0 has a segfault when linking Setup
+brokenHaddock = compilerVersion < makeVersion [8,2]
 
 main = testBuild (unless brokenHaddock . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
