@@ -9,7 +9,6 @@ import System.Directory
 import Test.Type
 import Control.Monad
 import Data.Char
-import General.Extra
 import Data.List.Extra
 import Data.Maybe
 import System.Info
@@ -21,6 +20,7 @@ brokenHaddock = compilerVersion < makeVersion [8]
 
 main = testBuild (unless brokenHaddock . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
+    let setup = "dist/setup.exe"
     let config = "dist/setup-config"
     want ["Success.txt"]
     let trackIgnore = trackAllow ["dist/**"]
@@ -28,18 +28,32 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
     let needSource = need =<< getDirectoryFiles "." (map (shakeRoot </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
-    config %> \_ -> do
+    let runSetup args = do
         trackIgnore
-        need $ map (shakeRoot </>) ["shake.cabal","Setup.hs"]
-        -- Make Cabal and Stack play nicely
+        need [setup]
+        -- Make Cabal and Stack play nicely with GHC_PACKAGE_PATH
+        setup <- liftIO $ canonicalizePath setup
+        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) setup args
+
+    setup %> \_ -> do
+        -- Important to compile the setup binary, or we run foul of
+        -- https://gitlab.haskell.org/ghc/ghc/issues/17575
+        trackIgnore
+        need [shakeRoot </> "Setup.hs"]
+        setup <- liftIO $ canonicalizePath setup
+        curdir <- liftIO $ canonicalizePath "dist"
+        cmd_ (Cwd shakeRoot) "ghc -package=Cabal Setup.hs -o" [setup] "-outputdir" [curdir]
+
+    config %> \_ -> do
         path <- getEnv "GHC_PACKAGE_PATH"
-        liftIO $ createDirectoryRecursive "dist"
         dist <- liftIO $ canonicalizePath "dist" -- make sure it works even if we cwd
-        cmd_ (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell -package=Cabal Setup.hs configure"
-            ["--builddir=" ++ dist,"--user"]
+        need [shakeRoot </> "shake.cabal"]
+        runSetup $
+            ["configure","--builddir=" ++ dist,"--user"] ++
             -- package-db is very sensitive, see #267
             -- note that the reverse ensures the behaviour is consistent between the flags and the env variable
             ["--package-db=" ++ x | x <- maybe [] (reverse . filter (`notElem` [".",""]) . splitSearchPath) path]
+
         -- Paths_shake is only created by "Setup build" (which we want to skip), and required by "Setup haddock", so we fake it
         copyFile' (shakeRoot </> "src/Paths.hs") "dist/build/autogen/Paths_shake.hs"
         copyFile' (shakeRoot </> "src/Paths.hs") "dist/build/shake/autogen/Paths_shake.hs"
@@ -51,7 +65,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
         needSource
         trackIgnore
         dist <- liftIO $ canonicalizePath "dist"
-        cmd (RemEnv "GHC_PACKAGE_PATH") (Cwd shakeRoot) "runhaskell -package=Cabal Setup.hs haddock" ["--builddir=" ++ dist]
+        runSetup ["haddock", "--builddir=" ++ dist]
 
     "Part_*.hs" %> \out -> do
         need [shakeRoot </> "src/Test/Docs.hs"] -- so much of the generator is in this module
