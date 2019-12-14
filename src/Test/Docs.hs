@@ -28,7 +28,8 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
     let needSource = need =<< getDirectoryFiles "." (map (shakeRoot </>)
             ["src/Development/Shake.hs","src/Development/Shake//*.hs","src/Development/Ninja/*.hs","src/General//*.hs"])
 
-    let runSetup args = do
+    let runSetup :: [String] -> Action ()
+        runSetup args = do
             trackIgnore
             need [setup]
             -- Make Cabal and Stack play nicely with GHC_PACKAGE_PATH
