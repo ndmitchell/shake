@@ -93,6 +93,7 @@ For some reason, Shake tends to find a reasonable number of serious bugs in GHC,
 * [GHC bug 10176](https://ghc.haskell.org/trac/ghc/ticket/10176), invalid optimisations caused by a part of GHC that had been formally proved to be correct, in a pre-release.
 * [GHC bug 10793](https://ghc.haskell.org/trac/ghc/ticket/10793), `BlockedIndefinitelyOnMVar` can be raised even if the thread isn't indefinitely blocked.
 * [GHC bug 15595](https://ghc.haskell.org/trac/ghc/ticket/15595), `withArgs` on a limited stack loops forever consuming memory.
+* [GHC bug 17575](https://gitlab.haskell.org/ghc/ghc/issues/17575), `runhaskell -package=Cabal` causes an error.
 
 #### Q: What's the history of Shake?
 
