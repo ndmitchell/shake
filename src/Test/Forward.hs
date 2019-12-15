@@ -1,10 +1,10 @@
 
 module Test.Forward(main) where
 
-import Control.Monad
 import Data.Char
 import Data.List.Extra
 import Development.Shake
+import System.Info.Extra
 import Development.Shake.Forward
 import Development.Shake.FilePath
 import Test.Type
@@ -26,35 +26,40 @@ main = testBuild test $ forwardRule $ do
     cacheActionWith "reducer" src $ writeFile' "out.txt" $ filter isUpper src
 
 
-test build = do
+checkVaild act = do
     b <- hasTracker
-    unless b $
-        putStrLn "Warning: Running forward test but without --forward mode (no tracker)"
+    if not b then
+        putStrLn "Warning: Not running forward test (no tracker)"
+     else if isMac then
+        putStrLn "Warning: Not running forward test (doesn't work on Mac)"
+     else
+        act
 
+test build = checkVaild $ do
     -- first clean then copy the source files over
     build ["clean"]
     copyDirectoryChanged (shakeRoot </> "src/Test/C") "."
 
     -- build and rebuild
-    build ["--forward" | b]
+    build ["--forward"]
     assertContents "output.txt" "Hello Shake Users!\n"
     assertContents "out.txt" "HSU"
 
     -- check that cacheAction doesn't rerun when it shouldn't
     writeFile "out.txt" "HHH"
-    build $ "-j2" : ["--forward" | b]
+    build ["-j2","--forward"]
     assertContents "output.txt" "Hello Shake Users!\n"
     assertContents "out.txt" "HHH"
 
     -- modify the constants
     orig <- IO.readFile' "constants.c"
     writeFile "constants.c" $ replace "Shake" "Rattle" orig
-    build $ "-j2" : ["--forward" | b]
+    build ["-j2","--forward"]
     assertContents "output.txt" "Hello Rattle Users!\n"
     assertContents "out.txt" "HRU"
 
     -- put it back
     writeFile "constants.c" orig
-    build $ "-j2" : ["--forward" | b]
+    build ["-j2","--forward"]
     assertContents "output.txt" "Hello Shake Users!\n"
     assertContents "out.txt" "HSU"
