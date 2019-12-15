@@ -5,16 +5,24 @@
 # There are lots of internals of Shake want to test, but don't want to expose
 - message: Module reused between components
 
+# Seems to have broken with Cabal 3.0 because of module reuse
+- section:
+  - name: "exe:shake"
+  - message: Weeds exported
+
 # There are a few general modules that offer a complete interface,
 # but only a subset is used by Shake
 - message:
   - name: Weeds exported
   - module: [General.Bilist, General.Ids, General.Intern, General.TypeMap, General.EscCodes, General.ListBuilder]
 
-# These packages are used on older compilers for compatibility methods
+
 - message:
   - name: Redundant build-depends entry
+  # These packages are used on older compilers for compatibility methods
   - depends: [old-time, semigroups]
+  # These packages are conditionally included
+  - depends: [file-embed, template-haskell]
 
 # Things that are related to the 'cloud' flag
 # Remove as part of https://github.com/ndmitchell/shake/issues/621
