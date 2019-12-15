@@ -82,17 +82,17 @@ Shake works well when run by Continuous Integration (CI) systems. There are a fe
 
 For some reason, Shake tends to find a reasonable number of serious bugs in GHC, given how few bugs there are generally in GHC. I suspect the reason is a combination of thorough testing including with GHC pre-releases. Some of the best bugs found by Shake are:
 
-* [GHC bug 7646](https://ghc.haskell.org/trac/ghc/ticket/7646), a race condition when closing file handles that had been in several releases.
-* [GHC bug 10830](https://ghc.haskell.org/trac/ghc/ticket/10830), `maximumBy` had a space leak in a released version.
-* [GHC bug 11555](https://ghc.haskell.org/trac/ghc/ticket/11555), `catch` wouldn't catch an `undefined` argument passed to it in a pre-release.
-* [GHC bug 11830](https://ghc.haskell.org/trac/ghc/ticket/11830), livelock when disabling idle GC in a pre-release.
-* [GHC bug 11458](https://ghc.haskell.org/trac/ghc/ticket/11458) (originally from [GHC bug 11379](https://ghc.haskell.org/trac/ghc/ticket/11379)), serious issue with type applications producing dodgy programs in a pre-release.
-* [GHC bug 11978](https://ghc.haskell.org/trac/ghc/ticket/11978), segfaults when running certain profiling modes that weren't multithread safe.
-* [GHC bug 10553](https://ghc.haskell.org/trac/ghc/ticket/10553), `getEnvironment` was blank when run on PowerPC in `ghci`.
-* [GHC bug 10549](https://ghc.haskell.org/trac/ghc/ticket/10549), inconsistent optimisation flags leading to fatal errors in a pre-release.
-* [GHC bug 10176](https://ghc.haskell.org/trac/ghc/ticket/10176), invalid optimisations caused by a part of GHC that had been formally proved to be correct, in a pre-release.
-* [GHC bug 10793](https://ghc.haskell.org/trac/ghc/ticket/10793), `BlockedIndefinitelyOnMVar` can be raised even if the thread isn't indefinitely blocked.
-* [GHC bug 15595](https://ghc.haskell.org/trac/ghc/ticket/15595), `withArgs` on a limited stack loops forever consuming memory.
+* [GHC bug 7646](https://gitlab.haskell.org/ghc/ghc/issues/7646), a race condition when closing file handles that had been in several releases.
+* [GHC bug 10830](https://gitlab.haskell.org/ghc/ghc/issues/10830), `maximumBy` had a space leak in a released version.
+* [GHC bug 11555](https://gitlab.haskell.org/ghc/ghc/issues/11555), `catch` wouldn't catch an `undefined` argument passed to it in a pre-release.
+* [GHC bug 11830](https://gitlab.haskell.org/ghc/ghc/issues/11830), livelock when disabling idle GC in a pre-release.
+* [GHC bug 11458](https://gitlab.haskell.org/ghc/ghc/issues/11458) (originally from [GHC bug 11379](https://gitlab.haskell.org/ghc/ghc/issues/11379)), serious issue with type applications producing dodgy programs in a pre-release.
+* [GHC bug 11978](https://gitlab.haskell.org/ghc/ghc/issues/11978), segfaults when running certain profiling modes that weren't multithread safe.
+* [GHC bug 10553](https://gitlab.haskell.org/ghc/ghc/issues/10553), `getEnvironment` was blank when run on PowerPC in `ghci`.
+* [GHC bug 10549](https://gitlab.haskell.org/ghc/ghc/issues/10549), inconsistent optimisation flags leading to fatal errors in a pre-release.
+* [GHC bug 10176](https://gitlab.haskell.org/ghc/ghc/issues/10176), invalid optimisations caused by a part of GHC that had been formally proved to be correct, in a pre-release.
+* [GHC bug 10793](https://gitlab.haskell.org/ghc/ghc/issues/10793), `BlockedIndefinitelyOnMVar` can be raised even if the thread isn't indefinitely blocked.
+* [GHC bug 15595](https://gitlab.haskell.org/ghc/ghc/issues/15595), `withArgs` on a limited stack loops forever consuming memory.
 * [GHC bug 17575](https://gitlab.haskell.org/ghc/ghc/issues/17575), `runhaskell -package=Cabal` causes an error.
 
 #### Q: What's the history of Shake?
