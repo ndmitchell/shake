@@ -57,7 +57,7 @@ Some libraries push Shake into specific domains:
 
 * [bioshake](https://github.com/PapenfussLab/bioshake) lets users define bioinformatics pipelines in a DSL that is executed in conjunction with Shake, also including support for cluster execution. There is also [a paper](https://www.biorxiv.org/content/biorxiv/early/2019/01/24/529479.full.pdf) describing the system.
 * [Slick](https://hackage.haskell.org/package/slick) is a static site generator written and configured using Haskell. Slick provides a small set of tools and combinators for building static websites on top of the Shake build system.
-* [Rib](https://github.com/srid/rib#readme) is a library for writing your own static site generator, prioritizing the use of existing tools over and enableing the user to compose them together.
+* [Rib](https://github.com/srid/rib#readme) is a library for writing your own static site generator, prioritizing the use of existing tools over reinventing them and thereby enabling the user to compose them together.
 
 Several open-source projects make key use of Shake:
 
