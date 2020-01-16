@@ -702,6 +702,7 @@ instance IsCmdArgument String where toCmdArgument = CmdArgument . map Right . wo
 instance IsCmdArgument [String] where toCmdArgument = CmdArgument . map Right
 instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . return . Left
 instance IsCmdArgument [CmdOption] where toCmdArgument = CmdArgument . map Left
+instance IsCmdArgument CmdArgument where toCmdArgument = id
 instance IsCmdArgument a => IsCmdArgument (Maybe a) where toCmdArgument = maybe mempty toCmdArgument
 
 
