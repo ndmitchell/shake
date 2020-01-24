@@ -1,6 +1,6 @@
 Changelog for Shake (* = breaking change)
 
-    #740, maae CmdArgument an instance of IsCmdArgument
+    #740, make CmdArgument an instance of IsCmdArgument
 0.18.4, released 2019-12-15
     #734, add Forward.cacheActionWith
     #734, make forward fail if shakeLintInside is empty
