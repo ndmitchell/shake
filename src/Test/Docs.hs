@@ -99,6 +99,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ,"import Data.Maybe"
             ,"import Data.Monoid"
             ,"import Development.Shake hiding ((*>))"
+            ,"import Development.Shake.Command"
             ,"import Development.Shake.Classes"
             ,"import Development.Shake.Database"
             ,"import Development.Shake.Rule"

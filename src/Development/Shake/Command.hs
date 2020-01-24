@@ -659,7 +659,7 @@ type a :-> t = a
 -- 'cmd' ('Cwd' \"generated\") \"gcc -c\" [myfile] :: 'Action' ()         -- run a command in a directory
 --
 -- let gccCommand = 'cmd' \"gcc -c\" :: 'CmdArgument'                 -- build a sub-command. 'cmd' can return 'CmdArgument' values as well as execute commands
--- in cmd ('Cwd' \"generated\") gccCommand [myfile]                 -- splice that command into a greater command
+-- cmd ('Cwd' \"generated\") gccCommand [myfile]                 -- splice that command into a greater command
 -- @
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
