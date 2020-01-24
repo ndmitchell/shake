@@ -625,7 +625,7 @@ command_ opts x xs = withFrozenCallStack $ void $ commandExplicitAction (Params 
 type a :-> t = a
 
 
--- | Execute a system command. Before running 'cmd' make sure you 'Development.Shake.need' any files
+-- | Build or execute a system command. Before using 'cmd' to run a command, make sure you 'Development.Shake.need' any files
 --   that are used by the command.
 --
 -- * @String@ arguments are treated as a list of whitespace separated arguments.
@@ -633,6 +633,8 @@ type a :-> t = a
 -- * @[String]@ arguments are treated as a list of literal arguments.
 --
 -- * 'CmdOption' arguments are used as options.
+--
+-- * 'CmdArgument' arguments, which can be built by 'cmd' itself, are spliced into the containing command.
 --
 --   Typically only string literals should be passed as @String@ arguments. When using variables
 --   prefer @[myvar]@ so that if @myvar@ contains spaces they are properly escaped.
@@ -655,6 +657,9 @@ type a :-> t = a
 -- ('Exit' c, 'Stderr' err) <- 'cmd' \"gcc -c myfile.c\"                -- run a command, recording the exit code and error output
 -- 'Stdout' out <- 'cmd' \"gcc -MM myfile.c\"                         -- run a command, recording the output
 -- 'cmd' ('Cwd' \"generated\") \"gcc -c\" [myfile] :: 'Action' ()         -- run a command in a directory
+--
+-- let gccCommand = 'cmd' \"gcc -c\" :: 'CmdArgument'                 -- build a sub-command. 'cmd' can return 'CmdArgument' values as well as execute commands
+-- in cmd ('Cwd' \"generated\") gccCommand [myfile]                 -- splice that command into a greater command
 -- @
 --
 --   If you use 'cmd' inside a @do@ block and do not use the result, you may get a compile-time error about being
