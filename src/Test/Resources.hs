@@ -74,5 +74,5 @@ test build = do
             (s, _) <- duration $ build [flags,"throttle","--no-report","--clean"]
             -- the 0.1s cap is a guess at an upper bound for how long everything else should take
             -- and should be raised on slower machines
-            assertBool (s >= 1.4 && s < 1.6) $
-                "Bad throttling, expected to take 1.4s + computation time (cap of 0.2s), took " ++ show s ++ "s"
+            assertBool (s >= 1.4 && s < 1.8) $
+                "Bad throttling, expected to take 1.4s + computation time (cap of 0.4s), took " ++ show s ++ "s"
