@@ -94,7 +94,6 @@ data ProfileTrace = ProfileTrace
     {prfCommand :: String, prfStart :: Double, prfStop :: Double}
 prfTime ProfileTrace{..} = prfStop - prfStart
 
-
 -- | Generates an report given some build system profiling data.
 writeProfile :: FilePath -> Database -> IO ()
 writeProfile out db = writeProfileInternal out =<< toReport db
@@ -138,9 +137,10 @@ generateHTML xs = do
 
 generateTrace :: [ProfileEntry] -> String
 generateTrace xs = jsonListLines $
-    showEntries 0 [y{prfCommand=prfName x} | x <- xs, y <- prfTraces x] ++
-    showEntries 1 (concatMap prfTraces xs)
+    showEntries 0 [y{prfCommand=prfName x} | x <- onlyLast, y <- prfTraces x] ++
+    showEntries 1 (concatMap prfTraces onlyLast)
     where
+        onlyLast = filter (\x -> prfBuilt x == 0) xs
         showEntries pid xs = map (showEntry pid) $ snd $ mapAccumL alloc [] $ sortOn prfStart xs
 
         alloc :: [ProfileTrace] -> ProfileTrace -> ([ProfileTrace], (Int, ProfileTrace))
