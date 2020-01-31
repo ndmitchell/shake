@@ -62,7 +62,7 @@ usingWriteChunks :: Cleanup -> Chunks -> IO (Builder -> IO ())
 -- Make sure all exceptions happen on the caller, so we don't have to move exceptions back
 -- Make sure we only write on one thread, otherwise async exceptions can cause partial writes
 usingWriteChunks cleanup Chunks{..} = do
-    h <- allocate cleanup (takeMVar chunksHandle)  (putMVar chunksHandle)
+    h <- allocate cleanup (takeMVar chunksHandle) (putMVar chunksHandle)
     chan <- newChan -- operations to perform on the file
     kick <- newEmptyMVar -- kicked whenever something is written
     died <- newBarrier -- has the writing thread finished
