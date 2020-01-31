@@ -64,12 +64,12 @@ main = testSimple $ do
         assertBool ("currently running" `isInfixOf` results) "Contains 'currently using'"
 
     close
-    assertException ["already closed"] $ void $ shakeRunDatabase db []
+    assertException ["already closed"] $ shakeRunDatabase db []
 
     shakeRunAfter opts after
     assertBoolIO (not <$> IO.doesFileExist "log.txt") "Log must be deleted"
 
     errs <- shakeWithDatabase opts{shakeStaunch=True, shakeVerbosity=Silent} rules $ \db -> do
-        assertException ["Error when running"] $ void $ shakeRunDatabase db [need ["foo.err","bar.err"]]
+        assertException ["Error when running"] $ shakeRunDatabase db [need ["foo.err","bar.err"]]
         shakeErrorsDatabase db
     sort (map fst errs) === ["bar.err","foo.err"]
