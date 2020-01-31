@@ -33,7 +33,10 @@ withCleanup act = do
 newCleanup :: IO (Cleanup, IO ())
 newCleanup = do
     ref <- newIORef $ S 0 Map.empty
-    let clean = mask_ $ do
+    -- important to use uninterruptibleMask_ otherwise in things like allocateThread
+    -- we might end up being interrupted and failing to close down the thread
+    -- e.g. see https://github.com/digital-asset/ghcide/issues/381
+    let clean = uninterruptibleMask_ $ do
             items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
             mapM_ snd $ sortOn (negate . fst) $ Map.toList items
     return (Cleanup ref, clean)
