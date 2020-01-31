@@ -5,6 +5,7 @@ import Control.Concurrent.Extra
 import Control.Exception.Extra
 import Control.Monad
 import Data.List
+import Data.IORef
 import Development.Shake
 import Development.Shake.Database
 import Development.Shake.FilePath
@@ -73,3 +74,29 @@ main = testSimple $ do
         assertException ["Error when running"] $ shakeRunDatabase db [need ["foo.err","bar.err"]]
         shakeErrorsDatabase db
     sort (map fst errs) === ["bar.err","foo.err"]
+
+    -- check the progress thread gets killed properly on normal cleanup
+    ref <- newIORef 0
+    opts <- return opts{shakeProgress = const $ bracket_ (modifyIORef ref succ) (modifyIORef ref succ) $ sleep 100}
+    (open, close) <- shakeOpenDatabase opts rules
+    db <- open
+    ([12], after) <- shakeRunDatabase db [need ["a.out"] >> liftIO (modifyIORef ref succ) >> return 12]
+    (=== 3) =<< readIORef ref -- success if it all shuts down cleanly
+
+    -- and on an exception
+    writeIORef ref 0
+    assertException ["terminate"] $ shakeRunDatabase db [liftIO (modifyIORef ref succ) >> fail "terminate"]
+    (=== 3) =<< readIORef ref
+
+    -- and on an external exception
+    writeIORef ref 0
+    bar <- newBarrier; bar2 <- newBarrier
+    t <- flip forkFinally (signalBarrier bar2)  $ void $ shakeRunDatabase db $ return $ do
+        liftIO $ modifyIORef ref succ
+        liftIO $ signalBarrier bar ()
+        need ["sleep"]
+    waitBarrier bar
+    sleep 0.1
+    killThread t
+    waitBarrier bar2
+    (=== 3) =<< readIORef ref
