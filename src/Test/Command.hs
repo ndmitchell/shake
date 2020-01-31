@@ -71,8 +71,8 @@ main = testBuild test $ do
     "failure" !> do
         (Exit e, Stdout (), Stderr ()) <- cmd helper "oo ee x"
         when (e == ExitSuccess) $ error "/= ExitSuccess"
-        liftIO $ assertException ["BAD"] $ cmd helper "oo eBAD x" (EchoStdout False) (EchoStderr False)
-        liftIO $ assertException ["MORE"] $ cmd helper "oMORE eBAD x" (WithStdout True) (WithStderr False) (EchoStdout False) (EchoStderr False)
+        liftIO $ assertException ["BAD"] $ cmd_ helper "oo eBAD x" (EchoStdout False) (EchoStderr False)
+        liftIO $ assertException ["MORE"] $ cmd_ helper "oMORE eBAD x" (WithStdout True) (WithStderr False) (EchoStdout False) (EchoStderr False)
 
     "throws" ~>
         cmd Shell "not_a_process foo"

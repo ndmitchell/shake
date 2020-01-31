@@ -210,7 +210,7 @@ assertContentsWords = assertContentsOn (unwords . words)
 assertContentsUnordered :: FilePath -> [String] -> IO ()
 assertContentsUnordered file xs = assertContentsOn (unlines . sort . lines) file (unlines xs)
 
-assertExceptionAfter :: (String -> String) -> [String] -> IO () -> IO ()
+assertExceptionAfter :: (String -> String) -> [String] -> IO a -> IO ()
 assertExceptionAfter tweak parts act = do
     res <- try_ act
     case res of
@@ -218,7 +218,7 @@ assertExceptionAfter tweak parts act = do
             assertBool (p `isInfixOf` s) $ "Incorrect exception, missing part:\nGOT: " ++ s ++ "\nWANTED: " ++ p
         Right _ -> error $ "Expected an exception containing " ++ show parts ++ ", but succeeded"
 
-assertException :: [String] -> IO () -> IO ()
+assertException :: [String] -> IO a -> IO ()
 assertException = assertExceptionAfter id
 
 defaultTest :: ([String] -> IO ()) -> IO ()
