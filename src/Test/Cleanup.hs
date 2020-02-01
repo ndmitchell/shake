@@ -39,7 +39,7 @@ main = testSimple $ do
     do -- cleanup actions are masked https://github.com/snoyberg/conduit/issues/144
         let checkMasked name = do
                 ms <- getMaskingState
-                unless (ms == MaskedInterruptible) $
+                unless (ms == MaskedUninterruptible) $
                     error $ show (name, ms)
         withCleanup $ \cleanup -> do
             register cleanup (checkMasked "release") >>= release

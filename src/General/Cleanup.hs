@@ -51,7 +51,7 @@ unprotect :: ReleaseKey -> IO ()
 unprotect (ReleaseKey ref i) = atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, ())
 
 release :: ReleaseKey -> IO ()
-release (ReleaseKey ref i) = mask_ $ do
+release (ReleaseKey ref i) = uninterruptibleMask_ $ do
     undo <- atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, Map.lookup i $ items s)
     fromMaybe (return ()) undo
 
