@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.18.5, released 2020-02-02
     Use uninterruptibleMask_ to ensure all cleanup happens robustly
     #742, make the Chrome profile only include the last run
     #740, make CmdArgument an instance of IsCmdArgument
