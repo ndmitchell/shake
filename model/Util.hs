@@ -10,8 +10,6 @@ module Util(
 
 import Control.Monad.State
 import Data.Tuple.Extra
-import Control.Applicative
-import Data.Monoid
 
 
 newtype T = T Int deriving (Eq,Ord)
@@ -47,10 +45,8 @@ actMT f (Need k c) = do
 -- ASSOCIATION
 
 newtype k :-> v = Assoc [(k,v)]
+    deriving (Semigroup, Monoid)
 
-instance Monoid (k :-> v) where
-    mempty = Assoc []
-    mappend (Assoc a) (Assoc b) = Assoc $ a ++ b
 
 (!) :: Eq k => (k :-> v) -> k -> Maybe v
 (!) (Assoc xs) k = lookup k xs

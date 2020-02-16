@@ -2,11 +2,9 @@
 
 module Model(props) where
 
-import Control.Monad.State
 import Data.Tuple.Extra
-import Control.Applicative
+import Data.List.Extra
 import Control.Monad.Extra
-import Data.Monoid
 import Util
 import Test
 

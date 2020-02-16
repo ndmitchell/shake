@@ -9,10 +9,8 @@ module Test(
     ) where
 
 import Control.Monad.State
-import Data.Tuple.Extra
-import Control.Applicative
-import Data.Monoid
 import Data.IORef
+import Data.List.Extra
 import System.IO.Unsafe
 import Util
 import Test.QuickCheck
@@ -57,7 +55,7 @@ evalRules rs k | Just (Rule v ops) <- lookup k rs = f v ops
         f v [] = Done $ V k v
         f v ((k,o):xs) = Need k $ \(V k' v') -> case (v',o) of
             _ | k /= k' -> error $ "Asked for " ++ show k ++ " but got " ++ show k'
-            (True, Skip) -> f v $ drop 1 xs
+            (True, Skip) -> f v $ drop1 xs
             (True, Not ) -> f (not v) xs
             _              -> f v xs
 
