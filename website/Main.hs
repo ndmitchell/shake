@@ -6,7 +6,6 @@ import Data.Tuple.Extra
 import Control.Monad
 import Data.Char
 import Data.List.Extra
-import Data.Maybe
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import Text.HTML.TagSoup
@@ -25,7 +24,7 @@ data Mode = Debug | Release deriving (Eq,Enum,Bounded,Show)
 getMode :: IO Mode
 getMode = do
     args <- getArgs
-    let modes = [minBound..maxBound]
+    let modes = [Debug, Release]
     case args of
         [] -> return Release
         [x] | Just x <- lookup (lower x) $ map (lower . show &&& id) modes -> return x
@@ -44,7 +43,7 @@ main = do
         ".md" -> do
             putChar '.'
             p <- readPage mode code $ "../docs" </> file
-            skeleton ("output" </> map toLower (takeBaseName file) <.> "html") p
+            skeleton ("output" </> lower (takeBaseName file) <.> "html") p
         ".png" -> copyFile ("../docs" </> file) ("output" </> file)
         _ -> return ()
     copyFile "parts/favicon.ico" "output/favicon.ico"
@@ -87,8 +86,8 @@ readPage mode code file = do
         links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "234" =
                 ([Link{..} | i /= '4'] ++) *** (prefix++) $ links rest
             where linkTitle = innerText $ takeWhile (/= TagClose linkLevel) xs
-                  linkKey = intercalate "-" $ map (map toLower . filter isAlpha) $ words $
-                            takeWhile (`notElem` "?.!") $ fromMaybe linkTitle $ stripPrefix "Q: " linkTitle
+                  linkKey = intercalate "-" $ map (lower . filter isAlpha) $ words $
+                            takeWhile (`notElem` "?.!") $ dropPrefix "Q: " linkTitle
                   (this,rest) = break (== TagClose linkLevel) xs
                   prefix = [TagOpen "span" [("class","target"),("id",linkKey)],TagClose "span"
                            ,TagOpen linkLevel at,TagOpen "a" [("href",'#':linkKey),("class","anchor")]] ++
@@ -99,11 +98,11 @@ readPage mode code file = do
 
 reformat :: Mode -> (String -> [Tag String]) -> [Tag String] -> [Tag String]
 reformat mode code (TagOpen "p" []:TagOpen "i" []:TagText s:xs) | "See also" `isPrefixOf` s =
-    reformat mode code $ drop 1 $ dropWhile (~/= "</p>") xs
+    reformat mode code $ drop1 $ dropWhile (~/= "</p>") xs
 reformat mode code (TagOpen "a" at:xs) = TagOpen "a" (map f at) : reformat mode code xs
     where f ("href",x) | ".md" `isPrefixOf` takeExtension x =
                 -- watch out for Manual.md#readme
-                ("href", noReadme $ dropFileName x ++ map toLower (takeBaseName x) ++
+                ("href", noReadme $ dropFileName x ++ lower (takeBaseName x) ++
                          (if mode == Release then "" else ".html") ++
                          drop 3 (takeExtension x))
           f x = x
@@ -121,7 +120,7 @@ reformat mode code (TagText x:xs) = TagText (replace " -- " " \x2013 " x) : refo
 reformat mode code (x:xs) = x : reformat mode code xs
 reformat mode code [] = []
 
-noReadme x = fromMaybe x $ stripSuffix "#readme" x
+noReadme = dropSuffix "#readme"
 
 notCode :: String -> Bool
 notCode x =
@@ -129,7 +128,7 @@ notCode x =
     "shake-" `isPrefixOf` x ||
     ("--" `isPrefixOf` x && length (lines x) == 1) ||
     x == "shake" ||
-    (let t = takeExtension x in "." `isPrefixOf` t && all isAlpha (drop 1 t))
+    (let t = takeExtension x in "." `isPrefixOf` t && all isAlpha (drop1 t))
 
 
 ---------------------------------------------------------------------
@@ -161,7 +160,7 @@ skeleton mode dir cssOut = do
                   f x = x
 
         style = innerText . inside "style"
-        noStyle x = a ++ drop 1 (dropWhile (~/= "</style>") b)
+        noStyle x = a ++ drop1 (dropWhile (~/= "</style>") b)
             where (a,b) = break (~== "<style>") x
 
         activate url (TagOpen "a" ats) = TagOpen "a" $ let act = ("class","active") in
