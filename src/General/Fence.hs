@@ -34,7 +34,7 @@ waitFence (Fence ref) call = join $ liftIO $ atomicModifyIORef' ref $ \x -> case
     Right v -> (Right v, call v)
 
 testFence :: Fence m a -> IO (Maybe a)
-testFence (Fence x) = either (const Nothing) Just <$> readIORef x
+testFence (Fence x) = eitherToMaybe <$> readIORef x
 
 
 ---------------------------------------------------------------------

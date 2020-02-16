@@ -58,7 +58,7 @@ mergeOptDescr :: [OptDescr (Either String a)] -> [OptDescr (Either String b)] ->
 mergeOptDescr xs ys = map (fmapFmapOptDescr Left) xs ++ map (fmapFmapOptDescr Right) ys
 
 optionsEnum :: (Enum a, Bounded a, Show a) => [OptDescr (Either String a)]
-optionsEnum = optionsEnumDesc [(x, "Flag " ++ lower (show x) ++ ".") | x <- [minBound..maxBound]]
+optionsEnum = optionsEnumDesc [(x, "Flag " ++ lower (show x) ++ ".") | x <- enumerate]
 
 optionsEnumDesc :: Show a => [(a, String)] -> [OptDescr (Either String a)]
 optionsEnumDesc xs = [Option "" [lower $ show x] (NoArg $ Right x) d | (x,d) <- xs]

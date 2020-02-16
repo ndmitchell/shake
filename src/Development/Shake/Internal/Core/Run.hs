@@ -33,7 +33,7 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.HashSet as Set
 import Data.Dynamic
 import Data.Maybe
-import Data.IORef
+import Data.IORef.Extra
 import System.Directory
 import System.Time.Extra
 import qualified Data.ByteString as BS
@@ -147,9 +147,9 @@ run RunState{..} oneshot actions2 =
                     let local = newLocal stack shakeVerbosity
                     addPool PoolStart pool $ runAction global local (act >> getLocal) $ \x -> case x of
                         Left e -> raiseError =<< shakeException global stack e
-                        Right local -> atomicModifyIORef locals $ \rest -> (local:rest, ())
+                        Right local -> atomicModifyIORef_ locals (local:)
 
-            maybe (return ()) (throwIO . snd) =<< readIORef except
+            whenJustM (readIORef except) (throwIO . snd)
             assertFinishedDatabase database
             let putWhen lvl msg = when (shakeVerbosity >= lvl) $ output lvl msg
 

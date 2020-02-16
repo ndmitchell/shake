@@ -13,7 +13,7 @@ import General.Extra
 import Control.Exception
 import General.Thread
 import General.EscCodes
-import Data.IORef
+import Data.IORef.Extra
 import Control.Monad.Extra
 
 
@@ -64,7 +64,7 @@ compactUI opts = do
     unlessM checkEscCodes $
         putStrLn "Your terminal does not appear to support escape codes, --compact mode may not work"
     ref <- newIORef emptyS
-    let tweak f = atomicModifyIORef ref $ \s -> (f s, ())
+    let tweak = atomicModifyIORef_ ref
     time <- offsetTime
     opts <- return $ opts
         {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)

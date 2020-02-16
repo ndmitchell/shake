@@ -252,7 +252,7 @@ toCommand s
         -- Using the "cmd" program adds overhead (I measure 7ms), and a limit of 8191 characters,
         -- but is the most robust, requiring no additional escaping.
         ([Shell], s, [])
-    | (cmd,s) <- word1 s, map toUpper cmd `elem` ["CMD","CMD.EXE"], ("/c",s) <- word1 s =
+    | (cmd,s) <- word1 s, upper cmd `elem` ["CMD","CMD.EXE"], ("/c",s) <- word1 s =
         -- Given "cmd.exe /c <something>" we translate to Shell, which adds cmd.exe
         -- (looked up on the current path) and /c to the front. CMake uses this rule a lot.
         -- Adding quotes around pieces are /c goes very wrong.
@@ -260,7 +260,7 @@ toCommand s
     | otherwise =
         -- It's a long command line which doesn't call "cmd /c". We reverse the escaping
         -- Haskell applies, but each argument will still gain quotes around it.
-        let xs = splitArgs s in ([], head $ xs ++ [""], drop 1 xs)
+        let xs = splitArgs s in ([], headDef "" xs, drop1 xs)
 
 
 data State

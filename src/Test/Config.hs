@@ -5,7 +5,7 @@ import Development.Shake
 import Development.Shake.FilePath
 import Development.Shake.Config
 import Test.Type
-import Data.Char
+import Data.List.Extra
 import qualified Data.HashMap.Strict as Map
 import Data.Maybe
 
@@ -14,7 +14,7 @@ main = testBuild test $ do
     want ["hsflags.var","cflags.var","none.var","keys"]
     usingConfigFile "config"
     "*.var" %> \out -> do
-        cfg <- getConfig $ map toUpper $ takeBaseName out
+        cfg <- getConfig $ upper $ takeBaseName out
         liftIO $ appendFile (out -<.> "times") "X"
         writeFile' out $ fromMaybe "" cfg
     "keys" %> \out -> do

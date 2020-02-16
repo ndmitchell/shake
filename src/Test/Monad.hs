@@ -8,7 +8,7 @@ import Data.Either.Extra
 import Data.IORef
 import Control.Concurrent
 import Control.Exception
-import Control.Monad
+import Control.Monad.Extra
 import Control.Monad.IO.Class
 
 
@@ -18,7 +18,7 @@ run :: ro -> rw -> RAW () () ro rw a -> IO a
 run ro rw m = do
     res <- newEmptyMVar
     runRAW return ro rw m $ void . tryPutMVar res
-    either throwIO return =<< readMVar res
+    eitherM throwIO return (readMVar res)
 
 
 main = testSimple $ do

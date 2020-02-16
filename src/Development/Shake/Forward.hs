@@ -55,7 +55,7 @@ import Development.Shake.Rule
 import Development.Shake.Command
 import Development.Shake.Classes
 import Development.Shake.FilePath
-import Data.IORef
+import Data.IORef.Extra
 import Data.Either
 import Data.Typeable
 import Data.List.Extra
@@ -133,9 +133,9 @@ forwardOptions opts = opts{shakeCommandOptions=[AutoDeps]}
 --   (e.g. the action is a closure), you should call 'cacheActionWith' being explicit about what is captured.
 cacheAction :: (Typeable a, Binary a, Show a, Typeable b, Binary b, Show b) => a -> Action b -> Action b
 cacheAction (mkForward -> key) (action :: Action b) = do
-    liftIO $ atomicModifyIORef forwards $ \mp -> (Map.insert key (mkForward <$> action) mp, ())
+    liftIO $ atomicModifyIORef_ forwards $ Map.insert key (mkForward <$> action)
     res <- apply1 key
-    liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete key mp, ())
+    liftIO $ atomicModifyIORef_ forwards $ Map.delete key
     return $ unForward res
 
 newtype With a = With a
@@ -163,7 +163,7 @@ cache :: (forall r . CmdArguments r => r) -> Action ()
 cache cmd = do
     let CmdArgument args = cmd
     let isDull ['-',_] = True; isDull _ = False
-    let name = head $ filter (not . isDull) (drop 1 $ rights args) ++ ["unknown"]
+    let name = headDef "unknown" $ filter (not . isDull) $ drop1 $ rights args
     cacheAction (Command $ toStandard name ++ " #" ++ upper (showHex (abs $ hash $ show args) "")) cmd
 
 newtype Command = Command String

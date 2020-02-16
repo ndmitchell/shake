@@ -4,6 +4,7 @@ module Test(main) where
 import Control.Exception.Extra
 import Control.Monad.Extra
 import Data.Maybe
+import Data.List.Extra
 import System.Directory
 import System.Environment
 import General.Timing
@@ -153,14 +154,14 @@ main = do
 makefile :: IO () -> IO ()
 makefile _ = do
     args <- getArgs
-    withArgs (drop 1 args) Run.main
+    withArgs (drop1 args) Run.main
 
 
 filetime :: IO () -> IO ()
 filetime _ = do
     args <- getArgs
     addTiming "Reading files"
-    files <- fmap concat $ forM (drop 1 args) $ \file ->
+    files <- concatForM (drop1 args) $ \file ->
         BS.lines . BS.filter (/= '\r') <$> BS.readFile file
     let n = length files
     evaluate n
@@ -181,4 +182,4 @@ test :: IO () -> IO ()
 test yield = do
     args <- getArgs
     flip onException (putStrLn "TESTS FAILED") $
-        sequence_ [withArgs (name:"test":drop 1 args) $ test yield | (name,test) <- mains, name /= "random"]
+        sequence_ [withArgs (name:"test":drop1 args) $ test yield | (name,test) <- mains, name /= "random"]

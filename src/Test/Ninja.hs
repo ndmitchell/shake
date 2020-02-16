@@ -9,7 +9,7 @@ import General.GetOpt
 import General.Extra
 import Test.Type
 import qualified Data.HashMap.Strict as Map
-import Data.List
+import Data.List.Extra
 import System.IO.Extra
 import qualified Run
 import System.Environment
@@ -75,7 +75,7 @@ test build = do
     run "-f../../src/Test/Ninja/lint.ninja good --lint"
     runFail "-f../../src/Test/Ninja/lint.ninja bad --lint" "not a pre-dependency"
 
-    res <- fmap (drop 1 . lines . fst) $ captureOutput $ runEx "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx" "--quiet"
+    res <- fmap (drop1 . lines . fst) $ captureOutput $ runEx "-f../../src/Test/Ninja/compdb.ninja -t compdb cxx" "--quiet"
     want <- lines <$> readFile "../../src/Test/Ninja/compdb.output"
     let eq a b | (a1,'*':a2) <- break (== '*') a = unless (a1 `isPrefixOf` b && a2 `isSuffixOf` b) $ a === b
                | otherwise = a === b

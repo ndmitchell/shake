@@ -10,7 +10,6 @@ import Test.Type
 import Control.Monad
 import Data.Char
 import Data.List.Extra
-import Data.Maybe
 import System.Info
 import Data.Version.Extra
 
@@ -282,11 +281,11 @@ dropComment = fst . breakOn "--"
 
 -- | Find all pieces of text inside a given tag
 insideTag :: String -> String -> [String]
-insideTag tag = map (fst . breakOn ("</" ++ tag ++ ">")) . drop 1 . splitOn ("<" ++ tag ++ ">")
+insideTag tag = map (fst . breakOn ("</" ++ tag ++ ">")) . drop1 . splitOn ("<" ++ tag ++ ">")
 
 -- | Given some HTML, find the raw text
 innerText :: String -> String
-innerText ('<':xs) = innerText $ drop 1 $ dropWhile (/= '>') xs
+innerText ('<':xs) = innerText $ drop1 $ dropWhile (/= '>') xs
 innerText ('&':xs)
     | Just xs <- stripPrefix "quot;" xs = '\"' : innerText xs
     | Just xs <- stripPrefix "lt;" xs = '<' : innerText xs
@@ -332,7 +331,7 @@ isCmdFlag x = length a `elem` [1,2] && all (\x -> isAlphaNum x || x `elem` "-=/_
     where (a,b) = span (== '-') x
 
 isCmdFlags :: String -> Bool
-isCmdFlags = all (\x -> let y = fromMaybe x $ stripSuffix "," x in isCmdFlag y || isArg y) . words
+isCmdFlags = all (\x -> let y = dropSuffix "," x in isCmdFlag y || isArg y) . words
     where isArg = all (\x -> isUpper x || x == '=')
 
 isEnvVar :: String -> Bool

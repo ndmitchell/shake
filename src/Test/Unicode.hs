@@ -4,6 +4,7 @@ module Test.Unicode(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import Test.Type
+import Data.List.Extra
 import General.GetOpt
 import Control.Monad
 import GHC.IO.Encoding
@@ -23,7 +24,7 @@ opts =
     ,Option "" ["want"] (ReqArg (Right . Want) "") ""]
 
 main = testBuildArgs test opts $ \xs -> do
-    let pre = last $ "" : [decode x | Prefix x <- xs :: [Arg]]
+    let pre = lastDef "" [decode x | Prefix x <- xs :: [Arg]]
     want [decode x | Want x <- xs]
 
     pre ++ "dir/*" %> \out -> do

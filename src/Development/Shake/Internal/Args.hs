@@ -29,7 +29,7 @@ import Control.DeepSeq
 import Control.Exception.Extra
 import Control.Monad
 import Data.Either
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import System.Directory.Extra
 import System.Environment
@@ -146,7 +146,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         progressReplays = [x | ProgressReplay x <- flagsExtra]
         progressRecords = [x | ProgressRecord x <- flagsExtra]
         changeDirectory = listToMaybe [x | ChangeDirectory x <- flagsExtra]
-        printDirectory = last $ False : [x | PrintDirectory x <- flagsExtra]
+        printDirectory = lastDef False [x | PrintDirectory x <- flagsExtra]
         shareRemoves = [x | ShareRemove x <- flagsExtra]
         oshakeOpts = foldl' (flip ($)) baseOpts flagsShake
     lintInside <- mapM canonicalizePath $ shakeLintInside oshakeOpts
@@ -224,7 +224,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 curdir <- getCurrentDirectory
                 putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
             (shakeOpts, ui) <- do
-                let compact = last $ No : [x | Compact x <- flagsExtra]
+                let compact = lastDef No [x | Compact x <- flagsExtra]
                 use <- if compact == Auto then checkEscCodes else return $ compact == Yes
                 if use
                     then second withThreadSlave <$> compactUI shakeOpts

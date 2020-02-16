@@ -31,7 +31,7 @@ import System.FilePattern.Directory
 import Control.Concurrent.Extra
 import Data.Maybe
 import Data.Tuple.Extra
-import Data.IORef
+import Data.IORef.Extra
 import Data.List.Extra
 import Numeric.Extra
 import General.Extra
@@ -152,7 +152,7 @@ getProgress = do
 runAfter :: IO () -> Action ()
 runAfter op = do
     Global{..} <- Action getRO
-    liftIO $ atomicModifyIORef globalAfter $ \ops -> (op:ops, ())
+    liftIO $ atomicModifyIORef_ globalAfter (op:)
 
 
 ---------------------------------------------------------------------
@@ -340,7 +340,7 @@ lintTrackFinished = do
         -- check Write 3
         bad <- return $ filter (not . ignore) $ Set.toList $ Set.fromList localTrackWrite
         unless (null bad) $
-            liftIO $ atomicModifyIORef globalTrackAbsent $ \old -> ([(fromMaybe k top, k) | k <- bad] ++ old, ())
+            liftIO $ atomicModifyIORef_ globalTrackAbsent ([(fromMaybe k top, k) | k <- bad] ++)
 
 
 -- | Allow any matching key recorded with 'lintTrackRead' or 'lintTrackWrite' in this action,

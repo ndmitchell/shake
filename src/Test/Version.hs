@@ -5,6 +5,7 @@ module Test.Version(main) where
 import Development.Shake
 import Development.Shake.Classes
 import General.GetOpt
+import Data.List.Extra
 import Text.Read
 import Test.Type
 
@@ -21,7 +22,7 @@ main = testBuildArgs test opts $ \opts -> do
 
     "foo.txt" %> \file -> liftIO $ appendFile file "x"
 
-    let ver = head $ [x | Ver x <- opts] ++ [0]
+    let ver = headDef 0 [x | Ver x <- opts]
     versioned ver $ "ver.txt" %> \out -> liftIO $ appendFile out $ show ver
 
     versioned ver $ addOracleCache $ \(Oracle ()) -> do

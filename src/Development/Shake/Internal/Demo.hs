@@ -7,8 +7,7 @@ import Development.Shake.Command
 
 import Control.Exception.Extra
 import Control.Monad
-import Data.Char
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import System.Directory
 import System.Exit
@@ -100,7 +99,7 @@ demo auto = do
 yesNo :: Bool -> IO Bool
 yesNo auto = do
     putStr "% [Y/N] (then ENTER): "
-    x <- if auto then putLine "y" else fmap (map toLower) getLine
+    x <- if auto then putLine "y" else lower <$> getLine
     if "y" `isPrefixOf` x then
         return True
      else if "n" `isPrefixOf` x then

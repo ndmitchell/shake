@@ -7,7 +7,7 @@ import qualified System.FilePath as Native
 import Test.Type
 import Test.QuickCheck
 import Control.Monad
-import Data.List
+import Data.List.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Development.Shake.Internal.FileName as BS
 import System.Info.Extra
@@ -66,7 +66,7 @@ main = testSimple $ do
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(File x) ->
         let y = norm x
             sep = Native.isPathSeparator
-            noDrive = if isWindows then drop 1 else id
+            noDrive = if isWindows then drop1 else id
             ps = [y /= ""
                  ,null x || (sep (head x) == sep (head y) && sep (last x) == sep (last y))
                  ,not $ "/./" `isInfixOf` y

@@ -1,9 +1,10 @@
 
 module General.Timing(resetTimings, addTiming, getTimings) where
 
-import Data.IORef
+import Data.IORef.Extra
 import System.IO.Unsafe
 import Data.Tuple.Extra
+import Data.List.Extra
 import Numeric.Extra
 import General.Extra
 import System.Time.Extra
@@ -36,7 +37,7 @@ getTimings = do
 addTiming :: String -> IO ()
 addTiming msg = do
     now <- timer
-    atomicModifyIORef timings $ \ts -> ((now,msg):ts, ())
+    atomicModifyIORef_ timings ((now,msg):)
 
 
 showTimings :: Seconds -> [(Seconds, String)] -> [String]
@@ -51,7 +52,7 @@ showTimings stop times = showGap $
         mx = maximum $ map snd xs
         sm = sum $ map snd xs
         xs = [ (name, stop - start)
-             | ((start, name), stop) <- zipExact times $ map fst (drop 1 times) ++ [stop]]
+             | ((start, name), stop) <- zipExact times $ map fst (drop1 times) ++ [stop]]
 
 
 showGap :: [(String,String)] -> [String]

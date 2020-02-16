@@ -14,6 +14,7 @@ module Development.Shake.FilePath(
 
 import System.Directory (canonicalizePath)
 import System.Info.Extra
+import Data.List.Extra
 import qualified System.FilePath as Native
 
 import System.FilePath hiding
@@ -34,7 +35,7 @@ import System.FilePath.Posix
 -- > dropDirectory1 "aaa" == ""
 -- > dropDirectory1 "" == ""
 dropDirectory1 :: FilePath -> FilePath
-dropDirectory1 = drop 1 . dropWhile (not . isPathSeparator)
+dropDirectory1 = drop1 . dropWhile (not . isPathSeparator)
 
 
 -- | Take the first component of a 'FilePath'. Should only be used on

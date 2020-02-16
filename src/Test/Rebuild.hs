@@ -4,6 +4,7 @@ module Test.Rebuild(main) where
 import Development.Shake
 import Test.Type
 import Text.Read
+import Data.List.Extra
 import Control.Monad
 import General.GetOpt
 
@@ -14,7 +15,7 @@ opts = [Option "" ["timestamp"] (ReqArg (Right . Timestamp) "VALUE") "Value used
 
 main = testBuildArgs test opts $ \args -> do
     let timestamp = concat [x | Timestamp x <- args]
-    let p = last $ PatWildcard : [x | Pattern x <- args]
+    let p = lastDef PatWildcard [x | Pattern x <- args]
     want ["a.txt"]
     pat p "a.txt" $ \out -> do
         src <- readFile' "b.txt"

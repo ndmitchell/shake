@@ -13,6 +13,7 @@ module General.EscCodes(
     ) where
 
 import Data.Char
+import Data.List.Extra
 import System.IO
 import System.Environment
 import System.IO.Unsafe
@@ -74,7 +75,7 @@ checkEscCodesWindows = do
 #endif
 
 removeEscCodes :: String -> String
-removeEscCodes ('\ESC':'[':xs) = removeEscCodes $ drop 1 $ dropWhile (not . isAlpha) xs
+removeEscCodes ('\ESC':'[':xs) = removeEscCodes $ drop1 $ dropWhile (not . isAlpha) xs
 removeEscCodes (x:xs) = x : removeEscCodes xs
 removeEscCodes [] = []
 

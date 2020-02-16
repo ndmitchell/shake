@@ -69,7 +69,7 @@ getUserRuleInternal key disp test = do
     Global{..} <- Action getRO
     let UserRuleVersioned versioned rules = fromMaybe mempty $ TMap.lookup globalUserRules
     let ver = if versioned then Nothing else Just $ Ver 0
-    let items = head $ (map snd $ reverse $ groupSort $ f (Ver 0) Nothing rules) ++ [[]]
+    let items = headDef [] $ map snd $ reverse $ groupSort $ f (Ver 0) Nothing rules
     let err = errorMultipleRulesMatch (typeOf key) (show key) (map snd3 items)
     return (ver, map (\(Ver v,_,x) -> (v,x)) items, err)
     where

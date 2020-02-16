@@ -202,7 +202,7 @@ removeOptionFSATrace params@Params{..} call
         return $ replace [ResultFSATrace []] [ResultFSATrace fsaRes] res
     where
         fsaFlags = fromMaybe "rwmdqt" fsaOptions
-        fsaOptions = last $ Nothing : [Just x | FSAOptions x <- opts]
+        fsaOptions = lastDef Nothing [Just x | FSAOptions x <- opts]
 
         fsaParams file Params{..} = do
             prog <- copyFSABinary prog
@@ -272,7 +272,7 @@ commandExplicitAction oparams = do
 
     let tracer act = do
             -- note: use the oparams - find a good tracing before munging it for shell stuff
-            let msg = last $ defaultTraced oparams : [x | Traced x <- opts]
+            let msg = lastDef (defaultTraced oparams) [x | Traced x <- opts]
             if msg == "" then liftIO act else traced msg act
 
     let async = ResultProcess PID0 `elem` results
@@ -334,14 +334,14 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
     let optBinary = BinaryPipes `elem` opts
     let optAsync = ResultProcess PID0 `elem` results
     let optTimeout = listToMaybe $ reverse [x | Timeout x <- opts]
-    let optWithStdout = last $ False : [x | WithStdout x <- opts]
-    let optWithStderr = last $ True : [x | WithStderr x <- opts]
+    let optWithStdout = lastDef False [x | WithStdout x <- opts]
+    let optWithStderr = lastDef True [x | WithStderr x <- opts]
     let optFileStdout = [x | FileStdout x <- opts]
     let optFileStderr = [x | FileStderr x <- opts]
-    let optEchoStdout = last $ (not grabStdout && null optFileStdout) : [x | EchoStdout x <- opts]
-    let optEchoStderr = last $ (not grabStderr && null optFileStderr) : [x | EchoStderr x <- opts]
+    let optEchoStdout = lastDef (not grabStdout && null optFileStdout) [x | EchoStdout x <- opts]
+    let optEchoStderr = lastDef (not grabStderr && null optFileStderr) [x | EchoStderr x <- opts]
     let optRealCommand = showCommandForUser2 prog args
-    let optUserCommand = last $ optRealCommand : [x | UserCommand x <- opts]
+    let optUserCommand = lastDef optRealCommand [x | UserCommand x <- opts]
     let optCloseFds = CloseFileHandles `elem` opts
 
     let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)

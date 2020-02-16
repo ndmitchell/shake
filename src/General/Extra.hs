@@ -271,7 +271,7 @@ whenLeft x f = either f (const $ pure ()) x
 type Located = Partial
 
 callStackTop :: Partial => String
-callStackTop = withFrozenCallStack $ head $ callStackFull ++ ["unknown location"]
+callStackTop = withFrozenCallStack $ headDef "unknown location" callStackFull
 
 callStackFull :: Partial => [String]
 callStackFromException :: SomeException -> ([String], SomeException)

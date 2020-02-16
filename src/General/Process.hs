@@ -19,7 +19,7 @@ import System.Info.Extra
 import System.Process
 import System.Time.Extra
 import Data.Unique
-import Data.IORef
+import Data.IORef.Extra
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import General.Extra
@@ -38,7 +38,7 @@ newBuffer :: IO (Buffer a)
 newBuffer = liftM2 Buffer newUnique (newIORef [])
 
 addBuffer :: Buffer a -> a -> IO ()
-addBuffer (Buffer _ ref) x = atomicModifyIORef ref $ \xs -> (x:xs, ())
+addBuffer (Buffer _ ref) x = atomicModifyIORef_ ref (x:)
 
 readBuffer :: Buffer a -> IO [a]
 readBuffer (Buffer _ ref) = reverse <$> readIORef ref

@@ -3,7 +3,7 @@ module Test.Resources(main) where
 
 import Development.Shake
 import Test.Type
-import Data.List
+import Data.List.Extra
 import System.FilePath
 import Control.Exception.Extra
 import System.Time.Extra
@@ -56,7 +56,7 @@ main = testBuild test $ do
         res <- newThrottle "throttle" 2 0.4
         phony "throttle" $ need ["t_file1.1","t_file2.1","t_file3.2","t_file4.1","t_file5.2"]
         "t_*.*" %> \out -> do
-            withResource res (read $ drop 1 $ takeExtension out) $
+            withResource res (read $ drop1 $ takeExtension out) $
                 when (takeBaseName out == "t_file3") $ liftIO $ sleep 0.2
             writeFile' out ""
 

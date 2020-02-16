@@ -151,7 +151,7 @@ applyKeyValue callStack ks = do
     Local{localStack, localBlockApply} <- Action getRW
     let stack = addCallStack callStack localStack
 
-    let tk = typeKey $ head $ ks ++ [newKey ()] -- always called at non-empty so never see () key
+    let tk = typeKey $ headDef (newKey ()) ks -- always called at non-empty so never see () key
     whenJust localBlockApply $ throwM . errorNoApply tk (show <$> listToMaybe ks)
 
     let database = globalDatabase
