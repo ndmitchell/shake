@@ -11,7 +11,6 @@ import Control.Exception.Extra
 import Development.Shake.Classes
 import Development.Shake.Internal.FileName
 import qualified Data.ByteString.Lazy.Internal as LBS (defaultChunkSize)
-import Data.Char
 import Data.List.Extra
 import Data.Word
 import Numeric
@@ -28,6 +27,7 @@ import Development.Shake.Internal.Errors
 import Control.Monad
 import qualified Data.ByteString.Char8 as BS
 import Foreign.C.String
+import Data.Char
 
 #else
 import Development.Shake.Internal.Errors
