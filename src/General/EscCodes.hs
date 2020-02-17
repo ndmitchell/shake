@@ -9,6 +9,7 @@ module General.EscCodes(
     escCursorUp,
     escClearLine,
     escForeground,
+    escBold,
     escNormal
     ) where
 
@@ -89,6 +90,8 @@ escCursorUp i = "\ESC[" ++ show i ++ "A"
 escClearLine :: String
 escClearLine = "\ESC[K"
 
+escBold :: String
+escBold = "\ESC[1m"
 
 data Color = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White
     deriving (Show,Enum)

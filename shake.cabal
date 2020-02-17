@@ -122,7 +122,7 @@ library
 
     if flag(cloud)
         cpp-options: -DNETWORK
-        build-depends: network, network-uri
+        build-depends: network, network-uri, HTTP
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
@@ -181,6 +181,7 @@ library
         Development.Shake.Internal.Rules.Oracle
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.TermSize
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
@@ -246,7 +247,7 @@ executable shake
 
     if flag(cloud)
         cpp-options: -DNETWORK
-        build-depends: network, network-uri
+        build-depends: network, network-uri, HTTP
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
@@ -300,6 +301,7 @@ executable shake
         Development.Shake.Internal.Rules.Oracle
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.TermSize
         Development.Shake.Internal.Value
         General.Bilist
         General.Binary
@@ -370,7 +372,7 @@ test-suite shake-test
 
     if flag(cloud)
         cpp-options: -DNETWORK
-        build-depends: network, network-uri
+        build-depends: network, network-uri, HTTP
 
     if impl(ghc < 8.0)
         build-depends: semigroups >= 0.18
@@ -426,6 +428,7 @@ test-suite shake-test
         Development.Shake.Internal.Rules.Oracle
         Development.Shake.Internal.Rules.OrderOnly
         Development.Shake.Internal.Rules.Rerun
+        Development.Shake.Internal.TermSize
         Development.Shake.Internal.Value
         Development.Shake.Rule
         Development.Shake.Util

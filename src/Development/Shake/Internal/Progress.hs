@@ -4,7 +4,7 @@
 module Development.Shake.Internal.Progress(
     progress,
     progressSimple, progressDisplay, progressTitlebar, progressProgram,
-    ProgressEntry(..), progressReplay, writeProgressReport -- INTERNAL USE ONLY
+    ProgressEntry(..), RawProgress(..), progressReplay, writeProgressReport, progressRaw -- INTERNAL USE ONLY
     ) where
 
 import Control.Applicative
@@ -205,12 +205,26 @@ message input = liftA3 (,,) time perc debug
 --   while time left is calculated by scaling @remaining@ by the observed work rate in this build,
 --   roughly @done / time_elapsed@.
 progressDisplay :: Double -> (String -> IO ()) -> IO Progress -> IO ()
-progressDisplay sample disp prog = do
-    disp "Starting..." -- no useful info at this stage
+progressDisplay sample disp prog = progressRaw sample (disp . format) prog
+  where format Starting     = "Starting..."
+        format (Finished t) = "Finished in " ++ showDuration t
+        format (Executing p t secs perc done todo predicted) =
+            "Running for " ++ showDurationSecs t ++ " [" ++ show done ++ "/" ++ show todo ++ "]" ++
+            ", predicted " ++ predicted ++
+            maybe "" (", Failure! " ++) (isFailure p)
+
+data RawProgress
+  = Starting
+  | Finished Double
+  | Executing Progress Double Double Double Int Int String
+
+progressRaw :: Double -> (RawProgress -> IO ()) -> IO Progress -> IO ()
+progressRaw sample disp prog = do
+    disp Starting -- no useful info at this stage
     time <- offsetTime
     catchJust (\x -> if x == ThreadKilled then Just () else Nothing)
         (loop time $ message echoMealy)
-        (const $ do t <- time; disp $ "Finished in " ++ showDuration t)
+        (const $ do t <- time; disp $ Finished t)
     where
         loop :: IO Double -> Mealy (Double, Progress) (Double, Double, String) -> IO ()
         loop time mealy = do
@@ -221,10 +235,7 @@ progressDisplay sample disp prog = do
             -- putStrLn _debug
             let done = countSkipped p + countBuilt p
             let todo = done + countUnknown p + countTodo p
-            disp $
-                "Running for " ++ showDurationSecs t ++ " [" ++ show done ++ "/" ++ show todo ++ "]" ++
-                ", predicted " ++ formatMessage secs perc ++
-                maybe "" (", Failure! " ++) (isFailure p)
+            disp $ Executing p t secs perc done todo (formatMessage secs perc)
             loop time mealy
 
 
