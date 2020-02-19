@@ -7,7 +7,7 @@ import System.Environment
 import System.Time.Extra
 import System.Info.Extra
 import Data.Functor
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import Control.Exception.Extra
 import Control.Monad
@@ -105,7 +105,7 @@ main = do
     unless isHead $ do
         ver <- do
             src <- readFile "shake.cabal"
-            return $ head [dropWhile isSpace x | x <- lines src, Just x <- [stripPrefix "version:" x]]
+            return $ head [trimStart x | x <- lines src, Just x <- [stripPrefix "version:" x]]
         forM_ (requiresShake ghcver) $ \x ->
             retry 3 $ cmd $ "cabal v1-install " ++ x ++ " --constraint=shake==" ++ ver
 

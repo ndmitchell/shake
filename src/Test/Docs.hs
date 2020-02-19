@@ -222,7 +222,7 @@ findCodeMarkdown [] = []
 -- RENDER THE CODE
 
 showCode :: [Code] -> [String]
-showCode = concat . zipWith f [1..] . nubOrd
+showCode = concat . zipWithFrom f 1 . nubOrd
     where
         f i (Code x) | "#" `isPrefixOf` concat x = []
                      | all whitelist x = []
@@ -247,7 +247,7 @@ showStmt i xs | isDecl $ unlines xs = map f xs
 showStmt i [x] | filter isAlpha (fst $ word1 x) `elem` types = ["type Code_" ++ show i ++ " = " ++ x]
 showStmt i [x] | length (words x) <= 2 = ["code_" ++ show i ++ " = (" ++ x ++ ")"] -- deal with operators and sections
 showStmt i xs | all isPredicate xs, length xs > 1 =
-    zipWith (\j x -> "code_" ++ show i ++ "_" ++ show j ++ " = " ++ x) [1..] xs
+    zipWithFrom (\j x -> "code_" ++ show i ++ "_" ++ show j ++ " = " ++ x) 1 xs
 showStmt i xs = ("code_" ++ show i ++ " = do") : map ("  " ++) xs ++ ["  undefined" | isBindStmt $ last xs]
 
 isPredicate :: String -> Bool
