@@ -39,6 +39,7 @@ import System.Time.Extra
 import System.IO.Unsafe(unsafeInterleaveIO)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.UTF8 as UTF8
 import General.Extra
 import General.Process
 import Prelude
@@ -202,7 +203,7 @@ removeOptionFSATrace params@Params{..} call
         liftIO $ writeFile file "" -- ensures even if we fail before fsatrace opens the file, we can still read it
         params <- liftIO $ fsaParams file params
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
-        fsaRes <- liftIO $ parseFSA <$> readFileUTF8' file
+        fsaRes <- liftIO $ parseFSA <$> BS.readFile file
         return $ replace [ResultFSATrace []] [ResultFSATrace fsaRes] res
     where
         fsaFlags = fromMaybe "rwmdqt" fsaOptions
@@ -243,15 +244,22 @@ data FSATrace
 
 
 -- | Parse the 'FSATrace' entries, ignoring anything you don't understand.
-parseFSA :: String -> [FSATrace]
-parseFSA = mapMaybe f . lines
-    where f ('w':'|':xs) = Just $ FSAWrite xs
-          f ('r':'|':xs) = Just $ FSARead xs
-          f ('d':'|':xs) = Just $ FSADelete xs
-          f ('m':'|':xs) | (xs,'|':ys) <- break (== '|') xs = Just $ FSAMove xs ys
-          f ('q':'|':xs) = Just $ FSAQuery xs
-          f ('t':'|':xs) = Just $ FSATouch xs
-          f _ = Nothing
+parseFSA :: BS.ByteString -> [FSATrace]
+parseFSA = mapMaybe f . BS.lines
+    where
+        f x
+            | Just (k, x) <- BS.uncons x
+            , Just ('\'', x) <- BS.uncons x =
+                case k of
+                    'w' -> Just $ FSAWrite $ UTF8.toString x
+                    'r' -> Just $ FSARead $ UTF8.toString x
+                    'd' -> Just $ FSADelete $ UTF8.toString x
+                    'm' | (xs, ys) <- BS.break (== '|') x, Just ('|',ys) <- BS.uncons ys ->
+                        Just $ FSAMove (UTF8.toString xs) (UTF8.toString ys)
+                    'q' -> Just $ FSAQuery $ UTF8.toString x
+                    't' -> Just $ FSATouch $ UTF8.toString x
+                    _ -> Nothing
+            | otherwise = Nothing
 
 
 ---------------------------------------------------------------------
