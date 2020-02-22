@@ -127,9 +127,15 @@ data Params = Params
     ,args :: [String]
     } deriving Show
 
-class MonadIO m => MonadTempDir m where runWithTempDir :: (FilePath -> m a) -> m a
-instance MonadTempDir IO where runWithTempDir = IO.withTempDir
-instance MonadTempDir Action where runWithTempDir = withTempDir
+class MonadIO m => MonadTempDir m where
+    runWithTempDir :: (FilePath -> m a) -> m a
+    runWithTempFile :: (FilePath -> m a) -> m a
+instance MonadTempDir IO where
+    runWithTempDir = IO.withTempDir
+    runWithTempFile = IO.withTempFile
+instance MonadTempDir Action where
+    runWithTempDir = withTempDir
+    runWithTempFile = withTempFile
 
 ---------------------------------------------------------------------
 -- DEAL WITH Shell
@@ -192,8 +198,7 @@ removeOptionFSATrace params@Params{..} call
     | ResultProcess PID0 `elem` results =
         -- This is a bad state to get into, you could technically just ignore the tracing, but that's a bit dangerous
         liftIO $ errorIO "Asyncronous process execution combined with FSATrace is not support"
-    | otherwise = runWithTempDir $ \dir -> do
-        let file = dir </> "fsatrace.txt"
+    | otherwise = runWithTempFile $ \file -> do
         liftIO $ writeFile file "" -- ensures even if we fail before fsatrace opens the file, we can still read it
         params <- liftIO $ fsaParams file params
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
