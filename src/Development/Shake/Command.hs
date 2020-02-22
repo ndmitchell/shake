@@ -245,8 +245,13 @@ data FSATrace
 
 -- | Parse the 'FSATrace' entries, ignoring anything you don't understand.
 parseFSA :: BS.ByteString -> [FSATrace]
-parseFSA = mapMaybe f . BS.lines
+parseFSA = mapMaybe f . map dropR . BS.lines
     where
+        -- deal with CRLF on Windows
+        dropR x = case BS.unsnoc x of
+            Just (x, '\r') -> x
+            _ -> x
+
         f x
             | Just (k, x) <- BS.uncons x
             , Just ('\'', x) <- BS.uncons x =
