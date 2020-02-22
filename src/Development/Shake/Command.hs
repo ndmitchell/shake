@@ -245,7 +245,7 @@ data FSATrace
 
 -- | Parse the 'FSATrace' entries, ignoring anything you don't understand.
 parseFSA :: BS.ByteString -> [FSATrace]
-parseFSA = mapMaybe f . map dropR . BS.lines
+parseFSA = mapMaybe (f . dropR) . BS.lines
     where
         -- deal with CRLF on Windows
         dropR x = case BS.unsnoc x of
