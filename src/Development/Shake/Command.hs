@@ -286,7 +286,6 @@ commandExplicitAction oparams = do
             xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs]
             cwd <- liftIO getCurrentDirectory
             temp <- fixPaths cwd xs
-            liftIO $ print ("AutoDeps", pxs, cwd, xs, temp) -- DEBUGGING
             unsafeAllowApply $ need temp
             return res
 
