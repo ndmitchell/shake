@@ -254,7 +254,7 @@ parseFSA = mapMaybe f . map dropR . BS.lines
 
         f x
             | Just (k, x) <- BS.uncons x
-            , Just ('\'', x) <- BS.uncons x =
+            , Just ('|', x) <- BS.uncons x =
                 case k of
                     'w' -> Just $ FSAWrite $ UTF8.toString x
                     'r' -> Just $ FSARead $ UTF8.toString x
