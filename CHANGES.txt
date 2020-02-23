@@ -1,5 +1,7 @@
 Changelog for Shake (* = breaking change)
 
+    Allow getting FSATrace ByteString as a result
+*   Make the FSATrace type polymorphic over the FilePath
     Speed up FSATrace parsing
     Require extra-1.6.19
 0.18.5, released 2020-02-02

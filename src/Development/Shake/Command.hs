@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, DeriveDataTypeable, RecordWildCards #-}
 
@@ -113,7 +114,8 @@ data Result
     | ResultTime Double
     | ResultLine String
     | ResultProcess PID
-    | ResultFSATrace [FSATrace]
+    | ResultFSATrace [FSATrace FilePath]
+    | ResultFSATraceBS [FSATrace BS.ByteString]
       deriving (Eq,Show)
 
 data PID = PID0 | PID ProcessHandle
@@ -169,7 +171,7 @@ removeOptionShell params@Params{..} call
 -- DEAL WITH FSATrace
 
 isFSATrace :: Params -> Bool
-isFSATrace Params{..} = ResultFSATrace [] `elem` results || any isFSAOptions opts
+isFSATrace Params{..} = any isResultFSATrace  results || any isFSAOptions opts
 
 -- Mac disables tracing on system binaries, so we copy them over, yurk
 copyFSABinary :: FilePath -> IO FilePath
@@ -203,8 +205,11 @@ removeOptionFSATrace params@Params{..} call
         liftIO $ writeFile file "" -- ensures even if we fail before fsatrace opens the file, we can still read it
         params <- liftIO $ fsaParams file params
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
-        fsaRes <- liftIO $ parseFSA <$> BS.readFile file
-        return $ replace [ResultFSATrace []] [ResultFSATrace fsaRes] res
+        fsaResBS <- liftIO $ parseFSA <$> BS.readFile file
+        let fsaRes = map (fmap UTF8.toString) fsaResBS
+        return $ flip map res $ \x -> case x of
+            ResultFSATrace [] -> ResultFSATrace fsaRes
+            ResultFSATraceBS [] -> ResultFSATraceBS fsaResBS
     where
         fsaFlags = lastDef "rwmdqt" [x | FSAOptions x <- opts]
 
@@ -216,6 +221,10 @@ removeOptionFSATrace params@Params{..} call
 isFSAOptions FSAOptions{} = True
 isFSAOptions _ = False
 
+isResultFSATrace ResultFSATrace{} = True
+isResultFSATrace ResultFSATraceBS{} = True
+isResultFSATrace _ = False
+
 addFSAOptions :: String -> [CmdOption] -> [CmdOption]
 addFSAOptions x opts | any isFSAOptions opts = map f opts
     where f (FSAOptions y) = FSAOptions $ nubOrd $ y ++ x
@@ -226,24 +235,24 @@ addFSAOptions x opts = FSAOptions x : opts
 -- | The results produced by @fsatrace@. All files will be absolute paths.
 --   You can get the results for a 'cmd' by requesting a value of type
 --   @['FSATrace']@.
-data FSATrace
+data FSATrace a
     = -- | Writing to a file
-      FSAWrite FilePath
+      FSAWrite a
     | -- | Reading from a file
-      FSARead FilePath
+      FSARead a
     | -- | Deleting a file
-      FSADelete FilePath
+      FSADelete a
     | -- | Moving, arguments destination, then source
-      FSAMove FilePath FilePath
+      FSAMove a a
     | -- | Querying\/stat on a file
-      FSAQuery FilePath
+      FSAQuery a
     | -- | Touching a file
-      FSATouch FilePath
-      deriving (Show,Eq,Ord,Data,Typeable)
+      FSATouch a
+      deriving (Show,Eq,Ord,Data,Typeable,Functor)
 
 
 -- | Parse the 'FSATrace' entries, ignoring anything you don't understand.
-parseFSA :: BS.ByteString -> [FSATrace]
+parseFSA :: BS.ByteString -> [FSATrace BS.ByteString]
 parseFSA = mapMaybe (f . dropR) . BS.lines
     where
         -- deal with CRLF on Windows
@@ -255,13 +264,13 @@ parseFSA = mapMaybe (f . dropR) . BS.lines
             | Just (k, x) <- BS.uncons x
             , Just ('|', x) <- BS.uncons x =
                 case k of
-                    'w' -> Just $ FSAWrite $ UTF8.toString x
-                    'r' -> Just $ FSARead $ UTF8.toString x
-                    'd' -> Just $ FSADelete $ UTF8.toString x
+                    'w' -> Just $ FSAWrite x
+                    'r' -> Just $ FSARead  x
+                    'd' -> Just $ FSADelete x
                     'm' | (xs, ys) <- BS.break (== '|') x, Just ('|',ys) <- BS.uncons ys ->
-                        Just $ FSAMove (UTF8.toString xs) (UTF8.toString ys)
-                    'q' -> Just $ FSAQuery $ UTF8.toString x
-                    't' -> Just $ FSATouch $ UTF8.toString x
+                        Just $ FSAMove xs ys
+                    'q' -> Just $ FSAQuery x
+                    't' -> Just $ FSATouch x
                     _ -> Nothing
             | otherwise = Nothing
 
@@ -375,6 +384,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
             ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
             ResultFSATrace _ -> return ([], [], \_ _ _ -> return $ ResultFSATrace []) -- filled in elsewhere
+            ResultFSATraceBS _ -> return ([], [], \_ _ _ -> return $ ResultFSATraceBS []) -- filled in elsewhere
 
     exceptionBuffer <- newBuffer
     po <- resolvePath ProcessOpts
@@ -559,8 +569,11 @@ instance CmdResult CmdLine where
 instance CmdResult CmdTime where
     cmdResult = ([ResultTime 0], \[ResultTime x] -> CmdTime x)
 
-instance CmdResult [FSATrace] where
+instance CmdResult [FSATrace FilePath] where
     cmdResult = ([ResultFSATrace []], \[ResultFSATrace x] -> x)
+
+instance CmdResult [FSATrace BS.ByteString] where
+    cmdResult = ([ResultFSATraceBS []], \[ResultFSATraceBS x] -> x)
 
 instance CmdString a => CmdResult (Stdout a) where
     cmdResult = let (a,b) = cmdString in ([ResultStdout a], \[ResultStdout x] -> Stdout $ b x)
