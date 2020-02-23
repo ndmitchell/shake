@@ -1,6 +1,6 @@
 Changelog for Shake (* = breaking change)
 
-    Speed up Traced parsing
+    Speed up FSATrace parsing
     Require extra-1.6.19
 0.18.5, released 2020-02-02
     Use uninterruptibleMask_ to ensure all cleanup happens robustly
