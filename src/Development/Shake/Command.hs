@@ -206,8 +206,7 @@ removeOptionFSATrace params@Params{..} call
         fsaRes <- liftIO $ parseFSA <$> BS.readFile file
         return $ replace [ResultFSATrace []] [ResultFSATrace fsaRes] res
     where
-        fsaFlags = fromMaybe "rwmdqt" fsaOptions
-        fsaOptions = lastDef Nothing [Just x | FSAOptions x <- opts]
+        fsaFlags = lastDef "rwmdqt" [x | FSAOptions x <- opts]
 
         fsaParams file Params{..} = do
             prog <- copyFSABinary prog
