@@ -397,8 +397,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             Just v -> do
                 v <- canonicalizePath v `catchIO` const (return v)
                 return $ "Current directory: " ++ v ++ "\n"
-        -- FIXME: switch to errorIO once extra-1.6.18 is available everywhere
-        liftIO $ error $
+        liftIO $ errorIO $
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
             "Command line: " ++ optRealCommand ++ "\n" ++
             (if optRealCommand /= optUserCommand then "Original command line: " ++ optUserCommand ++ "\n" else "") ++
