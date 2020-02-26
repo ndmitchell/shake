@@ -210,6 +210,7 @@ removeOptionFSATrace params@Params{..} call
         return $ flip map res $ \x -> case x of
             ResultFSATrace [] -> ResultFSATrace fsaRes
             ResultFSATraceBS [] -> ResultFSATraceBS fsaResBS
+            x -> x
     where
         fsaFlags = lastDef "rwmdqt" [x | FSAOptions x <- opts]
 
