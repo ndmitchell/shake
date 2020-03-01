@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #746, add an instance for CmdArgument ()
     Allow getting FSATrace ByteString as a result
 *   Make the FSATrace type polymorphic over the FilePath
     Speed up FSATrace parsing

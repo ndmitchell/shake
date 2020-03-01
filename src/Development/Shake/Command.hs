@@ -734,6 +734,7 @@ instance CmdArguments CmdArgument where
 class IsCmdArgument a where
     -- | Conversion to a CmdArgument
     toCmdArgument :: a -> CmdArgument
+instance IsCmdArgument () where toCmdArgument = mempty
 instance IsCmdArgument String where toCmdArgument = CmdArgument . map Right . words
 instance IsCmdArgument [String] where toCmdArgument = CmdArgument . map Right
 instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . pure . Left
