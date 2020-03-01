@@ -235,7 +235,7 @@ shakeOptions :: ShakeOptions
 shakeOptions = ShakeOptions
     ".shake" 1 "1" Info False [] Nothing [] [] [] [] (Just 10) [] [] False True False
     True ChangeModtime True [] False False Nothing [] False
-    (const $ return ())
+    (const $ pure ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
     (\_ _ _ -> return ())
     Map.empty

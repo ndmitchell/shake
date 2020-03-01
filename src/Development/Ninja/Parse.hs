@@ -35,18 +35,18 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
         binds <- mapM (\(a,b) -> (a,) <$> askExpr env b) binds
         let (normal,implicit,orderOnly) = splitDeps deps
         let build = Build rule env normal implicit orderOnly binds
-        return $
+        pure $
             if rule == BS.pack "phony" then ninja{phonys = [(x, normal ++ implicit ++ orderOnly) | x <- outputs] ++ phonys}
             else if length outputs == 1 then ninja{singles = (head outputs, build) : singles}
             else ninja{multiples = (outputs, build) : multiples}
     LexRule name ->
-        return ninja{rules = (name, Rule binds) : rules}
+        pure ninja{rules = (name, Rule binds) : rules}
     LexDefault xs -> do
         xs <- mapM (askExpr env) xs
-        return ninja{defaults = xs ++ defaults}
+        pure ninja{defaults = xs ++ defaults}
     LexPool name -> do
         depth <- getDepth env binds
-        return ninja{pools = (name, depth) : pools}
+        pure ninja{pools = (name, depth) : pools}
     LexInclude expr -> do
         file <- askExpr env expr
         parseFile (BS.unpack file) env ninja
@@ -56,7 +56,7 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
         parseFile (BS.unpack file) e ninja
     LexDefine a b -> do
         addBind env a b
-        return ninja
+        pure ninja
     LexBind a _ ->
         error $ "Unexpected binding defining " ++ BS.unpack a
 
@@ -71,9 +71,9 @@ splitDeps [] = ([], [], [])
 
 getDepth :: Env Str Str -> [(Str, Expr)] -> IO Int
 getDepth env xs = case lookup (BS.pack "depth") xs of
-    Nothing -> return 1
+    Nothing -> pure 1
     Just x -> do
         x <- askExpr env x
         case BS.readInt x of
-            Just (i, n) | BS.null n -> return i
+            Just (i, n) | BS.null n -> pure i
             _ -> error $ "Could not parse depth field in pool, got: " ++ BS.unpack x

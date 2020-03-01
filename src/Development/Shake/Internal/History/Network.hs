@@ -28,7 +28,7 @@ post (Conn _) _ _ = fail "impossible to get here"
 
 #else
 
-connect x = Just $ return $ Conn $ x ++ ['/' | not $ "/" `isSuffixOf` x]
+connect x = Just $ pure $ Conn $ x ++ ['/' | not $ "/" `isSuffixOf` x]
 
 post (Conn prefix) url send = do
     let request = Request

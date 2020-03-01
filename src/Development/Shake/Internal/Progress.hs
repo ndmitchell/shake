@@ -53,7 +53,7 @@ foreign import CALLCONV "Windows.h SetConsoleTitleW" c_setConsoleTitleW :: CWStr
 progress :: Database -> Step -> IO Progress
 progress db step = do
     xs <- getKeyValues db
-    return $! foldl' f mempty $ map snd xs
+    pure $! foldl' f mempty $ map snd xs
     where
         g = floatToDouble
 
@@ -217,7 +217,7 @@ progressDisplay sample disp prog = do
             sleep sample
             p <- prog
             t <- time
-            ((secs,perc,_debug), mealy) <- return $ runMealy mealy (t, p)
+            ((secs,perc,_debug), mealy)<- pure $ runMealy mealy (t, p)
             -- putStrLn _debug
             let done = countSkipped p + countBuilt p
             let todo = done + countUnknown p + countTodo p
@@ -270,7 +270,7 @@ generateSummary xs = flip concatMap xs $ \(file,xs) ->
 generateHTML :: [(FilePath, [ProgressEntry])] -> IO LBS.ByteString
 generateHTML xs = do
     report <- readDataFileHTML "progress.html"
-    let f "data/progress-data.js" = return $ LBS.pack $ "var progress =\n" ++ generateJSON xs
+    let f "data/progress-data.js" = pure $ LBS.pack $ "var progress =\n" ++ generateJSON xs
     runTemplate f report
 
 generateJSON :: [(FilePath, [ProgressEntry])] -> String
@@ -299,7 +299,7 @@ progressTitlebar x = unlessM win lin
 #ifdef mingw32_HOST_OS
         win = withCWString x c_setConsoleTitleW
 #else
-        win = return False
+        win = pure False
 #endif
 
         lin = whenM checkEscCodes $ BS.putStr $ BS.pack $ escWindowTitle x
@@ -326,7 +326,7 @@ progressProgram = do
         Nothing -> return $ const $ return ()
         Just exe -> do
             lastArgs <- newIORef Nothing -- the arguments we passed to shake-progress last time
-            return $ \msg -> do
+            pure $ \msg -> do
                 let failure = " Failure! " `isInfixOf` msg
                 let perc = let (a,b) = break (== '%') msg
                            in if null b then "" else reverse $ takeWhile isDigit $ reverse a

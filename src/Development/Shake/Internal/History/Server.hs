@@ -24,16 +24,16 @@ import Data.Typeable
 data Server = Server Conn (Map.HashMap TypeRep (BinaryOp Key)) Ver
 
 newServer :: Conn -> Map.HashMap TypeRep (BinaryOp Key) -> Ver -> IO Server
-newServer a b c = return $ Server a b c
+newServer a b c = pure $ Server a b c
 
 serverAllKeys :: Server -> [(TypeRep, Ver)] -> IO [(Key, Ver, [Key], Bloom [BS_Identity])]
 serverAllKeys (Server conn key ver) typs = do
     res <- post conn "allkeys/v1" $ LBS.fromChunks [runBuilder $ putEx $ withTypeReps $ SendAllKeys ver typs]
     let RecvAllKeys ans = withoutKeys key $ getEx $ BS.concat $ LBS.toChunks res
-    return ans
+    pure ans
 
 serverOneKey :: Server -> Key -> Ver -> Ver -> [(Key, BS_Identity)] -> IO (BuildTree Key)
-serverOneKey _ _ _ _ _ = return $ Depend [] []
+serverOneKey _ _ _ _ _ = pure $ Depend [] []
 
 
 serverDownloadFiles :: Server -> Key -> [(FilePath, FileSize, FileHash)] -> IO ()

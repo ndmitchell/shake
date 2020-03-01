@@ -41,7 +41,7 @@ demo auto = do
     dir <- if empty then getCurrentDirectory else do
         home <- getHomeDirectory
         dir <- getDirectoryContents home
-        return $ home </> head (map ("shake-demo" ++) ("":map show [2..]) \\ dir)
+        pure $ home </> head (map ("shake-demo" ++) ("":map show [2..]) \\ dir)
 
     putStrLn "% The Shake demo uses an empty directory, OK to use:"
     putStrLn $ "%     " ++ dir
@@ -101,19 +101,19 @@ yesNo auto = do
     putStr "% [Y/N] (then ENTER): "
     x <- if auto then putLine "y" else lower <$> getLine
     if "y" `isPrefixOf` x then
-        return True
+        pure True
      else if "n" `isPrefixOf` x then
-        return False
+        pure False
      else
         yesNo auto
 
 putLine :: String -> IO String
-putLine x = putStrLn x >> return x
+putLine x = putStrLn x >> pure x
 
 
 -- | Replace exceptions with 'False'.
 wrap :: IO Bool -> IO Bool
-wrap act = act `catch_` const (return False)
+wrap act = act `catch_` const (pure False)
 
 
 -- | Require a condition to be true, or exit with a message.

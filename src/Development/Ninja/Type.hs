@@ -25,7 +25,7 @@ data Expr = Exprs [Expr] | Lit Str | Var Str deriving (Show,Eq)
 askExpr :: Env Str Str -> Expr -> IO Str
 askExpr e = f
     where f (Exprs xs) = BS.concat <$> mapM f xs
-          f (Lit x) = return x
+          f (Lit x) = pure x
           f (Var x) = askVar e x
 
 askVar :: Env Str Str -> Str -> IO Str

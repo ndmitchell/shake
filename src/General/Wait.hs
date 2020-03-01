@@ -20,7 +20,7 @@ import Control.Monad.Fail
 
 runWait :: Monad m => Wait m a -> m (Wait m a)
 runWait (Lift x) = runWait =<< x
-runWait x = return x
+runWait x = pure x
 
 fromLater :: Monad m => Wait m a -> (a -> m ()) -> m ()
 fromLater (Lift x) f = do x <- x; fromLater x f
@@ -79,7 +79,7 @@ firstJustWaitUnordered f = go [] . map f
             Later l -> go (l:later) xs
             Lift x -> Lift $ do
                 x <- x
-                return $ go later (x:xs)
+                pure $ go later (x:xs)
         go [] [] = Now Nothing
         go [l] [] = Later l
         go ls [] = Later $ \callback -> do
@@ -114,7 +114,7 @@ firstLeftWaitUnordered f xs = do
             Later l -> go mut ((i,l):later) xs
             Lift x -> Lift $ do
                 x <- x
-                return $ go mut later ((i,x):xs)
+                pure $ go mut later ((i,x):xs)
         go _ [] [] = Now Nothing
         go mut ls [] = Later $ \callback -> do
             ref <- liftIO $ newIORef $ length ls

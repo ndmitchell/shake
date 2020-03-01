@@ -77,12 +77,12 @@ replaceDirectory1 x dir = dir </> dropDirectory1 x
 makeRelativeEx :: FilePath -> FilePath -> IO (Maybe FilePath)
 makeRelativeEx pathA pathB
     | isRelative makeRelativePathAPathB =
-        return (Just makeRelativePathAPathB)
+        pure (Just makeRelativePathAPathB)
     | otherwise = do
         a' <- canonicalizePath pathA
         b' <- canonicalizePath pathB
         if takeDrive a' /= takeDrive b'
-            then return Nothing
+            then pure Nothing
             else Just <$> makeRelativeEx' a' b'
     where
         makeRelativePathAPathB = makeRelative pathA pathB
@@ -92,11 +92,11 @@ makeRelativeEx pathA pathB
             let rel = makeRelative a b
                 parent = takeDirectory a
             if isRelative rel
-                then return rel
+                then pure rel
                 else if a /= parent
                     then do
                         parentToB <- makeRelativeEx' parent b
-                        return (".." </> parentToB)
+                        pure (".." </> parentToB)
 
                     -- Impossible: makeRelative should have succeeded in finding
                     -- a relative path once `a == "/"`.

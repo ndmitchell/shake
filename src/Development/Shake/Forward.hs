@@ -89,7 +89,7 @@ encode' :: Binary a => a -> BS.ByteString
 encode' = BS.concat . LBS.toChunks . encode
 
 decode' :: Binary a => BS.ByteString -> a
-decode' = decode . LBS.fromChunks . return
+decode' = decode . LBS.fromChunks . pure
 
 type instance RuleResult Forward = Forward
 
@@ -119,7 +119,7 @@ forwardRule act = do
                     Nothing -> liftIO $ errorIO $ "Failed to find action name, " ++ show k
                     Just act -> do
                         new <- act
-                        return $ RunResult ChangedRecomputeSame (encode' new) new
+                        pure $ RunResult ChangedRecomputeSame (encode' new) new
     action act
 
 -- | Given a 'ShakeOptions', set the options necessary to execute in forward mode.
@@ -136,7 +136,7 @@ cacheAction (mkForward -> key) (action :: Action b) = do
     liftIO $ atomicModifyIORef_ forwards $ Map.insert key (mkForward <$> action)
     res <- apply1 key
     liftIO $ atomicModifyIORef_ forwards $ Map.delete key
-    return $ unForward res
+    pure $ unForward res
 
 newtype With a = With a
     deriving (Typeable, Binary, Show)
@@ -147,7 +147,7 @@ cacheActionWith :: (Typeable a, Binary a, Show a, Typeable b, Binary b, Show b, 
 cacheActionWith key argument action = do
     cacheAction (With argument) $ do
         alwaysRerun
-        return argument
+        pure argument
     cacheAction key $ do
         apply1 $ mkForward $ With argument
         action

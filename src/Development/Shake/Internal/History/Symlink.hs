@@ -32,11 +32,11 @@ foreign import CALLCONV unsafe "Windows.h CreateHardLinkW " c_CreateHardLinkW ::
 
 createLinkMaybe from to = withCWString from $ \cfrom -> withCWString to $ \cto -> do
     res <- c_CreateHardLinkW cto cfrom nullPtr
-    return $ if res then Nothing else Just "CreateHardLink failed."
+    pure $ if res then Nothing else Just "CreateHardLink failed."
 
 #else
 
-createLinkMaybe from to = handleIO (return . Just . show) $ createLink from to >> return Nothing
+createLinkMaybe from to = handleIO (return . Just . show) $ createLink from to >> pure Nothing
 
 #endif
 

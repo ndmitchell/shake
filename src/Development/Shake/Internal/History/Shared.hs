@@ -39,7 +39,7 @@ data Shared = Shared
     }
 
 newShared :: Bool -> BinaryOp Key -> Ver -> FilePath -> IO Shared
-newShared useSymlink keyOp globalVersion sharedRoot = return Shared{..}
+newShared useSymlink keyOp globalVersion sharedRoot = pure Shared{..}
 
 
 data Entry = Entry
@@ -94,7 +94,7 @@ sharedFileDir shared key = sharedRoot shared </> ".shake.cache" </> hexed key
 sharedFileKeys :: FilePath -> IO [FilePath]
 sharedFileKeys dir = do
     b <- doesDirectoryExist_ $ dir </> "_key"
-    if not b then return [] else listFiles $ dir </> "_key"
+    if not b then pure [] else listFiles $ dir </> "_key"
 
 loadSharedEntry :: Shared -> Key -> Ver -> Ver -> IO [IO (Maybe Entry)]
 loadSharedEntry shared@Shared{..} key builtinVersion userVersion =
@@ -103,7 +103,7 @@ loadSharedEntry shared@Shared{..} key builtinVersion userVersion =
         f file = do
             e@Entry{..} <- getEntry keyOp <$> BS.readFile file
             let valid = entryKey == key && entryGlobalVersion == globalVersion && entryBuiltinVersion == builtinVersion && entryUserVersion == userVersion
-            return $ if valid then Just e else Nothing
+            pure $ if valid then Just e else Nothing
 
 
 -- | Given a way to get the identity, see if you can find a stored cloud version
@@ -154,7 +154,7 @@ removeShared Shared{..} test = do
         b <- flip anyM files $ \file -> handleSynchronous (\e -> putStrLn ("Warning: " ++ show e) >> return False) $
             evaluate . test . entryKey . getEntry keyOp =<< BS.readFile file
         when b $ removePathForcibly dir
-        return b
+        pure b
     liftIO $ putStrLn $ "Deleted " ++ show (length (filter id deleted)) ++ " entries"
 
 listShared :: Shared -> IO ()

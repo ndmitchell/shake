@@ -55,8 +55,8 @@ emptyS n deterministic = do
     rand <- if not deterministic then return randomIO else do
         ref <- newIORef 0
         -- no need to be thread-safe - if two threads race they were basically the same time anyway
-        return $ do i <- readIORef ref; writeIORef' ref (i+1); return i
-    return $ S True Set.empty n 0 0 0 rand Heap.empty
+        pure $ do i <- readIORef ref; writeIORef' ref (i+1); return i
+    pure $ S True Set.empty n 0 0 0 rand Heap.empty
 
 
 data Pool = Pool
@@ -66,10 +66,10 @@ data Pool = Pool
 
 withPool :: Pool -> (S -> IO (S, IO ())) -> IO ()
 withPool (Pool var _) f = join $ modifyVar var $ \s ->
-    if alive s then f s else return (s, return ())
+    if alive s then f s else return (s, pure ())
 
 withPool_ :: Pool -> (S -> IO S) -> IO ()
-withPool_ pool act = withPool pool $ fmap (, return()) . act
+withPool_ pool act = withPool pool $ fmap (, pure()) . act
 
 
 worker :: Pool -> IO ()
@@ -90,13 +90,13 @@ step pool@(Pool _ done) op = mask_ $ withPool_ pool $ \s -> do
             t <- newThreadFinally (now >> worker pool) $ \t res -> case res of
                 Left e -> withPool_ pool $ \s -> do
                     signalBarrier done $ Left e
-                    return (remThread t s){alive = False}
+                    pure (remThread t s){alive = False}
                 Right _ ->
-                    step pool $ return . remThread t
-            return (addThread t s){todo = todo2}
+                    step pool $ pure . remThread t
+            pure (addThread t s){todo = todo2}
         Nothing | threadsCount s == 0 -> do
             signalBarrier done $ Right s
-            return s{alive = False}
+            pure s{alive = False}
         _ -> return s
     where
         addThread t s = s{threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
@@ -109,7 +109,7 @@ step pool@(Pool _ done) op = mask_ $ withPool_ pool $ \s -> do
 addPool :: PoolPriority -> Pool -> IO a -> IO ()
 addPool priority pool act = step pool $ \s -> do
     i <- rand s
-    return s{todo = Heap.insert (Heap.Entry (priority, i) $ void act) $ todo s}
+    pure s{todo = Heap.insert (Heap.Entry (priority, i) $ void act) $ todo s}
 
 
 data PoolPriority
@@ -125,7 +125,7 @@ data PoolPriority
 increasePool :: Pool -> IO (IO ())
 increasePool pool = do
     step pool $ \s -> return s{threadsLimit = threadsLimit s + 1}
-    return $ step pool $ \s -> return s{threadsLimit = threadsLimit s - 1}
+    pure $ step pool $ \s -> return s{threadsLimit = threadsLimit s - 1}
 
 
 -- | Make sure the pool cannot run out of tasks (and thus everything finishes) until after the cancel is called.
@@ -137,7 +137,7 @@ keepAlivePool pool = do
         cancel <- increasePool pool
         waitBarrier bar
         cancel
-    return $ signalBarrier bar ()
+    pure $ signalBarrier bar ()
 
 
 -- | Run all the tasks in the pool on the given number of works.

@@ -45,7 +45,7 @@ break0 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
         i = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
             let start = castPtr ptr :: S
             let end = go start
-            return $! Ptr end `minusPtr` start
+            pure $! Ptr end `minusPtr` start
 
         go s@(Ptr a) | c == '\0' || f c = a
                      | otherwise = go (next s)
@@ -59,7 +59,7 @@ break00 f (Str0 bs) = (BS.unsafeTake i bs, Str0 $ BS.unsafeDrop i bs)
         i = unsafePerformIO $ BS.unsafeUseAsCString bs $ \ptr -> do
             let start = castPtr ptr :: S
             let end = go start
-            return $! Ptr end `minusPtr` start
+            pure $! Ptr end `minusPtr` start
 
         go s@(Ptr a) | f c = a
                      | otherwise = go (next s)

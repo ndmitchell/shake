@@ -16,11 +16,11 @@ instance Show (Env k v) where show _ = "Env"
 
 
 newEnv :: IO (Env k v)
-newEnv = do ref <- newIORef Map.empty; return $ Env ref Nothing
+newEnv = do ref <- newIORef Map.empty; pure $ Env ref Nothing
 
 
 scopeEnv :: Env k v -> IO (Env k v)
-scopeEnv e = do ref <- newIORef Map.empty; return $ Env ref $ Just e
+scopeEnv e = do ref <- newIORef Map.empty; pure $ Env ref $ Just e
 
 
 addEnv :: (Eq k, Hashable k) => Env k v -> k -> v -> IO ()
@@ -31,9 +31,9 @@ askEnv :: (Eq k, Hashable k) => Env k v -> k -> IO (Maybe v)
 askEnv (Env ref e) k = do
     mp <- readIORef ref
     case Map.lookup k mp of
-        Just v -> return $ Just v
+        Just v -> pure $ Just v
         Nothing | Just e <- e -> askEnv e k
-        _ -> return Nothing
+        _ -> pure Nothing
 
 fromEnv :: Env k v -> IO (Map.HashMap k v)
 fromEnv (Env ref _) = readIORef ref

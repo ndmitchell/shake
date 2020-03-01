@@ -80,7 +80,7 @@ shake opts rules = do
 -- * @main _make/henry.txt@ will not build @neil.txt@ or @emily.txt@, but will instead build @henry.txt@.
 shakeArgs :: ShakeOptions -> Rules () -> IO ()
 shakeArgs opts rules = shakeArgsWith opts [] f
-    where f _ files = return $ Just $ if null files then rules else want files >> withoutActions rules
+    where f _ files = pure $ Just $ if null files then rules else want files >> withoutActions rules
 
 
 -- | A version of 'shakeArgs' with more flexible handling of command line arguments.
@@ -170,7 +170,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                             helpSuffix <- getHelpSuffix shakeOpts rs
                             evaluate $ force (["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs], helpSuffix)
                         _ -> return ([], [])
-            changes <- return $
+            changes<- pure $
                 let as = shakeOptionsFields baseOpts
                     bs = shakeOptionsFields oshakeOpts
                 in ["  - " ++ lbl ++ ": " ++ v1 ++ " => " ++ v2 | long, ((lbl, v1), (_, v2)) <- zip as bs, v1 /= v2]
@@ -199,7 +199,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
      else if not $ null progressReplays then do
         dat <- forM progressReplays $ \file -> do
             src <- readFile file
-            return (file, map read $ lines src)
+            pure (file, map read $ lines src)
         forM_ (if null $ shakeReport shakeOpts then ["-"] else shakeReport shakeOpts) $ \file -> do
             putWhenLn Info $ "Writing report to " ++ file
             writeProgressReport file dat
@@ -210,14 +210,14 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         let redir = maybe id withCurrentDirectory changeDirectory
         shakeOpts <- if null progressRecords then return shakeOpts else do
             t <- offsetTime
-            return shakeOpts{shakeProgress = \p ->
+            pure shakeOpts{shakeProgress = \p ->
                 void $ withThreadsBoth (shakeProgress shakeOpts p) $
-                    progressDisplay 1 (const $ return ()) $ do
+                    progressDisplay 1 (const $ pure ()) $ do
                         p <- p
                         t <- t
                         forM_ progressRecords $ \file ->
                             appendFile file $ show (t,p) ++ "\n"
-                        return p
+                        pure p
             }
         (ran,shakeOpts,res) <- redir $ do
             when printDirectory $ do
@@ -228,7 +228,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 use <- if compact == Auto then checkEscCodes else return $ compact == Yes
                 if use
                     then second withThreadSlave <$> compactUI shakeOpts
-                    else return (shakeOpts, id)
+                    else pure (shakeOpts, id)
             rules <- rules shakeOpts user files
             ui $ case rules of
                 Nothing -> return (False, shakeOpts, Right ())
@@ -249,10 +249,10 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                             withoutActions rules
                         else
                             rules
-                    return (True, shakeOpts, res)
+                    pure (True, shakeOpts, res)
 
         if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
-            either throwIO return res
+            either throwIO pure res
          else
             let esc = if shakeColor shakeOpts then escape else flip const
             in case res of

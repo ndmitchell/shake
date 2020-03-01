@@ -68,7 +68,7 @@ shakeArgsAccumulate opts flags def f = shakeArgsWith opts flags $ \flags targets
 --   the second argument is called with a list of the files that the build checked were up-to-date.
 shakeArgsPrune :: ShakeOptions -> ([FilePath] -> IO ()) -> Rules () -> IO ()
 shakeArgsPrune opts prune rules = shakeArgsPruneWith opts prune [] f
-    where f _ files = return $ Just $ if null files then rules else want files >> withoutActions rules
+    where f _ files = pure $ Just $ if null files then rules else want files >> withoutActions rules
 
 
 -- | A version of 'shakeArgsPrune' that also takes a list of extra options to use.
@@ -80,7 +80,7 @@ shakeArgsPruneWith opts prune flags act = do
         case sequence opts of
             Nothing -> do
                 writeIORef pruning True
-                return Nothing
+                pure Nothing
             Just opts -> act opts args
     whenM (readIORef pruning) $
         IO.withTempFile $ \file -> do

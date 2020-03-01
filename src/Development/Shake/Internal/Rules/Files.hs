@@ -73,10 +73,10 @@ defaultRuleFiles = do
     addBuiltinRuleEx (ruleLint opts) (ruleIdentity opts) (ruleRun opts $ shakeRebuildApply opts)
 
 ruleLint :: ShakeOptions -> BuiltinLint FilesQ FilesA
-ruleLint _ _ (FilesA []) = return Nothing -- in the case of disabling lint
+ruleLint _ _ (FilesA []) = pure Nothing -- in the case of disabling lint
 ruleLint opts k v = do
     now <- filesStoredValue opts k
-    return $ case now of
+    pure $ case now of
         Nothing -> Just "<missing>"
         Just now | filesEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
@@ -107,7 +107,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
             Just _ ->
                 -- ignoring the currently stored value, which may trigger lint has changed
                 -- so disable lint on this file
-                return $ RunResult ChangedNothing (fromJust o) $ FilesA []
+                pure $ RunResult ChangedNothing (fromJust o) $ FilesA []
             Nothing -> do
                 -- i don't have a previous value, so assume this is a source node, and mark rebuild in future
                 now <- liftIO $ filesStoredValue opts k
@@ -130,16 +130,16 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
                 Just res ->
                     fmap FilesA $ forM (zipExact (getExList res) (fromFilesQ k)) $ \(bin, file) -> do
                         Just (FileA mod size _) <- liftIO $ fileStoredValue opts file
-                        return $ FileA mod size $ getExStorable bin
+                        pure $ FileA mod size $ getExStorable bin
                 Nothing -> do
                     FilesA v <- act
                     producesUnchecked $ map (fileNameToString . fromFileQ) $ fromFilesQ k
                     historySave ver $ runBuilder $ putExList
                         [if isNoFileHash hash then throwImpure errorNoHash else putExStorable hash | FileA _ _ hash <- v]
-                    return $ FilesA v
+                    pure $ FilesA v
             let c | Just (Result _ old) <- old, filesEqualValue opts old v /= NotEqual = ChangedRecomputeSame
                   | otherwise = ChangedRecomputeDiff
-            return $ RunResult c (runBuilder $ putEx $ Result (Ver ver) v) v
+            pure $ RunResult c (runBuilder $ putEx $ Result (Ver ver) v) v
 
 
 
@@ -159,7 +159,7 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
 --   have the same sequence of @\/\/@ and @*@ wildcards in the same order.
 --   This function will create directories for the result files, if necessary.
 (&%>) :: Located => [FilePattern] -> ([FilePath] -> Action ()) -> Rules ()
-[p] &%> act = withFrozenCallStack $ p %> act . return
+[p] &%> act = withFrozenCallStack $ p %> act . pure
 ps &%> act
     | not $ compatible ps = error $ unlines $
         "All patterns to &%> must have the same number and position of ** and * wildcards" :
@@ -169,7 +169,7 @@ ps &%> act
             (if simple p then id else priority 0.5) $
                 fileForward (show ps ++ " &%> at " ++ callStackTop) $ let op = (p ?==) in \file -> if not $ op file then Nothing else Just $ do
                     FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString . substitute (extract p file)) ps
-                    return $ if null res then Nothing else Just $ res !! i
+                    pure $ if null res then Nothing else Just $ res !! i
         (if all simple ps then id else priority 0.5) $ do
             mapM_ addTarget ps
             addUserRule $ FilesRule (show ps ++ " &%> " ++ callStackTop) $ \(FilesQ xs_) -> let xs = map (fileNameToString . fromFileQ) xs_ in
@@ -208,7 +208,7 @@ ps &%> act
     let checkedTest x = case normTest x of
             Nothing -> Nothing
             Just ys | x `notElem` ys -> error $ unlines $
-                "Invariant broken in &?>, did not return the input (after normalisation)." :
+                "Invariant broken in &?>, did not pure the input (after normalisation)." :
                 inputOutput "" x ys
             Just ys | bad:_ <- filter ((/= Just ys) . normTest) ys -> error $ unlines $
                 ["Invariant broken in &?>, not equalValue for all arguments (after normalisation)."] ++
@@ -220,7 +220,7 @@ ps &%> act
         Nothing -> Nothing
         Just ys -> Just $ do
             FilesA res <- apply1 $ FilesQ $ map (FileQ . fileNameFromString) ys
-            return $ if null res then Nothing else Just $ res !! fromJust (elemIndex x ys)
+            pure $ if null res then Nothing else Just $ res !! fromJust (elemIndex x ys)
 
     addUserRule $ FilesRule ("&?> " ++ callStackTop) $ \(FilesQ xs_) -> let xs@(x:_) = map (fileNameToString . fromFileQ) xs_ in
         case checkedTest x of

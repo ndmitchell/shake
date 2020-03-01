@@ -71,7 +71,7 @@ addPath :: MonadIO m => [String] -> [String] -> m CmdOption
 addPath pre post = do
     args <- liftIO getEnvironment
     let (path,other) = partition ((== "PATH") . (if isWindows then upper else id) . fst) args
-    return $ Env $
+    pure $ Env $
         [("PATH",intercalate [searchPathSeparator] $ pre ++ post) | null path] ++
         [(a,intercalate [searchPathSeparator] $ pre ++ [b | b /= ""] ++ post) | (a,b) <- path] ++
         other
@@ -90,7 +90,7 @@ addPath pre post = do
 addEnv :: MonadIO m => [(String, String)] -> m CmdOption
 addEnv extra = do
     args <- liftIO getEnvironment
-    return $ Env $ extra ++ filter (\(a,_) -> a `notElem` map fst extra) args
+    pure $ Env $ extra ++ filter (\(a,_) -> a `notElem` map fst extra) args
 
 
 data Str = Str String | BS BS.ByteString | LBS LBS.ByteString | Unit deriving (Eq,Show)
@@ -152,9 +152,9 @@ removeOptionShell params@Params{..} call
     | Shell `elem` opts = do
         -- put our UserCommand first, as the last one wins, and ours is lowest priority
         let userCmdline = unwords $ prog : args
-        params <- return params{opts = UserCommand userCmdline : filter (/= Shell) opts}
+        params <- pure params{opts = UserCommand userCmdline : filter (/= Shell) opts}
 
-        prog <- liftIO $ if isFSATrace params then copyFSABinary prog else return prog
+        prog <- liftIO $ if isFSATrace params then copyFSABinary prog else pure prog
         let realCmdline = unwords $ prog : args
         if not isWindows then
             call params{prog = "/bin/sh", args = ["-c",realCmdline]}
@@ -176,7 +176,7 @@ isFSATrace Params{..} = any isResultFSATrace  results || any isFSAOptions opts
 -- Mac disables tracing on system binaries, so we copy them over, yurk
 copyFSABinary :: FilePath -> IO FilePath
 copyFSABinary prog
-    | not isMac = return prog
+    | not isMac = pure prog
     | otherwise = do
         progFull <- findExecutable prog
         case progFull of
@@ -188,8 +188,8 @@ copyFSABinary prog
                 unlessM (doesFileExist fake) $ do
                     createDirectoryRecursive $ takeDirectory fake
                     copyFile x fake
-                return fake
-            _ -> return prog
+                pure fake
+            _ -> pure prog
 
 removeOptionFSATrace
     :: MonadTempDir m
@@ -207,7 +207,7 @@ removeOptionFSATrace params@Params{..} call
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
         fsaResBS <- liftIO $ parseFSA <$> BS.readFile file
         let fsaRes = map (fmap UTF8.toString) fsaResBS
-        return $ flip map res $ \x -> case x of
+        pure $ flip map res $ \x -> case x of
             ResultFSATrace [] -> ResultFSATrace fsaRes
             ResultFSATraceBS [] -> ResultFSATraceBS fsaResBS
             x -> x
@@ -216,7 +216,7 @@ removeOptionFSATrace params@Params{..} call
 
         fsaParams file Params{..} = do
             prog <- copyFSABinary prog
-            return params{prog = "fsatrace", args = fsaFlags : file : "--" : prog : args }
+            pure params{prog = "fsatrace", args = fsaFlags : file : "--" : prog : args }
 
 
 isFSAOptions FSAOptions{} = True
@@ -283,9 +283,9 @@ parseFSA = mapMaybe (f . dropR) . BS.lines
 commandExplicitAction :: Partial => Params -> Action [Result]
 commandExplicitAction oparams = do
     ShakeOptions{shakeCommandOptions,shakeRunCommands,shakeLint,shakeLintInside} <- getShakeOptions
-    params@Params{..} <- return $ oparams{opts = shakeCommandOptions ++ opts oparams}
+    params@Params{..}<- pure $ oparams{opts = shakeCommandOptions ++ opts oparams}
 
-    let skipper act = if null results && not shakeRunCommands then return [] else act
+    let skipper act = if null results && not shakeRunCommands then pure [] else act
 
     let verboser act = do
             let cwd = listToMaybe $ reverse [x | Cwd x <- opts]
@@ -313,11 +313,11 @@ commandExplicitAction oparams = do
             cwd <- liftIO getCurrentDirectory
             temp <- fixPaths cwd xs
             unsafeAllowApply $ need temp
-            return res
+            pure res
 
         fixPaths cwd xs = liftIO $ do
-            xs <- return $ map toStandard xs
-            xs <- return $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
+            xs<- pure $ map toStandard xs
+            xs<- pure $ filter (\x -> any (`isPrefixOf` x) shakeLintInside) xs
             mapM (\x -> fromMaybe x <$> makeRelativeEx cwd x) xs
 
         fsalint act = do
@@ -328,7 +328,7 @@ commandExplicitAction oparams = do
             cwd <- liftIO getCurrentDirectory
             trackRead  =<< fixPaths cwd =<< existing reader xs
             trackWrite =<< fixPaths cwd =<< existing writer xs
-            return res
+            pure res
 
     skipper $ tracker $ \params -> verboser $ tracer $ commandExplicitIO params
 
@@ -374,7 +374,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
         buf Str{} = do x <- newBuffer; return ([DestString x | not optAsync], Str . concat <$> readBuffer x)
         buf LBS{} = do x <- newBuffer; return ([DestBytes x | not optAsync], LBS . LBS.fromChunks <$> readBuffer x)
         buf BS {} = bufLBS (BS . BS.concat . LBS.toChunks)
-        buf Unit  = return ([], return Unit)
+        buf Unit  = return ([], pure Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \r -> case r of
             ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
@@ -407,7 +407,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             Nothing -> return ""
             Just v -> do
                 v <- canonicalizePath v `catchIO` const (return v)
-                return $ "Current directory: " ++ v ++ "\n"
+                pure $ "Current directory: " ++ v ++ "\n"
         liftIO $ errorIO $
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
             "Command line: " ++ optRealCommand ++ "\n" ++
@@ -426,9 +426,9 @@ mergeCwd xs = Just $ foldl1 (</>) xs
 -- | Apply all environment operations, to produce a new environment to use.
 resolveEnv :: [CmdOption] -> IO (Maybe [(String, String)])
 resolveEnv opts
-    | null env, null addEnv, null addPath, null remEnv = return Nothing
+    | null env, null addEnv, null addPath, null remEnv = pure Nothing
     | otherwise = Just . unique . tweakPath . (++ addEnv) . filter (flip notElem remEnv . fst) <$>
-                  if null env then getEnvironment else return (concat env)
+                  if null env then getEnvironment else pure (concat env)
     where
         env = [x | Env x <- opts]
         addEnv = [(x,y) | AddEnv x y <- opts]
@@ -459,24 +459,24 @@ resolvePath po
     new <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath path) progExe
     old2 <- unsafeInterleaveIO $ findExecutableWith (splitSearchPath pathOld) progExe
 
-    switch <- return $ case () of
+    switch<- pure $ case () of
         _ | path == pathOld -> False -- The state I can see hasn't changed
           | Nothing <- new -> False -- I have nothing to offer
           | Nothing <- old -> True -- I failed last time, so this must be an improvement
           | Just old <- old, Just new <- new, equalFilePath old new -> False -- no different
           | Just old <- old, Just old2 <- old2, equalFilePath old old2 -> True -- I could predict last time
           | otherwise -> False
-    return $ case new of
+    pure $ case new of
         Just new | switch -> po{poCommand = RawCommand new args}
         _ -> po
-resolvePath po = return po
+resolvePath po = pure po
 
 
 -- | Given a list of directories, and a file name, return the complete path if you can find it.
 --   Like findExecutable, but with a custom PATH.
 findExecutableWith :: [FilePath] -> String -> IO (Maybe FilePath)
 findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
-    ifM (doesFileExist s) (return $ Just s) (return Nothing)
+    ifM (doesFileExist s) (return $ Just s) (pure Nothing)
 
 
 ---------------------------------------------------------------------
@@ -735,7 +735,7 @@ class IsCmdArgument a where
     toCmdArgument :: a -> CmdArgument
 instance IsCmdArgument String where toCmdArgument = CmdArgument . map Right . words
 instance IsCmdArgument [String] where toCmdArgument = CmdArgument . map Right
-instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . return . Left
+instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . pure . Left
 instance IsCmdArgument [CmdOption] where toCmdArgument = CmdArgument . map Left
 instance IsCmdArgument CmdArgument where toCmdArgument = id
 instance IsCmdArgument a => IsCmdArgument (Maybe a) where toCmdArgument = maybe mempty toCmdArgument

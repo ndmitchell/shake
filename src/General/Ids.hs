@@ -51,14 +51,14 @@ fromList xs = do
 sizeUpperBound :: Ids a -> IO Int
 sizeUpperBound (Ids ref) = do
     S{..} <- readIORef ref
-    return used
+    pure used
 
 
 size :: Ids a -> IO Int
 size (Ids ref) = do
     S{..} <- readIORef ref
     let go !acc i
-            | i < 0 = return acc
+            | i < 0 = pure acc
             | otherwise = do
                 v <- readArray values i
                 if isJust v then go (acc+1) (i-1) else go acc (i-1)
@@ -68,12 +68,12 @@ size (Ids ref) = do
 toMap :: Ids a -> IO (Map.HashMap Id a)
 toMap ids = do
     mp <- Map.fromList <$> toListUnsafe ids
-    return $! mp
+    pure $! mp
 
 forWithKeyM_ :: Ids a -> (Id -> a -> IO ()) -> IO ()
 forWithKeyM_ (Ids ref) f = do
     S{..} <- readIORef ref
-    let go !i | i >= used = return ()
+    let go !i | i >= used = pure ()
               | otherwise = do
                 v <- readArray values i
                 whenJust v $ f $ Id $ fromIntegral i
@@ -84,7 +84,7 @@ forCopy :: Ids a -> (a -> b) -> IO (Ids b)
 forCopy (Ids ref) f = do
     S{..} <- readIORef ref
     values2 <- newArray capacity Nothing
-    let go !i | i >= used = return ()
+    let go !i | i >= used = pure ()
               | otherwise = do
                 v <- readArray values i
                 whenJust v $ \v -> writeArray values2 i $ Just $ f v
@@ -96,7 +96,7 @@ forCopy (Ids ref) f = do
 forMutate :: Ids a -> (a -> a) -> IO ()
 forMutate (Ids ref) f = do
     S{..} <- readIORef ref
-    let go !i | i >= used = return ()
+    let go !i | i >= used = pure ()
               | otherwise = do
                 v <- readArray values i
                 whenJust v $ \v -> writeArray values i $ Just $ f v
@@ -124,7 +124,7 @@ toList ids = do
     let demand (_:xs) = demand xs
         demand [] = ()
     evaluate $ demand xs
-    return xs
+    pure xs
 
 elems :: Ids a -> IO [a]
 elems ids = map snd <$> toList ids
@@ -141,7 +141,7 @@ insert (Ids ref) (Id i) v = do
         writeArray values ii $ Just v
         when (ii >= used) $ writeIORef' ref S{used=ii+1,..}
      else do
-        c2 <- return $ max (capacity * 2) (ii + 10000)
+        c2<- pure $ max (capacity * 2) (ii + 10000)
         v2 <- newArray c2 Nothing
         copyMutableArray v2 0 values 0 capacity
         writeArray v2 ii $ Just v
@@ -154,4 +154,4 @@ lookup (Ids ref) (Id i) = do
     if ii < used then
         readArray values ii
      else
-        return Nothing
+        pure Nothing

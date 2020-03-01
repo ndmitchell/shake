@@ -49,7 +49,7 @@ setIdKeyStatus Global{..} db i k v = do
         let changeValue = case v of
                 Ready r -> Just $ "    = " ++ showBracket (result r) ++ " " ++ (if built r == changed r then "(changed)" else "(unchanged)")
                 _ -> Nothing
-        return $ changeStatus ++ maybe "" ("\n" ++) changeValue
+        pure $ changeStatus ++ maybe "" ("\n" ++) changeValue
     setMem db i k v
 
 
@@ -64,7 +64,7 @@ getDatabaseValueGeneric :: Key -> Action (Maybe (Result (Either BS.ByteString Va
 getDatabaseValueGeneric k = do
     Global{..} <- Action getRO
     Just status <- liftIO $ getValueFromKey globalDatabase k
-    return $ getResult status
+    pure $ getResult status
 
 
 ---------------------------------------------------------------------
@@ -97,7 +97,7 @@ buildOne :: Global -> Stack -> Database -> Id -> Key -> Maybe (Result BS.ByteStr
 buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Left e -> do
         quickly $ setIdKeyStatus global database i k $ mkError e
-        return $ Left e
+        pure $ Left e
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
         let go = buildRunMode global stack database r
@@ -126,7 +126,7 @@ buildRunMode global stack database me = do
     changed <- case me of
         Nothing -> return True
         Just me -> buildRunDependenciesChanged global stack database me
-    return $ if changed then RunDependenciesChanged else RunDependenciesSame
+    pure $ if changed then RunDependenciesChanged else RunDependenciesSame
 
 
 -- | Have the dependencies changed
@@ -162,7 +162,7 @@ applyKeyValue callStack ks = do
             case x of
                 Just e -> return $ Left e
                 Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . liftIO . getKeyValueFromId database) is
-        return (is, wait)
+        pure (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
     case wait of
@@ -174,7 +174,7 @@ applyKeyValue callStack ks = do
                     liftIO $ addPool (if isLeft x then PoolException else PoolResume) globalPool $ continue x
             offset <- liftIO offset
             Action $ modifyRW $ addDiscount offset
-            return vs
+            pure vs
 
 
 runKey
@@ -232,7 +232,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 apply :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => [key] -> Action [value]
 apply [] =
     -- if they do [] then we don't test localBlockApply, but unclear if that should be an error or not
-    return []
+    pure []
 apply ks =
     fmap (map fromValue) $ Action $ stepRAW (callStackFull, map newKey ks)
 
@@ -240,7 +240,7 @@ apply ks =
 -- | Apply a single rule, equivalent to calling 'apply' with a singleton list. Where possible,
 --   use 'apply' to allow parallelism.
 apply1 :: (Partial, RuleResult key ~ value, ShakeValue key, Typeable value) => key -> Action value
-apply1 = withFrozenCallStack $ fmap head . apply . return
+apply1 = withFrozenCallStack $ fmap head . apply . pure
 
 
 
@@ -256,7 +256,7 @@ historyLoad :: Int -> Action (Maybe BS.ByteString)
 historyLoad (Ver -> ver) = do
     global@Global{..} <- Action getRO
     Local{localStack, localBuiltinVersion} <- Action getRW
-    if isNothing globalShared && isNothing globalCloud then return Nothing else do
+    if isNothing globalShared && isNothing globalCloud then pure Nothing else do
         key <- liftIO $ evaluate $ fromMaybe (error "Can't call historyLoad outside a rule") $ topStack localStack
         let database = globalDatabase
         res <- liftIO $ runLocked database $ runWait $ do
@@ -285,14 +285,14 @@ historyLoad (Ver -> ver) = do
                         liftIO $ addPool PoolResume globalPool $ continue $ Right x
                 offset <- liftIO offset
                 Action $ modifyRW $ addDiscount offset
-                return res
+                pure res
         case res of
             Nothing -> return Nothing
             Just (res, deps, restore) -> do
-                liftIO $ globalDiagnostic $ return $ "History hit for " ++ show key
+                liftIO $ globalDiagnostic $ pure $ "History hit for " ++ show key
                 liftIO restore
                 Action $ modifyRW $ \s -> s{localDepends = reverse $ map Depends deps}
-                return (Just res)
+                pure (Just res)
 
 
 -- | Is the history enabled, returns 'True' if you have a 'shakeShare' or 'shakeCloud',
@@ -301,7 +301,7 @@ historyIsEnabled :: Action Bool
 historyIsEnabled = Action $ do
     Global{..} <- getRO
     Local{localHistory} <- getRW
-    return $ localHistory && (isJust globalShared || isJust globalCloud)
+    pure $ localHistory && (isJust globalShared || isJust globalCloud)
 
 
 -- | Save a value to the history. Record the version of any user rule
@@ -326,14 +326,14 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
             -- can do this without the DB lock, since it reads things that are stable
             forNothingM (reverse localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
                 Just (k, Ready r) <- getKeyValueFromId globalDatabase i
-                return $ (k,) <$> runIdentify globalRules k (fst $ result r)
+                pure $ (k,) <$> runIdentify globalRules k (fst $ result r)
         let k = topStack localStack
         case deps of
             Nothing -> liftIO $ globalDiagnostic $ return $ "Dependency with no identity for " ++ show k
             Just deps -> do
                 whenJust globalShared $ \shared -> addShared shared key localBuiltinVersion ver deps store produced
                 whenJust globalCloud  $ \cloud  -> addCloud  cloud  key localBuiltinVersion ver deps store produced
-                liftIO $ globalDiagnostic $ return $ "History saved for " ++ show k
+                liftIO $ globalDiagnostic $ pure $ "History saved for " ++ show k
 
 
 runIdentify :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> Maybe BS.ByteString

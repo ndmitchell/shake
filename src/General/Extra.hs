@@ -122,7 +122,7 @@ zipExact = zipWithExact (,)
 {-# NOINLINE getProcessorCount #-}
 getProcessorCount :: IO Int
 -- unsafePefromIO so we cache the result and only compute it once
-getProcessorCount = let res = unsafePerformIO act in return res
+getProcessorCount = let res = unsafePerformIO act in pure res
     where
         act =
             if rtsSupportsBoundThreads then
@@ -133,7 +133,7 @@ getProcessorCount = let res = unsafePerformIO act in return res
                     Just s | [(i,"")] <- reads s -> return i
                     _ -> do
                         src <- readFile' "/proc/cpuinfo" `catchIO` \_ -> return ""
-                        return $! max 1 $ length [() | x <- lines src, "processor" `isPrefixOf` x]
+                        pure $! max 1 $ length [() | x <- lines src, "processor" `isPrefixOf` x]
 
 
 -- Can you find a GCC executable? return a Bool, and optionally something to add to $PATH to run it
@@ -147,7 +147,7 @@ findGcc = do
                 Just ghc -> do
                     let gcc = takeDirectory (takeDirectory ghc) </> "mingw/bin/gcc.exe"
                     b <- doesFileExist_ gcc
-                    return $ if b then (True, Just $ takeDirectory gcc) else (False, Nothing)
+                    pure $ if b then (True, Just $ takeDirectory gcc) else (False, Nothing)
                 _ -> return (False, Nothing)
         _ -> return (isJust v, Nothing)
 
@@ -160,7 +160,7 @@ randomElem :: [a] -> IO a
 randomElem xs = do
     when (null xs) $ fail "General.Extra.randomElem called with empty list, can't pick a random element"
     i <- randomRIO (0, length xs - 1)
-    return $ xs !! i
+    pure $ xs !! i
 
 
 ---------------------------------------------------------------------
@@ -190,7 +190,7 @@ withs [] act = act []
 withs (f:fs) act = f $ \a -> withs fs $ \as -> act $ a:as
 
 forNothingM :: Monad m => [a] -> (a -> m (Maybe b)) -> m (Maybe [b])
-forNothingM [] f = return $ Just []
+forNothingM [] f = pure $ Just []
 forNothingM (x:xs) f = do
     v <- f x
     case v of

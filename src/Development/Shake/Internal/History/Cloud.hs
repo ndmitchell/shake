@@ -36,7 +36,7 @@ newLaterFence relock maxTime def act = do
     forkFinally (timeout maxTime act) $ \res -> relock $ signalFence fence $ case res of
         Right (Just v) -> v
         _ -> def
-    return fence
+    pure fence
 
 laterFence :: MonadIO m => Fence m a -> Wait m a
 laterFence fence = do
@@ -52,8 +52,8 @@ newCloud relock binop globalVer ruleVer urls = flip fmap (if null urls then Noth
     server <- newServer conn binop globalVer
     fence <- newLaterFence relock 10 Map.empty $ do
         xs <- serverAllKeys server ruleVer
-        return $ Map.fromList [(k,(v,ds,test)) | (k,v,ds,test) <- xs]
-    return $ Cloud server relock fence
+        pure $ Map.fromList [(k,(v,ds,test)) | (k,v,ds,test) <- xs]
+    pure $ Cloud server relock fence
 
 
 addCloud :: Cloud -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
@@ -63,7 +63,7 @@ addCloud (Cloud server _ _) x1 x2 x3 x4 x5 x6 = void $ forkIO $ serverUpload ser
 lookupCloud :: Cloud -> (Key -> Wait Locked (Maybe BS_Identity)) -> Key -> Ver -> Ver -> Wait Locked (Maybe (BS_Store, [[Key]], IO ()))
 lookupCloud (Cloud server relock initial) ask key builtinVer userVer = runMaybeT $ do
     mp <- lift $ laterFence initial
-    Just (ver, deps, bloom) <- return $ Map.lookup key mp
+    Just (ver, deps, bloom)<- pure $ Map.lookup key mp
     unless (ver == userVer) $ fail ""
     Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
     unless (bloomTest bloom vs) $ fail ""
@@ -72,8 +72,8 @@ lookupCloud (Cloud server relock initial) ask key builtinVer userVer = runMaybeT
     f [deps] tree
     where
         f :: [[Key]] -> BuildTree Key -> MaybeT (Wait Locked) (BS_Store, [[Key]], IO ())
-        f ks (Done store xs) = return (store, reverse ks, serverDownloadFiles server key xs)
+        f ks (Done store xs) = pure (store, reverse ks, serverDownloadFiles server key xs)
         f ks (Depend deps trees) = do
             Right vs <- lift $ firstLeftWaitUnordered (fmap (maybeToEither ()) . ask) deps
-            Just tree <- return $ lookup vs trees
+            Just tree<- pure $ lookup vs trees
             f (deps:ks) tree

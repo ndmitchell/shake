@@ -153,7 +153,7 @@ fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
         Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size noFileHash
         Just (time,size) -> do
             hash <- unsafeInterleaveIO $ getFileHash x
-            return $ Just $ FileA time size hash
+            pure $ Just $ FileA time size hash
 
 
 fileEqualValue :: ShakeOptions -> FileA -> FileA -> EqualCost
@@ -173,7 +173,7 @@ storedValueError :: ShakeOptions -> Bool -> String -> FileQ -> IO (Maybe FileA)
 storedValueError opts False msg x | False && not (shakeOutputCheck opts) = do
     when (shakeCreationCheck opts) $ do
         whenM (isNothing <$> (storedValue opts x :: IO (Maybe FileA))) $ error $ msg ++ "\n  " ++ unpackU (fromFileQ x)
-    return $ FileA fileInfoEq fileInfoEq fileInfoEq
+    pure $ FileA fileInfoEq fileInfoEq fileInfoEq
 -}
 storedValueError opts input msg x = maybe def Just <$> fileStoredValue opts2 x
     where def = if shakeCreationCheck opts || input then error err else Nothing
@@ -193,11 +193,11 @@ defaultRuleFile = do
 ruleLint :: ShakeOptions -> BuiltinLint FileQ FileR
 ruleLint opts k (FileR (Just v) True) = do
     now <- fileStoredValue opts k
-    return $ case now of
+    pure $ case now of
         Nothing -> Just "<missing>"
         Just now | fileEqualValue opts v now == EqualCheap -> Nothing
                  | otherwise -> Just $ show now
-ruleLint _ _ _ = return Nothing
+ruleLint _ _ _ = pure Nothing
 
 ruleIdentity :: ShakeOptions -> BuiltinIdentity FileQ FileR
 ruleIdentity opts | shakeChange opts == ChangeModtime = throwImpure errorNoHash
@@ -268,10 +268,10 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
         unLint (RunResult a b c) = RunResult a b c{useLint = False}
 
         retNew :: RunChanged -> Answer -> Action (RunResult FileR)
-        retNew c v = return $ RunResult c (runBuilder $ putEx v) $ fileR v
+        retNew c v = pure $ RunResult c (runBuilder $ putEx v) $ fileR v
 
         retOld :: RunChanged -> Action (RunResult FileR)
-        retOld c = return $ RunResult c (fromJust oldBin) $ fileR (fromJust old)
+        retOld c = pure $ RunResult c (fromJust oldBin) $ fileR (fromJust old)
 
         -- actually run the rebuild
         rebuildWith act = do
@@ -315,7 +315,7 @@ ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) 
                                     res <- answer (AnswerDirect $ Ver ver) new
                                     historySave ver $ runBuilder $
                                         if isNoFileHash fileHash then throwImpure errorNoHash else putExStorable fileHash
-                                    return res
+                                    pure res
                 Just (_, ModePhony act) -> do
                     -- See #523 and #524
                     -- Shake runs the dependencies first, but stops when one has changed.
@@ -338,7 +338,7 @@ resultHasChanged :: FilePath -> Action Bool
 resultHasChanged file = do
     let filename = FileQ $ fileNameFromString file
     res <- getDatabaseValue filename
-    old <- return $ case result <$> res of
+    old<- pure $ case result <$> res of
         Nothing -> Nothing
         Just (Left bs) -> fromAnswer $ getEx bs
         Just (Right v) -> answer v
@@ -347,7 +347,7 @@ resultHasChanged file = do
         Just old -> do
             opts <- getShakeOptions
             new <- liftIO $ fileStoredValue opts filename
-            return $ case new of
+            pure $ case new of
                 Nothing -> True
                 Just new -> fileEqualValue opts old new == NotEqual
 
@@ -409,7 +409,7 @@ needHasChanged paths = withFrozenCallStack $ do
         Nothing -> return paths -- never build before or not a key, so everything has changed
         Just selfVal -> flip filterM paths $ \path -> do
             pathVal <- getDatabaseValue (FileQ $ fileNameFromString path)
-            return $ case pathVal of
+            pure $ case pathVal of
                 Just pathVal | changed pathVal > built selfVal -> True
                 _ -> False
 
@@ -502,7 +502,7 @@ produces xs = do
 --   This function is defined in terms of 'action' and 'need', use 'action' if you need more complex
 --   targets than 'want' allows.
 want :: Partial => [FilePath] -> Rules ()
-want [] = return ()
+want [] = pure ()
 want xs = withFrozenCallStack $ action $ need xs
 
 

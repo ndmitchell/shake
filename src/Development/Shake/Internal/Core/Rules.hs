@@ -71,7 +71,7 @@ getUserRuleInternal key disp test = do
     let ver = if versioned then Nothing else Just $ Ver 0
     let items = headDef [] $ map snd $ reverse $ groupSort $ f (Ver 0) Nothing rules
     let err = errorMultipleRulesMatch (typeOf key) (show key) (map snd3 items)
-    return (ver, map (\(Ver v,_,x) -> (v,x)) items, err)
+    pure (ver, map (\(Ver v,_,x) -> (v,x)) items, err)
     where
         f :: Ver -> Maybe Double -> UserRule a -> [(Double,(Ver,Maybe String,b))]
         f v p (UserRule x) = [(fromMaybe 1 p, (v,disp x,x2)) | Just x2 <- [test x]]
@@ -133,14 +133,14 @@ modifyRulesScoped f (Rules r) = Rules $ do
         res <- runReaderT r (opts, refNew)
         rules <- readIORef refNew
         modifyIORef' refOld (<> f rules)
-        return res
+        pure res
 
 runRules :: ShakeOptions -> Rules () -> IO (SRules [])
 runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    return $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
+    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -150,12 +150,12 @@ runRules opts (Rules r) = do
 getTargets :: ShakeOptions -> Rules () -> IO [(String, Maybe String)]
 getTargets opts rs = do
     SRules{targets} <- runRules opts rs
-    return [(target, documentation) | Target{..} <- targets]
+    pure [(target, documentation) | Target{..} <- targets]
 
 getHelpSuffix :: ShakeOptions -> Rules () -> IO [String]
 getHelpSuffix opts rs = do
     SRules{helpSuffix} <- runRules opts rs
-    return helpSuffix
+    pure helpSuffix
 
 data Target = Target
     {target :: !String
@@ -182,7 +182,7 @@ instance Semigroup a => Semigroup (Rules a) where
     (<>) = liftA2 (<>)
 
 instance (Semigroup a, Monoid a) => Monoid (Rules a) where
-    mempty = return mempty
+    mempty = pure mempty
     mappend = (<>)
 
 
@@ -215,7 +215,7 @@ addHelpSuffix s = newRules mempty{helpSuffix = newListBuilder s}
 
 -- | A suitable 'BuiltinLint' that always succeeds.
 noLint :: BuiltinLint key value
-noLint _ _ = return Nothing
+noLint _ _ = pure Nothing
 
 -- | A suitable 'BuiltinIdentity' that always fails with a runtime error, incompatible with 'shakeShare'.
 --   Use this function if you don't care about 'shakeShare', or if your rule provides a dependency that can
@@ -239,7 +239,7 @@ addBuiltinRule
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
-    (runGet get . LBS.fromChunks . return)
+    (runGet get . LBS.fromChunks . pure)
 
 addBuiltinRuleEx
     :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value, Partial)

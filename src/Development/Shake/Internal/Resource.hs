@@ -26,7 +26,7 @@ import System.Time.Extra
 resourceId :: IO Int
 resourceId = unsafePerformIO $ do
     ref <- newIORef 0
-    return $ atomicModifyIORef' ref $ \i -> let j = i + 1 in (j, j)
+    pure $ atomicModifyIORef' ref $ \i -> let j = i + 1 in (j, j)
 
 
 -- | Run an action which uses part of a finite resource. For more details see 'Resource'.
@@ -34,17 +34,17 @@ resourceId = unsafePerformIO $ do
 withResource :: Resource -> Int -> Action a -> Action a
 withResource r i act = do
     Global{..} <- Action getRO
-    liftIO $ globalDiagnostic $ return $ show r ++ " waiting to acquire " ++ show i
+    liftIO $ globalDiagnostic $ pure $ show r ++ " waiting to acquire " ++ show i
 
     fence <- liftIO $ acquireResource r globalPool i
     whenJust fence $ \fence -> do
         (offset, ()) <- actionFenceRequeueBy Right fence
         Action $ modifyRW $ addDiscount offset
 
-    liftIO $ globalDiagnostic $ return $ show r ++ " running with " ++ show i
+    liftIO $ globalDiagnostic $ pure $ show r ++ " running with " ++ show i
     Action $ fromAction (blockApply ("Within withResource using " ++ show r) act) `finallyRAW` do
         liftIO $ releaseResource r globalPool i
-        liftIO $ globalDiagnostic $ return $ show r ++ " released " ++ show i
+        liftIO $ globalDiagnostic $ pure $ show r ++ " released " ++ show i
 
 
 
@@ -98,7 +98,7 @@ newResourceIO name mx = do
         errorIO $ "You cannot create a resource named " ++ name ++ " with a negative quantity, you used " ++ show mx
     key <- resourceId
     var <- newVar $ Finite mx mempty
-    return $ Resource (negate key) shw (acquire var) (release var)
+    pure $ Resource (negate key) shw (acquire var) (release var)
     where
         shw = "Resource " ++ name
 
@@ -108,10 +108,10 @@ newResourceIO name mx = do
             | want > mx = errorIO $ "You cannot acquire more than " ++ show mx ++ " of " ++ shw ++ ", requested " ++ show want
             | otherwise = modifyVar var $ \x@Finite{..} ->
                 if want <= finiteAvailable then
-                    return (x{finiteAvailable = finiteAvailable - want}, Nothing)
+                    pure (x{finiteAvailable = finiteAvailable - want}, Nothing)
                 else do
                     fence <- newFence
-                    return (x{finiteWaiting = finiteWaiting `snoc` (want, fence)}, Just fence)
+                    pure (x{finiteWaiting = finiteWaiting `snoc` (want, fence)}, Just fence)
 
         release :: Var Finite -> Pool -> Int -> IO ()
         release var _ i = join $ modifyVar var $ \x -> return $ f x{finiteAvailable = finiteAvailable x + i}
@@ -119,7 +119,7 @@ newResourceIO name mx = do
                 f (Finite i (uncons -> Just ((wi,wa),ws)))
                     | wi <= i = second (signalFence wa () >>) $ f $ Finite (i-wi) ws
                     | otherwise = first (add (wi,wa)) $ f $ Finite i ws
-                f (Finite i _) = (Finite i mempty, return ())
+                f (Finite i _) = (Finite i mempty, pure ())
                 add a s = s{finiteWaiting = a `cons` finiteWaiting s}
 
 
@@ -149,7 +149,7 @@ newThrottleIO name count period = do
         errorIO $ "You cannot create a throttle named " ++ name ++ " with a negative quantity, you used " ++ show count
     key <- resourceId
     var <- newVar $ ThrottleAvailable count
-    return $ Resource key shw (acquire var) (release var)
+    pure $ Resource key shw (acquire var) (release var)
     where
         shw = "Throttle " ++ name
 
@@ -163,10 +163,10 @@ newThrottleIO name count period = do
                     | otherwise -> do
                         stop <- keepAlivePool pool
                         fence <- newFence
-                        return (ThrottleWaiting stop $ (want - i, fence) `cons` mempty, Just fence)
+                        pure (ThrottleWaiting stop $ (want - i, fence) `cons` mempty, Just fence)
                 ThrottleWaiting stop xs -> do
                     fence <- newFence
-                    return (ThrottleWaiting stop $ xs `snoc` (want, fence), Just fence)
+                    pure (ThrottleWaiting stop $ xs `snoc` (want, fence), Just fence)
 
         release :: Var Throttle -> Pool -> Int -> IO ()
         release var _ n = waiter period $ join $ modifyVar var $ \x -> return $ case x of

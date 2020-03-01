@@ -41,7 +41,7 @@ addOracleFlavor flavor act = do
 
         addBuiltinRule noLint (\_ v -> Just $ runBuilder $ putEx $ hash v) $ \(OracleQ q) old mode -> case old of
             Just old | (flavor /= Hash && skip) || (flavor == Cache && mode == RunDependenciesSame) ->
-                return $ RunResult ChangedNothing old $ decode' old
+                pure $ RunResult ChangedNothing old $ decode' old
             _ -> do
                 -- can only use cmpHash if flavor == Hash
                 let cmpValue new = if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff
@@ -51,18 +51,18 @@ addOracleFlavor flavor act = do
                 case cache of
                     Just newEncode -> do
                         let new = decode' newEncode
-                        return $ RunResult (cmpValue new) newEncode new
+                        pure $ RunResult (cmpValue new) newEncode new
                     Nothing -> do
                         new <- OracleA <$> act q
                         let newHash = encodeHash new
                         let newEncode = encode' new
                         when (flavor == Cache) $
                             historySave 0 newEncode
-                        return $
+                        pure $
                             if flavor == Hash
                                 then RunResult (cmpHash newHash) newHash new
                                 else RunResult (cmpValue new) newEncode new
-        return askOracle
+        pure askOracle
     where
         encodeHash :: Hashable a => a -> BS.ByteString
         encodeHash = runBuilder . putEx . hash
@@ -71,7 +71,7 @@ addOracleFlavor flavor act = do
         encode' = BS.concat . LBS.toChunks . encode
 
         decode' :: Binary a => BS.ByteString -> a
-        decode' = decode . LBS.fromChunks . return
+        decode' = decode . LBS.fromChunks . pure
 
 
 -- | Add extra information which rules can depend on.

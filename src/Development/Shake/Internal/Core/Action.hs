@@ -67,7 +67,7 @@ actionThenUndoLocal f m = Action $ do
     putRW s2
     res <- fromAction m
     modifyRW undo
-    return res
+    pure res
 
 
 ---------------------------------------------------------------------
@@ -80,10 +80,10 @@ shakeException :: Global -> Stack -> SomeException -> IO ShakeException
 shakeException Global{globalOptions=ShakeOptions{..},..} stk e = case fromException e of
     Just (e :: ShakeException) -> return e
     Nothing -> do
-        e <- return $ exceptionStack stk e
+        e<- pure $ exceptionStack stk e
         when (shakeStaunch && shakeVerbosity >= Error) $
             globalOutput Error $ show e ++ "Continuing due to staunch mode"
-        return e
+        pure e
 
 
 actionBracketEx :: Bool -> IO a -> (a -> IO b) -> (a -> Action c) -> Action c
@@ -92,18 +92,18 @@ actionBracketEx runOnSuccess alloc free act = do
     (v, key) <- liftIO $ mask_ $ do
         v <- alloc
         key <- liftIO $ register globalCleanup $ void $ free v
-        return (v, key)
+        pure (v, key)
     res <- Action $ catchRAW (fromAction $ act v) $ \e -> liftIO (release key) >> throwRAW e
     liftIO $ if runOnSuccess then release key else unprotect key
-    return res
+    pure res
 
 -- | If an exception is raised by the 'Action', perform some 'IO' then reraise the exception.
 actionOnException :: Action a -> IO b -> Action a
-actionOnException act free = actionBracketEx False (return ()) (const free) (const act)
+actionOnException act free = actionBracketEx False (pure ()) (const free) (const act)
 
 -- | After an 'Action', perform some 'IO', even if there is an exception.
 actionFinally :: Action a -> IO b -> Action a
-actionFinally act free = actionBracket (return ()) (const free) (const act)
+actionFinally act free = actionBracket (pure ()) (const free) (const act)
 
 -- | Like `bracket`, but where the inner operation is of type 'Action'. Usually used as
 --   @'actionBracket' alloc free use@.
@@ -257,7 +257,7 @@ traced msg act = do
     let trace = newTrace msg start stop
     liftIO $ evaluate $ rnf trace
     Action $ modifyRW $ \s -> s{localTraces = trace : localTraces s}
-    return res
+    pure res
 
 
 ---------------------------------------------------------------------
@@ -320,7 +320,7 @@ lintTrackFinished = do
         let used = Set.filter (not . ignore) $ Set.fromList localTrackRead
 
         -- check Read 4a
-        bad <- return $ Set.toList $ used `Set.difference` Set.fromList deps
+        bad<- pure $ Set.toList $ used `Set.difference` Set.fromList deps
         unless (null bad) $ do
             let n = length bad
             throwM $ errorStructured
@@ -338,7 +338,7 @@ lintTrackFinished = do
                 ""
 
         -- check Write 3
-        bad <- return $ filter (not . ignore) $ Set.toList $ Set.fromList localTrackWrite
+        bad<- pure $ filter (not . ignore) $ Set.toList $ Set.fromList localTrackWrite
         unless (null bad) $
             liftIO $ atomicModifyIORef_ globalTrackAbsent ([(fromMaybe k top, k) | k <- bad] ++)
 
@@ -366,12 +366,12 @@ lintCurrentDirectory old msg = do
         ""
 
 lintWatch :: [FilePattern] -> IO (String -> IO ())
-lintWatch [] = return $ const $ return ()
+lintWatch [] = pure $ const $ pure ()
 lintWatch pats = do
     let op = getDirectoryFiles "." pats -- cache parsing of the pats
     let record = do xs <- op; forM xs $ \x -> (x,) <$> getFileInfo (fileNameFromString x)
     old <- record
-    return $ \msg -> do
+    pure $ \msg -> do
         now <- record
         when (old /= now) $ throwIO $ errorStructured
             "Lint checking error - watched files have changed"
@@ -391,7 +391,7 @@ listDepends db (Depends xs) = mapM (fmap (fst . fromJust) . getKeyValueFromId db
 lookupDependencies :: Database -> Key -> IO [Depends]
 lookupDependencies db k = do
     Just (Ready r) <- getValueFromKey db k
-    return $ depends r
+    pure $ depends r
 
 
 -- | This rule should not be cached or recorded in the history because it makes use of untracked dependencies
@@ -425,7 +425,7 @@ orderOnlyAction act = Action $ do
     Local{localDepends=pre} <- getRW
     res <- fromAction act
     modifyRW $ \s -> s{localDepends=pre}
-    return res
+    pure res
 
 
 ---------------------------------------------------------------------
@@ -436,15 +436,15 @@ orderOnlyAction act = Action $ do
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
 newCacheIO (act :: k -> Action v) = do
     var :: Var (Map.HashMap k (Fence IO (Either SomeException ([Depends],v)))) <- newVar Map.empty
-    return $ \key ->
+    pure $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> return $ (,) mp $ do
                 (offset, (deps, v)) <- actionFenceRequeue bar
                 Action $ modifyRW $ \s -> addDiscount offset $ s{localDepends = deps ++ localDepends s}
-                return v
+                pure v
             Nothing -> do
                 bar <- newFence
-                return $ (Map.insert key bar mp,) $ do
+                pure $ (Map.insert key bar mp,) $ do
                     Local{localDepends=pre} <- Action getRW
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
@@ -455,7 +455,7 @@ newCacheIO (act :: k -> Action v) = do
                             Local{localDepends=post} <- Action getRW
                             let deps = dropEnd (length pre) post
                             liftIO $ signalFence bar $ Right (deps, v)
-                            return v
+                            pure v
 
 
 -- | Run an action without counting to the thread limit, typically used for actions that execute
@@ -473,14 +473,14 @@ unsafeExtraThread act = do
     -- we start a new thread, giving up ours, to ensure the thread count goes down
     (wait, res) <- actionAlwaysRequeue res
     Action $ modifyRW $ addDiscount wait
-    return res
+    pure res
 
 
 -- | Execute a list of actions in parallel. In most cases 'need' will be more appropriate to benefit from parallelism.
 parallel :: [Action a] -> Action [a]
 -- Note: There is no parallel_ unlike sequence_ because there is no stack benefit to doing so
-parallel [] = return []
-parallel [x] = return <$> x
+parallel [] = pure []
+parallel [x] = pure <$> x
 parallel acts = do
     Global{..} <- Action getRO
 
@@ -492,12 +492,12 @@ parallel acts = do
             Action $ modifyRW localClearMutable
             res <- act
             old <- Action getRW
-            return (old, res)
+            pure (old, res)
     (wait, res) <- actionFenceSteal =<< liftIO (exceptFence waits)
     liftIO $ atomicWriteIORef done True
     let (waits, locals, results) = unzip3 $ map (\(a,(b,c)) -> (a,b,c)) res
     Action $ modifyRW $ \root -> addDiscount (wait - sum waits) $ localMergeMutable root locals
-    return results
+    pure results
 
 
 -- | Batch different outputs into a single 'Action', typically useful when a command has a high
@@ -553,7 +553,7 @@ batch mx pred one many
         requeue todo trigger count
             | count `trigger` mx = addPoolWait_ PoolResume $ go todo
             | count `trigger` 1  = addPoolWait_ PoolBatch  $ go todo
-            | otherwise = return ()
+            | otherwise = pure ()
 
         go todo = do
             -- delete at most mx from the batch
@@ -570,7 +570,7 @@ batch mx pred one many
                     modifyRW $ const $ localClearMutable $ snd3 $ head now
                     fromAction $ many $ map fst3 now
                     res <- getRW
-                    return res{localDiscount = localDiscount res / intToDouble (length now)} -- divide the batch fairly
+                    pure res{localDiscount = localDiscount res / intToDouble (length now)} -- divide the batch fairly
                 liftIO $ mapM_ (flip signalFence res . thd3) now
 
 

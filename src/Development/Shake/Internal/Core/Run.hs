@@ -72,20 +72,20 @@ data RunState = RunState
 
 open :: Cleanup -> ShakeOptions -> Rules () -> IO RunState
 open cleanup opts rs = withInit opts $ \opts@ShakeOptions{..} diagnostic _ -> do
-    diagnostic $ return "Starting run"
+    diagnostic $ pure "Starting run"
     SRules{actions, builtinRules, userRules} <- runRules opts rs
 
-    diagnostic $ return $ "Number of actions = " ++ show (length actions)
-    diagnostic $ return $ "Number of builtin rules = " ++ show (Map.size builtinRules) ++ " " ++ show (Map.keys builtinRules)
-    diagnostic $ return $ "Number of user rule types = " ++ show (TMap.size userRules)
-    diagnostic $ return $ "Number of user rules = " ++ show (sum (TMap.toList (userRuleSize . userRuleContents) userRules))
+    diagnostic $ pure $ "Number of actions = " ++ show (length actions)
+    diagnostic $ pure $ "Number of builtin rules = " ++ show (Map.size builtinRules) ++ " " ++ show (Map.keys builtinRules)
+    diagnostic $ pure $ "Number of user rule types = " ++ show (TMap.size userRules)
+    diagnostic $ pure $ "Number of user rules = " ++ show (sum (TMap.toList (userRuleSize . userRuleContents) userRules))
 
     checkShakeExtra shakeExtra
     curdir <- getCurrentDirectory
 
     database <- usingDatabase cleanup opts diagnostic builtinRules
     (shared, cloud) <- loadSharedCloud database opts builtinRules
-    return RunState{..}
+    pure RunState{..}
 
 
 -- Prepare for a fresh run by changing Result to Loaded
@@ -172,7 +172,7 @@ run RunState{..} oneshot actions2 =
                     writeProfile file database
             when (shakeLiveFiles /= []) $ do
                 addTiming "Listing live"
-                diagnostic $ return "Listing live keys"
+                diagnostic $ pure "Listing live keys"
                 xs <- liveFiles database
                 forM_ shakeLiveFiles $ \file -> do
                     putWhen Info $ "Writing live list to " ++ file
@@ -180,21 +180,21 @@ run RunState{..} oneshot actions2 =
 
             res <- readIORef after
             addTiming "Cleanup"
-            return res
+            pure res
 
         whenJustM (readIORef timingsToShow) $
             putStr . unlines
-        return res
+        pure res
 
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
 --   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics
 --   etc as specified in the 'ShakeOptions'.
 shakeRunAfter :: ShakeOptions -> [IO ()] -> IO ()
-shakeRunAfter _ [] = return ()
+shakeRunAfter _ [] = pure ()
 shakeRunAfter opts after = withInit opts $ \ShakeOptions{..} diagnostic _ -> do
     let n = show $ length after
-    diagnostic $ return $ "Running " ++ n ++ " after actions"
+    diagnostic $ pure $ "Running " ++ n ++ " after actions"
     (time, _) <- duration $ sequence_ $ reverse after
     when (shakeTimings && shakeVerbosity >= Info) $
         putStrLn $ "(+ running " ++ show n ++ " after actions in " ++ showDuration time ++ ")"
@@ -213,14 +213,14 @@ usingShakeOptions cleanup opts = do
     opts@ShakeOptions{..} <- if shakeThreads opts /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
     when shakeLineBuffering $ usingLineBuffering cleanup
     usingNumCapabilities cleanup shakeThreads
-    return opts
+    pure opts
 
 outputFunctions :: ShakeOptions -> Lock -> (IO String -> IO (), Verbosity -> String -> IO ())
 outputFunctions opts@ShakeOptions{..} outputLock = (diagnostic, output)
     where
         outputLocked v msg = withLock outputLock $ shakeOutput v msg
 
-        diagnostic | shakeVerbosity < Diagnostic = const $ return ()
+        diagnostic | shakeVerbosity < Diagnostic = const $ pure ()
                    | otherwise = \act -> do v <- act; outputLocked Diagnostic $ "% " ++ v
         output v = outputLocked v . shakeAbbreviationsApply opts
 
@@ -230,9 +230,9 @@ usingProgress cleanup ShakeOptions{..} database step getFailure = do
     let getProgress = do
             failure <- getFailure
             stats <- progress database step
-            return stats{isFailure=failure}
+            pure stats{isFailure=failure}
     allocateThread cleanup $ shakeProgress getProgress
-    return getProgress
+    pure getProgress
 
 checkShakeExtra :: Map.HashMap TypeRep Dynamic -> IO ()
 checkShakeExtra mp = do
@@ -269,26 +269,26 @@ liveFiles :: Database -> IO [FilePath]
 liveFiles database = do
     status <- getKeyValues database
     let specialIsFileKey t = show (fst $ splitTyConApp t) == "FileQ"
-    return [show k | (k, Ready{}) <- status, specialIsFileKey $ typeKey k]
+    pure [show k | (k, Ready{}) <- status, specialIsFileKey $ typeKey k]
 
 errorsState :: RunState -> IO [(String, SomeException)]
 errorsState RunState{..} = do
     status <- getKeyValues database
-    return [(show k, e) | (k, Failed e _) <- status]
+    pure [(show k, e) | (k, Failed e _) <- status]
 
 
 checkValid :: (IO String -> IO ()) -> Database -> (Key -> Value -> IO (Maybe String)) -> [(Key, Key)] -> IO ()
 checkValid diagnostic db check absent = do
     status <- getKeyValues db
-    diagnostic $ return "Starting validity/lint checking"
+    diagnostic $ pure "Starting validity/lint checking"
 
     -- TEST 1: Have values changed since being depended on
     -- Do not use a forM here as you use too much stack space
     bad <- (\f -> foldM f [] status) $ \seen v -> case v of
         (key, Ready Result{..}) -> do
             good <- check key $ fst result
-            diagnostic $ return $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
-            return $ [(key, result, now) | Just now <- [good]] ++ seen
+            diagnostic $ pure $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
+            pure $ [(key, result, now) | Just now <- [good]] ++ seen
         _ -> return seen
     unless (null bad) $ do
         let n = length bad
@@ -308,7 +308,7 @@ checkValid diagnostic db check absent = do
             (intercalate [("",Just "")] [ [("Rule", Just $ show parent), ("Created", Just $ show key)] | (parent,key) <- bad])
             ""
 
-    diagnostic $ return "Validity/lint check passed"
+    diagnostic $ pure "Validity/lint check passed"
 
 
 ---------------------------------------------------------------------
@@ -318,11 +318,11 @@ usingDatabase :: Cleanup -> ShakeOptions -> (IO String -> IO ()) -> Map.HashMap 
 usingDatabase cleanup opts diagnostic owitness = do
     let step = (typeRep (Proxy :: Proxy StepKey), (Ver 0, BinaryOp (const mempty) (const stepKey)))
     let root = (typeRep (Proxy :: Proxy Root), (Ver 0, BinaryOp (const mempty) (const rootKey)))
-    witness <- return $ Map.fromList
+    witness<- pure $ Map.fromList
         [ (QTypeRep t, (version, BinaryOp (putDatabase putOp) (getDatabase getOp)))
         | (t,(version, BinaryOp{..})) <- step : root : Map.toList (Map.map (\BuiltinRule{..} -> (builtinVersion, builtinKey)) owitness)]
     (status, journal) <- usingStorage cleanup opts diagnostic witness
-    journal <- return $ \i k v -> journal (QTypeRep $ typeKey k) i (k, v)
+    journal<- pure $ \i k v -> journal (QTypeRep $ typeKey k) i (k, v)
     createDatabase status journal Missing
 
 
@@ -330,13 +330,13 @@ incrementStep :: Database -> IO Step
 incrementStep db = runLocked db $ do
     stepId <- mkId db stepKey
     v <- liftIO $ getKeyValueFromId db stepId
-    step <- return $ case v of
+    step<- pure $ case v of
         Just (_, Loaded r) -> incStep $ fromStepResult r
         _ -> Step 1
     let stepRes = toStepResult step
     setMem db stepId stepKey $ Ready stepRes
     liftIO $ setDisk db stepId stepKey $ Loaded $ fmap snd stepRes
-    return step
+    pure step
 
 toStepResult :: Step -> Result (Value, BS_Store)
 toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
@@ -375,7 +375,7 @@ loadSharedCloud var opts owitness = do
         _ | null $ shakeCloud opts -> return Nothing
         Nothing -> fail "shakeCloud set but Shake not compiled for cloud operation"
         Just res -> Just <$> res
-    return (shared, cloud)
+    pure (shared, cloud)
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)

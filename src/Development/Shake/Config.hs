@@ -51,7 +51,7 @@ readConfigFileWithEnv vars file = do
     mapM_ (uncurry (Ninja.addEnv env) . (UTF8.fromString *** UTF8.fromString)) vars
     Ninja.parse file env
     mp <- Ninja.fromEnv env
-    return $ Map.fromList $ map (UTF8.toString *** UTF8.toString) $ Map.toList mp
+    pure $ Map.fromList $ map (UTF8.toString *** UTF8.toString) $ Map.toList mp
 
 
 newtype Config = Config String deriving (Show,Typeable,Eq,Hashable,Binary,NFData)
@@ -70,7 +70,7 @@ usingConfigFile file = do
         liftIO $ readConfigFile file
     addOracle $ \(Config x) -> Map.lookup x <$> mp ()
     addOracle $ \(ConfigKeys ()) -> sort . Map.keys <$> mp ()
-    return ()
+    pure ()
 
 
 -- | Specify the values to use with 'getConfig', generally prefer
@@ -80,7 +80,7 @@ usingConfig :: Map.HashMap String String -> Rules ()
 usingConfig mp = do
     addOracle $ \(Config x) -> return $ Map.lookup x mp
     addOracle $ \(ConfigKeys ()) -> return $ sort $ Map.keys mp
-    return ()
+    pure ()
 
 
 -- | Obtain the value of a configuration variable, returns 'Nothing' to indicate the variable

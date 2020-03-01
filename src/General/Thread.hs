@@ -32,7 +32,7 @@ newThreadFinally act cleanup = do
         res <- try $ unmask act
         me <- myThreadId
         cleanup (Thread me bar) res
-    return $ Thread t bar
+    pure $ Thread t bar
 
 
 stopThreads :: [Thread] -> IO ()
@@ -63,13 +63,13 @@ withThreadsBoth act1 act2 = do
         res :: Either SomeException (a,b) <- try $ unmask $ do
             Right v1 <- waitBarrier bar1
             Right v2 <- waitBarrier bar2
-            return (v1,v2)
+            pure (v1,v2)
         writeVar ignore True
         killThread t1
         forkIO $ killThread t2
         waitBarrier bar1
         waitBarrier bar2
-        either throwIO return res
+        either throwIO pure res
 
 
 -- | Run an action in a separate thread.

@@ -31,7 +31,7 @@ getTimings :: IO [String]
 getTimings = do
     now <- timer
     old <- atomicModifyIORef timings dupe
-    return $ showTimings now $ reverse old
+    pure $ showTimings now $ reverse old
 
 
 addTiming :: String -> IO ()

@@ -27,18 +27,18 @@ import Foreign.Marshal.Alloc
 #endif
 
 checkEscCodes :: IO Bool
-checkEscCodes = return checkEscCodesOnce
+checkEscCodes = pure checkEscCodesOnce
 
 {-# NOINLINE checkEscCodesOnce #-}
 checkEscCodesOnce :: Bool
 checkEscCodesOnce = unsafePerformIO $ do
     hdl <- hIsTerminalDevice stdout
     env <- maybe False (/= "dumb") <$> lookupEnv "TERM"
-    if hdl && env then return True else
+    if hdl && env then pure True else
 #ifdef mingw32_HOST_OS
         checkEscCodesWindows
 #else
-        return False
+        pure False
 #endif
 
 #ifdef mingw32_HOST_OS
@@ -65,12 +65,12 @@ checkEscCodesWindows = do
     -- might return INVALID_HANDLE_VALUE, but then the next step will happily fail
     mode <- alloca $ \v -> do
         b <- c_GetConsoleModule h v
-        if b then Just <$> peek v else return Nothing
+        if b then Just <$> peek v else pure Nothing
     case mode of
         Nothing -> return False
         Just mode -> do
             let modeNew = mode .|. c_ENABLE_VIRTUAL_TERMINAL_PROCESSING
-            if mode == modeNew then return True else do
+            if mode == modeNew then pure True else do
                 c_SetConsoleMode h modeNew
 #endif
 

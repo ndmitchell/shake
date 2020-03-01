@@ -80,7 +80,7 @@ data ProcessOpts = ProcessOpts
 
 -- | If two buffers can be replaced by one and a copy, do that (only if they start empty)
 optimiseBuffers :: ProcessOpts -> IO (ProcessOpts, IO ())
-optimiseBuffers po@ProcessOpts{..} = return (po{poStdout = nubOrd poStdout, poStderr = nubOrd poStderr}, return ())
+optimiseBuffers po@ProcessOpts{..} = return (po{poStdout = nubOrd poStdout, poStderr = nubOrd poStderr}, pure ())
 
 stdStream :: (FilePath -> Handle) -> [Destination] -> [Destination] -> StdStream
 stdStream _ [DestEcho] _ = Inherit
@@ -89,8 +89,8 @@ stdStream _ _ _ = CreatePipe
 
 
 stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
-stdIn _ [] = (Inherit, const $ return ())
-stdIn file [SrcFile x] = (UseHandle $ file x, const $ return ())
+stdIn _ [] = (Inherit, const $ pure ())
+stdIn file [SrcFile x] = (UseHandle $ file x, const $ pure ())
 stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
     forM_ src $ \x -> case x of
         SrcString x -> hPutStr h x
@@ -113,7 +113,7 @@ withExceptions stop go = do
         unmask (waitBarrier bar) `onException` do
             forkIO stop
             waitBarrier bar
-    either throwIO return v
+    either throwIO pure v
 
 
 withTimeout :: Maybe Double -> IO () -> IO a -> IO a
@@ -131,7 +131,7 @@ forkWait :: IO a -> IO (IO a)
 forkWait a = do
     res <- newEmptyMVar
     _ <- mask $ \restore -> forkIO $ try_ (restore a) >>= putMVar res
-    return $ takeMVar res >>= either throwIO return
+    return $ takeMVar res >>= either throwIO pure
 
 
 abort :: ProcessHandle -> IO ()
@@ -174,7 +174,7 @@ process po = do
 
                     if isBinary then do
                         hSetBinaryMode h True
-                        dest <- return $ flip map dest $ \d -> case d of
+                        dest<- pure $ flip map dest $ \d -> case d of
                             DestEcho -> BS.hPut hh
                             DestFile x -> BS.hPut (outHandle x)
                             DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
@@ -184,16 +184,16 @@ process po = do
                             mapM_ ($ src) dest
                             notM $ hIsEOF h
                      else if isTied then do
-                        dest <- return $ flip map dest $ \d -> case d of
+                        dest<- pure $ flip map dest $ \d -> case d of
                             DestEcho -> hPutStrLn hh
                             DestFile x -> hPutStrLn (outHandle x)
                             DestString x -> addBuffer x . (++ "\n")
                             DestBytes{} -> throwImpure $ errorInternal "Not reachable due to isBinary condition"
                         forkWait $ whileM $
-                            ifM (hIsEOF h) (return False) $ do
+                            ifM (hIsEOF h) (pure False) $ do
                                 src <- hGetLine h
                                 mapM_ ($ src) dest
-                                return True
+                                pure True
                      else do
                         src <- hGetContents h
                         wait1 <- forkWait $ C.evaluate $ rnf src
@@ -202,18 +202,18 @@ process po = do
                             DestFile x -> forkWait $ hPutStr (outHandle x) src
                             DestString x -> do addBuffer x src; return $ return ()
                             DestBytes{} -> throwImpure $ errorInternal "Not reachable due to isBinary condition"
-                        return $ sequence_ $ wait1 : waits
+                        pure $ sequence_ $ wait1 : waits
 
                 whenJust inh $ snd $ stdIn inHandle poStdin
                 if poAsync then
-                    return (pid, ExitSuccess)
+                    pure (pid, ExitSuccess)
                  else do
                     sequence_ wait
                     flushBuffers
                     res <- waitForProcess pid
                     whenJust outh hClose
                     whenJust errh hClose
-                    return (pid, res)
+                    pure (pid, res)
 
 
 ---------------------------------------------------------------------

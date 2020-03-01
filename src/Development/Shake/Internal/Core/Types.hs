@@ -73,7 +73,7 @@ runAction g l (Action x) = runRAW (fromAction . build) g l x
         -- first argument is a list of call stacks, since build only takes one we use the first
         -- they are very probably all identical...
         build :: [([String], [Key])] -> Action [[Value]]
-        build [] = return []
+        build [] = pure []
         build ks@((callstack,_):_) = do
             let kss = map snd ks
             unconcat kss <$> globalBuild g callstack (concat kss)

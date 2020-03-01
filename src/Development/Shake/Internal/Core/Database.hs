@@ -58,7 +58,7 @@ createDatabase status journal vDefault = do
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
     lock <- newLock
-    return Database{..}
+    pure Database{..}
 
 
 ---------------------------------------------------------------------
@@ -84,7 +84,7 @@ getKeyValuesFromId Database{..} = Ids.toMap status
 getIdFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> IO (k -> Maybe Id)
 getIdFromKey Database{..} = do
     is <- readIORef intern
-    return $ flip Intern.lookup is
+    pure $ flip Intern.lookup is
 
 
 ---------------------------------------------------------------------
@@ -97,11 +97,11 @@ mkId Database{..} k = liftIO $ do
     case Intern.lookup k is of
         Just i -> return i
         Nothing -> do
-            (is, i) <- return $ Intern.add k is
+            (is, i)<- pure $ Intern.add k is
             -- make sure to write it into Status first to maintain Database invariants
             Ids.insert status i (k, vDefault)
             writeIORef' intern is
-            return i
+            pure i
 
 
 setMem :: DatabasePoly k v -> Id -> k -> v -> Locked ()

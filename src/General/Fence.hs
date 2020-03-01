@@ -21,7 +21,7 @@ newtype Fence m a = Fence (IORef (Either (a -> m ()) a))
 instance Show (Fence m a) where show _ = "Fence"
 
 newFence :: MonadIO m => IO (Fence m a)
-newFence = Fence <$> newIORef (Left $ const $ return ())
+newFence = Fence <$> newIORef (Left $ const $ pure ())
 
 signalFence :: (Partial, MonadIO m) => Fence m a -> a -> m ()
 signalFence (Fence ref) v = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of
@@ -51,4 +51,4 @@ exceptFence xs = do
             Left e | i >= 0 -> (-1, signalFence fence $ Left e)
             _ | i == 1 -> (-1, signalFence fence . Right =<< liftIO (mapM (fmap (fromRight' . fromJust) . testFence) xs))
               | otherwise -> (i-1, return ())
-    return fence
+    pure fence

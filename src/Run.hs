@@ -25,7 +25,7 @@ main = do
         ,"Shakefile.hs","Shakefile.lhs"]
     case hsExe of
         Just file -> do
-            (prog,args) <- return $
+            (prog,args)<- pure $
                 if takeExtension file `elem` [".hs",".lhs"] then ("runhaskell", file:args) else (toNative file, args)
             e <- rawSystem prog args
             when (e /= ExitSuccess) $ exitWith e
@@ -33,11 +33,11 @@ main = do
             let go = shakeArgsWith shakeOptions{shakeThreads=0,shakeCreationCheck=False} flags $ \opts targets -> do
                         let tool = listToMaybe [x | Tool x <- opts]
                         makefile <- case reverse [x | UseMakefile x <- opts] of
-                            x:_ -> return x
+                            x:_ -> pure x
                             _ -> do
                                 res <- findFile ["build.ninja"]
                                 case res of
-                                    Just x -> return x
+                                    Just x -> pure x
                                     Nothing -> errorIO "Could not find `build.ninja'"
                         runNinja go makefile targets tool
             withArgs ("--no-time":args) go

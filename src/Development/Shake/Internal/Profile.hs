@@ -85,7 +85,7 @@ toReport db = do
             }
             where fromStep i = fromJust $ Map.lookup i steps
                   fromTrace (Trace a b c) = ProfileTrace (BS.unpack a) (floatToDouble b) (floatToDouble c)
-    return [maybe (throwImpure $ errorInternal "toReport") f $ Map.lookup i status | i <- order]
+    pure [maybe (throwImpure $ errorInternal "toReport") f $ Map.lookup i status | i <- order]
 
 
 data ProfileEntry = ProfileEntry
@@ -131,7 +131,7 @@ generateSummary xs =
 generateHTML :: [ProfileEntry] -> IO LBS.ByteString
 generateHTML xs = do
     report <- readDataFileHTML "profile.html"
-    let f "data/profile-data.js" = return $ LBS.pack $ "var profile =\n" ++ generateJSON xs
+    let f "data/profile-data.js" = pure $ LBS.pack $ "var profile =\n" ++ generateJSON xs
     runTemplate f report
 
 

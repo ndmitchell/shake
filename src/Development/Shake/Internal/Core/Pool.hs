@@ -30,7 +30,7 @@ addPoolWait pri act = do
         fence <- newFence
         let act2 = do offset <- liftIO offsetTime; res <- act; offset <- liftIO offset; return (offset, res)
         addPool pri globalPool $ runAction ro rw act2 $ signalFence fence
-        return fence
+        pure fence
 
 -- | Like 'addPoolWait' but doesn't provide a fence to wait for it - a fire and forget version.
 --   Warning: If Action throws an exception, it would be lost, so must be executed with try. Seconds are not tracked.

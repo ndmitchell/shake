@@ -36,7 +36,7 @@ shakeVersionString = showVersion version
 #ifdef FILE_EMBED
 
 initDataDirectory :: IO ()
-initDataDirectory = return ()
+initDataDirectory = pure ()
 
 htmlDataFiles :: [(FilePath, BS.ByteString)]
 htmlDataFiles =
@@ -55,7 +55,7 @@ manualDirData :: [(FilePath, BS.ByteString)]
 manualDirData = $(embedDir "docs/manual")
 
 hasManualData :: IO Bool
-hasManualData = return True
+hasManualData = pure True
 
 copyManualData :: FilePath -> IO ()
 copyManualData dest = do
@@ -72,7 +72,7 @@ dataDirs = unsafePerformIO $ do
     datdir <- getDataDir
     exedir <- takeDirectory <$> getExecutablePath `catchIO` \_ -> return ""
     curdir <- getCurrentDirectory
-    return $ [datdir] ++ [exedir | exedir /= ""] ++ [curdir]
+    pure $ [datdir] ++ [exedir | exedir /= ""] ++ [curdir]
 
 -- The data files may be located relative to the current directory, if so cache it in advance
 initDataDirectory :: IO ()

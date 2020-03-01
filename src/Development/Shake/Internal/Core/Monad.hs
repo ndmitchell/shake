@@ -81,10 +81,10 @@ assertOnceCheck = False
 
 assertOnce :: MonadIO m => String -> (a -> m b) -> IO (a -> m b)
 assertOnce msg k
-    | not assertOnceCheck = return k
+    | not assertOnceCheck = pure k
     | otherwise = do
         ref <- liftIO $ newIORef False
-        return $ \v -> do
+        pure $ \v -> do
             liftIO $ join $ atomicModifyIORef ref $ \old -> (True,) $ when old $ do
                 hPutStrLn stderr "FATAL ERROR: assertOnce failed"
                 Prelude.fail $ "assertOnce failed: " ++ msg
@@ -158,7 +158,7 @@ goRAW step steps handler ro rw = \x k -> go x $ \v -> sio v k
                     Left e -> old e
                     Right v -> do
                         writeIORef handler old
-                        k (return v) `catch_` \e -> do unflush; ($ e) =<< readIORef handler
+                        k (pure v) `catch_` \e -> do unflush; ($ e) =<< readIORef handler
 
 
 newtype SIO a = SIO (IO a)
@@ -174,7 +174,7 @@ addStep :: Steps k v -> k -> IO (SIO v)
 addStep (Steps ref) k = do
     out <- newIORef $ throwImpure $ errorInternal "Monad, addStep not flushed"
     modifyIORef ref ((k,out):)
-    return $ SIO $ readIORef out
+    pure $ SIO $ readIORef out
 
 unflushSteps :: Steps k v -> IO ()
 unflushSteps (Steps ref) = writeIORef ref []
@@ -186,7 +186,7 @@ flushSteps (Steps ref) = do
         [] -> return Nothing
         xs -> do
             writeIORef ref []
-            return $ Just $ \step -> do
+            pure $ Just $ \step -> do
                 vs <- step $ map fst xs
                 liftIO $ zipWithM_ writeIORef (map snd xs) vs
 
@@ -215,7 +215,7 @@ catchRAW :: RAW k v ro rw a -> (SomeException -> RAW k v ro rw a) -> RAW k v ro 
 catchRAW = CatchRAW
 
 tryRAW :: RAW k v ro rw a -> RAW k v ro rw (Either SomeException a)
-tryRAW m = catchRAW (fmap Right m) (return . Left)
+tryRAW m = catchRAW (fmap Right m) (pure . Left)
 
 throwRAW :: Exception e => e -> RAW k v ro rw a
 -- Note that while we could directly pass this to the handler
@@ -226,7 +226,7 @@ finallyRAW :: RAW k v ro rw a -> RAW k v ro rw b -> RAW k v ro rw a
 finallyRAW a undo = do
     r <- catchRAW a (\e -> undo >> throwRAW e)
     undo
-    return r
+    pure r
 
 
 ---------------------------------------------------------------------

@@ -66,7 +66,7 @@ compactUI opts = do
     ref <- newIORef emptyS
     let tweak = atomicModifyIORef_ ref
     time <- offsetTime
-    opts <- return $ opts
+    opts <- pure $ opts
         {shakeTrace = \a b c -> do t <- time; tweak (addTrace a b c t)
         ,shakeOutput = \a b -> tweak (addOutput a b)
         ,shakeProgress = \x -> void $ progressDisplay 1 (tweak . addProgress) x `withThreadsBoth` shakeProgress opts x
@@ -74,4 +74,4 @@ compactUI opts = do
         ,shakeVerbosity = Error
         }
     let tick = do t <- time; mask_ $ putStr =<< atomicModifyIORef ref (display t)
-    return (opts, forever (tick >> sleep 0.4) `finally` tick)
+    pure (opts, forever (tick >> sleep 0.4) `finally` tick)

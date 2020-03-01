@@ -56,7 +56,7 @@ databaseVersion x = "SHAKE-DATABASE-14-" ++ os ++ "-" ++ arch ++ "-" ++  s ++ "\
 messageCorrupt :: FilePath -> SomeException -> IO [String]
 messageCorrupt dbfile err = do
     msg <- showException err
-    return $
+    pure $
         ("Error when reading Shake database " ++ dbfile) :
         map ("  "++) (lines msg) ++
         ["All files will be rebuilt"]
@@ -97,15 +97,15 @@ usingStorage
     -> Map.HashMap k (Ver, BinaryOp v)                 -- ^ Witnesses
     -> IO (Ids.Ids v, k -> Id -> v -> IO ())
 usingStorage _ ShakeOptions{..} diagnostic _ | shakeFiles == "/dev/null" = do
-    diagnostic $ return "Using in-memory database"
+    diagnostic $ pure "Using in-memory database"
     ids <- Ids.empty
-    return (ids, \_ _ _ -> return ())
+    pure (ids, \_ _ _ -> return ())
 
 usingStorage cleanup ShakeOptions{..} diagnostic witness = do
     let lockFile = shakeFiles </> ".shake.lock"
-    diagnostic $ return $ "Before usingLockFile on " ++ lockFile
+    diagnostic $ pure $ "Before usingLockFile on " ++ lockFile
     usingLockFile cleanup lockFile
-    diagnostic $ return "After usingLockFile"
+    diagnostic $ pure "After usingLockFile"
 
     let dbfile = shakeFiles </> ".shake.database"
     createDirectoryRecursive shakeFiles
@@ -113,7 +113,7 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
     -- complete a partially failed compress
     whenM (restoreChunksBackup dbfile) $ do
         unexpected "Backup file exists, restoring over the previous file\n"
-        diagnostic $ return "Backup file move to original"
+        diagnostic $ pure "Backup file move to original"
 
     addTiming "Database read"
     h <- usingChunks cleanup dbfile shakeFlush
@@ -137,11 +137,11 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
     ids <- case witnessOld of
         Left _ -> do
             resetChunksCorrupt Nothing h
-            return Nothing
+            pure Nothing
         Right witnessOld ->  handleBool (not . isAsyncException) (\err -> do
             outputErr =<< messageCorrupt dbfile err
             corrupt
-            return Nothing) $ do
+            pure Nothing) $ do
 
             (!missing, !load) <- evaluate $ loadWitness witness witnessOld
             when (missing /= []) $ outputErr $ messageMissingTypes dbfile missing
@@ -154,8 +154,8 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
                         Left e -> do
                             let slop = fromIntegral $ BS.length e
                             when (slop > 0) $ unexpected $ "Last " ++ show slop ++ " bytes do not form a whole record\n"
-                            diagnostic $ return $ "Read " ++ show i ++ " chunks, plus " ++ show slop ++ " slop"
-                            return i
+                            diagnostic $ pure $ "Read " ++ show i ++ " chunks, plus " ++ show slop ++ " slop"
+                            pure i
                         Right bs | (id, Just (k,v)) <- load bs -> do
                             evaluate $ rnf k
                             evaluate $ rnf v
@@ -164,14 +164,14 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
                                 let pretty (Left x) = "FAILURE: " ++ show x
                                     pretty (Right x) = x
                                 x2 <- try_ $ evaluate $ let s = show v in rnf s `seq` s
-                                return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " " ++ show id ++ " = " ++ pretty x2
+                                pure $ "Chunk " ++ show i ++ " " ++ raw bs ++ " " ++ show id ++ " = " ++ pretty x2
                             go $ i+1
                         Right bs -> do
-                            diagnostic $ return $ "Chunk " ++ show i ++ " " ++ raw bs ++ " UNKNOWN WITNESS"
+                            diagnostic $ pure $ "Chunk " ++ show i ++ " " ++ raw bs ++ " UNKNOWN WITNESS"
                             go i
             countItems <- go 0
             countDistinct <- Ids.sizeUpperBound ids
-            diagnostic $ return $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
+            diagnostic $ pure $ "Found at most " ++ show countDistinct ++ " distinct entries out of " ++ show countItems
 
             when (countItems > countDistinct*2 || not verEq || witnessOld /= witnessNew) $ do
                 addTiming "Database compression"
@@ -190,7 +190,7 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
 
     addTiming "With database"
     out <- usingWriteChunks cleanup h
-    return (ids, \k i v -> out $ save k i v)
+    pure (ids, \k i v -> out $ save k i v)
     where
         unexpected x = when shakeStorageLog $ do
             t <- getCurrentTime

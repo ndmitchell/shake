@@ -44,12 +44,12 @@ readChunkDirect :: Handle -> Word32 -> IO (Either BS.ByteString BS.ByteString)
 readChunkDirect h mx = do
     let slop x = do
             unless (BS.null x) $ hSetFileSize h . subtract (toInteger $ BS.length x) =<< hFileSize h
-            return $ Left x
+            pure $ Left x
     n <- BS.hGet h 4
     if BS.length n < 4 then slop n else do
         let count = fromIntegral $ min mx $ fst $ unsafeBinarySplit n
         v <- BS.hGet h count
-        if BS.length v < count then slop (n `BS.append` v) else return $ Right v
+        if BS.length v < count then slop (n `BS.append` v) else pure $ Right v
 
 writeChunkDirect :: Handle -> Builder -> IO ()
 writeChunkDirect h x = bs `seq` BS.hPut h bs
@@ -72,18 +72,18 @@ usingWriteChunks cleanup Chunks{..} = do
             takeMVar kick
             sleep flush
             tryTakeMVar kick
-            writeChan chan $ hFlush h >> return True
+            writeChan chan $ hFlush h >> pure True
 
     -- pump the thread while we are running
     -- once we abort, let everything finish flushing first
     -- the mask_ is very important - we don't want to abort until everything finishes
     allocateThread cleanup $ mask_ $ whileM $ join $ readChan chan
     -- this cleanup will run before we attempt to kill the thread
-    register cleanup $ writeChan chan $ return False
+    register cleanup $ writeChan chan $ pure False
 
-    return $ \s -> do
+    pure $ \s -> do
         out <- evaluate $ writeChunkDirect h s -- ensure exceptions occur on this thread
-        writeChan chan $ out >> tryPutMVar kick () >> return True
+        writeChan chan $ out >> tryPutMVar kick () >> pure True
 
 
 writeChunk :: Chunks -> Builder -> IO ()
@@ -99,10 +99,10 @@ restoreChunksBackup :: FilePath -> IO Bool
 restoreChunksBackup file = do
     -- complete a partially failed compress
     b <- doesFileExist $ backup file
-    if not b then return False else do
+    if not b then pure False else do
         removeFile_ file
         renameFile (backup file) file
-        return True
+        pure True
 
 
 usingChunks :: Cleanup -> FilePath -> Maybe Seconds -> IO Chunks
@@ -111,7 +111,7 @@ usingChunks cleanup file flush = do
     allocate cleanup
         (putMVar h =<< openFile file ReadWriteMode)
         (const $ hClose =<< takeMVar h)
-    return $ Chunks file flush h
+    pure $ Chunks file flush h
 
 
 -- | The file is being compacted, if the process fails, use a backup.
@@ -128,7 +128,7 @@ resetChunksCompact Chunks{..} act = mask $ \restore -> do
         res <- act $ writeChunkDirect h
         hFlush h
         removeFile $ backup chunksFileName
-        return res
+        pure res
 
 
 -- | The file got corrupted, return a new version.

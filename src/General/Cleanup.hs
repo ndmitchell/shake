@@ -40,7 +40,7 @@ newCleanup = do
     let clean = uninterruptibleMask_ $ do
             items <- atomicModifyIORef' ref $ \s -> (s{items=Map.empty}, items s)
             mapM_ snd $ sortOn (negate . fst) $ Map.toList items
-    return (Cleanup ref, clean)
+    pure (Cleanup ref, clean)
 
 
 register :: Cleanup -> IO () -> IO ReleaseKey
@@ -53,11 +53,11 @@ unprotect (ReleaseKey ref i) = atomicModifyIORef' ref $ \s -> (s{items = Map.del
 release :: ReleaseKey -> IO ()
 release (ReleaseKey ref i) = uninterruptibleMask_ $ do
     undo <- atomicModifyIORef' ref $ \s -> (s{items = Map.delete i $ items s}, Map.lookup i $ items s)
-    fromMaybe (return ()) undo
+    fromMaybe (pure ()) undo
 
 allocate :: Cleanup -> IO a -> (a -> IO ()) -> IO a
 allocate cleanup acquire release =
     mask_ $ do
         v <- acquire
         register cleanup $ release v
-        return v
+        pure v

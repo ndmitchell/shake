@@ -66,7 +66,7 @@ shakeOpenDatabase opts rules = do
                     Using s -> throwM $ errorStructured "Error when calling shakeOpenDatabase close function, currently running" [("Existing call", Just s)] ""
                     _ -> return Closed
             clean
-    return (alloc, free)
+    pure (alloc, free)
 
 withOpen :: Var UseState -> String -> (UseState -> UseState) -> (UseState -> IO a) -> IO a
 withOpen var name final act = mask $ \restore -> do
@@ -77,7 +77,7 @@ withOpen var name final act = mask $ \restore -> do
     let clean = writeVar var $ final o
     res <- restore (act o) `onException` clean
     clean
-    return res
+    pure res
 
 -- | Declare that a just-openned database will be used to call 'shakeRunDatabase' at most once.
 --   If so, an optimisation can be applied to retain less memory.
@@ -142,7 +142,7 @@ shakeRunDatabase (ShakeDatabase use s) as =
             reset s
         (refs, as) <- fmap unzip $ forM as $ \a -> do
             ref <- newIORef Nothing
-            return (ref, liftIO . writeIORef ref . Just =<< a)
+            pure (ref, liftIO . writeIORef ref . Just =<< a)
         after <- run s openOneShot $ map void as
         results <- mapM readIORef refs
         case sequence results of

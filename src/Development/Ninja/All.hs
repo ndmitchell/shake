@@ -38,9 +38,9 @@ runNinja :: IO () -> FilePath -> [String] -> Maybe String -> IO (Maybe (Rules ()
 runNinja _ file args (Just "compdb") = do
     dir <- getCurrentDirectory
     Ninja{..} <- parse file =<< newEnv
-    rules <- return $ Map.fromList [r | r <- rules, BS.unpack (fst r) `elem` args]
+    rules<- pure $ Map.fromList [r | r <- rules, BS.unpack (fst r) `elem` args]
     -- the build items are generated in reverse order, hence the reverse
-    let xs = [(a,b,file,rule) | (a,b@Build{..}) <- reverse $ multiples ++ map (first return) singles
+    let xs = [(a,b,file,rule) | (a,b@Build{..}) <- reverse $ multiples ++ map (first pure) singles
                               , Just rule <- [Map.lookup ruleName rules], file:_ <- [depsNormal]]
     xs <- forM xs $ \(out,Build{..},file,Rule{..}) -> do
         -- the order of adding new environment variables matters
@@ -51,21 +51,21 @@ runNinja _ file args (Just "compdb") = do
         forM_ buildBind $ \(a,b) -> addEnv env a b
         addBinds env ruleBind
         commandline <- fmap BS.unpack $ askVar env $ BS.pack "command"
-        return $ CompDb dir commandline $ BS.unpack file
+        pure $ CompDb dir commandline $ BS.unpack file
     putStr $ printCompDb xs
-    return Nothing
+    pure Nothing
 
 runNinja _ _ _ (Just x) = errorIO $ "Unknown tool argument, expected 'compdb', got " ++ x
 
 runNinja restart file args Nothing = do
     addTiming "Ninja parse"
     ninja@Ninja{..} <- parse file =<< newEnv
-    return $ Just $ do
-        phonys <- return $ Map.fromList phonys
-        needDeps <- return $ needDeps ninja phonys -- partial application
-        singles <- return $ Map.fromList $ map (first filepathNormalise) singles
-        multiples <- return $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map filepathNormalise) multiples, x <- xs]
-        rules <- return $ Map.fromList rules
+    pure $ Just $ do
+        phonys<- pure $ Map.fromList phonys
+        needDeps<- pure $ needDeps ninja phonys -- partial application
+        singles<- pure $ Map.fromList $ map (first filepathNormalise) singles
+        multiples<- pure $ Map.fromList [(x,(xs,b)) | (xs,b) <- map (first $ map filepathNormalise) multiples, x <- xs]
+        rules<- pure $ Map.fromList rules
         pools <- fmap Map.fromList $ forM ((BS.pack "console",1):pools) $ \(name,depth) ->
             (name,) <$> newResource (BS.unpack name) depth
 
@@ -156,13 +156,13 @@ needDeps Ninja{..} phonysMp = \build xs -> do -- eta reduced so 'builds' is shar
         neededBS xs
         -- now try and statically validate needed will never fail
         -- first find which dependencies are generated files
-        xs <- return $ filter (`Map.member` builds) xs
+        xs<- pure $ filter (`Map.member` builds) xs
         -- now try and find them as dependencies
         -- performance note: allDependencies generates lazily, and difference consumes lazily,
         -- with the property that in the common case it won't generate much of the list at all
         let bad = xs `difference` allDependencies build
         case bad of
-            [] -> return ()
+            [] -> pure ()
             xs -> throwM $ errorStructured
                 ("Lint checking error - " ++
                     (if length xs == 1 then "file in deps is" else "files in deps are") ++

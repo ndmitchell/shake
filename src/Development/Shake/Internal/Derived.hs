@@ -54,7 +54,7 @@ import Data.Dynamic
 getHashedShakeVersion :: [FilePath] -> IO String
 getHashedShakeVersion files = do
     hashes <- mapM (fmap (hashWithSalt 0) . BS.readFile) files
-    return $ "hash-" ++ show (hashWithSalt 0 hashes)
+    pure $ "hash-" ++ show (hashWithSalt 0 hashes)
 
 
 -- | Get an item from 'shakeExtra', using the requested type as the key. Fails
@@ -145,7 +145,7 @@ writeFileChanged name x = liftIO $ do
         -- semantics on Windows
         b <- withFile name ReadMode $ \h -> do
             src <- hGetContents h
-            return $! src /= x
+            pure $! src /= x
         when b $ do
             removeFile_ name -- symlink safety
             writeFile name x
