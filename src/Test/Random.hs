@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternGuards #-}
 
 module Test.Random(main) where
@@ -41,7 +42,7 @@ main = testBuildArgs test arg $ \args -> do
             i <- randomRIO (0, 25)
             sleep $ intToDouble i / 100
 
-    forM_ (map read $ filter (isNothing . asDuration) args) $ \x -> case x of
+    forM_ (map read $ filter (isNothing . asDuration) args) $ \case
         Want xs -> want $ map (toFile . Output) xs
         Logic out srcs -> toFile (Output out) %> \out -> do
             res <- fmap (show . Multiple) $ forM srcs $ \src -> do
@@ -106,7 +107,7 @@ test build = do
 
                 let value i =
                         let ys = head [ys | Logic j ys <- xs, j == i]
-                        in Multiple $ flip map ys $ map $ \i -> case i of
+                        in Multiple $ flip map ys $ map $ \case
                             Input i -> Single $ if i `elem` negated then negate i else i
                             Output i -> value i
                             Bang -> error "BANG"

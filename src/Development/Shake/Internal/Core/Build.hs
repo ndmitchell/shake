@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards, PatternGuards, ScopedTypeVariables, NamedFieldPuns, GADTs #-}
 {-# LANGUAGE Rank2Types, ConstraintKinds, TupleSections, ViewPatterns #-}
 
@@ -203,7 +204,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
             globalRuleFinished k
             producesCheck
 
-        Action $ fmap (res,) getRW) $ \x -> case x of
+        Action $ fmap (res,) getRW) $ \case
             Left e ->
                 continue . Left . toException =<< shakeException global stack e
             Right (RunResult{..}, Local{..})

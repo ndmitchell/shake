@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards, ViewPatterns #-}
 
 module Development.Shake.Internal.Resource(
@@ -157,7 +158,7 @@ newThrottleIO name count period = do
         acquire var pool want
             | want < 0 = errorIO $ "You cannot acquire a negative quantity of " ++ shw ++ ", requested " ++ show want
             | want > count = errorIO $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
-            | otherwise = modifyVar var $ \x -> case x of
+            | otherwise = modifyVar var $ \case
                 ThrottleAvailable i
                     | i >= want -> return (ThrottleAvailable $ i - want, Nothing)
                     | otherwise -> do

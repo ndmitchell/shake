@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables, PatternGuards #-}
 {-# LANGUAGE ConstraintKinds, TupleSections, ViewPatterns #-}
 {-# LANGUAGE TypeFamilies, NamedFieldPuns #-}
@@ -145,7 +146,7 @@ run RunState{..} oneshot actions2 =
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
-                    addPool PoolStart pool $ runAction global local (act >> getLocal) $ \x -> case x of
+                    addPool PoolStart pool $ runAction global local (act >> getLocal) $ \case
                         Left e -> raiseError =<< shakeException global stack e
                         Right local -> atomicModifyIORef_ locals (local:)
 

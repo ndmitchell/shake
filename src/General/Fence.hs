@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 
 module General.Fence(
     Fence, newFence, signalFence, waitFence, testFence,
@@ -24,12 +25,12 @@ newFence :: MonadIO m => IO (Fence m a)
 newFence = Fence <$> newIORef (Left $ const $ pure ())
 
 signalFence :: (Partial, MonadIO m) => Fence m a -> a -> m ()
-signalFence (Fence ref) v = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of
+signalFence (Fence ref) v = join $ liftIO $ atomicModifyIORef' ref $ \case
     Left queue -> (Right v, queue v)
     Right _ -> throwImpure $ errorInternal "signalFence called twice on one Fence"
 
 waitFence :: MonadIO m => Fence m a -> (a -> m ()) -> m ()
-waitFence (Fence ref) call = join $ liftIO $ atomicModifyIORef' ref $ \x -> case x of
+waitFence (Fence ref) call = join $ liftIO $ atomicModifyIORef' ref $ \case
     Left queue -> (Left (\a -> queue a >> call a), return ())
     Right v -> (Right v, call v)
 

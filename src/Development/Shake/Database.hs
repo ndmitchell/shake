@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
 -- | Lower-level primitives to drive Shake, which are wrapped into the
@@ -62,7 +63,7 @@ shakeOpenDatabase opts rules = do
             withOpen use "shakeOpenDatabase" id $ \_ ->
                 ShakeDatabase use <$> open cleanup opts (rules >> defaultRules)
     let free = do
-            modifyVar_ use $ \x -> case x of
+            modifyVar_ use $ \case
                     Using s -> throwM $ errorStructured "Error when calling shakeOpenDatabase close function, currently running" [("Existing call", Just s)] ""
                     _ -> return Closed
             clean
@@ -70,7 +71,7 @@ shakeOpenDatabase opts rules = do
 
 withOpen :: Var UseState -> String -> (UseState -> UseState) -> (UseState -> IO a) -> IO a
 withOpen var name final act = mask $ \restore -> do
-    o <- modifyVar var $ \x -> case x of
+    o <- modifyVar var $ \case
         Using s -> throwM $ errorStructured ("Error when calling " ++ name ++ ", currently running") [("Existing call", Just s)] ""
         Closed -> throwM $ errorStructured ("Error when calling " ++ name ++ ", already closed") [] ""
         o@Open{} -> return (Using name, o)

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleInstances, TypeOperators, ScopedTypeVariables, NamedFieldPuns #-}
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, DeriveDataTypeable, RecordWildCards #-}
@@ -207,7 +208,7 @@ removeOptionFSATrace params@Params{..} call
         res <- call params{opts = UserCommand (showCommandForUser2 prog args) : filter (not . isFSAOptions) opts}
         fsaResBS <- liftIO $ parseFSA <$> BS.readFile file
         let fsaRes = map (fmap UTF8.toString) fsaResBS
-        pure $ flip map res $ \x -> case x of
+        pure $ flip map res $ \case
             ResultFSATrace [] -> ResultFSATrace fsaRes
             ResultFSATraceBS [] -> ResultFSATraceBS fsaResBS
             x -> x
@@ -343,7 +344,7 @@ defaultTraced Params{..} = takeBaseName $ if Shell `elem` opts then fst (word1 p
 -- | Given a very explicit set of CmdOption, translate them to a General.Process structure
 commandExplicitIO :: Partial => Params -> IO [Result]
 commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSATrace params $ \Params{..} -> do
-    let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \r -> case r of
+    let (grabStdout, grabStderr) = both or $ unzip $ flip map results $ \case
             ResultStdout{} -> (True, False)
             ResultStderr{} -> (False, True)
             ResultStdouterr{} -> (True, True)
@@ -351,7 +352,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
 
     optEnv <- resolveEnv opts
     let optCwd = mergeCwd [x | Cwd x <- opts]
-    let optStdin = flip mapMaybe opts $ \x -> case x of
+    let optStdin = flip mapMaybe opts $ \case
             Stdin x -> Just $ SrcString x
             StdinBS x -> Just $ SrcBytes x
             FileStdin x -> Just $ SrcFile x
@@ -376,7 +377,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
         buf BS {} = bufLBS (BS . BS.concat . LBS.toChunks)
         buf Unit  = return ([], pure Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
-        fmap unzip3 $ forM results $ \r -> case r of
+        fmap unzip3 $ forM results $ \case
             ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
             ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
             ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine optUserCommand)

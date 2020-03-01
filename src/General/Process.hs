@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
 -- | A wrapping of createProcess to provide a more flexible interface.
@@ -92,7 +93,7 @@ stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
 stdIn _ [] = (Inherit, const $ pure ())
 stdIn file [SrcFile x] = (UseHandle $ file x, const $ pure ())
 stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
-    forM_ src $ \x -> case x of
+    forM_ src $ \case
         SrcString x -> hPutStr h x
         SrcBytes x -> LBS.hPutStr h x
         SrcFile x -> LBS.hPutStr h =<< LBS.hGetContents (file x)
@@ -174,7 +175,7 @@ process po = do
 
                     if isBinary then do
                         hSetBinaryMode h True
-                        dest<- pure $ flip map dest $ \d -> case d of
+                        dest<- pure $ flip map dest $ \case
                             DestEcho -> BS.hPut hh
                             DestFile x -> BS.hPut (outHandle x)
                             DestString x -> addBuffer x . (if isWindows then replace "\r\n" "\n" else id) . BS.unpack
@@ -184,7 +185,7 @@ process po = do
                             mapM_ ($ src) dest
                             notM $ hIsEOF h
                      else if isTied then do
-                        dest<- pure $ flip map dest $ \d -> case d of
+                        dest<- pure $ flip map dest $ \case
                             DestEcho -> hPutStrLn hh
                             DestFile x -> hPutStrLn (outHandle x)
                             DestString x -> addBuffer x . (++ "\n")
@@ -197,7 +198,7 @@ process po = do
                      else do
                         src <- hGetContents h
                         wait1 <- forkWait $ C.evaluate $ rnf src
-                        waits <- forM dest $ \d -> case d of
+                        waits <- forM dest $ \case
                             DestEcho -> forkWait $ hPutStr hh src
                             DestFile x -> forkWait $ hPutStr (outHandle x) src
                             DestString x -> do addBuffer x src; return $ return ()

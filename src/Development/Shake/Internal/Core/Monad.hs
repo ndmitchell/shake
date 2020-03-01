@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs, ScopedTypeVariables, TupleSections, GeneralizedNewtypeDeriving #-}
 
@@ -154,7 +155,7 @@ goRAW step steps handler ro rw = \x k -> go x $ \v -> sio v k
                 f <- assertOnce "CaptureRAW" f
                 old <- readIORef handler
                 writeIORef handler throwIO
-                f $ \x -> case x of
+                f $ \case
                     Left e -> old e
                     Right v -> do
                         writeIORef handler old
