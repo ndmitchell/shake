@@ -370,23 +370,23 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
     let optUserCommand = lastDef optRealCommand [x | UserCommand x <- opts]
     let optCloseFds = CloseFileHandles `elem` opts
 
-    let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; return (a, (\(LBS x) -> f x) <$> b)
+    let bufLBS f = do (a,b) <- buf $ LBS LBS.empty; pure (a, (\(LBS x) -> f x) <$> b)
         buf Str{} | optBinary = bufLBS (Str . LBS.unpack)
-        buf Str{} = do x <- newBuffer; return ([DestString x | not optAsync], Str . concat <$> readBuffer x)
-        buf LBS{} = do x <- newBuffer; return ([DestBytes x | not optAsync], LBS . LBS.fromChunks <$> readBuffer x)
+        buf Str{} = do x <- newBuffer; pure ([DestString x | not optAsync], Str . concat <$> readBuffer x)
+        buf LBS{} = do x <- newBuffer; pure ([DestBytes x | not optAsync], LBS . LBS.fromChunks <$> readBuffer x)
         buf BS {} = bufLBS (BS . BS.concat . LBS.toChunks)
-        buf Unit  = return ([], pure Unit)
+        buf Unit  = pure ([], pure Unit)
     (dStdout, dStderr, resultBuild) :: ([[Destination]], [[Destination]], [Double -> ProcessHandle -> ExitCode -> IO Result]) <-
         fmap unzip3 $ forM results $ \case
-            ResultCode _ -> return ([], [], \_ _ ex -> return $ ResultCode ex)
-            ResultTime _ -> return ([], [], \dur _ _ -> return $ ResultTime dur)
-            ResultLine _ -> return ([], [], \_ _ _ -> return $ ResultLine optUserCommand)
-            ResultProcess _ -> return ([], [], \_ pid _ -> return $ ResultProcess $ PID pid)
-            ResultStdout    s -> do (a,b) <- buf s; return (a , [], \_ _ _ -> fmap ResultStdout b)
-            ResultStderr    s -> do (a,b) <- buf s; return ([], a , \_ _ _ -> fmap ResultStderr b)
-            ResultStdouterr s -> do (a,b) <- buf s; return (a , a , \_ _ _ -> fmap ResultStdouterr b)
-            ResultFSATrace _ -> return ([], [], \_ _ _ -> return $ ResultFSATrace []) -- filled in elsewhere
-            ResultFSATraceBS _ -> return ([], [], \_ _ _ -> return $ ResultFSATraceBS []) -- filled in elsewhere
+            ResultCode _ -> pure ([], [], \_ _ ex -> pure $ ResultCode ex)
+            ResultTime _ -> pure ([], [], \dur _ _ -> pure $ ResultTime dur)
+            ResultLine _ -> pure ([], [], \_ _ _ -> pure $ ResultLine optUserCommand)
+            ResultProcess _ -> pure ([], [], \_ pid _ -> pure $ ResultProcess $ PID pid)
+            ResultStdout    s -> do (a,b) <- buf s; pure (a , [], \_ _ _ -> fmap ResultStdout b)
+            ResultStderr    s -> do (a,b) <- buf s; pure ([], a , \_ _ _ -> fmap ResultStderr b)
+            ResultStdouterr s -> do (a,b) <- buf s; pure (a , a , \_ _ _ -> fmap ResultStdouterr b)
+            ResultFSATrace _ -> pure ([], [], \_ _ _ -> pure $ ResultFSATrace []) -- filled in elsewhere
+            ResultFSATraceBS _ -> pure ([], [], \_ _ _ -> pure $ ResultFSATraceBS []) -- filled in elsewhere
 
     exceptionBuffer <- newBuffer
     po <- resolvePath ProcessOpts
@@ -405,9 +405,9 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
         exceptionBuffer <- readBuffer exceptionBuffer
         let captured = ["Stderr" | optWithStderr] ++ ["Stdout" | optWithStdout]
         cwd <- case optCwd of
-            Nothing -> return ""
+            Nothing -> pure ""
             Just v -> do
-                v <- canonicalizePath v `catchIO` const (return v)
+                v <- canonicalizePath v `catchIO` const (pure v)
                 pure $ "Current directory: " ++ v ++ "\n"
         liftIO $ errorIO $
             "Development.Shake." ++ funcName ++ ", system command failed\n" ++
@@ -477,7 +477,7 @@ resolvePath po = pure po
 --   Like findExecutable, but with a custom PATH.
 findExecutableWith :: [FilePath] -> String -> IO (Maybe FilePath)
 findExecutableWith path x = flip firstJustM (map (</> x) path) $ \s ->
-    ifM (doesFileExist s) (return $ Just s) (pure Nothing)
+    ifM (doesFileExist s) (pure $ Just s) (pure Nothing)
 
 
 ---------------------------------------------------------------------
@@ -522,7 +522,7 @@ newtype Process = Process {fromProcess :: ProcessHandle}
 -- timer act = do
 --     ('CmdTime' t, 'CmdLine' x, r) <- act
 --     liftIO $ putStrLn $ \"Command \" ++ x ++ \" took \" ++ show t ++ \" seconds\"
---     return r
+--     pure r
 --
 -- run :: IO ()
 -- run = timer $ 'cmd' \"ghc --version\"

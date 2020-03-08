@@ -112,7 +112,7 @@ forwardRule act = do
         fail "When running in forward mode you must set shakeLintInside to specify where to detect dependencies"
     addBuiltinRule noLint noIdentity $ \k old mode ->
         case old of
-            Just old | mode == RunDependenciesSame -> return $ RunResult ChangedNothing old (decode' old)
+            Just old | mode == RunDependenciesSame -> pure $ RunResult ChangedNothing old (decode' old)
             _ -> do
                 res <- liftIO $ atomicModifyIORef forwards $ \mp -> (Map.delete k mp, Map.lookup k mp)
                 case res of

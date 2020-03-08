@@ -115,7 +115,7 @@ newResourceIO name mx = do
                     pure (x{finiteWaiting = finiteWaiting `snoc` (want, fence)}, Just fence)
 
         release :: Var Finite -> Pool -> Int -> IO ()
-        release var _ i = join $ modifyVar var $ \x -> return $ f x{finiteAvailable = finiteAvailable x + i}
+        release var _ i = join $ modifyVar var $ \x -> pure $ f x{finiteAvailable = finiteAvailable x + i}
             where
                 f (Finite i (uncons -> Just ((wi,wa),ws)))
                     | wi <= i = second (signalFence wa () >>) $ f $ Finite (i-wi) ws
@@ -160,7 +160,7 @@ newThrottleIO name count period = do
             | want > count = errorIO $ "You cannot acquire more than " ++ show count ++ " of " ++ shw ++ ", requested " ++ show want
             | otherwise = modifyVar var $ \case
                 ThrottleAvailable i
-                    | i >= want -> return (ThrottleAvailable $ i - want, Nothing)
+                    | i >= want -> pure (ThrottleAvailable $ i - want, Nothing)
                     | otherwise -> do
                         stop <- keepAlivePool pool
                         fence <- newFence
@@ -170,11 +170,11 @@ newThrottleIO name count period = do
                     pure (ThrottleWaiting stop $ xs `snoc` (want, fence), Just fence)
 
         release :: Var Throttle -> Pool -> Int -> IO ()
-        release var _ n = waiter period $ join $ modifyVar var $ \x -> return $ case x of
-                ThrottleAvailable i -> (ThrottleAvailable $ i+n, return ())
+        release var _ n = waiter period $ join $ modifyVar var $ \x -> pure $ case x of
+                ThrottleAvailable i -> (ThrottleAvailable $ i+n, pure ())
                 ThrottleWaiting stop xs -> f stop n xs
             where
                 f stop i (uncons -> Just ((wi,wa),ws))
                     | i >= wi = second (signalFence wa () >>) $ f stop (i-wi) ws
-                    | otherwise = (ThrottleWaiting stop $ (wi-i,wa) `cons` ws, return ())
+                    | otherwise = (ThrottleWaiting stop $ (wi-i,wa) `cons` ws, pure ())
                 f stop i _ = (ThrottleAvailable i, stop)

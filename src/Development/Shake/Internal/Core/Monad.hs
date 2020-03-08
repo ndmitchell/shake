@@ -137,10 +137,10 @@ goRAW step steps handler ro rw = \x k -> go x $ \v -> sio v k
             Bind a b -> go a $ \a -> sio a $ \a -> go (b a) k
             LiftIO act -> flush $ do v <- act; k $ pure v
 
-            GetRO -> k $ return ro
-            GetRW -> flush $ k . return =<< readIORef rw
-            PutRW x -> flush $ writeIORef rw x >> k (return ())
-            ModifyRW f -> flush $ modifyIORef' rw f >> k (return ())
+            GetRO -> k $ pure ro
+            GetRW -> flush $ k . pure =<< readIORef rw
+            PutRW x -> flush $ writeIORef rw x >> k (pure ())
+            ModifyRW f -> flush $ modifyIORef' rw f >> k (pure ())
 
             CatchRAW m hdl -> flush $ do
                 hdl <- assertOnce "CatchRAW" hdl
@@ -184,7 +184,7 @@ flushSteps :: MonadIO m => Steps k v -> IO (Maybe (([k] -> m [v]) -> m ()))
 flushSteps (Steps ref) = do
     v <- reverse <$> readIORef ref
     case v of
-        [] -> return Nothing
+        [] -> pure Nothing
         xs -> do
             writeIORef ref []
             pure $ Just $ \step -> do

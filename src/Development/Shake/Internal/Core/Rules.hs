@@ -98,8 +98,8 @@ getUserRuleMaybe :: (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -
 getUserRuleMaybe key disp test = do
     (_, xs, err) <- getUserRuleInternal key disp test
     case xs of
-        [] -> return Nothing
-        [x] -> return $ Just x
+        [] -> pure Nothing
+        [x] -> pure $ Just x
         _ -> throwM err
 
 -- | A version of 'getUserRuleList' that fails if there is not exactly one result
@@ -108,7 +108,7 @@ getUserRuleOne :: (ShakeValue key, Typeable a) => key -> (a -> Maybe String) -> 
 getUserRuleOne key disp test = do
     (_, xs, err) <- getUserRuleInternal key disp test
     case xs of
-        [x] -> return x
+        [x] -> pure x
         _ -> throwM err
 
 

@@ -149,8 +149,8 @@ fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
 fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
     res <- getFileInfo x
     case res of
-        Nothing -> return Nothing
-        Just (time,size) | c == ChangeModtime -> return $ Just $ FileA time size noFileHash
+        Nothing -> pure Nothing
+        Just (time,size) | c == ChangeModtime -> pure $ Just $ FileA time size noFileHash
         Just (time,size) -> do
             hash <- unsafeInterleaveIO $ getFileHash x
             pure $ Just $ FileA time size hash
@@ -343,7 +343,7 @@ resultHasChanged file = do
         Just (Left bs) -> fromAnswer $ getEx bs
         Just (Right v) -> answer v
     case old of
-        Nothing -> return True
+        Nothing -> pure True
         Just old -> do
             opts <- getShakeOptions
             new <- liftIO $ fileStoredValue opts filename
@@ -403,10 +403,10 @@ needHasChanged paths = withFrozenCallStack $ do
     apply_ fileNameFromString paths
     self <- getCurrentKey
     selfVal <- case self of
-        Nothing -> return Nothing
+        Nothing -> pure Nothing
         Just self -> getDatabaseValueGeneric self
     case selfVal of
-        Nothing -> return paths -- never build before or not a key, so everything has changed
+        Nothing -> pure paths -- never build before or not a key, so everything has changed
         Just selfVal -> flip filterM paths $ \path -> do
             pathVal <- getDatabaseValue (FileQ $ fileNameFromString path)
             pure $ case pathVal of
@@ -439,7 +439,7 @@ neededCheck xs = withFrozenCallStack $ do
     let bad = [ (x, if isJust a then "File change" else "File created")
               | (x, a, FileR (Just b) _) <- zip3 xs pre post, maybe NotEqual (\a -> fileEqualValue opts a b) a == NotEqual]
     case bad of
-        [] -> return ()
+        [] -> pure ()
         (file,msg):_ -> throwM $ errorStructured
             "Lint checking error - 'needed' file required rebuilding"
             [("File", Just $ fileNameToString file)
@@ -574,7 +574,7 @@ addPhony help act = addUserRule $ FileRule help $ fmap ModePhony . act
     mapM_ addTarget pats
     let (simp,other) = partition simple pats
     case map toStandard simp of
-        [] -> return ()
+        [] -> pure ()
         [p] -> root help (\x -> toStandard x == p) act
         ps -> let set = Set.fromList ps in root help (flip Set.member set . toStandard) act
     unless (null other) $

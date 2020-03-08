@@ -113,7 +113,7 @@ lookupShared shared ask key builtinVersion userVersion = do
     flip firstJustWaitUnordered ents $ \act -> do
         me <- liftIO act
         case me of
-            Nothing -> return Nothing
+            Nothing -> pure Nothing
             Just Entry{..} -> do
                 -- use Nothing to indicate success, Just () to bail out early on mismatch
                 let result x = if isJust x then Nothing else Just $ (entryResult, map (map fst) entryDepends, ) $ do
@@ -151,7 +151,7 @@ removeShared Shared{..} test = do
     deleted <- forM dirs $ \dir -> do
         files <- sharedFileKeys dir
         -- if any key matches, clean them all out
-        b <- flip anyM files $ \file -> handleSynchronous (\e -> putStrLn ("Warning: " ++ show e) >> return False) $
+        b <- flip anyM files $ \file -> handleSynchronous (\e -> putStrLn ("Warning: " ++ show e) >> pure False) $
             evaluate . test . entryKey . getEntry keyOp =<< BS.readFile file
         when b $ removePathForcibly dir
         pure b

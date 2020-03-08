@@ -47,7 +47,7 @@ addOracleFlavor flavor act = do
                 let cmpValue new = if fmap decode' old == Just new then ChangedRecomputeSame else ChangedRecomputeDiff
                 let cmpHash newHash = if old == Just newHash then ChangedRecomputeSame else ChangedRecomputeDiff
 
-                cache <- if flavor == Cache then historyLoad 0 else return Nothing
+                cache <- if flavor == Cache then historyLoad 0 else pure Nothing
                 case cache of
                     Just newEncode -> do
                         let new = decode' newEncode
@@ -112,11 +112,11 @@ addOracleFlavor flavor act = do
 -- rules = do
 --     getPkgList \<- 'addOracle' $ \\GhcPkgList{} -> do
 --         Stdout out <- 'Development.Shake.cmd' \"ghc-pkg list --simple-output\"
---         return [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
+--         pure [(reverse b, reverse a) | x <- words out, let (a,_:b) = break (== \'-\') $ reverse x]
 --
 --     getPkgVersion \<- 'addOracle' $ \\(GhcPkgVersion pkg) -> do
 --         pkgs <- getPkgList $ GhcPkgList ()
---         return $ lookup pkg pkgs
+--         pure $ lookup pkg pkgs
 --
 --     \"myrule\" %> \\_ -> do
 --         getPkgVersion $ GhcPkgVersion \"shake\"

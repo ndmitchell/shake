@@ -28,7 +28,7 @@ addPoolWait pri act = do
     rw <- Action getRW
     liftIO $ do
         fence <- newFence
-        let act2 = do offset <- liftIO offsetTime; res <- act; offset <- liftIO offset; return (offset, res)
+        let act2 = do offset <- liftIO offsetTime; res <- act; offset <- liftIO offset; pure (offset, res)
         addPool pri globalPool $ runAction ro rw act2 $ signalFence fence
         pure fence
 
@@ -38,7 +38,7 @@ addPoolWait_ :: PoolPriority -> Action a -> Action ()
 addPoolWait_ pri act = do
     ro@Global{..} <- Action getRO
     rw <- Action getRW
-    liftIO $ addPool pri globalPool $ runAction ro rw act $ \_ -> return ()
+    liftIO $ addPool pri globalPool $ runAction ro rw act $ \_ -> pure ()
 
 
 actionFenceSteal :: Fence IO (Either SomeException a) -> Action (Seconds, a)
@@ -46,7 +46,7 @@ actionFenceSteal fence = do
     res <- liftIO $ testFence fence
     case res of
         Just (Left e) -> Action $ throwRAW e
-        Just (Right v) -> return (0, v)
+        Just (Right v) -> pure (0, v)
         Nothing -> Action $ captureRAW $ \continue -> do
             offset <- offsetTime
             waitFence fence $ \v -> do
@@ -62,7 +62,7 @@ actionFenceRequeueBy op fence = Action $ do
     res <- liftIO $ testFence fence
     case fmap op res of
         Just (Left e) -> throwRAW e
-        Just (Right v) -> return (0, v)
+        Just (Right v) -> pure (0, v)
         Nothing -> do
             Global{..} <- getRO
             offset <- liftIO offsetTime

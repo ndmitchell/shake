@@ -38,7 +38,7 @@ newThreadFinally act cleanup = do
 stopThreads :: [Thread] -> IO ()
 stopThreads threads = do
     -- if a thread is in a masked action, killing it may take some time, so kill them in parallel
-    bars <- sequence [do forkIO $ killThread t; return bar | Thread t bar <- threads]
+    bars <- sequence [do forkIO $ killThread t; pure bar | Thread t bar <- threads]
     mapM_ waitBarrier bars
 
 

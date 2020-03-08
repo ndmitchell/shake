@@ -79,7 +79,7 @@ instance Semigroup Builder where
     (Builder x1 x2) <> (Builder y1 y2) = Builder (x1+y1) $ \p i -> do x2 p i; y2 p $ i+x1
 
 instance Monoid Builder where
-    mempty = Builder 0 $ \_ _ -> return ()
+    mempty = Builder 0 $ \_ _ -> pure ()
     mappend = (<>)
 
 -- | Methods for Binary serialisation that go directly between strict ByteString values.

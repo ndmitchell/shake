@@ -113,14 +113,14 @@ ruleRun opts rebuildFlags k o@(fmap getEx -> old :: Maybe Result) mode = do
                 now <- liftIO $ filesStoredValue opts k
                 case now of
                     Nothing -> rebuild
-                    Just now -> do alwaysRerun; return $ RunResult ChangedStore (runBuilder $ putEx $ Result (Ver 0) now) now
+                    Just now -> do alwaysRerun; pure $ RunResult ChangedStore (runBuilder $ putEx $ Result (Ver 0) now) now
         Just (Result ver old) | mode == RunDependenciesSame, verEq ver -> do
             v <- liftIO $ filesStoredValue opts k
             case v of
                 Just v -> case filesEqualValue opts old v of
                     NotEqual -> rebuild
-                    EqualCheap -> return $ RunResult ChangedNothing (fromJust o) v
-                    EqualExpensive -> return $ RunResult ChangedStore (runBuilder $ putEx $ Result ver v) v
+                    EqualCheap -> pure $ RunResult ChangedNothing (fromJust o) v
+                    EqualExpensive -> pure $ RunResult ChangedStore (runBuilder $ putEx $ Result ver v) v
                 Nothing -> rebuild
         _ -> rebuild
     where
@@ -238,8 +238,8 @@ getFileTimes name xs = do
     let opts2 = if shakeChange opts == ChangeModtimeAndDigestInput then opts{shakeChange=ChangeModtime} else opts
     ys <- liftIO $ mapM (fileStoredValue opts2) xs
     case sequence ys of
-        Just ys -> return $ FilesA ys
-        Nothing | not $ shakeCreationCheck opts -> return $ FilesA []
+        Just ys -> pure $ FilesA ys
+        Nothing | not $ shakeCreationCheck opts -> pure $ FilesA []
         Nothing -> do
             let missing = length $ filter isNothing ys
             error $ "Error, " ++ name ++ " rule failed to produce " ++ show missing ++

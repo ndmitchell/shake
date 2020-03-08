@@ -78,8 +78,8 @@ usingConfigFile file = do
 --   of variables outside 'Action'.
 usingConfig :: Map.HashMap String String -> Rules ()
 usingConfig mp = do
-    addOracle $ \(Config x) -> return $ Map.lookup x mp
-    addOracle $ \(ConfigKeys ()) -> return $ sort $ Map.keys mp
+    addOracle $ \(Config x) -> pure $ Map.lookup x mp
+    addOracle $ \(ConfigKeys ()) -> pure $ sort $ Map.keys mp
     pure ()
 
 

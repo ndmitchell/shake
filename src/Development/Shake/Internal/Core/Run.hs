@@ -211,7 +211,7 @@ withInit opts act =
 
 usingShakeOptions :: Cleanup -> ShakeOptions -> IO ShakeOptions
 usingShakeOptions cleanup opts = do
-    opts@ShakeOptions{..} <- if shakeThreads opts /= 0 then return opts else do p <- getProcessorCount; return opts{shakeThreads=p}
+    opts@ShakeOptions{..} <- if shakeThreads opts /= 0 then pure opts else do p <- getProcessorCount; pure opts{shakeThreads=p}
     when shakeLineBuffering $ usingLineBuffering cleanup
     usingNumCapabilities cleanup shakeThreads
     pure opts
@@ -242,12 +242,12 @@ checkShakeExtra mp = do
         (k,t):xs -> throwIO $ errorStructured "Invalid Map in shakeExtra"
             [("Key",Just $ show k),("Value type",Just $ show t)]
             (if null xs then "" else "Plus " ++ show (length xs) ++ " other keys")
-        _ -> return ()
+        _ -> pure ()
 
 
 runLint :: Map.HashMap TypeRep BuiltinRule -> Key -> Value -> IO (Maybe String)
 runLint mp k v = case Map.lookup (typeKey k) mp of
-    Nothing -> return Nothing
+    Nothing -> pure Nothing
     Just BuiltinRule{..} -> builtinLint k v
 
 
@@ -290,7 +290,7 @@ checkValid diagnostic db check absent = do
             good <- check key $ fst result
             diagnostic $ pure $ "Checking if " ++ show key ++ " is " ++ show result ++ ", " ++ if isNothing good then "passed" else "FAILED"
             pure $ [(key, result, now) | Just now <- [good]] ++ seen
-        _ -> return seen
+        _ -> pure seen
     unless (null bad) $ do
         let n = length bad
         throwM $ errorStructured
@@ -301,7 +301,7 @@ checkValid diagnostic db check absent = do
 
     -- TEST 2: Is anything from lintTrackWrite which promised not to exist actually been created
     exists <- getIdFromKey db
-    bad <- return [(parent,key) | (parent, key) <- Set.toList $ Set.fromList absent, isJust $ exists key]
+    bad <- pure [(parent,key) | (parent, key) <- Set.toList $ Set.fromList absent, isJust $ exists key]
     unless (null bad) $ do
         let n = length bad
         throwM $ errorStructured
@@ -370,10 +370,10 @@ loadSharedCloud var opts owitness = do
     let ver = makeVer $ shakeVersion opts
 
     shared <- case shakeShare opts of
-        Nothing -> return Nothing
+        Nothing -> pure Nothing
         Just x -> Just <$> newShared (shakeSymlink opts) wit2 ver x
     cloud <- case newCloud (runLocked var) (Map.map builtinKey owitness) ver keyVers $ shakeCloud opts of
-        _ | null $ shakeCloud opts -> return Nothing
+        _ | null $ shakeCloud opts -> pure Nothing
         Nothing -> fail "shakeCloud set but Shake not compiled for cloud operation"
         Just res -> Just <$> res
     pure (shared, cloud)

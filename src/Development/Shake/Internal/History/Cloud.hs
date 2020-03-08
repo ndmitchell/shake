@@ -42,7 +42,7 @@ laterFence :: MonadIO m => Fence m a -> Wait m a
 laterFence fence = do
     res <- liftIO $ testFence fence
     case res of
-        Just v -> return v
+        Just v -> pure v
         Nothing -> Later $ waitFence fence
 
 

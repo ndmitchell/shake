@@ -108,7 +108,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     let val = fmap runValue res
                     res <- liftIO $ getKeyValueFromId database i
                     w <- case res of
-                        Just (_, Running (NoShow w) _) -> return w
+                        Just (_, Running (NoShow w) _) -> pure w
                         -- We used to be able to hit here, but we fixed it by ensuring the thread pool workers are all
                         -- dead _before_ any exception bubbles up
                         _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
@@ -116,7 +116,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     w val
                 case res of
                     Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k $ Loaded runValue{result=runStore}
-                    _ -> return ()
+                    _ -> pure ()
     where
         mkError e = Failed e $ if globalOneShot then Nothing else r
 
@@ -125,7 +125,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
 buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Wait Locked RunMode
 buildRunMode global stack database me = do
     changed <- case me of
-        Nothing -> return True
+        Nothing -> pure True
         Just me -> buildRunDependenciesChanged global stack database me
     pure $ if changed then RunDependenciesChanged else RunDependenciesSame
 
@@ -161,13 +161,13 @@ applyKeyValue callStack ks = do
         wait <- runWait $ do
             x <- firstJustWaitUnordered (fmap (either Just (const Nothing)) . lookupOne global stack database) $ nubOrd is
             case x of
-                Just e -> return $ Left e
+                Just e -> pure $ Left e
                 Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . liftIO . getKeyValueFromId database) is
         pure (is, wait)
     Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
 
     case wait of
-        Now vs -> either throwM return vs
+        Now vs -> either throwM pure vs
         _ -> do
             offset <- liftIO offsetTime
             vs <- Action $ captureRAW $ \continue ->
@@ -190,7 +190,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
         Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
-        Just r -> return r
+        Just r -> pure r
 
     let s = (newLocal stack shakeVerbosity){localBuiltinVersion = builtinVersion}
     time <- offsetTime
@@ -266,19 +266,19 @@ historyLoad (Ver -> ver) = do
                     let identify = runIdentify globalRules k . fst . result
                     either (const Nothing) identify <$> lookupOne global localStack database i
             x <- case globalShared of
-                Nothing -> return Nothing
+                Nothing -> pure Nothing
                 Just shared -> lookupShared shared ask key localBuiltinVersion ver
             x <- case x of
-                Just res -> return $ Just res
+                Just res -> pure $ Just res
                 Nothing -> case globalCloud of
-                    Nothing -> return Nothing
+                    Nothing -> pure Nothing
                     Just cloud -> lookupCloud cloud ask key localBuiltinVersion ver
             case x of
-                Nothing -> return Nothing
+                Nothing -> pure Nothing
                 Just (a,b,c) -> quickly $ Just . (a,,c) <$> mapM (mapM $ mkId database) b
         -- FIXME: If running with cloud and shared, and you got a hit in cloud, should also add it to shared
         res <- case res of
-            Now x -> return x
+            Now x -> pure x
             _ -> do
                 offset <- liftIO offsetTime
                 res <- Action $ captureRAW $ \continue ->
@@ -288,7 +288,7 @@ historyLoad (Ver -> ver) = do
                 Action $ modifyRW $ addDiscount offset
                 pure res
         case res of
-            Nothing -> return Nothing
+            Nothing -> pure Nothing
             Just (res, deps, restore) -> do
                 liftIO $ globalDiagnostic $ pure $ "History hit for " ++ show key
                 liftIO restore
@@ -330,7 +330,7 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
                 pure $ (k,) <$> runIdentify globalRules k (fst $ result r)
         let k = topStack localStack
         case deps of
-            Nothing -> liftIO $ globalDiagnostic $ return $ "Dependency with no identity for " ++ show k
+            Nothing -> liftIO $ globalDiagnostic $ pure $ "Dependency with no identity for " ++ show k
             Just deps -> do
                 whenJust globalShared $ \shared -> addShared shared key localBuiltinVersion ver deps store produced
                 whenJust globalCloud  $ \cloud  -> addCloud  cloud  key localBuiltinVersion ver deps store produced

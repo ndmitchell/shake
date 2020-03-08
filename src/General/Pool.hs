@@ -52,10 +52,10 @@ data S = S
 
 emptyS :: Int -> Bool -> IO S
 emptyS n deterministic = do
-    rand <- if not deterministic then return randomIO else do
+    rand <- if not deterministic then pure randomIO else do
         ref <- newIORef 0
         -- no need to be thread-safe - if two threads race they were basically the same time anyway
-        pure $ do i <- readIORef ref; writeIORef' ref (i+1); return i
+        pure $ do i <- readIORef ref; writeIORef' ref (i+1); pure i
     pure $ S True Set.empty n 0 0 0 rand Heap.empty
 
 
@@ -66,15 +66,15 @@ data Pool = Pool
 
 withPool :: Pool -> (S -> IO (S, IO ())) -> IO ()
 withPool (Pool var _) f = join $ modifyVar var $ \s ->
-    if alive s then f s else return (s, pure ())
+    if alive s then f s else pure (s, pure ())
 
 withPool_ :: Pool -> (S -> IO S) -> IO ()
 withPool_ pool act = withPool pool $ fmap (, pure()) . act
 
 
 worker :: Pool -> IO ()
-worker pool = withPool pool $ \s -> return $ case Heap.uncons $ todo s of
-    Nothing -> (s, return ())
+worker pool = withPool pool $ \s -> pure $ case Heap.uncons $ todo s of
+    Nothing -> (s, pure ())
     Just (Heap.Entry _ now, todo2) -> (s{todo = todo2}, now >> worker pool)
 
 -- | Given a pool, and a function that breaks the S invariants, restore them.
@@ -97,7 +97,7 @@ step pool@(Pool _ done) op = mask_ $ withPool_ pool $ \s -> do
         Nothing | threadsCount s == 0 -> do
             signalBarrier done $ Right s
             pure s{alive = False}
-        _ -> return s
+        _ -> pure s
     where
         addThread t s = s{threads = Set.insert t $ threads s, threadsCount = threadsCount s + 1
                          ,threadsSum = threadsSum s + 1, threadsMax = threadsMax s `max` (threadsCount s + 1)}
@@ -124,8 +124,8 @@ data PoolPriority
 --   After calling cleanup you should requeue onto a new thread.
 increasePool :: Pool -> IO (IO ())
 increasePool pool = do
-    step pool $ \s -> return s{threadsLimit = threadsLimit s + 1}
-    pure $ step pool $ \s -> return s{threadsLimit = threadsLimit s - 1}
+    step pool $ \s -> pure s{threadsLimit = threadsLimit s + 1}
+    pure $ step pool $ \s -> pure s{threadsLimit = threadsLimit s - 1}
 
 
 -- | Make sure the pool cannot run out of tasks (and thus everything finishes) until after the cancel is called.
@@ -149,7 +149,7 @@ runPool deterministic n act = do
     let pool = Pool s done
 
     -- if someone kills our thread, make sure we kill our child threads
-    let cleanup = join $ modifyVar s $ \s -> return (s{alive=False}, stopThreads $ Set.toList $ threads s)
+    let cleanup = join $ modifyVar s $ \s -> pure (s{alive=False}, stopThreads $ Set.toList $ threads s)
 
     let ghc10793 = do
             -- if this thread dies because it is blocked on an MVar there's a chance we have

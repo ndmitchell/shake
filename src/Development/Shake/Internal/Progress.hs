@@ -323,7 +323,7 @@ progressProgram :: IO (String -> IO ())
 progressProgram = do
     exe <- findExecutable "shake-progress"
     case exe of
-        Nothing -> return $ const $ return ()
+        Nothing -> pure $ const $ pure ()
         Just exe -> do
             lastArgs <- newIORef Nothing -- the arguments we passed to shake-progress last time
             pure $ \msg -> do

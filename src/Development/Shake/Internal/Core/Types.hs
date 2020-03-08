@@ -296,7 +296,7 @@ nubDepends = fMany Set.empty
 --
 -- > run key oldStore mode = do
 -- >     ...
--- >     return $ RunResult change newStore newValue
+-- >     pure $ RunResult change newStore newValue
 --
 --   Where you have:
 --

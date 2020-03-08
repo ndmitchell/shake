@@ -109,7 +109,7 @@ import Development.Shake.Internal.Core.Rules
 --   exercise our build system with:
 --
 -- > example = do
--- >     fileRule "a.txt" $ return ()
+-- >     fileRule "a.txt" $ pure ()
 -- >     fileRule "b.txt" $ do
 -- >         fileNeed "a.txt"
 -- >         liftIO $ writeFile "b.txt" . reverse =<< readFile "a.txt"
@@ -122,18 +122,18 @@ import Development.Shake.Internal.Core.Rules
 -- > addBuiltinFileRule :: Rules ()
 -- > addBuiltinFileRule = addBuiltinRule noLint noIdentity run
 -- >     where
--- >         fileContents (File x) = do b <- IO.doesFileExist x; if b then IO.readFile' x else return ""
+-- >         fileContents (File x) = do b <- IO.doesFileExist x; if b then IO.readFile' x else pure ""
 -- >
 -- >         run :: BuiltinRun File ()
 -- >         run key old mode = do
 -- >             now <- liftIO $ fileContents key
 -- >             if mode == RunDependenciesSame && fmap BS.unpack old == Just now then
--- >                 return $ RunResult ChangedNothing (BS.pack now) ()
+-- >                 pure $ RunResult ChangedNothing (BS.pack now) ()
 -- >             else do
 -- >                 (_, act) <- getUserRuleOne key (const Nothing) $ \(FileRule k act) -> if k == key then Just act else Nothing
 -- >                 act
 -- >                 now <- liftIO $ fileContents key
--- >                 return $ RunResult ChangedRecomputeDiff (BS.pack now) ()
+-- >                 pure $ RunResult ChangedRecomputeDiff (BS.pack now) ()
 --
 --   We define a wrapper @addBuiltinFileRule@ that calls @addBuiltinRule@, opting out of linting and cached storage.
 --   The only thing we provide is a 'BuiltinRun' function which gets the previous state, and whether any dependency has changed,

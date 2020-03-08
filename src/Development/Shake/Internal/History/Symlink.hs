@@ -36,7 +36,7 @@ createLinkMaybe from to = withCWString from $ \cfrom -> withCWString to $ \cto -
 
 #else
 
-createLinkMaybe from to = handleIO (return . Just . show) $ createLink from to >> pure Nothing
+createLinkMaybe from to = handleIO (pure . Just . show) $ createLink from to >> pure Nothing
 
 #endif
 

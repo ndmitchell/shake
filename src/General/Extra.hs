@@ -130,9 +130,9 @@ getProcessorCount = let res = unsafePerformIO act in pure res
             else do
                 env <- lookupEnv "NUMBER_OF_PROCESSORS"
                 case env of
-                    Just s | [(i,"")] <- reads s -> return i
+                    Just s | [(i,"")] <- reads s -> pure i
                     _ -> do
-                        src <- readFile' "/proc/cpuinfo" `catchIO` \_ -> return ""
+                        src <- readFile' "/proc/cpuinfo" `catchIO` \_ -> pure ""
                         pure $! max 1 $ length [() | x <- lines src, "processor" `isPrefixOf` x]
 
 
@@ -148,8 +148,8 @@ findGcc = do
                     let gcc = takeDirectory (takeDirectory ghc) </> "mingw/bin/gcc.exe"
                     b <- doesFileExist_ gcc
                     pure $ if b then (True, Just $ takeDirectory gcc) else (False, Nothing)
-                _ -> return (False, Nothing)
-        _ -> return (isJust v, Nothing)
+                _ -> pure (False, Nothing)
+        _ -> pure (isJust v, Nothing)
 
 
 
@@ -194,7 +194,7 @@ forNothingM [] f = pure $ Just []
 forNothingM (x:xs) f = do
     v <- f x
     case v of
-        Nothing -> return Nothing
+        Nothing -> pure Nothing
         Just v -> liftM (v:) `liftM` forNothingM xs f
 
 
@@ -235,16 +235,16 @@ handleSynchronous = handleBool (not . isAsyncException)
 -- System.Directory
 
 doesFileExist_ :: FilePath -> IO Bool
-doesFileExist_ x = doesFileExist x `catchIO` \_ -> return False
+doesFileExist_ x = doesFileExist x `catchIO` \_ -> pure False
 
 doesDirectoryExist_ :: FilePath -> IO Bool
-doesDirectoryExist_ x = doesDirectoryExist x `catchIO` \_ -> return False
+doesDirectoryExist_ x = doesDirectoryExist x `catchIO` \_ -> pure False
 
 -- | Remove a file, but don't worry if it fails
 removeFile_ :: FilePath -> IO ()
 removeFile_ x =
     removeFile x `catchIO` \e ->
-        when (isPermissionError e) $ handleIO (\_ -> return ()) $ do
+        when (isPermissionError e) $ handleIO (\_ -> pure ()) $ do
             perms <- getPermissions x
             setPermissions x perms{readable = True, searchable = True, writable = True}
             removeFile x

@@ -41,14 +41,14 @@ instance (Monad m, Applicative m) => Applicative (Wait m) where
     Lift x <*> y = Lift $ (<*> y) <$> x
     Later x <*> Now y = Later $ \c -> x $ \x -> c $ x y
     -- Note: We pull the Lift from the right BEFORE the Later, to enable parallelism
-    Later x <*> Lift y = Lift $ do y <- y; return $ Later x <*> y
+    Later x <*> Lift y = Lift $ do y <- y; pure $ Later x <*> y
     Later x <*> Later y = Later $ \c -> x $ \x -> y $ \y -> c $ x y
 
 instance (Monad m, Applicative m) => Monad (Wait m) where
     return = pure
     (>>) = (*>)
     Now x >>= f = f x
-    Lift x >>= f = Lift $ do x <- x; return $ x >>= f
+    Lift x >>= f = Lift $ do x <- x; pure $ x >>= f
     Later x >>= f = Later $ \c -> x $ \x -> do
         x <- runWait $ f x
         case x of
@@ -101,7 +101,7 @@ firstLeftWaitUnordered f xs = do
         mut <- liftIO $ newArray n undefined
         res <- go mut [] $ zipFrom 0 $ map f xs
         case res of
-            Just e -> return $ Left e
+            Just e -> pure $ Left e
             Nothing -> liftIO $ Right <$> mapM (readArray mut) [0..n-1]
     where
         -- keep a list of those things we might visit later, and ask for each we see in turn

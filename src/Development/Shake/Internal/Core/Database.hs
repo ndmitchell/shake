@@ -68,7 +68,7 @@ getValueFromKey :: (Eq k, Hashable k) => DatabasePoly k v -> k -> IO (Maybe v)
 getValueFromKey Database{..} k = do
     is <- readIORef intern
     case Intern.lookup k is of
-        Nothing -> return Nothing
+        Nothing -> pure Nothing
         Just i -> fmap snd <$> Ids.lookup status i
 
 -- Returns Nothing only if the Id was serialised previously but then the Id disappeared
@@ -95,7 +95,7 @@ mkId :: (Eq k, Hashable k) => DatabasePoly k v -> k -> Locked Id
 mkId Database{..} k = liftIO $ do
     is <- readIORef intern
     case Intern.lookup k is of
-        Just i -> return i
+        Just i -> pure i
         Nothing -> do
             (is, i)<- pure $ Intern.add k is
             -- make sure to write it into Status first to maintain Database invariants

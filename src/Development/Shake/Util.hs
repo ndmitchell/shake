@@ -50,7 +50,7 @@ neededMakefileDependencies file = neededBS . concatMap snd . BS.parseMakefile =<
 -- data Flags = Flags {distCC :: Bool} deriving Eq
 -- flags = [Option \"\" [\"distcc\"] (NoArg $ Right $ \\x -> x{distCC=True}) \"Run distributed.\"]
 --
--- main = 'shakeArgsAccumulate' 'shakeOptions' flags (Flags False) $ \\flags targets -> return $ Just $ do
+-- main = 'shakeArgsAccumulate' 'shakeOptions' flags (Flags False) $ \\flags targets -> pure $ Just $ do
 --     if null targets then 'want' [\"result.exe\"] else 'want' targets
 --     let compiler = if distCC flags then \"distcc\" else \"gcc\"
 --     \"*.o\" '%>' \\out -> do

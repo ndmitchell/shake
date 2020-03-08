@@ -67,7 +67,7 @@ checkEscCodesWindows = do
         b <- c_GetConsoleModule h v
         if b then Just <$> peek v else pure Nothing
     case mode of
-        Nothing -> return False
+        Nothing -> pure False
         Just mode -> do
             let modeNew = mode .|. c_ENABLE_VIRTUAL_TERMINAL_PROCESSING
             if mode == modeNew then pure True else do

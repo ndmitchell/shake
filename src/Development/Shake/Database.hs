@@ -65,7 +65,7 @@ shakeOpenDatabase opts rules = do
     let free = do
             modifyVar_ use $ \case
                     Using s -> throwM $ errorStructured "Error when calling shakeOpenDatabase close function, currently running" [("Existing call", Just s)] ""
-                    _ -> return Closed
+                    _ -> pure Closed
             clean
     pure (alloc, free)
 
@@ -74,7 +74,7 @@ withOpen var name final act = mask $ \restore -> do
     o <- modifyVar var $ \case
         Using s -> throwM $ errorStructured ("Error when calling " ++ name ++ ", currently running") [("Existing call", Just s)] ""
         Closed -> throwM $ errorStructured ("Error when calling " ++ name ++ ", already closed") [] ""
-        o@Open{} -> return (Using name, o)
+        o@Open{} -> pure (Using name, o)
     let clean = writeVar var $ final o
     res <- restore (act o) `onException` clean
     clean
@@ -84,7 +84,7 @@ withOpen var name final act = mask $ \restore -> do
 --   If so, an optimisation can be applied to retain less memory.
 shakeOneShotDatabase :: ShakeDatabase -> IO ()
 shakeOneShotDatabase (ShakeDatabase use _) =
-    withOpen use "shakeOneShotDatabase" (\o -> o{openOneShot=True}) $ \_ -> return ()
+    withOpen use "shakeOneShotDatabase" (\o -> o{openOneShot=True}) $ \_ -> pure ()
 
 -- | Given some options and rules, create a 'ShakeDatabase' that can be used to run
 --   executions.
@@ -147,5 +147,5 @@ shakeRunDatabase (ShakeDatabase use s) as =
         after <- run s openOneShot $ map void as
         results <- mapM readIORef refs
         case sequence results of
-            Just result -> return (result, after)
+            Just result -> pure (result, after)
             Nothing -> throwM $ errorInternal "Expected all results were written, but some where not"

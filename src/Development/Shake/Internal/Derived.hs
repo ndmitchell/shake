@@ -70,13 +70,13 @@ lookupShakeExtra :: forall a . Typeable a => Map.HashMap TypeRep Dynamic -> IO (
 lookupShakeExtra mp =
     case Map.lookup want mp of
         Just dyn
-            | Just x <- fromDynamic dyn -> return $ Just x
+            | Just x <- fromDynamic dyn -> pure $ Just x
             | otherwise -> throwM $ errorStructured
                 "shakeExtra value is malformed, all keys and values must agree"
                 [("Key", Just $ show want)
                 ,("Value", Just $ show $ dynTypeRep dyn)]
                 "Use addShakeExtra to ensure shakeExtra is well-formed"
-        Nothing -> return Nothing
+        Nothing -> pure Nothing
     where want = typeRep (Proxy :: Proxy a)
 
 -- | Add a properly structued value to 'shakeExtra' which can be retrieved with 'getShakeExtra'.
@@ -252,7 +252,7 @@ newResource name mx = liftIO $ newResourceIO name mx
 -- @
 -- google <- 'Development.Shake.newThrottle' \"Google\" 1 5
 -- \"*.url\" 'Development.Shake.%>' \\out -> do
---     'Development.Shake.withResource' google 1 $ return ()
+--     'Development.Shake.withResource' google 1 $ pure ()
 --     'Development.Shake.cmd' \"wget\" [\"https:\/\/google.com?q=\" ++ 'Development.Shake.FilePath.takeBaseName' out] \"-O\" [out]
 -- @
 --
@@ -290,7 +290,7 @@ withResources res act
 -- @
 -- digits \<- 'newCache' $ \\file -> do
 --     src \<- readFile\' file
---     return $ length $ filter isDigit src
+--     pure $ length $ filter isDigit src
 -- \"*.digits\" 'Development.Shake.%>' \\x -> do
 --     v1 \<- digits ('dropExtension' x)
 --     v2 \<- digits ('dropExtension' x)

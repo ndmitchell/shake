@@ -99,7 +99,7 @@ usingStorage
 usingStorage _ ShakeOptions{..} diagnostic _ | shakeFiles == "/dev/null" = do
     diagnostic $ pure "Using in-memory database"
     ids <- Ids.empty
-    pure (ids, \_ _ _ -> return ())
+    pure (ids, \_ _ _ -> pure ())
 
 usingStorage cleanup ShakeOptions{..} diagnostic witness = do
     let lockFile = shakeFiles </> ".shake.lock"
@@ -182,7 +182,7 @@ usingStorage cleanup ShakeOptions{..} diagnostic witness = do
             Just <$> Ids.forCopy ids snd
 
     ids <- case ids of
-        Just ids -> return ids
+        Just ids -> pure ids
         Nothing -> do
             writeChunk h $ putEx ver
             writeChunk h $ putEx witnessNew

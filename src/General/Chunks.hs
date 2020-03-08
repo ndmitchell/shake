@@ -136,7 +136,7 @@ resetChunksCorrupt :: Maybe FilePath -> Chunks -> IO ()
 resetChunksCorrupt copy Chunks{..} = mask $ \restore -> do
     h <- takeMVar chunksHandle
     case copy of
-        Nothing -> return h
+        Nothing -> pure h
         Just copy -> do
             flip onException (putMVar chunksHandle h) $ restore $ do
                 hClose h

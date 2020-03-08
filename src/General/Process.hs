@@ -81,7 +81,7 @@ data ProcessOpts = ProcessOpts
 
 -- | If two buffers can be replaced by one and a copy, do that (only if they start empty)
 optimiseBuffers :: ProcessOpts -> IO (ProcessOpts, IO ())
-optimiseBuffers po@ProcessOpts{..} = return (po{poStdout = nubOrd poStdout, poStderr = nubOrd poStderr}, pure ())
+optimiseBuffers po@ProcessOpts{..} = pure (po{poStdout = nubOrd poStdout, poStderr = nubOrd poStderr}, pure ())
 
 stdStream :: (FilePath -> Handle) -> [Destination] -> [Destination] -> StdStream
 stdStream _ [DestEcho] _ = Inherit
@@ -102,7 +102,7 @@ stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
 
 ignoreSigPipe :: IO () -> IO ()
 ignoreSigPipe = handleIO $ \e -> case e of
-    IOError {ioe_type=ResourceVanished, ioe_errno=Just ioe} | Errno ioe == ePIPE -> return ()
+    IOError {ioe_type=ResourceVanished, ioe_errno=Just ioe} | Errno ioe == ePIPE -> pure ()
     _ -> throwIO e
 
 
@@ -132,7 +132,7 @@ forkWait :: IO a -> IO (IO a)
 forkWait a = do
     res <- newEmptyMVar
     _ <- mask $ \restore -> forkIO $ try_ (restore a) >>= putMVar res
-    return $ takeMVar res >>= either throwIO pure
+    pure $ takeMVar res >>= either throwIO pure
 
 
 abort :: ProcessHandle -> IO ()
@@ -170,7 +170,7 @@ process po = do
                     when (DestEcho `elem` dest) $ do
                         buf <- hGetBuffering hh
                         case buf of
-                            BlockBuffering{} -> return ()
+                            BlockBuffering{} -> pure ()
                             _ -> hSetBuffering h buf
 
                     if isBinary then do
@@ -201,7 +201,7 @@ process po = do
                         waits <- forM dest $ \case
                             DestEcho -> forkWait $ hPutStr hh src
                             DestFile x -> forkWait $ hPutStr (outHandle x) src
-                            DestString x -> do addBuffer x src; return $ return ()
+                            DestString x -> do addBuffer x src; pure $ pure ()
                             DestBytes{} -> throwImpure $ errorInternal "Not reachable due to isBinary condition"
                         pure $ sequence_ $ wait1 : waits
 

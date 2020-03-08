@@ -40,7 +40,7 @@ post (Conn prefix) url send = do
     case response of
         Left e -> fail $ "Network.post, failed: " ++ show e
         Right v | rspCode v /= (2,0,0) -> fail $ "Network.post, failed: " ++ show (rspCode v)
-                | otherwise -> return $ rspBody v
+                | otherwise -> pure $ rspBody v
 
 
 parseURI_ :: String -> URI

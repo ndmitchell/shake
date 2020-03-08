@@ -31,7 +31,7 @@ signalFence (Fence ref) v = join $ liftIO $ atomicModifyIORef' ref $ \case
 
 waitFence :: MonadIO m => Fence m a -> (a -> m ()) -> m ()
 waitFence (Fence ref) call = join $ liftIO $ atomicModifyIORef' ref $ \case
-    Left queue -> (Left (\a -> queue a >> call a), return ())
+    Left queue -> (Left (\a -> queue a >> call a), pure ())
     Right v -> (Right v, call v)
 
 testFence :: Fence m a -> IO (Maybe a)
@@ -51,5 +51,5 @@ exceptFence xs = do
         join $ liftIO $ atomicModifyIORef' todo $ \i -> case res of
             Left e | i >= 0 -> (-1, signalFence fence $ Left e)
             _ | i == 1 -> (-1, signalFence fence . Right =<< liftIO (mapM (fmap (fromRight' . fromJust) . testFence) xs))
-              | otherwise -> (i-1, return ())
+              | otherwise -> (i-1, pure ())
     pure fence

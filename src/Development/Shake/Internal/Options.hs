@@ -237,7 +237,7 @@ shakeOptions = ShakeOptions
     True ChangeModtime True [] False False Nothing [] False
     (const $ pure ())
     (const $ BS.putStrLn . UTF8.fromString) -- try and output atomically using BS
-    (\_ _ _ -> return ())
+    (\_ _ _ -> pure ())
     Map.empty
 
 fieldsShakeOptions =

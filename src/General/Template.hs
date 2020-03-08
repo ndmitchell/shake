@@ -52,8 +52,8 @@ runTemplate ask = lbsMapLinesIO f
         link = LBS.pack "<link href=\""
         script = LBS.pack "<script src=\""
 
-        f x | Just file <- lbsStripPrefix script y = do res <- grab file; return $ LBS.pack "<script>\n" `LBS.append` res `LBS.append` LBS.pack "\n</script>"
-            | Just file <- lbsStripPrefix link y = do res <- grab file; return $ LBS.pack "<style type=\"text/css\">\n" `LBS.append` res `LBS.append` LBS.pack "\n</style>"
+        f x | Just file <- lbsStripPrefix script y = do res <- grab file; pure $ LBS.pack "<script>\n" `LBS.append` res `LBS.append` LBS.pack "\n</script>"
+            | Just file <- lbsStripPrefix link y = do res <- grab file; pure $ LBS.pack "<style type=\"text/css\">\n" `LBS.append` res `LBS.append` LBS.pack "\n</style>"
             | otherwise = pure x
             where
                 y = LBS.dropWhile isSpace x

@@ -78,7 +78,7 @@ actionThenUndoLocal f m = Action $ do
 --   then do nothing with it.
 shakeException :: Global -> Stack -> SomeException -> IO ShakeException
 shakeException Global{globalOptions=ShakeOptions{..},..} stk e = case fromException e of
-    Just (e :: ShakeException) -> return e
+    Just (e :: ShakeException) -> pure e
     Nothing -> do
         e<- pure $ exceptionStack stk e
         when (shakeStaunch && shakeVerbosity >= Error) $
@@ -438,7 +438,7 @@ newCacheIO (act :: k -> Action v) = do
     var :: Var (Map.HashMap k (Fence IO (Either SomeException ([Depends],v)))) <- newVar Map.empty
     pure $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
-            Just bar -> return $ (,) mp $ do
+            Just bar -> pure $ (,) mp $ do
                 (offset, (deps, v)) <- actionFenceRequeue bar
                 Action $ modifyRW $ \s -> addDiscount offset $ s{localDepends = deps ++ localDepends s}
                 pure v
@@ -516,7 +516,7 @@ parallel acts = do
 --
 -- @
 -- 'batch' 3 (\"*.out\" 'Development.Shake.%>')
---     (\\out -> do 'Development.Shake.need' [out '-<.>' \"in\"]; return out)
+--     (\\out -> do 'Development.Shake.need' [out '-<.>' \"in\"]; pure out)
 --     (\\outs -> 'Development.Shake.cmd' "build-multiple" [out '-<.>' \"in\" | out \<- outs])
 -- @
 --
@@ -580,7 +580,7 @@ batch mx pred one many
 --   Only useful if the results are being interactively reported or consumed.
 reschedule :: Double -> Action ()
 reschedule x = do
-    (wait, _) <- actionAlwaysRequeuePriority (PoolDeprioritize $ negate x) $ return ()
+    (wait, _) <- actionAlwaysRequeuePriority (PoolDeprioritize $ negate x) $ pure ()
     Action $ modifyRW $ addDiscount wait
 
 

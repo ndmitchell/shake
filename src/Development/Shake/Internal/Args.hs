@@ -115,7 +115,7 @@ shakeArgs opts rules = shakeArgsWith opts [] f
 -- data Flags = DistCC deriving Eq
 -- flags = [Option \"\" [\"distcc\"] (NoArg $ Right DistCC) \"Run distributed.\"]
 --
--- main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> return $ Just $ do
+-- main = 'shakeArgsWith' 'shakeOptions' flags $ \\flags targets -> pure $ Just $ do
 --     let compiler = if DistCC \`elem\` flags then \"distcc\" else \"gcc\"
 --     let rules = do
 --         \"*.o\" '%>' \\out -> do
@@ -160,8 +160,8 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
     let putWhenLn v msg = putWhen v $ msg ++ "\n"
     let showHelp long = do
             progName <- getProgName
-            (targets, helpSuffix) <- if not long then return ([], []) else
-                handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; return ([], [])) $ do
+            (targets, helpSuffix) <- if not long then pure ([], []) else
+                handleSynchronous (\e -> do putWhenLn Info $ "Failure to collect targets: " ++ show e; pure ([], [])) $ do
                     -- run the rules as simply as we can
                     rs <- rules shakeOpts [] []
                     case rs of
@@ -169,7 +169,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                             xs <- getTargets shakeOpts rs
                             helpSuffix <- getHelpSuffix shakeOpts rs
                             evaluate $ force (["  - " ++ a ++ maybe "" (" - " ++) b | (a,b) <- xs], helpSuffix)
-                        _ -> return ([], [])
+                        _ -> pure ([], [])
             changes<- pure $
                 let as = shakeOptionsFields baseOpts
                     bs = shakeOptionsFields oshakeOpts
@@ -208,7 +208,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         start <- offsetTime
         initDataDirectory -- must be done before we start changing directory
         let redir = maybe id withCurrentDirectory changeDirectory
-        shakeOpts <- if null progressRecords then return shakeOpts else do
+        shakeOpts <- if null progressRecords then pure shakeOpts else do
             t <- offsetTime
             pure shakeOpts{shakeProgress = \p ->
                 void $ withThreadsBoth (shakeProgress shakeOpts p) $
@@ -225,13 +225,13 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
                 putWhenLn Info $ "shake: In directory `" ++ curdir ++ "'"
             (shakeOpts, ui) <- do
                 let compact = lastDef No [x | Compact x <- flagsExtra]
-                use <- if compact == Auto then checkEscCodes else return $ compact == Yes
+                use <- if compact == Auto then checkEscCodes else pure $ compact == Yes
                 if use
                     then second withThreadSlave <$> compactUI shakeOpts
                     else pure (shakeOpts, id)
             rules <- rules shakeOpts user files
             ui $ case rules of
-                Nothing -> return (False, shakeOpts, Right ())
+                Nothing -> pure (False, shakeOpts, Right ())
                 Just (shakeOpts, rules) -> do
                     res <- try_ $ shake shakeOpts $
                         if NoBuild `elem` flagsExtra then
@@ -357,7 +357,7 @@ shakeOptsEx =
     ,opts $ Option "S" ["no-keep-going","stop"] (noArg $ \s -> s{shakeStaunch=False}) "Turns off -k."
     ,opts $ Option ""  ["storage"] (noArg $ \s -> s{shakeStorageLog=True}) "Write a storage log."
     ,both $ Option "p" ["progress"] (progress $ optArgInt 1 "progress" "N" $ \i s -> s{shakeProgress=prog $ fromMaybe 5 i}) "Show progress messages [every N secs, default 5]."
-    ,opts $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ return ()}) "Don't show progress messages."
+    ,opts $ Option ""  ["no-progress"] (noArg $ \s -> s{shakeProgress=const $ pure ()}) "Don't show progress messages."
     ,opts $ Option "q" ["quiet"] (noArg $ \s -> s{shakeVerbosity=move (shakeVerbosity s) pred}) "Print less (pass repeatedly for even less)."
     ,extr $ Option ""  ["no-time"] (noArg [NoTime]) "Don't print build time."
     ,opts $ Option ""  ["timings"] (noArg $ \s -> s{shakeTimings=True}) "Print phase timings."

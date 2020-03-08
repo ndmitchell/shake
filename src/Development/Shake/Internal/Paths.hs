@@ -49,7 +49,7 @@ readDataFileHTML :: FilePath -> IO LBS.ByteString
 readDataFileHTML file = do
     case lookup file htmlDataFiles of
       Nothing -> fail $ "Could not find data file " ++ file ++ " in embedded data files!"
-      Just x  -> return (LBS.fromStrict x)
+      Just x  -> pure (LBS.fromStrict x)
 
 manualDirData :: [(FilePath, BS.ByteString)]
 manualDirData = $(embedDir "docs/manual")
@@ -70,7 +70,7 @@ copyManualData dest = do
 dataDirs :: [String]
 dataDirs = unsafePerformIO $ do
     datdir <- getDataDir
-    exedir <- takeDirectory <$> getExecutablePath `catchIO` \_ -> return ""
+    exedir <- takeDirectory <$> getExecutablePath `catchIO` \_ -> pure ""
     curdir <- getCurrentDirectory
     pure $ [datdir] ++ [exedir | exedir /= ""] ++ [curdir]
 
@@ -84,7 +84,7 @@ getDataFile file = do
     res <- filterM doesFileExist_ poss
     case res of
         [] -> fail $ unlines $ ("Could not find data file " ++ file ++ ", looked in:") : map ("  " ++) poss
-        x:_ -> return x
+        x:_ -> pure x
 
 hasDataFile :: FilePath -> IO Bool
 hasDataFile file = anyM (\dir -> doesFileExist_ $ dir </> file) dataDirs
