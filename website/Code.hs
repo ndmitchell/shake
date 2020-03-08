@@ -18,14 +18,14 @@ code file = do
     unlessM (doesFileExist file) $
         fail "You must run cabal haddock --hoogle to generate the necessary info first"
     r <- resolve file
-    return $ format r
+    pure $ format r
 
 
 resolve :: FilePath -> IO (String -> [Tag String])
 resolve file = do
     src <- readFile file
     let info = catMaybes $ snd $ mapAccumL f "" $ map words $ lines src
-    return $ \x -> fromMaybe [TagText x] $ lookup x info
+    pure $ \x -> fromMaybe [TagText x] $ lookup x info
     where
         f _ ("module":modu:_) = (fix modu, Just (modu, link modu "" "" modu))
         f modu (('(':x):rest) = f modu $ init x : rest

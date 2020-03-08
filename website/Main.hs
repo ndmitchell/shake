@@ -26,8 +26,8 @@ getMode = do
     args <- getArgs
     let modes = [Debug, Release]
     case args of
-        [] -> return Release
-        [x] | Just x <- lookup (lower x) $ map (lower . show &&& id) modes -> return x
+        [] -> pure Release
+        [x] | Just x <- lookup (lower x) $ map (lower . show &&& id) modes -> pure x
             | otherwise -> fail $ "Couldn't recognise argument, got " ++ x ++ ", wanted " ++ show modes
         _ -> fail "Only allowed at most one command line argument"
 
@@ -45,7 +45,7 @@ main = do
             p <- readPage mode code $ "../docs" </> file
             skeleton ("output" </> lower (takeBaseName file) <.> "html") p
         ".png" -> copyFile ("../docs" </> file) ("output" </> file)
-        _ -> return ()
+        _ -> pure ()
     copyFile "parts/favicon.ico" "output/favicon.ico"
     putStrLn " done"
 
@@ -81,7 +81,7 @@ readPage :: Mode -> (String -> [Tag String]) -> FilePath -> IO Page
 readPage mode code file = do
     (pageTOC, pageBody) <- fmap (links . reformat mode code) $ readFileMarkdown $ "../docs" </> file
     let pageTitle = innerText $ inside "h1" pageBody
-    return Page{..}
+    pure Page{..}
     where
         links (TagOpen linkLevel@['h',i] at:xs) | i `elem` "234" =
                 ([Link{..} | i /= '4'] ++) *** (prefix++) $ links rest
@@ -141,7 +141,7 @@ skeleton mode dir cssOut = do
     content <- readFileTags $ dir </> "content.html"
     footer <- readFileTags $ dir </> "footer.html"
     writeFile cssOut $ common ++ style header ++ style content ++ style footer
-    return $ \file Page{..} -> writeFileTags file $
+    pure $ \file Page{..} -> writeFileTags file $
         inject (takeBaseName file) (takeWhile (~/= "<div id=content>") (remode $ map (activate $ takeFileName file) $ noStyle header)) ++
         parseTags "<div id=content>" ++
         (if length pageTOC <= 1 then [] else
