@@ -31,11 +31,11 @@ act f (Done v) = v
 act f (Need k c) = act f $ c $ f k
 
 actM :: Monad m => (k -> m v) -> Action k v -> m v
-actM f (Done v) = return v
+actM f (Done v) = pure v
 actM f (Need k c) = actM f . c =<< f k
 
 actMT :: Monad m => (k -> m v) -> Action k v -> m (v, [(k,v)])
-actMT f (Done v) = return (v, [])
+actMT f (Done v) = pure (v, [])
 actMT f (Need k c) = do
     v <- f k
     second ((k,v):) `liftM` actMT f (c v)
@@ -68,11 +68,11 @@ cache :: Eq k => k -> Cache k v v -> Cache k v v
 cache k act = do
     v <- askCache k
     case v of
-        Just v -> return v
+        Just v -> pure v
         Nothing -> do
             v <- act
             Cache $ modify $ mappend $ one k v
-            return v
+            pure v
 
 runCache :: Cache k v a -> (k :-> v) -> (a, k :-> v)
 runCache (Cache s) = runState s

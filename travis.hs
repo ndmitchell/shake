@@ -27,7 +27,7 @@ cmd x = do
     putStrLn $ "$ " ++ x
     (t, _) <- duration $ system_ x
     putStrLn $ "Took " ++ showDuration t
-    return t
+    pure t
 
 main = do
     args <- getArgs
@@ -105,7 +105,7 @@ main = do
     unless isHead $ do
         ver <- do
             src <- readFile "shake.cabal"
-            return $ head [trimStart x | x <- lines src, Just x <- [stripPrefix "version:" x]]
+            pure $ head [trimStart x | x <- lines src, Just x <- [stripPrefix "version:" x]]
         forM_ (requiresShake ghcver) $ \x ->
             retry 3 $ cmd $ "cabal v1-install " ++ x ++ " --constraint=shake==" ++ ver
 

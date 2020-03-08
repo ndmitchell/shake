@@ -73,21 +73,21 @@ instance Arbitrary ValidRule where
     arbitrary = do
         rs <- forM ks $ \k -> do
             r <- arbitrary
-            return (k, fixRule k r)
-        return $ ValidRule rs $ evalRules rs
+            pure (k, fixRule k r)
+        pure $ ValidRule rs $ evalRules rs
 
 instance Arbitrary ValidRuleOnce where
     arbitrary = do
         ValidRule a b <- arbitrary
-        return $ ValidRuleOnce a $ assertOnce b
+        pure $ ValidRuleOnce a $ assertOnce b
 
 
 {-# NOINLINE assertOnce #-}
 assertOnce :: (Show k, Eq k) => (k -> v) -> (k -> v)
 assertOnce f = unsafePerformIO $ do
     ref <- newIORef []
-    return $ \k -> unsafePerformIO $ do
+    pure $ \k -> unsafePerformIO $ do
         ks <- readIORef ref
         when (k `elem` ks) $ error $ "Key used twice: " ++ show k
         modifyIORef ref (k:)
-        return $ f k
+        pure $ f k

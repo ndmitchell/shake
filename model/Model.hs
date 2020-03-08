@@ -77,11 +77,11 @@ model3 rule k old = second (<> old) $ runCache (run k) mempty
     where
         run k = fmap fst $ cache k $
             case (old ! k, rule k) of
-                (_, Left v ) -> return (v, [])
+                (_, Left v ) -> pure (v, [])
                 (Nothing, Right a) -> actMT run a
                 (Just o@(_, ds), Right a) -> do
                     b <- andM [(== dv) <$> run dk | (dk,dv) <- ds]
-                    if b then return o else actMT run a
+                    if b then pure o else actMT run a
 
 
 -- | model3 + computed values change
@@ -98,8 +98,8 @@ model4 rule k old = second (<> old) $ runCache (run k) mempty
             case (old ! k, rule k) of
                 (Nothing, (_, a)) -> actMT run a
                 (Just o@(ov, ds), (v, a)) -> do
-                    b <- andM $ return (v == ov) : [(== dv) <$> run dk | (dk,dv) <- ds]
-                    if b then return o else actMT run a
+                    b <- andM $ pure (v == ov) : [(== dv) <$> run dk | (dk,dv) <- ds]
+                    if b then pure o else actMT run a
 
 
 data DB k v = DB {dbValue :: v, dbBuilt :: T, dbChanged :: T, dbDepends :: [k]}
@@ -117,12 +117,12 @@ model5 rule k (succ -> t, old) =
             case (old ! k, rule k) of
                 (Nothing, (_, a)) -> do
                     (v,trace) <- actMT (fmap dbValue . run) a
-                    return $ DB v t t (map fst trace)
+                    pure $ DB v t t (map fst trace)
                 (Just o, (v, a)) -> do
-                    b <- andM $ return (v == dbValue o) : [(<= dbBuilt o) . dbChanged <$> run dk | dk <- dbDepends o]
-                    if b then return o else do
+                    b <- andM $ pure (v == dbValue o) : [(<= dbBuilt o) . dbChanged <$> run dk | dk <- dbDepends o]
+                    if b then pure o else do
                         (v,trace) <- actMT (fmap dbValue . run) a
-                        return $ DB v t (if v == dbValue o then dbChanged o else t) (map fst trace)
+                        pure $ DB v t (if v == dbValue o then dbChanged o else t) (map fst trace)
 
 
 -- | model5 + more powerful action
@@ -143,9 +143,9 @@ model6 rule k (succ -> t, old) =
             case (old ! k, rule k) of
                 (Nothing, (_, a)) -> do
                     (v,trace) <- actMT grab a
-                    return $ DB v t t (map (snd . fst) trace)
+                    pure $ DB v t t (map (snd . fst) trace)
                 (Just o, (v, a)) -> do
-                    b <- andM $ return (v == dbValue o) : [(<= dbBuilt o) . dbChanged <$> run dk | dk <- dbDepends o]
-                    if b then return o else do
+                    b <- andM $ pure (v == dbValue o) : [(<= dbBuilt o) . dbChanged <$> run dk | dk <- dbDepends o]
+                    if b then pure o else do
                         (v,trace) <- actMT grab a
-                        return $ DB v t (if v == dbValue o then dbChanged o else t) (map (snd . fst) trace)
+                        pure $ DB v t (if v == dbValue o then dbChanged o else t) (map (snd . fst) trace)
