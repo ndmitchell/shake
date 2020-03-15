@@ -24,18 +24,18 @@ data FileRule = FileRule File (Action ())
 addBuiltinFileRule :: Rules ()
 addBuiltinFileRule = addBuiltinRule noLint noIdentity run
     where
-        fileContents (File x) = do b <- IO.doesFileExist x; if b then IO.readFile' x else return ""
+        fileContents (File x) = do b <- IO.doesFileExist x; if b then IO.readFile' x else pure ""
 
         run :: BuiltinRun File ()
         run key old mode = do
             now <- liftIO $ fileContents key
             if mode == RunDependenciesSame && fmap BS.unpack old == Just now then
-                return $ RunResult ChangedNothing (BS.pack now) ()
+                pure $ RunResult ChangedNothing (BS.pack now) ()
             else do
                 (_, act) <- getUserRuleOne key (const Nothing) $ \(FileRule k act) -> if k == key then Just act else Nothing
                 act
                 now <- liftIO $ fileContents key
-                return $ RunResult ChangedRecomputeDiff (BS.pack now) ()
+                pure $ RunResult ChangedRecomputeDiff (BS.pack now) ()
 
 fileRule :: FilePath -> Action () -> Rules ()
 fileRule file act = addUserRule $ FileRule (File file) act
@@ -47,7 +47,7 @@ fileNeed = apply1 . File
 main = testBuild test $ do
     addBuiltinFileRule
 
-    fileRule "a.txt" $ return ()
+    fileRule "a.txt" $ pure ()
     fileRule "b.txt" $ do
         fileNeed "a.txt"
         liftIO $ appendFile "log.txt" "X"

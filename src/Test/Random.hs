@@ -65,7 +65,7 @@ test build = do
         args <- getArgs
         let bound = listToMaybe $ reverse $ mapMaybe asDuration args
         time <- offsetTime
-        return $ when (isJust bound) $ do
+        pure $ when (isJust bound) $ do
             now <- time
             when (now > fromJust bound) exitSuccess
 
@@ -89,9 +89,9 @@ test build = do
         res <- try_ $ build $ "--exception" : ("-j" ++ show j) : map ((++) "--arg=" . show) (logicBang ++ [Want [i | Logic i _ <- logicBang]])
         case res of
             Left err
-                | "BANG" `isInfixOf` show err -> return () -- error I expected
+                | "BANG" `isInfixOf` show err -> pure () -- error I expected
                 | otherwise -> error $ "UNEXPECTED ERROR: " ++ show err
-            _ -> return () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
+            _ -> pure () -- occasionally we only put BANG in places with no dependenies that don't get rebuilt
         runLogic [] $ logic ++ [Want [i | Logic i _ <- logic]]
         where
             runLogic :: [Int] -> [Logic] -> IO ()
@@ -123,13 +123,13 @@ addBang xs = do
     i <- randomRIO (0, length xs - 1)
     let (before,now:after) = splitAt i xs
     now <- f now
-    return $ before ++ now : after
+    pure $ before ++ now : after
     where
         f (Logic log xs) = do
             i <- randomRIO (0, length xs)
             let (before,after) = splitAt i xs
-            return $ Logic log $ before ++ [Bang] : after
-        f x = return x
+            pure $ Logic log $ before ++ [Bang] : after
+        f x = pure x
 
 
 randomLogic :: IO [Logic] -- only Logic constructors
@@ -137,7 +137,7 @@ randomLogic = do
     rules <- randomRIO (1,100)
     f rules $ map Input inputRange
     where
-        f 0 _ = return []
+        f 0 _ = pure []
         f i avail = do
             needs <- randomRIO (0,3)
             xs <- replicateM needs $ do

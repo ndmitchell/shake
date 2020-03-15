@@ -15,7 +15,7 @@ import Test.Type
 main = testSimple $ do
     do -- survives releasing bottom
         x <- newIORef (0 :: Int)
-        handle (\(_ :: SomeException) -> return ()) $ withCleanup $ \cleanup -> do
+        handle (\(_ :: SomeException) -> pure ()) $ withCleanup $ \cleanup -> do
             _ <- register cleanup $ modifyIORef x (+1)
             release undefined
         (=== 1) =<< readIORef x
@@ -47,7 +47,7 @@ main = testSimple $ do
         Left Dummy <- try $ withCleanup $ \cleanup -> do
             register cleanup (checkMasked "exception")
             throwIO Dummy
-        return ()
+        pure ()
 
 
 data Dummy = Dummy

@@ -33,7 +33,7 @@ main = testSimple $ do
     (open, close) <- shakeOpenDatabase opts rules
     db <- open
 
-    ([12], after) <- shakeRunDatabase db [need ["a.out"] >> return 12]
+    ([12], after) <- shakeRunDatabase db [need ["a.out"] >> pure 12]
     assertContents "log.txt" "x"
 
     writeFile "a.in" "A"
@@ -41,7 +41,7 @@ main = testSimple $ do
     assertContents "a.out" "A"
     assertContents "log.txt" "xxx"
 
-    ([13,14], _) <- shakeRunDatabase db [need ["a.out"] >> return 13, return 14]
+    ([13,14], _) <- shakeRunDatabase db [need ["a.out"] >> pure 13, pure 14]
     assertContents "log.txt" "xxx"
 
     live <- shakeLiveFilesDatabase db
@@ -77,10 +77,10 @@ main = testSimple $ do
 
     -- check the progress thread gets killed properly on normal cleanup
     ref <- newIORef 0
-    opts <- return opts{shakeProgress = const $ bracket_ (modifyIORef ref succ) (modifyIORef ref succ) $ sleep 100}
+    opts <- pure opts{shakeProgress = const $ bracket_ (modifyIORef ref succ) (modifyIORef ref succ) $ sleep 100}
     (open, close) <- shakeOpenDatabase opts rules
     db <- open
-    ([12], after) <- shakeRunDatabase db [need ["a.out"] >> liftIO (modifyIORef ref succ) >> return 12]
+    ([12], after) <- shakeRunDatabase db [need ["a.out"] >> liftIO (modifyIORef ref succ) >> pure 12]
     (=== 3) =<< readIORef ref -- success if it all shuts down cleanly
 
     -- and on an exception
@@ -91,7 +91,7 @@ main = testSimple $ do
     -- and on an external exception
     writeIORef ref 0
     bar <- newBarrier; bar2 <- newBarrier
-    t <- flip forkFinally (signalBarrier bar2)  $ void $ shakeRunDatabase db $ return $ do
+    t <- flip forkFinally (signalBarrier bar2)  $ void $ shakeRunDatabase db $ pure $ do
         liftIO $ modifyIORef ref succ
         liftIO $ signalBarrier bar ()
         need ["sleep"]

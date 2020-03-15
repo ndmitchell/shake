@@ -27,7 +27,7 @@ main = testBuildArgs test opts $ \opts -> do
 
     versioned ver $ addOracleCache $ \(Oracle ()) -> do
         liftIO $ appendFile "oracle.in" $ show ver
-        return $ ver `mod` 2
+        pure $ ver `mod` 2
     "oracle.txt" %> \out -> do
         v <- askOracle $ Oracle ()
         liftIO $ appendFile out $ show v

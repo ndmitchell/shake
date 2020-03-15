@@ -147,7 +147,7 @@ main = testBuild test $ do
         liftIO $ (===) (str, bs) $ second BS.pack $ dupe $ if isWindows then "foo\r\n" else "foo\n"
         (Stdout str, Stdout bs) <- cmd helper "ofoo"
         liftIO $ (str, bs) === ("foo\n", BS.pack $ if isWindows then "foo\r\n" else "foo\n")
-        return ()
+        pure ()
 
     "large" !> do
         (Stdout (_ :: String), CmdTime t1) <- cmd helper "r10000000"
@@ -184,7 +184,7 @@ timer :: (CmdResult r, MonadIO m) => (forall r . CmdResult r => m r) -> m r
 timer act = do
     (CmdTime t, CmdLine x, r) <- act
     liftIO $ putStrLn $ "Command " ++ x ++ " took " ++ show t ++ " seconds"
-    return r
+    pure r
 
 waits :: (String -> IO ()) -> IO ()
 waits op = f 0

@@ -7,7 +7,7 @@ import System.Directory.Extra
 import System.FilePath
 
 
-main = testBuild test $ return ()
+main = testBuild test $ pure ()
 
 
 -- | Given a list of todo times, get out a list of how long is predicted
@@ -19,7 +19,7 @@ progEx mxDone todo = do
     let resolution = 10000 -- Use resolution to get extra detail on the numbers
     let done = scanl (+) 0 $ map (min mxDone . max 0) $ zipWith (-) todo (tail todo)
     let res = progressReplay $ zip (map (*resolution) [1..]) $ tail $ zipWith (\t d -> mempty{timeBuilt=d*resolution,timeTodo=(t*resolution,0)}) todo done
-    return $ (0/0) : map ((/ resolution) . actualSecs) res
+    pure $ (0/0) : map ((/ resolution) . actualSecs) res
 
 
 test build = do

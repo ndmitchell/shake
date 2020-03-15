@@ -19,7 +19,7 @@ main = testBuildArgs test optionsEnum $ \args -> do
     let die :: a -> a
         die x = if Die `elem` args then error "Die" else x
 
-    phony "Phony" $ return ()
+    phony "Phony" $ pure ()
     "Phony.txt" %> \out -> do
         need ["Phony"]
         copyFile' "In.txt" out

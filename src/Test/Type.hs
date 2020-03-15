@@ -56,10 +56,10 @@ testBuild
 testBuild f g = testBuildArgs f [] (const g)
 
 testSimple :: IO () -> IO () -> IO ()
-testSimple act = testBuild (const act) (return ())
+testSimple act = testBuild (const act) (pure ())
 
 testNone :: IO () -> IO ()
-testNone _ = return ()
+testNone _ = pure ()
 
 shakenEx
     :: Bool
@@ -74,7 +74,7 @@ shakenEx reenter options test rules sleeper = do
     name:args <- getArgs
     putStrLn $ "## BUILD " ++ unwords (name:args)
     let forward = "--forward" `elem` args
-    args <- return $ delete "--forward" args
+    args <- pure $ delete "--forward" args
     let out = "output/" ++ name ++ "/"
     let change = if not reenter then withCurrentDirectory out else id
     let clean = do
@@ -103,9 +103,9 @@ shakenEx reenter options test rules sleeper = do
 
         args -> change $ do
             t <- tracker
-            opts <- return shakeOptions{shakeFiles = "."}
+            opts <- pure shakeOptions{shakeFiles = "."}
             cwd <- getCurrentDirectory
-            opts <- return $ if forward then forwardOptions opts{shakeLintInside=[""]} else opts
+            opts <- pure $ if forward then forwardOptions opts{shakeLintInside=[""]} else opts
                 {shakeLint = Just t
                 ,shakeLintInside = [cwd </> ".." </> ".."]
                 ,shakeLintIgnore = [".cabal-sandbox/**",".stack-work/**","../../.stack-work/**"]}
@@ -118,13 +118,13 @@ shakenEx reenter options test rules sleeper = do
                     let (extra1, extra2) = partitionEithers extra
                     when (Clean `elem` extra1) clean
                     when (Sleep `elem` extra1) sleeper
-                    so <- return $ if UsePredicate `notElem` extra1 then so else
+                    so <- pure $ if UsePredicate `notElem` extra1 then so else
                         so{shakeExtra = addShakeExtra UsePredicateYes $ shakeExtra so}
                     if "clean" `elem` files then
-                        clean >> return Nothing
-                    else return $ Just $ (,) so $ do
+                        clean >> pure Nothing
+                    else pure $ Just $ (,) so $ do
                         -- if you have passed sleep, suppress the "no actions" warning
-                        when (Sleep `elem` extra1) $ action $ return ()
+                        when (Sleep `elem` extra1) $ action $ pure ()
                         rules extra2 files
 
 data Flags
@@ -149,12 +149,12 @@ shakeRoot = "../.."
 tracker :: IO Lint
 tracker = do
     fsatrace <- findExecutable $ "fsatrace" <.> exe
-    return $ if isJust fsatrace then LintFSATrace else LintBasic
+    pure $ if isJust fsatrace then LintFSATrace else LintBasic
 
 hasTracker :: IO Bool
 hasTracker = do
     t <- tracker
-    return $ t == LintFSATrace
+    pure $ t == LintFSATrace
 
 assertFail :: String -> IO a
 assertFail msg = error $ "ASSERTION FAILED: " ++ msg
@@ -186,7 +186,7 @@ assertWithin n act = do
     t <- timeout n act
     case t of
         Nothing -> assertFail $ "Expected to complete within " ++ show n ++ " seconds, but did not"
-        Just v -> return v
+        Just v -> pure v
 
 assertContents :: FilePath -> String -> IO ()
 assertContents file want = do
@@ -246,9 +246,9 @@ sleepFileTimeCalibrate file = do
         flip loopM 0 $ \j -> do
             writeFile file $ show (i,j)
             t2 <- time
-            return $ if t1 == t2 then Left $ j+1 else Right ()
+            pure $ if t1 == t2 then Left $ j+1 else Right ()
     putStrLn $ "Longest file modification time lag was " ++ show (ceiling (maximum' mtimes * 1000)) ++ "ms"
-    return $ sleep $ min 1 $ maximum' mtimes * 2
+    pure $ sleep $ min 1 $ maximum' mtimes * 2
 
 
 removeFilesRandom :: FilePath -> IO Int
@@ -257,7 +257,7 @@ removeFilesRandom x = do
     n <- randomRIO (0,length files)
     rs <- replicateM (length files) (randomIO :: IO Double)
     mapM_ (removeFile . snd) $ sort $ zip rs files
-    return n
+    pure n
 
 
 getDirectoryContentsRecursive :: FilePath -> IO [FilePath]
@@ -265,7 +265,7 @@ getDirectoryContentsRecursive dir = do
     xs <- IO.getDirectoryContents dir
     (dirs,files) <- partitionM IO.doesDirectoryExist [dir </> x | x <- xs, not $ "." `isPrefixOf` x]
     rest <- concatMapM getDirectoryContentsRecursive dirs
-    return $ files++rest
+    pure $ files++rest
 
 
 copyDirectoryChanged :: FilePath -> FilePath -> IO ()
@@ -309,7 +309,7 @@ instance forall a . Typeable a => Binary (BinarySentinel a) where
     get = do
         x <- get
         let want = show (typeRep (Proxy :: Proxy a))
-        if x == want then return $ BinarySentinel () else
+        if x == want then pure $ BinarySentinel () else
             error $ "BinarySentinel failed, got " ++ show x ++ " but wanted " ++ show want
 
 newtype RandomType = RandomType (BinarySentinel ())

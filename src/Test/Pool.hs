@@ -23,10 +23,10 @@ main = testSimple $ do
             runPool deterministic n $ \pool ->
                 replicateM_ 5 $
                     add pool $ do
-                        modifyVar_ var $ \(mx,now) -> return (max (now+1) mx, now+1)
+                        modifyVar_ var $ \(mx,now) -> pure (max (now+1) mx, now+1)
                         -- requires that all tasks get spawned within 0.1s
                         sleep 0.1
-                        modifyVar_ var $ \(mx,now) -> return (mx,now-1)
+                        modifyVar_ var $ \(mx,now) -> pure (mx,now-1)
             res <- readVar var
             res === (min n 5, 0)
 
@@ -42,7 +42,7 @@ main = testSimple $ do
                     flip finally (signalBarrier stopped ()) $ do
                         signalBarrier started ()
                         sleep 10
-                        modifyVar_ good $ const $ return False
+                        modifyVar_ good $ const $ pure False
         -- note that the pool finishing means we started killing our threads
         -- not that they have actually died
         mapLeft fromException res === Left (Just Underflow)
@@ -60,7 +60,7 @@ main = testSimple $ do
         -- check high priority stuff runs first
         res <- newVar ""
         runPool deterministic 1 $ \pool -> do
-            let note c = modifyVar_ res $ return . (c:)
+            let note c = modifyVar_ res $ pure . (c:)
             -- deliberately in a random order
             addPool PoolBatch pool $ note 'b'
             addPool PoolException pool $ note 'e'

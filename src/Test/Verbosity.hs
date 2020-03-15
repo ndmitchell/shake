@@ -19,7 +19,7 @@ main = testBuild test $ do
             b <- getVerbosity
             c <- quietly getVerbosity
             d <- fmap shakeVerbosity getShakeOptions
-            return [a,b,c,d]
+            pure [a,b,c,d]
         z <- getVerbosity
         writeFile' out $ unwords $ map show $ [x] ++ ys ++ [z]
 

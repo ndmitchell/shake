@@ -13,22 +13,22 @@ main _sleeper = do
 
 rules :: Rules ()
 rules = do
-    withTargetDocs "A phony target" $ phony "phony1" $ return ()
+    withTargetDocs "A phony target" $ phony "phony1" $ pure ()
 
-    "file1" %> \_ -> return ()
-    ["file2", "file3"] |%> \_ -> return ()
-    ["file4", "file5"] &%> \_ -> return ()
+    "file1" %> \_ -> pure ()
+    ["file2", "file3"] |%> \_ -> pure ()
+    ["file4", "file5"] &%> \_ -> pure ()
 
-    "file6" %> \_ -> return ()
-    ["file7", "file8"] |%> \_ -> return ()
-    ["file9", "file10"] &%> \_ -> return ()
+    "file6" %> \_ -> pure ()
+    ["file7", "file8"] |%> \_ -> pure ()
+    ["file9", "file10"] &%> \_ -> pure ()
 
-    withTargetDocs "Builds something really good" $ phony "phony2" $ return ()
+    withTargetDocs "Builds something really good" $ phony "phony2" $ pure ()
     withTargetDocs "bad docs" $ do
-        withTargetDocs "a great file" $ "file11" %> \_ -> return ()
-        withTargetDocs "awesome files" $ ["file12", "file13"] &%> \_ -> return ()
-        phony "Foo" $ return ()
-        withoutTargets $ phony "Bar" $ return ()
+        withTargetDocs "a great file" $ "file11" %> \_ -> pure ()
+        withTargetDocs "awesome files" $ ["file12", "file13"] &%> \_ -> pure ()
+        phony "Foo" $ pure ()
+        withoutTargets $ phony "Bar" $ pure ()
 
     addHelpSuffix "Don't Panic"
     addHelpSuffix "Know where your towel is"

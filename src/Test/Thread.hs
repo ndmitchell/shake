@@ -33,14 +33,14 @@ main = testSimple $ do
     isAnswer 1 $ withCleanup $ \cleanup -> do
         allocateThread cleanup finish
         sleep 0.1
-        return 1
+        pure 1
     finished 1
 
     putStrLn "## allocateThread, main finishes first"
     isAnswer 1 $ withCleanup $ \cleanup -> do
         allocateThread cleanup $ (unpause >> sleep 100) `finally` finish
         pause
-        return 1
+        pure 1
     finished 1
 
     putStrLn "## allocateThread, spawned throws an exception"
@@ -54,16 +54,16 @@ main = testSimple $ do
         allocateThread cleanup $ (unpause >> sleep 100) `finally` finish
         pause
         throw Overflow
-        return 1
+        pure 1
     finished 1
 
     putStrLn "## withThreadsBoth, both succeed"
-    isAnswer (2,3) $ withThreadsBoth (return 2) (return 3)
+    isAnswer (2,3) $ withThreadsBoth (pure 2) (pure 3)
 
     putStrLn "## withThreadsBoth, left fails"
-    isException Overflow $ withThreadsBoth (pause >> throw Overflow >> return 1) ((unpause >> return 3) `finally` finish)
+    isException Overflow $ withThreadsBoth (pause >> throw Overflow >> pure 1) ((unpause >> pure 3) `finally` finish)
     finished 1
 
     putStrLn "## withThreadsBoth, right fails"
-    isException Overflow $ withThreadsBoth ((unpause >> return 3) `finally` finish) (pause >> throw Overflow >> return 1)
+    isException Overflow $ withThreadsBoth ((unpause >> pure 3) `finally` finish) (pause >> throw Overflow >> pure 1)
     finished 1

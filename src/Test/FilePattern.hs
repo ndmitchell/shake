@@ -180,27 +180,27 @@ main = testSimple $ do
     substitute  ["foo/bar/","test"] "//*a.txt" === "foo/bar/testa.txt"
     substitute  ["foo/bar/","test"] "**/*a.txt" === "foo/bar/testa.txt"
 
-    (False, Walk _) <- return $ walk ["*.xml"]
-    (False, Walk _) <- return $ walk ["//*.xml"]
-    (False, Walk _) <- return $ walk ["**/*.xml"]
-    (False, WalkTo ([], [("foo",Walk _)])) <- return $ walk ["foo//*.xml"]
-    (False, WalkTo ([], [("foo",Walk _)])) <- return $ walk ["foo/**/*.xml"]
-    (False, WalkTo ([], [("foo",WalkTo ([],[("bar",Walk _)]))])) <- return $ walk ["foo/bar/*.xml"]
-    (False, WalkTo (["a"],[("b",WalkTo (["c"],[]))])) <- return $ walk ["a","b/c"]
-    ([], [("foo",WalkTo ([],[("bar",Walk _)]))]) <- let (False, Walk f) = walk ["*/bar/*.xml"] in return $ f ["foo"]
-    (False, WalkTo ([],[("bar",Walk _),("baz",Walk _)])) <- return $ walk ["bar/*.xml","baz//*.c"]
-    (False, WalkTo ([],[("bar",Walk _),("baz",Walk _)])) <- return $ walk ["bar/*.xml","baz/**/*.c"]
-    (False, WalkTo ([], [])) <- return $ walk []
-    (True, Walk _) <- return $ walk ["//"]
-    (True, Walk _) <- return $ walk ["**"]
-    (True, WalkTo _) <- return $ walk [""]
+    (False, Walk _) <- pure $ walk ["*.xml"]
+    (False, Walk _) <- pure $ walk ["//*.xml"]
+    (False, Walk _) <- pure $ walk ["**/*.xml"]
+    (False, WalkTo ([], [("foo",Walk _)])) <- pure $ walk ["foo//*.xml"]
+    (False, WalkTo ([], [("foo",Walk _)])) <- pure $ walk ["foo/**/*.xml"]
+    (False, WalkTo ([], [("foo",WalkTo ([],[("bar",Walk _)]))])) <- pure $ walk ["foo/bar/*.xml"]
+    (False, WalkTo (["a"],[("b",WalkTo (["c"],[]))])) <- pure $ walk ["a","b/c"]
+    ([], [("foo",WalkTo ([],[("bar",Walk _)]))]) <- let (False, Walk f) = walk ["*/bar/*.xml"] in pure $ f ["foo"]
+    (False, WalkTo ([],[("bar",Walk _),("baz",Walk _)])) <- pure $ walk ["bar/*.xml","baz//*.c"]
+    (False, WalkTo ([],[("bar",Walk _),("baz",Walk _)])) <- pure $ walk ["bar/*.xml","baz/**/*.c"]
+    (False, WalkTo ([], [])) <- pure $ walk []
+    (True, Walk _) <- pure $ walk ["//"]
+    (True, Walk _) <- pure $ walk ["**"]
+    (True, WalkTo _) <- pure $ walk [""]
 
     Success{} <- quickCheckWithResult stdArgs{maxSuccess=1000} $ \(Pattern p) (Path x) ->
         let label _ = property in
             -- Ignore label to workaround QuickCheck space-leak
             -- See #450 and https://github.com/nick8325/quickcheck/pull/93
-        let b = p ?== x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; return True
-    return ()
+        let b = p ?== x in (if b then property else label "No match") $ unsafePerformIO $ do f b p x; pure True
+    pure ()
 
 
 walker :: FilePattern -> FilePath -> Bool

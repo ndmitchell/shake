@@ -37,14 +37,14 @@ data Define = Define String String -- this type produces this result
 opt = [Option "" ["def"] (ReqArg (Right . uncurry Define . second tail . breakOn "=") "type=value") ""]
 
 main = testBuildArgs test opt $ \args -> do
-    addOracle $ \(T.RandomType _) -> return 42
-    addOracle $ \(RandomType _) -> return (-42)
+    addOracle $ \(T.RandomType _) -> pure 42
+    addOracle $ \(RandomType _) -> pure (-42)
     "randomtype.txt" %> \out -> do
         a <- askOracle $ T.RandomType $ BinarySentinel ()
         b <- askOracle $ RandomType $ BinarySentinel ()
         writeFile' out $ show (a,b)
 
-    addOracle $ \b -> return $ not b
+    addOracle $ \b -> pure $ not b
     "true.txt" %> \out -> writeFile' out . show =<< askOracle False
 
     let add :: forall a . (ShakeValue a, RuleResult a ~ String) => String -> a -> Rules ()
@@ -53,7 +53,7 @@ main = testBuildArgs test opt $ \args -> do
                 liftIO $ appendFile ".log" "."
                 writeFile' out =<< askOracle key
             forM_ [val | Define nam val <- args, nam == name] $ \val ->
-                addOracle $ \(_ :: a) -> return val
+                addOracle $ \(_ :: a) -> pure val
     add "string" ""
     add "unit" ()
     add "int" (0 :: Int)

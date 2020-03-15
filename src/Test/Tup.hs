@@ -22,7 +22,7 @@ main = testBuild defaultTest $ do
                     | takeExtension x == ".a" = takeBaseName x </> "lib" ++ x
                     | otherwise = error $ "Unknown extension, " ++ x
             x <- fromMaybe (error $ "Missing config key, " ++ key) <$> getConfig key
-            return $ map f $ words x
+            pure $ map f $ words x
 
     (\x -> x -<.> exe == x) ?> \out -> do
         os <- objects "" $ takeBaseName out <.> "exe"

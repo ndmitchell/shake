@@ -20,7 +20,7 @@ main = testBuild test $ do
     addOracle $ \Zero{} -> do
         liftIO $ createDirectoryRecursive "dir"
         liftIO $ setCurrentDirectory "dir"
-        return $ Zero ()
+        pure $ Zero ()
 
     "changedir" %> \out -> do
         Zero () <- askOracle $ Zero ()

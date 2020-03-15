@@ -53,8 +53,8 @@ main = testBuild test $ do
         x <- getShakeOptions
         writeFile' "threads.txt" $ show $ shakeThreads x
 
-    phony ("slash" </> "platform") $ return ()
-    phony "slash/forward" $ return ()
+    phony ("slash" </> "platform") $ pure ()
+    phony "slash/forward" $ pure ()
 
     phony "options" $ do
         opts <- getShakeOptions
@@ -78,7 +78,7 @@ main = testBuild test $ do
     ["sep" </> "3.txt", "sep" </> "4.txt", "sep" </> "5.*", "sep/6.txt"] |%> \out -> writeFile' out ""
     ["sep" </> "7.txt"] |%> \out -> writeFile' out ""
 
-    "ids/source" %> \_ -> return ()
+    "ids/source" %> \_ -> pure ()
     "ids/out" %> \out -> do need =<< readFileLines "ids/source"; writeFile' out ""
     "ids/*" %> \out -> do alwaysRerun; trace (takeFileName out); writeFile' out $ takeFileName out
 

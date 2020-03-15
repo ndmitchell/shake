@@ -29,8 +29,8 @@ main = testBuild test $ do
     phony "papplicative" $ do
         need ["papplicative_1"]
         need ["papplicative_2"]
-        let ensureReturn = return ()
-        ensureReturn -- should work even though we have a return
+        let ensureReturn = pure ()
+        ensureReturn -- should work even though we have a pure
         need ["papplicative_3"]
 
     "pseparate_*" %> \out -> do
@@ -41,7 +41,7 @@ main = testBuild test $ do
 
     phony "pseparate" $ do
         need ["pseparate_1"]
-        liftIO $ return ()
+        liftIO $ pure ()
         need ["pseparate_2"]
 
     sem <- liftIO $ newQSemN 0
@@ -77,7 +77,7 @@ main = testBuild test $ do
         writeFile' "parallel" $ show peak
 
     "parallels" %> \out -> do
-        xs <- parallel $ replicate 5 $ parallel $ map return [1..5]
+        xs <- parallel $ replicate 5 $ parallel $ map pure [1..5]
         writeFile' out $ show xs
 
 

@@ -25,7 +25,7 @@ main = testBuild defaultTest $ do
 
     ghcPkg <- addOracleHash $ \GhcPkg{} -> do
         Stdout out <- quietly $ cmd "ghc-pkg list --simple-output"
-        return $ words out
+        pure $ words out
 
     ghcFlags <- addOracleHash $ \GhcFlags{} ->
         map ("-package=" ++) <$> readFileLines ".pkgs"

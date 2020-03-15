@@ -142,7 +142,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ,"instance Eq (OptDescr a)"
             ,"(foo,bar,baz) = undefined"
             ,"(p1,p2) = (0.0, 0.0)"
-            ,"(r1,r2) = (return () :: Rules(), return () :: Rules())"
+            ,"(r1,r2) = (pure () :: Rules(), pure () :: Rules())"
             ,"xs = []"
             ,"ys = []"
             ,"os = [\"file.o\"]"
@@ -170,11 +170,11 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ["Part_" ++ takeBaseName x ++ "_md" | x <- filesMd,
                 takeBaseName x `notElem` ["Developing","Model","Architecture"]]
 
-    let needModules = do mods <- readFileLines "Files.lst"; need [m <.> "hs" | m <- mods]; return mods
+    let needModules = do mods <- readFileLines "Files.lst"; need [m <.> "hs" | m <- mods]; pure mods
 
     "Main.hs" %> \out -> do
         mods <- needModules
-        writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m ++ "()" | m <- mods] ++ ["main = return ()"]
+        writeFileLines out $ ["module Main(main) where"] ++ ["import " ++ m ++ "()" | m <- mods] ++ ["main = pure ()"]
 
     "Success.txt" %> \out -> do
         putInfo . ("Checking documentation for:\n" ++) =<< readFile' "Files.lst"
@@ -211,7 +211,7 @@ findCodeMarkdown (x:xs) | indented x && not (isBlank x) =
     in Code (dropWhileEnd isBlank $ unindent a) : findCodeMarkdown b
     where
         indented x = length (takeWhile isSpace x) >= 4
-findCodeMarkdown (x:xs) = map (Code . return) (evens $ splitOn "`" x) ++ findCodeMarkdown xs
+findCodeMarkdown (x:xs) = map (Code . pure) (evens $ splitOn "`" x) ++ findCodeMarkdown xs
     where
         evens (_:x:xs) = x : evens xs
         evens _ = []
@@ -231,7 +231,7 @@ showCode = concat . zipWithFrom f 1 . nubOrd
 
 fixCmd :: [String] -> [String]
 fixCmd xs
-    | all ("cmd_ " `isPrefixOf`) xs = xs ++ ["return () :: IO () "]
+    | all ("cmd_ " `isPrefixOf`) xs = xs ++ ["pure () :: IO () "]
     | otherwise = map (replace "Stdout out" "Stdout (out :: String)" . replace "Stderr err" "Stderr (err :: String)") xs
 
 -- | Replace ... with undefined (don't use undefined with cmd; two ...'s should become one replacement)

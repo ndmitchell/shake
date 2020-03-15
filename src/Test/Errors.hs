@@ -26,14 +26,14 @@ newtype BadBinary = BadBinary String deriving (NFData,Show,Eq,Hashable,Typeable)
 type instance RuleResult BadBinary = BadBinary
 instance Binary BadBinary where
     put (BadBinary x) = put x
-    get = do x <- get; if x == "bad" then error "get: BadBinary \"bad\"" else return $ BadBinary x
+    get = do x <- get; if x == "bad" then error "get: BadBinary \"bad\"" else pure $ BadBinary x
 
 main = testBuildArgs test optionsEnum $ \args -> do
     "norule" %> \_ ->
         need ["norule_isavailable"]
 
     "failcreate" %> \_ ->
-        return ()
+        pure ()
 
     ["failcreates", "failcreates2"] &%> \_ ->
         writeFile' "failcreates" ""
@@ -60,12 +60,12 @@ main = testBuildArgs test optionsEnum $ \args -> do
             writeFile' out "0"
             op $ do src <- IO.readFile' out; writeFile out $ show (read src + 1 :: Int)
     catcher "finally1" $ actionFinally $ fail "die"
-    catcher "finally2" $ actionFinally $ return ()
+    catcher "finally2" $ actionFinally $ pure ()
     catcher "finally3" $ actionFinally $ liftIO $ sleep 10
     catcher "finally4" $ actionFinally $ need ["wait"]
     "wait" ~> do liftIO $ sleep 10
     catcher "exception1" $ actionOnException $ fail "die"
-    catcher "exception2" $ actionOnException $ return ()
+    catcher "exception2" $ actionOnException $ pure ()
 
     "retry*" %> \out -> do
         ref <- liftIO $ newIORef 3
@@ -93,7 +93,7 @@ main = testBuildArgs test optionsEnum $ \args -> do
     "tempfile" %> \out -> do
         file <- withTempFile $ \file -> do
             liftIO $ assertExists file
-            return file
+            pure file
         liftIO $ assertMissing file
         withTempFile $ \file -> do
             liftIO $ assertExists file
@@ -106,7 +106,7 @@ main = testBuildArgs test optionsEnum $ \args -> do
             liftIO $ writeFile (dir </> "foo.txt") ""
                 -- will throw if the directory does not exist
             writeFile' out ""
-            return file
+            pure file
         liftIO $ assertMissing file
 
     phony "fail1" $ fail "die1"
@@ -141,7 +141,7 @@ main = testBuildArgs test optionsEnum $ \args -> do
         liftIO $ sleep 20
         writeFile' out ""
 
-    addOracle $ \(BadBinary x) -> return $ BadBinary $ 'b':x
+    addOracle $ \(BadBinary x) -> pure $ BadBinary $ 'b':x
     "badinput" %> \out -> do
         askOracle $ BadBinary "bad"
         liftIO $ appendFile out "x"

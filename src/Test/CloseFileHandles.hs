@@ -51,7 +51,7 @@ main = testBuild test $ do
             \file -> actionBracket (openFile file AppendMode) hClose $
                 \h -> do fd <- liftIO $ handleToFd h
                          (Exit c, Stdout _, Stderr _) <- cmdWithOpts helper (show fd) :: Action (Exit, Stdout String, Stderr String)
-                         return c
+                         pure c
 
     "defaultbehaviour" !> do
         c <- callWithOpenFile cmd

@@ -25,4 +25,4 @@ main = testBuild defaultTest $ do
 cIncludes :: FilePath -> Action [FilePath]
 cIncludes x = do
     Stdout stdout <- cmd "gcc" ["-MM",x]
-    return $ drop 2 $ words stdout
+    pure $ drop 2 $ words stdout

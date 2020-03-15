@@ -23,7 +23,7 @@ main = testBuild test $ do
         writeFile' out1 "X"
         writeFile' out2 "Y"
 
-    "leaf" ~> return ()
+    "leaf" ~> pure ()
     "node1.txt" %> \file -> do need ["leaf"]; writeFile' file "x"
     "node2.txt" %> \file -> do need ["node1.txt"]; liftIO $ appendFile file "x"
 

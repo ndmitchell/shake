@@ -16,7 +16,7 @@ main = testBuild test $ forwardRule $ do
     os <- forP cs $ \c -> do
         let o = c <.> "o"
         cache $ cmd "gcc -c" [c] "-o" [o]
-        return o
+        pure o
     cache $ cmd "gcc -o" ["Main" <.> exe] os
     cache $ cmd ["." </> "Main" <.> exe] (FileStdout "output.txt")
 

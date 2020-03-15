@@ -12,7 +12,7 @@ main = testBuild test $ do
     vowels <- newCache $ \file -> do
         src <- readFile' file
         liftIO $ appendFile "trace.txt" "1"
-        return $ length $ filter isDigit src
+        pure $ length $ filter isDigit src
     "*.out*" %> \x ->
         writeFile' x . show =<< vowels (dropExtension x <.> "txt")
 
