@@ -1,12 +1,12 @@
 language: minimal
 matrix:
   include:
-  - env: GHCVER=7.10
   - env: GHCVER=8.0
   - env: GHCVER=8.2
   - env: GHCVER=8.4
   - env: GHCVER=8.6
   - env: GHCVER=8.8
+  - env: GHCVER=8.10
   - env: GHCVER=head
   - os: osx
 
