@@ -14,9 +14,9 @@ import Control.Monad
 import System.Process.Extra
 
 
--- fclabels doesn't support GHC 8.8 yet
+-- fclabels doesn't support GHC 8.10 yet
 requiresShake ghcver =
-  if "8.8." `isPrefixOf` ghcver
+  if "8.10." `isPrefixOf` ghcver
   then words "ghc-make"
   else words "ghc-make shake-language-c"
 
