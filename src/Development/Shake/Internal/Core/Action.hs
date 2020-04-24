@@ -546,7 +546,7 @@ batch mx pred one many
             count <- liftIO $ atomicModifyIORef todo $ \(count, bs) -> let i = count+1 in ((i, (b,local,fence):bs), i)
             requeue todo (==) count
             (wait, local2) <- actionFenceRequeue fence
-            Action $ modifyRW $ \root -> addDiscount wait $ localMergeMutable root [local2]
+            Action $ modifyRW $ addDiscount wait
     where
         -- When changing by one, only trigger on (==) so we don't have lots of waiting pool entries
         -- When changing by many, trigger on (>=) because we don't hit all edges
