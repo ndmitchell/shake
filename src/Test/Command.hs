@@ -98,9 +98,9 @@ main = testBuild test $ do
 
     "timeout2" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "w20"
 
-    -- commented out beause on Windows when you abort a Shell process you get a
-    -- Do you want to terminate the batch file (Y/N)
-    when False $ "timeout3" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ Shell helper "w20"
+    -- disabled on Windows because when you abort a Shell process you get a
+    -- "Do you want to terminate the batch file (Y/N)"
+    unless isWindows $ "timeout3" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ Shell helper "w20"
 
     "timeout4" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "sw20"
 
