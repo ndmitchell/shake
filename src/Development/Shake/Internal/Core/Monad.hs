@@ -19,7 +19,7 @@ import System.IO
 import Data.Semigroup
 import Prelude
 
-#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
+#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
