@@ -25,11 +25,7 @@ import Control.Monad.Fail
 
 
 newtype Locked a = Locked (IO a)
-    deriving (Functor, Applicative, Monad, MonadIO
-#if __GLASGOW_HASKELL__ >= 800
-             ,MonadFail
-#endif
-        )
+    deriving (Functor, Applicative, Monad, MonadIO, MonadFail)
 
 runLocked :: DatabasePoly k v -> Locked b -> IO b
 runLocked db (Locked act) = withLock (lock db) act

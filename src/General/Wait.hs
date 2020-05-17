@@ -13,7 +13,7 @@ import Data.List.Extra
 import Data.Primitive.Array
 import GHC.Exts(RealWorld)
 
-#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
+#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
@@ -58,11 +58,10 @@ instance (Monad m, Applicative m) => Monad (Wait m) where
 instance (MonadIO m,  Applicative m) => MonadIO (Wait m) where
     liftIO = Lift . liftIO . fmap Now
 
-#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
+#if __GLASGOW_HASKELL__ < 808
 instance MonadFail m => MonadFail (Wait m) where
     fail = Lift . Control.Monad.Fail.fail
-#endif
-#if __GLASGOW_HASKELL__ >= 808
+#else
 instance MonadFail m => MonadFail (Wait m) where
     fail = Lift . Prelude.fail
 #endif

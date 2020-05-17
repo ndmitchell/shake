@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving, ViewPatterns, Rank2Types #-}
 
 module General.Extra(
@@ -50,9 +49,7 @@ import Data.Primitive.Array
 import Control.Monad
 import Control.Monad.ST
 import GHC.Conc(getNumProcessors)
-#if __GLASGOW_HASKELL__ >= 800
 import GHC.Stack
-#endif
 
 
 ---------------------------------------------------------------------
@@ -277,8 +274,6 @@ callStackFull :: Partial => [String]
 callStackFromException :: SomeException -> ([String], SomeException)
 
 
-#if __GLASGOW_HASKELL__ >= 800
-
 -- | Invert 'prettyCallStack', which GHC pre-applies in certain cases
 parseCallStack = reverse . map trimStart . drop 1 . lines
 
@@ -287,14 +282,6 @@ callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
 callStackFromException (fromException -> Just (ErrorCallWithLocation msg loc)) = (parseCallStack loc, toException $ ErrorCall msg)
 callStackFromException e = ([], e)
 
-#else
-
-callStackFull = []
-callStackFromException e = ([], e)
-
-withFrozenCallStack :: a -> a
-withFrozenCallStack = id
-#endif
 
 ---------------------------------------------------------------------
 -- Data.Version

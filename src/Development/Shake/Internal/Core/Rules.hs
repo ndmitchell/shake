@@ -42,7 +42,7 @@ import Data.Binary.Get
 import General.ListBuilder
 import Prelude
 
-#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
+#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
@@ -116,11 +116,7 @@ getUserRuleOne key disp test = do
 --   Rules are combined with either the 'Monoid' instance, or (more commonly) the 'Monad' instance and @do@ notation.
 --   To define your own custom types of rule, see "Development.Shake.Rule".
 newtype Rules a = Rules (ReaderT (ShakeOptions, IORef (SRules ListBuilder)) IO a) -- All IO must be associative/commutative (e.g. creating IORef/MVars)
-    deriving (Functor, Applicative, Monad, MonadIO, MonadFix
-#if __GLASGOW_HASKELL__ >= 800
-             ,MonadFail
-#endif
-        )
+    deriving (Functor, Applicative, Monad, MonadIO, MonadFix, MonadFail)
 
 newRules :: SRules ListBuilder -> Rules ()
 newRules x = Rules $ liftIO . flip modifyIORef' (<> x) =<< asks snd

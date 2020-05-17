@@ -49,7 +49,7 @@ import Data.Semigroup
 import General.Cleanup
 import Prelude
 
-#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
+#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
 #endif
 
@@ -61,11 +61,7 @@ import Control.Monad.Fail
 --   Action values are used by 'addUserRule' and 'action'. The 'Action' monad tracks the dependencies of a rule.
 --   To raise an exception call 'error', 'fail' or @'liftIO' . 'throwIO'@.
 newtype Action a = Action {fromAction :: RAW ([String],[Key]) [Value] Global Local a}
-    deriving (Functor, Applicative, Monad, MonadIO, Typeable, Semigroup, Monoid
-#if __GLASGOW_HASKELL__ >= 800
-             ,MonadFail
-#endif
-        )
+    deriving (Functor, Applicative, Monad, MonadIO, Typeable, Semigroup, Monoid, MonadFail)
 
 runAction :: Global -> Local -> Action a -> Capture (Either SomeException a)
 runAction g l (Action x) = runRAW (fromAction . build) g l x

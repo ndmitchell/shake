@@ -55,11 +55,10 @@ instance Monad (RAW k v ro rw) where
 instance MonadIO (RAW k v ro rw) where
     liftIO = LiftIO
 
-#if __GLASGOW_HASKELL__ >= 800 && __GLASGOW_HASKELL__ < 808
+#if __GLASGOW_HASKELL__ < 808
 instance MonadFail (RAW k v ro rw) where
     fail = liftIO . Control.Monad.Fail.fail
-#endif
-#if __GLASGOW_HASKELL__ >= 808
+#else
 instance MonadFail (RAW k v ro rw) where
     fail = liftIO . Prelude.fail
 #endif
