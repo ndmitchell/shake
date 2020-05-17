@@ -4,6 +4,7 @@ module Test.Batch(main) where
 import Development.Shake
 import Development.Shake.FilePath
 import System.Directory
+import Data.List
 import General.Extra
 import Test.Type
 import Control.Monad
@@ -37,6 +38,12 @@ main = testBuild test $ do
 
     batch maxBound ("batch_max.*" %>) pure $ \outs ->
         forM_ outs $ \out -> writeFile' out $ show $ length outs
+
+    phony "sleep2" $ liftIO $ sleep 2
+    batch 2 ("batch_profile.*" %>) (\x -> when ("1" `isSuffixOf` x) (liftIO $ sleep 1) >> pure x) $ \outs -> do
+        liftIO $ sleep 2
+        need ["sleep2"]
+        forM_ outs $ \out -> writeFile' out ""
 
 
 test build = do
@@ -96,3 +103,7 @@ test build = do
 
     build ["batch_max." ++ show i | i <- [1..100]]
     assertContents "batch_max.72" "100"
+
+    let names = ["batch_profile." ++ show i | i <- [1..2]]
+    build names
+    assertTimings build $ ("sleep2",2) : zip names [2,1]
