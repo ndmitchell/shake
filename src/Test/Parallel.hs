@@ -80,7 +80,7 @@ main = testBuild test $ do
         xs <- parallel $ replicate 5 $ parallel $ map pure [1..5]
         writeFile' out $ show xs
 
-    phony "timings" $ do
+    phony "timings" $
         void $ parallel $ map (liftIO . sleep) [1, 2, 0, 1]
 
 
