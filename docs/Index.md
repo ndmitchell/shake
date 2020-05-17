@@ -63,8 +63,10 @@ Some libraries push Shake into specific domains:
 Several open-source projects make key use of Shake:
 
 * [GHC](https://ghc.haskell.org/trac/ghc/wiki/Building/Shake) uses a Shake-based build system named [Hadrian](https://github.com/snowleopard/hadrian).
+* [Shakebook](https://shakebook.site/) uses Shake and [Pandoc](https://hackage.haskell.org/package/pandoc) to provide a website generator.
 * [ToolCabal](https://github.com/TiborIntelSoft/ToolCabal) is a rewrite of [Cabal](https://www.haskell.org/cabal/) using Shake as the dependency engine.
 * [ghc-make](https://github.com/ndmitchell/ghc-make) uses Shake to build programs with GHC, speeding up checking if the build is clean.
+* [Ghcide](https://hackage.haskell.org/package/ghcide) is a Haskell IDE which uses Shake as its core.
 * [shake-install](https://github.com/alphaHeavy/shake-install) helps build a set of cabal packages in the correct order.
 * [OpenSUSE Haskell packaging](https://github.com/opensuse-haskell) makes use of Shake to [convert a Stack project to OBS](https://github.com/opensuse-haskell/cabal2obs).
 * [Pier](https://github.com/judah/pier) is an alternative to [Stack](https://haskellstack.org/) using Shake as the dependency engine.
