@@ -86,6 +86,7 @@ main = testBuild (unless brokenHaddock . defaultTest) $ do
             ,"import Control.Concurrent"
             ,"import Control.Exception"
             ,"import Control.Monad"
+            ,"import Control.Monad.Trans.Reader"
             ,"import Data.ByteString(ByteString, pack, unpack)"
             ,"import qualified Data.ByteString.Char8 as BS"
             ,"import qualified System.Directory.Extra as IO"
