@@ -44,8 +44,9 @@ Shake is used by lots of companies, but only a few have declared so publicly:
 * [NoRedInk](https://www.noredink.com/) use Shake [to build stuff](https://twitter.com/rtfeldman/status/1113968101060689920).
 * [Digital Asset](https://www.digitalasset.com/) use Shake as part of their [DAML SDK IDE](https://daml.com/), as can be seen [in the central module](https://github.com/digital-asset/daml/blob/eed24b01ae4b0ca1bf024612354e88c15c9d30c0/compiler/haskell-ide-core/src/Development/IDE/State/Shake.hs).
 
-There are several libraries providing pre-made rules for Shake:
+There are several libraries providing pre-made rules and extending Shake:
 
+* [shake-plus](https://hackage.haskell.org/package/shake-plus) wraps all of Shake to use the [Path library](https://hackage.haskell.org/package/path), [`ReaderT` wrappers](https://hackage.haskell.org/package/transformers/docs/Control-Monad-Trans-Reader.html#t:ReaderT) and the [Text library](https://hackage.haskell.org/package/text).
 * [shake-language-c](https://hackage.haskell.org/package/shake-language-c) allows cross-compiling C, C++ and Objective-C code to various target platforms.
 * [shake-cpp](https://github.com/jfeltz/shake-cpp) is an abstraction layer for Shake, providing simple C++ rules.
 * [kansas-lava-shake](https://hackage.haskell.org/package/kansas-lava-shake) provides a set of rules to work with [Kansas Lava](https://hackage.haskell.org/package/kansas-lava) and compile down to [Xilinx chips](https://www.xilinx.com/).
