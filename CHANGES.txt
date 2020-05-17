@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Delete stuff deprecated since 2014 - **>, ?>>, *>>, *>, |*>, &*>
     Mark askOracleWith and deprioritize as DEPRECATED
     #753, fix timing information for batch
     #746, optimise file modification times on Linux
