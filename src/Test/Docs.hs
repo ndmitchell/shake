@@ -306,7 +306,7 @@ italics = words "command-name file-name N"
 -- | Identifiers that indicate the fragment is a type
 types :: [String]
 types = words $
-    "MVar IO String FilePath Maybe [String] FSATrace Char ExitCode Change " ++
+    "MVar IO String FilePath Maybe [String] FSATrace Char ExitCode ReaderT Change " ++
     "Action Resource Rebuild FilePattern Development.Shake.FilePattern " ++
     "Lint Verbosity Rules CmdOption Int Double " ++
     "NFData Binary Hashable Eq Typeable Show Applicative " ++
