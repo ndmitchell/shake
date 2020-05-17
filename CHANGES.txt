@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    Mark askOracleWith and deprioritize as DEPRECATED
     #753, fix timing information for batch
     #746, optimise file modification times on Linux
     #746, add an instance for CmdArgument ()

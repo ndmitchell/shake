@@ -268,6 +268,7 @@ infix 1 *>, |*>, &*>
 
 -- | /Deprecated:/ Replace @'askOracleWith' q a@ by @'askOracle' q@
 --   since the 'RuleResult' type family now fixes the result type.
+{-# DEPRECATED askOracleWith "Use 'askOracle q' instead of 'askOracleWith q a', the result value is now unnecessary" #-}
 askOracleWith :: (RuleResult q ~ a, ShakeValue q, ShakeValue a) => q -> a -> Action a
 askOracleWith question _ = askOracle question
 
@@ -275,6 +276,7 @@ askOracleWith question _ = askOracle question
 -- DEPRECATED SINCE 0.18.4, JUL 2019
 
 -- | /Deprecated:/ Alias for 'reschedule'.
+{-# DEPRECATED deprioritize "Use 'reschedule' instead" #-}
 deprioritize :: Double -> Action ()
 deprioritize = reschedule
 
