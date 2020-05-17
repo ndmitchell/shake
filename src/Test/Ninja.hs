@@ -17,9 +17,13 @@ import System.Environment
 
 opts = Option "" ["arg"] (ReqArg Right "") ""
 
+-- | Set to True to test with real Ninja
+--   On Windows doesn't work because echo foo > 1 isn't supported
+real_ninja = False
+
 main = testBuildArgs test [opts] $ \opts -> do
     let real = "real" `elem` opts
-    action $ if real
+    action $ if real || real_ninja
         then cmd "ninja" opts
         else liftIO $ withArgs ("--lint":"--report=report.html":opts) Run.main
 
