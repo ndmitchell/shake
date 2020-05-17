@@ -71,9 +71,9 @@ runNinja restart file args Nothing = do
 
         action $ do
             -- build the .ninja files, if they change, restart the build
-            before <- liftIO $ mapM (getFileInfo . fileNameFromString) sources
+            before <- liftIO $ mapM (getFileInfo False . fileNameFromString) sources
             need sources
-            after <- liftIO $ mapM (getFileInfo . fileNameFromString) sources
+            after <- liftIO $ mapM (getFileInfo False . fileNameFromString) sources
             if before /= after then
                 runAfter restart
              else

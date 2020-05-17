@@ -260,7 +260,7 @@ sleepFileTimeCalibrate file = do
     mtimes <- forM [1..2] $ \i -> fmap fst $ duration $ do
         writeFile file $ show i
         let time = fmap (fst . fromMaybe (error "File missing during sleepFileTimeCalibrate")) $
-                        getFileInfo $ fileNameFromString file
+                        getFileInfo False $ fileNameFromString file
         t1 <- time
         flip loopM 0 $ \j -> do
             writeFile file $ show (i,j)

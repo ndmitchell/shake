@@ -170,7 +170,7 @@ filetime _ = do
     let (b,cd) = splitAt (n `div` 4) bcd
     let (c,d) = splitAt (n `div` 4) cd
     vars <- forM [a,b,c,d] $ \xs ->
-        onceFork $ mapM_ (getFileInfo . fileNameFromByteString) xs
+        onceFork $ mapM_ (getFileInfo False . fileNameFromByteString) xs
     sequence_ vars
 
 

@@ -106,11 +106,12 @@ result x y = do
     pure $ Just (x, y)
 
 
-getFileInfo :: FileName -> IO (Maybe (ModTime, FileSize))
+-- | True = allow directory, False = disallow
+getFileInfo :: Bool -> FileName -> IO (Maybe (ModTime, FileSize))
 
 #if defined(PORTABLE)
 -- Portable fallback
-getFileInfo x = handleBool isDoesNotExistError (const $ pure Nothing) $ do
+getFileInfo allowDir x = handleBool isDoesNotExistError (const $ pure Nothing) $ do
     let file = fileNameToString x
     time <- getModificationTime file
     size <- withFile file ReadMode hFileSize
@@ -122,12 +123,12 @@ extractFileTime = floor . fromRational . toRational . utctDayTime
 
 #elif defined(mingw32_HOST_OS)
 -- Directly against the Win32 API, twice as fast as the portable version
-getFileInfo x = BS.useAsCString (fileNameToByteString x) $ \file ->
+getFileInfo allowDir x = BS.useAsCString (fileNameToByteString x) $ \file ->
     alloca_WIN32_FILE_ATTRIBUTE_DATA $ \fad -> do
         res <- c_GetFileAttributesExA file 0 fad
         let peek = do
                 code <- peekFileAttributes fad
-                if testBit code 4 then
+                if not allowDir && testBit code 4 then
                     throwIO $ errorDirectoryNotFile $ fileNameToString x
                  else
                     join $ liftM2 result (peekLastWriteTimeLow fad) (peekFileSizeLow fad)
@@ -169,9 +170,9 @@ peekFileSizeLow p = peekByteOff p index_WIN32_FILE_ATTRIBUTE_DATA_nFileSizeLow
 
 #else
 -- Unix version
-getFileInfo x = handleBool isDoesNotExistError' (const $ pure Nothing) $ do
+getFileInfo allowDir x = handleBool isDoesNotExistError' (const $ pure Nothing) $ do
     s <- getFileStatus $ fileNameToByteString x
-    if isDirectory s then
+    if not allowDir && isDirectory s then
         throwM $ errorDirectoryNotFile $ fileNameToString x
      else
         result (extractFileTime s) (fromIntegral $ fileSize s)

@@ -11,10 +11,10 @@ main _ = do
     cwd <- getCurrentDirectory
     someFiles <- getDirectoryFilesIO cwd ["*"]
     let someFile = head someFiles
-    assertIsJust . getFileInfo $ fileNameFromString someFile
+    assertIsJust $ getFileInfo False $ fileNameFromString someFile
 
     let fileThatCantExist = someFile </> "fileThatCantExist"
-    assertIsNothing . getFileInfo $ fileNameFromString fileThatCantExist
+    assertIsNothing $ getFileInfo False $ fileNameFromString fileThatCantExist
 
 assertIsJust :: IO (Maybe a) -> IO ()
 assertIsJust action = do

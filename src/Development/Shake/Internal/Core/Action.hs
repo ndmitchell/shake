@@ -370,7 +370,7 @@ lintWatch :: [FilePattern] -> IO (String -> IO ())
 lintWatch [] = pure $ const $ pure ()
 lintWatch pats = do
     let op = getDirectoryFiles "." pats -- cache parsing of the pats
-    let record = do xs <- op; forM xs $ \x -> (x,) <$> getFileInfo (fileNameFromString x)
+    let record = do xs <- op; forM xs $ \x -> (x,) <$> getFileInfo False (fileNameFromString x)
     old <- record
     pure $ \msg -> do
         now <- record

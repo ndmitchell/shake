@@ -147,7 +147,7 @@ data EqualCost
 
 fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
 fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
-    res <- getFileInfo x
+    res <- getFileInfo False x
     case res of
         Nothing -> pure Nothing
         Just (time,size) | c == ChangeModtime -> pure $ Just $ FileA time size noFileHash
