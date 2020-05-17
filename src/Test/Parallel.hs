@@ -80,6 +80,9 @@ main = testBuild test $ do
         xs <- parallel $ replicate 5 $ parallel $ map pure [1..5]
         writeFile' out $ show xs
 
+    phony "timings" $ do
+        void $ parallel $ map (liftIO . sleep) [1, 2, 0, 1]
+
 
 test build = do
     build ["clean"]
@@ -106,3 +109,8 @@ test build = do
     assertContents "pseparate.log" "[][]"
     build ["papplicative","-j3"]
     build ["ptraverse","-j8"]
+
+    build ["timings","-j6"]
+    assertTimings build [("timings",4)]
+    build ["timings","-j1"]
+    assertTimings build [("timings",4)]

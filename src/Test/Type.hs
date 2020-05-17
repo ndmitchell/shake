@@ -10,6 +10,7 @@ module Test.Type(
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
     assertContents, assertContentsUnordered, assertContentsWords, assertContentsInfix,
     assertExists, assertMissing,
+    assertTimings,
     (===),
     (&?%>),
     Pat(PatWildcard), pat,
@@ -27,7 +28,8 @@ import Development.Shake.Internal.Paths
 
 import Control.Exception.Extra
 import Control.Monad.Extra
-import Data.List
+import Data.List.Extra
+import Text.Read(readMaybe)
 import Data.Maybe
 import Data.Either
 import Data.Typeable
@@ -220,6 +222,23 @@ assertExceptionAfter tweak parts act = do
 
 assertException :: [String] -> IO a -> IO ()
 assertException = assertExceptionAfter id
+
+assertTimings :: ([String] -> IO ()) -> [(String, Seconds)] -> IO ()
+assertTimings build expect = do
+    build ["--report=report.json","--no-build"]
+    src <- IO.readFile' "report.json"
+    let f ('[':'\"':xs)
+            | (name,_:',':xs) <- break (== '\"') xs
+            , num <- takeWhile (`notElem` ",]") xs
+            , Just num <- readMaybe num
+            = (name, num :: Double)
+        f x = error $ "Failed to parse JSON output in assertTimings, " ++ show x
+    let got = [f x | x <- map drop1 $ lines src, x /= ""]
+    forM_ expect $ \(name, val) ->
+        case lookup name got of
+            Nothing -> assertFail $ "Couldn't find key " ++ show name ++ " in profiling output"
+            Just v -> assertBool (v >= val && v < (val + 1)) $ "Unexpected value, got " ++ show v ++ ", hoping for " ++ show val ++ " (+ 1 sec)"
+
 
 defaultTest :: ([String] -> IO ()) -> IO ()
 defaultTest build = do
