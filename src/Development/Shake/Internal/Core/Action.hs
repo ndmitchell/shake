@@ -28,6 +28,7 @@ import Data.Typeable
 import System.Directory
 import System.FilePattern
 import System.FilePattern.Directory
+import System.Time.Extra
 import Control.Concurrent.Extra
 import Data.Maybe
 import Data.Tuple.Extra
@@ -537,7 +538,7 @@ batch mx pred one many
     | mx <= 0 = error $ "Can't call batchable with <= 0, you used " ++ show mx
     | mx == 1 = pred $ \a -> do b <- one a; many [b]
     | otherwise = do
-        todo :: IORef (Int, [(b, Local, Fence IO (Either SomeException Local))]) <- liftIO $ newIORef (0, [])
+        todo :: IORef (Int, [(b, Local, Fence IO (Either SomeException (Seconds, Local)))]) <- liftIO $ newIORef (0, [])
         pred $ \a -> do
             b <- one a
             fence <- liftIO newFence
@@ -545,8 +546,8 @@ batch mx pred one many
             local <- Action getRW
             count <- liftIO $ atomicModifyIORef todo $ \(count, bs) -> let i = count+1 in ((i, (b,local,fence):bs), i)
             requeue todo (==) count
-            (wait, local2) <- actionFenceRequeue fence
-            Action $ modifyRW $ \root -> addDiscount wait $ localMergeMutable root [local2]
+            (wait, (cost, local2)) <- actionFenceRequeue fence
+            Action $ modifyRW $ \root -> addDiscount (wait - cost) $ localMergeMutable root [local2]
     where
         -- When changing by one, only trigger on (==) so we don't have lots of waiting pool entries
         -- When changing by many, trigger on (>=) because we don't hit all edges
@@ -568,9 +569,17 @@ batch mx pred one many
                     -- make sure we are using one of the local's that we are computing
                     -- we things like stack, blockApply etc. work as expected
                     modifyRW $ const $ localClearMutable $ snd3 $ head now
+                    start <- liftIO offsetTime
                     fromAction $ many $ map fst3 now
-                    res <- getRW
-                    pure res{localDiscount = localDiscount res / intToDouble (length now)} -- divide the batch fairly
+                    end <- liftIO start
+
+                    -- accounting for time is tricky, we spend time T, over N jobs
+                    -- so want to charge everyone for T / N time
+                    -- but that also means we need to subtract localDiscount so we don't apply that to all
+                    rw <- getRW
+                    let t = end - localDiscount rw
+                    let n = intToDouble (length now)
+                    pure (t / n, rw{localDiscount = 0})
                 liftIO $ mapM_ (flip signalFence res . thd3) now
 
 
