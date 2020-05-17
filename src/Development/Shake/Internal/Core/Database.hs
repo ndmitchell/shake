@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards #-}
 
 module Development.Shake.Internal.Core.Database(
@@ -18,10 +17,8 @@ import qualified General.Intern as Intern
 import Control.Concurrent.Extra
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
-
-#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
-#endif
+import Prelude
 
 
 newtype Locked a = Locked (IO a)

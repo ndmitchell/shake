@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, CPP #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
 module General.Wait(
@@ -12,10 +12,8 @@ import Data.IORef.Extra
 import Data.List.Extra
 import Data.Primitive.Array
 import GHC.Exts(RealWorld)
-
-#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
-#endif
+import Prelude
 
 
 runWait :: Monad m => Wait m a -> m (Wait m a)
@@ -58,14 +56,8 @@ instance (Monad m, Applicative m) => Monad (Wait m) where
 instance (MonadIO m,  Applicative m) => MonadIO (Wait m) where
     liftIO = Lift . liftIO . fmap Now
 
-#if __GLASGOW_HASKELL__ < 808
 instance MonadFail m => MonadFail (Wait m) where
     fail = Lift . Control.Monad.Fail.fail
-#else
-instance MonadFail m => MonadFail (Wait m) where
-    fail = Lift . Prelude.fail
-#endif
-
 
 firstJustWaitUnordered :: MonadIO m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
 firstJustWaitUnordered f = go [] . map f

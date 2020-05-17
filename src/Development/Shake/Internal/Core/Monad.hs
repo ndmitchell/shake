@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs, ScopedTypeVariables, TupleSections, GeneralizedNewtypeDeriving #-}
 
 module Development.Shake.Internal.Core.Monad(
@@ -17,11 +16,8 @@ import Data.IORef
 import Control.Monad
 import System.IO
 import Data.Semigroup
-import Prelude
-
-#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
-#endif
+import Prelude
 
 
 data RAW k v ro rw a where
@@ -55,13 +51,8 @@ instance Monad (RAW k v ro rw) where
 instance MonadIO (RAW k v ro rw) where
     liftIO = LiftIO
 
-#if __GLASGOW_HASKELL__ < 808
 instance MonadFail (RAW k v ro rw) where
     fail = liftIO . Control.Monad.Fail.fail
-#else
-instance MonadFail (RAW k v ro rw) where
-    fail = liftIO . Prelude.fail
-#endif
 
 instance Semigroup a => Semigroup (RAW k v ro rw a) where
     (<>) a b = (<>) <$> a <*> b

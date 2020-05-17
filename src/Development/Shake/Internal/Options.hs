@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, DeriveDataTypeable, PatternGuards #-}
+{-# LANGUAGE DeriveDataTypeable, PatternGuards #-}
 
 -- | Types exposed to the user
 module Development.Shake.Internal.Options(

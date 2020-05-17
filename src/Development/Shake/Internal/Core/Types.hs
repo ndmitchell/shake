@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, ViewPatterns #-}
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards, FlexibleInstances #-}
 
@@ -47,11 +46,8 @@ import Development.Shake.Internal.Options
 import Development.Shake.Classes
 import Data.Semigroup
 import General.Cleanup
-import Prelude
-
-#if __GLASGOW_HASKELL__ < 808
 import Control.Monad.Fail
-#endif
+import Prelude
 
 
 ---------------------------------------------------------------------
