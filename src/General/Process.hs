@@ -153,8 +153,13 @@ process po = do
     (ProcessOpts{..}, flushBuffers) <- optimiseBuffers po
     let outFiles = nubOrd [x | DestFile x <- poStdout ++ poStderr]
     let inFiles = nubOrd [x | SrcFile x <- poStdin]
+    -- On Windows, creating groups makes async exceptions work better, see
+    -- https://github.com/ndmitchell/shake/commit/058138fef2e5afe34a22111b2005b31300430d26
+    -- On Linux, creating a group makes Docker stop working, see #748 #749
+    -- Therefore, create a group only on Windows
+    let createGroup = isWindows
     withFiles WriteMode outFiles $ \outHandle -> withFiles ReadMode inFiles $ \inHandle -> do
-        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = isJust poTimeout, close_fds = poCloseFds
+        let cp = (cmdSpec poCommand){cwd = poCwd, env = poEnv, create_group = createGroup, close_fds = poCloseFds
                  ,std_in = fst $ stdIn inHandle poStdin
                  ,std_out = stdStream outHandle poStdout poStderr, std_err = stdStream outHandle poStderr poStdout}
         withCreateProcessCompat cp $ \inh outh errh pid ->
