@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, RecordWildCards, GeneralizedNewtypeDeriving, ViewPatterns, Rank2Types #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds, GeneralizedNewtypeDeriving, ViewPatterns #-}
 
 module General.Extra(
     getProcessorCount,
