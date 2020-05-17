@@ -1,6 +1,6 @@
 Changelog for Shake (* = breaking change)
 
-    #748, don't hang when running an action via Docker
+    #748, add NoProcessGroup to enable running Docker with cmd
     Delete stuff deprecated since 2014 - **>, ?>>, *>>, *>, |*>, &*>
     Mark askOracleWith and deprioritize as DEPRECATED
     #753, fix timing information for batch
