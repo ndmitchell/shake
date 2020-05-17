@@ -112,6 +112,10 @@ test build = do
     runEx "-frestart.ninja" "--sleep"
     assertExists "restart.txt"
 
+    createDirectoryRecursive "directory1"
+    createDirectoryRecursive "directory2"
+    run "-f../../src/Test/Ninja/allow_directory.ninja"
+
     when False $ do
         -- currently fails because Shake doesn't match Ninja here
         run "-f../../src/Test/Ninja/outputtouch.ninja"

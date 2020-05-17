@@ -146,8 +146,8 @@ data EqualCost
       deriving (Eq,Ord,Show,Read,Typeable,Enum,Bounded)
 
 fileStoredValue :: ShakeOptions -> FileQ -> IO (Maybe FileA)
-fileStoredValue ShakeOptions{shakeChange=c} (FileQ x) = do
-    res <- getFileInfo False x
+fileStoredValue ShakeOptions{shakeChange=c, shakeNeedDirectory=allowDir} (FileQ x) = do
+    res <- getFileInfo allowDir x
     case res of
         Nothing -> pure Nothing
         Just (time,size) | c == ChangeModtime -> pure $ Just $ FileA time size noFileHash
