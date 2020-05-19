@@ -104,6 +104,8 @@ main = testBuild test $ do
 
     "timeout4" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "sw20"
 
+    "timeout5" !> do checkTimeout $ liftIO $ timeout 2 $ cmd_ helper "i w20"
+
     "env" !> do
         -- use liftIO since it blows away PATH which makes lint-tracker stop working
         Stdout out <- liftIO $ cmd (Env [("FOO","HELLO SHAKE")]) Shell helper "vFOO"

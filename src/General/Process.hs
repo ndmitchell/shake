@@ -91,7 +91,7 @@ stdStream _ _ _ = CreatePipe
 
 
 stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
-stdIn _ [] = (Inherit, const $ pure ())
+--stdIn _ [] = (Inherit, const $ pure ())
 stdIn file [SrcFile x] = (UseHandle $ file x, const $ pure ())
 stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
     forM_ src $ \case
