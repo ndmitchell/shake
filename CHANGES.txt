@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #738, improve the help text
     #679, allow Ninja to depend on a directory
 *   #748, close stdin by default in cmd
     #748, add NoProcessGroup and InheritStdin to cmd
