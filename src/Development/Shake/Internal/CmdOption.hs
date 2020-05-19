@@ -30,4 +30,5 @@ data CmdOption
     | FSAOptions String -- ^ Options to @fsatrace@, a list of strings with characters such as @\"r\"@ (reads) @\"w\"@ (writes). Defaults to @\"rwmdqt\"@ if the output of @fsatrace@ is required.
     | CloseFileHandles -- ^ Before starting the command in the child process, close all file handles except stdin, stdout, stderr in the child process. Uses @close_fds@ from package process and comes with the same caveats, i.e. runtime is linear with the maximum number of open file handles (@RLIMIT_NOFILE@, see @man 2 getrlimit@ on Linux).
     | NoProcessGroup -- ^ Don't run the process in its own group. Required when running @docker@. Will mean that process timeouts and asyncronous exceptions may not properly clean up child processes.
+    | InheritStdin -- ^ Cause the stdin from the parent to be inherited. Might also require NoProcessGroup on Linux. Ignored if you explicitly pass a stdin.
       deriving (Eq,Ord,Show,Data,Typeable)

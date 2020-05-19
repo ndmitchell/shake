@@ -1,7 +1,8 @@
 Changelog for Shake (* = breaking change)
 
     #679, allow Ninja to depend on a directory
-    #748, add NoProcessGroup to enable running Docker with cmd
+*   #748, close stdin by default in cmd
+    #748, add NoProcessGroup and InheritStdin to cmd
     Delete stuff deprecated since 2014 - **>, ?>>, *>>, *>, |*>, &*>
     Mark askOracleWith and deprioritize as DEPRECATED
     #753, fix timing information for batch

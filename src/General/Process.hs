@@ -52,6 +52,7 @@ data Source
     = SrcFile FilePath
     | SrcString String
     | SrcBytes LBS.ByteString
+    | SrcInherit
 
 data Destination
     = DestEcho
@@ -91,13 +92,14 @@ stdStream _ _ _ = CreatePipe
 
 
 stdIn :: (FilePath -> Handle) -> [Source] -> (StdStream, Handle -> IO ())
---stdIn _ [] = (Inherit, const $ pure ())
+stdIn _ [SrcInherit] = (Inherit, const $ pure ())
 stdIn file [SrcFile x] = (UseHandle $ file x, const $ pure ())
 stdIn file src = (,) CreatePipe $ \h -> ignoreSigPipe $ do
     forM_ src $ \case
         SrcString x -> hPutStr h x
         SrcBytes x -> LBS.hPutStr h x
         SrcFile x -> LBS.hPutStr h =<< LBS.hGetContents (file x)
+        SrcInherit -> pure () -- Can't both inherit and set it
     hClose h
 
 

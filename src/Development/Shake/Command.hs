@@ -356,6 +356,7 @@ commandExplicitIO params = removeOptionShell params $ \params -> removeOptionFSA
             Stdin x -> Just $ SrcString x
             StdinBS x -> Just $ SrcBytes x
             FileStdin x -> Just $ SrcFile x
+            InheritStdin -> Just SrcInherit
             _ -> Nothing
     let optBinary = BinaryPipes `elem` opts
     let optAsync = ResultProcess PID0 `elem` results
