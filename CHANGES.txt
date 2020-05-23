@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #754, tighten bounds to exclude GHC 7.10
 0.19, released 2020-05-23
     #738, improve the help text
     #679, allow Ninja to depend on a directory
