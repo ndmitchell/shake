@@ -7,7 +7,9 @@ import General.Pool
 import Control.Concurrent.Extra
 import Control.Exception.Extra
 import Control.Monad
+import System.Time.Extra
 import Data.Either.Extra
+import General.Timing
 
 
 main = testSimple $ do
@@ -92,3 +94,12 @@ main = testSimple $ do
             add pool $ try_ $ (do signalBarrier started (); sleep 10) `finally` (do sleep 1; writeVar var True)
             add pool $ do waitBarrier started; throw Overflow
         (=== True) =<< readVar var
+
+    -- benchmark for testing thread performance, see https://github.com/ndmitchell/shake/pull/751
+    when False $ do
+        resetTimings
+        withNumCapabilities 4 $ do
+            (d, _) <- duration $ runPool False 4 $ \pool -> do
+                replicateM_ 200000 $ addPool PoolStart pool $ return ()
+            print d
+            print =<< getTimings
