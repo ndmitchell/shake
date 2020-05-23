@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.19, released 2020-05-23
     #738, improve the help text
     #679, allow Ninja to depend on a directory
 *   #748, close stdin by default in cmd
