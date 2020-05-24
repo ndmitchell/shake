@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #755, add instance IsCmdArgument (NonEmpty String)
     #754, tighten bounds to exclude GHC 7.10
 0.19, released 2020-05-23
     #738, improve the help text
