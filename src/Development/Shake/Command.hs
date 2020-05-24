@@ -26,7 +26,9 @@ import Control.Monad.IO.Class
 import Control.Exception.Extra
 import Data.Char
 import Data.Either.Extra
+import Data.Foldable (toList)
 import Data.List.Extra
+import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe
 import Data.Data
 import Data.Semigroup
@@ -38,7 +40,7 @@ import System.IO.Extra hiding (withTempFile, withTempDir)
 import System.Process
 import System.Info.Extra
 import System.Time.Extra
-import System.IO.Unsafe(unsafeInterleaveIO)
+import System.IO.Unsafe (unsafeInterleaveIO)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.UTF8 as UTF8
@@ -740,6 +742,7 @@ class IsCmdArgument a where
 instance IsCmdArgument () where toCmdArgument = mempty
 instance IsCmdArgument String where toCmdArgument = CmdArgument . map Right . words
 instance IsCmdArgument [String] where toCmdArgument = CmdArgument . map Right
+instance IsCmdArgument (NonEmpty String) where toCmdArgument = toCmdArgument . toList
 instance IsCmdArgument CmdOption where toCmdArgument = CmdArgument . pure . Left
 instance IsCmdArgument [CmdOption] where toCmdArgument = CmdArgument . map Left
 instance IsCmdArgument CmdArgument where toCmdArgument = id
