@@ -275,7 +275,7 @@ callStackFromException :: SomeException -> ([String], SomeException)
 
 
 -- | Invert 'prettyCallStack', which GHC pre-applies in certain cases
-parseCallStack = reverse . map trimStart . drop 1 . lines
+parseCallStack = reverse . map trimStart . drop1 . lines
 
 callStackFull = parseCallStack $ prettyCallStack $ popCallStack callStack
 

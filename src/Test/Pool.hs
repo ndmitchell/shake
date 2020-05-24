@@ -100,6 +100,6 @@ main = testSimple $ do
         resetTimings
         withNumCapabilities 4 $ do
             (d, _) <- duration $ runPool False 4 $ \pool ->
-                replicateM_ 200000 $ addPool PoolStart pool $ return ()
+                replicateM_ 200000 $ addPool PoolStart pool $ pure ()
             print d
             print =<< getTimings
