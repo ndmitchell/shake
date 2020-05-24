@@ -94,6 +94,7 @@ For some reason, Shake tends to find a reasonable number of serious bugs in GHC,
 * [GHC bug 10793](https://gitlab.haskell.org/ghc/ghc/issues/10793), `BlockedIndefinitelyOnMVar` can be raised even if the thread isn't indefinitely blocked.
 * [GHC bug 15595](https://gitlab.haskell.org/ghc/ghc/issues/15595), `withArgs` on a limited stack loops forever consuming memory.
 * [GHC bug 17575](https://gitlab.haskell.org/ghc/ghc/issues/17575), `runhaskell -package=Cabal` causes an error.
+* [GHC bug 18221](https://gitlab.haskell.org/ghc/ghc/issues/18221), `forkOn` has complexity _O(n^2)_.
 
 #### Q: What's the history of Shake?
 
