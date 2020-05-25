@@ -207,10 +207,10 @@ newTrace msg start stop = Trace (BS.pack msg) (doubleToFloat start) (doubleToFlo
 type OneShot a = a
 
 data Status
-    = Ready (Result (Value, OneShot BS_Store)) -- ^ I have a value
-    | Failed SomeException (OneShot (Maybe (Result BS_Store))) -- ^ I have been run and raised an error
-    | Loaded (Result BS_Store) -- ^ Loaded from the database
-    | Running (NoShow (Either SomeException (Result (Value, BS_Store)) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
+    = Ready !(Result (Value, OneShot BS_Store)) -- ^ I have a value
+    | Failed !SomeException !(OneShot (Maybe (Result BS_Store))) -- ^ I have been run and raised an error
+    | Loaded !(Result BS_Store) -- ^ Loaded from the database
+    | Running !(NoShow (Either SomeException (Result (Value, BS_Store)) -> Locked ())) (Maybe (Result BS_Store)) -- ^ Currently in the process of being checked or built
     | Missing -- ^ I am only here because I got into the Intern table
       deriving Show
 
@@ -227,12 +227,12 @@ instance NFData Status where
 
 
 data Result a = Result
-    {result :: a -- ^ the result associated with the Key
+    {result :: !a -- ^ the result associated with the Key
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
-    ,depends :: [Depends] -- ^ dependencies (don't run them early)
+    ,depends :: ![Depends] -- ^ dependencies (don't run them early)
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
-    ,traces :: [Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
+    ,traces :: ![Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Functor)
 
 instance NFData a => NFData (Result a) where
