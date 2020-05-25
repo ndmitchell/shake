@@ -99,7 +99,7 @@ forMutate (Ids ref) f = do
     let go !i | i >= used = pure ()
               | otherwise = do
                 v <- readArray values i
-                whenJust v $ \v -> writeArray values i $ Just $ f v
+                whenJust v $ \v -> writeArray values i $! Just $! f v
                 go $ i+1
     go 0
 
