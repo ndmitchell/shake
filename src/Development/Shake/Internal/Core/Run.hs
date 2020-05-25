@@ -331,7 +331,7 @@ incrementStep :: Database -> IO Step
 incrementStep db = runLocked db $ do
     stepId <- mkId db stepKey
     v <- liftIO $ getKeyValueFromId db stepId
-    step<- pure $ case v of
+    step <- liftIO $ evaluate $ case v of
         Just (_, Loaded r) -> incStep $ fromStepResult r
         _ -> Step 1
     let stepRes = toStepResult step
