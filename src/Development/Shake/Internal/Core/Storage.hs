@@ -71,7 +71,7 @@ messageDatabaseVersionChange dbfile old new =
     ,"All rules will be rebuilt"]
     where
         limit x = let (a,b) = splitAt 200 x in a ++ (if null b then "" else "...")
-        disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` "\r\n")
+        disp = map (\x -> if isPrint x && isAscii x then x else '?') . takeWhile (`notElem` ("\r\n" :: String))
 
 
 messageMissingTypes :: FilePath -> [String] -> [String]

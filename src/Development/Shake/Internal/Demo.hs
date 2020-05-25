@@ -27,7 +27,7 @@ demo auto = do
     hasManual <- hasManualData
     ghc <- isJust <$> findExecutable "ghc"
     (gcc, gccPath) <- findGcc
-    shakeLib <- wrap $ fmap (not . null . words . fromStdout) (cmd "ghc-pkg list --simple-output shake")
+    shakeLib <- wrap $ fmap (not . null . words . fromStdout) (cmd ("ghc-pkg list --simple-output shake" :: String))
     ninja <- findExecutable "ninja"
     putStrLn "done\n"
 
