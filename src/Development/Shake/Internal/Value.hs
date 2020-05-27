@@ -12,7 +12,6 @@ import Development.Shake.Classes
 import Development.Shake.Internal.Errors
 import Data.Typeable
 
-import Data.Bits
 import Unsafe.Coerce
 
 
