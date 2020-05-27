@@ -103,7 +103,8 @@ instance NFData Value where
     rnf Value{..} = valueRnf valueValue
 
 instance Hashable Key where
-    hashWithSalt salt Key{..} = hashWithSalt salt keyType `xor` keyHash salt keyValue
+    hash Key{..} = keyHash (hash keyType) keyValue
+    hashWithSalt salt Key{..} = keyHash (hashWithSalt salt keyType) keyValue
 
 instance Eq Key where
     Key{keyType=at,keyValue=a,keyEq=eq} == Key{keyType=bt,keyValue=b}
