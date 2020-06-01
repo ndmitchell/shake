@@ -41,7 +41,7 @@ dependencyOrder shw status = f (map fst noDeps) $ Map.map Just $ Map.fromListWit
         (noDeps, hasDeps) = partition (null . snd) $ Map.toList status
 
         f [] mp | null bad = []
-                | otherwise = error $ unlines $
+                | otherwise = throwImpure $ errorInternal $ unlines $
                     "Internal invariant broken, database seems to be cyclic" :
                     map ("    " ++) bad ++
                     ["... plus " ++ show (length badOverflow) ++ " more ..." | not $ null badOverflow]

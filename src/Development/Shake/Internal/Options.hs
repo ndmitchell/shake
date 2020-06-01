@@ -18,6 +18,7 @@ import General.Extra
 import System.Time.Extra
 import qualified Data.HashMap.Strict as Map
 import Development.Shake.Internal.FilePattern
+import Development.Shake.Internal.Errors
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as UTF8
 import Development.Shake.Internal.CmdOption
@@ -285,7 +286,7 @@ shakeOptionsFields = zipExact fieldsShakeOptions . gmapQ f
             | Just x <- cast x = show (x :: Hidden (Map.HashMap TypeRep Dynamic))
             | Just x <- cast x = show (x :: Hidden (String -> String -> Bool -> IO ()))
             | Just x <- cast x = show (x :: [CmdOption])
-            | otherwise = error $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
+            | otherwise = throwImpure $ errorInternal $ "Error while showing ShakeOptions, missing alternative for " ++ show (typeOf x)
 
 instance Show ShakeOptions where
     show x = "ShakeOptions {" ++ intercalate ", " (map (\(a,b) -> a ++ " = " ++ b) $ shakeOptionsFields x) ++ "}"

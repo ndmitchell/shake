@@ -164,7 +164,7 @@ lexxBind ctor x
     , ('=',x) <- list0 $ jumpCont $ dropSpace x
     , (exp,x) <- lexxExpr False False $ jumpCont $ dropSpace x
     = ctor var exp : lexerLoop x
-lexxBind _ x = error $ show ("parse failed when parsing binding", take0 100 x)
+lexxBind _ x = error $ "Ninja parse failed when parsing binding, " ++ show (take0 100 x)
 
 lexxFile :: (Expr -> Lexeme) -> Str0 -> [Lexeme]
 lexxFile ctor x
@@ -182,11 +182,11 @@ lexxExprs stopColon x = case lexxExpr stopColon True x of
     (a,c_x) | c <- head0 c_x, x <- tail0 c_x -> case c of
         ' ' -> add a $ lexxExprs stopColon $ dropSpace x
         ':' | stopColon -> new a x
-        _ | stopColon -> error "expected a colon"
+        _ | stopColon -> error "Ninja parsing, expected a colon"
         '\r' -> new a $ dropN x
         '\n' -> new a x
         '\0' -> new a c_x
-        _ -> error "unexpected expression in Ninja"
+        _ -> error "Ninja parsing, unexpected expression"
     where
         new a x = add a ([], x)
         add (Exprs []) x = x
@@ -218,7 +218,7 @@ lexxExpr stopColon stopSpace = first exprs . f
             '\r' -> f $ dropSpace $ dropN x
             '{' | (name,x) <- span0 isVarDot x, not $ BS.null name, ('}',x) <- list0 x -> Var name $: f x
             _ | (name,x) <- span0 isVar c_x, not $ BS.null name -> Var name $: f x
-            _ -> error "Unexpect $ followed by unexpected stuff"
+            _ -> error "Ninja parsing, unexpect $ followed by unexpected stuff"
 
 jumpCont :: Str0 -> Str0
 jumpCont o

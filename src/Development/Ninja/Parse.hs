@@ -58,7 +58,7 @@ applyStmt env ninja@Ninja{..} (key, binds) = case key of
         addBind env a b
         pure ninja
     LexBind a _ ->
-        error $ "Unexpected binding defining " ++ BS.unpack a
+        error $ "Ninja parsing, unexpected binding defining " ++ BS.unpack a
 
 
 splitDeps :: [Str] -> ([Str], [Str], [Str])
@@ -76,4 +76,4 @@ getDepth env xs = case lookup (BS.pack "depth") xs of
         x <- askExpr env x
         case BS.readInt x of
             Just (i, n) | BS.null n -> pure i
-            _ -> error $ "Could not parse depth field in pool, got: " ++ BS.unpack x
+            _ -> error $ "Ninja parsing, could not parse depth field in pool, got: " ++ BS.unpack x

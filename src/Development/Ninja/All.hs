@@ -93,7 +93,7 @@ resolvePhony :: Map.HashMap Str [Str] -> Str -> [Str]
 resolvePhony mp = f $ Left 100
     where
         f (Left 0) x = f (Right []) x
-        f (Right xs) x | x `elem` xs = error $ "Recursive phony involving " ++ BS.unpack x
+        f (Right xs) x | x `elem` xs = error $ "Ninja recursive phony involving " ++ BS.unpack x
         f a x = case Map.lookup x mp of
             Nothing -> [x]
             Just xs -> concatMap (f $ either (Left . subtract 1) (Right . (x:)) a) xs
