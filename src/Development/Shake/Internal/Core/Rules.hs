@@ -226,6 +226,8 @@ type family RuleResult key -- = value
 --   but are required to supply a suitable 'BuiltinRun'.
 --
 --   Raises an error if any other rule exists at this type.
+--
+--   For a worked example of writing a rule see <https://tech-blog.capital-match.com/posts/5-upgrading-shake.html>.
 addBuiltinRule
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
