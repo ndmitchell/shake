@@ -19,7 +19,7 @@ import Data.List
 import Control.Monad.Extra
 import System.Directory.Extra
 import System.FilePath
-import System.IO
+import System.IO.Extra
 import Numeric
 import Development.Shake.Internal.FileInfo
 import General.Wait
@@ -136,8 +136,11 @@ saveSharedEntry shared entry = do
             copyFileLink (useSymlink shared) file (dir </> show hash)
     -- Write key after files to make sure cache is always useable
     let v = runBuilder $ putEntry (keyOp shared) entry
-    createDirectoryRecursive $ dir </> "_key"
-    BS.writeFile (dir </> "_key" </> hexed v) v
+    let dirName = dir </> "_key"
+    createDirectoryRecursive dirName
+    -- #757, make sure we write this file atomically
+    (tempFile, cleanUp) <- newTempFileWithin dir
+    (BS.writeFile tempFile v >> renameFile tempFile (dirName </> hexed v)) `onException` cleanUp
 
 
 addShared :: Shared -> Key -> Ver -> Ver -> [[(Key, BS_Identity)]] -> BS_Store -> [FilePath] -> IO ()
