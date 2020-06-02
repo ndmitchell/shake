@@ -220,7 +220,10 @@ noIdentity _ _ = Nothing
 --   See 'addBuiltinRule' and 'Development.Shake.Rule.apply'.
 type family RuleResult key -- = value
 
--- | Define a builtin rule, passing the functions to run in the right circumstances.
+-- | Before looking at this function, you should read the warnings at the top of this module.
+--   This function is not often necessary in build systems.
+--
+--   Define a builtin rule, passing the functions to run in the right circumstances.
 --   The @key@ and @value@ types will be what is used by 'Development.Shake.Rule.apply'.
 --   As a start, you can use 'noLint' and 'noIdentity' as the first two functions,
 --   but are required to supply a suitable 'BuiltinRun'.
