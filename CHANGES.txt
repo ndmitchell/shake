@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.19.1, released 2020-06-06
     #757, make sure shared cache writes are atomic
     Remove a small space leak if using the Database module
     #755, add instance IsCmdArgument (NonEmpty String)
