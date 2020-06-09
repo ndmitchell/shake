@@ -57,6 +57,7 @@ There are several libraries providing pre-made rules and extending Shake:
 Some libraries push Shake into specific domains:
 
 * [bioshake](https://github.com/PapenfussLab/bioshake) lets users define bioinformatics pipelines in a DSL that is executed in conjunction with Shake, also including support for cluster execution. There is also [a paper](https://www.biorxiv.org/content/biorxiv/early/2019/01/24/529479.full.pdf) describing the system.
+* [neuron](https://neuron.zettel.page/) is a note-taking tool based on the Zettelkasten method, that uses Shake to monitor and rebuild as the Markdown note files change.
 * [Slick](https://hackage.haskell.org/package/slick) is a static site generator written and configured using Haskell. Slick provides a small set of tools and combinators for building static websites on top of the Shake build system.
 * [Rib](https://github.com/srid/rib#readme) is a library for writing your own static site generator, prioritizing the use of existing tools over reinventing them and thereby enabling the user to compose them together.
 
