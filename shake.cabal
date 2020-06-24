@@ -234,7 +234,8 @@ executable shake
         unordered-containers >= 0.2.7,
         utf8-string >= 0.3
 
-    cpp-options: -DFILE_EMBED
+    if flag(embed-files)
+        cpp-options: -DFILE_EMBED
 
     if flag(portable)
         cpp-options: -DPORTABLE
