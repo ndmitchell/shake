@@ -219,7 +219,6 @@ executable shake
         extra >= 1.6.19,
         filepath,
         filepattern,
-        file-embed >= 0.0.11,
         hashable >= 1.1.2.3,
         heaps >= 0.3.6.1,
         js-dgtable,
@@ -228,7 +227,6 @@ executable shake
         primitive,
         process >= 1.1,
         random,
-        template-haskell,
         time,
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
@@ -236,6 +234,9 @@ executable shake
 
     if flag(embed-files)
         cpp-options: -DFILE_EMBED
+        build-depends:
+            file-embed >= 0.0.11,
+            template-haskell
 
     if flag(portable)
         cpp-options: -DPORTABLE
