@@ -254,7 +254,7 @@ shakeArgsOptionsWith baseOpts userOptions rules = do
         if not ran || shakeVerbosity shakeOpts < Info || NoTime `elem` flagsExtra then
             either throwIO pure res
          else
-            let esc = if shakeColor shakeOpts then escape else flip const
+            let esc = if shakeColor shakeOpts then escape else \_ x -> x
             in case res of
                 Left err ->
                     if Exception `elem` flagsExtra then
