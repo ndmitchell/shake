@@ -231,8 +231,12 @@ progressTracker :: Double -> (Progress -> IO ()) -> IO Progress -> IO ()
 progressTracker sample progHandler prog = do
   catchJust (\x -> if x == ThreadKilled then Just () else Nothing) go errHandler
   where
-    go = prog >>= progHandler
-    errHandler = const go
+    go = do
+      p <- prog
+      progHandler p
+      sleep sample
+      go
+    errHandler = const $ prog >>= progHandler
 
 
 data ProgressEntry = ProgressEntry
