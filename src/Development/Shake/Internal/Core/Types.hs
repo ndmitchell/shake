@@ -8,9 +8,10 @@ module Development.Shake.Internal.Core.Types(
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
     Traces, newTrace, addTrace, flattenTraces,
+    DependsList, flattenDepends, enumerateDepends, addDepends, addDepends1, newDepends,
     Stack, Step(..), Result(..), Database, DatabasePoly(..), Depends(..), Status(..), Trace(..), BS_Store,
     getResult, exceptionStack, statusType, addStack, addCallStack,
-    incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
+    incStep, emptyStack, topStack, showTopStack,
     stepKey, StepKey(..),
     rootKey, Root(..)
     ) where
@@ -272,10 +273,39 @@ instance BinaryEx [Depends] where
     putEx = putExList . map putEx
     getEx = map getEx . getExList
 
--- | Afterwards each Id must occur at most once and there are no empty Depends
-nubDepends :: [Depends] -> [Depends]
-nubDepends = fMany Set.empty
+data DependsList
+    = DependsNone
+    | DependsDirect [Depends]
+    | DependsSequence DependsList DependsList
+    | DependsSequence1 DependsList Depends
+    | DependsParallel [DependsList]
+
+-- Create a new set of depends, from a list in the right order
+newDepends :: [Depends] -> DependsList
+newDepends = DependsDirect
+
+-- Add two sequences of dependencies in order
+addDepends :: DependsList -> DependsList -> DependsList
+addDepends = DependsSequence
+
+addDepends1 :: DependsList -> Depends -> DependsList
+addDepends1 = DependsSequence1
+
+-- Two goals here, merge parallel lists so they retain as much leading parallelism as possible
+-- Afterwards each Id must occur at most once and there are no empty Depends
+flattenDepends :: DependsList -> [Depends]
+flattenDepends d = fMany Set.empty $ flat d []
     where
+        flat :: DependsList -> [Depends] -> [Depends]
+        flat DependsNone rest = rest
+        flat (DependsDirect xs) rest = xs ++ rest
+        flat (DependsSequence xs ys) rest = flat xs $ flat ys rest
+        flat (DependsSequence1 xs y) rest = flat xs $ y:rest
+        -- for each element of xs, we want to pull off the things that must be done first
+        -- and then the stuff that can be done later
+        flat (DependsParallel xs) rest = map mconcat xss ++ rest
+            where xss = transpose $ map (`flat` []) xs
+
         fMany _ [] = []
         fMany seen (Depends d:ds) = [Depends d2 | d2 /= []] ++ fMany seen2 ds
             where (d2,seen2) = fOne seen d
@@ -283,6 +313,20 @@ nubDepends = fMany Set.empty
         fOne seen [] = ([], seen)
         fOne seen (x:xs) | x `Set.member` seen = fOne seen xs
         fOne seen (x:xs) = first (x:) $ fOne (Set.insert x seen) xs
+
+
+
+
+-- List all the dependencies in whatever order you wish, used for linting
+enumerateDepends :: DependsList -> [Depends]
+enumerateDepends d = f d []
+    where
+        f DependsNone rest = rest
+        f (DependsDirect xs) rest = xs ++ rest
+        f (DependsSequence xs ys) rest = f xs $ f ys rest
+        f (DependsSequence1 xs y) rest = f xs (y:rest)
+        f (DependsParallel []) rest = rest
+        f (DependsParallel (x:xs)) rest = f x $ f (DependsParallel xs) rest
 
 
 -- | Define a rule between @key@ and @value@. As an example, a typical 'BuiltinRun' will look like:
@@ -416,7 +460,7 @@ data Local = Local
     ,localVerbosity :: Verbosity -- ^ Verbosity, may be changed locally
     ,localBlockApply ::  Maybe String -- ^ Reason to block apply, or Nothing to allow
     -- mutable local variables
-    ,localDepends :: [Depends] -- ^ Dependencies, built up in reverse
+    ,localDepends :: DependsList -- ^ Dependencies that we rely on, morally a list of sets
     ,localDiscount :: !Seconds -- ^ Time spend building dependencies (may be negative for parallel)
     ,localTraces :: Traces -- ^ Traces that have occurred
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
@@ -449,7 +493,7 @@ addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 TracesNone [] [] [] [] True
+newLocal stack verb = Local stack (Ver 0) verb Nothing DependsNone 0 TracesNone [] [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -467,7 +511,7 @@ localMergeMutable root xs = Local
     ,localBlockApply = localBlockApply root
     -- mutable locals that need integrating
     -- note that a lot of the lists are stored in reverse, assume root happened first
-    ,localDepends = mergeDependsRev (map localDepends xs) ++ localDepends root
+    ,localDepends = DependsParallel (map localDepends xs) `DependsSequence` localDepends root
     ,localDiscount = sum $ map localDiscount $ root : xs
     ,localTraces = TracesParallel (map localTraces xs) `TracesSequence` localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
@@ -476,12 +520,3 @@ localMergeMutable root xs = Local
     ,localProduces = concatMap localProduces xs ++ localProduces root
     ,localHistory = all localHistory $ root:xs
     }
-
--- ignoring reversing, want to merge the first set of dependencies and so on
--- so we increase parallelism when rechecking builds
-mergeDependsRev :: [[Depends]] -> [Depends]
-mergeDependsRev = reverse . f . map reverse
-    where
-        f [] = []
-        f xs = mconcat now : f next
-            where (now, next) = unzip $ mapMaybe uncons xs

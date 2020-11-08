@@ -275,7 +275,7 @@ lintTrackRead ks = do
     Global{..} <- Action getRO
     when (isJust $ shakeLint globalOptions) $ do
         l@Local{..} <- Action getRW
-        deps <- liftIO $ concatMapM (listDepends globalDatabase) localDepends
+        deps <- liftIO $ concatMapM (listDepends globalDatabase) $ enumerateDepends localDepends
         let top = topStack localStack
 
         let condition1 k = top == Just k
@@ -317,7 +317,7 @@ lintTrackFinished = do
         let ignore k = any ($ k) localTrackAllows
 
         -- Read stuff
-        deps <- concatMapM (listDepends globalDatabase) localDepends
+        deps <- concatMapM (listDepends globalDatabase) $ enumerateDepends localDepends
         let used = Set.filter (not . ignore) $ Set.fromList localTrackRead
 
         -- check Read 4a
@@ -436,25 +436,24 @@ orderOnlyAction act = Action $ do
 --   Most people should use 'Development.Shake.newCache' instead.
 newCacheIO :: (Eq k, Hashable k) => (k -> Action v) -> IO (k -> Action v)
 newCacheIO (act :: k -> Action v) = do
-    var :: Var (Map.HashMap k (Fence IO (Either SomeException ([Depends],v)))) <- newVar Map.empty
+    var :: Var (Map.HashMap k (Fence IO (Either SomeException (DependsList,v)))) <- newVar Map.empty
     pure $ \key ->
         join $ liftIO $ modifyVar var $ \mp -> case Map.lookup key mp of
             Just bar -> pure $ (,) mp $ do
                 (offset, (deps, v)) <- actionFenceRequeue bar
-                Action $ modifyRW $ \s -> addDiscount offset $ s{localDepends = deps ++ localDepends s}
+                Action $ modifyRW $ \s -> addDiscount offset $ s{localDepends = addDepends (localDepends s) deps}
                 pure v
             Nothing -> do
                 bar <- newFence
                 pure $ (Map.insert key bar mp,) $ do
-                    Local{localDepends=pre} <- Action getRW
+                    Action $ modifyRW $ \s -> s{localDepends = newDepends []}
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
                         Left err -> do
                             liftIO $ signalFence bar $ Left err
                             Action $ throwRAW err
                         Right v -> do
-                            Local{localDepends=post} <- Action getRW
-                            let deps = dropEnd (length pre) post
+                            Local{localDepends=deps} <- Action getRW
                             liftIO $ signalFence bar $ Right (deps, v)
                             pure v
 

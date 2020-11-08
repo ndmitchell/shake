@@ -164,7 +164,7 @@ applyKeyValue callStack ks = do
                 Just e -> pure $ Left e
                 Nothing -> quickly $ Right <$> mapM (fmap (\(Just (_, Ready r)) -> fst $ result r) . liftIO . getKeyValueFromId database) is
         pure (is, wait)
-    Action $ modifyRW $ \s -> s{localDepends = Depends is : localDepends s}
+    Action $ modifyRW $ \s -> s{localDepends = addDepends1 (localDepends s) $ Depends is}
 
     case wait of
         Now vs -> either throwM pure vs
@@ -218,7 +218,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         {result = mkResult runValue runStore
                         ,changed = c
                         ,built = globalStep
-                        ,depends = nubDepends $ reverse localDepends
+                        ,depends = flattenDepends localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = flattenTraces localTraces}
             where
@@ -292,7 +292,7 @@ historyLoad (Ver -> ver) = do
             Just (res, deps, restore) -> do
                 liftIO $ globalDiagnostic $ pure $ "History hit for " ++ show key
                 liftIO restore
-                Action $ modifyRW $ \s -> s{localDepends = reverse $ map Depends deps}
+                Action $ modifyRW $ \s -> s{localDepends = newDepends $ map Depends deps}
                 pure (Just res)
 
 
@@ -325,7 +325,7 @@ historySave (Ver -> ver) store = whenM historyIsEnabled $ Action $ do
         let produced = reverse $ map snd localProduces
         deps <-
             -- can do this without the DB lock, since it reads things that are stable
-            forNothingM (reverse localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
+            forNothingM (flattenDepends localDepends) $ \(Depends is) -> forNothingM is $ \i -> do
                 Just (k, Ready r) <- getKeyValueFromId globalDatabase i
                 pure $ (k,) <$> runIdentify globalRules k (fst $ result r)
         let k = topStack localStack

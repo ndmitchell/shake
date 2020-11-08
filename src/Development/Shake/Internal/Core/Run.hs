@@ -354,7 +354,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
             {result = (newValue (), BS.empty)
             ,changed = step
             ,built = step
-            ,depends = nubDepends $ reverse $ localDepends local
+            ,depends = flattenDepends $ localDepends local
             ,execution = 0
             ,traces = flattenTraces $ addTrace (localTraces local) $ Trace BS.empty end end}
     setMem db rootId rootKey $ Ready rootRes
