@@ -29,6 +29,7 @@ import Data.Either.Extra
 import Data.Foldable (toList)
 import Data.List.Extra
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.HashSet as Set
 import Data.Maybe
 import Data.Data
 import Data.Semigroup
@@ -311,8 +312,10 @@ commandExplicitAction oparams = do
             | otherwise = act params
 
         autodeps act = do
-            ResultFSATrace pxs : res <- act params{opts = addFSAOptions "r" opts, results = ResultFSATrace [] : results}
-            xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs]
+            ResultFSATrace pxs : res <- act params{opts = addFSAOptions "rw" opts, results = ResultFSATrace [] : results}
+            let written = Set.fromList [x | FSAWrite x <- pxs]
+            -- If something both reads and writes to a file, it isn't eligible to be an autodeps
+            xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs, not $ x `Set.member` written]
             cwd <- liftIO getCurrentDirectory
             temp <- fixPaths cwd xs
             unsafeAllowApply $ need temp
