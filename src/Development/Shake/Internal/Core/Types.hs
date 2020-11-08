@@ -7,6 +7,7 @@ module Development.Shake.Internal.Core.Types(
     UserRule(..), UserRuleVersioned(..), userRuleSize,
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
     newLocal, localClearMutable, localMergeMutable,
+    Traces, newTrace, addTrace, flattenTraces,
     Stack, Step(..), Result(..), Database, DatabasePoly(..), Depends(..), Status(..), Trace(..), BS_Store,
     getResult, exceptionStack, statusType, addStack, addCallStack,
     incStep, newTrace, nubDepends, emptyStack, topStack, showTopStack,
@@ -417,7 +418,7 @@ data Local = Local
     -- mutable local variables
     ,localDepends :: [Depends] -- ^ Dependencies, built up in reverse
     ,localDiscount :: !Seconds -- ^ Time spend building dependencies (may be negative for parallel)
-    ,localTraces :: [Trace] -- ^ Traces, built in reverse
+    ,localTraces :: Traces -- ^ Traces that have occurred
     ,localTrackAllows :: [Key -> Bool] -- ^ Things that are allowed to be used
     ,localTrackRead :: [Key] -- ^ Calls to 'lintTrackRead'
     ,localTrackWrite :: [Key] -- ^ Calls to 'lintTrackWrite'
@@ -425,11 +426,30 @@ data Local = Local
     ,localHistory :: !Bool -- ^ Is it valid to cache the result
     }
 
+data Traces
+    = TracesNone -- no traces
+    | TracesSequence1 Traces Trace -- Like TracesSequence but with 1 element
+    | TracesSequence Traces Traces -- first the Traces happened, then Traces that happened after
+    | TracesParallel [Traces] -- these traces happened in parallel with each other
+
+flattenTraces :: Traces -> [Trace]
+flattenTraces t = f t []
+    where
+        f TracesNone rest = rest
+        f (TracesSequence1 a b) rest = f a (b:rest)
+        f (TracesSequence a b) rest = f a $ f b rest
+        f (TracesParallel []) rest = rest
+        -- Might want to resort them by time started?
+        f (TracesParallel (x:xs)) rest = f x $ f (TracesParallel xs) rest
+
+addTrace :: Traces -> Trace -> Traces
+addTrace ts t = ts `TracesSequence1` t
+
 addDiscount :: Seconds -> Local -> Local
 addDiscount s l = l{localDiscount = s + localDiscount l}
 
 newLocal :: Stack -> Verbosity -> Local
-newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 [] [] [] [] [] True
+newLocal stack verb = Local stack (Ver 0) verb Nothing [] 0 TracesNone [] [] [] [] True
 
 -- Clear all the local mutable variables
 localClearMutable :: Local -> Local
@@ -449,7 +469,7 @@ localMergeMutable root xs = Local
     -- note that a lot of the lists are stored in reverse, assume root happened first
     ,localDepends = mergeDependsRev (map localDepends xs) ++ localDepends root
     ,localDiscount = sum $ map localDiscount $ root : xs
-    ,localTraces = mergeTracesRev (map localTraces xs) ++ localTraces root
+    ,localTraces = TracesParallel (map localTraces xs) `TracesSequence` localTraces root
     ,localTrackAllows = localTrackAllows root ++ concatMap localTrackAllows xs
     ,localTrackRead = localTrackRead root ++ concatMap localTrackRead xs
     ,localTrackWrite = localTrackWrite root ++ concatMap localTrackWrite xs
@@ -465,7 +485,3 @@ mergeDependsRev = reverse . f . map reverse
         f [] = []
         f xs = mconcat now : f next
             where (now, next) = unzip $ mapMaybe uncons xs
-
-mergeTracesRev :: [[Trace]] -> [Trace]
--- might want to resort them?
-mergeTracesRev = concat

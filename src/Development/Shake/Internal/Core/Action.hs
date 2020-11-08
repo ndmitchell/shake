@@ -257,7 +257,7 @@ traced msg act = do
     stop <- liftIO globalTimestamp
     let trace = newTrace msg start stop
     liftIO $ evaluate $ rnf trace
-    Action $ modifyRW $ \s -> s{localTraces = trace : localTraces s}
+    Action $ modifyRW $ \s -> s{localTraces = addTrace (localTraces s) trace}
     pure res
 
 

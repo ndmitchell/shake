@@ -220,7 +220,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         ,built = globalStep
                         ,depends = nubDepends $ reverse localDepends
                         ,execution = doubleToFloat $ dur - localDiscount
-                        ,traces = reverse localTraces}
+                        ,traces = flattenTraces localTraces}
             where
                 mkResult value store = (value, if globalOneShot then BS.empty else store)
 

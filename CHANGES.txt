@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+    #779, merge local traces in O(n)
     #768, the embed-files flag work on the executable too
 0.19.1, released 2020-06-06
     #757, make sure shared cache writes are atomic
