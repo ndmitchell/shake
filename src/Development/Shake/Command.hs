@@ -312,8 +312,8 @@ commandExplicitAction oparams = do
             | otherwise = act params
 
         autodeps act = do
-            ResultFSATrace pxs : res <- act params{opts = addFSAOptions "rw" opts, results = ResultFSATrace [] : results}
-            let written = Set.fromList [x | FSAWrite x <- pxs]
+            ResultFSATrace pxs : res <- act params{opts = addFSAOptions "rwm" opts, results = ResultFSATrace [] : results}
+            let written = Set.fromList $ [x | FSAMove x _ <- pxs] ++ [x | FSAWrite x <- pxs]
             -- If something both reads and writes to a file, it isn't eligible to be an autodeps
             xs <- liftIO $ filterM doesFileExist [x | FSARead x <- pxs, not $ x `Set.member` written]
             cwd <- liftIO getCurrentDirectory
