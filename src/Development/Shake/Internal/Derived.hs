@@ -17,7 +17,7 @@ import Control.Monad.Extra
 import Control.Monad.IO.Class
 import System.Directory
 import System.FilePath (takeDirectory)
-import System.IO
+import System.IO (IOMode (..), hGetContents, withFile)
 import qualified System.IO.Extra as IO
 
 import Development.Shake.Internal.Errors
