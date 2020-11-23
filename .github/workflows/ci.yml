@@ -32,7 +32,7 @@ jobs:
     - run: |
         git clone https://github.com/jacereda/fsatrace.git .fsatrace
         (cd .fsatrace && make)
-        export PATH=$PATH:`pwd`/.fsatrace
+        export PATH=${PATH}:`pwd`/.fsatrace
         fsatrace v - -- echo fsatrace works
     - uses: ndmitchell/neil@master
       with:
