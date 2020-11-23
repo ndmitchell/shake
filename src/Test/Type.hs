@@ -4,7 +4,7 @@ module Test.Type(
     sleep, sleepFileTime, sleepFileTimeCalibrate,
     testBuildArgs, testBuild, testSimple, testNone,
     shakeRoot,
-    defaultTest, hasTracker,
+    defaultTest, hasTracker, notCI,
     copyDirectoryChanged, copyFileChangedIO,
     assertWithin,
     assertBool, assertBoolIO, assertException, assertExceptionAfter,
@@ -152,6 +152,12 @@ tracker :: IO Lint
 tracker = do
     fsatrace <- findExecutable $ "fsatrace" <.> exe
     pure $ if isJust fsatrace then LintFSATrace else LintBasic
+
+-- Tests that don't currently work on CI
+notCI :: IO () -> IO ()
+notCI act = do
+    b <- lookupEnv "CI"
+    when (isNothing b) act
 
 hasTracker :: IO Bool
 hasTracker = do

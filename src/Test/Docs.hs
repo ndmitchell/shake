@@ -18,7 +18,7 @@ import Data.Version.Extra
 -- GHC 8.0 has a segfault when linking Setup
 brokenHaddock = compilerVersion < makeVersion [8,2]
 
-main = testBuild (unless brokenHaddock . defaultTest) $ do
+main = testBuild (notCI . unless brokenHaddock . defaultTest) $ do
     let index = "dist/doc/html/shake/index.html"
     let setup = "dist/setup.exe"
     let config = "dist/setup-config"
