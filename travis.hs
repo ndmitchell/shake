@@ -99,18 +99,21 @@ main = do
             when (ninjaZero + 0.1 + hack716 < shakeZero) $
                 error "ERROR: Ninja zero build was more than 0.1s faster than Shake"
 
-    createDirectoryIfMissing True "temp"
-    withCurrentDirectory "temp" $
-        cmd "shake --demo --keep-going"
+    notCI $ do
+        createDirectoryIfMissing True "temp"
+        withCurrentDirectory "temp" $
+            cmd "shake --demo --keep-going"
 
-    isHead <- (== Just "1") <$> lookupEnv "GHC_HEAD"
-    ghcver <- fromMaybe "" <$> lookupEnv "GHCVER"
-    unless isHead $ do
-        ver <- do
-            src <- readFile "shake.cabal"
-            pure $ head [trimStart x | x <- lines src, Just x <- [stripPrefix "version:" x]]
-        forM_ (requiresShake ghcver) $ \x ->
-            retry 3 $ cmd $ "cabal v1-install " ++ x ++ " --constraint=shake==" ++ ver
+        isHead <- (== Just "1") <$> lookupEnv "GHC_HEAD"
+        ghcver <- fromMaybe "" <$> lookupEnv "GHCVER"
+        unless isHead $ do
+            ver <- do
+                src <- readFile "shake.cabal"
+                pure $ head [trimStart x | x <- lines src, Just x <- [stripPrefix "version:" x]]
+            forM_ (requiresShake ghcver) $ \x ->
+                retry 3 $ cmd $ "cabal v1-install " ++ x ++ " --constraint=shake==" ++ ver
+
+notCI _ = pure ()
 
 ninjaProfile :: FilePath -> IO ()
 ninjaProfile src = do
