@@ -39,6 +39,7 @@ import System.Random
 import General.GetOpt
 import System.IO.Extra as IO
 import System.Time.Extra
+import System.Info.Extra
 
 
 testBuildArgs
@@ -162,7 +163,8 @@ notCI act = do
 hasTracker :: IO Bool
 hasTracker = do
     t <- tracker
-    pure $ t == LintFSATrace
+    -- Tracking on a Mac is pretty unreliable
+    pure $ not isMac && t == LintFSATrace
 
 assertFail :: String -> IO a
 assertFail msg = error $ "ASSERTION FAILED: " ++ msg
