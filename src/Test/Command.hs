@@ -27,9 +27,9 @@ main = testBuild test $ do
                           name ~> do need ["helper/shake_helper" <.> exe]; test
 
     let helper_source = unlines
-            ["import System.Time.Extra"
-            ,"import System.Process"
+            ["import System.Process"
             ,"import Control.Monad"
+            ,"import Control.Concurrent"
             ,"import System.Directory"
             ,"import System.Environment"
             ,"import System.Exit"
@@ -45,7 +45,7 @@ main = testBuild test $ do
             ,"            'x' -> exitFailure"
             ,"            'c' -> putStrLn =<< getCurrentDirectory"
             ,"            'v' -> putStrLn =<< getEnv rg"
-            ,"            'w' -> sleep (read rg :: Double)"
+            ,"            'w' -> threadDelay $ ceiling $ (read rg :: Double) * 1000000"
             ,"            'r' -> LBS.putStr $ LBS.replicate (read rg) 'x'"
             ,"            'i' -> putStr =<< getContents"
             ,"            's' -> void $ readProcess exe [rg] \"\""
