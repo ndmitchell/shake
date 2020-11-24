@@ -14,7 +14,7 @@ import General.Extra
 import General.GetOpt
 import System.Process
 import System.Exit
-import Data.Either
+import Data.Either.Extra
 
 
 main :: IO ()
