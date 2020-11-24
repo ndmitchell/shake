@@ -14,6 +14,7 @@ import General.Extra
 import General.GetOpt
 import System.Process
 import System.Exit
+import Data.Either
 
 
 main :: IO ()
@@ -51,4 +52,4 @@ flags = [Option "f" ["file","makefile"] (ReqArg (Right . UseMakefile) "FILE") "R
         ]
 
 findFile :: [FilePath] -> IO (Maybe FilePath)
-findFile = findM (fmap (either (const False) id) . tryIO . IO.doesFileExist)
+findFile = findM (fmap (fromRight False) . tryIO . IO.doesFileExist)
