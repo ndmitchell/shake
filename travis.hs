@@ -29,7 +29,7 @@ cmd x = do
     putStrLn $ "Took " ++ showDuration t
     pure t
 
-main = do
+main = unless isWindows $ do
     args <- getArgs
     unless (null args) $ error "Terminating early"
 
