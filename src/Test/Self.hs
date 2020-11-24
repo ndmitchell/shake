@@ -35,11 +35,11 @@ main = testBuild defaultTest $ do
         map ("-package=" ++) <$> readFileLines ".pkgs"
 
     let ghc args = do
-            trackAllow ["**/package.cache"]
+            trackAllow ["**/package.cache", "**/.ghc.environment.*"]
             -- since ghc-pkg includes the ghc package, it changes if the version does
             ghcPkg $ GhcPkg ()
             flags <- ghcFlags $ GhcFlags ()
-            cmd "ghc -package-env=-" flags args
+            cmd "ghc" flags args
 
     "Main" <.> exe %> \out -> do
         src <- readFileLines "Run.deps"
