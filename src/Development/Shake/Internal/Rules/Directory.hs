@@ -148,15 +148,38 @@ defaultRuleDirectory = do
 
 -- | Returns 'True' if the file exists. The existence of the file is tracked as a
 --   dependency, and if the file is created or deleted the rule will rerun in subsequent builds.
+--   Usually used to implement include paths. For example, given a include path of @foo@ and @bar@,
+--   and a file @hello.txt@, you might write:
+--
+-- @
+-- b <- 'doesFileExist' \"foo\/hello.txt\"
+-- let file = if b then \"foo\/hello.txt\" else "\bar\/hello.txt\"
+-- @
+--
+--   Now if the user had a file @bar\/hello.txt@, and then creates a file @foo\/hello.txt@, the
+--   rule would correctly rerun, as while the @hello.txt@ that was used didn't change, which
+--   file should be used has changed.
 --
 --   You should not call 'doesFileExist' on files which can be created by the build system.
+--   The reason is that Shake operations such as this one are both cached for the duration of the build,
+--   and may be run preemptively during a recheck. That means you can't control the time at which
+--   'doesFileExist' is called. For that to be consistent, 'doesFileExist' must return the same result at the
+--   start and end of the build, a property that is partially checked by the @--lint@ flag. Given a
+--   file created by the build system, a build from clean will return 'False' at the beginning and 'True'
+--   at the end, leading to a change, and thus rebuilds in subsequent runs.
+--
+--   If you do want to know whether a file exists separate to the build system, e.g. you can perfectly
+--   predict the files contents and can save some meaningful work if the file already exists, you should
+--   use the untracked "System.Directory" version. Such calls are not tracked by the file system, and you
+--   should take care not to result in unpredictable results.
 doesFileExist :: FilePath -> Action Bool
 doesFileExist = fmap fromDoesFileExistA . apply1 . DoesFileExistQ . toStandard
 
 -- | Returns 'True' if the directory exists. The existence of the directory is tracked as a
 --   dependency, and if the directory is created or delete the rule will rerun in subsequent builds.
 --
---   You should not call 'doesDirectoryExist' on directories which can be created by the build system.
+--   You should not call 'doesDirectoryExist' on directories which can be created by the build system,
+--   for reasons explained in 'doesFileExist'.
 doesDirectoryExist :: FilePath -> Action Bool
 doesDirectoryExist = fmap fromDoesDirectoryExistA . apply1 . DoesDirectoryExistQ . toStandard
 
