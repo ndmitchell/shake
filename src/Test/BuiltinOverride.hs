@@ -5,12 +5,9 @@
 module Test.BuiltinOverride (main) where
 
 import Control.Concurrent
-import qualified Data.ByteString.Char8 as BS
 import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.Rule
-import System.Directory as IO
-import qualified System.IO.Extra as IO
 import Test.Type
 
 newtype Key = Key Int
