@@ -457,6 +457,7 @@ test-suite shake-test
         Test.Batch
         Test.Benchmark
         Test.Builtin
+        Test.BuiltinOverride
         Test.C
         Test.Cache
         Test.Cleanup
