@@ -310,6 +310,8 @@ outputColor output v msg = output v $ color msg
 shakeOptsEx :: [(Bool, OptDescr (Either String ([Extra], ShakeOptions -> ShakeOptions)))]
 shakeOptsEx =
     [opts $ Option "a" ["abbrev"] (reqArgPair "abbrev" "FULL=SHORT" $ \a s -> s{shakeAbbreviations=shakeAbbreviations s ++ [a]}) "Use abbreviation in status messages."
+    ,opts $ Option ""  ["allow-redefine-rules"] (noArg $ \s -> s{shakeAllowRedefineRules = True}) "Allow redefining built-in rules"
+    ,opts $ Option ""  ["no-allow-redefine-rules"] (noArg $ \s -> s{shakeAllowRedefineRules = False}) "Forbid redefining built-in rules (default)"
     ,extr $ Option ""  ["no-build"] (noArg [NoBuild]) "Don't build anything."
     ,extr $ Option "C" ["directory"] (reqArg "DIRECTORY" $ \x -> [ChangeDirectory x]) "Change to DIRECTORY before doing anything."
 --    ,yes $ Option ""  ["cloud"] (reqArg "URL" $ \x s -> s{shakeCloud=shakeCloud s ++ [x]}) "HTTP server providing a cloud cache."

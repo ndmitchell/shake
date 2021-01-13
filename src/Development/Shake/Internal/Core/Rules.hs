@@ -129,10 +129,10 @@ modifyRulesScoped f (Rules r) = Rules $ do
 
 runRules :: ShakeOptions -> Rules () -> IO (SRules [])
 runRules opts (Rules r) = do
-    ref <- newIORef mempty
+    ref <- newIORef mempty{allowOverwrite = shakeAllowRedefineRules opts}
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
+    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix) allowOverwrite
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -160,14 +160,20 @@ data SRules list = SRules
     ,userRules :: !(TMap.Map UserRuleVersioned)
     ,targets :: !(list Target)
     ,helpSuffix :: !(list String)
+    ,allowOverwrite :: Bool
     }
 
 instance Semigroup (SRules ListBuilder) where
-    (SRules x1 x2 x3 x4 x5) <> (SRules y1 y2 y3 y4 y5) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5)
-        where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
+    (SRules x1 x2 x3 x4 x5 x6) <> (SRules y1 y2 y3 y4 y5 y6) =
+      SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5) canOverwrite
+      where
+        canOverwrite = x6 && y6
+        f k a b
+          | canOverwrite = b
+          | otherwise = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
 instance Monoid (SRules ListBuilder) where
-    mempty = SRules mempty Map.empty TMap.empty mempty mempty
+    mempty = SRules mempty Map.empty TMap.empty mempty mempty True
     mappend = (<>)
 
 instance Semigroup a => Semigroup (Rules a) where
