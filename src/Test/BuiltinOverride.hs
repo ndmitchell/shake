@@ -26,10 +26,10 @@ main sleep = do
 setRules resultsStore = do
   addBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
     liftIO $ putMVar resultsStore n
-    return $ RunResult ChangedRecomputeDiff mempty ()
+    pure $ RunResult ChangedRecomputeDiff mempty ()
   addOrOverrideBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
     liftIO $ putMVar resultsStore (n + 1)
-    return $ RunResult ChangedRecomputeDiff mempty ()
+    pure $ RunResult ChangedRecomputeDiff mempty ()
   action $ apply1 $ Key 1
 
 test store build = do
