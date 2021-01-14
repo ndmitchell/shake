@@ -16,7 +16,7 @@ module Development.Shake.Rule(
 
     -- * Defining builtin rules
     -- | Functions and types for defining new types of Shake rules.
-    addBuiltinRule, addOrOverrideBuiltinRule,
+    addBuiltinRule, overrideBuiltinRule,
     BuiltinLint, noLint, BuiltinIdentity, noIdentity, BuiltinRun, RunMode(..), RunChanged(..), RunResult(..),
     -- * Calling builtin rules
     -- | Wrappers around calling Shake rules. In general these should be specialised to a builtin rule.

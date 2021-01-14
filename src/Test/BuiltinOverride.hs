@@ -24,7 +24,7 @@ setRules resultsStore = do
   addBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
     liftIO $ putMVar resultsStore n
     pure $ RunResult ChangedRecomputeDiff mempty ()
-  addOrOverrideBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
+  overrideBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
     liftIO $ putMVar resultsStore (n + 1)
     pure $ RunResult ChangedRecomputeDiff mempty ()
   action $ apply1 $ Key 1

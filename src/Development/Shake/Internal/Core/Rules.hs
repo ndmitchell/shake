@@ -7,7 +7,7 @@
 module Development.Shake.Internal.Core.Rules(
     Rules, SRules(..), runRules,
     RuleResult,
-    addBuiltinRule, addOrOverrideBuiltinRule, addBuiltinRuleEx,
+    addBuiltinRule, overrideBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
@@ -133,7 +133,7 @@ runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix) pleaseOverwrite
+    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix) override
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -161,7 +161,7 @@ data SRules list = SRules
     ,userRules :: !(TMap.Map UserRuleVersioned)
     ,targets :: !(list Target)
     ,helpSuffix :: !(list String)
-    ,pleaseOverwrite :: Bool
+    ,override :: Bool
     }
 
 instance Semigroup (SRules ListBuilder) where
@@ -256,14 +256,15 @@ addBuiltinRule
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
 addBuiltinRule = addBuiltinRuleCanOverride False
 
--- | Like 'addBuiltinRule' but doesn't raise an error if a rule already exists
-addOrOverrideBuiltinRule ::
+-- | Like 'addBuiltinRule' but doesn't raise an error if a rule already exists.
+--   In most cases 'addBuiltinRule' should be used.
+overrideBuiltinRule ::
   (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial) =>
   BuiltinLint key value ->
   BuiltinIdentity key value ->
   BuiltinRun key value ->
   Rules ()
-addOrOverrideBuiltinRule = addBuiltinRuleCanOverride True
+overrideBuiltinRule = addBuiltinRuleCanOverride True
 
 addBuiltinRuleEx
     :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value, Partial)
@@ -275,7 +276,7 @@ addBuiltinRuleEx = addBuiltinRuleInternal False $ BinaryOp putEx getEx
 addBuiltinRuleInternal
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => Bool -> BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleInternal pleaseOverwrite binary lint check (run :: BuiltinRun key value) = do
+addBuiltinRuleInternal override binary lint check (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
     let lint_ k v = lint (fromKey k) (fromValue v)
     let check_ k v = check (fromKey k) (fromValue v)
@@ -284,7 +285,7 @@ addBuiltinRuleInternal pleaseOverwrite binary lint check (run :: BuiltinRun key 
     newRules
       mempty
         { builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop,
-          pleaseOverwrite
+          override
         }
 
 
