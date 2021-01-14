@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.19.4, released 2021-01-14
     #790, add option shakeAllowRedefineRules
 *   #790, remove overrideBuiltinRule
 0.19.3, released 2021-01-14
