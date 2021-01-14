@@ -1,5 +1,6 @@
 Changelog for Shake (* = breaking change)
 
+0.19.3, released 2021-01-14
     #789, add overrideBuiltinRule
     #787, more documentation on doesFileExist
 0.19.2, released 2020-11-15
