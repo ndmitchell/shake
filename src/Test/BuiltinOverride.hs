@@ -24,13 +24,15 @@ setRules resultsStore = do
   addBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
     liftIO $ putMVar resultsStore n
     pure $ RunResult ChangedRecomputeDiff mempty ()
-  overrideBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
+  addBuiltinRule noLint noIdentity $ \(Key n) _ _ -> do
     liftIO $ putMVar resultsStore (n + 1)
     pure $ RunResult ChangedRecomputeDiff mempty ()
   action $ apply1 $ Key 1
 
 test store build = do
-  build []
+  build ["--allow-redefine-rules"]
 
   res <- takeMVar store
   assertBool (res == 2) "Rule was not overriden"
+
+  assertException ["rule defined twice"] $ build ["--quiet"]
