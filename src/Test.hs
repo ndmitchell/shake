@@ -18,6 +18,7 @@ import qualified Test.Basic
 import qualified Test.Batch
 import qualified Test.Benchmark
 import qualified Test.Builtin
+import qualified Test.BuiltinOverride
 import qualified Test.C
 import qualified Test.Cache
 import qualified Test.Cleanup
@@ -74,6 +75,7 @@ mains =
     ,"batch" * Test.Batch.main
     ,"benchmark" * Test.Benchmark.main
     ,"builtin" * Test.Builtin.main
+    ,"builtinOverride" * Test.BuiltinOverride.main
     ,"c" * Test.C.main
     ,"cache" * Test.Cache.main
     ,"cleanup" * Test.Cleanup.main

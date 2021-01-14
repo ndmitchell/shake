@@ -6,7 +6,8 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, SRules(..), runRules,
-    RuleResult, addBuiltinRule, addBuiltinRuleEx,
+    RuleResult,
+    addBuiltinRule, addOrOverrideBuiltinRule, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
@@ -132,7 +133,7 @@ runRules opts (Rules r) = do
     ref <- newIORef mempty
     runReaderT r (opts, ref)
     SRules{..} <- readIORef ref
-    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix)
+    pure $ SRules (runListBuilder actions) builtinRules userRules (runListBuilder targets) (runListBuilder helpSuffix) pleaseOverwrite
 
 -- | Get all targets registered in the given rules. The names in
 --   'Development.Shake.phony' and 'Development.Shake.~>' as well as the file patterns
@@ -160,14 +161,20 @@ data SRules list = SRules
     ,userRules :: !(TMap.Map UserRuleVersioned)
     ,targets :: !(list Target)
     ,helpSuffix :: !(list String)
+    ,pleaseOverwrite :: Bool
     }
 
 instance Semigroup (SRules ListBuilder) where
-    (SRules x1 x2 x3 x4 x5) <> (SRules y1 y2 y3 y4 y5) = SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5)
-        where f k a b = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
+    (SRules x1 x2 x3 x4 x5 x6) <> (SRules y1 y2 y3 y4 y5 y6) =
+      SRules (mappend x1 y1) (Map.unionWithKey f x2 y2) (TMap.unionWith (<>) x3 y3) (mappend x4 y4) (mappend x5 y5) pleaseOverwrite
+      where
+        pleaseOverwrite = x6 || y6
+        f k a b
+          | pleaseOverwrite = b
+          | otherwise = throwImpure $ errorRuleDefinedMultipleTimes k [builtinLocation a, builtinLocation b]
 
 instance Monoid (SRules ListBuilder) where
-    mempty = SRules mempty Map.empty TMap.empty mempty mempty
+    mempty = SRules mempty Map.empty TMap.empty mempty mempty False
     mappend = (<>)
 
 instance Semigroup a => Semigroup (Rules a) where
@@ -220,6 +227,19 @@ noIdentity _ _ = Nothing
 --   See 'addBuiltinRule' and 'Development.Shake.Rule.apply'.
 type family RuleResult key -- = value
 
+addBuiltinRuleCanOverride ::
+  (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial) =>
+  Bool ->
+  BuiltinLint key value ->
+  BuiltinIdentity key value ->
+  BuiltinRun key value ->
+  Rules ()
+addBuiltinRuleCanOverride canOverride =
+  withFrozenCallStack $
+    addBuiltinRuleInternal canOverride $
+      BinaryOp
+        (putEx . Bin.toLazyByteString . execPut . put)
+        (runGet get . LBS.fromChunks . pure)
 -- | Before looking at this function, you should read the warnings at the top of this module.
 --   This function is not often necessary in build systems.
 --
@@ -234,27 +254,38 @@ type family RuleResult key -- = value
 addBuiltinRule
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
-    (putEx . Bin.toLazyByteString . execPut . put)
-    (runGet get . LBS.fromChunks . pure)
+addBuiltinRule = addBuiltinRuleCanOverride False
+
+-- | Like 'addBuiltinRule' but doesn't raise an error if a rule already exists
+addOrOverrideBuiltinRule ::
+  (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial) =>
+  BuiltinLint key value ->
+  BuiltinIdentity key value ->
+  BuiltinRun key value ->
+  Rules ()
+addOrOverrideBuiltinRule = addBuiltinRuleCanOverride True
 
 addBuiltinRuleEx
     :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
+addBuiltinRuleEx = addBuiltinRuleInternal False $ BinaryOp putEx getEx
 
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
 addBuiltinRuleInternal
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
-    => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleInternal binary lint check (run :: BuiltinRun key value) = do
+    => Bool -> BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
+addBuiltinRuleInternal pleaseOverwrite binary lint check (run :: BuiltinRun key value) = do
     let k = Proxy :: Proxy key
     let lint_ k v = lint (fromKey k) (fromValue v)
     let check_ k v = check (fromKey k) (fromValue v)
     let run_ k v b = fmap newValue <$> run (fromKey k) v b
     let binary_ = BinaryOp (putOp binary . fromKey) (newKey . getOp binary)
-    newRules mempty{builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop}
+    newRules
+      mempty
+        { builtinRules = Map.singleton (typeRep k) $ BuiltinRule lint_ check_ run_ binary_ (Ver 0) callStackTop,
+          pleaseOverwrite
+        }
 
 
 -- | Change the priority of a given set of rules, where higher values take precedence.
