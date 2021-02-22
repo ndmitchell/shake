@@ -25,7 +25,12 @@ import System.Time.Extra
 
 {-# NOINLINE resourceId #-}
 resourceId :: IO Int
-resourceId = unsafePerformIO $ do
+resourceId = unsafePerformIO resourceCounter
+
+-- Work around for GHC bug https://gitlab.haskell.org/ghc/ghc/-/issues/19413
+{-# NOINLINE  resourceCounter #-}
+resourceCounter :: IO (IO Int)
+resourceCounter = do
     ref <- newIORef 0
     pure $ atomicModifyIORef' ref $ \i -> let j = i + 1 in (j, j)
 
