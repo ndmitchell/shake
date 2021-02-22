@@ -114,7 +114,7 @@ main = testBuild (notCI . unless brokenHaddock . defaultTest) $ do
             ,"import Control.Applicative"
             ,"import Control.Monad.IO.Class"
             ,"import Control.Monad.Fail"
-            ,"import System.IO"] ++
+            ,"import System.IO hiding (readFile')"] ++
             ["import " ++ replace "_" "." (drop 5 $ takeBaseName out) | not $ "_md.hs" `isSuffixOf` out] ++
             imports ++
             ["(==>) :: Bool -> Bool -> Bool"
