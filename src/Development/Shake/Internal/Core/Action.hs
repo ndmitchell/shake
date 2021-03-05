@@ -446,6 +446,7 @@ newCacheIO (act :: k -> Action v) = do
             Nothing -> do
                 bar <- newFence
                 pure $ (Map.insert key bar mp,) $ do
+                    Local{localDepends=pre} <- Action getRW
                     Action $ modifyRW $ \s -> s{localDepends = newDepends []}
                     res <- Action $ tryRAW $ fromAction $ act key
                     case res of
@@ -454,6 +455,7 @@ newCacheIO (act :: k -> Action v) = do
                             Action $ throwRAW err
                         Right v -> do
                             Local{localDepends=deps} <- Action getRW
+                            Action $ modifyRW $ \s -> s{localDepends = addDepends (localDepends s) pre}
                             liftIO $ signalFence bar $ Right (deps, v)
                             pure v
 
