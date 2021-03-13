@@ -352,7 +352,7 @@ enumerateDepends d = f d []
 -- * @newStore@, the new value to store in the database, which will be passed in next time as @oldStore@.
 --
 -- * @newValue@, the result that 'Development.Shake.Rule.apply' will return when asked for the given @key@.
-type BuiltinRun key value
+type BuiltinRun' key value
     = key
     -> Maybe BS.ByteString
     -> RunMode
@@ -363,13 +363,13 @@ data BuiltinRunResult value
     | BuiltinRunMore !(Action (RunResult value))
   deriving Functor
 
-type BuiltinRun' key value
+type BuiltinRun key value
     = key
     -> Maybe BS.ByteString
     -> RunMode
     -> Action (RunResult value)
 
-builtinRun' :: BuiltinRun' k v -> BuiltinRun k v
+builtinRun' :: BuiltinRun k v -> BuiltinRun' k v
 builtinRun' run k bs m = pure $ BuiltinRunMore $ run k bs m
 
 -- | The action performed by @--lint@ for a given @key@/@value@ pair.
@@ -394,7 +394,7 @@ type BuiltinIdentity key value = key -> value -> Maybe BS.ByteString
 data BuiltinRule = BuiltinRule
     {builtinLint :: BuiltinLint Key Value
     ,builtinIdentity :: BuiltinIdentity Key Value
-    ,builtinRun :: BuiltinRun Key Value
+    ,builtinRun :: BuiltinRun' Key Value
     ,builtinKey :: BinaryOp Key
     ,builtinVersion :: Ver
     ,builtinLocation :: String
