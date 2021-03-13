@@ -36,6 +36,8 @@ import Data.Maybe
 import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
+import Data.Function
+import Control.Exception.Extra (try_)
 
 
 ---------------------------------------------------------------------
@@ -102,7 +104,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
         let go = buildRunMode global stack database r
-        fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
+        fromLater go $ \mode -> liftIO $ -- addPool PoolStart globalPool $
             runKey global stack k r mode $ \res -> do
                 runLocked database $ do
                     let val = fmap runValue res
@@ -194,35 +196,38 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
 
     let s = (newLocal stack shakeVerbosity){localBuiltinVersion = builtinVersion}
     time <- offsetTime
-    runAction global s (do
-        res <- builtinRun k (fmap result r) mode
-        liftIO $ evaluate $ rnf res
-
-        -- completed, now track anything required afterwards
-        when (runChanged res `elem` [ChangedRecomputeSame,ChangedRecomputeDiff]) $ do
-            -- if the users code didn't run you don't have to check anything (we assume builtin rules are correct)
-            globalRuleFinished k
-            producesCheck
-
-        Action $ fmap (res,) getRW) $ \case
-            Left e ->
-                continue . Left . toException =<< shakeException global stack e
-            Right (RunResult{..}, Local{..})
-                | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                    continue $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
-                | otherwise -> do
-                    dur <- time
-                    let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
-                                | otherwise = (ChangedRecomputeDiff, globalStep)
-                    continue $ Right $ RunResult cr runStore Result
-                        {result = mkResult runValue runStore
-                        ,changed = c
-                        ,built = globalStep
-                        ,depends = flattenDepends localDepends
-                        ,execution = doubleToFloat $ dur - localDiscount
-                        ,traces = flattenTraces localTraces}
-            where
-                mkResult value store = (value, if globalOneShot then BS.empty else store)
+    let followUp = \case
+                Left e ->
+                    continue . Left . toException =<< shakeException global stack e
+                Right (RunResult{..}, Local{..})
+                    | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
+                        continue $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
+                    | otherwise -> do
+                        dur <- time
+                        let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
+                                    | otherwise = (ChangedRecomputeDiff, globalStep)
+                        continue $ Right $ RunResult cr runStore Result
+                            {result = mkResult runValue runStore
+                            ,changed = c
+                            ,built = globalStep
+                            ,depends = flattenDepends localDepends
+                            ,execution = doubleToFloat $ dur - localDiscount
+                            ,traces = flattenTraces localTraces}
+                where
+                    mkResult value store = (value, if globalOneShot then BS.empty else store)
+    runAction global s (builtinRun k (fmap result r) mode >>= \x -> Action ((x,) <$> getRW)) $ \case
+        Left e -> continue . Left . toException =<< shakeException global stack e
+        Right (BuiltinRunChangedNothing done, s') ->
+            followUp (Right (RunResult ChangedNothing (result $ fromJust r) done,s'))
+        Right (BuiltinRunMore more, _) -> addPool PoolStart globalPool $ runAction global s (do
+            res <- more
+            liftIO $ evaluate $ rnf res
+            -- completed, now track anything required afterwards
+            when (runChanged res `elem` [ChangedRecomputeSame,ChangedRecomputeDiff]) $ do
+                -- if the users code didn't run you don't have to check anything (we assume builtin rules are correct)
+                globalRuleFinished k
+                producesCheck
+            Action $ fmap (res,) getRW) followUp
 
 ---------------------------------------------------------------------
 -- USER key/value WRAPPERS

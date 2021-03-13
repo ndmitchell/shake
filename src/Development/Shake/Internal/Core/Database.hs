@@ -14,7 +14,7 @@ import General.Intern(Id, Intern)
 import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map
 import qualified General.Intern as Intern
-import Control.Concurrent.Extra
+import Control.Concurrent.RLock as RLock
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
 import Control.Monad.Fail
@@ -25,7 +25,7 @@ newtype Locked a = Locked (IO a)
     deriving (Functor, Applicative, Monad, MonadIO, MonadFail)
 
 runLocked :: DatabasePoly k v -> Locked b -> IO b
-runLocked db (Locked act) = withLock (lock db) act
+runLocked db (Locked act) = RLock.with (lock db) act
 
 
 -- | Invariant: The database does not have any cycles where a Key depends on itself.
@@ -33,7 +33,7 @@ runLocked db (Locked act) = withLock (lock db) act
 --   There may be dangling Id's as a result of version changes.
 --   Lock is used to prevent any torn updates
 data DatabasePoly k v = Database
-    {lock :: Lock
+    {lock :: RLock
     ,intern :: IORef (Intern k) -- ^ Key |-> Id mapping
     ,status :: Ids.Ids (k, v) -- ^ Id |-> (Key, Status) mapping
     ,journal :: Id -> k -> v -> IO () -- ^ Record all changes to status
@@ -50,7 +50,7 @@ createDatabase
 createDatabase status journal vDefault = do
     xs <- Ids.toList status
     intern <- newIORef $ Intern.fromList [(k, i) | (i, (k,_)) <- xs]
-    lock <- newLock
+    lock <- RLock.new
     pure Database{..}
 
 

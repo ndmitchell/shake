@@ -205,7 +205,7 @@ ruleIdentity _ = \k v -> case answer v of
     Just (FileA _ size hash) -> Just $ runBuilder $ putExStorable size <> putExStorable hash
     Nothing -> Nothing
 
-ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun FileQ FileR
+ruleRun :: ShakeOptions -> (FilePath -> Rebuild) -> BuiltinRun' FileQ FileR
 ruleRun opts@ShakeOptions{..} rebuildFlags o@(FileQ (fileNameToString -> xStr)) oldBin@(fmap getEx -> old :: Maybe Answer) mode = do
     -- for One, rebuild makes perfect sense
     -- for Forward, we expect the child will have already rebuilt - Rebuild just lets us deal with code changes

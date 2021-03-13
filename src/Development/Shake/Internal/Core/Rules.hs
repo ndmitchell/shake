@@ -6,7 +6,7 @@
 
 module Development.Shake.Internal.Core.Rules(
     Rules, SRules(..), runRules,
-    RuleResult, addBuiltinRule, addBuiltinRuleEx,
+    RuleResult, addBuiltinRule, addBuiltinRuleStaged, addBuiltinRuleEx,
     noLint, noIdentity,
     getShakeOptionsRules,
     getUserRuleInternal, getUserRuleOne, getUserRuleList, getUserRuleMaybe,
@@ -47,6 +47,7 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
+import Data.Bifunctor (bimap)
 
 
 ---------------------------------------------------------------------
@@ -239,18 +240,28 @@ type family RuleResult key -- = value
 --   For a worked example of writing a rule see <https://tech-blog.capital-match.com/posts/5-upgrading-shake.html>.
 addBuiltinRule
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
+    => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun' key value -> Rules ()
+addBuiltinRule lint check run = addBuiltinRuleStaged lint check (builtinRun' run)
+
+addBuiltinRuleStaged
+    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRule = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
+addBuiltinRuleStaged = withFrozenCallStack $ addBuiltinRuleInternal $ BinaryOp
     (putEx . Bin.toLazyByteString . execPut . put)
     (runGet get . LBS.fromChunks . pure)
 
 addBuiltinRuleEx
     :: (RuleResult key ~ value, ShakeValue key, BinaryEx key, Typeable value, NFData value, Show value, Partial)
-    => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()
-addBuiltinRuleEx = addBuiltinRuleInternal $ BinaryOp putEx getEx
-
+    => BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun' key value -> Rules ()
+addBuiltinRuleEx = addBuiltinRuleInternal' $ BinaryOp putEx getEx
 
 -- | Unexpected version of 'addBuiltinRule', which also lets me set the 'BinaryOp'.
+addBuiltinRuleInternal'
+    :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
+    => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun' key value -> Rules ()
+addBuiltinRuleInternal' binary lint check run =
+    addBuiltinRuleInternal binary lint check (builtinRun' run)
+
 addBuiltinRuleInternal
     :: (RuleResult key ~ value, ShakeValue key, Typeable value, NFData value, Show value, Partial)
     => BinaryOp key -> BuiltinLint key value -> BuiltinIdentity key value -> BuiltinRun key value -> Rules ()

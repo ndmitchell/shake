@@ -1,8 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DeriveDataTypeable, ViewPatterns #-}
 {-# LANGUAGE ExistentialQuantification, DeriveFunctor, RecordWildCards, FlexibleInstances #-}
 
+{-# LANGUAGE RankNTypes #-}
 module Development.Shake.Internal.Core.Types(
-    BuiltinRun, BuiltinLint, BuiltinIdentity,
+    BuiltinRun, BuiltinRun', BuiltinLint, BuiltinIdentity,
+    BuiltinRunResult(..), builtinRun',
     RunMode(..), RunResult(..), RunChanged(..),
     UserRule(..), UserRuleVersioned(..), userRuleSize,
     BuiltinRule(..), Global(..), Local(..), Action(..), runAction, addDiscount,
@@ -354,7 +356,21 @@ type BuiltinRun key value
     = key
     -> Maybe BS.ByteString
     -> RunMode
+    -> Action(BuiltinRunResult value)
+
+data BuiltinRunResult value
+    = BuiltinRunChangedNothing !value
+    | BuiltinRunMore !(Action (RunResult value))
+  deriving Functor
+
+type BuiltinRun' key value
+    = key
+    -> Maybe BS.ByteString
+    -> RunMode
     -> Action (RunResult value)
+
+builtinRun' :: BuiltinRun' k v -> BuiltinRun k v
+builtinRun' run k bs m = pure $ BuiltinRunMore $ run k bs m
 
 -- | The action performed by @--lint@ for a given @key@/@value@ pair.
 --   At the end of the build the lint action will be called for each @key@ that was built this run,
