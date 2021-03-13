@@ -356,7 +356,7 @@ type BuiltinRun' key value
     = key
     -> Maybe BS.ByteString
     -> RunMode
-    -> Action(BuiltinRunResult value)
+    -> IO (BuiltinRunResult value)
 
 data BuiltinRunResult value
     = BuiltinRunChangedNothing !value

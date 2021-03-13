@@ -215,11 +215,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                             ,traces = flattenTraces localTraces}
                 where
                     mkResult value store = (value, if globalOneShot then BS.empty else store)
-    runAction global s (builtinRun k (fmap result r) mode >>= \x -> Action ((x,) <$> getRW)) $ \case
+    stage1 <- try $ builtinRun k (fmap result r) mode
+    case stage1 of
         Left e -> continue . Left . toException =<< shakeException global stack e
-        Right (BuiltinRunChangedNothing done, s') ->
-            followUp (Right (RunResult ChangedNothing (result $ fromJust r) done,s'))
-        Right (BuiltinRunMore more, _) -> addPool PoolStart globalPool $ runAction global s (do
+        Right (BuiltinRunChangedNothing done) ->
+            followUp (Right (RunResult ChangedNothing (result $ fromJust r) done, s))
+        Right (BuiltinRunMore more) -> addPool PoolStart globalPool $ runAction global s (do
             res <- more
             liftIO $ evaluate $ rnf res
             -- completed, now track anything required afterwards
