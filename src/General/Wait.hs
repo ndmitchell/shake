@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveFunctor #-}
 
 -- | A bit like 'Fence', but not thread safe and optimised for avoiding taking the fence
@@ -60,21 +61,21 @@ instance MonadFail m => MonadFail (Wait m) where
     fail = Lift . Control.Monad.Fail.fail
 
 firstJustWaitUnordered :: MonadIO m => (a -> Wait m (Maybe b)) -> [a] -> Wait m (Maybe b)
-firstJustWaitUnordered f = go [] . map f
+firstJustWaitUnordered f = go 0 [] . map f
     where
         -- keep a list of those things we might visit later, and ask for each we see in turn
-        go :: MonadIO m => [(Maybe a -> m ()) -> m ()] -> [Wait m (Maybe a)] -> Wait m (Maybe a)
-        go later (x:xs) = case x of
+        go :: MonadIO m => Int -> [(Maybe a -> m ()) -> m ()] -> [Wait m (Maybe a)] -> Wait m (Maybe a)
+        go !nlater later (x:xs) = case x of
             Now (Just a) -> Now $ Just a
-            Now Nothing -> go later xs
-            Later l -> go (l:later) xs
+            Now Nothing -> go nlater later xs
+            Later l -> go (succ nlater) (l:later) xs
             Lift x -> Lift $ do
                 x <- x
-                pure $ go later (x:xs)
-        go [] [] = Now Nothing
-        go [l] [] = Later l
-        go ls [] = Later $ \callback -> do
-            ref <- liftIO $ newIORef $ length ls
+                pure $ go nlater later (x:xs)
+        go _ [] [] = Now Nothing
+        go _ [l] [] = Later l
+        go nls ls [] = Later $ \callback -> do
+            ref <- liftIO $ newIORef nls
             forM_ ls $ \l -> l $ \r -> do
                 old <- liftIO $ readIORef ref
                 when (old > 0) $ case r of
