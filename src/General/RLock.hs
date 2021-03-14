@@ -9,7 +9,7 @@ import Control.Exception
 -- | A reentrant lock inspired by the one in the concurrent-extra package, to
 --   work around https://github.com/basvandijk/concurrent-extra/issues/20
 --   This implementation uses a single 'TVar' and therefore it is not *fair*
-newtype RLock = RLock {rlock :: TVar State}
+newtype RLock = RLock {_rlock :: TVar State}
 
 data State
   = Locked !ThreadId !Int
