@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Command line parsing flags.
 module Development.Shake.Internal.Args(
@@ -47,7 +48,7 @@ shake opts rules = do
     addTiming "Function shake"
     (_, after) <- shakeWithDatabase opts rules $ \db -> do
         shakeOneShotDatabase db
-        shakeRunDatabase db []
+        shakeRunDatabase db (Nothing @[()]) []
     shakeRunAfter opts after
 
 

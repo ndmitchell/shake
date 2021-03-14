@@ -54,6 +54,11 @@ import General.Extra
 import General.Cleanup
 import Data.Monoid
 import Prelude
+import General.Ids (Id)
+import qualified Control.Monad.Trans.State.Strict as State
+import Control.Monad.Trans.Class (lift)
+import Data.Foldable (traverse_)
+import Text.Printf
 
 
 ---------------------------------------------------------------------
@@ -100,8 +105,8 @@ reset RunState{..} = runLocked database $
         f x = x
 
 
-run :: RunState -> Bool -> [Action ()] -> IO [IO ()]
-run RunState{..} oneshot actions2 =
+run :: ShakeValue key => Maybe [key] -> RunState -> Bool -> [Action ()] -> IO [IO ()]
+run keysChanged RunState{..} oneshot actions2 =
     withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
 
         -- timings are a bit delicate, we want to make sure we clear them before we leave (so each run is fresh)
@@ -141,8 +146,11 @@ run RunState{..} oneshot actions2 =
 
             addTiming "Running rules"
             locals <- newIORef []
+
+            transitiveChanges <- computeTransitiveChanges diagnostic database keysChanged
+
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
-                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot
+                let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot transitiveChanges
                 -- give each action a stack to start with!
                 forM_ (actions ++ map (emptyStack,) actions2) $ \(stack, act) -> do
                     let local = newLocal stack shakeVerbosity
@@ -187,6 +195,24 @@ run RunState{..} oneshot actions2 =
             putStr . unlines
         pure res
 
+computeTransitiveChanges :: ShakeValue key => (IO String -> IO()) -> Database -> Maybe [key] -> IO (Maybe (Set.HashSet Id))
+computeTransitiveChanges _ _ Nothing = pure Nothing
+computeTransitiveChanges diag database (Just keys) = do
+    getId <- getIdFromKey database
+    let ids = mapMaybe (getId . newKey) keys
+        loop x = do
+            seen <- State.get
+            if x `Set.member` seen then pure () else do
+                Just (_, Loaded result) <- lift $ getKeyValueFromId database x
+                State.put (Set.insert x seen)
+                let next = rdepends result
+                traverse_ loop next
+    transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
+
+    diag $ pure $
+        printf "%d transitive changes computed for: %s" (Set.size transitive) (show keys)
+
+    return $ Just transitive
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
 --   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics
@@ -340,7 +366,7 @@ incrementStep db = runLocked db $ do
     pure step
 
 toStepResult :: Step -> Result (Value, BS_Store)
-toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] 0 []
+toStepResult i = Result (newValue i, runBuilder $ putEx i) i i [] mempty 0 []
 
 fromStepResult :: Result BS_Store -> Step
 fromStepResult = getEx . result
@@ -355,6 +381,7 @@ recordRoot step locals (doubleToFloat -> end) db = runLocked db $ do
             ,changed = step
             ,built = step
             ,depends = flattenDepends $ localDepends local
+            ,rdepends = mempty
             ,execution = 0
             ,traces = flattenTraces $ addTrace (localTraces local) $ Trace BS.empty end end}
     setMem db rootId rootKey $ Ready rootRes
@@ -380,8 +407,8 @@ loadSharedCloud var opts owitness = do
 
 
 putDatabase :: (Key -> Builder) -> ((Key, Status) -> Builder)
-putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6)) =
-    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x5 <> putExN (putEx x4) <> putEx x6
+putDatabase putKey (key, Loaded (Result x1 x2 x3 x4 x5 x6 x7)) =
+    putExN (putKey key) <> putExN (putEx x1) <> putEx x2 <> putEx x3 <> putEx x6 <> putExN (putEx x4) <> putExN (putEx $ Depends $ Set.toList x5) <> putEx x7
 putDatabase _ (_, x) = throwImpure $ errorInternal $ "putWith, Cannot write Status with constructor " ++ statusType x
 
 
@@ -389,6 +416,8 @@ getDatabase :: (BS.ByteString -> Key) -> BS.ByteString -> (Key, Status)
 getDatabase getKey bs
     | (key, bs) <- getExN bs
     , (x1, bs) <- getExN bs
-    , (x2, x3, x5, bs) <- binarySplit3 bs
-    , (x4, x6) <- getExN bs
-    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) x5 (getEx x6)))
+    , (x2, x3, x6, bs) <- binarySplit3 bs
+    , (x4, x57) <- getExN bs
+    , (x5, x7) <- getExN x57
+    , Depends rdeps <- getEx x5
+    = (getKey key, Loaded (Result x1 x2 x3 (getEx x4) (Set.fromList rdeps) x6 (getEx x7)))

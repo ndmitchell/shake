@@ -38,6 +38,7 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
+import Development.Shake.Internal.Value (ShakeValue)
 
 
 data UseState
@@ -134,8 +135,8 @@ shakeErrorsDatabase (ShakeDatabase use s) =
 --   plus the list of 'Action' given here. Returns the results from the explicitly passed
 --   actions along with a list of actions to run after the database was closed, as added with
 --   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
-shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
-shakeRunDatabase (ShakeDatabase use s) as =
+shakeRunDatabase :: ShakeValue key => ShakeDatabase -> Maybe [key] -> [Action a] -> IO ([a], [IO ()])
+shakeRunDatabase (ShakeDatabase use s) keysChanged as =
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do
         when openRequiresReset $ do
             when openOneShot $
@@ -144,7 +145,7 @@ shakeRunDatabase (ShakeDatabase use s) as =
         (refs, as) <- fmap unzip $ forM as $ \a -> do
             ref <- newIORef Nothing
             pure (ref, liftIO . writeIORef ref . Just =<< a)
-        after <- run s openOneShot $ map void as
+        after <- run keysChanged s openOneShot $ map void as
         results <- mapM readIORef refs
         case sequence results of
             Just result -> pure (result, after)

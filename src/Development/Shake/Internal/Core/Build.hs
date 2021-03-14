@@ -36,6 +36,7 @@ import Data.Maybe
 import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
+import qualified Data.HashSet as HashSet
 
 
 ---------------------------------------------------------------------
@@ -103,9 +104,9 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         setIdKeyStatus global database i k (Running (NoShow continue) r)
         let go = buildRunMode global stack database r
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
-            runKey global stack k r mode $ \res -> do
+            runKey global stack k r mode $ \result -> do
                 runLocked database $ do
-                    let val = fmap runValue res
+                    let val = fmap runValue result
                     res <- liftIO $ getKeyValueFromId database i
                     w <- case res of
                         Just (_, Running (NoShow w) _) -> pure w
@@ -113,13 +114,45 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                         -- dead _before_ any exception bubbles up
                         _ -> throwM $ errorInternal $ "expected Waiting but got " ++ maybe "nothing" (statusType . snd) res ++ ", key " ++ show k
                     setIdKeyStatus global database i k $ either mkError Ready val
+
+                    -- update reverse dependencies efficiently - have they changed since last time?
+                    case result of
+                        Right RunResult{..} | runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
+                            updateReverseDeps i database (depends <$> r) (depends runValue)
+                        _ -> return ()
+
                     w val
-                case res of
+                case result of
                     Right RunResult{..} | runChanged /= ChangedNothing -> setDisk database i k $ Loaded runValue{result=runStore}
                     _ -> pure ()
     where
         mkError e = Failed e $ if globalOneShot then Nothing else r
 
+
+
+-- | Refresh all the reverse dependencies
+--   Assumes that none of them is running
+updateReverseDeps :: Id -> Database -> Maybe [Depends] -> [Depends] -> Locked ()
+updateReverseDeps myId db prev new = do
+    let added = foldMap fromDepends new
+        deleted = [] -- Does not have an efficient impl. so we overestimate for now
+    forM_ added   $ doOne (HashSet.insert myId)
+    forM_ deleted $ doOne (HashSet.delete myId)
+    where
+        doOne f id = do
+            kv <- liftIO $ getKeyValueFromId db id
+            whenJust kv $ \(k,v) ->
+                setMem db id k $ updateResult (\it -> it{rdepends = f $ rdepends it}) v
+
+        addDep :: Result a -> Result a
+        addDep it = it{rdepends = HashSet.insert myId (rdepends it)}
+
+        updateResult :: (forall a. Result a -> Result a) -> Status -> Status
+        updateResult f (Ready r) = Ready $ f r
+        updateResult f (Failed e r) = Failed e (fmap f r)
+        updateResult f (Loaded r) = Loaded $ addDep r
+        updateResult _ Running{} = error "Running"
+        updateResult _ Missing{} = error "Missing"
 
 -- | Compute the value for a given RunMode and a restore function to run
 buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Wait Locked RunMode
@@ -132,7 +165,10 @@ buildRunMode global stack database me = do
 
 -- | Have the dependencies changed
 buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Wait Locked Bool
-buildRunDependenciesChanged global stack database me = isJust <$> firstJustM id
+buildRunDependenciesChanged global stack database me
+  | Just keys <- globalKeysChanged global
+  = pure $ any (`HashSet.member` keys) (foldMap fromDepends $ depends me)
+  | otherwise = isJust <$> firstJustM id
     [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends me]
     where
         test (Right dep) | changed dep <= built me = Nothing
@@ -219,6 +255,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                         ,changed = c
                         ,built = globalStep
                         ,depends = flattenDepends localDepends
+                        ,rdepends = mempty
                         ,execution = doubleToFloat $ dur - localDiscount
                         ,traces = flattenTraces localTraces}
             where

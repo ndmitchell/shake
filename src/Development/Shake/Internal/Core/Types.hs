@@ -50,6 +50,7 @@ import Data.Semigroup
 import General.Cleanup
 import Control.Monad.Fail
 import Prelude
+import Data.HashSet (HashSet)
 
 
 ---------------------------------------------------------------------
@@ -237,13 +238,14 @@ data Result a = Result
     ,built :: {-# UNPACK #-} !Step -- ^ when it was actually run
     ,changed :: {-# UNPACK #-} !Step -- ^ the step for deciding if it's valid
     ,depends :: ![Depends] -- ^ dependencies (don't run them early)
+    ,rdepends :: !(HashSet Id) -- ^ reverse dependencies
     ,execution :: {-# UNPACK #-} !Float -- ^ how long it took when it was last run (seconds)
     ,traces :: ![Trace] -- ^ a trace of the expensive operations (start/end in seconds since beginning of run)
     } deriving (Show,Functor)
 
 instance NFData a => NFData (Result a) where
     -- ignore unpacked fields
-    rnf (Result a _ _ b _ c) = rnf a `seq` rnf b `seq` rnf c
+    rnf (Result a _ _ b _rdeps _ c) = rnf a `seq` rnf b `seq` rnf c
 
 statusType Ready{} = "Ready"
 statusType Failed{} = "Failed"
@@ -453,6 +455,7 @@ data Global = Global
     ,globalCloud :: Maybe Cloud
     ,globalStep :: {-# UNPACK #-} !Step
     ,globalOneShot :: Bool -- ^ I am running in one-shot mode so don't need to store BS's for Result/Failed
+    ,globalKeysChanged :: Maybe (HashSet Id)
     }
 
 -- local variables of Action
