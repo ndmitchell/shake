@@ -88,7 +88,6 @@ library
         base >= 4.9,
         binary,
         bytestring,
-        concurrent-extra,
         deepseq >= 1.1,
         directory >= 1.2.7.0,
         extra >= 1.6.19,
@@ -102,6 +101,7 @@ library
         primitive,
         process >= 1.1,
         random,
+        stm,
         time,
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
@@ -198,6 +198,7 @@ library
         General.Makefile
         General.Pool
         General.Process
+        General.RLock
         General.Template
         General.Thread
         General.Timing
@@ -215,7 +216,6 @@ executable shake
         base == 4.*,
         binary,
         bytestring,
-        concurrent-extra,
         deepseq >= 1.1,
         directory,
         extra >= 1.6.19,
@@ -229,6 +229,7 @@ executable shake
         primitive,
         process >= 1.1,
         random,
+        stm,
         time,
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
@@ -320,6 +321,7 @@ executable shake
         General.Makefile
         General.Pool
         General.Process
+        General.RLock
         General.Template
         General.Thread
         General.Timing
@@ -339,7 +341,6 @@ test-suite shake-test
         base == 4.*,
         binary,
         bytestring,
-        concurrent-extra,
         deepseq >= 1.1,
         directory,
         extra >= 1.6.19,
@@ -354,6 +355,7 @@ test-suite shake-test
         process >= 1.1,
         QuickCheck >= 2.0,
         random,
+        stm,
         time,
         transformers >= 0.2,
         unordered-containers >= 0.2.7,
@@ -449,6 +451,7 @@ test-suite shake-test
         General.Makefile
         General.Pool
         General.Process
+        General.RLock
         General.Template
         General.Thread
         General.Timing

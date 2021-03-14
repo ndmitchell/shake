@@ -14,7 +14,7 @@ import General.Intern(Id, Intern)
 import Development.Shake.Classes
 import qualified Data.HashMap.Strict as Map
 import qualified General.Intern as Intern
-import Control.Concurrent.RLock as RLock
+import General.RLock as RLock
 import Control.Monad.IO.Class
 import qualified General.Ids as Ids
 import Control.Monad.Fail
