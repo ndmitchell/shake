@@ -36,8 +36,6 @@ import Data.Maybe
 import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
-import Data.Function
-import Control.Exception.Extra (try_)
 
 
 ---------------------------------------------------------------------
