@@ -199,12 +199,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode = do
                     Left . toException <$> shakeException global stack e
                 Right (RunResult{..}, Local{..})
                     | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                        return $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
+                        pure $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
                     | otherwise -> do
                         dur <- liftIO time
                         let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                     | otherwise = (ChangedRecomputeDiff, globalStep)
-                        return $ Right $ RunResult cr runStore Result
+                        pure $ Right $ RunResult cr runStore Result
                             {result = mkResult runValue runStore
                             ,changed = c
                             ,built = globalStep
