@@ -47,7 +47,6 @@ import Development.Shake.Internal.Core.Monad
 import Development.Shake.Internal.Value
 import Development.Shake.Internal.Options
 import Development.Shake.Internal.Errors
-import Data.Bifunctor (bimap)
 
 
 ---------------------------------------------------------------------
