@@ -103,7 +103,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         setIdKeyStatus global database i k (Running (NoShow continue) r)
         let go = buildRunMode global stack database r
         fromLater go $ \mode -> liftIO $
-            runKey global stack k r mode $ \res -> mask_ $ do
+            fromLater(runKey global stack k r mode) $ \res -> mask_ $ do
                 runLocked database $ do
                     let val = fmap runValue res
                     res <- liftIO $ getKeyValueFromId database i
@@ -184,27 +184,27 @@ runKey
     -> Key -- The key to build
     -> Maybe (Result BS.ByteString) -- A previous result, or Nothing if never been built before
     -> RunMode -- True if any of the children were dirty
-    -> Capture (Either SomeException (RunResult (Result (Value, BS_Store))))
+    -> Wait IO (Either SomeException (RunResult (Result (Value, BS_Store))))
         -- Either an error, or a (the produced files, the result).
-runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue = do
+runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode = do
     let tk = typeKey k
     BuiltinRule{..} <- case Map.lookup tk globalRules of
         Nothing -> throwM $ errorNoRuleToBuildType tk (Just $ show k) Nothing
         Just r -> pure r
 
     let s = (newLocal stack shakeVerbosity){localBuiltinVersion = builtinVersion}
-    time <- offsetTime
+    time <- liftIO offsetTime
     let followUp = \case
                 Left e ->
-                    continue . Left . toException =<< shakeException global stack e
+                    Left . toException <$> shakeException global stack e
                 Right (RunResult{..}, Local{..})
                     | runChanged == ChangedNothing || runChanged == ChangedStore, Just r <- r ->
-                        continue $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
+                        return $ Right $ RunResult runChanged runStore (r{result = mkResult runValue runStore})
                     | otherwise -> do
-                        dur <- time
+                        dur <- liftIO time
                         let (cr, c) | Just r <- r, runChanged == ChangedRecomputeSame = (ChangedRecomputeSame, changed r)
                                     | otherwise = (ChangedRecomputeDiff, globalStep)
-                        continue $ Right $ RunResult cr runStore Result
+                        return $ Right $ RunResult cr runStore Result
                             {result = mkResult runValue runStore
                             ,changed = c
                             ,built = globalStep
@@ -213,12 +213,12 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                             ,traces = flattenTraces localTraces}
                 where
                     mkResult value store = (value, if globalOneShot then BS.empty else store)
-    stage1 <- try $ builtinRun k (fmap result r) mode
+    stage1 <- liftIO $ try $ builtinRun k (fmap result r) mode
     case stage1 of
-        Left e -> continue . Left . toException =<< shakeException global stack e
+        Left e -> Now . Left . toException =<< liftIO (shakeException global stack e)
         Right (BuiltinRunChangedNothing done) ->
-            followUp (Right (RunResult ChangedNothing (result $ fromJust r) done, s))
-        Right (BuiltinRunMore more) -> addPool PoolStart globalPool $ runAction global s (do
+            liftIO $ followUp (Right (RunResult ChangedNothing (result $ fromJust r) done, s))
+        Right (BuiltinRunMore more) -> Later $ \continue -> liftIO $ addPool PoolStart globalPool $ runAction global s (do
             res <- more
             liftIO $ evaluate $ rnf res
             -- completed, now track anything required afterwards
@@ -226,7 +226,7 @@ runKey global@Global{globalOptions=ShakeOptions{..},..} stack k r mode continue 
                 -- if the users code didn't run you don't have to check anything (we assume builtin rules are correct)
                 globalRuleFinished k
                 producesCheck
-            Action $ fmap (res,) getRW) followUp
+            Action $ fmap (res,) getRW) (followUp >=> continue)
 
 ---------------------------------------------------------------------
 -- USER key/value WRAPPERS
