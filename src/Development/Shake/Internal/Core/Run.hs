@@ -59,6 +59,7 @@ import qualified Control.Monad.Trans.State.Strict as State
 import Control.Monad.Trans.Class (lift)
 import Data.Foldable (traverse_)
 import Text.Printf
+import Development.Shake.Internal.Rules.Rerun (AlwaysRerunQ(AlwaysRerunQ))
 
 
 ---------------------------------------------------------------------
@@ -199,7 +200,8 @@ computeTransitiveChanges :: ShakeValue key => (IO String -> IO()) -> Database ->
 computeTransitiveChanges _ _ Nothing = pure Nothing
 computeTransitiveChanges diag database (Just keys) = do
     getId <- getIdFromKey database
-    let ids = mapMaybe (getId . newKey) keys
+    let ids = maybeToList (getId $ newKey $ AlwaysRerunQ ())
+            <> mapMaybe (getId . newKey) keys
         loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do

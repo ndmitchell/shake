@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Development.Shake.Internal.Rules.Rerun(
-    defaultRuleRerun, alwaysRerun
+    defaultRuleRerun, alwaysRerun, AlwaysRerunQ(..)
     ) where
 
 import Development.Shake.Internal.Core.Rules
