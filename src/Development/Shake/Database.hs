@@ -20,6 +20,7 @@ module Development.Shake.Database(
     shakeWithDatabase,
     shakeOneShotDatabase,
     shakeRunDatabase,
+    shakeRunDatabaseForKeys,
     shakeLiveFilesDatabase,
     shakeProfileDatabase,
     shakeErrorsDatabase,
