@@ -135,8 +135,16 @@ shakeErrorsDatabase (ShakeDatabase use s) =
 --   plus the list of 'Action' given here. Returns the results from the explicitly passed
 --   actions along with a list of actions to run after the database was closed, as added with
 --   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
-shakeRunDatabase :: ShakeValue key => ShakeDatabase -> Maybe [key] -> [Action a] -> IO ([a], [IO ()])
-shakeRunDatabase (ShakeDatabase use s) keysChanged as =
+shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
+shakeRunDatabase = shakeRunDatabaseForKeys (Nothing :: Maybe [()])
+
+-- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
+--   plus the list of 'Action' given here, for a subset of the keys (or all if 'Nothing').
+--   Returns the results from the explicitly passed
+--   actions along with a list of actions to run after the database was closed, as added with
+--   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
+shakeRunDatabaseForKeys :: ShakeValue key => Maybe [key] -> ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
+shakeRunDatabaseForKeys keysChanged (ShakeDatabase use s) as =
     withOpen use "shakeRunDatabase" (\o -> o{openRequiresReset=True}) $ \Open{..} -> do
         when openRequiresReset $ do
             when openOneShot $
