@@ -212,7 +212,7 @@ computeTransitiveChanges diag database (Just keys) = do
     diag $ pure $
         printf "%d transitive changes computed for: %s" (Set.size transitive) (show keys)
 
-    return $ Just transitive
+    pure $ Just transitive
 
 -- | Run a set of IO actions, treated as \"after\" actions, typically returned from
 --   'Development.Shake.Database.shakeRunDatabase'. The actions will be run with diagnostics

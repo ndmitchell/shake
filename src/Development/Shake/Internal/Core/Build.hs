@@ -119,7 +119,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
                     case result of
                         Right RunResult{..} | runChanged `elem` [ChangedRecomputeDiff, ChangedRecomputeSame ] ->
                             updateReverseDeps i database (depends <$> r) (depends runValue)
-                        _ -> return ()
+                        _ -> pure ()
 
                     w val
                 case result of
