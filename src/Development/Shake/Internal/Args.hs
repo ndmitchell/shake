@@ -1,5 +1,4 @@
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | Command line parsing flags.
 module Development.Shake.Internal.Args(
