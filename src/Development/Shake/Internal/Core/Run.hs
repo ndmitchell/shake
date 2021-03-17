@@ -196,6 +196,7 @@ run keysChanged RunState{..} oneshot actions2 =
             putStr . unlines
         pure res
 
+{-# SCC computeTransitiveChanges #-}
 computeTransitiveChanges :: ShakeValue key => (IO String -> IO()) -> Database -> Maybe [key] -> IO (Maybe (Set.HashSet Id))
 computeTransitiveChanges _ _ Nothing = pure Nothing
 computeTransitiveChanges diag database (Just keys) = do
