@@ -152,8 +152,8 @@ updateReverseDeps myId db prev new = do
         updateResult f (Ready r) = Ready $ f r
         updateResult f (Failed e r) = Failed e (fmap f r)
         updateResult f (Loaded r) = Loaded $ addDep r
-        updateResult _ Running{} = error "Running"
-        updateResult _ Missing{} = error "Missing"
+        updateResult _ Running{} = error "Running: can this happen?"
+        updateResult _ Missing{} = error "Missing: can this happen?"
 
 -- | Compute the value for a given RunMode and a restore function to run
 buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Wait Locked RunMode
