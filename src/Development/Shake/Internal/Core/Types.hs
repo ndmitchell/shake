@@ -455,7 +455,7 @@ data Global = Global
     ,globalCloud :: Maybe Cloud
     ,globalStep :: {-# UNPACK #-} !Step
     ,globalOneShot :: Bool -- ^ I am running in one-shot mode so don't need to store BS's for Result/Failed
-    ,globalKeysChanged :: Maybe (HashSet Id)
+    ,globalDirtySet :: Maybe (HashSet Id)
     }
 
 -- local variables of Action

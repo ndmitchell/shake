@@ -148,7 +148,7 @@ run keysChanged RunState{..} oneshot actions2 =
             addTiming "Running rules"
             locals <- newIORef []
 
-            transitiveChanges <- computeTransitiveChanges diagnostic database keysChanged
+            transitiveChanges <- computeDirtySet diagnostic database keysChanged
 
             runPool (shakeThreads == 1) shakeThreads $ \pool -> do
                 let global = Global applyKeyValue database pool cleanup start builtinRules output opts diagnostic ruleFinished after absent getProgress userRules shared cloud step oneshot transitiveChanges
@@ -196,10 +196,10 @@ run keysChanged RunState{..} oneshot actions2 =
             putStr . unlines
         pure res
 
-{-# SCC computeTransitiveChanges #-}
-computeTransitiveChanges :: ShakeValue key => (IO String -> IO()) -> Database -> Maybe [key] -> IO (Maybe (Set.HashSet Id))
-computeTransitiveChanges _ _ Nothing = pure Nothing
-computeTransitiveChanges diag database (Just keys) = do
+{-# SCC computeDirtySet #-}
+computeDirtySet :: ShakeValue key => (IO String -> IO()) -> Database -> Maybe [key] -> IO (Maybe (Set.HashSet Id))
+computeDirtySet _ _ Nothing = pure Nothing
+computeDirtySet diag database (Just keys) = do
     getId <- getIdFromKey database
     let ids = maybeToList (getId $ newKey $ AlwaysRerunQ ())
             <> mapMaybe (getId . newKey) keys

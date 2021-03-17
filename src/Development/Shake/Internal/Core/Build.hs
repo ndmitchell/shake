@@ -37,6 +37,7 @@ import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
 import qualified Data.HashSet as HashSet
+import Data.Functor ((<&>))
 
 
 ---------------------------------------------------------------------
@@ -102,7 +103,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         pure $ Left e
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        let go = buildRunMode global stack database r
+        let go = buildRunMode global stack database (r <&> \r -> r{result = i})
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
             runKey global stack k r mode $ \result -> do
                 runLocked database $ do
@@ -156,7 +157,7 @@ updateReverseDeps myId db prev new = do
         updateResult _ Missing{} = error "Missing: can this happen?"
 
 -- | Compute the value for a given RunMode and a restore function to run
-buildRunMode :: Global -> Stack -> Database -> Maybe (Result a) -> Wait Locked RunMode
+buildRunMode :: Global -> Stack -> Database -> Maybe (Result Id) -> Wait Locked RunMode
 buildRunMode global stack database me = do
     changed <- case me of
         Nothing -> pure True
@@ -165,10 +166,14 @@ buildRunMode global stack database me = do
 
 
 -- | Have the dependencies changed
-buildRunDependenciesChanged :: Global -> Stack -> Database -> Result a -> Wait Locked Bool
+buildRunDependenciesChanged :: Global -> Stack -> Database -> Result Id -> Wait Locked Bool
 buildRunDependenciesChanged global stack database me
-  | Just keys <- globalKeysChanged global
-  = pure $ any (`HashSet.member` keys) (foldMap fromDepends $ depends me)
+  | Just dirtySet <- globalDirtySet global
+  , not (result me `HashSet.member` dirtySet)
+  -- If I am not in the dirty set then none of my dependencies are, so they must be unchanged
+  = pure False
+  -- If I am in the dirty set, it is still possible that all my dependencies are unchanged
+  -- thanks to early cutoff, and therefore we must check to avoid redundant work
   | otherwise = isJust <$> firstJustM id
     [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends me]
     where
