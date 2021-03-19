@@ -205,14 +205,18 @@ computeDirtySet diag database (Just keys) = do
         loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do
-                Just (_, Loaded result) <- lift $ getKeyValueFromId database x
+                Just (_, Loaded result) <- liftIO $ getKeyValueFromId database x
                 State.put (Set.insert x seen)
                 let next = rdepends result
                 traverse_ loop next
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
-    diag $ pure $
-        printf "%d transitive changes computed for: %s" (Set.size transitive) (show keys)
+    diag $ do
+        let st = Set.size transitive
+            res = take 10 $ Set.toList transitive
+            ellipsis = if st > 10 then "..." else ""
+        keys <- unwords . map (show . fst) . catMaybes <$> mapM (getKeyValueFromId database) res
+        pure $ printf "%d transitive changes computed: %s%s" st keys ellipsis
 
     pure $ Just transitive
 
