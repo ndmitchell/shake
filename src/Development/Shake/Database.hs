@@ -21,6 +21,7 @@ module Development.Shake.Database(
     shakeOneShotDatabase,
     shakeRunDatabase,
     shakeRunDatabaseForKeys,
+    SomeShakeValue(..),
     shakeLiveFilesDatabase,
     shakeProfileDatabase,
     shakeErrorsDatabase,
@@ -39,7 +40,7 @@ import Development.Shake.Internal.Core.Rules
 import Development.Shake.Internal.Core.Run
 import Development.Shake.Internal.Core.Types
 import Development.Shake.Internal.Rules.Default
-import Development.Shake.Internal.Value (ShakeValue)
+import Development.Shake.Internal.Value (ShakeValue, SomeShakeValue(..))
 
 
 data UseState
@@ -137,7 +138,7 @@ shakeErrorsDatabase (ShakeDatabase use s) =
 --   actions along with a list of actions to run after the database was closed, as added with
 --   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
 shakeRunDatabase :: ShakeDatabase -> [Action a] -> IO ([a], [IO ()])
-shakeRunDatabase = shakeRunDatabaseForKeys (Nothing :: Maybe [()])
+shakeRunDatabase = shakeRunDatabaseForKeys Nothing
 
 -- | Given an open 'ShakeDatabase', run both whatever actions were added to the 'Rules',
 --   plus the list of 'Action' given here.
@@ -151,8 +152,7 @@ shakeRunDatabase = shakeRunDatabaseForKeys (Nothing :: Maybe [()])
 --   of actions to run after the database was closed, as added with
 --   'Development.Shake.runAfter' and 'Development.Shake.removeFilesAfter'.
 shakeRunDatabaseForKeys
-    :: ShakeValue key
-    => Maybe [key]       -- ^ Set of keys changed since last run
+    :: Maybe [SomeShakeValue]       -- ^ Set of keys changed since last run
     -> ShakeDatabase
     -> [Action a]
     -> IO ([a], [IO ()])

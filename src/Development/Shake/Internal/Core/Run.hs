@@ -105,7 +105,7 @@ reset RunState{..} = runLocked database $
         f x = x
 
 
-run :: ShakeValue key => Maybe [key] -> RunState -> Bool -> [Action ()] -> IO [IO ()]
+run :: Maybe [SomeShakeValue] -> RunState -> Bool -> [Action ()] -> IO [IO ()]
 run keysChanged RunState{..} oneshot actions2 =
     withInit opts $ \opts@ShakeOptions{..} diagnostic output -> do
 
@@ -196,11 +196,11 @@ run keysChanged RunState{..} oneshot actions2 =
         pure res
 
 {-# SCC computeDirtySet #-}
-computeDirtySet :: ShakeValue key => (IO String -> IO()) -> Database -> Maybe [key] -> IO (Maybe (Set.HashSet Id))
+computeDirtySet :: (IO String -> IO()) -> Database -> Maybe [SomeShakeValue] -> IO (Maybe (Set.HashSet Id))
 computeDirtySet _ _ Nothing = pure Nothing
 computeDirtySet diag database (Just keys) = do
     getId <- getIdFromKey database
-    let ids = mapMaybe (getId . newKey) keys
+    let ids = mapMaybe (\(SomeShakeValue x) -> getId $ newKey x) keys
         loop x = do
             seen <- State.get
             if x `Set.member` seen then pure () else do
@@ -210,10 +210,11 @@ computeDirtySet diag database (Just keys) = do
                 traverse_ loop next
     transitive <- flip State.execStateT Set.empty $ traverse_ loop ids
 
-    diag $ do
+    diag $
+        if null ids then pure "Could not compute transitive changes for unknown keys" else do
         let st = Set.size transitive
-            res = take 10 $ Set.toList transitive
-            ellipsis = if st > 10 then "..." else ""
+            res = take 100 $ Set.toList transitive
+            ellipsis = if st > 100 then "..." else ""
         keys <- unwords . map (show . fst) . catMaybes <$> mapM (getKeyValueFromId database) res
         pure $ printf "%d transitive changes computed: %s%s" st keys ellipsis
 
