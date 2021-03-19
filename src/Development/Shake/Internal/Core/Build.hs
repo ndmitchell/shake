@@ -37,7 +37,6 @@ import Data.List.Extra
 import Data.Either.Extra
 import System.Time.Extra
 import qualified Data.HashSet as HashSet
-import Data.Functor ((<&>))
 
 
 ---------------------------------------------------------------------
@@ -103,7 +102,7 @@ buildOne global@Global{..} stack database i k r = case addStack i k stack of
         pure $ Left e
     Right stack -> Later $ \continue -> do
         setIdKeyStatus global database i k (Running (NoShow continue) r)
-        let go = buildRunMode global stack database (r <&> \r -> r{result = i})
+        let go = buildRunMode global stack database (fmap (\r -> r{result = i}) r)
         fromLater go $ \mode -> liftIO $ addPool PoolStart globalPool $
             runKey global stack k r mode $ \result -> do
                 runLocked database $ do
@@ -172,7 +171,7 @@ buildRunDependenciesChanged global stack database me
   , not (result me `HashSet.member` dirtySet)
   -- If I am not in the dirty set then none of my dependencies are, so they must be unchanged
   = pure False
-  -- If I am in the dirty set, it is still possible that all my dependencies are unchanged
+-- If I am in the dirty set, it is still possible that all my dependencies are unchanged
   -- thanks to early cutoff, and therefore we must check to avoid redundant work
   | otherwise = isJust <$> firstJustM id
     [firstJustWaitUnordered (fmap test . lookupOne global stack database) x | Depends x <- depends me]
